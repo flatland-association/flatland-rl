@@ -4,9 +4,6 @@ The base Environment class is adapted from rllib.env.MultiAgentEnv
 (https://github.com/ray-project/ray).
 """
 
-# TODO: add derived classes and environments, e.g., GridEnvironment and
-# RailEnvironment.
-
 class Environment:
     """Base interface for multi-agent environments in Flatland.
 
