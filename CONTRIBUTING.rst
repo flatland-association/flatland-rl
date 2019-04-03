@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/spMohanty/flatland/issues.
+Report bugs at https://gitlab.aicrowd.com/flatland/flatland/issues.
 
 If you are reporting a bug, please include:
 
@@ -26,13 +26,13 @@ If you are reporting a bug, please include:
 Fix Bugs
 ~~~~~~~~
 
-Look through the GitHub issues for bugs. Anything tagged with "bug" and "help
+Look through the Repository Issue Tracker for bugs. Anything tagged with "bug" and "help
 wanted" is open to whoever wants to implement it.
 
 Implement Features
 ~~~~~~~~~~~~~~~~~~
 
-Look through the GitHub issues for features. Anything tagged with "enhancement"
+Look through the Repository Issue Tracker for features. Anything tagged with "enhancement"
 and "help wanted" is open to whoever wants to implement it.
 
 Write Documentation
@@ -45,7 +45,7 @@ articles, and such.
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/spMohanty/flatland/issues.
+The best way to send feedback is to file an issue at https://gitlab.aicrowd.com/flatland/flatland/issues.
 
 If you are proposing a feature:
 
@@ -59,10 +59,10 @@ Get Started!
 
 Ready to contribute? Here's how to set up `flatland` for local development.
 
-1. Fork the `flatland` repo on GitHub.
+1. Fork the `flatland` repo on https://gitlab.aicrowd.com/flatland/flatland .
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/flatland.git
+    $ git clone git@gitlab.aicrowd.com:flatland/flatland.git
 
 3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
 
@@ -85,25 +85,25 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 
    To get flake8 and tox, just pip install them into your virtualenv.
 
-6. Commit your changes and push your branch to GitHub::
+6. Commit your changes and push your branch to Gitlab::
 
     $ git add .
     $ git commit -m "Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
-7. Submit a pull request through the GitHub website.
+7. Submit a merge request through the Gitlab repository website.
 
-Pull Request Guidelines
+Merge Request Guidelines
 -----------------------
 
-Before you submit a pull request, check that it meets these guidelines:
+Before you submit a merge request, check that it meets these guidelines:
 
-1. The pull request should include tests.
-2. If the pull request adds functionality, the docs should be updated. Put
+1. The merge request should include tests.
+2. If the merge request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
-3. The pull request should work for Python 2.7, 3.4, 3.5 and 3.6, and for PyPy. Check
-   https://travis-ci.org/spMohanty/flatland/pull_requests
+3. The merge request should work for Python 3.6, 3.7 and for PyPy. Check
+   https://gitlab.aicrowd.com/flatland/flatland/pipelines
    and make sure that the tests pass for all supported Python versions.
 
 Tips
@@ -125,4 +125,4 @@ $ bumpversion patch # possible: major / minor / patch
 $ git push
 $ git push --tags
 
-Travis will then deploy to PyPI if tests pass.
+Travis will then deploy to PyPI if tests pass. (To be configured properly by Mohanty)
