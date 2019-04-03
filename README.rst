@@ -5,9 +5,9 @@ flatland
 
 
 
-.. image:: https://pyup.io/repos/github/spMohanty/flatland/shield.svg
-     :target: https://pyup.io/repos/github/spMohanty/flatland/
-     :alt: Updates
+.. image:: https://gitlab.aicrowd.com/flatland/flatland/badges/master/pipeline.svg
+     :target: https://gitlab.aicrowd.com/flatland/flatland/pipelines
+     :alt: Test Running
 
 
 
