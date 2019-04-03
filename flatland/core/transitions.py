@@ -25,7 +25,7 @@ class Transitions:
         Parameters
         ----------
         cell_transition : [cell content]
-            The object is specific to each derived class )e.g., for 
+            The object is specific to each derived class (e.g., for
             GridTransitions, int), and is only manipulated by methods
             of the Transitions derived classes.
         orientation : int
@@ -50,7 +50,7 @@ class Transitions:
         Parameters
         ----------
         cell_transition : [cell-content]
-            The object is specific to each derived class )e.g., for 
+            The object is specific to each derived class (e.g., for
             GridTransitions, int), and is only manipulated by methods
             of the Transitions derived classes.
         orientation : int
@@ -79,7 +79,7 @@ class Transitions:
         Parameters
         ----------
         cell_transition : [cell-content]
-            The object is specific to each derived class )e.g., for 
+            The object is specific to each derived class (e.g., for
             GridTransitions, int), and is only manipulated by methods
             of the Transitions derived classes.
         orientation : int
@@ -111,7 +111,7 @@ class Transitions:
         Parameters
         ----------
         cell_transition : [cell-content]
-            The object is specific to each derived class )e.g., for 
+            The object is specific to each derived class (e.g., for
             GridTransitions, int), and is only manipulated by methods
             of the Transitions derived classes.
         orientation : int
@@ -195,8 +195,8 @@ class GridTransitions(Transitions):
         """
         if self.number_of_cell_neighbors == 4:
             bits = (cell_transition >> ((3-orientation)*4))
-            cell_transition = ((bits >> 3) & 1, (bits >> 2)
-                               & 1, (bits >> 1) & 1, (bits) & 1)
+            cell_transition = ((bits >> 3) & 1, (bits >> 2) & 1,
+                               (bits >> 1) & 1, (bits) & 1)
         elif self.number_of_cell_neighbors == 8:
             bits = (cell_transition >> ((7-orientation)*8))
             cell_transition = (
@@ -334,14 +334,12 @@ class GridTransitions(Transitions):
             cell_transition |= \
                 (1 << ((self.number_of_cell_neighbors-1-orientation) *
                        self.number_of_cell_neighbors +
-                       (self.number_of_cell_neighbors
-                        - 1 - direction)))
+                       (self.number_of_cell_neighbors - 1 - direction)))
         else:
             cell_transition &= \
                 ~(1 << ((self.number_of_cell_neighbors-1-orientation) *
                         self.number_of_cell_neighbors +
-                        (self.number_of_cell_neighbors
-                         - 1 - direction)))
+                        (self.number_of_cell_neighbors - 1 - direction)))
 
         return cell_transition
 
@@ -351,6 +349,23 @@ class GridTransitions(Transitions):
         rotation={0, 90, 180, 270} degrees in diagonal steps are not allowed,
         or by rotation={0, 45, 90, 135, 180, 225, 270, 315} degrees if \
         they are.
+
+        Parameters
+        ----------
+        cell_transition : int
+            16 or 64 bits used to encode the valid transitions for a cell.
+        rotation : int
+            Angle by which to clock-wise rotate the transition bits in
+            `cell_transition' by. I.e., rotation={0, 90, 180, 270} degrees in
+            diagonal steps are not allowed, or by
+            rotation={0, 45, 90, 135, 180, 225, 270, 315} degrees if they are.
+
+        Returns
+        -------
+        int
+            An updated bitmap that replaces the original transitions bits
+            with the equivalent bitmap after rotation.
+
         """
         if self.number_of_cell_neighbors == 4:
             # Rotate the individual bits in each block
@@ -400,7 +415,7 @@ class RailEnvTransitions(GridTransitions):
 
     --------------------------------------------------------------------------
 
-    As no diagonal transitions are allowed in the RailEnv environment, the 
+    As no diagonal transitions are allowed in the RailEnv environment, the
     possible transitions for RailEnv from a cell to its neighboring ones
     are represented over 16 bits.
 
