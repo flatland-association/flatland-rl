@@ -13,6 +13,7 @@ To install flatland, run this command in your terminal:
 .. code-block:: console
 
     $ pip install flatland
+    # TODO: To be configured by Mohanty
 
 This is the preferred method to install flatland, as it will always install the most recent stable release.
 
@@ -26,19 +27,13 @@ you through the process.
 From sources
 ------------
 
-The sources for flatland can be downloaded from the `Github repo`_.
+The sources for flatland can be downloaded from the `Gitlab repo`_.
 
-You can either clone the public repository:
-
-.. code-block:: console
-
-    $ git clone git://github.com/spMohanty/flatland
-
-Or download the `tarball`_:
+You can clone the public repository:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/spMohanty/flatland/tarball/master
+    $ git clone git@gitlab.aicrowd.com:flatland/flatland.git
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +42,4 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/spMohanty/flatland
-.. _tarball: https://github.com/spMohanty/flatland/tarball/master
+.. _Gitlab repo: https://gitlab.aicrowd.com/flatland/flatland
