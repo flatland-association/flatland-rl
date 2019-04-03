@@ -4,6 +4,7 @@ The base Environment class is adapted from rllib.env.MultiAgentEnv
 (https://github.com/ray-project/ray).
 """
 
+
 class Environment:
     """Base interface for multi-agent environments in Flatland.
 
