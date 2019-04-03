@@ -1,0 +1,12 @@
+image: python:3.5
+
+cache:
+    paths:
+        - .tox
+
+before_script:
+    - pip install -U tox
+
+tests:
+    script:
+        - tox
