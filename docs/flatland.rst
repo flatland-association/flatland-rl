@@ -1,6 +1,13 @@
 flatland package
 ================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    flatland.core
+
 Submodules
 ----------
 
