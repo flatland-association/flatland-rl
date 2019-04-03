@@ -5,8 +5,7 @@ cache:
         - .tox
 
 before_script:
-    # Any pre-test setup
-    echo "Setting Up...."
+    - echo "Setting Up...."
 
 tests:
     script:
