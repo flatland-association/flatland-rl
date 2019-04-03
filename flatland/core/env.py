@@ -52,10 +52,10 @@ class Environment:
 
     def step(self, action_dict):
         """
-        Performs an environment step with simultaneous execution of actions for
-        agents in action_dict.
+        Environment step.
 
-        Returns observations from agents in the environment.
+        Performs an environment step with simultaneous execution of actions for
+        agents in action_dict. Returns observations from agents in the environment.
         The returns are dicts mapping from agent_id strings to values.
 
         Parameters
