@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     flatland.core
+    flatland.utils
 
 Submodules
 ----------
