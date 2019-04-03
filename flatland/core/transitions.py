@@ -234,7 +234,7 @@ class RailEnvTransitions(GridTransitions):
     Special case of `GridTransitions' over a 2D-grid, with a pre-defined set
     of transitions mimicking the types of real Swiss rail connections.
 
-    -----------------------------------------------------------------------------------------------
+    --------------------------------------------------------------------------
 
     The possible transitions for RailEnv from a cell to its neighboring ones
     are represented over 16 bits.
@@ -243,7 +243,8 @@ class RailEnvTransitions(GridTransitions):
     inside the cell is facing (0=North, 1=East, 2=South, 3=West) and which
     direction the agent wants to move to
     (North, East, South, West, relative to the cell).
-    Each transition (orientation, direction) can be allowed (1) or forbidden (0).
+    Each transition (orientation, direction)
+    can be allowed (1) or forbidden (0).
 
     The 16 bits are organized in 4 blocks of 4 bits each, the direction that
     the agent is facing.
