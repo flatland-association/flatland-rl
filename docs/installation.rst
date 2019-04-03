@@ -12,8 +12,7 @@ To install flatland, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install flatland
-    # TODO: To be configured by Mohanty
+    $ pip install flatland-rl
 
 This is the preferred method to install flatland, as it will always install the most recent stable release.
 
