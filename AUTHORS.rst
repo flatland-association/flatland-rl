@@ -2,7 +2,7 @@
 Credits
 =======
 
-Development Lead
+Development
 ----------------
 
 * S.P. Mohanty <mohanty@aicrowd.com>

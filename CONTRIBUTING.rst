@@ -88,7 +88,7 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 6. Commit your changes and push your branch to Gitlab::
 
     $ git add .
-    $ git commit -m "Your detailed description of your changes."
+    $ git commit -m "Addresses #<issue-number> Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
 7. Submit a merge request through the Gitlab repository website.

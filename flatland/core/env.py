@@ -54,6 +54,7 @@ class Environment:
         """
         Performs an environment step with simultaneous execution of actions for
         agents in action_dict.
+
         Returns observations from agents in the environment.
         The returns are dicts mapping from agent_id strings to values.
 

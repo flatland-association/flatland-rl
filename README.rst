@@ -24,6 +24,7 @@ Generate Docs
 
           git clone git@gitlab.aicrowd.com:flatland/flatland.git
           cd flatland
+          pip install -r requirements_dev.txt
           make docs
 
 Features
