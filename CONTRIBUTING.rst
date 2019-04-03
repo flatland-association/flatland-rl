@@ -40,7 +40,7 @@ Write Documentation
 
 flatland could always use more documentation, whether as part of the
 official flatland docs, in docstrings, or even on the web in blog posts,
-articles, and such.
+articles, and such. A quick reference for writing good docstrings is available at : https://docs.python-guide.org/writing/documentation/#writing-docstrings
 
 Submit Feedback
 ~~~~~~~~~~~~~~~
