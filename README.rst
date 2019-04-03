@@ -35,4 +35,4 @@ Features
 Authors
 --------
 * Sharada Mohanty <mohanty@aicrowd.com>
-* <please-fill-in>
+* Giacomo Spigler <giacomo.spigler@gmail.com>
