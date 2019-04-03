@@ -7,6 +7,8 @@ possible transitions over a 2D grid.
 
 class Transitions:
     """
+    Base Transitions class.
+
     Generic class that implements checks to control whether a
     certain transition is allowed (agent facing a direction
     `orientation' and moving into direction `direction')
@@ -19,6 +21,21 @@ class Transitions:
         (e.g., a tuple of size of the maximum number of transitions,
         with values 0 or 1, or potentially in between,
         for stochastic transitions).
+
+        Parameters
+        ----------
+        cell_transition : [cell content]
+            The object is specific to each derived class )e.g., for 
+            GridTransitions, int), and is only manipulated by methods
+            of the Transitions derived classes.
+        orientation : int
+            Orientation of the agent inside the cell.
+
+        Returns
+        -------
+        tuple
+            List of the validity of transitions in the cell.
+
         """
         raise NotImplementedError()
 
@@ -29,6 +46,25 @@ class Transitions:
         available for an agent facing direction `orientation' are replaced
         with the tuple `new_transitions'. `new_orientations' must have
         one element for each possible transition.
+
+        Parameters
+        ----------
+        cell_transition : [cell-content]
+            The object is specific to each derived class )e.g., for 
+            GridTransitions, int), and is only manipulated by methods
+            of the Transitions derived classes.
+        orientation : int
+            Orientation of the agent inside the cell.
+        new_transitions : tuple
+            Tuple of new transitions validitiy for the cell.
+
+        Returns
+        -------
+        [cell-content]
+            An updated class-specific object that replaces the original
+            transitions validity of `cell_transition' with `new_transitions',
+            for the appropriate `orientation'.
+
         """
         raise NotImplementedError()
 
@@ -39,6 +75,24 @@ class Transitions:
         `orientation' and inside a cell with transitions `cell_transition'
         can move to the cell in direction `direction' relative
         to the current cell.
+
+        Parameters
+        ----------
+        cell_transition : [cell-content]
+            The object is specific to each derived class )e.g., for 
+            GridTransitions, int), and is only manipulated by methods
+            of the Transitions derived classes.
+        orientation : int
+            Orientation of the agent inside the cell.
+        direction : int
+            Direction of movement whose validity is to be tested.
+
+        Returns
+        -------
+        int or float (depending on derived class)
+            Validity of the requested transition (e.g.,
+            0/1 allowed/not allowed, a probability in [0,1], etc...)
+
         """
         raise NotImplementedError()
 
@@ -53,14 +107,60 @@ class Transitions:
         a cell with transitions `cell_transition' can move to the cell
         in direction `direction' relative to the current cell is set
         to `new_transition'.
+
+        Parameters
+        ----------
+        cell_transition : [cell-content]
+            The object is specific to each derived class )e.g., for 
+            GridTransitions, int), and is only manipulated by methods
+            of the Transitions derived classes.
+        orientation : int
+            Orientation of the agent inside the cell.
+        direction : int
+            Direction of movement whose validity is to be tested.
+        new_transition : int or float (depending on derived class)
+            Validity of the requested transition (e.g.,
+            0/1 allowed/not allowed, a probability in [0,1], etc...)
+
+        Returns
+        -------
+        [cell-content]
+            An updated class-specific object that replaces the original
+            transitions validity of `cell_transition' with `new_transitions',
+            for the appropriate `orientation' to `direction'.
+
         """
         raise NotImplementedError()
 
 
 class GridTransitions(Transitions):
     """
+    GridTransitions class derived from Transitions.
+
     Special case of `Transitions' over a 2D-grid (FlatLand).
     Transitions are possible to neighboring cells on the grid if allowed.
+    GridTransitions keeps track of valid transitions supplied as `transitions'
+    list, each represented as a bitmap of 16 (allow_diagonal_transitions=False)
+    or 64 bits (allow_diagonal_transitions=True).
+
+    Whether a transition is allowed or not depends on which direction an agent
+    inside the cell is facing (0=North, 1=East, 2=South, 3=West) and which
+    direction the agent wants to move to
+    (North, East, South, West, relative to the cell).
+    Each transition (orientation, direction)
+    can be allowed (1) or forbidden (0).
+
+    For example, in case of no diagonal transitions on the grid, the 16 bits
+    of the transition bitmaps are organized in 4 blocks of 4 bits each, the
+    direction that the agent is facing.
+    E.g., the most-significant 4-bits represent the possible movements (NESW)
+    if the agent is facing North, etc...
+
+    agent's direction:          North    East   South   West
+    agent's allowed movements:  [nesw]   [nesw] [nesw]  [nesw]
+    example:                     0010     0000   1000    0000
+
+    In the example, the agent can move from North to South and viceversa.
     """
 
     def __init__(self,
@@ -79,6 +179,19 @@ class GridTransitions(Transitions):
         if no diagonal transitions allowed) available for an agent oriented
         in direction `orientation' and inside a cell with
         transitions `cell_transition'.
+
+        Parameters
+        ----------
+        cell_transition : int
+            16 or 64 bits used to encode the valid transitions for a cell.
+        orientation : int
+            Orientation of the agent inside the cell.
+
+        Returns
+        -------
+        tuple
+            List of the validity of transitions in the cell.
+
         """
         if self.number_of_cell_neighbors == 4:
             bits = (cell_transition >> ((3-orientation)*4))
@@ -108,6 +221,23 @@ class GridTransitions(Transitions):
         oriented in direction `orientation' and inside a cell with transitions
         `cell_transition'. A new `cell_transition' is returned with
         the specified bits replaced by `new_transitions'.
+
+        Parameters
+        ----------
+        cell_transition : int
+            16 or 64 bits used to encode the valid transitions for a cell.
+        orientation : int
+            Orientation of the agent inside the cell.
+        new_transitions : tuple
+            Tuple of new transitions validitiy for the cell.
+
+        Returns
+        -------
+        int
+            An updated bitmap that replaces the original transitions validity
+            of `cell_transition' with `new_transitions', for the appropriate
+            `orientation'.
+
         """
         if self.number_of_cell_neighbors == 4:
             mask = (1 << ((4-orientation)*4)) - (1 << ((3-orientation)*4))
@@ -151,6 +281,21 @@ class GridTransitions(Transitions):
         oriented in direction `orientation' and inside a cell with transitions
         `cell_transition' can move to the cell in direction `direction'
         relative to the current cell.
+
+        Parameters
+        ----------
+        cell_transition : int
+            16 or 64 bits used to encode the valid transitions for a cell.
+        orientation : int
+            Orientation of the agent inside the cell.
+        direction : int
+            Direction of movement whose validity is to be tested.
+
+        Returns
+        -------
+        int
+            Validity of the requested transition: 0/1 allowed/not allowed.
+
         """
         return ((cell_transition >>
                  ((self.number_of_cell_neighbors-1-orientation) *
@@ -165,6 +310,25 @@ class GridTransitions(Transitions):
         oriented in direction `orientation' and inside a cell with transitions
         `cell_transition' can move to the cell in direction `direction'
         relative to the current cell.
+
+        Parameters
+        ----------
+        cell_transition : int
+            16 or 64 bits used to encode the valid transitions for a cell.
+        orientation : int
+            Orientation of the agent inside the cell.
+        direction : int
+            Direction of movement whose validity is to be tested.
+        new_transition : int
+            Validity of the requested transition: 0/1 allowed/not allowed.
+
+        Returns
+        -------
+        int
+            An updated bitmap that replaces the original transitions validity
+            of `cell_transition' with `new_transitions', for the appropriate
+            `orientation'.
+
         """
         if new_transition:
             cell_transition |= \
@@ -236,15 +400,9 @@ class RailEnvTransitions(GridTransitions):
 
     --------------------------------------------------------------------------
 
-    The possible transitions for RailEnv from a cell to its neighboring ones
+    As no diagonal transitions are allowed in the RailEnv environment, the 
+    possible transitions for RailEnv from a cell to its neighboring ones
     are represented over 16 bits.
-
-    Whether a transition is allowed or not depends on which direction an agent
-    inside the cell is facing (0=North, 1=East, 2=South, 3=West) and which
-    direction the agent wants to move to
-    (North, East, South, West, relative to the cell).
-    Each transition (orientation, direction)
-    can be allowed (1) or forbidden (0).
 
     The 16 bits are organized in 4 blocks of 4 bits each, the direction that
     the agent is facing.
