@@ -94,7 +94,7 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 7. Submit a merge request through the Gitlab repository website.
 
 Merge Request Guidelines
------------------------
+-------------------------
 
 Before you submit a merge request, check that it meets these guidelines:
 

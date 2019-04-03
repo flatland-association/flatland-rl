@@ -9,6 +9,7 @@ Welcome to flatland's documentation!
    installation
    usage
    modules
+   FAQ
    contributing
    authors
    history
