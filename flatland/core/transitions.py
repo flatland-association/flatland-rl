@@ -167,9 +167,11 @@ class GridTransitions(Transitions):
                  transitions,
                  allow_diagonal_transitions=False
                  ):
-        self.number_of_cell_neighbors = 4
+
         if allow_diagonal_transitions:
             self.number_of_cell_neighbors = 8
+        else:
+            self.number_of_cell_neighbors = 4
 
         self.transitions = transitions
 
