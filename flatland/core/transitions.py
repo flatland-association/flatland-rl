@@ -438,14 +438,15 @@ class RailEnvTransitions(GridTransitions):
     transitions available as a function of the agent's orientation
     (north, east, south, west)
     """
-    transition_list = [int('0000000000000000', 2),
-                       int('1000000000100000', 2),
-                       int('1001001000100000', 2),
-                       int('1000010000100001', 2),
-                       int('1001011000100001', 2),
-                       int('1100110000110011', 2),
-                       int('0101001000000010', 2),
-                       int('0000000000100000', 2)]
+
+    transition_list = [int('0000000000000000', 2),  # empty cell - Case 0
+             int('1000000000100000', 2),  # Case 1 - straight
+             int('1001001000000000', 2),  # Case 2 - simple switch
+             int('1000010000100001', 2),  # Case 3 - diamond drossing
+             int('1001011000100001', 2),  # Case 4 - single slip switch
+             int('1100110000110011', 2),  # Case 5 - double slip switch
+             int('0101001000000010', 2),  # Case 6 - symmetrical switch
+             int('0010000000000000', 2)]  # Case 7 - dead end
 
     def __init__(self):
         super(RailEnvTransitions, self).__init__(
