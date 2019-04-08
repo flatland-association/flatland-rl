@@ -158,7 +158,7 @@ class GridTransitions(Transitions):
 
     agent's direction:          North    East   South   West
     agent's allowed movements:  [nesw]   [nesw] [nesw]  [nesw]
-    example:                     0010     0000   1000    0000
+    example:                     1000     0000   0010    0000
 
     In the example, the agent can move from North to South and viceversa.
     """
@@ -428,7 +428,7 @@ class RailEnvTransitions(GridTransitions):
 
     agent's direction:          North    East   South   West
     agent's allowed movements:  [nesw]   [nesw] [nesw]  [nesw]
-    example:                     0010     0000   1000    0000
+    example:                     1000     0000   0010    0000
 
     In the example, the agent can move from North to South and viceversa.
     """
