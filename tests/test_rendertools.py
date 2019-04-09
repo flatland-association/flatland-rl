@@ -28,7 +28,8 @@ import flatland.utils.rendertools as rt
 
 
 def checkFrozenImage(sFileImage):
-    sTmpFileImage = "images/test/" + sFileImage
+    sDirRoot = "."
+    sTmpFileImage = sDirRoot + "/images/test/" + sFileImage
 
     if os.path.exists(sTmpFileImage):
         os.remove(sTmpFileImage)
@@ -36,8 +37,8 @@ def checkFrozenImage(sFileImage):
     plt.savefig(sTmpFileImage)
 
     bytesFrozenImage = None
-    for sDir in [ "images/", "images/test/" ]:
-        sfPath = sDir + sFileImage
+    for sDir in [ "/images/", "/images/test/" ]:
+        sfPath = sDirRoot + sDir + sFileImage
         with open(sfPath, "rb") as fIn:
             bytesImage = fIn.read()
             if bytesFrozenImage == None:
@@ -58,5 +59,26 @@ def test_render_env():
 
     checkFrozenImage("basic-env.png")
 
+    plt.figure(figsize=(10,10))
+    oRT.renderEnv()
+    lVisits = oRT.plotTreeOnRail(
+        oEnv.agents_position[0], 
+        oEnv.agents_direction[0], 
+        nDepth=17)
+
+    checkFrozenImage("env-tree-spatial.png")
+    
+    plt.figure(figsize=(8,8))
+    xyTarg = oRT.env.agents_target[0]
+    visitDest = oRT.plotTree(lVisits, xyTarg)
+
+    checkFrozenImage("env-tree-graph.png")
+
+
+    oFig = plt.figure(figsize=(10,10))
+    oRT.renderEnv()
+    oRT.plotPath(visitDest)
+
+    checkFrozenImage("env-path.png")
 
 
