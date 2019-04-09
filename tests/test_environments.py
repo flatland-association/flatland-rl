@@ -75,7 +75,7 @@ def test_rail_environment_single_agent():
         assert(initial_pos[0] == rail_env.agents_position[0][0])
 
         # We check that the train always attains its target after some time
-        for _ in range(200):
+        for _ in range(10):
             _ = rail_env.reset()
 
             done = False
