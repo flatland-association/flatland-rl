@@ -413,7 +413,13 @@ class RenderTool(object):
         plt.ylim([-env.height * cell_size, 0])
 
         plt.xticks(np.linspace(0, env.width * cell_size, env.width+1))
-        plt.yticks(np.linspace(-env.height * cell_size, 0, env.height+1))
+        plt.yticks(np.linspace(-env.height * cell_size, 0, env.height+1),
+                   np.abs(np.linspace(-env.height * cell_size,
+                          0, env.height+1)))
+
+        plt.xlim([0, env.width * cell_size])
+        plt.ylim([-env.height * cell_size, 0])
+        plt.show()
 
     def _draw_square(self, center, size, color):
         x0 = center[0]-size/2
