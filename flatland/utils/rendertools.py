@@ -289,7 +289,7 @@ class RenderTool(object):
                 visit = visit.prev
                 xyPrev = xy
 
-    def renderEnv(self):
+    def renderEnv(self, show=False):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -419,7 +419,8 @@ class RenderTool(object):
 
         plt.xlim([0, env.width * cell_size])
         plt.ylim([-env.height * cell_size, 0])
-        plt.show()
+        if show:
+            plt.show()
 
     def _draw_square(self, center, size, color):
         x0 = center[0]-size/2
