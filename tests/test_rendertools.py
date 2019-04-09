@@ -28,7 +28,7 @@ import flatland.utils.rendertools as rt
 
 
 def checkFrozenImage(sFileImage):
-    sTmpFileImage = "images/test/" + sFileImage
+    sTmpFileImage = "flatland/images/test/" + sFileImage
 
     if os.path.exists(sTmpFileImage):
         os.remove(sTmpFileImage)
@@ -36,7 +36,7 @@ def checkFrozenImage(sFileImage):
     plt.savefig(sTmpFileImage)
 
     bytesFrozenImage = None
-    for sDir in [ "images/", "images/test/" ]:
+    for sDir in [ "flatland/images/", "flatland/images/test/" ]:
         sfPath = sDir + sFileImage
         with open(sfPath, "rb") as fIn:
             bytesImage = fIn.read()
@@ -81,4 +81,3 @@ def test_render_env():
     checkFrozenImage("env-path.png")
 
 
-    
