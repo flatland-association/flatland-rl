@@ -12,3 +12,5 @@ pytest-runner==4.2
 sphinx-rtd-theme==0.4.3
 
 numpy==1.16.2
+recordtype==1.3
+
