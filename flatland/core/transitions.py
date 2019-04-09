@@ -245,7 +245,8 @@ class Grid4Transitions(Transitions):
             Validity of the requested transition: 0/1 allowed/not allowed.
 
         """
-        return ((cell_transition >> ((4-1-orientation) * 4)) >> (4-1-direction)) & 1
+        return ((cell_transition >> ((4-1-orientation) * 4)) >>
+                (4-1-direction)) & 1
 
     def set_transition(self, cell_transition, orientation, direction,
                        new_transition):
@@ -275,12 +276,12 @@ class Grid4Transitions(Transitions):
 
         """
         if new_transition:
-            cell_transition |= (1 << ((4-1-orientation) * 4 + 
-                                (4 - 1 - direction)))
+            cell_transition |= (1 << ((4-1-orientation) * 4 +
+                                (4-1-direction)))
         else:
             cell_transition &= \
                 ~(1 << ((4-1-orientation) * 4 +
-                        (4 - 1 - direction)))
+                        (4-1-direction)))
 
         return cell_transition
 
@@ -315,7 +316,7 @@ class Grid4Transitions(Transitions):
 
         # Rotate the 4-bits blocks
         value = ((value & (2**(rotation*4)-1)) <<
-                    ((4-rotation)*4)) | (value >> (rotation*4))
+                 ((4-rotation)*4)) | (value >> (rotation*4))
 
         cell_transition = value
         return cell_transition
@@ -429,7 +430,7 @@ class Grid8Transitions(Transitions):
 
         """
         return ((cell_transition >> ((8-1-orientation) * 8)) >>
-                  (8-1-direction)) & 1
+                (8-1-direction)) & 1
 
     def set_transition(self, cell_transition, orientation, direction,
                        new_transition):
@@ -469,7 +470,7 @@ class Grid8Transitions(Transitions):
 
     def rotate_transition(self, cell_transition, rotation=0):
         """
-        Clockwise-rotate a 64-bit transition bitmap by 
+        Clockwise-rotate a 64-bit transition bitmap by
         rotation={0, 45, 90, 135, 180, 225, 270, 315} degrees.
 
         Parameters
@@ -500,7 +501,7 @@ class Grid8Transitions(Transitions):
 
         # Rotate the 8bits blocks
         value = ((value & (2**(rotation*8)-1)) <<
-                    ((8-rotation)*8)) | (value >> (rotation*8))
+                 ((8-rotation)*8)) | (value >> (rotation*8))
 
         cell_transition = value
 
@@ -540,9 +541,9 @@ class RailEnvTransitions(Grid4Transitions):
                        int('1000000000100000', 2),  # Case 1 - straight
                        int('1001001000100000', 2),  # Case 2 - simple switch
                        int('1000010000100001', 2),  # Case 3 - diamond drossing
-                       int('1001011000100001', 2),  # Case 4 - single slip switch
-                       int('1100110000110011', 2),  # Case 5 - double slip switch
-                       int('0101001000000010', 2),  # Case 6 - symmetrical switch
+                       int('1001011000100001', 2),  # Case 4 - single slip
+                       int('1100110000110011', 2),  # Case 5 - double slip
+                       int('0101001000000010', 2),  # Case 6 - symmetrical
                        int('0010000000000000', 2)]  # Case 7 - dead end
 
     def __init__(self):

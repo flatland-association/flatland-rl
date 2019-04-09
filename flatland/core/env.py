@@ -284,8 +284,9 @@ class RailEnv:
                 # Is it a legal move?  1) transition allows the movement in the
                 # cell,  2) the new cell is not empty (case 0),  3) the cell is
                 # free, i.e., no agent is currently in that cell
-                if new_position[1] >= self.width or new_position[0] >= self.height or\
-                    new_position[0] < 0 or new_position[1] < 0:
+                if new_position[1] >= self.width or\
+                   new_position[0] >= self.height or\
+                   new_position[0] < 0 or new_position[1] < 0:
                     new_cell_isValid = False
 
                 elif self.rail[new_position[0]][new_position[1]] > 0:
