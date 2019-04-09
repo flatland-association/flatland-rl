@@ -28,7 +28,8 @@ import flatland.utils.rendertools as rt
 
 
 def checkFrozenImage(sFileImage):
-    sTmpFileImage = "flatland/images/test/" + sFileImage
+    sDirRoot = "."
+    sTmpFileImage = sDirRoot + "/images/test/" + sFileImage
 
     if os.path.exists(sTmpFileImage):
         os.remove(sTmpFileImage)
@@ -36,8 +37,8 @@ def checkFrozenImage(sFileImage):
     plt.savefig(sTmpFileImage)
 
     bytesFrozenImage = None
-    for sDir in [ "flatland/images/", "flatland/images/test/" ]:
-        sfPath = sDir + sFileImage
+    for sDir in [ "/images/", "/images/test/" ]:
+        sfPath = sDirRoot + sDir + sFileImage
         with open(sfPath, "rb") as fIn:
             bytesImage = fIn.read()
             if bytesFrozenImage == None:
