@@ -58,5 +58,27 @@ def test_render_env():
 
     checkFrozenImage("basic-env.png")
 
+    plt.figure(figsize=(10,10))
+    oRT.renderEnv()
+    lVisits = oRT.plotTreeOnRail(
+        oEnv.agents_position[0], 
+        oEnv.agents_direction[0], 
+        nDepth=17)
+
+    checkFrozenImage("env-tree-spatial.png")
+    
+    plt.figure(figsize=(8,8))
+    xyTarg = oRT.env.agents_target[0]
+    visitDest = oRT.plotTree(lVisits, xyTarg)
+
+    checkFrozenImage("env-tree-graph.png")
 
 
+    oFig = plt.figure(figsize=(10,10))
+    oRT.renderEnv()
+    oRT.plotPath(visitDest)
+
+    checkFrozenImage("env-path.png")
+
+
+    

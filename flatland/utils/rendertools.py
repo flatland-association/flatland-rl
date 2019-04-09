@@ -125,7 +125,7 @@ class RenderTool(object):
         else:
             return gTransRCAg
 
-    def plotAgent(self, rcPos, iDir, sColor):
+    def plotAgent(self, rcPos, iDir, sColor="r"):
         """
         Plot a simple agent.
         Assumes a working matplotlib context.
@@ -278,14 +278,22 @@ class RenderTool(object):
             visit = visitDest
             xyPrev = None
             while visit.prev is not None:
-                # rDist =  np.linalg.norm(array(visit.xy) - array(xyTarg))
-                # xLoc = rDist + visit.iDir / 4
-                # print (visit.xy)
                 xy = np.matmul(visit.rc, rt.grc2xy) + rt.xyHalf
                 if xyPrev is not None:
-                    plt.plot([xy[0], xyPrev[0]],
-                             [xy[1], xyPrev[1]],
-                             color="r", alpha=0.5, lw=3)
+                    dx, dy = (xyPrev - xy) / 20
+                    xyLine = array([xy, xyPrev]) + array([dy, dx])
+
+                    plt.plot(*xyLine.T, color="r", alpha=0.5, lw=1)
+
+                    xyMid = np.sum(xyLine * [[1/4], [3/4]], axis=0)
+
+                    xyArrow = array([
+                        xyMid + [-dx-dy, +dx-dy],
+                        xyMid,
+                        xyMid + [-dx+dy, -dx-dy]
+                        ])
+                    plt.plot(*xyArrow.T, color="r")
+
                 visit = visit.prev
                 xyPrev = xy
 
@@ -411,10 +419,13 @@ class RenderTool(object):
         plt.xlim([0, env.width * cell_size])
         plt.ylim([-env.height * cell_size, 0])
 
-        plt.xticks(np.linspace(0, env.width * cell_size, env.width+1))
-        plt.yticks(np.linspace(-env.height * cell_size, 0, env.height+1),
-                   np.abs(np.linspace(-env.height * cell_size,
-                          0, env.height+1)))
+        gTicks = (np.arange(0, env.height) + 0.5) * cell_size
+        gLabels = np.arange(0, env.height)
+        plt.xticks(gTicks, gLabels)
+
+        gTicks = np.arange(-env.height * cell_size, 0) + cell_size/2
+        gLabels = np.arange(env.height, 0, -1)
+        plt.yticks(gTicks, gLabels)
 
         plt.xlim([0, env.width * cell_size])
         plt.ylim([-env.height * cell_size, 0])
