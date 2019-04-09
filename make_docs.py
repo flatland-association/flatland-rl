@@ -22,11 +22,11 @@ def remove_exists(filename):
 remove_exists('docs/flatland.rst')
 remove_exists('docs/modules.rst')
 
-subprocess.call('sphinx-apidoc -o docs/ flatland')
+subprocess.call(['sphinx-apidoc', '-o', 'docs/', 'flatland'])
 
 os.environ["SPHINXPROJ"] = "flatland"
 os.chdir('docs')
-subprocess.call('python -msphinx -M clean . _build')
-subprocess.call('python -msphinx -M html . _build')
+subprocess.call(['python', '-msphinx', '-M', 'clean', '.', '_build'])
+subprocess.call(['python', '-msphinx', '-M', 'html', '.', '_build'])
 
 browser(os.path.abspath('_build/html/index.html'))
