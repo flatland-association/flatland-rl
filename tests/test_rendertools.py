@@ -5,6 +5,7 @@ from flatland.core.env import RailEnv
 #from flatland.core.transitions import GridTransitions
 import numpy as np
 import random
+import os
 
 from recordtype import recordtype
 
@@ -26,6 +27,23 @@ import flatland.utils.rendertools as rt
 
 
 
+def checkFrozenImage(sFileImage):
+    sTmpFileImage = "images/test/" + sFileImage
+
+    if os.path.exists(sTmpFileImage):
+        os.remove(sTmpFileImage)
+
+    plt.savefig(sTmpFileImage)
+
+    bytesFrozenImage = None
+    for sDir in [ "images/", "images/test/" ]:
+        sfPath = sDir + sFileImage
+        with open(sfPath, "rb") as fIn:
+            bytesImage = fIn.read()
+            if bytesFrozenImage == None:
+                bytesFrozenImage = bytesImage
+            else:
+                assert(bytesFrozenImage == bytesImage)
 
 
 def test_render_env():
@@ -37,3 +55,8 @@ def test_render_env():
     oRT = rt.RenderTool(oEnv)
     plt.figure(figsize=(10,10))
     oRT.renderEnv()
+
+    checkFrozenImage("basic-env.png")
+
+
+
