@@ -21,11 +21,19 @@ Generate Docs
      | **TODO**: Mohanty to add atleast a neat outline herefor the contents to the docs here.
 
     .. code-block:: bash
-
+          Linux and macOS setup
           git clone git@gitlab.aicrowd.com:flatland/flatland.git
           cd flatland
           pip install -r requirements_dev.txt
           make docs
+
+          Windows Setup
+          git clone git@gitlab.aicrowd.com:flatland/flatland.git
+          cd flatland
+          pip install -r requirements_dev.txt
+          python setup.py develop
+          python make_docs.py
+     
 
 Features
 --------
@@ -36,4 +44,5 @@ Authors
 --------
 * Sharada Mohanty <mohanty@aicrowd.com>
 * Giacomo Spigler <giacomo.spigler@gmail.com>
+* Mattias Ljungström <ml@mljx.io>
 <please fill yourself in>

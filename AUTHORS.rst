@@ -11,6 +11,7 @@ Development
 
 * A Egli <adrian.egli@sbb.ch> 
 
+* Mattias Ljungström <ml@mljx.io>
 
 Contributors
 ------------
