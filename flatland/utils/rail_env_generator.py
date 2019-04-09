@@ -2,8 +2,8 @@
 The rail_env_generator module defines provides utilities to generate env
 bitmaps for the RailEnv environment.
 """
-import numpy as np
 import random
+import numpy as np
 
 from flatland.core.transitions import RailEnvTransitions
 
@@ -82,8 +82,7 @@ def generate_random_rail(width, height):
     for i in range(len(t_utils.transitions)-1):  # don't include dead-ends
         all_transitions = 0
         for dir_ in range(4):
-            trans = t_utils.get_transitions_from_orientation(
-                     t_utils.transitions[i], dir_)
+            trans = t_utils.get_transitions(t_utils.transitions[i], dir_)
             all_transitions |= (trans[0] << 3) | \
                                (trans[1] << 2) | \
                                (trans[2] << 1) | \
@@ -148,8 +147,7 @@ def generate_random_rail(width, height):
                     max_bit = 0
                     for k in range(4):
                         max_bit |= \
-                         t_utils.get_transition_from_orientation_to_direction(
-                          neigh_trans, k, el[1])
+                         t_utils.get_transition(neigh_trans, k, el[1])
 
                     if max_bit:
                         valid_template[el[0]] = 1

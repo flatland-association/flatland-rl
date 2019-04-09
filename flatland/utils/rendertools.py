@@ -58,7 +58,7 @@ class RenderTool(object):
                     # transition for next cell
                     oTrans = self.env.rail[rcNext[0]][rcNext[1]]
                     tbTrans = RailEnvTransitions. \
-                        get_transitions_from_orientation(oTrans, iDir)
+                        get_transitions(oTrans, iDir)
                     giTrans = np.where(tbTrans)[0]  # RC list of transitions
                     gTransRCAg = self.__class__.gTransRC[giTrans]
 
@@ -106,7 +106,7 @@ class RenderTool(object):
 
         # TODO: suggest we provide an accessor in RailEnv
         oTrans = self.env.rail[rcPos]   # transition for current cell
-        tbTrans = rt.RETrans.get_transitions_from_orientation(oTrans, iDir)
+        tbTrans = rt.RETrans.get_transitions(oTrans, iDir)
         giTrans = np.where(tbTrans)[0]  # RC list of transitions
 
         # HACK: workaround dead-end transitions
@@ -363,8 +363,7 @@ class RenderTool(object):
                     # renderer.translate(c * CELL_PIXELS, r * CELL_PIXELS)
 
                     if True:
-                        tMoves = RETrans.get_transitions_from_orientation(
-                                    oCell, orientation)
+                        tMoves = RETrans.get_transitions(oCell, orientation)
 
                         # to_ori = (orientation + 2) % 4
                         for to_ori in range(4):

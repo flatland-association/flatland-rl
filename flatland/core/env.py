@@ -144,9 +144,7 @@ class RailEnv:
 
         self.agents_handles = list(range(self.number_of_agents))
 
-        self.t_utils = RailEnvTransitions()
-        # TODO : bad hack for pylint 80 characters per line; shortened function
-        self.gtfotd = self.t_utils.get_transition_from_orientation_to_direction
+        self.trans = RailEnvTransitions()
 
     def get_agent_handles(self):
         return self.agents_handles
@@ -177,7 +175,7 @@ class RailEnv:
                 valid_movements = []
                 for direction in range(4):
                     position = self.agents_position[i]
-                    moves = self.t_utils.get_transitions_from_orientation(
+                    moves = self.trans.get_transitions(
                              self.rail[position[0]][position[1]], direction)
                     for move_index in range(4):
                         if moves[move_index]:
@@ -272,7 +270,7 @@ class RailEnv:
                         elif direction == 3:
                             reverse_direction = 1
 
-                        valid_transition = self.gtfotd(
+                        valid_transition = self.trans.get_transition(
                                             self.rail[pos[0]][pos[1]],
                                             reverse_direction,
                                             reverse_direction)
@@ -295,7 +293,7 @@ class RailEnv:
                 else:
                     new_cell_isValid = False
 
-                transition_isValid = self.gtfotd(
+                transition_isValid = self.trans.get_transition(
                      self.rail[pos[0]][pos[1]],
                      direction,
                      movement)
@@ -364,7 +362,7 @@ class RailEnv:
                 return 1
             if node not in visited:
                 visited.add(node)
-                moves = self.t_utils.get_transitions_from_orientation(
+                moves = self.trans.get_transitions(
                          self.rail[node[0][0]][node[0][1]], node[1])
                 for move_index in range(4):
                     if moves[move_index]:
