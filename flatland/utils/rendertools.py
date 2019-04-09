@@ -424,7 +424,7 @@ class RenderTool(object):
         plt.xticks(gTicks, gLabels)
 
         gTicks = np.arange(-env.height * cell_size, 0) + cell_size/2
-        gLabels = np.arange(env.height, 0, -1)
+        gLabels = np.arange(env.height-1, -1, -1)
         plt.yticks(gTicks, gLabels)
 
         plt.xlim([0, env.width * cell_size])
