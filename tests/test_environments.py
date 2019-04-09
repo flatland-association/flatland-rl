@@ -28,17 +28,21 @@ def test_rail_environment_single_agent():
     transitions = Grid4Transitions([])
     vertical_line = cells[1]
     south_symmetrical_switch = cells[6]
-    north_symmetrical_switch = transitions.rotate_transition(south_symmetrical_switch, 180)
-    south_east_turn = int('0100000000000010', 2)  # Simple turn not in the base transitions ?
+    north_symmetrical_switch = transitions.rotate_transition(
+                                south_symmetrical_switch, 180)
+    # Simple turn not in the base transitions ?
+    south_east_turn = int('0100000000000010', 2)
     south_west_turn = transitions.rotate_transition(south_east_turn, 90)
     # print(bytes(south_west_turn))
     north_east_turn = transitions.rotate_transition(south_east_turn, 270)
     north_west_turn = transitions.rotate_transition(south_east_turn, 180)
 
-    rail_map = np.array([[south_east_turn, south_symmetrical_switch, south_west_turn],
-                    [vertical_line, vertical_line, vertical_line],
-                    [north_east_turn, north_symmetrical_switch, north_west_turn]],
-                   dtype=np.uint16)
+    rail_map = np.array([[south_east_turn, south_symmetrical_switch,
+                          south_west_turn],
+                         [vertical_line, vertical_line, vertical_line],
+                         [north_east_turn, north_symmetrical_switch,
+                          north_west_turn]],
+                        dtype=np.uint16)
 
     rail_env = RailEnv(rail_map, number_of_agents=1)
     for _ in range(200):
@@ -47,7 +51,8 @@ def test_rail_environment_single_agent():
         # We do not care about target for the moment
         rail_env.agents_target[0] = [-1, -1]
 
-        # Check that trains are always initialized at a consistent position / direction.
+        # Check that trains are always initialized at a consistent position
+        # or direction.
         # They should always be able to go somewhere.
         assert(transitions.get_transitions(
             rail_map[rail_env.agents_position[0]],
@@ -68,8 +73,8 @@ def test_rail_environment_single_agent():
             if prev_pos != pos:
                 valid_active_actions_done += 1
 
-        # After 6 movements on this railway network, the train should be back to its original
-        # position.
+        # After 6 movements on this railway network, the train should be back
+        # to its original position.
         assert(initial_pos[0] == rail_env.agents_position[0][0])
 
         # We check that the train always attains its target after some time
@@ -84,9 +89,3 @@ def test_rail_environment_single_agent():
                 _, _, dones, _ = rail_env.step({0: action})
 
                 done = dones['__all__']
-
-
-
-
-
-
