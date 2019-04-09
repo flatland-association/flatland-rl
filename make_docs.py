@@ -3,13 +3,10 @@
 import os
 import webbrowser
 import subprocess
+from urllib.request import pathname2url
 
 def browser(pathname):
-    try:
-        from urllib import pathname2url
-    except:
-        from urllib.request import pathname2url
-    webbrowser.open("file:" + pathname2url(pathname))
+    webbrowser.open("file:" + pathname2url(os.path.abspath(pathname)))
 
 def remove_exists(filename):
     try:
@@ -29,4 +26,4 @@ os.chdir('docs')
 subprocess.call(['python', '-msphinx', '-M', 'clean', '.', '_build'])
 subprocess.call(['python', '-msphinx', '-M', 'html', '.', '_build'])
 
-browser(os.path.abspath('_build/html/index.html'))
+browser('_build/html/index.html')
