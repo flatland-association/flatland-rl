@@ -68,9 +68,7 @@ class RenderTool(object):
             tbTrans = rt.RETrans.get_transitions(oTrans, visit.iDir)
             giTrans = np.where(tbTrans)[0]  # RC list of transitions
             gTransRCAg = rt.gTransRC[giTrans]
-            self.plotTrans(
-                visit.rc, gTransRCAg,
-                depth=str(visit.iDepth), color=color)
+            self.plotTrans(visit.rc, gTransRCAg, depth=str(visit.iDepth), color=color)
 
     def plotAgents(self):
         rt = self.__class__
