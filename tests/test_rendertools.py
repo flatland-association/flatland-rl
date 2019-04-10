@@ -61,10 +61,11 @@ def test_render_env():
 
     plt.figure(figsize=(10,10))
     oRT.renderEnv()
-    lVisits = oRT.plotTreeOnRail(
+    
+    lVisits = oRT.getTreeFromRail(
         oEnv.agents_position[0], 
         oEnv.agents_direction[0], 
-        nDepth=17)
+        nDepth=17, bPlot=True)
 
     checkFrozenImage("env-tree-spatial.png")
     

@@ -30,7 +30,8 @@ class RenderTool(object):
     def __init__(self, env):
         self.env = env
 
-    def plotTreeOnRail(self, rcPos, iDir, nDepth=10):
+    #def plotTreeOnRail(self, rcPos, iDir, nDepth=10, color="r"):
+    def plotTreeOnRail(self, lVisits, color="r"):
         """
         Derives and plots a tree of transitions starting at position rcPos
         in direction iDir.
@@ -50,7 +51,7 @@ class RenderTool(object):
                 self.plotAgent(rcPos, iDir, sColor)
 
                 gTransRCAg = self.getTransRC(rcPos, iDir)
-                self.plotTrans(rcPos, gTransRCAg)
+                self.plotTrans(rcPos, gTransRCAg, color=color)
 
                 if False:
                     # TODO: this was `rcDir' but it was undefined
@@ -62,13 +63,16 @@ class RenderTool(object):
                     giTrans = np.where(tbTrans)[0]  # RC list of transitions
                     gTransRCAg = self.__class__.gTransRC[giTrans]
 
-        # rcPos=(6,4)
-        # iDir=2
-        gTransRCAg = self.getTransRC(rcPos, iDir)
-        self.plotTrans(rcPos, gTransRCAg)
+        for visit in lVisits:
+            # transition for next cell
+            oTrans = self.env.rail[visit.rc]
+            tbTrans = rt.RETrans.get_transitions(oTrans, visit.iDir)
+            giTrans = np.where(tbTrans)[0]  # RC list of transitions
+            gTransRCAg = rt.gTransRC[giTrans]
+            self.plotTrans(visit.rc, gTransRCAg, depth=str(visit.iDepth), color=color)
 
-        lVisits = self.getTreeFromRail(rcPos, iDir, nDepth=nDepth)
-        return lVisits
+        #lVisits = self.getTreeFromRail(rcPos, iDir, nDepth=nDepth)
+        #return lVisits
 
     def plotAgents(self):
         rt = self.__class__
@@ -149,12 +153,13 @@ class RenderTool(object):
         xyPos = np.matmul(rcPos, rt.grc2xy) + rt.xyHalf
         gxyTrans = xyPos + np.matmul(gTransRCAg, rt.grc2xy/2.4)
         # print(gxyTrans)
+        #print(gxyTrans, color)
         plt.scatter(*gxyTrans.T, color=color, marker="o", s=50, alpha=0.2)
         if depth is not None:
             for x, y in gxyTrans:
                 plt.text(x, y, depth)
 
-    def getTreeFromRail(self, rcPos, iDir, nDepth=10, bBFS=True):
+    def getTreeFromRail(self, rcPos, iDir, nDepth=10, bBFS=True, bPlot=False):
         """
         Generate a tree from the env starting at rcPos, iDir.
         """
@@ -194,7 +199,8 @@ class RenderTool(object):
                     stack.append(visitNext)
 
                 # plot the available transitions from this node
-                self.plotTrans(visit.rc, gTransRCAg, depth=str(visit.iDepth))
+                if bPlot:
+                    self.plotTrans(visit.rc, gTransRCAg, depth=str(visit.iDepth))
 
         return lVisits
 
