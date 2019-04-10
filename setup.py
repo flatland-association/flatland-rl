@@ -38,7 +38,7 @@ setup(
     include_package_data=True,
     keywords='flatland',
     name='flatland-rl',
-    packages=find_packages(include=['flatland']),
+    packages=find_packages('.'),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
