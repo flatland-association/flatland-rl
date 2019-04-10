@@ -39,11 +39,12 @@ def checkFrozenImage(sFileImage):
     bytesFrozenImage = None
     for sDir in [ "/images/", "/images/test/" ]:
         sfPath = sDirRoot + sDir + sFileImage
-        bytesImage = plt.imread(sfPath)
-        if bytesFrozenImage is None:
-            bytesFrozenImage = bytesImage
-        else:
-            assert (np.sum(np.square(bytesFrozenImage-bytesImage)))
+        with open(sfPath, "rb") as fIn:
+            bytesImage = fIn.read()
+            if bytesFrozenImage == None:
+                bytesFrozenImage = bytesImage
+            else:
+                assert(bytesFrozenImage == bytesImage)
 
 
 def test_render_env():
