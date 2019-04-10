@@ -286,7 +286,7 @@ class RenderTool(object):
         if visitDest is not None:
             visit = visitDest
             xyPrev = None
-            while visit.prev is not None:
+            while visit is not None:
                 xy = np.matmul(visit.rc, rt.grc2xy) + rt.xyHalf
                 if xyPrev is not None:
                     dx, dy = (xyPrev - xy) / 20
