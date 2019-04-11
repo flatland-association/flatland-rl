@@ -281,6 +281,16 @@ class RenderTool(object):
         return visitDest
 
     def plotPath(self, visitDest):
+        """
+        Given a "final" visit visitDest, plotPath recurses back through the path
+        using the visit.prev field (previous) to get back to the start of the path.
+        The path of transitions is plotted with arrows at 3/4 along the line.
+        The transition is plotted slightly to one side of the rail, so that
+        transitions in opposite directions are separate.
+        Currently, no attempt is made to make the transition arrows coincide
+        at corners, and they are straight only.
+        """
+
         rt = self.__class__
         # Walk backwards from destination to origin
         if visitDest is not None:
@@ -306,7 +316,7 @@ class RenderTool(object):
                 visit = visit.prev
                 xyPrev = xy
 
-    def renderEnv(self, show=False, curves=True):
+    def renderEnv(self, show=False, curves=True, spacing=False, arrows=False, agents=True):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -332,7 +342,12 @@ class RenderTool(object):
                 color=sColor
             )
 
-        def drawTrans2(xyLine, xyCentre, rotation, sColor="gray"):
+        def drawTrans2(
+                xyLine, xyCentre,
+                rotation, bDeadEnd=False,
+                sColor="gray",
+                bArrow=True,
+                spacing=0.1):
             """
             gLine is a numpy 2d array of points,
             in the plotting space / coords.
@@ -341,16 +356,55 @@ class RenderTool(object):
             from x=0, y=0.5
             to   x=1, y=0.2
             """
-            xyMid = np.mean(xyLine, axis=0)
-            dxy = xyMid - xyCentre
-            xyCorner = xyMid + dxy
-            dxy2 = xyCentre - xyCorner
 
             bStraight = rotation in [0, 2]
             if bStraight:
-                plt.plot(*xyLine.T, color=sColor)
+
+                dx, dy = np.squeeze(np.diff(xyLine, axis=0)) * spacing / 2
+                if bDeadEnd:
+                    xyLine2 = array([
+                        xyLine[1] + [dy, dx],
+                        xyCentre,
+                        xyLine[1] - [dy, dx],
+                    ])
+                    plt.plot(*xyLine2.T, color=sColor)
+                else:
+                    xyLine2 = xyLine + [dy, dx]
+                    plt.plot(*xyLine2.T, color=sColor)
+
+                    if bArrow:
+                        xyMid = np.sum(xyLine2 * [[1/4], [3/4]], axis=0)
+
+                        xyArrow = array([
+                            xyMid + [-dx-dy, +dx-dy],
+                            xyMid,
+                            xyMid + [-dx+dy, -dx-dy]
+                            ])
+                        plt.plot(*xyArrow.T, color=sColor)
+
             else:
+
+                xyMid = np.mean(xyLine, axis=0)
+                dxy = xyMid - xyCentre
+                xyCorner = xyMid + dxy
+                if rotation == 1:
+                    rArcFactor = 1 - spacing
+                else:
+                    rArcFactor = 1 + spacing
+                dxy2 = (xyCentre - xyCorner) * rArcFactor  # for scaling the arc
+
                 plt.plot(*(gArc * dxy2 + xyCorner).T, color=sColor)
+
+                if bArrow:
+                    dx, dy = np.squeeze(np.diff(xyLine, axis=0)) / 20
+                    iArc = int(len(gArc) / 2)
+                    xyMid = xyCorner + gArc[iArc] * dxy2
+                    xyArrow = array([
+                        xyMid + [-dx-dy, +dx-dy],
+                        xyMid,
+                        xyMid + [-dx+dy, -dx-dy]
+                        ])
+                    plt.plot(*xyArrow.T, color=sColor)
 
         RETrans = RailEnvTransitions()
         env = self.env
@@ -369,13 +423,14 @@ class RenderTool(object):
         # Draw each cell independently
         for r in range(env.height):
             for c in range(env.width):
-                trans_ = env.rail[r][c]
 
+                # bounding box of the grid cell
                 x0 = cell_size * c       # left
                 x1 = cell_size * (c+1)   # right
                 y0 = cell_size * -r      # top
                 y1 = cell_size * -(r+1)  # bottom
 
+                # centres of cell edges
                 coords = [
                     ((x0+x1)/2.0, y0),  # N middle top
                     (x1, (y0+y1)/2.0),  # E middle right
@@ -383,83 +438,95 @@ class RenderTool(object):
                     (x0, (y0+y1)/2.0)   # W middle left
                 ]
 
+                # cell centre
                 xyCentre = array([x0, y1]) + cell_size / 2
 
+                # cell transition values
                 oCell = env.rail[r, c]
+
+                # Special Case 7, with a single bit; terminate at center
+                nbits = 0
+                tmp = oCell
+
+                while tmp > 0:
+                    nbits += (tmp & 1)
+                    tmp = tmp >> 1
+
+                # as above - move the from coord to the centre
+                # it's a dead env.
+                bDeadEnd = nbits == 1
 
                 for orientation in range(4):  # ori is where we're heading
                     from_ori = (orientation + 2) % 4  # 0123=NESW -> 2301=SWNE
                     from_xy = coords[from_ori]
 
-                    # Special Case 7, with a single bit; terminate at center
-                    nbits = 0
-                    tmp = trans_
-
-                    while tmp > 0:
-                        nbits += (tmp & 1)
-                        tmp = tmp >> 1
-
-                    # as above - move the from coord to the centre
-                    # it's a dead env.
-                    if nbits == 1:
-                        from_xy = ((x0+x1)/2.0, (y0+y1)/2.0)
-
                     # renderer.push()
                     # renderer.translate(c * CELL_PIXELS, r * CELL_PIXELS)
 
-                    if True:
-                        tMoves = RETrans.get_transitions(oCell, orientation)
+                    tMoves = RETrans.get_transitions(oCell, orientation)
 
-                        # to_ori = (orientation + 2) % 4
-                        for to_ori in range(4):
-                            to_xy = coords[to_ori]
-                            rotation = (to_ori - from_ori) % 4
+                    # to_ori = (orientation + 2) % 4
+                    for to_ori in range(4):
+                        to_xy = coords[to_ori]
+                        rotation = (to_ori - from_ori) % 4
 
-                            if (tMoves[to_ori]):
+                        if (tMoves[to_ori]):  # if we have this transition
+
+                            if bDeadEnd:
+                                drawTrans2(
+                                    array([from_xy, to_xy]), xyCentre,
+                                    rotation, bDeadEnd=True, spacing=spacing)
+
+                            else:
+
                                 if curves:
-                                    drawTrans2(array([from_xy, to_xy]), xyCentre, rotation)
+                                    drawTrans2(
+                                        array([from_xy, to_xy]), xyCentre,
+                                        rotation, spacing=spacing, bArrow=arrows)
                                 else:
                                     drawTrans(from_xy, to_xy)
-                                if False:
-                                    print(
-                                        "r,c,ori: ", r, c, orientation,
-                                        "cell:", "{0:b}".format(oCell),
-                                        "moves:", tMoves,
-                                        "from:", from_ori, from_xy,
-                                        "to: ", to_ori, to_xy,
-                                        "cen:", *xyCentre,
-                                        "rot:", rotation,
-                                    )
+
+                            if False:
+                                print(
+                                    "r,c,ori: ", r, c, orientation,
+                                    "cell:", "{0:b}".format(oCell),
+                                    "moves:", tMoves,
+                                    "from:", from_ori, from_xy,
+                                    "to: ", to_ori, to_xy,
+                                    "cen:", *xyCentre,
+                                    "rot:", rotation,
+                                )
 
         # Draw each agent + its orientation + its target
-        cmap = plt.get_cmap('hsv', lut=env.number_of_agents+1)
-        for i in range(env.number_of_agents):
-            self._draw_square((env.agents_position[i][1] *
-                              cell_size+cell_size/2,
-                              -env.agents_position[i][0] *
-                              cell_size-cell_size/2),
-                              cell_size/8, cmap(i))
-        for i in range(env.number_of_agents):
-            self._draw_square((env.agents_target[i][1] *
-                              cell_size+cell_size/2,
-                              -env.agents_target[i][0] *
-                              cell_size-cell_size/2),
-                              cell_size/3, [c for c in cmap(i)])
+        if agents:
+            cmap = plt.get_cmap('hsv', lut=env.number_of_agents+1)
+            for i in range(env.number_of_agents):
+                self._draw_square((
+                                env.agents_position[i][1] *
+                                cell_size+cell_size/2,
+                                -env.agents_position[i][0] *
+                                cell_size-cell_size/2),
+                                cell_size/8, cmap(i))
+            for i in range(env.number_of_agents):
+                self._draw_square((
+                                env.agents_target[i][1] *
+                                cell_size+cell_size/2,
+                                -env.agents_target[i][0] *
+                                cell_size-cell_size/2),
+                                cell_size/3, [c for c in cmap(i)])
 
-            # orientation is a line connecting the center of the cell to the
-            # side of the square of the agent
-            new_position = env._new_position(env.agents_position[i],
-                                             env.agents_direction[i])
-            new_position = ((new_position[0] +
-                            env.agents_position[i][0])/2*cell_size,
-                            (new_position[1] +
-                            env.agents_position[i][1])/2*cell_size)
+                # orientation is a line connecting the center of the cell to the
+                # side of the square of the agent
+                new_position = env._new_position(env.agents_position[i], env.agents_direction[i])
+                new_position = ((
+                    new_position[0] + env.agents_position[i][0]) / 2 * cell_size,
+                    (new_position[1] + env.agents_position[i][1]) / 2 * cell_size)
 
-            plt.plot([env.agents_position[i][1] * cell_size+cell_size/2,
-                     new_position[1]+cell_size/2],
-                     [-env.agents_position[i][0] * cell_size-cell_size/2,
-                     -new_position[0]-cell_size/2], color=cmap(i),
-                     linewidth=2.0)
+                plt.plot(
+                    [env.agents_position[i][1] * cell_size+cell_size/2, new_position[1]+cell_size/2],
+                    [-env.agents_position[i][0] * cell_size-cell_size/2, -new_position[0]-cell_size/2],
+                    color=cmap(i),
+                    linewidth=2.0)
 
         plt.xlim([0, env.width * cell_size])
         plt.ylim([-env.height * cell_size, 0])
