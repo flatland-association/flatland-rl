@@ -53,5 +53,6 @@ Authors
 * Giacomo Spigler <giacomo.spigler@gmail.com>
 * Mattias Ljungström <ml@mljx.io>
 * Jeremy Watson
+* Erik Nygren <erik.nygren@sbb.ch>
 
 <please fill yourself in>
