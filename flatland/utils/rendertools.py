@@ -100,7 +100,7 @@ class RenderTool(object):
         """
 
         # TODO: suggest we provide an accessor in RailEnv
-        tbTrans = self.env.get_transitions((rcPos[0], rcPos[1], iDir))
+        tbTrans = self.env.rail.get_transitions((rcPos[0], rcPos[1], iDir))
         giTrans = np.where(tbTrans)[0]  # RC list of transitions
 
         # HACK: workaround dead-end transitions
