@@ -17,7 +17,7 @@ env = RailEnv(rail, number_of_agents=10)
 env.reset()
 
 env_renderer = RenderTool(env)
-env_renderer.renderEnv()
+env_renderer.renderEnv(show=True)
 
 
 # Example generate a rail given a manual specification,
@@ -37,7 +37,7 @@ env.agents_target = [[1, 1]]
 env.agents_direction = [1]
 
 env_renderer = RenderTool(env)
-env_renderer.renderEnv()
+env_renderer.renderEnv(show=True)
 
 
 print("Manual control: s=perform step, q=quit, [agent id] [1-2-3 action] \
@@ -64,4 +64,4 @@ for step in range(100):
             i = i+1
         i += 1
 
-    env_renderer.renderEnv()
+    env_renderer.renderEnv(show=True)

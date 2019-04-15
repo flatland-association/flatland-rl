@@ -5,8 +5,6 @@ The base Environment class is adapted from rllib.env.MultiAgentEnv
 """
 import random
 
-from .transitions import RailEnvTransitions
-
 
 class Environment:
     """
@@ -133,8 +131,8 @@ class RailEnv:
         """
 
         self.rail = rail
-        self.width = len(self.rail[0])
-        self.height = len(self.rail)
+        self.width = rail.width
+        self.height = rail.height
 
         self.number_of_agents = number_of_agents
 
@@ -143,8 +141,6 @@ class RailEnv:
         self.done = False
 
         self.agents_handles = list(range(self.number_of_agents))
-
-        self.trans = RailEnvTransitions()
 
     def get_agent_handles(self):
         return self.agents_handles
@@ -159,7 +155,7 @@ class RailEnv:
             valid_positions = []
             for r in range(self.height):
                 for c in range(self.width):
-                    if self.rail[r][c] > 0:
+                    if self.rail.get_transitions((r, c)) > 0:
                         valid_positions.append((r, c))
 
             self.agents_position = random.sample(valid_positions,
@@ -175,8 +171,8 @@ class RailEnv:
                 valid_movements = []
                 for direction in range(4):
                     position = self.agents_position[i]
-                    moves = self.trans.get_transitions(
-                             self.rail[position[0]][position[1]], direction)
+                    moves = self.rail.get_transitions(
+                            (position[0], position[1], direction))
                     for move_index in range(4):
                         if moves[move_index]:
                             valid_movements.append((direction, move_index))
@@ -251,8 +247,9 @@ class RailEnv:
                 if action == 2:
                     # compute number of possible transitions in the current
                     # cell
+                    is_deadend = False
                     nbits = 0
-                    tmp = self.rail[pos[0]][pos[1]]
+                    tmp = self.rail.get_transitions((pos[0], pos[1]))
                     while tmp > 0:
                         nbits += (tmp & 1)
                         tmp = tmp >> 1
@@ -270,14 +267,13 @@ class RailEnv:
                         elif direction == 3:
                             reverse_direction = 1
 
-                        valid_transition = self.trans.get_transition(
-                                            self.rail[pos[0]][pos[1]],
-                                            reverse_direction,
+                        valid_transition = self.rail.get_transition(
+                                            (pos[0], pos[1], direction),
                                             reverse_direction)
-
                         if valid_transition:
                             direction = reverse_direction
-                            movement = direction
+                            movement = reverse_direction
+                            is_deadend = True
 
                 new_position = self._new_position(pos, movement)
 
@@ -289,15 +285,14 @@ class RailEnv:
                    new_position[0] < 0 or new_position[1] < 0:
                     new_cell_isValid = False
 
-                elif self.rail[new_position[0]][new_position[1]] > 0:
+                elif self.rail.get_transitions((new_position[0], new_position[1])) > 0:
                     new_cell_isValid = True
                 else:
                     new_cell_isValid = False
 
-                transition_isValid = self.trans.get_transition(
-                     self.rail[pos[0]][pos[1]],
-                     direction,
-                     movement)
+                transition_isValid = self.rail.get_transition(
+                     (pos[0], pos[1], direction),
+                     movement) or is_deadend
 
                 cell_isFree = True
                 for j in range(self.number_of_agents):
@@ -363,8 +358,7 @@ class RailEnv:
                 return 1
             if node not in visited:
                 visited.add(node)
-                moves = self.trans.get_transitions(
-                         self.rail[node[0][0]][node[0][1]], node[1])
+                moves = self.rail.get_transitions((node[0][0], node[0][1], node[1]))
                 for move_index in range(4):
                     if moves[move_index]:
                         stack.append((self._new_position(node[0], move_index),
@@ -373,7 +367,7 @@ class RailEnv:
                 # If cell is a dead-end, append previous node with reversed
                 # orientation!
                 nbits = 0
-                tmp = self.rail[node[0][0]][node[0][1]]
+                tmp = self.rail.get_transitions((node[0][0], node[0][1]))
                 while tmp > 0:
                     nbits += (tmp & 1)
                     tmp = tmp >> 1

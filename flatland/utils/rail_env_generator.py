@@ -6,6 +6,7 @@ import random
 import numpy as np
 
 from flatland.core.transitions import RailEnvTransitions
+from flatland.core.transitionmap import GridTransitionMap
 
 
 def generate_rail_from_manual_specifications(rail_spec):
@@ -30,7 +31,7 @@ def generate_rail_from_manual_specifications(rail_spec):
 
     height = len(rail_spec)
     width = len(rail_spec[0])
-    rail = np.zeros((height, width), dtype=np.uint16)
+    rail = GridTransitionMap(width=width, height=height, transitions=t_utils)
 
     for r in range(height):
         for c in range(width):
@@ -38,8 +39,8 @@ def generate_rail_from_manual_specifications(rail_spec):
             if cell[0] < 0 or cell[0] >= len(t_utils.transitions):
                 print("ERROR - invalid cell type=", cell[0])
                 return []
-            rail[r, c] = t_utils.rotate_transition(
-                          t_utils.transitions[cell[0]], cell[1])
+            rail.set_transitions((r, c), t_utils.rotate_transition(
+                          t_utils.transitions[cell[0]], cell[1]))
 
     return rail
 
@@ -300,4 +301,7 @@ def generate_random_rail(width, height):
             if rail[r][c] is None:
                 rail[r][c] = int('0000000000000000', 2)
 
-    return np.asarray(rail, dtype=np.uint16)
+    tmp_rail = np.asarray(rail, dtype=np.uint16)
+    return_rail = GridTransitionMap(width=width, height=height, transitions=t_utils)
+    return_rail.grid = tmp_rail
+    return return_rail

@@ -4,7 +4,6 @@ import numpy as np
 from numpy import array
 import xarray as xr
 import matplotlib.pyplot as plt
-from flatland.core.transitions import RailEnvTransitions
 
 
 class RenderTool(object):
@@ -25,7 +24,6 @@ class RenderTool(object):
     gCentres = xr.DataArray(gGrid,
                             dims=["xy", "p1", "p2"],
                             coords={"xy": ["x", "y"]}) + xyPixHalf
-    RETrans = RailEnvTransitions()
 
     def __init__(self, env):
         self.env = env
@@ -56,16 +54,14 @@ class RenderTool(object):
                     # TODO: this was `rcDir' but it was undefined
                     rcNext = rcPos + iDir
                     # transition for next cell
-                    oTrans = self.env.rail[rcNext[0]][rcNext[1]]
-                    tbTrans = RailEnvTransitions. \
-                        get_transitions(oTrans, iDir)
+                    tbTrans = self.env.rail. \
+                        get_transitions((rcNext[0], rcNext[1], iDir))
                     giTrans = np.where(tbTrans)[0]  # RC list of transitions
                     gTransRCAg = self.__class__.gTransRC[giTrans]
 
         for visit in lVisits:
             # transition for next cell
-            oTrans = self.env.rail[visit.rc]
-            tbTrans = rt.RETrans.get_transitions(oTrans, visit.iDir)
+            tbTrans = self.env.rail.get_transitions((visit.rc[0], visit.rc[1], visit.iDir))
             giTrans = np.where(tbTrans)[0]  # RC list of transitions
             gTransRCAg = rt.gTransRC[giTrans]
             self.plotTrans(visit.rc, gTransRCAg, depth=str(visit.iDepth), color=color)
@@ -102,11 +98,9 @@ class RenderTool(object):
             [0, 1] #  available transition indices, ie N, E
         )
         """
-        rt = self.__class__
 
         # TODO: suggest we provide an accessor in RailEnv
-        oTrans = self.env.rail[rcPos]   # transition for current cell
-        tbTrans = rt.RETrans.get_transitions(oTrans, iDir)
+        tbTrans = self.env.get_transitions((rcPos[0], rcPos[1], iDir))
         giTrans = np.where(tbTrans)[0]  # RC list of transitions
 
         # HACK: workaround dead-end transitions
@@ -406,7 +400,6 @@ class RenderTool(object):
                         ])
                     plt.plot(*xyArrow.T, color=sColor)
 
-        RETrans = RailEnvTransitions()
         env = self.env
 
         # Draw cells grid
@@ -442,7 +435,7 @@ class RenderTool(object):
                 xyCentre = array([x0, y1]) + cell_size / 2
 
                 # cell transition values
-                oCell = env.rail[r, c]
+                oCell = env.rail.get_transitions((r, c))
 
                 # Special Case 7, with a single bit; terminate at center
                 nbits = 0
@@ -463,7 +456,7 @@ class RenderTool(object):
                     # renderer.push()
                     # renderer.translate(c * CELL_PIXELS, r * CELL_PIXELS)
 
-                    tMoves = RETrans.get_transitions(oCell, orientation)
+                    tMoves = env.rail.get_transitions((r, c, orientation))
 
                     # to_ori = (orientation + 2) % 4
                     for to_ori in range(4):
