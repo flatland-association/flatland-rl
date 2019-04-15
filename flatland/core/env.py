@@ -244,10 +244,10 @@ class RailEnv:
                 if movement >= 4:
                     movement -= 4
 
+                is_deadend = False
                 if action == 2:
                     # compute number of possible transitions in the current
                     # cell
-                    is_deadend = False
                     nbits = 0
                     tmp = self.rail.get_transitions((pos[0], pos[1]))
                     while tmp > 0:
