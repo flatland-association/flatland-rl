@@ -54,5 +54,6 @@ Authors
 * Mattias Ljungström <ml@mljx.io>
 * Jeremy Watson
 * Erik Nygren <erik.nygren@sbb.ch>
+* Adrian Egli <adrian.egli@sbb.ch>
 
 <please fill yourself in>
