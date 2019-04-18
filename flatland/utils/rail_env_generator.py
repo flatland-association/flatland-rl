@@ -6,7 +6,7 @@ import random
 import numpy as np
 
 from flatland.core.transitions import RailEnvTransitions
-from flatland.core.transitionmap import GridTransitionMap
+from flatland.core.transition_map import GridTransitionMap
 
 
 def generate_rail_from_manual_specifications(rail_spec):

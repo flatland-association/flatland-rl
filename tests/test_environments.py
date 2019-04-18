@@ -3,7 +3,7 @@
 
 from flatland.core.env import RailEnv
 from flatland.core.transitions import Grid4Transitions
-from flatland.core.transitionmap import GridTransitionMap
+from flatland.core.transition_map import GridTransitionMap
 import numpy as np
 
 """Tests for `flatland` package."""
