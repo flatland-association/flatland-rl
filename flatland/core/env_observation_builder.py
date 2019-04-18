@@ -1,4 +1,4 @@
-## TODO: add docstrings, pylint, etc...
+# TODO: add docstrings, pylint, etc...
 
 
 class ObservationBuilder:
@@ -12,16 +12,14 @@ class ObservationBuilder:
         raise NotImplementedError()
 
 
-
 class TreeObsForRailEnv(ObservationBuilder):
     def reset(self):
         # TODO: precompute distances, etc...
-        #raise NotImplementedError()
+        # raise NotImplementedError()
         pass
 
     def get(self, handle):
         # TODO: compute the observation for agent `handle'
-        #raise NotImplementedError()
+
+        # raise NotImplementedError()
         return []
-
-
