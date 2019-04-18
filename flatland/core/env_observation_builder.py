@@ -15,7 +15,6 @@ class ObservationBuilder:
         raise NotImplementedError()
 
 
-
 class TreeObsForRailEnv(ObservationBuilder):
     def __init__(self, env):
         self.env = env
@@ -126,9 +125,6 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     def get(self, handle):
         # TODO: compute the observation for agent `handle'
-        #raise NotImplementedError()
-        return []
-
 
 
 
