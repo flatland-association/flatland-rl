@@ -24,28 +24,62 @@ def generate_rail_from_manual_specifications(rail_spec):
 
     Returns
     -------
-    numpy.ndarray of type numpy.uint16
-        The matrix with the correct 16-bit bitmaps for each cell.
+    function
+        Generator function that always returns a GridTransitionMap object with
+        the matrix of correct 16-bit bitmaps for each cell.
     """
-    t_utils = RailEnvTransitions()
+    def generator(width, height, num_resets=0):
+        t_utils = RailEnvTransitions()
 
-    height = len(rail_spec)
-    width = len(rail_spec[0])
-    rail = GridTransitionMap(width=width, height=height, transitions=t_utils)
+        height = len(rail_spec)
+        width = len(rail_spec[0])
+        rail = GridTransitionMap(width=width, height=height, transitions=t_utils)
 
-    for r in range(height):
-        for c in range(width):
-            cell = rail_spec[r][c]
-            if cell[0] < 0 or cell[0] >= len(t_utils.transitions):
-                print("ERROR - invalid cell type=", cell[0])
-                return []
-            rail.set_transitions((r, c), t_utils.rotate_transition(
-                          t_utils.transitions[cell[0]], cell[1]))
+        for r in range(height):
+            for c in range(width):
+                cell = rail_spec[r][c]
+                if cell[0] < 0 or cell[0] >= len(t_utils.transitions):
+                    print("ERROR - invalid cell type=", cell[0])
+                    return []
+                rail.set_transitions((r, c), t_utils.rotate_transition(
+                              t_utils.transitions[cell[0]], cell[1]))
 
-    return rail
+        return rail
+
+    return generator
 
 
-def generate_random_rail(width, height):
+def generate_rail_from_GridTransitionMap(rail_map):
+    """
+    Utility to convert a rail given by a GridTransitionMap map with the correct
+    16-bit transitions specifications.
+
+    Parameters
+    -------
+    rail_map : GridTransitionMap object
+        GridTransitionMap object to return when the generator is called.
+
+    Returns
+    -------
+    function
+        Generator function that always returns the given `rail_map' object.
+    """
+    def generator(width, height, num_resets=0):
+        return rail_map
+
+    return generator
+
+
+"""
+def generate_rail_from_list_of_manual_specifications(list_of_specifications)
+    def generator(width, height, num_resets=0):
+        return generate_rail_from_manual_specifications(list_of_specifications)
+
+    return generator
+"""
+
+
+def generate_random_rail(width, height, num_resets=0):
     """
     Dummy random level generator:
     - fill in cells at random in [width-2, height-2]

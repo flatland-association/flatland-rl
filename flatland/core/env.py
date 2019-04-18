@@ -6,6 +6,7 @@ The base Environment class is adapted from rllib.env.MultiAgentEnv
 import random
 
 from .env_observation_builder import TreeObsForRailEnv
+from flatland.utils.rail_env_generator import generate_random_rail
 
 
 class Environment:
@@ -121,34 +122,55 @@ class RailEnv:
     """
 
     def __init__(self,
-                 rail,
+                 width,
+                 height,
+                 rail_generator=generate_random_rail,
                  number_of_agents=1,
-                 custom_observation_builder=TreeObsForRailEnv):
+                 obs_builder_object=TreeObsForRailEnv(max_depth=2)):
         """
         Environment init.
 
         Parameters
         -------
-        rail : numpy.ndarray of type numpy.uint16
-            The transition matrix that defines the environment.
+        rail_generator : function
+            The rail_generator function is a function that takes the width and
+            height of a  rail map along with the number of times the env has
+            been reset, and returns a GridTransitionMap object.
+            Implemented functions are:
+                generate_random_rail : generate a random rail of given size
+                TODO: generate_rail_from_saved_list ---
+        width : int
+            The width of the rail map. Potentially in the future,
+            a range of widths to sample from.
+        height : int
+            The height of the rail map. Potentially in the future,
+            a range of heights to sample from.
         number_of_agents : int
-            Number of agents to spawn on the map.
-        custom_observation_builder: ObservationBuilder object
-            ObservationBuilder-derived object that takes this env object
-            as input as provides observation vectors for each agent.
+            Number of agents to spawn on the map. Potentially in the future,
+            a range of number of agents to sample from.
+        obs_builder_object: ObservationBuilder object
+            ObservationBuilder-derived object that takes builds observation
+            vectors for each agent.
         """
 
-        self.rail = rail
-        self.width = rail.width
-        self.height = rail.height
+        self.rail_generator = rail_generator
+        self.num_resets = 0
+        self.rail = None
+        self.width = width
+        self.height = height
 
         self.number_of_agents = number_of_agents
 
-        self.obs_builder = custom_observation_builder(env=self)
+        self.obs_builder = obs_builder_object
+        self.obs_builder.set_env(self)
 
         self.actions = [0]*self.number_of_agents
         self.rewards = [0]*self.number_of_agents
         self.done = False
+
+        self.agents_position = []
+        self.agents_target = []
+        self.agents_direction = []
 
         self.dones = {"__all__": False}
         self.obs_dict = {}
@@ -160,6 +182,9 @@ class RailEnv:
         return self.agents_handles
 
     def reset(self):
+        self.rail = self.rail_generator(self.width, self.height, self.num_resets)
+        self.num_resets += 1
+
         self.dones = {"__all__": False}
         for handle in self.agents_handles:
             self.dones[handle] = False

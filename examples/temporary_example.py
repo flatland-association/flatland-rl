@@ -9,32 +9,36 @@ from flatland.utils.rendertools import *
 random.seed(1)
 np.random.seed(1)
 
-
 # Example generate a random rail
-rail = generate_random_rail(20, 20)
-
-env = RailEnv(rail, number_of_agents=10)
+env = RailEnv(width=20, height=20, rail_generator=generate_random_rail, number_of_agents=10)
 env.reset()
 
 env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
-
 
 # Example generate a rail given a manual specification,
 # a map of tuples (cell_type, rotation)
 specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (7, 0), (0, 0)],
          [(7, 270), (1, 90), (1, 90), (1, 90), (2, 90), (7, 90)]]
 
-rail = generate_rail_from_manual_specifications(specs)
-env = RailEnv(rail, number_of_agents=1)
+env = RailEnv(width=6,
+              height=2,
+              rail_generator=generate_rail_from_manual_specifications(specs),
+              number_of_agents=1)
 
 handle = env.get_agent_handles()
 
-env.reset()
+obs = env.reset()
 
 env.agents_position = [[1, 4]]
 env.agents_target = [[1, 1]]
 env.agents_direction = [1]
+# TODO: watch out: if these variables are overridden, the obs_builder object has to be reset, too!
+env.obs_builder.reset()
+
+# TODO: delete next line
+#print(env.obs_builder.distance_map[0,:,:])
+#print(env.obs_builder.max_dist)
 
 env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
