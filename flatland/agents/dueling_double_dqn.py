@@ -2,7 +2,7 @@ import numpy as np
 import random
 from collections import namedtuple, deque
 import os
-from agent.model import QNetwork, QNetwork2
+from flatland.agents.model import QNetwork, QNetwork2
 import torch
 import torch.nn.functional as F
 import torch.optim as optim

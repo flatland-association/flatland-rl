@@ -32,9 +32,9 @@ env = RailEnv(width=20,
 env.reset()
 
 env_renderer = RenderTool(env)
-env_renderer.renderEnv(show=True)
+handle = env.get_agent_handles()
 
-state_size = 5
+state_size = 105
 action_size = 4
 agent = Agent(state_size, action_size, "FC", 0)
 
@@ -49,7 +49,6 @@ env = RailEnv(width=6,
               number_of_agents=1,
               obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
-handle = env.get_agent_handles()
 
 env.agents_position[0] = [1, 4]
 env.agents_target[0] = [1, 1]
@@ -62,14 +61,15 @@ env.obs_builder.reset()
 #    print(env.obs_builder.distance_map[0, :, :, i])
 
 obs, all_rewards, done, _ = env.step({0:0})
-print(len(obs[0]))
-env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
+#env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
 
 env_renderer = RenderTool(env)
-env_renderer.renderEnv(show=True)
+action_dict = {0: 0}
 
 for step in range(100):
     obs, all_rewards, done, _ = env.step(action_dict)
-    action_dict = {}
+    action = agent.act(np.array(obs[0]),eps=1)
+
+    action_dict = {0 :action}
     print("Rewards: ", all_rewards, "  [done=", done, "]")
-    env_renderer.renderEnv(show=True)
+
