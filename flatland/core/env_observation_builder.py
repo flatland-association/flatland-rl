@@ -69,6 +69,11 @@ class TreeObsForRailEnv(ObservationBuilder):
         for i in range(self.env.number_of_agents):
             self.max_dist[i] = self._distance_map_walker(self.env.agents_target[i], i)
 
+        # Update local lookup table for all agents' target locations
+        self.location_has_target = {}
+        for loc in self.env.agents_target:
+            self.location_has_target[(loc[0],loc[1])] = 1
+
     def _distance_map_walker(self, position, target_nr):
         """
         Utility function to compute distance maps from each cell in the rail network (and each possible
@@ -210,13 +215,14 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         #1:
 
-        #2:
+        #2: 1 if a target of another agent is detected between the previous node and the current one.
 
-        #3:
+        #3: 1 if another agent is detected between the previous node and the current one.
 
         #4:
 
-        #5: minimum distance from node to the agent's target
+        #5: minimum distance from node to the agent's target (when landing to the node following the corresponding
+            branch.
 
         Missing/padding nodes are filled in with -inf (truncated).
         Missing values in present node are filled in with +inf (truncated).
@@ -225,6 +231,11 @@ class TreeObsForRailEnv(ObservationBuilder):
         In case of the root node, the values are [0, 0, 0, 0, distance from agent to target].
         In case the target node is reached, the values are [0, 0, 0, 0, 0].
         """
+
+        # Update local lookup table for all agents' positions
+        self.location_has_agent = {}
+        for loc in self.env.agents_position:
+            self.location_has_agent[(loc[0], loc[1])] = 1
 
         position = self.env.agents_position[handle]
         orientation = self.env.agents_direction[handle]
@@ -264,25 +275,31 @@ class TreeObsForRailEnv(ObservationBuilder):
         exploring = True
         last_isSwitch = False
         last_isDeadEnd = False
-        # TODO: last_isTerminal = False  # dead-end
-        # TODO: last_isTarget = False
+        # TODO: last_isTerminal = False  # wrong cell encountered
+        last_isTarget = False
+
+        other_agent_encountered = False
+        other_target_encountered = False
         while exploring:
             # #############################
             # #############################
             # Modify here to compute any useful data required to build the end node's features. This code is called
             # for each cell visited between the previous branching node and the next switch / target / dead-end.
 
-            # TODO: update the current variables according to the current cell in the path
-            # (store info about other agents and targets)
+            if position in self.location_has_agent:
+                other_agent_encountered = True
 
-            # TODO: [[[for efficiency, [make dict for hashed-lookup of coords] -- do it in the reset function!]]]
+            if position in self.location_has_target:
+                other_target_encountered = True
+
+
 
             # #############################
             # #############################
 
             # If the target node is encountered, pick that as node. Also, no further branching is possible.
             if position[0] == self.env.agents_target[handle][0] and position[1] == self.env.agents_target[handle][1]:
-                # TODO: last_isTarget = True
+                last_isTarget = True
                 break
 
             cell_transitions = self.env.rail.get_transitions((position[0], position[1], direction))
@@ -323,8 +340,23 @@ class TreeObsForRailEnv(ObservationBuilder):
         # #############################
         # Modify here to append new / different features for each visited cell!
 
-        observation = [0, 0, 0, 0, self.distance_map[handle, position[0], position[1], direction]]
+        if last_isTarget:
+            observation = [0,
+                           1 if other_target_encountered else 0,
+                           1 if other_agent_encountered else 0,
+                           0,
+                           0]
+
+        else:
+            observation = [0,
+                           1 if other_target_encountered else 0,
+                           1 if other_agent_encountered else 0,
+                           0,
+                           self.distance_map[handle, position[0], position[1], direction]]
+
+
         # TODO:
+
 
         # #############################
         # #############################

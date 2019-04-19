@@ -26,14 +26,14 @@ specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (7, 0), (0, 0)],
 env = RailEnv(width=6,
               height=2,
               rail_generator=rail_from_manual_specifications_generator(specs),
-              number_of_agents=1,
+              number_of_agents=2,
               obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
 handle = env.get_agent_handles()
 
-env.agents_position = [[1, 4]]
-env.agents_target = [[1, 1]]
-env.agents_direction = [1]
+env.agents_position[0] = [1, 4]
+env.agents_target[0] = [1, 1]
+env.agents_direction[0] = 1
 # TODO: watch out: if these variables are overridden, the obs_builder object has to be reset, too!
 env.obs_builder.reset()
 
