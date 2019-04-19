@@ -10,13 +10,34 @@ random.seed(1)
 np.random.seed(1)
 
 """
+transition_probability = [1.0,  # empty cell - Case 0
+                          3.0,  # Case 1 - straight
+                          1.0,  # Case 2 - simple switch
+                          3.0,  # Case 3 - diamond drossing
+                          2.0,  # Case 4 - single slip
+                          1.0,  # Case 5 - double slip
+                          1.0,  # Case 6 - symmetrical
+                          1.0]  # Case 7 - dead end
+"""
+transition_probability = [1.0,  # empty cell - Case 0
+                          1.0,  # Case 1 - straight
+                          1.0,  # Case 2 - simple switch
+                          1.0,  # Case 3 - diamond drossing
+                          1.0,  # Case 4 - single slip
+                          1.0,  # Case 5 - double slip
+                          1.0,  # Case 6 - symmetrical
+                          1.0]  # Case 7 - dead end
+
 # Example generate a random rail
-env = RailEnv(width=20, height=20, rail_generator=random_rail_generator, number_of_agents=10)
+env = RailEnv(width=20,
+              height=20,
+              rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
+              number_of_agents=10)
 env.reset()
 
 env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
-"""
+
 
 # Example generate a rail given a manual specification,
 # a map of tuples (cell_type, rotation)
@@ -26,7 +47,7 @@ specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (7, 0), (0, 0)],
 env = RailEnv(width=6,
               height=2,
               rail_generator=rail_from_manual_specifications_generator(specs),
-              number_of_agents=2,
+              number_of_agents=1,
               obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
 handle = env.get_agent_handles()

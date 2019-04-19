@@ -72,7 +72,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Update local lookup table for all agents' target locations
         self.location_has_target = {}
         for loc in self.env.agents_target:
-            self.location_has_target[(loc[0],loc[1])] = 1
+            self.location_has_target[(loc[0], loc[1])] = 1
 
     def _distance_map_walker(self, position, target_nr):
         """
@@ -292,8 +292,6 @@ class TreeObsForRailEnv(ObservationBuilder):
             if position in self.location_has_target:
                 other_target_encountered = True
 
-
-
             # #############################
             # #############################
 
@@ -354,9 +352,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                            0,
                            self.distance_map[handle, position[0], position[1], direction]]
 
-
         # TODO:
-
 
         # #############################
         # #############################
@@ -368,9 +364,9 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                                (branch_direction+2) % 4):
                 # Swap forward and back in case of dead-end, so that an agent can learn that going forward takes
                 # it back
-                new_cell = self._new_position(position, (branch_direction+2)%4)
+                new_cell = self._new_position(position, (branch_direction+2) % 4)
 
-                branch_observation = self._explore_branch(handle, new_cell, (branch_direction+2)%4, depth+1)
+                branch_observation = self._explore_branch(handle, new_cell, (branch_direction+2) % 4, depth+1)
                 observation = observation + branch_observation
 
             elif last_isSwitch and self.env.rail.get_transition((position[0], position[1], direction),
