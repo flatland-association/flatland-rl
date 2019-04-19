@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import numpy as np
 
-from flatland.core.env import RailEnv, rail_from_GridTransitionMap_generator
+from flatland.envs.rail_env import RailEnv, rail_from_GridTransitionMap_generator
 from flatland.core.transitions import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
-import numpy as np
 
 """Tests for `flatland` package."""
 
