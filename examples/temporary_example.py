@@ -9,14 +9,14 @@ from flatland.utils.rendertools import *
 random.seed(1)
 np.random.seed(1)
 
-
+"""
 # Example generate a random rail
 env = RailEnv(width=20, height=20, rail_generator=random_rail_generator, number_of_agents=10)
 env.reset()
 
 env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
-
+"""
 
 # Example generate a rail given a manual specification,
 # a map of tuples (cell_type, rotation)
@@ -27,7 +27,7 @@ env = RailEnv(width=6,
               height=2,
               rail_generator=rail_from_manual_specifications_generator(specs),
               number_of_agents=1,
-              obs_builder_object=TreeObsForRailEnv(max_depth=1))
+              obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
 handle = env.get_agent_handles()
 
