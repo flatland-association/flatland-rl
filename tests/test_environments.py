@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from flatland.core.env import RailEnv
+from flatland.core.env import RailEnv, rail_from_GridTransitionMap_generator
 from flatland.core.transitions import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.utils.rail_env_generator import generate_rail_from_GridTransitionMap
 import numpy as np
 
 """Tests for `flatland` package."""
@@ -47,7 +46,10 @@ def test_rail_environment_single_agent():
 
     rail = GridTransitionMap(width=3, height=3, transitions=transitions)
     rail.grid = rail_map
-    rail_env = RailEnv(width=3, height=3, rail_generator=generate_rail_from_GridTransitionMap(rail), number_of_agents=1)
+    rail_env = RailEnv(width=3,
+                       height=3,
+                       rail_generator=rail_from_GridTransitionMap_generator(rail),
+                       number_of_agents=1)
     for _ in range(200):
         _ = rail_env.reset()
 
@@ -121,7 +123,7 @@ def test_dead_end():
     rail.grid = rail_map
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
-                       rail_generator=generate_rail_from_GridTransitionMap(rail),
+                       rail_generator=rail_from_GridTransitionMap_generator(rail),
                        number_of_agents=1)
 
     def check_consistency(rail_env):
@@ -170,7 +172,7 @@ def test_dead_end():
     rail.grid = rail_map
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
-                       rail_generator=generate_rail_from_GridTransitionMap(rail),
+                       rail_generator=rail_from_GridTransitionMap_generator(rail),
                        number_of_agents=1)
 
     rail_env.reset()

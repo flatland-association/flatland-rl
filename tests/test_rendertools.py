@@ -4,14 +4,13 @@
 Tests for `flatland` package.
 """
 
-from flatland.core.env import RailEnv
+from flatland.envs.rail_env import RailEnv, random_rail_generator
 import numpy as np
 import random
 import os
 
 import matplotlib.pyplot as plt
 
-from flatland.utils import rail_env_generator
 import flatland.utils.rendertools as rt
 
 
@@ -37,7 +36,7 @@ def checkFrozenImage(sFileImage):
 
 def test_render_env():
     random.seed(100)
-    oEnv = RailEnv(width=10, height=10, rail_generator=rail_env_generator.generate_random_rail, number_of_agents=2)
+    oEnv = RailEnv(width=10, height=10, rail_generator=random_rail_generator, number_of_agents=2)
     oEnv.reset()
     oRT = rt.RenderTool(oEnv)
     plt.figure(figsize=(10, 10))

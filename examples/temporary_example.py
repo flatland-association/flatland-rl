@@ -2,19 +2,21 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 
-from flatland.core.env import RailEnv
-from flatland.utils.rail_env_generator import *
+from flatland.envs.rail_env import *
+from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.utils.rendertools import *
 
 random.seed(1)
 np.random.seed(1)
 
+
 # Example generate a random rail
-env = RailEnv(width=20, height=20, rail_generator=generate_random_rail, number_of_agents=10)
+env = RailEnv(width=20, height=20, rail_generator=random_rail_generator, number_of_agents=10)
 env.reset()
 
 env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
+
 
 # Example generate a rail given a manual specification,
 # a map of tuples (cell_type, rotation)
@@ -23,12 +25,11 @@ specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (7, 0), (0, 0)],
 
 env = RailEnv(width=6,
               height=2,
-              rail_generator=generate_rail_from_manual_specifications(specs),
-              number_of_agents=1)
+              rail_generator=rail_from_manual_specifications_generator(specs),
+              number_of_agents=1,
+              obs_builder_object=TreeObsForRailEnv(max_depth=1))
 
 handle = env.get_agent_handles()
-
-obs = env.reset()
 
 env.agents_position = [[1, 4]]
 env.agents_target = [[1, 1]]
@@ -37,12 +38,14 @@ env.agents_direction = [1]
 env.obs_builder.reset()
 
 # TODO: delete next line
-#print(env.obs_builder.distance_map[0,:,:])
-#print(env.obs_builder.max_dist)
+#for i in range(4):
+#    print(env.obs_builder.distance_map[0, :, :, i])
+
+obs, all_rewards, done, _ = env.step({0:0})
+env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
 
 env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
-
 
 print("Manual control: s=perform step, q=quit, [agent id] [1-2-3 action] \
        (turnleft+move, move to front, turnright+move)")

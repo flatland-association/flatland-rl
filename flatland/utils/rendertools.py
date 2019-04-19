@@ -6,6 +6,8 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 
+# TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
+
 class RenderTool(object):
     Visit = recordtype("Visit", ["rc", "iDir", "iDepth", "prev"])
 
