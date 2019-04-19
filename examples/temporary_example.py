@@ -21,12 +21,12 @@ transition_probability = [1.0,  # empty cell - Case 0
 """
 transition_probability = [1.0,  # empty cell - Case 0
                           1.0,  # Case 1 - straight
-                          1.0,  # Case 2 - simple switch
-                          1.0,  # Case 3 - diamond drossing
-                          1.0,  # Case 4 - single slip
-                          1.0,  # Case 5 - double slip
-                          1.0,  # Case 6 - symmetrical
-                          1.0]  # Case 7 - dead end
+                          0.5,  # Case 2 - simple switch
+                          0.2,  # Case 3 - diamond drossing
+                          0.5,  # Case 4 - single slip
+                          0.1,  # Case 5 - double slip
+                          0.2,  # Case 6 - symmetrical
+                          0.01]  # Case 7 - dead end
 
 # Example generate a random rail
 env = RailEnv(width=20,
