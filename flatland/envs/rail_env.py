@@ -388,7 +388,7 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator=random_rail_generator,
+                 rail_generator=random_rail_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2)):
         """
