@@ -257,8 +257,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                             rail[replace_row][replace_col] = None
 
                             possible_transitions, possible_probabilities = zip(*besttrans)
-                            possible_probabilities = \
-                                np.exp(possible_probabilities) / sum(np.exp(possible_probabilities))
+                            possible_probabilities = [p/sum(possible_probabilities) for p in possible_probabilities]
 
                             rail[row][col] = np.random.choice(possible_transitions,
                                                               p=possible_probabilities)
@@ -272,7 +271,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
 
                 else:
                     possible_transitions, possible_probabilities = zip(*possible_cell_transitions)
-                    possible_probabilities = np.exp(possible_probabilities) / sum(np.exp(possible_probabilities))
+                    possible_probabilities = [p/sum(possible_probabilities) for p in possible_probabilities]
 
                     rail[row][col] = np.random.choice(possible_transitions,
                                                       p=possible_probabilities)
