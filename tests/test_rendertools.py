@@ -36,6 +36,7 @@ def checkFrozenImage(sFileImage):
 
 def test_render_env():
     random.seed(100)
+    np.random.seed(100)
     oEnv = RailEnv(width=10, height=10, rail_generator=random_rail_generator(), number_of_agents=2)
     oEnv.reset()
     oRT = rt.RenderTool(oEnv)
