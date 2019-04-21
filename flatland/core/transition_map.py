@@ -268,7 +268,8 @@ class GridTransitionMap(TransitionMap):
         override_gridsize : bool
             If override_gridsize=True, the width and height of the GridTransitionMap object are replaced with the size
             of the map loaded from `filename'. If override_gridsize=False, the transitions grid is either cropped (if
-            the grid size is larger than (height,width) ) or padded with zeros (if the grid size is smaller than (height,width) )
+            the grid size is larger than (height,width) ) or padded with zeros (if the grid size is smaller than
+            (height,width) )
 
         """
         new_grid = np.load(filename)
@@ -287,7 +288,9 @@ class GridTransitionMap(TransitionMap):
             elif new_grid.dtype == np.uint64:
                 self.grid = np.zeros((self.height, self.width), dtype=np.uint64)
 
-            self.grid[0:min(self.height, new_height), 0:min(self.width, new_width)] = new_grid[0:min(self.height, new_height), 0:min(self.width, new_width)]
+            self.grid[0:min(self.height, new_height),
+                      0:min(self.width, new_width)] = new_grid[0:min(self.height, new_height),
+                                                               0:min(self.width, new_width)]
 
 # TODO: GIACOMO: is it better to provide those methods with lists of cell_ids
 # (most general implementation) or to make Grid-class specific methods for
