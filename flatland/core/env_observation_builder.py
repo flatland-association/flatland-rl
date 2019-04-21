@@ -103,7 +103,6 @@ class TreeObsForRailEnv(ObservationBuilder):
             node = nodes_queue.popleft()
 
             node_id = (node[0], node[1], node[2])
-
             if node_id not in visited:
                 visited.add(node_id)
 
@@ -126,58 +125,50 @@ class TreeObsForRailEnv(ObservationBuilder):
         """
         neighbors = []
 
-        for direction in range(4):
-            new_cell = self._new_position(position, (direction+2) % 4)
+        possible_directions = [0, 1, 2, 3]
+        if enforce_target_direction >= 0:
+            # The agent must land into the current cell with orientation `enforce_target_direction'.
+            # This is only possible if the agent has arrived from the cell in the opposite direction!
+            possible_directions = [(enforce_target_direction+2) % 4]
+
+        for neigh_direction in possible_directions:
+            new_cell = self._new_position(position, neigh_direction)
 
             if new_cell[0] >= 0 and new_cell[0] < self.env.height and \
                new_cell[1] >= 0 and new_cell[1] < self.env.width:
 
-                # Check if the two cells are connected by a valid transition
-                transitionValid = False
-                for orientation in range(4):
-                    moves = self.env.rail.get_transitions((new_cell[0], new_cell[1], orientation))
-                    if moves[direction]:
-                        transitionValid = True
-                        break
+                desired_movement_from_new_cell = (neigh_direction+2) % 4
 
-                if not transitionValid:
-                    continue
+                """
+                # Is the next cell a dead-end?
+                isNextCellDeadEnd = False
+                nbits = 0
+                tmp = self.env.rail.get_transitions((new_cell[0], new_cell[1]))
+                while tmp > 0:
+                    nbits += (tmp & 1)
+                    tmp = tmp >> 1
+                if nbits == 1:
+                    # Dead-end!
+                    isNextCellDeadEnd = True
+                """
 
-                # Check if a transition in direction node[2] is possible if an agent lands in the current
-                # cell with orientation `direction'; this only applies to cells that are not dead-ends!
-                directionMatch = True
-                if enforce_target_direction >= 0:
-                    directionMatch = self.env.rail.get_transition((new_cell[0], new_cell[1], direction),
-                                                                  enforce_target_direction)
+                # Check all possible transitions in new_cell
+                for agent_orientation in range(4):
+                    # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
+                    isValid = self.env.rail.get_transition((new_cell[0], new_cell[1], agent_orientation),
+                                                           desired_movement_from_new_cell)
 
-                # If transition is found to invalid, check if perhaps it is a dead-end, in which case the
-                # direction of movement is rotated 180 degrees (moving forward turns the agents and makes
-                # it step in the previous cell)
-                if not directionMatch:
-                    # If cell is a dead-end, append previous node with reversed
-                    # orientation!
-                    nbits = 0
-                    tmp = self.env.rail.get_transitions((new_cell[0], new_cell[1]))
-                    while tmp > 0:
-                        nbits += (tmp & 1)
-                        tmp = tmp >> 1
-                    if nbits == 1:
-                        # Dead-end!
-                        # Check if transition is possible in new_cell with orientation
-                        # (direction+2)%4 in direction `direction'
-                        directionMatch = directionMatch or \
-                                         self.env.rail.get_transition((new_cell[0], new_cell[1], (direction+2) % 4),
-                                                                      direction)
-
-                if transitionValid and directionMatch:
-                    # Append all possible orientations in new_cell that allow a transition to direction!
-                    for orientation in range(4):
-                        moves = self.env.rail.get_transitions((new_cell[0], new_cell[1], orientation))
-                        if moves[direction]:
-                            new_distance = min(self.distance_map[target_nr, new_cell[0], new_cell[1], orientation],
-                                               current_distance+1)
-                            neighbors.append((new_cell[0], new_cell[1], orientation, new_distance))
-                            self.distance_map[target_nr, new_cell[0], new_cell[1], orientation] = new_distance
+                    if isValid:
+                        """
+                        # TODO: check that it works with deadends! -- still bugged!
+                        movement = desired_movement_from_new_cell
+                        if isNextCellDeadEnd:
+                            movement = (desired_movement_from_new_cell+2) % 4
+                        """
+                        new_distance = min(self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation],
+                                           current_distance+1)
+                        neighbors.append((new_cell[0], new_cell[1], agent_orientation, new_distance))
+                        self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation] = new_distance
 
         return neighbors
 
@@ -309,16 +300,24 @@ class TreeObsForRailEnv(ObservationBuilder):
             exploring = False
             if num_transitions == 1:
                 # Check if dead-end, or if we can go forward along direction
-                if cell_transitions[direction]:
-                    position = self._new_position(position, direction)
+                nbits = 0
+                tmp = self.env.rail.get_transitions((position[0], position[1]))
+                while tmp > 0:
+                    nbits += (tmp & 1)
+                    tmp = tmp >> 1
+                if nbits == 1:
+                    # Dead-end!
+                    last_isDeadEnd = True
 
+                if not last_isDeadEnd:
                     # Keep walking through the tree along `direction'
                     exploring = True
 
-                else:
-                    # If a dead-end is reached, pick that as node. Also, no further branching is possible.
-                    last_isDeadEnd = True
-                    break
+                    for i in range(4):
+                        if cell_transitions[i]:
+                            position = self._new_position(position, i)
+                            direction = i
+                            break
 
             elif num_transitions > 0:
                 # Switch detected
@@ -351,8 +350,6 @@ class TreeObsForRailEnv(ObservationBuilder):
                            1 if other_agent_encountered else 0,
                            0,
                            self.distance_map[handle, position[0], position[1], direction]]
-
-        # TODO:
 
         # #############################
         # #############################

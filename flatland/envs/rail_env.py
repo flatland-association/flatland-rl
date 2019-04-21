@@ -218,7 +218,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                                     rot = 90
 
                                 rail[row][col] = t_utils.rotate_transition(
-                                                  int('0000000000100000', 2), rot)
+                                                  int('0010000000000000', 2), rot)
                                 num_insertions += 1
 
                                 break
@@ -299,7 +299,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                     max_bit = max_bit | (neigh_trans_from_direction & 1)
             if max_bit:
                 rail[r][0] = t_utils.rotate_transition(
-                               int('0000000000100000', 2), 270)
+                               int('0010000000000000', 2), 270)
             else:
                 rail[r][0] = int('0000000000000000', 2)
 
@@ -312,7 +312,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                                                  & (2**4-1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 2))
             if max_bit:
-                rail[r][-1] = t_utils.rotate_transition(int('0000000000100000', 2),
+                rail[r][-1] = t_utils.rotate_transition(int('0010000000000000', 2),
                                                         90)
             else:
                 rail[r][-1] = int('0000000000000000', 2)
@@ -327,7 +327,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                                                   & (2**4-1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 3))
             if max_bit:
-                rail[0][c] = int('0000000000100000', 2)
+                rail[0][c] = int('0010000000000000', 2)
             else:
                 rail[0][c] = int('0000000000000000', 2)
 
@@ -341,7 +341,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 1))
             if max_bit:
                 rail[-1][c] = t_utils.rotate_transition(
-                                int('0000000000100000', 2), 180)
+                                int('0010000000000000', 2), 180)
             else:
                 rail[-1][c] = int('0000000000000000', 2)
 
@@ -352,6 +352,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                     rail[r][c] = int('0000000000000000', 2)
 
         tmp_rail = np.asarray(rail, dtype=np.uint16)
+
         return_rail = GridTransitionMap(width=width, height=height, transitions=t_utils)
         return_rail.grid = tmp_rail
         return return_rail
