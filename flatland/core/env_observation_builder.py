@@ -383,15 +383,15 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         return observation
 
-    def util_print_obs_subtree(self, tree, num_elements_per_node=5, prompt='', current_depth=0):
+    def util_print_obs_subtree(self, tree, num_features_per_node=5, prompt='', current_depth=0):
         """
         Utility function to pretty-print tree observations returned by this object.
         """
-        if len(tree) < num_elements_per_node:
+        if len(tree) < num_features_per_node:
             return
 
         depth = 0
-        tmp = len(tree)/num_elements_per_node-1
+        tmp = len(tree)/num_features_per_node-1
         pow4 = 4
         while tmp > 0:
             tmp -= pow4
@@ -400,12 +400,12 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         prompt_ = ['L:', 'F:', 'R:', 'B:']
 
-        print("  "*current_depth + prompt, tree[0:num_elements_per_node])
-        child_size = (len(tree)-num_elements_per_node)//4
+        print("  "*current_depth + prompt, tree[0:num_features_per_node])
+        child_size = (len(tree)-num_features_per_node)//4
         for children in range(4):
-            child_tree = tree[(num_elements_per_node+children*child_size):
-                              (num_elements_per_node+(children+1)*child_size)]
+            child_tree = tree[(num_features_per_node+children*child_size):
+                              (num_features_per_node+(children+1)*child_size)]
             self.util_print_obs_subtree(child_tree,
-                                        num_elements_per_node,
+                                        num_features_per_node,
                                         prompt=prompt_[children],
                                         current_depth=current_depth+1)

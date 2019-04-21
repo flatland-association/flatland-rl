@@ -9,24 +9,14 @@ from flatland.utils.rendertools import *
 random.seed(0)
 np.random.seed(0)
 
-"""
-transition_probability = [1.0,  # empty cell - Case 0
-                          3.0,  # Case 1 - straight
-                          1.0,  # Case 2 - simple switch
-                          3.0,  # Case 3 - diamond drossing
-                          2.0,  # Case 4 - single slip
-                          1.0,  # Case 5 - double slip
-                          1.0,  # Case 6 - symmetrical
-                          1.0]  # Case 7 - dead end
-"""
 transition_probability = [1.0,  # empty cell - Case 0
                           1.0,  # Case 1 - straight
-                          0.5,  # Case 2 - simple switch
-                          0.2,  # Case 3 - diamond drossing
+                          1.0,  # Case 2 - simple switch
+                          0.3,  # Case 3 - diamond drossing
                           0.5,  # Case 4 - single slip
-                          0.1,  # Case 5 - double slip
+                          0.5,  # Case 5 - double slip
                           0.2,  # Case 6 - symmetrical
-                          0.01]  # Case 7 - dead end
+                          0.0]  # Case 7 - dead end
 
 # Example generate a random rail
 env = RailEnv(width=20,
@@ -38,12 +28,12 @@ env.reset()
 env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
 
+"""
 # Example generate a rail given a manual specification,
 # a map of tuples (cell_type, rotation)
 specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (7, 0), (0, 0)],
          [(7, 270), (1, 90), (1, 90), (1, 90), (2, 90), (7, 90)]]
 
-"""
 env = RailEnv(width=6,
               height=2,
               rail_generator=rail_from_manual_specifications_generator(specs),
@@ -56,20 +46,20 @@ env.agents_target[0] = [1, 1]
 env.agents_direction[0] = 1
 # TODO: watch out: if these variables are overridden, the obs_builder object has to be reset, too!
 env.obs_builder.reset()
-#"""
-
+"""
 env = RailEnv(width=7,
               height=7,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
               number_of_agents=2)
 
-# TODO: delete next line
-#for i in range(4):
-#    print(env.obs_builder.distance_map[0, :, :, i])
+# Print the distance map of each cell to the target of the first agent
+# for i in range(4):
+#     print(env.obs_builder.distance_map[0, :, :, i])
 
+# Print the observation vector for agent 0
 obs, all_rewards, done, _ = env.step({0:0})
 for i in range(env.number_of_agents):
-    env.obs_builder.util_print_obs_subtree(tree=obs[i], num_elements_per_node=5)
+    env.obs_builder.util_print_obs_subtree(tree=obs[i], num_features_per_node=5)
 
 env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
