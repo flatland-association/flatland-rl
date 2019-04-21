@@ -282,7 +282,11 @@ class GridTransitionMap(TransitionMap):
             self.grid = new_grid
 
         else:
-            self.grid = self.grid * 0
+            if new_grid.dtype == np.uint16:
+                self.grid = np.zeros((self.height, self.width), dtype=np.uint16)
+            elif new_grid.dtype == np.uint64:
+                self.grid = np.zeros((self.height, self.width), dtype=np.uint64)
+
             self.grid[0:min(self.height, new_height), 0:min(self.width, new_width)] = new_grid[0:min(self.height, new_height), 0:min(self.width, new_width)]
 
 # TODO: GIACOMO: is it better to provide those methods with lists of cell_ids

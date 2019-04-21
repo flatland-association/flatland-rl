@@ -10,7 +10,7 @@ import numpy as np
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 
-from flatland.core.transitions import RailEnvTransitions
+from flatland.core.transitions import Grid4Transitions, Grid8Transitions, RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 
 
@@ -70,6 +70,33 @@ def rail_from_GridTransitionMap_generator(rail_map):
         Generator function that always returns the given `rail_map' object.
     """
     def generator(width, height, num_resets=0):
+        return rail_map
+
+    return generator
+
+
+def rail_from_list_of_saved_GridTransitionMap_generator(list_of_filenames):
+    """
+    Utility to sequentially and cyclically return GridTransitionMap-s from a list of files, on each environment reset.
+
+    Parameters
+    -------
+    list_of_filenames : list
+        List of filenames with the saved grids to load.
+
+    Returns
+    -------
+    function
+        Generator function that always returns the given `rail_map' object.
+    """
+    def generator(width, height, num_resets=0):
+        t_utils = RailEnvTransitions()
+        rail_map = GridTransitionMap(width=width, height=height, transitions=t_utils)
+        rail_map.load_transition_map(list_of_filenames[num_resets % len(list_of_filenames)], override_gridsize=False)
+
+        if rail_map.grid.dtype == np.uint64:
+            rail_map.transitions = Grid8Transitions()
+
         return rail_map
 
     return generator

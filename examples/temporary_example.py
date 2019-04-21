@@ -23,6 +23,12 @@ env = RailEnv(width=20,
               height=20,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
               number_of_agents=10)
+
+# env = RailEnv(width=20,
+#               height=20,
+#               rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(['examples/sample_10_10_rail.npy']),
+#               number_of_agents=10)
+
 env.reset()
 
 env_renderer = RenderTool(env)
