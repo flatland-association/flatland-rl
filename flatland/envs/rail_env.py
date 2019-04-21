@@ -4,7 +4,6 @@ Definition of the RailEnv environment and related level-generation functions.
 Generator functions are functions that take width, height and num_resets as arguments and return
 a GridTransitionMap object.
 """
-import random
 import numpy as np
 
 from flatland.core.env import Environment
@@ -199,7 +198,8 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
 
             num_insertions = 0
             while num_insertions < MAX_INSERTIONS and len(cells_to_fill) > 0:
-                cell = random.sample(cells_to_fill, 1)[0]
+                # cell = random.sample(cells_to_fill, 1)[0]
+                cell = cells_to_fill[np.random.choice(len(cells_to_fill), 1)[0]]
                 cells_to_fill.remove(cell)
                 row = cell[0]
                 col = cell[1]
@@ -494,10 +494,14 @@ class RailEnv(Environment):
                     if self.rail.get_transitions((r, c)) > 0:
                         valid_positions.append((r, c))
 
-            self.agents_position = random.sample(valid_positions,
-                                                 self.number_of_agents)
-            self.agents_target = random.sample(valid_positions,
-                                               self.number_of_agents)
+            # self.agents_position = random.sample(valid_positions,
+            #                                     self.number_of_agents)
+            self.agents_position = [
+                valid_positions[i] for i in
+                np.random.choice(len(valid_positions), self.number_of_agents)]
+            self.agents_target = [
+                valid_positions[i] for i in
+                np.random.choice(len(valid_positions), self.number_of_agents)]
 
             # agents_direction must be a direction for which a solution is
             # guaranteed.
@@ -525,8 +529,8 @@ class RailEnv(Environment):
                 if len(valid_starting_directions) == 0:
                     re_generate = True
                 else:
-                    self.agents_direction[i] = random.sample(
-                                               valid_starting_directions, 1)[0]
+                    self.agents_direction[i] = valid_starting_directions[
+                        np.random.choice(len(valid_starting_directions), 1)[0]]
 
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()

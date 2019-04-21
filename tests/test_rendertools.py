@@ -6,7 +6,6 @@ Tests for `flatland` package.
 
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 import numpy as np
-import random
 import os
 
 import matplotlib.pyplot as plt
@@ -35,7 +34,7 @@ def checkFrozenImage(sFileImage):
 
 
 def test_render_env():
-    random.seed(100)
+    # random.seed(100)
     np.random.seed(100)
     oEnv = RailEnv(width=10, height=10, rail_generator=random_rail_generator(), number_of_agents=2)
     oEnv.reset()
