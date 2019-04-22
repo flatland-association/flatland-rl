@@ -4,13 +4,12 @@ Definition of the RailEnv environment and related level-generation functions.
 Generator functions are functions that take width, height and num_resets as arguments and return
 a GridTransitionMap object.
 """
-import random
 import numpy as np
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 
-from flatland.core.transitions import RailEnvTransitions
+from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 
 
@@ -70,6 +69,33 @@ def rail_from_GridTransitionMap_generator(rail_map):
         Generator function that always returns the given `rail_map' object.
     """
     def generator(width, height, num_resets=0):
+        return rail_map
+
+    return generator
+
+
+def rail_from_list_of_saved_GridTransitionMap_generator(list_of_filenames):
+    """
+    Utility to sequentially and cyclically return GridTransitionMap-s from a list of files, on each environment reset.
+
+    Parameters
+    -------
+    list_of_filenames : list
+        List of filenames with the saved grids to load.
+
+    Returns
+    -------
+    function
+        Generator function that always returns the given `rail_map' object.
+    """
+    def generator(width, height, num_resets=0):
+        t_utils = RailEnvTransitions()
+        rail_map = GridTransitionMap(width=width, height=height, transitions=t_utils)
+        rail_map.load_transition_map(list_of_filenames[num_resets % len(list_of_filenames)], override_gridsize=False)
+
+        if rail_map.grid.dtype == np.uint64:
+            rail_map.transitions = Grid8Transitions()
+
         return rail_map
 
     return generator
@@ -172,7 +198,8 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
 
             num_insertions = 0
             while num_insertions < MAX_INSERTIONS and len(cells_to_fill) > 0:
-                cell = random.sample(cells_to_fill, 1)[0]
+                # cell = random.sample(cells_to_fill, 1)[0]
+                cell = cells_to_fill[np.random.choice(len(cells_to_fill), 1)[0]]
                 cells_to_fill.remove(cell)
                 row = cell[0]
                 col = cell[1]
@@ -218,7 +245,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                                     rot = 90
 
                                 rail[row][col] = t_utils.rotate_transition(
-                                                  int('0000000000100000', 2), rot)
+                                                  int('0010000000000000', 2), rot)
                                 num_insertions += 1
 
                                 break
@@ -257,8 +284,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                             rail[replace_row][replace_col] = None
 
                             possible_transitions, possible_probabilities = zip(*besttrans)
-                            possible_probabilities = \
-                                np.exp(possible_probabilities) / sum(np.exp(possible_probabilities))
+                            possible_probabilities = [p/sum(possible_probabilities) for p in possible_probabilities]
 
                             rail[row][col] = np.random.choice(possible_transitions,
                                                               p=possible_probabilities)
@@ -272,7 +298,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
 
                 else:
                     possible_transitions, possible_probabilities = zip(*possible_cell_transitions)
-                    possible_probabilities = np.exp(possible_probabilities) / sum(np.exp(possible_probabilities))
+                    possible_probabilities = [p/sum(possible_probabilities) for p in possible_probabilities]
 
                     rail[row][col] = np.random.choice(possible_transitions,
                                                       p=possible_probabilities)
@@ -300,7 +326,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                     max_bit = max_bit | (neigh_trans_from_direction & 1)
             if max_bit:
                 rail[r][0] = t_utils.rotate_transition(
-                               int('0000000000100000', 2), 270)
+                               int('0010000000000000', 2), 270)
             else:
                 rail[r][0] = int('0000000000000000', 2)
 
@@ -313,7 +339,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                                                  & (2**4-1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 2))
             if max_bit:
-                rail[r][-1] = t_utils.rotate_transition(int('0000000000100000', 2),
+                rail[r][-1] = t_utils.rotate_transition(int('0010000000000000', 2),
                                                         90)
             else:
                 rail[r][-1] = int('0000000000000000', 2)
@@ -328,7 +354,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                                                   & (2**4-1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 3))
             if max_bit:
-                rail[0][c] = int('0000000000100000', 2)
+                rail[0][c] = int('0010000000000000', 2)
             else:
                 rail[0][c] = int('0000000000000000', 2)
 
@@ -342,7 +368,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 1))
             if max_bit:
                 rail[-1][c] = t_utils.rotate_transition(
-                                int('0000000000100000', 2), 180)
+                                int('0010000000000000', 2), 180)
             else:
                 rail[-1][c] = int('0000000000000000', 2)
 
@@ -353,6 +379,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                     rail[r][c] = int('0000000000000000', 2)
 
         tmp_rail = np.asarray(rail, dtype=np.uint16)
+
         return_rail = GridTransitionMap(width=width, height=height, transitions=t_utils)
         return_rail.grid = tmp_rail
         return return_rail
@@ -388,7 +415,7 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator=random_rail_generator,
+                 rail_generator=random_rail_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2)):
         """
@@ -467,10 +494,14 @@ class RailEnv(Environment):
                     if self.rail.get_transitions((r, c)) > 0:
                         valid_positions.append((r, c))
 
-            self.agents_position = random.sample(valid_positions,
-                                                 self.number_of_agents)
-            self.agents_target = random.sample(valid_positions,
-                                               self.number_of_agents)
+            # self.agents_position = random.sample(valid_positions,
+            #                                     self.number_of_agents)
+            self.agents_position = [
+                valid_positions[i] for i in
+                np.random.choice(len(valid_positions), self.number_of_agents)]
+            self.agents_target = [
+                valid_positions[i] for i in
+                np.random.choice(len(valid_positions), self.number_of_agents)]
 
             # agents_direction must be a direction for which a solution is
             # guaranteed.
@@ -498,8 +529,8 @@ class RailEnv(Environment):
                 if len(valid_starting_directions) == 0:
                     re_generate = True
                 else:
-                    self.agents_direction[i] = random.sample(
-                                               valid_starting_directions, 1)[0]
+                    self.agents_direction[i] = valid_starting_directions[
+                        np.random.choice(len(valid_starting_directions), 1)[0]]
 
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
