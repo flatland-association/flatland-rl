@@ -169,10 +169,10 @@ class TreeObsForRailEnv(ObservationBuilder):
                             (new_cell[0], new_cell[1], (direction+2) % 4), direction)
 
                 if transitionValid and directionMatch:
-                    new_distance = min(self.distance_map[target_nr,
-                                                         new_cell[0], new_cell[1]], current_distance+1)
+                    new_distance = min(self.distance_map[target_nr, new_cell[0], new_cell[1], direction],
+                                       current_distance+1)
                     neighbors.append((new_cell[0], new_cell[1], direction, new_distance))
-                    self.distance_map[target_nr, new_cell[0], new_cell[1]] = new_distance
+                    self.distance_map[target_nr, new_cell[0], new_cell[1], direction] = new_distance
 
         possible_directions = [0, 1, 2, 3]
         if enforce_target_direction >= 0:
@@ -319,13 +319,15 @@ class TreeObsForRailEnv(ObservationBuilder):
         exploring = True
         last_isSwitch = False
         last_isDeadEnd = False
-        # TODO: last_isTerminal = False  # wrong cell encountered
+        last_isTerminal = False  # wrong cell encountered OR cycle encountered;  either way, we don't want the agent
+                                 # to land here
         last_isTarget = False
+
+        visited = set([position[0], position[1], direction])
 
         other_agent_encountered = False
         other_target_encountered = False
         while exploring:
-
             # #############################
             # #############################
             # Modify here to compute any useful data required to build the end node's features. This code is called
@@ -339,6 +341,10 @@ class TreeObsForRailEnv(ObservationBuilder):
 
             # #############################
             # #############################
+
+            if (position[0], position[1], direction) in visited:
+                last_isTerminal = True
+                break
 
             # If the target node is encountered, pick that as node. Also, no further branching is possible.
             if position[0] == self.env.agents_target[handle][0] and position[1] == self.env.agents_target[handle][1]:
@@ -380,8 +386,10 @@ class TreeObsForRailEnv(ObservationBuilder):
 
             elif num_transitions == 0:
                 # Wrong cell type, but let's cover it and treat it as a dead-end, just in case
-                # TODO: last_isTerminal = True
+                last_isTerminal = True
                 break
+
+            visited.add((position[0], position[1], direction))
 
         # `position' is either a terminal node or a switch
 
@@ -398,6 +406,12 @@ class TreeObsForRailEnv(ObservationBuilder):
                            0,
                            0]
 
+        elif last_isTerminal:
+            observation = [0,
+                           1 if other_target_encountered else 0,
+                           1 if other_agent_encountered else 0,
+                           0,
+                           np.inf]
         else:
             observation = [0,
                            1 if other_target_encountered else 0,
