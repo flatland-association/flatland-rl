@@ -63,8 +63,9 @@ for trials in range(1, n_trials + 1):
             action_dict.update({a: action})
 
         # Environment step
+        print(trials,step)
         next_obs, all_rewards, done, _ = env.step(action_dict)
-
+        print("stepped")
 
         # Update replay buffer and train agent
         for a in range(env.number_of_agents):

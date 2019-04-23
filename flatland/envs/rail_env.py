@@ -612,9 +612,7 @@ class RailEnv(Environment):
                             direction = reverse_direction
                             movement = reverse_direction
                             is_deadend = True
-
                 new_position = self._new_position(pos, movement)
-
                 # Is it a legal move?  1) transition allows the movement in the
                 # cell,  2) the new cell is not empty (case 0),  3) the cell is
                 # free, i.e., no agent is currently in that cell
@@ -668,7 +666,6 @@ class RailEnv(Environment):
         # Reset the step actions (in case some agent doesn't 'register_action'
         # on the next step)
         self.actions = [0]*self.number_of_agents
-
         return self._get_observations(), self.rewards_dict, self.dones, {}
 
     def _new_position(self, position, movement):

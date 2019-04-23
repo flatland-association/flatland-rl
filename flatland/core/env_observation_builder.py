@@ -272,6 +272,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         other_agent_encountered = False
         other_target_encountered = False
         while exploring:
+
             # #############################
             # #############################
             # Modify here to compute any useful data required to build the end node's features. This code is called
