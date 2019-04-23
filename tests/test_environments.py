@@ -5,6 +5,7 @@ import numpy as np
 from flatland.envs.rail_env import RailEnv, rail_from_GridTransitionMap_generator
 from flatland.core.transitions import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.core.env_observation_builder import GlobalObsForRailEnv
 
 """Tests for `flatland` package."""
 
@@ -49,7 +50,9 @@ def test_rail_environment_single_agent():
     rail_env = RailEnv(width=3,
                        height=3,
                        rail_generator=rail_from_GridTransitionMap_generator(rail),
-                       number_of_agents=1)
+                       number_of_agents=1,
+                       obs_builder_object=GlobalObsForRailEnv())
+
     for _ in range(200):
         _ = rail_env.reset()
 
@@ -124,7 +127,8 @@ def test_dead_end():
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
                        rail_generator=rail_from_GridTransitionMap_generator(rail),
-                       number_of_agents=1)
+                       number_of_agents=1,
+                       obs_builder_object=GlobalObsForRailEnv())
 
     def check_consistency(rail_env):
         # We run step to check that trains do not move anymore
@@ -147,14 +151,14 @@ def test_dead_end():
 
     # We try the configuration in the 4 directions:
     rail_env.reset()
-    rail_env.agents_target[0] = [0, 0]
-    rail_env.agents_position[0] = [0, 2]
+    rail_env.agents_target[0] = (0, 0)
+    rail_env.agents_position[0] = (0, 2)
     rail_env.agents_direction[0] = 1
     check_consistency(rail_env)
 
     rail_env.reset()
-    rail_env.agents_target[0] = [0, 4]
-    rail_env.agents_position[0] = [0, 2]
+    rail_env.agents_target[0] = (0, 4)
+    rail_env.agents_position[0] = (0, 2)
     rail_env.agents_direction[0] = 3
     check_consistency(rail_env)
 
@@ -173,16 +177,17 @@ def test_dead_end():
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
                        rail_generator=rail_from_GridTransitionMap_generator(rail),
-                       number_of_agents=1)
+                       number_of_agents=1,
+                       obs_builder_object=GlobalObsForRailEnv())
 
     rail_env.reset()
-    rail_env.agents_target[0] = [0, 0]
-    rail_env.agents_position[0] = [2, 0]
+    rail_env.agents_target[0] = (0, 0)
+    rail_env.agents_position[0] = (2, 0)
     rail_env.agents_direction[0] = 2
     check_consistency(rail_env)
 
     rail_env.reset()
-    rail_env.agents_target[0] = [4, 0]
-    rail_env.agents_position[0] = [2, 0]
+    rail_env.agents_target[0] = (4, 0)
+    rail_env.agents_position[0] = (2, 0)
     rail_env.agents_direction[0] = 0
     check_consistency(rail_env)

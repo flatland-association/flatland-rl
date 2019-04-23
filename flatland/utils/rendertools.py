@@ -406,6 +406,7 @@ class RenderTool(object):
         plt.clf()
         # if oFigure is None:
         #    oFigure = plt.figure()
+
         def drawTrans(oFrom, oTo, sColor="gray"):
             plt.plot(
                 [oFrom[0], oTo[0]],  # x
@@ -553,8 +554,6 @@ class RenderTool(object):
             plt.show(block=False)
             plt.pause(0.00001)
             return
-
-
 
     def _draw_square(self, center, size, color):
         x0 = center[0]-size/2
