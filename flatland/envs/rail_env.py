@@ -486,6 +486,8 @@ class RailEnv(Environment):
         for handle in self.agents_handles:
             self.dones[handle] = False
 
+        # Use a TreeObsForRailEnv to compute distance maps to each agent's target, to sample initial
+        # agent's orientations that allow a valid solution.
         re_generate = True
         while re_generate:
             valid_positions = []
