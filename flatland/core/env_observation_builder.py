@@ -9,6 +9,7 @@ case of multi-agent environments.
 """
 
 import numpy as np
+
 from collections import deque
 
 # TODO: add docstrings, pylint, etc...
@@ -103,6 +104,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             node = nodes_queue.popleft()
 
             node_id = (node[0], node[1], node[2])
+
             if node_id not in visited:
                 visited.add(node_id)
 
@@ -124,6 +126,53 @@ class TreeObsForRailEnv(ObservationBuilder):
         minimum distances from each target cell.
         """
         neighbors = []
+
+        for direction in range(4):
+            new_cell = self._new_position(position, (direction+2) % 4)
+
+            if new_cell[0] >= 0 and new_cell[0] < self.env.height and new_cell[1] >= 0 and new_cell[1] < self.env.width:
+                # Check if the two cells are connected by a valid transition
+                transitionValid = False
+                for orientation in range(4):
+                    moves = self.env.rail.get_transitions((new_cell[0], new_cell[1], orientation))
+                    if moves[direction]:
+                        transitionValid = True
+                        break
+
+                if not transitionValid:
+                    continue
+
+                # Check if a transition in direction node[2] is possible if an agent
+                # lands in the current cell with orientation `direction'; this only
+                # applies to cells that are not dead-ends!
+                directionMatch = True
+                if enforce_target_direction >= 0:
+                    directionMatch = self.env.rail.get_transition(
+                        (new_cell[0], new_cell[1], direction), enforce_target_direction)
+
+                # If transition is found to invalid, check if perhaps it
+                # is a dead-end, in which case the direction of movement is rotated
+                # 180 degrees (moving forward turns the agents and makes it step in the previous cell)
+                if not directionMatch:
+                    # If cell is a dead-end, append previous node with reversed
+                    # orientation!
+                    nbits = 0
+                    tmp = self.env.rail.get_transitions((new_cell[0], new_cell[1]))
+                    while tmp > 0:
+                        nbits += (tmp & 1)
+                        tmp = tmp >> 1
+                    if nbits == 1:
+                        # Dead-end!
+                        # Check if transition is possible in new_cell
+                        # with orientation (direction+2)%4 in direction `direction'
+                        directionMatch = directionMatch or self.env.rail.get_transition(
+                            (new_cell[0], new_cell[1], (direction+2) % 4), direction)
+
+                if transitionValid and directionMatch:
+                    new_distance = min(self.distance_map[target_nr,
+                                                         new_cell[0], new_cell[1]], current_distance+1)
+                    neighbors.append((new_cell[0], new_cell[1], direction, new_distance))
+                    self.distance_map[target_nr, new_cell[0], new_cell[1]] = new_distance
 
         possible_directions = [0, 1, 2, 3]
         if enforce_target_direction >= 0:
@@ -194,6 +243,10 @@ class TreeObsForRailEnv(ObservationBuilder):
         The possible movements are sorted relative to the current orientation of the agent, rather than NESW as for
         the transitions. The order is:
             [data from 'left'] + [data from 'forward'] + [data from 'right'] + [data from 'back']
+
+
+
+
 
         Each branch data is organized as:
             [root node information] +
@@ -410,3 +463,51 @@ class TreeObsForRailEnv(ObservationBuilder):
                                         num_features_per_node,
                                         prompt=prompt_[children],
                                         current_depth=current_depth+1)
+
+
+class GlobalObsForRailEnv(ObservationBuilder):
+    """
+    Gives a global observation of the entire rail environment.
+    The observation is composed of the following elements:
+
+        - transition map array with dimensions (env.height, env.width, 16),
+          assuming 16 bits encoding of transitions.
+
+        - Four 2D arrays containing respectively the position of the given agent,
+          the position of its target, the positions of the other agents and of
+          their target.
+
+        - A 4 elements array with one of encoding of the direction.
+    """
+    def __init__(self):
+        super(GlobalObsForRailEnv, self).__init__()
+
+    def reset(self):
+        self.rail_obs = np.zeros((self.env.height, self.env.width, 16))
+        for i in range(self.rail_obs.shape[0]):
+            for j in range(self.rail_obs.shape[1]):
+                self.rail_obs[i, j] = np.array(
+                    list(f'{self.env.rail.get_transitions((i, j)):016b}')).astype(int)
+
+        # self.targets = np.zeros(self.env.height, self.env.width)
+        # for target_pos in self.env.agents_target:
+        #     self.targets[target_pos] += 1
+
+    def get(self, handle):
+        obs_agents_targets_pos = np.zeros((4, self.env.height, self.env.width))
+        agent_pos = self.env.agents_position[handle]
+        obs_agents_targets_pos[0][agent_pos] += 1
+        for i in range(len(self.env.agents_position)):
+            if i != handle:
+                obs_agents_targets_pos[3][self.env.agents_position[i]] += 1
+
+        agent_target_pos = self.env.agents_target[handle]
+        obs_agents_targets_pos[1][agent_target_pos] += 1
+        for i in range(len(self.env.agents_target)):
+            if i != handle:
+                obs_agents_targets_pos[2][self.env.agents_target[i]] += 1
+
+        direction = np.zeros(4)
+        direction[self.env.agents_direction[handle]] = 1
+
+        return self.rail_obs, obs_agents_targets_pos, direction
