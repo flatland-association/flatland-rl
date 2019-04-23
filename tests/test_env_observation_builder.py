@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from flatland.core.env_observation_builder import GlobalObsForRailEnv
-from flatland.core.transitions import Grid4Transitions
+# from flatland.core.transitions import Grid4Transitions
+from flatland.core.transition_map import GridTransitionMap, Grid4Transitions
+from flatland.core.env import RailEnv
 import numpy as np
+from flatland.utils.rendertools import *
 
 """Tests for `flatland` package."""
 
@@ -43,18 +46,44 @@ def test_global_obs():
     double_switch_north_horizontal_straight = transitions.rotate_transition(
         double_switch_south_horizontal_straight, 180)
 
-
-
     rail_map = np.array(
         [[empty] * 3 + [dead_end_from_south] + [empty] * 6] +
-        [[empty] * 3 + [vertical_straight] + [empty] * 6]*2 +
-        [[horizontal_straight] * 3 + [double_switch_north_horizontal_straight] +
-        [horizontal_straight] * 2 + [double_switch_south_horizontal_straight] +
-        [horizontal_straight] * 3] +
         [[empty] * 3 + [vertical_straight] + [empty] * 6] * 2 +
-        [[empty] * 3 + [dead_end_from_south] + [empty] * 6], dtype=np.uint16)
+        [[dead_end_from_east] + [horizontal_straight] * 2 +
+         [double_switch_north_horizontal_straight] +
+        [horizontal_straight] * 2 + [double_switch_south_horizontal_straight] +
+        [horizontal_straight] * 2 + [dead_end_from_west]] +
+        [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
+        [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
 
-    print(rail_map.shape)
+    rail = GridTransitionMap(width=rail_map.shape[1],
+                             height=rail_map.shape[0], transitions=transitions)
+    rail.grid = rail_map
+    env = RailEnv(rail, number_of_agents=1)
+
+    env.reset()
+    # env_renderer = RenderTool(env)
+    # env_renderer.renderEnv(show=True)
+
+    global_obs = GlobalObsForRailEnv(env)
+    global_obs.reset()
+    assert(global_obs.rail_obs.shape == rail_map.shape + (16,))
+
+    rail_map_recons = np.zeros_like(rail_map)
+    for i in range(global_obs.rail_obs.shape[0]):
+        for j in range(global_obs.rail_obs.shape[1]):
+            rail_map_recons[i,j] = int(
+                ''.join(global_obs.rail_obs[i, j].astype(int).astype(str)), 2)
+
+    assert(rail_map_recons.all() == rail_map.all())
+
+    obs = global_obs.get(0)
+
+    # If this assertion is wrong, it means that the observation returned
+    # places the agent on an empty cell
+    assert(np.sum(rail_map * obs[1][0]) > 0)
+
+
 
 test_global_obs()
 
