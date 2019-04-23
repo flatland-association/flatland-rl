@@ -4,7 +4,8 @@ import numpy as np
 from numpy import array
 import xarray as xr
 import matplotlib.pyplot as plt
-
+import time
+from collections import deque
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
@@ -31,6 +32,9 @@ class RenderTool(object):
 
     def __init__(self, env):
         self.env = env
+        self.iFrame = 0
+        self.time1 = time.time()
+        self.lTimes = deque()
 
     def plotTreeOnRail(self, lVisits, color="r"):
         """
@@ -391,7 +395,8 @@ class RenderTool(object):
 
     def renderEnv(
             self, show=False, curves=True, spacing=False,
-            arrows=False, agents=True, sRailColor="gray"):
+            arrows=False, agents=True, sRailColor="gray",
+            frames=False, iEpisode=None, iStep=None):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -536,6 +541,27 @@ class RenderTool(object):
                     [-env.agents_position[i][0] * cell_size-cell_size/2, -new_position[0]-cell_size/2],
                     color=cmap(i),
                     linewidth=2.0)
+
+        # Draw some textual information like fps
+        yText = [0.1, 0.4, 0.7]
+        if frames:
+            plt.text(0.1, yText[2], "Frame:{:}".format(self.iFrame))
+        self.iFrame += 1
+        
+        if iEpisode is not None:
+            plt.text(0.1, yText[1], "Ep:{}".format(iEpisode))
+
+        if iStep is not None:
+            plt.text(0.1, yText[0], "Step:{}".format(iStep))
+
+        tNow = time.time()
+        plt.text(2, yText[2], "elapsed:{:.2f}s".format(tNow - self.time1))
+        self.lTimes.append(tNow)
+        if len(self.lTimes) > 20:
+            self.lTimes.popleft()
+        if len(self.lTimes) > 1:
+            rFps = (len(self.lTimes) - 1) / (self.lTimes[-1] - self.lTimes[0])
+            plt.text(2, yText[1], "fps:{:.2f}".format(rFps))
 
         plt.xlim([0, env.width * cell_size])
         plt.ylim([-env.height * cell_size, 0])
