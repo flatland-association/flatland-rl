@@ -10,8 +10,8 @@ np.random.seed(1)
 
 # Example generate a rail given a manual specification,
 # a map of tuples (cell_type, rotation)
-transition_probability = [1.0,  # empty cell - Case 0
-                          1.0,  # Case 1 - straight
+transition_probability = [10.0,  # empty cell - Case 0
+                          50.0,  # Case 1 - straight
                           1.0,  # Case 2 - simple switch
                           0.3,  # Case 3 - diamond drossing
                           0.5,  # Case 4 - single slip
@@ -38,13 +38,17 @@ scores_window = deque(maxlen=100)
 done_window = deque(maxlen=100)
 scores = []
 dones_list = []
-
+action_prob = [0]*4
 agent = Agent(state_size, action_size, "FC", 0)
 
 for trials in range(1, n_trials + 1):
 
     # Reset environment
     obs = env.reset()
+    for a in range(env.number_of_agents):
+        if np.max(obs[a]) > 0 and np.max(obs[a]) < np.inf:
+            obs[a] = np.clip(obs[a] / np.max(obs[a]), -1, 1)
+
     # env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
 
     score = 0
@@ -52,24 +56,26 @@ for trials in range(1, n_trials + 1):
 
     # Run episode
     for step in range(100):
-        if trials > 114:
-            env_renderer.renderEnv(show=True)
+        #if trials > 114:
+        #    env_renderer.renderEnv(show=True)
 
         # Action
         for a in range(env.number_of_agents):
             action = agent.act(np.array(obs[a]), eps=eps)
+            action_prob[action] += 1
             action_dict.update({a: action})
 
         # Environment step
         next_obs, all_rewards, done, _ = env.step(action_dict)
-
+        for a in range(env.number_of_agents):
+            if np.max(next_obs[a]) > 0 and np.max(next_obs[a]) < np.inf:
+                next_obs[a] = np.clip(next_obs[a] / np.max(next_obs[a]), -1, 1)
         # Update replay buffer and train agent
         for a in range(env.number_of_agents):
             agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
             score += all_rewards[a]
 
         obs = next_obs.copy()
-
         if done['__all__']:
             env_done = 1
             break
@@ -81,24 +87,24 @@ for trials in range(1, n_trials + 1):
     scores.append(np.mean(scores_window))
     dones_list.append((np.mean(done_window)))
 
-    print('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f}'.format(
+    print('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
         env.number_of_agents,
         trials,
         np.mean(
             scores_window),
         100 * np.mean(
             done_window),
-        eps),
+        eps, action_prob/np.sum(action_prob)),
           end=" ")
     if trials % 100 == 0:
         print(
-            '\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f}'.format(
+            '\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
                 env.number_of_agents,
                 trials,
                 np.mean(
                     scores_window),
                 100 * np.mean(
                     done_window),
-                eps))
+                eps, action_prob / np.sum(action_prob)))
         torch.save(agent.qnetwork_local.state_dict(),
                    '../flatland/baselines/Nets/avoid_checkpoint' + str(trials) + '.pth')
