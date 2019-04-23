@@ -40,7 +40,7 @@ scores = []
 dones_list = []
 action_prob = [0]*4
 agent = Agent(state_size, action_size, "FC", 0)
-agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint8000.pth'))
+#agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint8000.pth'))
 def max_lt(seq, val):
     """
     Return greatest item in seq for which item < val applies.
