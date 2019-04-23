@@ -62,7 +62,8 @@ for trials in range(1, n_trials + 1):
     env_done = 0
 
     # Run episode
-    for step in range(100):
+    for step in range(50):
+        #env_renderer.renderEnv(show=True)
 
         # Action
         for a in range(env.number_of_agents):
@@ -71,9 +72,6 @@ for trials in range(1, n_trials + 1):
 
         # Environment step
         next_obs, all_rewards, done, _ = env.step(action_dict)
-
-
-
         # Update replay buffer and train agent
         for a in range(env.number_of_agents):
             agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
