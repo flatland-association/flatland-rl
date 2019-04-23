@@ -403,10 +403,9 @@ class RenderTool(object):
         # cell_size is a bit pointless with matplotlib - it does not relate to pixels,
         # so for now I've changed it to 1 (from 10)
         cell_size = 1
-
+        plt.clf()
         # if oFigure is None:
         #    oFigure = plt.figure()
-
         def drawTrans(oFrom, oTo, sColor="gray"):
             plt.plot(
                 [oFrom[0], oTo[0]],  # x
@@ -551,7 +550,11 @@ class RenderTool(object):
         plt.xlim([0, env.width * cell_size])
         plt.ylim([-env.height * cell_size, 0])
         if show:
-            plt.show()
+            plt.show(block=False)
+            plt.pause(0.00001)
+            return
+
+
 
     def _draw_square(self, center, size, color):
         x0 = center[0]-size/2

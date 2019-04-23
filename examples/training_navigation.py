@@ -8,16 +8,7 @@ import torch,random
 random.seed(1)
 np.random.seed(1)
 
-"""
-transition_probability = [1.0,  # empty cell - Case 0
-                          3.0,  # Case 1 - straight
-                          1.0,  # Case 2 - simple switch
-                          3.0,  # Case 3 - diamond drossing
-                          2.0,  # Case 4 - single slip
-                          1.0,  # Case 5 - double slip
-                          1.0,  # Case 6 - symmetrical
-                          1.0]  # Case 7 - dead end
-"""
+
 # Example generate a rail given a manual specification,
 # a map of tuples (cell_type, rotation)
 transition_probability = [1.0,  # empty cell - Case 0
@@ -63,6 +54,7 @@ for trials in range(1, n_trials + 1):
 
     # Run episode
     for step in range(100):
+        #env_renderer.renderEnv(show=True)
 
         # Action
         for a in range(env.number_of_agents):
@@ -73,7 +65,6 @@ for trials in range(1, n_trials + 1):
         next_obs, all_rewards, done, _ = env.step(action_dict)
 
 
-
         # Update replay buffer and train agent
         for a in range(env.number_of_agents):
             agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
@@ -81,7 +72,7 @@ for trials in range(1, n_trials + 1):
 
         obs = next_obs.copy()
 
-        if all(done):
+        if done['__all__']:
             env_done = 1
             break
     # Epsioln decay
