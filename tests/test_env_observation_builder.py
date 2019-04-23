@@ -2,10 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from flatland.core.env_observation_builder import GlobalObsForRailEnv
-# from flatland.core.transitions import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap, Grid4Transitions
 from flatland.core.env import RailEnv
-import numpy as np
 from flatland.utils.rendertools import *
 
 """Tests for `flatland` package."""

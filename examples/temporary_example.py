@@ -1,7 +1,3 @@
-import random
-import numpy as np
-import matplotlib.pyplot as plt
-
 from flatland.core.env import RailEnv
 from flatland.utils.rail_env_generator import *
 from flatland.utils.rendertools import *

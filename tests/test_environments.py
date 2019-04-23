@@ -177,11 +177,3 @@ def test_dead_end():
     rail_env.agents_position[0] = [2, 0]
     rail_env.agents_direction[0] = 0
     check_consistency(rail_env)
-
-
-
-
-
-
-test_dead_end()
-
