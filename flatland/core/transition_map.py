@@ -118,7 +118,7 @@ class GridTransitionMap(TransitionMap):
             Width of the grid.
         height : int
             Height of the grid.
-        transitions_class : Transitions object
+        transitions : Transitions object
             The Transitions object to use to encode/decode transitions over the
             grid.
 
@@ -243,6 +243,54 @@ class GridTransitionMap(TransitionMap):
             return
         self.transitions.set_transition(self.grid[cell_id[0]][cell_id[1]], cell_id[2], transition_index, new_transition)
 
+    def save_transition_map(self, filename):
+        """
+        Save the transitions grid as `filename', in npy format.
+
+        Parameters
+        ----------
+        filename : string
+            Name of the file to which to save the transitions grid.
+
+        """
+        np.save(filename, self.grid)
+
+    def load_transition_map(self, filename, override_gridsize=True):
+        """
+        Load the transitions grid from `filename' (npy format).
+        The load function only updates the transitions grid, and possibly width and height, but the object has to be
+        initialized with the correct `transitions' object anyway.
+
+        Parameters
+        ----------
+        filename : string
+            Name of the file from which to load the transitions grid.
+        override_gridsize : bool
+            If override_gridsize=True, the width and height of the GridTransitionMap object are replaced with the size
+            of the map loaded from `filename'. If override_gridsize=False, the transitions grid is either cropped (if
+            the grid size is larger than (height,width) ) or padded with zeros (if the grid size is smaller than
+            (height,width) )
+
+        """
+        new_grid = np.load(filename)
+
+        new_height = new_grid.shape[0]
+        new_width = new_grid.shape[1]
+
+        if override_gridsize:
+            self.width = new_width
+            self.height = new_height
+            self.grid = new_grid
+
+        else:
+            if new_grid.dtype == np.uint16:
+                self.grid = np.zeros((self.height, self.width), dtype=np.uint16)
+            elif new_grid.dtype == np.uint64:
+                self.grid = np.zeros((self.height, self.width), dtype=np.uint64)
+
+            self.grid[0:min(self.height, new_height),
+                      0:min(self.width, new_width)] = new_grid[0:min(self.height, new_height),
+                                                               0:min(self.width, new_width)]
 
 # TODO: GIACOMO: is it better to provide those methods with lists of cell_ids
 # (most general implementation) or to make Grid-class specific methods for

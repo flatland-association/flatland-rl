@@ -6,6 +6,8 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 
+# TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
+
 class RenderTool(object):
     Visit = recordtype("Visit", ["rc", "iDir", "iDepth", "prev"])
 
@@ -401,7 +403,7 @@ class RenderTool(object):
         # cell_size is a bit pointless with matplotlib - it does not relate to pixels,
         # so for now I've changed it to 1 (from 10)
         cell_size = 1
-
+        plt.clf()
         # if oFigure is None:
         #    oFigure = plt.figure()
 
@@ -549,7 +551,9 @@ class RenderTool(object):
         plt.xlim([0, env.width * cell_size])
         plt.ylim([-env.height * cell_size, 0])
         if show:
-            plt.show()
+            plt.show(block=False)
+            plt.pause(0.00001)
+            return
 
     def _draw_square(self, center, size, color):
         x0 = center[0]-size/2

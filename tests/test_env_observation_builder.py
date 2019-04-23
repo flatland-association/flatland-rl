@@ -3,7 +3,7 @@
 
 from flatland.core.env_observation_builder import GlobalObsForRailEnv
 from flatland.core.transition_map import GridTransitionMap, Grid4Transitions
-from flatland.core.env import RailEnv
+from flatland.envs.rail_env import RailEnv, rail_from_GridTransitionMap_generator
 from flatland.utils.rendertools import *
 
 """Tests for `flatland` package."""
@@ -57,29 +57,30 @@ def test_global_obs():
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    env = RailEnv(rail, number_of_agents=1)
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_GridTransitionMap_generator(rail),
+                  number_of_agents=1,
+                  obs_builder_object=GlobalObsForRailEnv())
 
-    env.reset()
+    global_obs = env.reset()
     # env_renderer = RenderTool(env)
     # env_renderer.renderEnv(show=True)
 
-    global_obs = GlobalObsForRailEnv(env)
-    global_obs.reset()
-    assert(global_obs.rail_obs.shape == rail_map.shape + (16,))
+    # global_obs.reset()
+    assert(global_obs[0][0].shape == rail_map.shape + (16,))
 
     rail_map_recons = np.zeros_like(rail_map)
-    for i in range(global_obs.rail_obs.shape[0]):
-        for j in range(global_obs.rail_obs.shape[1]):
-            rail_map_recons[i,j] = int(
-                ''.join(global_obs.rail_obs[i, j].astype(int).astype(str)), 2)
+    for i in range(global_obs[0][0].shape[0]):
+        for j in range(global_obs[0][0].shape[1]):
+            rail_map_recons[i, j] = int(
+                ''.join(global_obs[0][0][i, j].astype(int).astype(str)), 2)
 
     assert(rail_map_recons.all() == rail_map.all())
 
-    obs = global_obs.get(0)
-
     # If this assertion is wrong, it means that the observation returned
     # places the agent on an empty cell
-    assert(np.sum(rail_map * obs[1][0]) > 0)
+    assert(np.sum(rail_map * global_obs[0][1][0]) > 0)
 
 
 
