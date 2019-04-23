@@ -6,8 +6,65 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import time
 from collections import deque
+from flatland.utils.render_qt import QTGL
+from flatland.utils.graphics_layer import GraphicsLayer
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
+
+
+class MPLGL(GraphicsLayer):
+    def __init__(self):
+        pass
+
+    def plot(self, *args, **kwargs):
+        plt.plot(*args, **kwargs)
+
+    def scatter(self, *args, **kwargs):
+        plt.scatter(*args, **kwargs)
+
+    def text(self, *args, **kwargs):
+        plt.text(*args, **kwargs)
+    
+    def prettify(self, *args, **kwargs):
+        ax = plt.gca()
+        plt.xticks(range(int(ax.get_xlim()[1])+1))
+        plt.yticks(range(int(ax.get_ylim()[1])+1))
+        plt.grid()
+        plt.xlabel("Euclidean distance")
+        plt.ylabel("Tree / Transition Depth")
+
+    def prettify2(self, width, height, cell_size):
+        plt.xlim([0, width * cell_size])
+        plt.ylim([-height * cell_size, 0])
+
+        gTicks = (np.arange(0, height) + 0.5) * cell_size
+        gLabels = np.arange(0, height)
+        plt.xticks(gTicks, gLabels)
+
+        gTicks = np.arange(-height * cell_size, 0) + cell_size/2
+        gLabels = np.arange(height-1, -1, -1)
+        plt.yticks(gTicks, gLabels)
+
+        plt.xlim([0, width * cell_size])
+        plt.ylim([-height * cell_size, 0])
+    
+    def show(self, block=False):
+        plt.show(block=block)
+
+    def pause(self, seconds=0.00001):
+        plt.pause(seconds)
+    
+    def clf(self):
+        plt.clf()
+    
+    def get_cmap(self, *args, **kwargs):
+        return plt.get_cmap(*args, **kwargs)
+
+    def beginFrame(self):
+        pass
+    
+    def endFrame(self):
+        pass
 
 
 class RenderTool(object):
@@ -31,11 +88,14 @@ class RenderTool(object):
     gTheta = np.linspace(0, np.pi/2, 10)
     gArc = array([np.cos(gTheta), np.sin(gTheta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env):
+    def __init__(self, env, gl="MPL"):
         self.env = env
         self.iFrame = 0
         self.time1 = time.time()
         self.lTimes = deque()
+        # self.gl = MPLGL()
+
+        self.gl = MPLGL() if gl == "MPL" else QTGL(env.width, env.height)
 
     def plotTreeOnRail(self, lVisits, color="r"):
         """
@@ -133,17 +193,17 @@ class RenderTool(object):
         """
         rt = self.__class__
         xyPos = np.matmul(rcPos, rt.grc2xy) + rt.xyHalf
-        plt.scatter(*xyPos, color=sColor)            # agent location
+        self.gl.scatter(*xyPos, color=sColor)            # agent location
 
         rcDir = rt.gTransRC[iDir]                    # agent direction in RC
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
         xyDirLine = array([xyPos, xyPos+xyDir/2]).T  # line for agent orient.
-        plt.plot(*xyDirLine, color=sColor, lw=5, ms=0, alpha=0.6)
+        self.gl.plot(*xyDirLine, color=sColor, lw=5, ms=0, alpha=0.6)
 
         # just mark the next cell we're heading into
         rcNext = rcPos + rcDir
         xyNext = np.matmul(rcNext, rt.grc2xy) + rt.xyHalf
-        plt.scatter(*xyNext, color=sColor)
+        self.gl.scatter(*xyNext, color=sColor)
 
     def plotTrans(self, rcPos, gTransRCAg, color="r", depth=None):
         """
@@ -156,10 +216,10 @@ class RenderTool(object):
         rt = self.__class__
         xyPos = np.matmul(rcPos, rt.grc2xy) + rt.xyHalf
         gxyTrans = xyPos + np.matmul(gTransRCAg, rt.grc2xy/2.4)
-        plt.scatter(*gxyTrans.T, color=color, marker="o", s=50, alpha=0.2)
+        self.gl.scatter(*gxyTrans.T, color=color, marker="o", s=50, alpha=0.2)
         if depth is not None:
             for x, y in gxyTrans:
-                plt.text(x, y, depth)
+                self.gl.text(x, y, depth)
 
     def getTreeFromRail(self, rcPos, iDir, nDepth=10, bBFS=True, bPlot=False):
         """
@@ -234,9 +294,9 @@ class RenderTool(object):
             xLoc = rDist + visit.iDir / 4
 
             # point labelled with distance
-            plt.scatter(xLoc, visit.iDepth,  color="k", s=2)
+            self.gl.scatter(xLoc, visit.iDepth,  color="k", s=2)
             # plt.text(xLoc, visit.iDepth, sDist, color="k", rotation=45)
-            plt.text(xLoc, visit.iDepth, visit.rc, color="k", rotation=45)
+            self.gl.text(xLoc, visit.iDepth, visit.rc, color="k", rotation=45)
 
             # if len(dPos)>1:
             if visit.prev:
@@ -251,7 +311,7 @@ class RenderTool(object):
                 xLocPrev = rDistPrev + visit.prev.iDir / 4
 
                 # line from prev node
-                plt.plot([xLocPrev, xLoc],
+                self.gl.plot([xLocPrev, xLoc],
                          [visit.iDepth-1, visit.iDepth],
                          color="k", alpha=0.5, lw=1)
 
@@ -266,19 +326,14 @@ class RenderTool(object):
                 rDist = np.linalg.norm(array(visit.rc) - array(xyTarg))
                 xLoc = rDist + visit.iDir / 4
                 if xLocPrev is not None:
-                    plt.plot([xLoc, xLocPrev], [visit.iDepth, visit.iDepth+1],
+                    self.gl.plot([xLoc, xLocPrev], [visit.iDepth, visit.iDepth+1],
                              color="r", alpha=0.5, lw=2)
                 xLocPrev = xLoc
                 visit = visit.prev
             # prev = prev.prev
 
-        # plt.xticks(range(7)); plt.yticks(range(11))
-        ax = plt.gca()
-        plt.xticks(range(int(ax.get_xlim()[1])+1))
-        plt.yticks(range(int(ax.get_ylim()[1])+1))
-        plt.grid()
-        plt.xlabel("Euclidean distance")
-        plt.ylabel("Tree / Transition Depth")
+        # self.gl.xticks(range(7)); self.gl.yticks(range(11))
+        self.gl.prettify()
         return visitDest
 
     def plotPath(self, visitDest):
@@ -303,7 +358,7 @@ class RenderTool(object):
                     dx, dy = (xyPrev - xy) / 20
                     xyLine = array([xy, xyPrev]) + array([dy, dx])
 
-                    plt.plot(*xyLine.T, color="r", alpha=0.5, lw=1)
+                    self.gl.plot(*xyLine.T, color="r", alpha=0.5, lw=1)
 
                     xyMid = np.sum(xyLine * [[1/4], [3/4]], axis=0)
 
@@ -312,7 +367,7 @@ class RenderTool(object):
                         xyMid,
                         xyMid + [-dx+dy, -dx-dy]
                         ])
-                    plt.plot(*xyArrow.T, color="r")
+                    self.gl.plot(*xyArrow.T, color="r")
 
                 visit = visit.prev
                 xyPrev = xy
@@ -350,10 +405,10 @@ class RenderTool(object):
                     xyCentre,
                     xyLine[1] - [dy, dx],
                 ])
-                plt.plot(*xyLine2.T, color=sColor)
+                self.gl.plot(*xyLine2.T, color=sColor)
             else:
                 xyLine2 = xyLine + [-dy, dx]
-                plt.plot(*xyLine2.T, color=sColor)
+                self.gl.plot(*xyLine2.T, color=sColor)
 
                 if bArrow:
                     xyMid = np.sum(xyLine2 * [[1/4], [3/4]], axis=0)
@@ -363,7 +418,7 @@ class RenderTool(object):
                         xyMid,
                         xyMid + [-dx+dy, -dx-dy]
                         ])
-                    plt.plot(*xyArrow.T, color=sColor)
+                    self.gl.plot(*xyArrow.T, color=sColor)
 
         else:
 
@@ -381,7 +436,7 @@ class RenderTool(object):
             if sColor == "auto":
                 sColor = sColorAuto
 
-            plt.plot(*(rt.gArc * dxy2 + xyCorner).T, color=sColor)
+            self.gl.plot(*(rt.gArc * dxy2 + xyCorner).T, color=sColor)
 
             if bArrow:
                 dx, dy = np.squeeze(np.diff(xyLine, axis=0)) / 20
@@ -392,7 +447,7 @@ class RenderTool(object):
                     xyMid,
                     xyMid + [-dx+dy, -dx-dy]
                     ])
-                plt.plot(*xyArrow.T, color=sColor)
+                self.gl.plot(*xyArrow.T, color=sColor)
 
     def renderEnv(
             self, show=False, curves=True, spacing=False,
@@ -409,12 +464,13 @@ class RenderTool(object):
         # cell_size is a bit pointless with matplotlib - it does not relate to pixels,
         # so for now I've changed it to 1 (from 10)
         cell_size = 1
-        plt.clf()
+        self.gl.beginFrame()
+        self.gl.clf()
         # if oFigure is None:
-        #    oFigure = plt.figure()
+        #    oFigure = self.gl.figure()
 
         def drawTrans(oFrom, oTo, sColor="gray"):
-            plt.plot(
+            self.gl.plot(
                 [oFrom[0], oTo[0]],  # x
                 [oFrom[1], oTo[1]],  # y
                 color=sColor
@@ -425,11 +481,11 @@ class RenderTool(object):
         # Draw cells grid
         grid_color = [0.95, 0.95, 0.95]
         for r in range(env.height+1):
-            plt.plot([0, (env.width+1)*cell_size],
+            self.gl.plot([0, (env.width+1)*cell_size],
                      [-r*cell_size, -r*cell_size],
                      color=grid_color)
         for c in range(env.width+1):
-            plt.plot([c*cell_size, c*cell_size],
+            self.gl.plot([c*cell_size, c*cell_size],
                      [0, -(env.height+1)*cell_size],
                      color=grid_color)
 
@@ -514,7 +570,7 @@ class RenderTool(object):
 
         # Draw each agent + its orientation + its target
         if agents:
-            cmap = plt.get_cmap('hsv', lut=env.number_of_agents+1)
+            cmap = self.gl.get_cmap('hsv', lut=env.number_of_agents+1)
             for i in range(env.number_of_agents):
                 self._draw_square((
                                 env.agents_position[i][1] *
@@ -537,54 +593,46 @@ class RenderTool(object):
                     new_position[0] + env.agents_position[i][0]) / 2 * cell_size,
                     (new_position[1] + env.agents_position[i][1]) / 2 * cell_size)
 
-                plt.plot(
+                self.gl.plot(
                     [env.agents_position[i][1] * cell_size+cell_size/2, new_position[1]+cell_size/2],
                     [-env.agents_position[i][0] * cell_size-cell_size/2, -new_position[0]-cell_size/2],
                     color=cmap(i),
                     linewidth=2.0)
 
         # Draw some textual information like fps
-        yText = [0.1, 0.4, 0.7]
+        yText = [-0.3, -0.6, -0.9]
         if frames:
-            plt.text(0.1, yText[2], "Frame:{:}".format(self.iFrame))
+            self.gl.text(0.1, yText[2], "Frame:{:}".format(self.iFrame))
         self.iFrame += 1
         
         if iEpisode is not None:
-            plt.text(0.1, yText[1], "Ep:{}".format(iEpisode))
+            self.gl.text(0.1, yText[1], "Ep:{}".format(iEpisode))
 
         if iStep is not None:
-            plt.text(0.1, yText[0], "Step:{}".format(iStep))
+            self.gl.text(0.1, yText[0], "Step:{}".format(iStep))
 
         tNow = time.time()
-        plt.text(2, yText[2], "elapsed:{:.2f}s".format(tNow - self.time1))
+        self.gl.text(2, yText[2], "elapsed:{:.2f}s".format(tNow - self.time1))
         self.lTimes.append(tNow)
         if len(self.lTimes) > 20:
             self.lTimes.popleft()
         if len(self.lTimes) > 1:
             rFps = (len(self.lTimes) - 1) / (self.lTimes[-1] - self.lTimes[0])
-            plt.text(2, yText[1], "fps:{:.2f}".format(rFps))
+            self.gl.text(2, yText[1], "fps:{:.2f}".format(rFps))
 
-        plt.xlim([0, env.width * cell_size])
-        plt.ylim([-env.height * cell_size, 0])
+        self.gl.prettify2(env.width, env.height, self.nPixCell)
 
-        gTicks = (np.arange(0, env.height) + 0.5) * cell_size
-        gLabels = np.arange(0, env.height)
-        plt.xticks(gTicks, gLabels)
+        self.gl.endFrame()
 
-        gTicks = np.arange(-env.height * cell_size, 0) + cell_size/2
-        gLabels = np.arange(env.height-1, -1, -1)
-        plt.yticks(gTicks, gLabels)
-
-        plt.xlim([0, env.width * cell_size])
-        plt.ylim([-env.height * cell_size, 0])
         if show:
-            plt.show(block=False)
-            plt.pause(0.00001)
-            return
+            self.gl.show(block=False)
+            self.gl.pause(0.00001)
+
+        return
 
     def _draw_square(self, center, size, color):
         x0 = center[0]-size/2
         x1 = center[0]+size/2
         y0 = center[1]-size/2
         y1 = center[1]+size/2
-        plt.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color)
+        self.gl.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color)

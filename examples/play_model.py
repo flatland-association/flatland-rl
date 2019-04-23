@@ -32,8 +32,8 @@ def main():
                 height=7,
                 rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
                 number_of_agents=1)
-    # env_renderer = RenderTool(env)
-    env_renderer = QtRailRender(env)
+    env_renderer = RenderTool(env, gl="QT")
+    #env_renderer = QtRailRender(env)
     plt.figure(figsize=(5,5))
     # fRedis = redis.Redis()
 
