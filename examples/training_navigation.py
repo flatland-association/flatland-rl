@@ -54,7 +54,8 @@ for trials in range(1, n_trials + 1):
 
     # Run episode
     for step in range(100):
-        #env_renderer.renderEnv(show=True)
+        if trials >= 114:
+            env_renderer.renderEnv(show=True)
 
         # Action
         for a in range(env.number_of_agents):

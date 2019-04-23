@@ -547,7 +547,7 @@ class RailEnv(Environment):
         global_reward = 1 * beta
 
         # Reset the step rewards
-        self.rewards_dict = {}
+        self.rewards_dict = dict()
         for handle in self.agents_handles:
             self.rewards_dict[handle] = 0
 
