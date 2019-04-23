@@ -74,7 +74,7 @@ for trials in range(1, n_trials + 1):
         #print(step)
         # Action
         for a in range(env.number_of_agents):
-            action = agent.act(np.array(obs[a]), eps=0)
+            action = agent.act(np.array(obs[a]), eps=eps)
             action_prob[action] += 1
             action_dict.update({a: action})
 
@@ -110,7 +110,7 @@ for trials in range(1, n_trials + 1):
         eps, action_prob/np.sum(action_prob)),
           end=" ")
     if trials % 100 == 0:
-        action_prob = [1]*4
+
         print(
             '\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
                 env.number_of_agents,
@@ -122,4 +122,4 @@ for trials in range(1, n_trials + 1):
                 eps, action_prob / np.sum(action_prob)))
         torch.save(agent.qnetwork_local.state_dict(),
                    '../flatland/baselines/Nets/avoid_checkpoint' + str(trials) + '.pth')
-
+        action_prob = [1]*4
