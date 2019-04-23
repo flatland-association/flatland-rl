@@ -12,8 +12,6 @@ import numpy as np
 
 from collections import deque
 
-# TODO: add docstrings, pylint, etc...
-
 
 class ObservationBuilder:
     """
@@ -273,8 +271,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         exploring = True
         last_isSwitch = False
         last_isDeadEnd = False
-        last_isTerminal = False  # wrong cell encountered OR cycle encountered;  either way, we don't want the agent
-                                 # to land here
+        last_isTerminal = False  # wrong cell OR cycle;  either way, we don't want the agent to land here
         last_isTarget = False
 
         visited = set()
@@ -301,7 +298,6 @@ class TreeObsForRailEnv(ObservationBuilder):
                 last_isTerminal = True
                 break
             visited.add((position[0], position[1], direction))
-
 
             # If the target node is encountered, pick that as node. Also, no further branching is possible.
             if position[0] == self.env.agents_target[handle][0] and position[1] == self.env.agents_target[handle][1]:
@@ -390,14 +386,22 @@ class TreeObsForRailEnv(ObservationBuilder):
                 # it back
                 new_cell = self._new_position(position, (branch_direction+2) % 4)
 
-                branch_observation = self._explore_branch(handle, new_cell, (branch_direction+2) % 4, new_root_observation, depth+1)
+                branch_observation = self._explore_branch(handle,
+                                                          new_cell,
+                                                          (branch_direction+2) % 4,
+                                                          new_root_observation,
+                                                          depth+1)
                 observation = observation + branch_observation
 
             elif last_isSwitch and self.env.rail.get_transition((position[0], position[1], direction),
                                                                 branch_direction):
                 new_cell = self._new_position(position, branch_direction)
 
-                branch_observation = self._explore_branch(handle, new_cell, branch_direction, new_root_observation, depth+1)
+                branch_observation = self._explore_branch(handle,
+                                                          new_cell,
+                                                          branch_direction,
+                                                          new_root_observation,
+                                                          depth+1)
                 observation = observation + branch_observation
 
             else:

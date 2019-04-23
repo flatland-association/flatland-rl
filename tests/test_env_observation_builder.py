@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import numpy as np
+
 from flatland.core.env_observation_builder import GlobalObsForRailEnv
 from flatland.core.transition_map import GridTransitionMap, Grid4Transitions
 from flatland.envs.rail_env import RailEnv, rail_from_GridTransitionMap_generator
-from flatland.utils.rendertools import *
 
 """Tests for `flatland` package."""
 
@@ -45,14 +46,14 @@ def test_global_obs():
         double_switch_south_horizontal_straight, 180)
 
     rail_map = np.array(
-        [[empty] * 3 + [dead_end_from_south] + [empty] * 6] +
-        [[empty] * 3 + [vertical_straight] + [empty] * 6] * 2 +
-        [[dead_end_from_east] + [horizontal_straight] * 2 +
-         [double_switch_north_horizontal_straight] +
-        [horizontal_straight] * 2 + [double_switch_south_horizontal_straight] +
-        [horizontal_straight] * 2 + [dead_end_from_west]] +
-        [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
-        [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
+               [[empty] * 3 + [dead_end_from_south] + [empty] * 6] +
+               [[empty] * 3 + [vertical_straight] + [empty] * 6] * 2 +
+               [[dead_end_from_east] + [horizontal_straight] * 2 +
+                [double_switch_north_horizontal_straight] +
+                [horizontal_straight] * 2 + [double_switch_south_horizontal_straight] +
+                [horizontal_straight] * 2 + [dead_end_from_west]] +
+               [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
+               [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
 
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
@@ -81,17 +82,3 @@ def test_global_obs():
     # If this assertion is wrong, it means that the observation returned
     # places the agent on an empty cell
     assert(np.sum(rail_map * global_obs[0][1][0]) > 0)
-
-
-
-test_global_obs()
-
-
-
-
-
-
-
-
-
-
