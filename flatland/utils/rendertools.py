@@ -9,6 +9,7 @@ from collections import deque
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
+
 class RenderTool(object):
     Visit = recordtype("Visit", ["rc", "iDir", "iDepth", "prev"])
 
