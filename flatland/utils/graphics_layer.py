@@ -30,3 +30,6 @@ class GraphicsLayer(object):
 
     def endFrame(self):
         pass
+
+    def getImage(self):
+        pass

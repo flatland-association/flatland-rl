@@ -9,6 +9,7 @@ from collections import deque
 from flatland.utils.render_qt import QTGL
 from flatland.utils.graphics_layer import GraphicsLayer
 
+
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
 
@@ -65,6 +66,15 @@ class MPLGL(GraphicsLayer):
 
     def endFrame(self):
         pass
+
+    def getImage(self):
+        ax = plt.gca()
+        fig = ax.get_figure()
+        fig.tight_layout(pad=0)
+        fig.canvas.draw()
+        data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        return data
 
 
 class RenderTool(object):
@@ -645,3 +655,7 @@ class RenderTool(object):
         y0 = center[1] - size / 2
         y1 = center[1] + size / 2
         self.gl.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color)
+
+    def getImage(self):
+        return self.gl.getImage()
+
