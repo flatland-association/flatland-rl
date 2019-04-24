@@ -47,6 +47,18 @@ Features
 
 * TODO
 
+
+Installation
+--------
+     | To install the **Stable Release** of flatland, run this command in your terminal:
+     
+     .. code-block:: bash
+     
+          pip install flatland-rl
+
+
+
+
 Authors
 --------
 * Sharada Mohanty <mohanty@aicrowd.com>
