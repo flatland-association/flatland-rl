@@ -73,6 +73,7 @@ class QTGL(GraphicsLayer):
     def scatter(self, gX, gY, color=None, marker="o", size=5, *args, **kwargs):
         color = self.adaptColor(color)
         self.qtr.setColor(*color)
+        self.qtr.setLineColor(*color)
         r = np.sqrt(size)
         gPoints = np.stack([np.atleast_1d(gX), -np.atleast_1d(gY)]).T * self.cell_pixels
         for x, y in gPoints:

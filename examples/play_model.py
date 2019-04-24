@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import time
 
 
-def main(render=True, delay=2):
+def main(render=True, delay=0.0):
 
     random.seed(1)
     np.random.seed(1)
@@ -27,10 +27,10 @@ def main(render=True, delay=2):
                             0.0]  # Case 7 - dead end
 
     # Example generate a random rail
-    env = RailEnv(width=7,
-                height=7,
+    env = RailEnv(width=15,
+                height=15,
                 rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
-                number_of_agents=1)
+                number_of_agents=5)
 
     if render:
         env_renderer = RenderTool(env, gl="QT")
@@ -52,7 +52,7 @@ def main(render=True, delay=2):
     dones_list = []
     action_prob = [0]*4
     agent = Agent(state_size, action_size, "FC", 0)
-    agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
+    # agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
 
     def max_lt(seq, val):
         """
@@ -108,7 +108,7 @@ def main(render=True, delay=2):
                 env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step)
                 if delay > 0:
                     time.sleep(delay)
-                    
+
             iFrame += 1
 
 

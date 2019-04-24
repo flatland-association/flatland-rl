@@ -134,7 +134,7 @@ class RenderTool(object):
             gTransRCAg = rt.gTransRC[giTrans]
             self.plotTrans(visit.rc, gTransRCAg, depth=str(visit.iDepth), color=color)
 
-    def plotAgents(self):
+    def plotAgents(self, targets=True):
         cmap = self.gl.get_cmap('hsv', lut=self.env.number_of_agents+1)
         for iAgent in range(self.env.number_of_agents):
             oColor = cmap(iAgent)
@@ -142,7 +142,11 @@ class RenderTool(object):
             rcPos = self.env.agents_position[iAgent]
             iDir = self.env.agents_direction[iAgent]  # agent direction index
 
-            self.plotAgent(rcPos, iDir, oColor)
+            if targets:
+                target = self.env.agents_target[iAgent]
+            else:
+                target = None
+            self.plotAgent(rcPos, iDir, oColor, target=target)
 
             # gTransRCAg = self.getTransRC(rcPos, iDir)
             # self.plotTrans(rcPos, gTransRCAg)
@@ -183,7 +187,7 @@ class RenderTool(object):
         else:
             return gTransRCAg
 
-    def plotAgent(self, rcPos, iDir, sColor="r"):
+    def plotAgent(self, rcPos, iDir, color="r", target=None):
         """
         Plot a simple agent.
         Assumes a working graphics layer context (cf a MPL figure).
@@ -194,16 +198,21 @@ class RenderTool(object):
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
 
         xyPos = np.matmul(rcPos - rcDir / 2, rt.grc2xy) + rt.xyHalf
-        self.gl.scatter(*xyPos, color=sColor, size=10)            # agent location
+        self.gl.scatter(*xyPos, color=color, size=40)            # agent location
 
         xyDirLine = array([xyPos, xyPos + xyDir/2]).T  # line for agent orient.
-        self.gl.plot(*xyDirLine, color=sColor, lw=5, ms=0, alpha=0.6)
+        self.gl.plot(*xyDirLine, color=color, lw=5, ms=0, alpha=0.6)
+
+        if target is not None:
+            rcTarget = array(target)
+            xyTarget = np.matmul(rcTarget, rt.grc2xy) + rt.xyHalf
+            self._draw_square(xyTarget, 1/3, color)
 
         if False:
             # mark the next cell we're heading into
             rcNext = rcPos + rcDir
             xyNext = np.matmul(rcNext, rt.grc2xy) + rt.xyHalf
-            self.gl.scatter(*xyNext, color=sColor)
+            self.gl.scatter(*xyNext, color=color)
 
     def plotTrans(self, rcPos, gTransRCAg, color="r", depth=None):
         """
@@ -571,7 +580,7 @@ class RenderTool(object):
         # Draw each agent + its orientation + its target
         if agents:
             cmap = self.gl.get_cmap('hsv', lut=env.number_of_agents+1)
-            self.plotAgents()
+            self.plotAgents(targets=True)
 
         if False:
             for i in range(env.number_of_agents):
