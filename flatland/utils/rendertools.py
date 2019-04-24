@@ -24,11 +24,11 @@ class MPLGL(GraphicsLayer):
 
     def text(self, *args, **kwargs):
         plt.text(*args, **kwargs)
-    
+
     def prettify(self, *args, **kwargs):
         ax = plt.gca()
-        plt.xticks(range(int(ax.get_xlim()[1])+1))
-        plt.yticks(range(int(ax.get_ylim()[1])+1))
+        plt.xticks(range(int(ax.get_xlim()[1]) + 1))
+        plt.yticks(range(int(ax.get_ylim()[1]) + 1))
         plt.grid()
         plt.xlabel("Euclidean distance")
         plt.ylabel("Tree / Transition Depth")
@@ -41,28 +41,28 @@ class MPLGL(GraphicsLayer):
         gLabels = np.arange(0, height)
         plt.xticks(gTicks, gLabels)
 
-        gTicks = np.arange(-height * cell_size, 0) + cell_size/2
-        gLabels = np.arange(height-1, -1, -1)
+        gTicks = np.arange(-height * cell_size, 0) + cell_size / 2
+        gLabels = np.arange(height - 1, -1, -1)
         plt.yticks(gTicks, gLabels)
 
         plt.xlim([0, width * cell_size])
         plt.ylim([-height * cell_size, 0])
-    
+
     def show(self, block=False):
         plt.show(block=block)
 
     def pause(self, seconds=0.00001):
         plt.pause(seconds)
-    
+
     def clf(self):
         plt.clf()
-    
+
     def get_cmap(self, *args, **kwargs):
         return plt.get_cmap(*args, **kwargs)
 
     def beginFrame(self):
         pass
-    
+
     def endFrame(self):
         pass
 
@@ -85,7 +85,7 @@ class RenderTool(object):
     gCentres = xr.DataArray(gGrid,
                             dims=["xy", "p1", "p2"],
                             coords={"xy": ["x", "y"]}) + xyPixHalf
-    gTheta = np.linspace(0, np.pi/2, 10)
+    gTheta = np.linspace(0, np.pi / 2, 10)
     gArc = array([np.cos(gTheta), np.sin(gTheta)]).T  # from [1,0] to [0,1]
 
     def __init__(self, env, gl="MPL"):
@@ -197,7 +197,7 @@ class RenderTool(object):
 
         rcDir = rt.gTransRC[iDir]                    # agent direction in RC
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
-        xyDirLine = array([xyPos, xyPos+xyDir/2]).T  # line for agent orient.
+        xyDirLine = array([xyPos, xyPos + xyDir / 2]).T  # line for agent orient.
         self.gl.plot(*xyDirLine, color=sColor, lw=5, ms=0, alpha=0.6)
 
         # just mark the next cell we're heading into
@@ -215,7 +215,7 @@ class RenderTool(object):
 
         rt = self.__class__
         xyPos = np.matmul(rcPos, rt.grc2xy) + rt.xyHalf
-        gxyTrans = xyPos + np.matmul(gTransRCAg, rt.grc2xy/2.4)
+        gxyTrans = xyPos + np.matmul(gTransRCAg, rt.grc2xy / 2.4)
         self.gl.scatter(*gxyTrans.T, color=color, marker="o", s=50, alpha=0.2)
         if depth is not None:
             for x, y in gxyTrans:
@@ -255,7 +255,7 @@ class RenderTool(object):
                     # print("Trans:", gTransRC2)
                     visitNext = rt.Visit(tuple(visit.rc + gTransRC2),
                                          iTrans,
-                                         visit.iDepth+1,
+                                         visit.iDepth + 1,
                                          visit)
                     # print("node2: ", node2)
                     stack.append(visitNext)
@@ -294,7 +294,7 @@ class RenderTool(object):
             xLoc = rDist + visit.iDir / 4
 
             # point labelled with distance
-            self.gl.scatter(xLoc, visit.iDepth,  color="k", s=2)
+            self.gl.scatter(xLoc, visit.iDepth, color="k", s=2)
             # plt.text(xLoc, visit.iDepth, sDist, color="k", rotation=45)
             self.gl.text(xLoc, visit.iDepth, visit.rc, color="k", rotation=45)
 
@@ -312,8 +312,8 @@ class RenderTool(object):
 
                 # line from prev node
                 self.gl.plot([xLocPrev, xLoc],
-                         [visit.iDepth-1, visit.iDepth],
-                         color="k", alpha=0.5, lw=1)
+                             [visit.iDepth - 1, visit.iDepth],
+                             color="k", alpha=0.5, lw=1)
 
             if rDist < 0.1:
                 visitDest = visit
@@ -326,8 +326,8 @@ class RenderTool(object):
                 rDist = np.linalg.norm(array(visit.rc) - array(xyTarg))
                 xLoc = rDist + visit.iDir / 4
                 if xLocPrev is not None:
-                    self.gl.plot([xLoc, xLocPrev], [visit.iDepth, visit.iDepth+1],
-                             color="r", alpha=0.5, lw=2)
+                    self.gl.plot([xLoc, xLocPrev], [visit.iDepth, visit.iDepth + 1],
+                                 color="r", alpha=0.5, lw=2)
                 xLocPrev = xLoc
                 visit = visit.prev
             # prev = prev.prev
@@ -360,13 +360,12 @@ class RenderTool(object):
 
                     self.gl.plot(*xyLine.T, color="r", alpha=0.5, lw=1)
 
-                    xyMid = np.sum(xyLine * [[1/4], [3/4]], axis=0)
+                    xyMid = np.sum(xyLine * [[1 / 4], [3 / 4]], axis=0)
 
                     xyArrow = array([
-                        xyMid + [-dx-dy, +dx-dy],
+                        xyMid + [-dx - dy, +dx - dy],
                         xyMid,
-                        xyMid + [-dx+dy, -dx-dy]
-                        ])
+                        xyMid + [-dx + dy, -dx - dy]])
                     self.gl.plot(*xyArrow.T, color="r")
 
                 visit = visit.prev
@@ -411,13 +410,12 @@ class RenderTool(object):
                 self.gl.plot(*xyLine2.T, color=sColor)
 
                 if bArrow:
-                    xyMid = np.sum(xyLine2 * [[1/4], [3/4]], axis=0)
+                    xyMid = np.sum(xyLine2 * [[1 / 4], [3 / 4]], axis=0)
 
                     xyArrow = array([
-                        xyMid + [-dx-dy, +dx-dy],
+                        xyMid + [-dx - dy, +dx - dy],
                         xyMid,
-                        xyMid + [-dx+dy, -dx-dy]
-                        ])
+                        xyMid + [-dx + dy, -dx - dy]])
                     self.gl.plot(*xyArrow.T, color=sColor)
 
         else:
@@ -443,10 +441,9 @@ class RenderTool(object):
                 iArc = int(len(rt.gArc) / 2)
                 xyMid = xyCorner + rt.gArc[iArc] * dxy2
                 xyArrow = array([
-                    xyMid + [-dx-dy, +dx-dy],
+                    xyMid + [-dx - dy, +dx - dy],
                     xyMid,
-                    xyMid + [-dx+dy, -dx-dy]
-                    ])
+                    xyMid + [-dx + dy, -dx - dy]])
                 self.gl.plot(*xyArrow.T, color=sColor)
 
     def renderEnv(
@@ -480,14 +477,14 @@ class RenderTool(object):
 
         # Draw cells grid
         grid_color = [0.95, 0.95, 0.95]
-        for r in range(env.height+1):
-            self.gl.plot([0, (env.width+1)*cell_size],
-                     [-r*cell_size, -r*cell_size],
-                     color=grid_color)
-        for c in range(env.width+1):
-            self.gl.plot([c*cell_size, c*cell_size],
-                     [0, -(env.height+1)*cell_size],
-                     color=grid_color)
+        for r in range(env.height + 1):
+            self.gl.plot([0, (env.width + 1) * cell_size],
+                         [-r * cell_size, -r * cell_size],
+                         color=grid_color)
+        for c in range(env.width + 1):
+            self.gl.plot([c * cell_size, c * cell_size],
+                         [0, -(env.height + 1) * cell_size],
+                         color=grid_color)
 
         # Draw each cell independently
         for r in range(env.height):
@@ -495,16 +492,16 @@ class RenderTool(object):
 
                 # bounding box of the grid cell
                 x0 = cell_size * c       # left
-                x1 = cell_size * (c+1)   # right
+                x1 = cell_size * (c + 1)   # right
                 y0 = cell_size * -r      # top
-                y1 = cell_size * -(r+1)  # bottom
+                y1 = cell_size * -(r + 1)  # bottom
 
                 # centres of cell edges
                 coords = [
-                    ((x0+x1)/2.0, y0),  # N middle top
-                    (x1, (y0+y1)/2.0),  # E middle right
-                    ((x0+x1)/2.0, y1),  # S middle bottom
-                    (x0, (y0+y1)/2.0)   # W middle left
+                    ((x0 + x1) / 2.0, y0),  # N middle top
+                    (x1, (y0 + y1) / 2.0),  # E middle right
+                    ((x0 + x1) / 2.0, y1),  # S middle bottom
+                    (x0, (y0 + y1) / 2.0)   # W middle left
                 ]
 
                 # cell centre
@@ -570,21 +567,21 @@ class RenderTool(object):
 
         # Draw each agent + its orientation + its target
         if agents:
-            cmap = self.gl.get_cmap('hsv', lut=env.number_of_agents+1)
+            cmap = self.gl.get_cmap('hsv', lut=env.number_of_agents + 1)
             for i in range(env.number_of_agents):
                 self._draw_square((
-                                env.agents_position[i][1] *
-                                cell_size+cell_size/2,
-                                -env.agents_position[i][0] *
-                                cell_size-cell_size/2),
-                                cell_size/8, cmap(i))
+                    env.agents_position[i][1] *
+                    cell_size + cell_size / 2,
+                    -env.agents_position[i][0] *
+                    cell_size - cell_size / 2),
+                    cell_size / 8, cmap(i))
             for i in range(env.number_of_agents):
                 self._draw_square((
-                                env.agents_target[i][1] *
-                                cell_size+cell_size/2,
-                                -env.agents_target[i][0] *
-                                cell_size-cell_size/2),
-                                cell_size/3, [c for c in cmap(i)])
+                    env.agents_target[i][1] *
+                    cell_size + cell_size / 2,
+                    -env.agents_target[i][0] *
+                    cell_size - cell_size / 2),
+                    cell_size / 3, [c for c in cmap(i)])
 
                 # orientation is a line connecting the center of the cell to the
                 # side of the square of the agent
@@ -594,8 +591,8 @@ class RenderTool(object):
                     (new_position[1] + env.agents_position[i][1]) / 2 * cell_size)
 
                 self.gl.plot(
-                    [env.agents_position[i][1] * cell_size+cell_size/2, new_position[1]+cell_size/2],
-                    [-env.agents_position[i][0] * cell_size-cell_size/2, -new_position[0]-cell_size/2],
+                    [env.agents_position[i][1] * cell_size + cell_size / 2, new_position[1] + cell_size / 2],
+                    [-env.agents_position[i][0] * cell_size - cell_size / 2, -new_position[0] - cell_size / 2],
                     color=cmap(i),
                     linewidth=2.0)
 
@@ -604,7 +601,7 @@ class RenderTool(object):
         if frames:
             self.gl.text(0.1, yText[2], "Frame:{:}".format(self.iFrame))
         self.iFrame += 1
-        
+
         if iEpisode is not None:
             self.gl.text(0.1, yText[1], "Ep:{}".format(iEpisode))
 
@@ -631,8 +628,8 @@ class RenderTool(object):
         return
 
     def _draw_square(self, center, size, color):
-        x0 = center[0]-size/2
-        x1 = center[0]+size/2
-        y0 = center[1]-size/2
-        y1 = center[1]+size/2
+        x0 = center[0] - size / 2
+        x1 = center[0] + size / 2
+        y0 = center[1] - size / 2
+        y1 = center[1] + size / 2
         self.gl.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color)

@@ -55,8 +55,8 @@ class QTGL(GraphicsLayer):
             if lastx is not None:
                 # print("line", lastx, lasty, x, y)
                 self.qtr.drawLine(
-                    lastx*self.cell_pixels, -lasty*self.cell_pixels,
-                    x*self.cell_pixels, -y*self.cell_pixels)
+                    lastx * self.cell_pixels, -lasty * self.cell_pixels,
+                    x * self.cell_pixels, -y * self.cell_pixels)
             lastx = x
             lasty = y
 
@@ -64,20 +64,20 @@ class QTGL(GraphicsLayer):
         print("scatter not yet implemented in ", self.__class__)
 
     def text(self, x, y, sText):
-        self.qtr.drawText(x*self.cell_pixels, -y*self.cell_pixels, sText)
-    
+        self.qtr.drawText(x * self.cell_pixels, -y * self.cell_pixels, sText)
+
     def prettify(self, *args, **kwargs):
         pass
 
     def prettify2(self, width, height, cell_size):
         pass
-    
+
     def show(self, block=False):
         pass
 
     def pause(self, seconds=0.00001):
         pass
-    
+
     def clf(self):
         pass
 
@@ -88,9 +88,7 @@ class QTGL(GraphicsLayer):
         self.qtr.beginFrame()
         self.qtr.push()
         self.qtr.fillRect(0, 0, self.widthPx, self.heightPx, *self.tColBg)
-    
+
     def endFrame(self):
         self.qtr.pop()
         self.qtr.endFrame()
-
-
