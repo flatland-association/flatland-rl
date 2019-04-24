@@ -1,12 +1,14 @@
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 # from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.utils.rendertools import RenderTool
+from flatland.utils.render_qt import QtRailRender
 from flatland.baselines.dueling_double_dqn import Agent
 from collections import deque
 import torch
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import redis
 
 
 def main():
@@ -30,8 +32,11 @@ def main():
                 height=7,
                 rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
                 number_of_agents=1)
-    env_renderer = RenderTool(env)
+    env_renderer = RenderTool(env, gl="QT")
+    #env_renderer = QtRailRender(env)
     plt.figure(figsize=(5,5))
+    # fRedis = redis.Redis()
+
     handle = env.get_agent_handles()
 
     state_size = 105
@@ -115,10 +120,8 @@ def main():
             '\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
                 env.number_of_agents,
                 trials,
-                np.mean(
-                    scores_window),
-                100 * np.mean(
-                    done_window),
+                np.mean(scores_window),
+                100 * np.mean(done_window),
                 eps, action_prob/np.sum(action_prob)),
             end=" ")
         if trials % 100 == 0:
