@@ -196,8 +196,6 @@ class RenderTool(object):
 
         rcDir = rt.gTransRC[iDir]                    # agent direction in RC
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
-        xyDirLine = array([xyPos, xyPos + xyDir / 2]).T  # line for agent orient.
-        self.gl.plot(*xyDirLine, color=sColor, lw=5, ms=0, alpha=0.6)
 
         xyPos = np.matmul(rcPos - rcDir / 2, rt.grc2xy) + rt.xyHalf
         self.gl.scatter(*xyPos, color=color, size=40)            # agent location
