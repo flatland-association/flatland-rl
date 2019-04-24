@@ -40,7 +40,7 @@ scores = []
 dones_list = []
 action_prob = [0]*4
 agent = Agent(state_size, action_size, "FC", 0)
-#agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint8000.pth'))
+agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
 def max_lt(seq, val):
     """
     Return greatest item in seq for which item < val applies.
@@ -70,11 +70,11 @@ for trials in range(1, n_trials + 1):
     # Run episode
     for step in range(50):
         #if trials > 114:
-        #env_renderer.renderEnv(show=True)
+        env_renderer.renderEnv(show=True)
         #print(step)
         # Action
         for a in range(env.number_of_agents):
-            action = agent.act(np.array(obs[a]), eps=eps)
+            action = agent.act(np.array(obs[a]), eps=0)
             action_prob[action] += 1
             action_dict.update({a: action})
 
