@@ -9,5 +9,7 @@ before_script:
 
 tests:
     script:
+        - apt update
+        - apt install -y libgl1-mesa-glx xvfb
         - pip install tox
-        - tox
+        - xvfb-run -s "-screen 0 800x600x24" tox
