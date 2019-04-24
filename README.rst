@@ -80,6 +80,10 @@ Usage
 To use flatland in a project ::
     
     import flatland
+    
+flatland
+========
+TODO: explain the interface here
 
 
 Authors
@@ -90,6 +94,7 @@ Authors
 * Jeremy Watson
 * Erik Nygren <erik.nygren@sbb.ch>
 * Adrian Egli <adrian.egli@sbb.ch>
+* Vaibhav Agrawal <theinfamouswayne@gmail.com>
 
 
 <please fill yourself in>
