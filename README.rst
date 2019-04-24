@@ -1,5 +1,6 @@
-# Flatland
-
+========
+Flatland
+========
 
 
 
@@ -14,48 +15,71 @@
 
 Multi Agent Reinforcement Learning on Trains
 
+Getting Started
+===============
+
 Generate Docs
 --------------
-     | The docs have a lot more details about how to interact with this codebase.   
-     | **TODO**: Mohanty to add atleast a neat outline herefor the contents to the docs here.
 
-     .. code-block:: bash
+The docs have a lot more details about how to interact with this codebase.  
 
-          git clone git@gitlab.aicrowd.com:flatland/flatland.git
-          cd flatland
-          pip install -r requirements_dev.txt
+**TODO**: Mohanty to add atleast a neat outline herefor the contents to the docs here ::
 
-     * Linux and macOS
+    git clone git@gitlab.aicrowd.com:flatland/flatland.git
+    cd flatland
+    pip install -r requirements_dev.txt
 
-          .. code-block:: bash
+* On, Linux and macOS ::
 
-               make docs
+    make docs
 
 
-     * Windows
+* On, Windows ::
 
-          .. code-block:: bash
-
-               python setup.py develop (or)
-               python setup.py install
-               python make_docs.py
+    python setup.py develop (or)
+    python setup.py install
+    python make_docs.py
 
 
 Features
 --------
 
-* TODO
+TODO
 
 
 Installation
---------
-     | To install the **Stable Release** of flatland, run this command in your terminal:
-     
-     .. code-block:: bash
-     
-          pip install flatland-rl
+============
+
+Stable Release
+--------------
+
+To install flatland, run this command in your terminal ::
+
+    pip install flatland-rl
+
+This is the preferred method to install flatland, as it will always install the most recent stable release.
+
+If you don’t have `pip <https://pip.pypa.io/en/stable/>`_ installed, this `Python installation guide <https://docs.python-guide.org/starting/installation/>`_ can guide you through the process.
 
 
+From Sources
+------------
+The sources for flatland can be downloaded from the `Gitlab repo <https://gitlab.aicrowd.com/flatland/flatland>`_.
+
+You can clone the public repository ::
+
+    $ git clone git@gitlab.aicrowd.com:flatland/flatland.git
+
+Once you have a copy of the source, you can install it with ::
+
+    $ python setup.py install
+    
+    
+Usage
+=====
+To use flatland in a project ::
+    
+    import flatland
 
 
 Authors
@@ -66,5 +90,6 @@ Authors
 * Jeremy Watson
 * Erik Nygren <erik.nygren@sbb.ch>
 * Adrian Egli <adrian.egli@sbb.ch>
+
 
 <please fill yourself in>
