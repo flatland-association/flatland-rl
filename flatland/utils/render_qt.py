@@ -80,20 +80,20 @@ class QTGL(GraphicsLayer):
             self.qtr.drawCircle(x, y, r)
 
     def text(self, x, y, sText):
-        self.qtr.drawText(x*self.cell_pixels, -y*self.cell_pixels, sText)
-    
+        self.qtr.drawText(x * self.cell_pixels, -y * self.cell_pixels, sText)
+
     def prettify(self, *args, **kwargs):
         pass
 
     def prettify2(self, width, height, cell_size):
         pass
-    
+
     def show(self, block=False):
         pass
 
     def pause(self, seconds=0.00001):
         pass
-    
+
     def clf(self):
         pass
 
@@ -104,9 +104,7 @@ class QTGL(GraphicsLayer):
         self.qtr.beginFrame()
         self.qtr.push()
         self.qtr.fillRect(0, 0, self.widthPx, self.heightPx, *self.tColBg)
-    
+
     def endFrame(self):
         self.qtr.pop()
         self.qtr.endFrame()
-
-
