@@ -123,7 +123,7 @@ class QtRenderer(object):
 
     def beginFrame(self):
         self.painter.begin(self.img)
-        self.painter.setRenderHint(QPainter.Antialiasing, False)
+        # self.painter.setRenderHint(QPainter.Antialiasing, False)
 
         # Clear the background
         self.painter.setBrush(QColor(0, 0, 0))
