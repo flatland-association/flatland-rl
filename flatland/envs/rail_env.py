@@ -45,8 +45,7 @@ def rail_from_manual_specifications_generator(rail_spec):
                 if cell[0] < 0 or cell[0] >= len(t_utils.transitions):
                     print("ERROR - invalid cell type=", cell[0])
                     return []
-                rail.set_transitions((r, c), t_utils.rotate_transition(
-                              t_utils.transitions[cell[0]], cell[1]))
+                rail.set_transitions((r, c), t_utils.rotate_transition(t_utils.transitions[cell[0]], cell[1]))
 
         return rail
 
@@ -110,7 +109,7 @@ def generate_rail_from_list_of_manual_specifications(list_of_specifications)
 """
 
 
-def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
+def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
     """
     Dummy random level generator:
     - fill in cells at random in [width-2, height-2]
@@ -149,7 +148,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
 
         transitions_templates_ = []
         transition_probabilities = []
-        for i in range(len(t_utils.transitions)-1):  # don't include dead-ends
+        for i in range(len(t_utils.transitions) - 1):  # don't include dead-ends
             all_transitions = 0
             for dir_ in range(4):
                 trans = t_utils.get_transitions(t_utils.transitions[i], dir_)
@@ -159,7 +158,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                                    (trans[3])
 
             template = [int(x) for x in bin(all_transitions)[2:]]
-            template = [0]*(4-len(template)) + template
+            template = [0] * (4 - len(template)) + template
 
             # add all rotations
             for rot in [0, 90, 180, 270]:
@@ -168,7 +167,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                                                t_utils.transitions[i],
                                                rot)))
                 transition_probabilities.append(transition_probability[i])
-                template = [template[-1]]+template[:-1]
+                template = [template[-1]] + template[:-1]
 
         def get_matching_templates(template):
             ret = []
@@ -183,7 +182,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                     ret.append((transitions_templates_[i][1], transition_probabilities[i]))
             return ret
 
-        MAX_INSERTIONS = (width-2) * (height-2) * 10
+        MAX_INSERTIONS = (width - 2) * (height - 2) * 10
         MAX_ATTEMPTS_FROM_SCRATCH = 10
 
         attempt_number = 0
@@ -191,10 +190,9 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
             cells_to_fill = []
             rail = []
             for r in range(height):
-                rail.append([None]*width)
-                if r > 0 and r < height-1:
-                    cells_to_fill = cells_to_fill \
-                                    + [(r, c) for c in range(1, width-1)]
+                rail.append([None] * width)
+                if r > 0 and r < height - 1:
+                    cells_to_fill = cells_to_fill + [(r, c) for c in range(1, width - 1)]
 
             num_insertions = 0
             while num_insertions < MAX_INSERTIONS and len(cells_to_fill) > 0:
@@ -212,14 +210,13 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                            (1, 3, (0, 1)),
                            (2, 0, (1, 0)),
                            (3, 1, (0, -1))]:  # N, E, S, W
-                    neigh_trans = rail[row+el[2][0]][col+el[2][1]]
+                    neigh_trans = rail[row + el[2][0]][col + el[2][1]]
                     if neigh_trans is not None:
                         # select transition coming from facing direction el[1] and
                         # moving to direction el[1]
                         max_bit = 0
                         for k in range(4):
-                            max_bit |= \
-                             t_utils.get_transition(neigh_trans, k, el[1])
+                            max_bit |= t_utils.get_transition(neigh_trans, k, el[1])
 
                         if max_bit:
                             valid_template[el[0]] = 1
@@ -244,8 +241,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                                 elif k == 3:
                                     rot = 90
 
-                                rail[row][col] = t_utils.rotate_transition(
-                                                  int('0010000000000000', 2), rot)
+                                rail[row][col] = t_utils.rotate_transition(int('0010000000000000', 2), rot)
                                 num_insertions += 1
 
                                 break
@@ -258,8 +254,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                         for k in range(4):
                             tmp_template = valid_template[:]
                             tmp_template[k] = -1
-                            possible_cell_transitions = get_matching_templates(
-                                                         tmp_template)
+                            possible_cell_transitions = get_matching_templates(tmp_template)
                             if len(possible_cell_transitions) > len(besttrans):
                                 besttrans = possible_cell_transitions
                                 bestk = k
@@ -284,7 +279,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
                             rail[replace_row][replace_col] = None
 
                             possible_transitions, possible_probabilities = zip(*besttrans)
-                            possible_probabilities = [p/sum(possible_probabilities) for p in possible_probabilities]
+                            possible_probabilities = [p / sum(possible_probabilities) for p in possible_probabilities]
 
                             rail[row][col] = np.random.choice(possible_transitions,
                                                               p=possible_probabilities)
@@ -298,7 +293,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
 
                 else:
                     possible_transitions, possible_probabilities = zip(*possible_cell_transitions)
-                    possible_probabilities = [p/sum(possible_probabilities) for p in possible_probabilities]
+                    possible_probabilities = [p / sum(possible_probabilities) for p in possible_probabilities]
 
                     rail[row][col] = np.random.choice(possible_transitions,
                                                       p=possible_probabilities)
@@ -321,12 +316,10 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
             neigh_trans = rail[r][1]
             if neigh_trans is not None:
                 for k in range(4):
-                    neigh_trans_from_direction = (neigh_trans >> ((3-k) * 4)) \
-                                                 & (2**4-1)
+                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2**4 - 1)
                     max_bit = max_bit | (neigh_trans_from_direction & 1)
             if max_bit:
-                rail[r][0] = t_utils.rotate_transition(
-                               int('0010000000000000', 2), 270)
+                rail[r][0] = t_utils.rotate_transition(int('0010000000000000', 2), 270)
             else:
                 rail[r][0] = int('0000000000000000', 2)
 
@@ -335,8 +328,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
             neigh_trans = rail[r][-2]
             if neigh_trans is not None:
                 for k in range(4):
-                    neigh_trans_from_direction = (neigh_trans >> ((3-k) * 4)) \
-                                                 & (2**4-1)
+                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2**4 - 1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 2))
             if max_bit:
                 rail[r][-1] = t_utils.rotate_transition(int('0010000000000000', 2),
@@ -350,8 +342,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
             neigh_trans = rail[1][c]
             if neigh_trans is not None:
                 for k in range(4):
-                    neigh_trans_from_direction = (neigh_trans >> ((3-k) * 4)) \
-                                                  & (2**4-1)
+                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2**4 - 1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 3))
             if max_bit:
                 rail[0][c] = int('0010000000000000', 2)
@@ -363,12 +354,10 @@ def random_rail_generator(cell_type_relative_proportion=[1.0]*8):
             neigh_trans = rail[-2][c]
             if neigh_trans is not None:
                 for k in range(4):
-                    neigh_trans_from_direction = (neigh_trans >> ((3-k) * 4)) \
-                                                 & (2**4-1)
+                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2**4 - 1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 1))
             if max_bit:
-                rail[-1][c] = t_utils.rotate_transition(
-                                int('0010000000000000', 2), 180)
+                rail[-1][c] = t_utils.rotate_transition(int('0010000000000000', 2), 180)
             else:
                 rail[-1][c] = int('0000000000000000', 2)
 
@@ -458,8 +447,8 @@ class RailEnv(Environment):
         self.obs_builder = obs_builder_object
         self.obs_builder._set_env(self)
 
-        self.actions = [0]*self.number_of_agents
-        self.rewards = [0]*self.number_of_agents
+        self.actions = [0] * self.number_of_agents
+        self.rewards = [0] * self.number_of_agents
         self.done = False
 
         self.dones = {"__all__": False}
@@ -507,14 +496,13 @@ class RailEnv(Environment):
 
             # agents_direction must be a direction for which a solution is
             # guaranteed.
-            self.agents_direction = [0]*self.number_of_agents
+            self.agents_direction = [0] * self.number_of_agents
             re_generate = False
             for i in range(self.number_of_agents):
                 valid_movements = []
                 for direction in range(4):
                     position = self.agents_position[i]
-                    moves = self.rail.get_transitions(
-                            (position[0], position[1], direction))
+                    moves = self.rail.get_transitions((position[0], position[1], direction))
                     for move_index in range(4):
                         if moves[move_index]:
                             valid_movements.append((direction, move_index))
@@ -608,8 +596,8 @@ class RailEnv(Environment):
                             reverse_direction = 1
 
                         valid_transition = self.rail.get_transition(
-                                            (pos[0], pos[1], direction),
-                                            reverse_direction)
+                            (pos[0], pos[1], direction),
+                            reverse_direction)
                         if valid_transition:
                             direction = reverse_direction
                             movement = reverse_direction
@@ -629,8 +617,8 @@ class RailEnv(Environment):
                     new_cell_isValid = False
 
                 transition_isValid = self.rail.get_transition(
-                     (pos[0], pos[1], direction),
-                     movement) or is_deadend
+                    (pos[0], pos[1], direction),
+                    movement) or is_deadend
 
                 cell_isFree = True
                 for j in range(self.number_of_agents):
@@ -664,20 +652,20 @@ class RailEnv(Environment):
 
         if num_agents_in_target_position == self.number_of_agents:
             self.dones["__all__"] = True
-            self.rewards_dict = [r+global_reward for r in self.rewards_dict]
+            self.rewards_dict = [r + global_reward for r in self.rewards_dict]
 
         # Reset the step actions (in case some agent doesn't 'register_action'
         # on the next step)
-        self.actions = [0]*self.number_of_agents
+        self.actions = [0] * self.number_of_agents
         return self._get_observations(), self.rewards_dict, self.dones, {}
 
     def _new_position(self, position, movement):
         if movement == 0:    # NORTH
-            return (position[0]-1, position[1])
+            return (position[0] - 1, position[1])
         elif movement == 1:  # EAST
             return (position[0], position[1] + 1)
         elif movement == 2:  # SOUTH
-            return (position[0]+1, position[1])
+            return (position[0] + 1, position[1])
         elif movement == 3:  # WEST
             return (position[0], position[1] - 1)
 

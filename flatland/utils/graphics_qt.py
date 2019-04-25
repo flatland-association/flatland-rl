@@ -123,7 +123,7 @@ class QtRenderer(object):
 
     def beginFrame(self):
         self.painter.begin(self.img)
-        self.painter.setRenderHint(QPainter.Antialiasing, False)
+        # self.painter.setRenderHint(QPainter.Antialiasing, False)
 
         # Clear the background
         self.painter.setBrush(QColor(0, 0, 0))
@@ -214,13 +214,12 @@ class QtRenderer(object):
     def takeSnapshot(self, sDir="./movie"):
         oWidget = self.window.mainWidget
         oPixmap = oWidget.grab()
-        
+
         if not os.path.isdir(sDir):
             os.mkdir(sDir)
-        
+
         nRunIn = 30
         if self.iFrame > nRunIn:
             sfImage = "%s/frame%05d.jpg" % (sDir, self.iFrame - nRunIn)
             oPixmap.save(sfImage, "jpg")
         self.iFrame += 1
-        

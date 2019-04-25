@@ -11,7 +11,7 @@ import os
 import matplotlib.pyplot as plt
 
 import flatland.utils.rendertools as rt
-from flatland.core.env_observation_builder import GlobalObsForRailEnv, TreeObsForRailEnv
+from flatland.core.env_observation_builder import TreeObsForRailEnv
 
 
 def checkFrozenImage(sFileImage):
@@ -31,7 +31,7 @@ def checkFrozenImage(sFileImage):
             bytesFrozenImage = bytesImage
         else:
             assert(bytesFrozenImage.shape == bytesImage.shape)
-            assert((np.sum(np.square(bytesFrozenImage-bytesImage)) / bytesFrozenImage.size) < 1e-3)
+            assert((np.sum(np.square(bytesFrozenImage - bytesImage)) / bytesFrozenImage.size) < 1e-3)
 
 
 def test_render_env():

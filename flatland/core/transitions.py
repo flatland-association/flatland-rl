@@ -180,7 +180,7 @@ class Grid4Transitions(Transitions):
             List of the validity of transitions in the cell.
 
         """
-        bits = (cell_transition >> ((3-orientation)*4))
+        bits = (cell_transition >> ((3 - orientation) * 4))
         return ((bits >> 3) & 1, (bits >> 2) & 1, (bits >> 1) & 1, (bits) & 1)
 
     def set_transitions(self, cell_transition, orientation, new_transitions):
@@ -208,7 +208,7 @@ class Grid4Transitions(Transitions):
             `orientation'.
 
         """
-        mask = (1 << ((4-orientation)*4)) - (1 << ((3-orientation)*4))
+        mask = (1 << ((4 - orientation) * 4)) - (1 << ((3 - orientation) * 4))
         negmask = ~mask
 
         new_transitions = \
@@ -217,9 +217,7 @@ class Grid4Transitions(Transitions):
             (new_transitions[2] & 1) << 1 | \
             (new_transitions[3] & 1)
 
-        cell_transition = \
-            (cell_transition & negmask) | \
-            (new_transitions << ((3-orientation)*4))
+        cell_transition = (cell_transition & negmask) | (new_transitions << ((3 - orientation) * 4))
 
         return cell_transition
 
@@ -245,8 +243,7 @@ class Grid4Transitions(Transitions):
             Validity of the requested transition: 0/1 allowed/not allowed.
 
         """
-        return ((cell_transition >> ((4-1-orientation) * 4)) >>
-                (4-1-direction)) & 1
+        return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
 
     def set_transition(self, cell_transition, orientation, direction,
                        new_transition):
@@ -276,12 +273,9 @@ class Grid4Transitions(Transitions):
 
         """
         if new_transition:
-            cell_transition |= (1 << ((4-1-orientation) * 4 +
-                                (4-1-direction)))
+            cell_transition |= (1 << ((4 - 1 - orientation) * 4 + (4 - 1 - direction)))
         else:
-            cell_transition &= \
-                ~(1 << ((4-1-orientation) * 4 +
-                        (4-1-direction)))
+            cell_transition &= ~(1 << ((4 - 1 - orientation) * 4 + (4 - 1 - direction)))
 
         return cell_transition
 
@@ -310,13 +304,11 @@ class Grid4Transitions(Transitions):
         rotation = rotation // 90
         for i in range(4):
             block_tuple = self.get_transitions(value, i)
-            block_tuple = block_tuple[(
-                4-rotation):] + block_tuple[:(4-rotation)]
+            block_tuple = block_tuple[(4 - rotation):] + block_tuple[:(4 - rotation)]
             value = self.set_transitions(value, i, block_tuple)
 
         # Rotate the 4-bits blocks
-        value = ((value & (2**(rotation*4)-1)) <<
-                 ((4-rotation)*4)) | (value >> (rotation*4))
+        value = ((value & (2**(rotation * 4) - 1)) << ((4 - rotation) * 4)) | (value >> (rotation * 4))
 
         cell_transition = value
         return cell_transition
@@ -355,7 +347,7 @@ class Grid8Transitions(Transitions):
             List of the validity of transitions in the cell.
 
         """
-        bits = (cell_transition >> ((7-orientation)*8))
+        bits = (cell_transition >> ((7 - orientation) * 8))
         cell_transition = (
             (bits >> 7) & 1,
             (bits >> 6) & 1,
@@ -389,7 +381,7 @@ class Grid8Transitions(Transitions):
             `orientation'.
 
         """
-        mask = (1 << ((8-orientation)*8)) - (1 << ((7-orientation)*8))
+        mask = (1 << ((8 - orientation) * 8)) - (1 << ((7 - orientation) * 8))
         negmask = ~mask
 
         new_transitions = \
@@ -402,8 +394,7 @@ class Grid8Transitions(Transitions):
             (new_transitions[6] & 1) << 1 | \
             (new_transitions[7] & 1)
 
-        cell_transition = (cell_transition & negmask) | (
-            new_transitions << ((7-orientation)*8))
+        cell_transition = (cell_transition & negmask) | (new_transitions << ((7 - orientation) * 8))
 
         return cell_transition
 
@@ -429,8 +420,7 @@ class Grid8Transitions(Transitions):
             Validity of the requested transition: 0/1 allowed/not allowed.
 
         """
-        return ((cell_transition >> ((8-1-orientation) * 8)) >>
-                (8-1-direction)) & 1
+        return ((cell_transition >> ((8 - 1 - orientation) * 8)) >> (8 - 1 - direction)) & 1
 
     def set_transition(self, cell_transition, orientation, direction,
                        new_transition):
@@ -460,11 +450,9 @@ class Grid8Transitions(Transitions):
 
         """
         if new_transition:
-            cell_transition |= (1 << ((8-1-orientation) * 8 +
-                                (8 - 1 - direction)))
+            cell_transition |= (1 << ((8 - 1 - orientation) * 8 + (8 - 1 - direction)))
         else:
-            cell_transition &= ~(1 << ((8-1-orientation) * 8 +
-                                 (8 - 1 - direction)))
+            cell_transition &= ~(1 << ((8 - 1 - orientation) * 8 + (8 - 1 - direction)))
 
         return cell_transition
 
@@ -500,8 +488,7 @@ class Grid8Transitions(Transitions):
             value = self.set_transitions(value, i, block_tuple)
 
         # Rotate the 8bits blocks
-        value = ((value & (2**(rotation*8)-1)) <<
-                 ((8-rotation)*8)) | (value >> (rotation*8))
+        value = ((value & (2**(rotation * 8) - 1)) << ((8 - rotation) * 8)) | (value >> (rotation * 8))
 
         cell_transition = value
 

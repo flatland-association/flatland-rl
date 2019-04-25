@@ -1,17 +1,16 @@
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 # from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.utils.rendertools import RenderTool
-from flatland.utils.render_qt import QtRailRender
 from flatland.baselines.dueling_double_dqn import Agent
 from collections import deque
 import torch
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-import redis
+import time
 
 
-def main():
+def main(render=True, delay=0.0):
 
     random.seed(1)
     np.random.seed(1)
@@ -28,12 +27,13 @@ def main():
                             0.0]  # Case 7 - dead end
 
     # Example generate a random rail
-    env = RailEnv(width=7,
-                height=7,
+    env = RailEnv(width=15,
+                height=15,
                 rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
-                number_of_agents=1)
-    env_renderer = RenderTool(env, gl="QT")
-    #env_renderer = QtRailRender(env)
+                number_of_agents=5)
+
+    if render:
+        env_renderer = RenderTool(env, gl="QT")
     plt.figure(figsize=(5,5))
     # fRedis = redis.Redis()
 
@@ -52,7 +52,7 @@ def main():
     dones_list = []
     action_prob = [0]*4
     agent = Agent(state_size, action_size, "FC", 0)
-    agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
+    # agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
 
     def max_lt(seq, val):
         """
@@ -67,6 +67,8 @@ def main():
             idx -= 1
         return None
 
+    iFrame = 0
+    tStart = time.time()
     for trials in range(1, n_trials + 1):
 
         # Reset environment
@@ -102,7 +104,13 @@ def main():
                 agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
                 score += all_rewards[a]
 
-            env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step)
+            if render:
+                env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step)
+                if delay > 0:
+                    time.sleep(delay)
+
+            iFrame += 1
+
 
             obs = next_obs.copy()
             if done['__all__']:
@@ -116,8 +124,8 @@ def main():
         scores.append(np.mean(scores_window))
         dones_list.append((np.mean(done_window)))
 
-        print('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' +
-            '\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
+        print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' +
+                '\tEpsilon: {:.2f} \t Action Probabilities: \t {}').format(
                 env.number_of_agents,
                 trials,
                 np.mean(scores_window),
@@ -125,16 +133,15 @@ def main():
                 eps, action_prob/np.sum(action_prob)),
             end=" ")
         if trials % 100 == 0:
-
-            print(
-                '\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
+            tNow = time.time()
+            rFps = iFrame / (tNow - tStart)
+            print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' + 
+                    '\tEpsilon: {:.2f} fps: {:.2f} \t Action Probabilities: \t {}').format(
                     env.number_of_agents,
                     trials,
-                    np.mean(
-                        scores_window),
-                    100 * np.mean(
-                        done_window),
-                    eps, action_prob / np.sum(action_prob)))
+                    np.mean(scores_window),
+                    100 * np.mean(done_window),
+                    eps, rFps, action_prob / np.sum(action_prob)))
             torch.save(agent.qnetwork_local.state_dict(),
                     '../flatland/baselines/Nets/avoid_checkpoint' + str(trials) + '.pth')
             action_prob = [1]*4
