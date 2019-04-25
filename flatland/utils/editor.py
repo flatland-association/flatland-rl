@@ -3,6 +3,9 @@ from numpy import array
 import time
 from collections import deque
 from matplotlib import pyplot as plt
+from contextlib import redirect_stdout
+import os
+
 # import io
 # from PIL import Image
 # from ipywidgets import IntSlider, link, VBox
@@ -19,8 +22,8 @@ class JupEditor(object):
         self.qEvents = deque()
 
         # TODO: These are currently estimated values
-        self.yxBase = array([20, 20])
-        self.nPixCell = 70
+        self.yxBase = array([6, 21])  # pixel offset
+        self.nPixCell = 35
 
         self.rcHistory = []
         self.iTransLast = -1
@@ -62,6 +65,7 @@ class JupEditor(object):
                         if len(rcHistory) > 1:
                             rcLast = rcHistory[-1]
                             if not np.array_equal(rcLast, rcCell):  # only save at transition
+                                # print(y, x, rcCell)
                                 rcHistory.append(rcCell)
                         else:
                             rcHistory.append(rcCell)
@@ -98,10 +102,14 @@ class JupEditor(object):
                 # Write the cell transition value back into the grid
                 env.rail.grid[tuple(rcMiddle)] = iValCell
                 
-                plt.figure(figsize=(10, 10))
-                self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
-                img = self.oRT.getImage()
-                plt.clf()
+                # TODO: bit of a hack - can we suppress the console messages from MPL at source?
+                with redirect_stdout(os.devnull):
+                    plt.figure(figsize=(10, 10))
+                    self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
+                    img = self.oRT.getImage()
+                    plt.clf()
+                    plt.close()
+
                 # This updates the image in the browser with the new rendered image
                 wid.data = img
                 bRedrawn = True
