@@ -3,9 +3,9 @@ from numpy import array
 import time
 from collections import deque
 from matplotlib import pyplot as plt
-from contextlib import redirect_stdout
-import os
-import sys
+# from contextlib import redirect_stdout
+# import os
+# import sys
 
 # import io
 # from PIL import Image
@@ -22,7 +22,7 @@ class View(object):
     def __init__(self, editor):
         self.editor = editor
         self.oRT = rt.RenderTool(self.editor.env)
-        plt.figure(figsize=(10,10))
+        plt.figure(figsize=(10, 10))
         self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
         img = self.oRT.getImage()
         plt.clf()
@@ -81,7 +81,7 @@ class JupEditor(object):
             self.env.agents_position.append(rcCell)
             self.env.agents_handles.append(max(self.env.agents_handles + [-1]) + 1)
             self.env.agents_direction.append(0)
-            self.env.agents_target.append(rcCell) # set the target to the origin initially
+            self.env.agents_target.append(rcCell)  # set the target to the origin initially
             self.env.number_of_agents = self.iAgent + 1
             self.drawMode = "Destination"
 
@@ -189,13 +189,13 @@ class JupEditor(object):
     
     def redraw(self, hide_stdout=True, update=True):
 
-        if hide_stdout:
-            stdout_dest = os.devnull
-        else:
-            stdout_dest = sys.stdout
+        # if hide_stdout:
+        #     stdout_dest = os.devnull
+        # else:
+        #     stdout_dest = sys.stdout
 
         # TODO: bit of a hack - can we suppress the console messages from MPL at source?
-        #with redirect_stdout(stdout_dest):
+        # with redirect_stdout(stdout_dest):
         with self.wid_output:
             plt.figure(figsize=(10, 10))
             self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
