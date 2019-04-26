@@ -21,7 +21,6 @@ class MPLGL(GraphicsLayer):
         plt.plot(*args, **kwargs)
 
     def scatter(self, *args, **kwargs):
-        print(args, kwargs)
         plt.scatter(*args, **kwargs)
 
     def text(self, *args, **kwargs):
@@ -209,7 +208,7 @@ class RenderTool(object):
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
 
         xyPos = np.matmul(rcPos - rcDir / 2, rt.grc2xy) + rt.xyHalf
-        self.gl.scatter(*xyPos, color=color, s=40)            # agent location
+        self.gl.scatter(*xyPos, color=color, marker="o", s=100)            # agent location
 
         xyDirLine = array([xyPos, xyPos + xyDir/2]).T  # line for agent orient.
         self.gl.plot(*xyDirLine, color=color, lw=5, ms=0, alpha=0.6)
@@ -218,12 +217,6 @@ class RenderTool(object):
             rcTarget = array(target)
             xyTarget = np.matmul(rcTarget, rt.grc2xy) + rt.xyHalf
             self._draw_square(xyTarget, 1/3, color)
-
-        if False:
-            # mark the next cell we're heading into
-            rcNext = rcPos + rcDir
-            xyNext = np.matmul(rcNext, rt.grc2xy) + rt.xyHalf
-            self.gl.scatter(*xyNext, color=color)
 
     def plotTrans(self, rcPos, gTransRCAg, color="r", depth=None):
         """

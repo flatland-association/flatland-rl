@@ -15,6 +15,19 @@ from flatland.envs.rail_env import RailEnv, random_rail_generator
 # from flatland.core.transitions import RailEnvTransitions
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 import flatland.utils.rendertools as rt
+from examples.play_model import Player
+
+
+class View(object):
+    def __init__(self, editor):
+        self.editor = editor
+        self.oRT = rt.RenderTool(self.editor.env)
+        plt.figure(figsize=(10,10))
+        self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
+        img = self.oRT.getImage()
+        plt.clf()
+        import jpy_canvas
+        self.wid_img = jpy_canvas.Canvas(img)
 
 
 class JupEditor(object):
@@ -39,6 +52,8 @@ class JupEditor(object):
         self.drawMode = "Draw"
         self.env_filename = "temp.npy"
         self.set_env(env)
+        self.iAgent = None
+        self.player = None
 
     def set_env(self, env):
         self.env = env
@@ -55,6 +70,28 @@ class JupEditor(object):
 
     def setDrawMode(self, dEvent):
         self.drawMode = dEvent["new"]
+
+    def on_click(self, wid, event):
+        x = event['canvasX']
+        y = event['canvasY']
+        rcCell = ((array([y, x]) - self.yxBase) / self.nPixCell).astype(int)
+
+        if self.drawMode == "Origin":
+            self.iAgent = len(self.env.agents_position)
+            self.env.agents_position.append(rcCell)
+            self.env.agents_handles.append(max(self.env.agents_handles + [-1]) + 1)
+            self.env.agents_direction.append(0)
+            self.env.agents_target.append(rcCell) # set the target to the origin initially
+            self.env.number_of_agents = self.iAgent + 1
+            self.drawMode = "Destination"
+
+        elif self.drawMode == "Destination" and self.iAgent is not None:
+            self.env.agents_target[self.iAgent] = rcCell
+            self.drawMode = "Origin"
+        
+        self.log("agent", self.drawMode, self.iAgent, rcCell)
+
+        self.redraw()
 
     def event_handler(self, wid, event):
         """Mouse motion event handler
@@ -150,9 +187,6 @@ class JupEditor(object):
             # This updates the image in the browser to be the new edited version
             self.wid_img.data = writableData
     
-    def on_click(self, event):
-        pass
-
     def redraw(self, hide_stdout=True, update=True):
 
         if hide_stdout:
@@ -161,7 +195,8 @@ class JupEditor(object):
             stdout_dest = sys.stdout
 
         # TODO: bit of a hack - can we suppress the console messages from MPL at source?
-        with redirect_stdout(stdout_dest):
+        #with redirect_stdout(stdout_dest):
+        with self.wid_output:
             plt.figure(figsize=(10, 10))
             self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
             img = self.oRT.getImage()
@@ -178,6 +213,13 @@ class JupEditor(object):
     
     def clear(self, event):
         self.env.rail.grid[:, :] = 0
+        self.env.number_of_agents = 0
+        self.env.agents_position = []
+        self.env.agents_direction = []
+        self.env.agents_handles = []
+        self.env.agents_target = []
+        self.player = None
+
         self.redraw_event(event)
 
     def setFilename(self, filename):
@@ -201,15 +243,22 @@ class JupEditor(object):
         self.env = RailEnv(width=self.regen_size,
               height=self.regen_size,
               rail_generator=random_rail_generator(cell_type_relative_proportion=[1, 1] + [0.5] * 6),
-              number_of_agents=0,
+              number_of_agents=self.env.number_of_agents,
               obs_builder_object=TreeObsForRailEnv(max_depth=2))
         self.env.reset()
         self.set_env(self.env)
+        self.player = Player(self.env)
         self.redraw()
         
     def setRegenSize_event(self, event):
         self.regen_size = event["new"]
-    
+
+    def step_event(self, event=None):
+        if self.player is None:
+            self.player = Player(self.env)
+        self.player.step()
+        self.redraw()
+
     def fix_env(self):
         self.env.width = self.env.rail.width
         self.env.height = self.env.rail.height

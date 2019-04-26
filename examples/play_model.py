@@ -10,6 +10,82 @@ import matplotlib.pyplot as plt
 import time
 
 
+
+class Player(object):
+    def __init__(self, env):
+        self.env = env
+        self.handle = env.get_agent_handles()
+
+        self.state_size = 105
+        self.action_size = 4
+        self.n_trials = 9999
+        self.eps = 1.
+        self.eps_end = 0.005
+        self.eps_decay = 0.998
+        self.action_dict = dict()
+        self.scores_window = deque(maxlen=100)
+        self.done_window = deque(maxlen=100)
+        self.scores = []
+        self.dones_list = []
+        self.action_prob = [0]*4
+        self.agent = Agent(self.state_size, self.action_size, "FC", 0)
+        self.agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
+
+        self.iFrame = 0
+        self.tStart = time.time()
+        
+        # Reset environment
+        self.obs = self.env.reset()
+        for a in range(self.env.number_of_agents):
+            norm = max(1, max_lt(self.obs[a], np.inf))
+            self.obs[a] = np.clip(np.array(self.obs[a]) / norm, -1, 1)
+
+        # env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
+
+        self.score = 0
+        self.env_done = 0
+
+    def step(self):
+        env = self.env
+        for a in range(env.number_of_agents):
+            action = self.agent.act(np.array(self.obs[a]), eps=self.eps)
+            self.action_prob[action] += 1
+            self.action_dict.update({a: action})
+
+        # Environment step
+        next_obs, all_rewards, done, _ = self.env.step(self.action_dict)
+
+        for a in range(env.number_of_agents):
+            norm = max(1, max_lt(next_obs[a], np.inf))
+            next_obs[a] = np.clip(np.array(next_obs[a]) / norm, -1, 1)
+
+        # Update replay buffer and train agent
+        for a in range(self.env.number_of_agents):
+            self.agent.step(self.obs[a], self.action_dict[a], all_rewards[a], next_obs[a], done[a])
+            self.score += all_rewards[a]
+
+        self.iFrame += 1
+
+        self.obs = next_obs.copy()
+        if done['__all__']:
+            self.env_done = 1
+
+
+def max_lt(seq, val):
+    """
+    Return greatest item in seq for which item < val applies.
+    None is returned if seq was empty or all items in seq were >= val.
+    """
+
+    idx = len(seq)-1
+    while idx >= 0:
+        if seq[idx] < val and seq[idx] >= 0:
+            return seq[idx]
+        idx -= 1
+    return None
+
+
+
 def main(render=True, delay=0.0):
 
     random.seed(1)
