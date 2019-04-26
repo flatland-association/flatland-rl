@@ -181,7 +181,9 @@ class GridTransitionMap(TransitionMap):
 
         """
         if len(cell_id) == 3:
-            self.transitions.set_transitions(self.grid[cell_id[0]][cell_id[1]], cell_id[2], new_transitions)
+            self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transitions(self.grid[cell_id[0]][cell_id[1]],
+                                                                                 cell_id[2],
+                                                                                 new_transitions)
         elif len(cell_id) == 2:
             self.grid[cell_id[0]][cell_id[1]] = new_transitions
         else:
@@ -241,7 +243,10 @@ class GridTransitionMap(TransitionMap):
             print('GridTransitionMap.set_transition() ERROR: \
                    wrong cell_id tuple.')
             return
-        self.transitions.set_transition(self.grid[cell_id[0]][cell_id[1]], cell_id[2], transition_index, new_transition)
+        self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transition(self.grid[cell_id[0]][cell_id[1]],
+                                                                            cell_id[2],
+                                                                            transition_index,
+                                                                            new_transition)
 
     def save_transition_map(self, filename):
         """
