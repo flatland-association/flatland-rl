@@ -537,3 +537,27 @@ class RailEnvTransitions(Grid4Transitions):
         super(RailEnvTransitions, self).__init__(
             transitions=self.transition_list
         )
+
+    def is_valid(self, cell_transition):
+        """
+        Checks if a cell transition is a valid cell setup.
+
+        Parameters
+        ----------
+        cell_transition : int
+            64 bits used to encode the valid transitions for a cell.
+
+        Returns
+        -------
+        Boolean
+            True or False
+        """
+        for trans in self.transitions:
+            if cell_transition == trans:
+                return True
+            for _ in range(3):
+                trans = self.rotate_transition(trans, rotation=90)
+                if cell_transition == trans:
+                    return True
+        return False
+
