@@ -21,6 +21,7 @@ class MPLGL(GraphicsLayer):
         plt.plot(*args, **kwargs)
 
     def scatter(self, *args, **kwargs):
+        print(args, kwargs)
         plt.scatter(*args, **kwargs)
 
     def text(self, *args, **kwargs):
@@ -208,7 +209,7 @@ class RenderTool(object):
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
 
         xyPos = np.matmul(rcPos - rcDir / 2, rt.grc2xy) + rt.xyHalf
-        self.gl.scatter(*xyPos, color=color, size=40)            # agent location
+        self.gl.scatter(*xyPos, color=color, s=40)            # agent location
 
         xyDirLine = array([xyPos, xyPos + xyDir/2]).T  # line for agent orient.
         self.gl.plot(*xyDirLine, color=color, lw=5, ms=0, alpha=0.6)
