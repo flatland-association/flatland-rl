@@ -38,6 +38,7 @@ class JupEditor(object):
         self.wid_output = None
         self.drawMode = "Draw"
         self.env_filename = "temp.npy"
+        self.set_env(env)
 
     def set_env(self, env):
         self.env = env
@@ -104,6 +105,11 @@ class JupEditor(object):
             # If we have already touched 3 cells
             # We have a transition into a cell, and out of it.
             
+            if self.drawMode == "Draw":
+                bTransition = True
+            elif self.drawMode == "Erase":
+                bTransition = False
+
             while len(rcHistory) >= 3:
                 rc3Cells = array(rcHistory[:3])  # the 3 cells
                 rcMiddle = rc3Cells[1]  # the middle cell which we will update
@@ -122,14 +128,14 @@ class JupEditor(object):
                     # Set the transition
                     # oEnv.rail.set_transition((*rcLast, iTransLast), iTrans, True) # does nothing
                     iValCell = env.rail.transitions.set_transition(
-                        env.rail.grid[tuple(rcMiddle)], liTrans[0], liTrans[1], True)
+                        env.rail.grid[tuple(rcMiddle)], liTrans[0], liTrans[1], bTransition)
 
                     # Also set the reverse transition
                     iValCell = env.rail.transitions.set_transition(
                         iValCell,
                         (liTrans[1] + 2) % 4,
                         (liTrans[0] + 2) % 4,
-                        True)
+                        bTransition)
 
                     # Write the cell transition value back into the grid
                     env.rail.grid[tuple(rcMiddle)] = iValCell
