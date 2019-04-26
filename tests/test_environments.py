@@ -140,10 +140,7 @@ def test_dead_end():
             _ = rail_env.step({0: 1})
             _ = rail_env.step({0: 3})
             assert (rail_env.agents_position[0] == prev_pos)
-            if rail_env.agents_position[0] != rail_env.agents_target[0]:
-                _, _, dones, _ = rail_env.step({0: 2})
-            else:
-                _, _, dones, _ = rail_env.step({0: 0})
+            _, _, dones, _ = rail_env.step({0: 2})
 
             if i < 5:
                 assert (not dones[0] and not dones['__all__'])

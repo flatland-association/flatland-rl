@@ -20,10 +20,10 @@ transition_probability = [5,  # empty cell - Case 0
                           0]  # Case 7 - dead end
 
 # Example generate a random rail
-env = RailEnv(width=15,
-              height=15,
+env = RailEnv(width=10,
+              height=10,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
-              number_of_agents=3)
+              number_of_agents=5)
 env_renderer = RenderTool(env, gl="QT")
 handle = env.get_agent_handles()
 

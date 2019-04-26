@@ -550,6 +550,8 @@ class RailEnv(Environment):
             if handle not in action_dict:
                 continue
 
+            if self.dones[handle]:
+                continue
             action = action_dict[handle]
 
             if action < 0 or action > 3:
@@ -637,8 +639,7 @@ class RailEnv(Environment):
 
             # if agent is not in target position, add step penalty
             if self.agents_position[i][0] == self.agents_target[i][0] and \
-               self.agents_position[i][1] == self.agents_target[i][1] and \
-                action_dict[handle] == 0:
+               self.agents_position[i][1] == self.agents_target[i][1]:
                 self.dones[handle] = True
             else:
                 self.rewards_dict[handle] += step_penalty
