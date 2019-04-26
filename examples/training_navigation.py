@@ -23,14 +23,14 @@ transition_probability = [5,  # empty cell - Case 0
 env = RailEnv(width=10,
               height=10,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
-              number_of_agents=2)
-
+              number_of_agents=1)
+"""
 env = RailEnv(width=20,
               height=20,
               rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
                   ['../flatland/baselines/test-editor.npy']),
               number_of_agents=1)
-
+"""
 env_renderer = RenderTool(env, gl="QT")
 handle = env.get_agent_handles()
 
@@ -47,7 +47,7 @@ scores = []
 dones_list = []
 action_prob = [0] * 4
 agent = Agent(state_size, action_size, "FC", 0)
-agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint13900.pth'))
+agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
 demo = True
 
