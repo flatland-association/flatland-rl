@@ -87,7 +87,7 @@ class JupEditor(object):
             self.env.agents_target[self.iAgent] = rcCell
             self.drawMode = "Origin"
         
-        #self.log("agent", self.drawMode, self.iAgent, rcCell)
+        # self.log("agent", self.drawMode, self.iAgent, rcCell)
 
         self.redraw()
 
@@ -265,17 +265,14 @@ class JupEditor(object):
         else:
             self.log("thread already present")
 
-
-
     def bg_updater(self):
         try:
             for i in range(20):
-                #self.log("step ", i)
+                # self.log("step ", i)
                 self.step_event()
                 time.sleep(0.2)
         finally:
             self.thread = None
-        
 
     def fix_env(self):
         self.env.width = self.env.rail.width

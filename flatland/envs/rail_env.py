@@ -534,7 +534,7 @@ class RailEnv(Environment):
         self.agents_handles.append(max(self.agents_handles + [-1]) + 1)  # max(handles) + 1, starting at 0
         self.agents_direction.append(0)
         self.agents_target.append(rcPos)  # set the target to the origin initially
-        self.number_of_agents += 1        
+        self.number_of_agents += 1
         self.check_agent_lists()
         return iAgent
     
