@@ -464,11 +464,84 @@ class RailEnv(Environment):
         self.reset()
         self.num_resets = 0
 
+        self.valid_positions = None
+
     def get_agent_handles(self):
         return self.agents_handles
 
-    def reset(self):
-        self.rail = self.rail_generator(self.width, self.height, self.num_resets)
+    def fill_valid_positions(self):
+        self.valid_positions = valid_positions = []
+        for r in range(self.height):
+            for c in range(self.width):
+                if self.rail.get_transitions((r, c)) > 0:
+                    valid_positions.append((r, c))
+
+    def check_agent_lists(self):
+        for lAgents, name in zip(
+                [self.agents_handles, self.agents_position, self.agents_direction],
+                ["handles", "positions", "directions"]):
+            assert self.number_of_agents == len(lAgents), "Inconsistent agent list:"+name
+
+    def check_agent_locdirpath(self, iAgent):
+        valid_movements = []
+        for direction in range(4):
+            position = self.agents_position[iAgent]
+            moves = self.rail.get_transitions((position[0], position[1], direction))
+            for move_index in range(4):
+                if moves[move_index]:
+                    valid_movements.append((direction, move_index))
+
+        valid_starting_directions = []
+        for m in valid_movements:
+            new_position = self._new_position(self.agents_position[iAgent], m[1])
+            if m[0] not in valid_starting_directions and \
+                    self._path_exists(new_position, m[0], self.agents_target[iAgent]):
+                valid_starting_directions.append(m[0])
+
+        if len(valid_starting_directions) == 0:
+            return False
+
+    def pick_agent_direction(self, rcPos, rcTarget):
+        valid_movements = []
+        for direction in range(4):
+            moves = self.rail.get_transitions((*rcPos, direction))
+            for move_index in range(4):
+                if moves[move_index]:
+                    valid_movements.append((direction, move_index))
+
+        valid_starting_directions = []
+        for m in valid_movements:
+            new_position = self._new_position(rcPos, m[1])
+            if m[0] not in valid_starting_directions and \
+                    self._path_exists(new_position, m[0], rcTarget):
+                valid_starting_directions.append(m[0])
+
+        if len(valid_starting_directions) == 0:
+            return None
+        else:
+            return valid_starting_directions[np.random.choice(len(valid_starting_directions), 1)[0]]
+
+    def add_agent(self, rcPos=None, rcTarget=None, iDir=None):
+        self.check_agent_lists()
+
+        if rcPos is None:
+            rcPos = np.random.choice(len(self.valid_positions))
+
+        # iAgent = self.number_of_agents
+        self.number_of_agents += 1
+        
+        self.env.agents_position.append(rcPos)
+        self.env.agents_handles.append(max(self.env.agents_handles + [-1]) + 1)  # max(handles) + 1, starting at 0
+        self.env.agents_direction.append(0)
+        self.env.agents_target.append(rcPos)  # set the target to the origin initially
+        
+        self.check_agent_lists()
+    
+    def reset(self, regen_rail=True, replace_agents=True):
+        if regen_rail or self.rail is None:
+            self.rail = self.rail_generator(self.width, self.height, self.num_resets)
+            self.fill_valid_positions()
+
         self.num_resets += 1
 
         self.dones = {"__all__": False}
@@ -477,50 +550,58 @@ class RailEnv(Environment):
 
         # Use a TreeObsForRailEnv to compute distance maps to each agent's target, to sample initial
         # agent's orientations that allow a valid solution.
-        re_generate = True
-        while re_generate:
-            valid_positions = []
-            for r in range(self.height):
-                for c in range(self.width):
-                    if self.rail.get_transitions((r, c)) > 0:
-                        valid_positions.append((r, c))
 
-            # self.agents_position = random.sample(valid_positions,
-            #                                     self.number_of_agents)
-            self.agents_position = [
-                valid_positions[i] for i in
-                np.random.choice(len(valid_positions), self.number_of_agents)]
-            self.agents_target = [
-                valid_positions[i] for i in
-                np.random.choice(len(valid_positions), self.number_of_agents)]
+        self.fill_valid_positions()
 
-            # agents_direction must be a direction for which a solution is
-            # guaranteed.
-            self.agents_direction = [0] * self.number_of_agents
-            re_generate = False
-            for i in range(self.number_of_agents):
-                valid_movements = []
-                for direction in range(4):
-                    position = self.agents_position[i]
-                    moves = self.rail.get_transitions((position[0], position[1], direction))
-                    for move_index in range(4):
-                        if moves[move_index]:
-                            valid_movements.append((direction, move_index))
+        if replace_agents:
+            re_generate = True
+            while re_generate:
 
-                valid_starting_directions = []
-                for m in valid_movements:
-                    new_position = self._new_position(self.agents_position[i],
-                                                      m[1])
-                    if m[0] not in valid_starting_directions and \
-                       self._path_exists(new_position, m[0],
-                                         self.agents_target[i]):
-                        valid_starting_directions.append(m[0])
+                # self.agents_position = random.sample(valid_positions,
+                #                                     self.number_of_agents)
+                self.agents_position = [
+                    self.valid_positions[i] for i in
+                    np.random.choice(len(self.valid_positions), self.number_of_agents)]
+                self.agents_target = [
+                    self.valid_positions[i] for i in
+                    np.random.choice(len(self.valid_positions), self.number_of_agents)]
 
-                if len(valid_starting_directions) == 0:
-                    re_generate = True
-                else:
-                    self.agents_direction[i] = valid_starting_directions[
-                        np.random.choice(len(valid_starting_directions), 1)[0]]
+                # agents_direction must be a direction for which a solution is
+                # guaranteed.
+                self.agents_direction = [0] * self.number_of_agents
+                re_generate = False
+
+                for i in range(self.number_of_agents):
+                    direction = self.pick_agent_direction(self.agents_position[i], self.agents_target)
+                    if direction is None:
+                        re_generate = True
+                        break
+                    else:
+                        self.agents_direction = direction
+
+                # Jeremy extracted this into the method pick_agent_direction
+                if False:
+                    for i in range(self.number_of_agents):
+                        valid_movements = []
+                        for direction in range(4):
+                            position = self.agents_position[i]
+                            moves = self.rail.get_transitions((position[0], position[1], direction))
+                            for move_index in range(4):
+                                if moves[move_index]:
+                                    valid_movements.append((direction, move_index))
+
+                        valid_starting_directions = []
+                        for m in valid_movements:
+                            new_position = self._new_position(self.agents_position[i], m[1])
+                            if m[0] not in valid_starting_directions and \
+                                    self._path_exists(new_position, m[0], self.agents_target[i]):
+                                valid_starting_directions.append(m[0])
+
+                        if len(valid_starting_directions) == 0:
+                            re_generate = True
+                        else:
+                            self.agents_direction[i] = valid_starting_directions[
+                                np.random.choice(len(valid_starting_directions), 1)[0]]
 
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()

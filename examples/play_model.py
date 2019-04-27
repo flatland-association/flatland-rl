@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import time
 
 
-
 class Player(object):
     def __init__(self, env):
         self.env = env
@@ -35,7 +34,9 @@ class Player(object):
         self.tStart = time.time()
         
         # Reset environment
-        self.obs = self.env.reset()
+        #self.obs = self.env.reset()
+        self.env.obs_builder.reset()
+        self.obs = self.env._get_observations()
         for a in range(self.env.number_of_agents):
             norm = max(1, max_lt(self.obs[a], np.inf))
             self.obs[a] = np.clip(np.array(self.obs[a]) / norm, -1, 1)
@@ -148,7 +149,7 @@ def main(render=True, delay=0.0):
     for trials in range(1, n_trials + 1):
 
         # Reset environment
-        obs = env.reset()
+        # obs = env.reset()
 
         for a in range(env.number_of_agents):
             norm = max(1, max_lt(obs[a],np.inf))
