@@ -532,7 +532,10 @@ class RailEnv(Environment):
         
         self.agents_position.append(tuple(rcPos))  # ensure it's a tuple not a list
         self.agents_handles.append(max(self.agents_handles + [-1]) + 1)  # max(handles) + 1, starting at 0
-        self.agents_direction.append(0)
+
+        if iDir is None:
+            iDir = self.pick_agent_direction(rcPos, rcTarget)
+        self.agents_direction.append(iDir)
         self.agents_target.append(rcPos)  # set the target to the origin initially
         self.number_of_agents += 1
         self.check_agent_lists()

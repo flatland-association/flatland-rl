@@ -79,7 +79,7 @@ class JupEditor(object):
         rcCell = ((array([y, x]) - self.yxBase) / self.nPixCell).astype(int)
 
         if self.drawMode == "Origin":
-            self.iAgent = self.env.add_agent(rcCell, rcCell, 0)
+            self.iAgent = self.env.add_agent(rcCell, rcCell, None)
             self.drawMode = "Destination"
             self.player = None  # will need to start a new player
 
