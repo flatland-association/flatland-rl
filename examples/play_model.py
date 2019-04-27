@@ -149,7 +149,7 @@ def main(render=True, delay=0.0):
     for trials in range(1, n_trials + 1):
 
         # Reset environment
-        # obs = env.reset()
+        obs = env.reset()
 
         for a in range(env.number_of_agents):
             norm = max(1, max_lt(obs[a],np.inf))

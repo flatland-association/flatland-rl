@@ -79,20 +79,15 @@ class JupEditor(object):
         rcCell = ((array([y, x]) - self.yxBase) / self.nPixCell).astype(int)
 
         if self.drawMode == "Origin":
-            self.env.add_agent(rcCell, rcCell, 0)
-            # self.iAgent = len(self.env.agents_position)
-            # self.env.agents_position.append(rcCell)
-            # self.env.agents_handles.append(max(self.env.agents_handles + [-1]) + 1)
-            # self.env.agents_direction.append(0)
-            # self.env.agents_target.append(rcCell)  # set the target to the origin initially
-            # self.env.number_of_agents = self.iAgent + 1
+            self.iAgent = self.env.add_agent(rcCell, rcCell, 0)
             self.drawMode = "Destination"
             self.player = None  # will need to start a new player
+
         elif self.drawMode == "Destination" and self.iAgent is not None:
             self.env.agents_target[self.iAgent] = rcCell
             self.drawMode = "Origin"
         
-        self.log("agent", self.drawMode, self.iAgent, rcCell)
+        #self.log("agent", self.drawMode, self.iAgent, rcCell)
 
         self.redraw()
 
@@ -259,7 +254,7 @@ class JupEditor(object):
     def step_event(self, event=None):
         if self.player is None:
             self.player = Player(self.env)
-            self.env.reset(regen_rail=False)
+            self.env.reset(regen_rail=False, replace_agents=False)
         self.player.step()
         self.redraw()
 
@@ -275,7 +270,7 @@ class JupEditor(object):
     def bg_updater(self):
         try:
             for i in range(20):
-                self.log("step ", i)
+                #self.log("step ", i)
                 self.step_event()
                 time.sleep(0.2)
         finally:

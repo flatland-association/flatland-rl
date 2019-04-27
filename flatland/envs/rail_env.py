@@ -508,6 +508,7 @@ class RailEnv(Environment):
             for move_index in range(4):
                 if moves[move_index]:
                     valid_movements.append((direction, move_index))
+        # print("pos", rcPos, "targ", rcTarget, "valid movements", valid_movements)
 
         valid_starting_directions = []
         for m in valid_movements:
@@ -527,15 +528,15 @@ class RailEnv(Environment):
         if rcPos is None:
             rcPos = np.random.choice(len(self.valid_positions))
 
-        # iAgent = self.number_of_agents
-        self.number_of_agents += 1
+        iAgent = self.number_of_agents
         
-        self.env.agents_position.append(rcPos)
-        self.env.agents_handles.append(max(self.env.agents_handles + [-1]) + 1)  # max(handles) + 1, starting at 0
-        self.env.agents_direction.append(0)
-        self.env.agents_target.append(rcPos)  # set the target to the origin initially
-        
+        self.agents_position.append(tuple(rcPos))  # ensure it's a tuple not a list
+        self.agents_handles.append(max(self.agents_handles + [-1]) + 1)  # max(handles) + 1, starting at 0
+        self.agents_direction.append(0)
+        self.agents_target.append(rcPos)  # set the target to the origin initially
+        self.number_of_agents += 1        
         self.check_agent_lists()
+        return iAgent
     
     def reset(self, regen_rail=True, replace_agents=True):
         if regen_rail or self.rail is None:
@@ -572,12 +573,12 @@ class RailEnv(Environment):
                 re_generate = False
 
                 for i in range(self.number_of_agents):
-                    direction = self.pick_agent_direction(self.agents_position[i], self.agents_target)
+                    direction = self.pick_agent_direction(self.agents_position[i], self.agents_target[i])
                     if direction is None:
                         re_generate = True
                         break
                     else:
-                        self.agents_direction = direction
+                        self.agents_direction[i] = direction
 
                 # Jeremy extracted this into the method pick_agent_direction
                 if False:
