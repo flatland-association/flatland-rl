@@ -1,4 +1,4 @@
-from flatland.envs.rail_env import RailEnv, random_rail_generator, complex_rail_generator
+from flatland.envs.rail_env import RailEnv, complex_rail_generator
 # from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.utils.rendertools import RenderTool
 from flatland.baselines.dueling_double_dqn import Agent
@@ -6,7 +6,6 @@ from collections import deque
 import torch
 import random
 import numpy as np
-#import matplotlib.pyplot as plt
 import time
 
 
@@ -34,7 +33,7 @@ class Player(object):
         self.tStart = time.time()
         
         # Reset environment
-        #self.obs = self.env.reset()
+        # self.obs = self.env.reset()
         self.env.obs_builder.reset()
         self.obs = self.env._get_observations()
         for a in range(self.env.number_of_agents):
@@ -86,7 +85,6 @@ def max_lt(seq, val):
     return None
 
 
-
 def main(render=True, delay=0.0):
 
     random.seed(1)
@@ -94,7 +92,7 @@ def main(render=True, delay=0.0):
 
     # Example generate a rail given a manual specification,
     # a map of tuples (cell_type, rotation)
-    #transition_probability = [0.5,  # empty cell - Case 0
+    # transition_probability = [0.5,  # empty cell - Case 0
     #                        1.0,  # Case 1 - straight
     #                        1.0,  # Case 2 - simple switch
     #                        0.3,  # Case 3 - diamond crossing
@@ -113,7 +111,7 @@ def main(render=True, delay=0.0):
     # plt.figure(figsize=(5,5))
     # fRedis = redis.Redis()
 
-    handle = env.get_agent_handles()
+    # handle = env.get_agent_handles()
 
     state_size = 105
     action_size = 4
@@ -151,7 +149,7 @@ def main(render=True, delay=0.0):
         obs = env.reset()
 
         for a in range(env.number_of_agents):
-            norm = max(1, max_lt(obs[a],np.inf))
+            norm = max(1, max_lt(obs[a], np.inf))
             obs[a] = np.clip(np.array(obs[a]) / norm, -1, 1)
 
         # env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
@@ -161,9 +159,9 @@ def main(render=True, delay=0.0):
 
         # Run episode
         for step in range(50):
-            #if trials > 114:
-            #env_renderer.renderEnv(show=True)
-            #print(step)
+            # if trials > 114:
+            # env_renderer.renderEnv(show=True)
+            # print(step)
             # Action
             for a in range(env.number_of_agents):
                 action = agent.act(np.array(obs[a]), eps=eps)
@@ -187,7 +185,6 @@ def main(render=True, delay=0.0):
 
             iFrame += 1
 
-
             obs = next_obs.copy()
             if done['__all__']:
                 env_done = 1
@@ -201,23 +198,23 @@ def main(render=True, delay=0.0):
         dones_list.append((np.mean(done_window)))
 
         print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' +
-                '\tEpsilon: {:.2f} \t Action Probabilities: \t {}').format(
-                env.number_of_agents,
-                trials,
-                np.mean(scores_window),
-                100 * np.mean(done_window),
-                eps, action_prob/np.sum(action_prob)),
+               '\tEpsilon: {:.2f} \t Action Probabilities: \t {}').format(
+               env.number_of_agents,
+               trials,
+               np.mean(scores_window),
+               100 * np.mean(done_window),
+               eps, action_prob/np.sum(action_prob)),
             end=" ")
         if trials % 100 == 0:
             tNow = time.time()
             rFps = iFrame / (tNow - tStart)
             print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' + 
-                    '\tEpsilon: {:.2f} fps: {:.2f} \t Action Probabilities: \t {}').format(
-                    env.number_of_agents,
-                    trials,
-                    np.mean(scores_window),
-                    100 * np.mean(done_window),
-                    eps, rFps, action_prob / np.sum(action_prob)))
+                   '\tEpsilon: {:.2f} fps: {:.2f} \t Action Probabilities: \t {}').format(
+                   env.number_of_agents,
+                   trials,
+                   np.mean(scores_window),
+                   100 * np.mean(done_window),
+                   eps, rFps, action_prob / np.sum(action_prob)))
             torch.save(agent.qnetwork_local.state_dict(),
                     '../flatland/baselines/Nets/avoid_checkpoint' + str(trials) + '.pth')
             action_prob = [1]*4

@@ -281,7 +281,7 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
         #         - on failure goto step1 and retry with seed+1
         #     - [avoid crossing other start,goal positions] (optional)
         #
-        #   - [after X pairs] 
+        #   - [after X pairs]
         #     - find closest rail from start (Pa)
         #       - iterating outwards in a "circle" from start until an existing rail cell is hit
         #     - connect [start, Pa]
@@ -314,6 +314,7 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
                     continue
                 # check distance to existing points
                 sg_new = [start, goal]
+
                 def check_all_dist(sg_new):
                     for sg in start_goal:
                         for i in range(2):

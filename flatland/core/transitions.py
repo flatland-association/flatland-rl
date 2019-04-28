@@ -542,10 +542,10 @@ class RailEnvTransitions(Grid4Transitions):
 
     def print(self, cell_transition):
         print("  NESW")
-        print("N", format(cell_transition>>(3*4) & 0xF, '04b'))
-        print("E", format(cell_transition>>(2*4) & 0xF, '04b'))
-        print("S", format(cell_transition>>(1*4) & 0xF, '04b'))
-        print("W", format(cell_transition>>(0*4) & 0xF, '04b'))
+        print("N", format(cell_transition >> (3*4) & 0xF, '04b'))
+        print("E", format(cell_transition >> (2*4) & 0xF, '04b'))
+        print("S", format(cell_transition >> (1*4) & 0xF, '04b'))
+        print("W", format(cell_transition >> (0*4) & 0xF, '04b'))
 
     def is_valid(self, cell_transition):
         """
