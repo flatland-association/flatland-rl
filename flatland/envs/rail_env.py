@@ -326,6 +326,7 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
                 if check_all_dist(sg_new):
                     break
             start_goal.append([start, goal])
+        print("Created #", len(start_goal), "pairs")
 
         # step 3:
         for sg in start_goal:

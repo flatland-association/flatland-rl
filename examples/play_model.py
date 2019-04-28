@@ -20,7 +20,7 @@ def main(render=True, delay=0.0):
     #transition_probability = [0.5,  # empty cell - Case 0
     #                        1.0,  # Case 1 - straight
     #                        1.0,  # Case 2 - simple switch
-    #                        0.3,  # Case 3 - diamond drossing
+    #                        0.3,  # Case 3 - diamond crossing
     #                        0.5,  # Case 4 - single slip
     #                        0.5,  # Case 5 - double slip
     #                        0.2,  # Case 6 - symmetrical
@@ -28,7 +28,7 @@ def main(render=True, delay=0.0):
 
     # Example generate a random rail
     env = RailEnv(width=15, height=15,
-                  rail_generator=complex_rail_generator(nr_start_goal=20),
+                  rail_generator=complex_rail_generator(nr_start_goal=20, min_dist=5),
                   number_of_agents=1)
 
     if render:
