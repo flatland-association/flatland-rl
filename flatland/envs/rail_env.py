@@ -13,6 +13,333 @@ from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 
 
+class AStarNode():
+    """A node class for A* Pathfinding"""
+
+    def __init__(self, parent=None, pos=None):
+        self.parent = parent
+        self.pos = pos
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.pos == other.pos
+
+    def update_if_better(self, other):
+        if other.g < self.g:
+            self.parent = other.parent
+            self.g = other.g
+            self.h = other.h
+            self.f = other.f
+
+
+def get_direction(pos1, pos2):
+    """
+    Assumes pos1 and pos2 are adjacent location on grid.
+    Returns direction (int) that can be used with transitions.
+    """
+    diff_0 = pos2[0] - pos1[0]
+    diff_1 = pos2[1] - pos1[1]
+    if diff_0 < 0:
+        return 0
+    if diff_0 > 0:
+        return 2
+    if diff_1 > 0:
+        return 1
+    if diff_1 < 0:
+        return 3
+    return 0
+
+
+def mirror(dir):
+    return (dir + 2) % 4
+
+
+def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_pos, end_pos):
+    # start by getting direction used to get to current node
+    # and direction from current node to possible child node
+    new_dir = get_direction(current_pos, new_pos)
+    if prev_pos is not None:
+        current_dir = get_direction(prev_pos, current_pos)
+    else:
+        current_dir = new_dir
+    # create new transition that would go to child
+    new_trans = rail_array[current_pos]
+    if prev_pos is None:
+        # need to flip direction because of how end points are defined
+        new_trans = rail_trans.set_transition(new_trans, mirror(current_dir), new_dir, 1)
+    else:
+        # set the forward path
+        new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+        # set the backwards path
+        new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+    if new_pos == end_pos:
+        # need to validate end pos setup as well
+        new_trans_e = rail_array[end_pos]
+        new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, mirror(new_dir), 1)
+        # print("========> end trans")
+        # rail_trans.print(new_trans_e)
+        if not rail_trans.is_valid(new_trans_e):
+            return False
+    # is transition is valid?
+    # print("=======> trans")
+    # rail_trans.print(new_trans)
+    return rail_trans.is_valid(new_trans)
+
+
+def a_star(rail_trans, rail_array, start, end):
+    """
+    Returns a list of tuples as a path from the given start to end.
+    If no path is found, returns path to closest point to end.
+    """
+    rail_shape = rail_array.shape
+    start_node = AStarNode(None, start)
+    end_node = AStarNode(None, end)
+    open_list = []
+    closed_list = []
+
+    open_list.append(start_node)
+
+    # this could be optimized
+    def is_node_in_list(node, the_list):
+        for o_node in the_list:
+            if node == o_node:
+                return o_node
+        return None
+
+    while len(open_list) > 0:
+        # get node with current shortest est. path (lowest f)
+        current_node = open_list[0]
+        current_index = 0
+        for index, item in enumerate(open_list):
+            if item.f < current_node.f:
+                current_node = item
+                current_index = index
+
+        # pop current off open list, add to closed list
+        open_list.pop(current_index)
+        closed_list.append(current_node)
+
+        # print("a*:", current_node.pos)
+        # for cn in closed_list:
+        #    print("closed:", cn.pos)
+
+        # found the goal
+        if current_node == end_node:
+            path = []
+            current = current_node
+            while current is not None:
+                path.append(current.pos)
+                current = current.parent
+            # return reversed path
+            return path[::-1]
+
+        # generate children
+        children = []
+        if current_node.parent is not None:
+            prev_pos = current_node.parent.pos
+        else:
+            prev_pos = None
+        for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+            node_pos = (current_node.pos[0] + new_pos[0], current_node.pos[1] + new_pos[1])
+            if node_pos[0] >= rail_shape[0] or \
+               node_pos[0] < 0 or \
+               node_pos[1] >= rail_shape[1] or \
+               node_pos[1] < 0:
+                continue
+
+            # validate positions
+            # debug: avoid all current rails
+            # if rail_array.item(node_pos) != 0:
+            #    continue
+
+            # validate positions
+            if not validate_new_transition(rail_trans, rail_array, prev_pos, current_node.pos, node_pos, end_node.pos):
+                # print("A*: transition invalid")
+                continue
+
+            # create new node
+            new_node = AStarNode(current_node, node_pos)
+            children.append(new_node)
+
+        # loop through children
+        for child in children:
+            # already in closed list?
+            closed_node = is_node_in_list(child, closed_list)
+            if closed_node is not None:
+                continue
+
+            # create the f, g, and h values
+            child.g = current_node.g + 1
+            # this heuristic favors diagonal paths
+            # child.h = ((child.pos[0] - end_node.pos[0]) ** 2) + \
+            #           ((child.pos[1] - end_node.pos[1]) ** 2)
+            # this heuristic avoids diagonal paths
+            child.h = abs(child.pos[0] - end_node.pos[0]) + abs(child.pos[1] - end_node.pos[1])
+            child.f = child.g + child.h
+
+            # already in the open list?
+            open_node = is_node_in_list(child, open_list)
+            if open_node is not None:
+                open_node.update_if_better(child)
+                continue
+
+            # add the child to the open list
+            open_list.append(child)
+
+        # no full path found, return partial path
+        if len(open_list) == 0:
+            path = []
+            current = current_node
+            while current is not None:
+                path.append(current.pos)
+                current = current.parent
+            # return reversed path
+            return path[::-1]
+
+
+def connect_rail(rail_trans, rail_array, start, end):
+    """
+    Creates a new path [start,end] in rail_array, based on rail_trans.
+    """
+    # in the worst case we will need to do a A* search, so we might as well set that up
+    path = a_star(rail_trans, rail_array, start, end)
+    # print("connecting path", path)
+    if len(path) < 2:
+        return
+    current_dir = get_direction(path[0], path[1])
+    end_pos = path[-1]
+    for index in range(len(path) - 1):
+        current_pos = path[index]
+        new_pos = path[index+1]
+        new_dir = get_direction(current_pos, new_pos)
+
+        new_trans = rail_array[current_pos]
+        if index == 0:
+            # need to flip direction because of how end points are defined
+            new_trans = rail_trans.set_transition(new_trans, mirror(current_dir), new_dir, 1)
+        else:
+            # set the forward path
+            new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+            # set the backwards path
+            new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+        rail_array[current_pos] = new_trans
+
+        if new_pos == end_pos:
+            # need to validate end pos setup as well
+            new_trans_e = rail_array[end_pos]
+            new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, mirror(new_dir), 1)
+            rail_array[end_pos] = new_trans_e
+
+        current_dir = new_dir
+
+
+def distance_on_rail(pos1, pos2):
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+
+def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
+    """
+    Parameters
+    -------
+    width : int
+        The width (number of cells) of the grid to generate.
+    height : int
+        The height (number of cells) of the grid to generate.
+
+    Returns
+    -------
+    numpy.ndarray of type numpy.uint16
+        The matrix with the correct 16-bit bitmaps for each cell.
+    """
+
+    def generator(width, height, num_resets=0):
+        rail_trans = RailEnvTransitions()
+        rail_array = np.zeros(shape=(width, height), dtype=np.uint16)
+
+        np.random.seed(seed + num_resets)
+
+        # generate rail array
+        # step 1:
+        # - generate a list of start and goal positions
+        # - use a min/max distance allowed as input for this
+        # - validate that start/goals are not placed too close to other start/goals
+        #
+        # step 2: (optional)
+        # - place random elements on rails array
+        #   - for instance "train station", etc.
+        #
+        # step 3:
+        # - iterate over all [start, goal] pairs:
+        #   - [first X pairs]
+        #     - draw a rail from [start,goal]
+        #     - draw either vertical or horizontal part first (randomly)
+        #     - if rail crosses existing rail then validate new connection
+        #       - if new connection is invalid turn 90 degrees to left/right
+        #       - possibility that this fails to create a path to goal
+        #         - on failure goto step1 and retry with seed+1
+        #     - [avoid crossing other start,goal positions] (optional)
+        #
+        #   - [after X pairs] 
+        #     - find closest rail from start (Pa)
+        #       - iterating outwards in a "circle" from start until an existing rail cell is hit
+        #     - connect [start, Pa]
+        #       - validate crossing rails
+        #     - Do A* from Pa to find closest point on rail (Pb) to goal point
+        #       - Basically normal A* but find point on rail which is closest to goal
+        #       - since full path to goal is unlikely
+        #     - connect [Pb, goal]
+        #       - validate crossing rails
+        #
+        # step 4: (optional)
+        # - add more rails to map randomly
+        #
+        # step 5:
+        # - return transition map + list of [start, goal] points
+        #
+
+        # step 1:
+        start_goal = []
+        for _ in range(nr_start_goal):
+            sanity_max = 9000
+            for _ in range(sanity_max):
+                start = (np.random.randint(0, width), np.random.randint(0, height))
+                goal = (np.random.randint(0, height), np.random.randint(0, height))
+                # check min/max distance
+                dist_sg = distance_on_rail(start, goal)
+                if dist_sg < min_dist:
+                    continue
+                if dist_sg > max_dist:
+                    continue
+                # check distance to existing points
+                sg_new = [start, goal]
+                def check_all_dist(sg_new):
+                    for sg in start_goal:
+                        for i in range(2):
+                            for j in range(2):
+                                dist = distance_on_rail(sg_new[i], sg[j])
+                                if dist < 2:
+                                    # print("too close:", dist, sg_new[i], sg[j])
+                                    return False
+                    return True
+                if check_all_dist(sg_new):
+                    break
+            start_goal.append([start, goal])
+        print("Created #", len(start_goal), "pairs")
+
+        # step 3:
+        for sg in start_goal:
+            connect_rail(rail_trans, rail_array, sg[0], sg[1])
+
+        return_rail = GridTransitionMap(width=width, height=height, transitions=rail_trans)
+        return_rail.grid = rail_array
+        # TODO: return start_goal
+        return return_rail
+
+    return generator
+
+
 def rail_from_manual_specifications_generator(rail_spec):
     """
     Utility to convert a rail given by manual specification as a map of tuples
@@ -148,7 +475,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
 
         transitions_templates_ = []
         transition_probabilities = []
-        for i in range(len(t_utils.transitions) - 1):  # don't include dead-ends
+        for i in range(len(t_utils.transitions) - 3):  # don't include dead-ends
             all_transitions = 0
             for dir_ in range(4):
                 trans = t_utils.get_transitions(t_utils.transitions[i], dir_)

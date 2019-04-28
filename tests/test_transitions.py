@@ -3,6 +3,56 @@
 
 """Tests for `flatland` package."""
 from flatland.core.transitions import RailEnvTransitions, Grid8Transitions
+from flatland.envs.rail_env import validate_new_transition
+import numpy as np
+
+
+def test_is_valid_railenv_transitions():
+    rail_env_trans = RailEnvTransitions()
+    transition_list = rail_env_trans.transitions
+
+    for t in transition_list:
+        assert(rail_env_trans.is_valid(t) == True)
+        for i in range(3):
+            rot_trans = rail_env_trans.rotate_transition(t, 90 * i)
+            assert(rail_env_trans.is_valid(rot_trans) == True)
+
+    assert(rail_env_trans.is_valid(int('1111111111110010', 2)) == False)
+    assert(rail_env_trans.is_valid(int('1001111111110010', 2)) == False)
+    assert(rail_env_trans.is_valid(int('1001111001110110', 2)) == False)
+
+
+def test_adding_new_valid_transition():
+    rail_trans = RailEnvTransitions()
+    rail_array = np.zeros(shape=(15, 15), dtype=np.uint16)
+
+    # adding straight
+    assert(validate_new_transition(rail_trans, rail_array, (4,5), (5,5), (6,5), (10,10)) == True)
+
+    # adding valid right turn
+    assert(validate_new_transition(rail_trans, rail_array, (5,4), (5,5), (5,6), (10,10)) == True)
+    # adding valid left turn
+    assert(validate_new_transition(rail_trans, rail_array, (5,6), (5,5), (5,6), (10,10)) == True)
+
+    # adding invalid turn
+    rail_array[(5,5)] = rail_trans.transitions[2]
+    assert(validate_new_transition(rail_trans, rail_array, (4,5), (5,5), (5,6), (10,10)) == False)
+
+    # should create #4 -> valid
+    rail_array[(5,5)] = rail_trans.transitions[3]
+    assert(validate_new_transition(rail_trans, rail_array, (4,5), (5,5), (5,6), (10,10)) == True)
+
+    # adding invalid turn
+    rail_array[(5,5)] = rail_trans.transitions[7]
+    assert(validate_new_transition(rail_trans, rail_array, (4,5), (5,5), (5,6), (10,10)) == False)
+
+    # test path start condition
+    rail_array[(5,5)] = rail_trans.transitions[0]
+    assert(validate_new_transition(rail_trans, rail_array, None, (5,5), (5,6), (10,10)) == True)
+
+    # test path end condition
+    rail_array[(5,5)] = rail_trans.transitions[0]
+    assert(validate_new_transition(rail_trans, rail_array, (5,4), (5,5), (6,5), (6,5)) == True)
 
 
 def test_valid_railenv_transitions():

@@ -1,4 +1,4 @@
-from flatland.envs.rail_env import RailEnv, random_rail_generator
+from flatland.envs.rail_env import RailEnv, random_rail_generator, complex_rail_generator
 # from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.utils.rendertools import RenderTool
 from flatland.baselines.dueling_double_dqn import Agent
@@ -6,7 +6,7 @@ from collections import deque
 import torch
 import random
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time
 
 
@@ -94,24 +94,23 @@ def main(render=True, delay=0.0):
 
     # Example generate a rail given a manual specification,
     # a map of tuples (cell_type, rotation)
-    transition_probability = [0.5,  # empty cell - Case 0
-                            1.0,  # Case 1 - straight
-                            1.0,  # Case 2 - simple switch
-                            0.3,  # Case 3 - diamond drossing
-                            0.5,  # Case 4 - single slip
-                            0.5,  # Case 5 - double slip
-                            0.2,  # Case 6 - symmetrical
-                            0.0]  # Case 7 - dead end
+    #transition_probability = [0.5,  # empty cell - Case 0
+    #                        1.0,  # Case 1 - straight
+    #                        1.0,  # Case 2 - simple switch
+    #                        0.3,  # Case 3 - diamond crossing
+    #                        0.5,  # Case 4 - single slip
+    #                        0.5,  # Case 5 - double slip
+    #                        0.2,  # Case 6 - symmetrical
+    #                        0.0]  # Case 7 - dead end
 
     # Example generate a random rail
-    env = RailEnv(width=15,
-                height=15,
-                rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
-                number_of_agents=5)
+    env = RailEnv(width=15, height=15,
+                  rail_generator=complex_rail_generator(nr_start_goal=20, min_dist=5),
+                  number_of_agents=1)
 
     if render:
         env_renderer = RenderTool(env, gl="QT")
-    plt.figure(figsize=(5,5))
+    # plt.figure(figsize=(5,5))
     # fRedis = redis.Redis()
 
     handle = env.get_agent_handles()
