@@ -51,7 +51,7 @@ Authors
 --------
 * Sharada Mohanty <mohanty@aicrowd.com>
 * Giacomo Spigler <giacomo.spigler@gmail.com>
-* Mattias Ljungström <ml@mljx.io>
+* Mattias Ljungström
 * Jeremy Watson
 * Erik Nygren <erik.nygren@sbb.ch>
 * Adrian Egli <adrian.egli@sbb.ch>
