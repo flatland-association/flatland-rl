@@ -338,8 +338,8 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
                 start = (np.random.randint(0, width), np.random.randint(0, height))
                 goal = (np.random.randint(0, height), np.random.randint(0, height))
                 # check to make sure start,goal pos is empty?
-                # if rail_array[goal] != 0: # or rail_array[start] != 0:
-                #     continue
+                if rail_array[goal] != 0 or rail_array[start] != 0:
+                    continue
                 # check min/max distance
                 dist_sg = distance_on_rail(start, goal)
                 if dist_sg < min_dist:
