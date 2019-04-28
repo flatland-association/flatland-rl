@@ -6,7 +6,7 @@ from collections import deque
 import torch
 import random
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time
 
 
@@ -28,12 +28,12 @@ def main(render=True, delay=0.0):
 
     # Example generate a random rail
     env = RailEnv(width=15, height=15,
-                  rail_generator=complex_rail_generator(),
+                  rail_generator=complex_rail_generator(nr_start_goal=20),
                   number_of_agents=1)
 
     if render:
         env_renderer = RenderTool(env, gl="QT")
-    plt.figure(figsize=(5,5))
+    # plt.figure(figsize=(5,5))
     # fRedis = redis.Redis()
 
     handle = env.get_agent_handles()

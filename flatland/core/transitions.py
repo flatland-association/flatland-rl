@@ -531,12 +531,21 @@ class RailEnvTransitions(Grid4Transitions):
                        int('1001011000100001', 2),  # Case 4 - single slip
                        int('1100110000110011', 2),  # Case 5 - double slip
                        int('0101001000000010', 2),  # Case 6 - symmetrical
-                       int('0010000000000000', 2)]  # Case 7 - dead end
+                       int('0010000000000000', 2),  # Case 7 - dead end
+                       int('0100000000000010', 2),  # Case 1b - simple turn right
+                       int('0001001000000000', 2)]  # Case 1c - simple turn left
 
     def __init__(self):
         super(RailEnvTransitions, self).__init__(
             transitions=self.transition_list
         )
+
+    def print(self, cell_transition):
+        print("  NESW")
+        print("N", format(cell_transition>>(3*4) & 0xF, '04b'))
+        print("E", format(cell_transition>>(2*4) & 0xF, '04b'))
+        print("S", format(cell_transition>>(1*4) & 0xF, '04b'))
+        print("W", format(cell_transition>>(0*4) & 0xF, '04b'))
 
     def is_valid(self, cell_transition):
         """
@@ -552,11 +561,16 @@ class RailEnvTransitions(Grid4Transitions):
         Boolean
             True or False
         """
+        # i = 0
         for trans in self.transitions:
+            # print(">", i)
+            # i += 1
+            # self.print(trans)
             if cell_transition == trans:
                 return True
             for _ in range(3):
                 trans = self.rotate_transition(trans, rotation=90)
+                # self.print(trans)
                 if cell_transition == trans:
                     return True
         return False
