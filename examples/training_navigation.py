@@ -34,7 +34,7 @@ env = RailEnv(width=20,
 env = RailEnv(width=20,
               height=20,
               rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
-                  ['../env-data/tests/train_simple.npy']),
+                  ['../env-data/tests/test1.npy']),
               number_of_agents=1)
 
 
@@ -109,7 +109,7 @@ for trials in range(1, n_trials + 1):
         for a in range(env.number_of_agents):
             if demo:
                 eps = 0
-            action = agent.act(np.array(obs[a]), eps=eps)
+            action = 2# agent.act(np.array(obs[a]), eps=eps)
             action_prob[action] += 1
             action_dict.update({a: action})
         # Environment step
