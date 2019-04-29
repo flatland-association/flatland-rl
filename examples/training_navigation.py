@@ -109,9 +109,10 @@ for trials in range(1, n_trials + 1):
         for a in range(env.number_of_agents):
             if demo:
                 eps = 0
-            action = 2# agent.act(np.array(obs[a]), eps=eps)
+            action = agent.act(np.array(obs[a]), eps=eps)
             action_prob[action] += 1
             action_dict.update({a: action})
+            env.obs_builder.util_print_obs_subtree(tree=obs[a], num_features_per_node=5)
         # Environment step
         next_obs, all_rewards, done, _ = env.step(action_dict)
         for a in range(env.number_of_agents):
@@ -126,7 +127,7 @@ for trials in range(1, n_trials + 1):
         if done['__all__']:
             env_done = 1
             break
-    # Epsioln decay
+    # Epsilon decay
     eps = max(eps_end, eps_decay * eps)  # decrease epsilon
 
     done_window.append(env_done)

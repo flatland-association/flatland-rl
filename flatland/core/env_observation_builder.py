@@ -326,7 +326,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 if not last_isDeadEnd:
                     # Keep walking through the tree along `direction'
                     exploring = True
-
+                    # TODO: Remove below calculation, this is computed already above and could be reused
                     for i in range(4):
                         if cell_transitions[i]:
                             position = self._new_position(position, i)
