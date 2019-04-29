@@ -1053,6 +1053,21 @@ class RailEnv(Environment):
                             direction = reverse_direction
                             movement = reverse_direction
                             is_deadend = True
+                    if nbits == 2:
+                        # straigt or curve
+                        valid_transition = self.rail.get_transition(
+                            (pos[0], pos[1], direction),
+                            movement)
+                        reverse_direction = (direction + 2) % 4
+                        curv_dir = (movement + 1) % 4
+                        while not valid_transition:
+                                if curv_dir != reverse_direction:
+                                    valid_transition = self.rail.get_transition(
+                                        (pos[0], pos[1], direction),
+                                        curv_dir)
+                                curv_dir = (curv_dir+1) % 4
+                                if valid_transition:
+                                    movement = curv_dir
                 new_position = self._new_position(pos, movement)
                 # Is it a legal move?  1) transition allows the movement in the
                 # cell,  2) the new cell is not empty (case 0),  3) the cell is

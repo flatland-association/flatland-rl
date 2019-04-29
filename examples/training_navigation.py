@@ -30,13 +30,13 @@ env = RailEnv(width=20,
               rail_generator=complex_rail_generator(nr_start_goal=20, min_dist=10, max_dist=99999, seed=0),
               number_of_agents=5)
 
-"""
+
 env = RailEnv(width=20,
               height=20,
               rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
-                  ['../env-data/tests/test_rail.npy']),
+                  ['../env-data/tests/train_simple.npy']),
               number_of_agents=1)
-"""
+
 
 env_renderer = RenderTool(env, gl="QT")
 handle = env.get_agent_handles()
