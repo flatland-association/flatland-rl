@@ -905,7 +905,7 @@ class RailEnv(Environment):
     
     def reset(self, regen_rail=True, replace_agents=True):
         if regen_rail or self.rail is None:
-            #TODO: Import not only rail information but also start and goal positions
+            # TODO: Import not only rail information but also start and goal positions
             self.rail = self.rail_generator(self.width, self.height, self.num_resets)
             self.fill_valid_positions()
 
