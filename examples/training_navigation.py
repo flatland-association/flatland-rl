@@ -25,6 +25,11 @@ env = RailEnv(width=10,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
               number_of_agents=1)
 
+env = RailEnv(width=20,
+              height=20,
+              rail_generator=complex_rail_generator(nr_start_goal=20, min_dist=10, max_dist=99999, seed=0),
+              number_of_agents=5)
+
 """
 env = RailEnv(width=20,
               height=20,

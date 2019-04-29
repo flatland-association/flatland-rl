@@ -905,6 +905,7 @@ class RailEnv(Environment):
     
     def reset(self, regen_rail=True, replace_agents=True):
         if regen_rail or self.rail is None:
+            #TODO: Import not only rail information but also start and goal positions
             self.rail = self.rail_generator(self.width, self.height, self.num_resets)
             self.fill_valid_positions()
 
@@ -916,7 +917,7 @@ class RailEnv(Environment):
 
         # Use a TreeObsForRailEnv to compute distance maps to each agent's target, to sample initial
         # agent's orientations that allow a valid solution.
-
+        # TODO: Possibility ot fill valid positions from list of goals and start
         self.fill_valid_positions()
 
         if replace_agents:
@@ -1023,6 +1024,7 @@ class RailEnv(Environment):
 
                 is_deadend = False
                 if action == 2:
+                    # TODO: Check if cell is curve --> Compute correct transition and change in orientation
                     # compute number of possible transitions in the current
                     # cell
                     nbits = 0
