@@ -532,14 +532,25 @@ class RailEnvTransitions(Grid4Transitions):
                        int('1100110000110011', 2),  # Case 5 - double slip
                        int('0101001000000010', 2),  # Case 6 - symmetrical
                        int('0010000000000000', 2),  # Case 7 - dead end
-                       int('0100000000000010', 2),  # Case 1b - simple turn right
-                       int('0001001000000000', 2),  # Case 1c - simple turn left
-                       int('1100000000100010', 2)]  # Case 2b - simple switch mirrored
+                       int('0100000000000010', 2),  # Case 1b (8)  - simple turn right
+                       int('0001001000000000', 2),  # Case 1c (9)  - simple turn left
+                       int('1100000000100010', 2)]  # Case 2b (10) - simple switch mirrored
 
     def __init__(self):
         super(RailEnvTransitions, self).__init__(
             transitions=self.transition_list
         )
+        # create this to make validation faster
+        self.transitions_all = []
+        for index, trans in enumerate(self.transitions):
+            self.transitions_all.append(trans)
+            if index in (2, 4, 6, 7, 8, 9, 10):
+                for _ in range(3):
+                    trans = self.rotate_transition(trans, rotation=90)
+                    self.transitions_all.append(trans)
+            elif index in (1, 5):
+                trans = self.rotate_transition(trans, rotation=90)
+                self.transitions_all.append(trans)
 
     def print(self, cell_transition):
         print("  NESW")
@@ -562,17 +573,8 @@ class RailEnvTransitions(Grid4Transitions):
         Boolean
             True or False
         """
-        # i = 0
-        for trans in self.transitions:
-            # print(">", i)
-            # i += 1
-            # self.print(trans)
+        for trans in self.transitions_all:
             if cell_transition == trans:
                 return True
-            for _ in range(3):
-                trans = self.rotate_transition(trans, rotation=90)
-                # self.print(trans)
-                if cell_transition == trans:
-                    return True
         return False
 

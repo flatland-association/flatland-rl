@@ -73,7 +73,7 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
         else:
             # check if matches existing layout
             new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
-            new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+            # new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
             # rail_trans.print(new_trans)
     else:
         # set the forward path
@@ -89,7 +89,7 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
         else:
             # check if matches existing layout
             new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
-            new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
+            # new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
             # print("end:", end_pos, current_pos)
             # rail_trans.print(new_trans_e)
 
@@ -244,7 +244,8 @@ def connect_rail(rail_trans, rail_array, start, end):
             else:
                 # into existing rail
                 new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
-                new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+                # new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+                pass
         else:
             # set the forward path
             new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
@@ -261,7 +262,7 @@ def connect_rail(rail_trans, rail_array, start, end):
             else:
                 # into existing rail
                 new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
-                new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
+                # new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
             rail_array[end_pos] = new_trans_e
 
         current_dir = new_dir
