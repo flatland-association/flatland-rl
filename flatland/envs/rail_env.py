@@ -1067,7 +1067,6 @@ class RailEnv(Environment):
                                     (pos[0], pos[1], direction),
                                     curv_dir)
                             if valid_transition:
-                                print("Curve")
                                 movement = curv_dir
                             curv_dir = (curv_dir + 1) % 4
 
