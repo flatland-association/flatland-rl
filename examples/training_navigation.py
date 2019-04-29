@@ -24,13 +24,15 @@ env = RailEnv(width=10,
               height=10,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
               number_of_agents=1)
+
 """
 env = RailEnv(width=20,
               height=20,
               rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
-                  ['../flatland/baselines/test-editor.npy']),
+                  ['../env-data/tests/test_rail.npy']),
               number_of_agents=1)
 """
+
 env_renderer = RenderTool(env, gl="QT")
 handle = env.get_agent_handles()
 
@@ -105,7 +107,6 @@ for trials in range(1, n_trials + 1):
             action = agent.act(np.array(obs[a]), eps=eps)
             action_prob[action] += 1
             action_dict.update({a: action})
-
         # Environment step
         next_obs, all_rewards, done, _ = env.step(action_dict)
         for a in range(env.number_of_agents):
