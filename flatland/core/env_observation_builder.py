@@ -242,7 +242,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         for branch_direction in [(orientation + 4 + i) % 4 for i in range(-1, 3)]:
-            # TODO: check if cell is a curve, then keep branch direction forward instead of left or right
             if self.env.rail.get_transition((position[0], position[1], orientation), branch_direction):
                 new_cell = self._new_position(position, branch_direction)
 
@@ -395,7 +394,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 observation = observation + branch_observation
 
             elif last_isSwitch and self.env.rail.get_transition((position[0], position[1], direction),
-                                                                branch_direction):
+                                                                ):
                 new_cell = self._new_position(position, branch_direction)
 
                 branch_observation = self._explore_branch(handle,
