@@ -340,7 +340,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
             elif num_transitions == 0:
                 # Wrong cell type, but let's cover it and treat it as a dead-end, just in case
-                print("WRONG CELL TYPE detected in tree-search (0 transitions possible)")
+                print("WRONG CELL TYPE detected in tree-search (0 transitions possible) at cell",position[0], position[1] )
                 last_isTerminal = True
                 break
 

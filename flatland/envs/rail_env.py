@@ -998,7 +998,7 @@ class RailEnv(Environment):
 
         for i in range(len(self.agents_handles)):
             handle = self.agents_handles[i]
-
+            transition_isValid = None
             if handle not in action_dict:
                 continue
 
@@ -1027,9 +1027,13 @@ class RailEnv(Environment):
                 movement = direction
                 if action == 1:
                     movement = direction - 1
+                    if nbits <= 2:
+                        transition_isValid == False
+
                 elif action == 3:
                     movement = direction + 1
-
+                    if nbits <= 2:
+                        transition_isValid == False
                 if movement < 0:
                     movement += 4
                 if movement >= 4:
@@ -1089,9 +1093,10 @@ class RailEnv(Environment):
                 else:
                     new_cell_isValid = False
 
-                transition_isValid = self.rail.get_transition(
-                    (pos[0], pos[1], direction),
-                    movement) or is_deadend
+                if transition_isValid == None:
+                    transition_isValid = self.rail.get_transition(
+                        (pos[0], pos[1], direction),
+                        movement) or is_deadend
 
                 cell_isFree = True
                 for j in range(self.number_of_agents):

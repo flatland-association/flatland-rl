@@ -112,7 +112,7 @@ for trials in range(1, n_trials + 1):
             action = agent.act(np.array(obs[a]), eps=eps)
             action_prob[action] += 1
             action_dict.update({a: action})
-            env.obs_builder.util_print_obs_subtree(tree=obs[a], num_features_per_node=5)
+            #env.obs_builder.util_print_obs_subtree(tree=obs[a], num_features_per_node=5)
         # Environment step
         next_obs, all_rewards, done, _ = env.step(action_dict)
         for a in range(env.number_of_agents):
