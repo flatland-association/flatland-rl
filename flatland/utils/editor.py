@@ -167,7 +167,7 @@ class JupEditor(object):
                 # get the direction index for the 2 transitions
                 liTrans = []
                 for rcTrans in rc2Trans:
-                    # gRCTrans - rcTrans gives an array of vector differences between our rcTrans 
+                    # gRCTrans - rcTrans gives an array of vector differences between our rcTrans
                     # and the 4 directions stored in gRCTrans.
                     # Where the vector difference is zero, we have a match...
                     # np.all detects where the whole row,col vector is zero.
@@ -177,10 +177,10 @@ class JupEditor(object):
                         iTrans = iTrans[0][0]
                         liTrans.append(iTrans)
 
-                # check that we have two transitions 
+                # check that we have two transitions
                 if len(liTrans) == 2:
                     # Set the transition
-                    env.rail.set_transition((*rcMiddle, liTrans[0]), liTrans[1], True)
+                    env.rail.set_transition((*rcMiddle, liTrans[0]), liTrans[1], bTransition)
                     # iValCell = env.rail.transitions.set_transition(
                     #    env.rail.grid[tuple(rcMiddle)], liTrans[0], liTrans[1], bTransition)
 
