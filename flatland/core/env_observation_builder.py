@@ -137,7 +137,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             new_cell = self._new_position(position, neigh_direction)
 
             if new_cell[0] >= 0 and new_cell[0] < self.env.height and \
-                new_cell[1] >= 0 and new_cell[1] < self.env.width:
+                    new_cell[1] >= 0 and new_cell[1] < self.env.width:
 
                 desired_movement_from_new_cell = (neigh_direction + 2) % 4
 
