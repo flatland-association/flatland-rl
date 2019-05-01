@@ -1024,7 +1024,6 @@ class RailEnv(Environment):
                 while tmp > 0:
                     nbits += (tmp & 1)
                     tmp = tmp >> 1
-                print(nbits)
                 movement = direction
                 if action == 1:
                     movement = direction - 1
