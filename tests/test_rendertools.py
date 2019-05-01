@@ -30,8 +30,8 @@ def checkFrozenImage(sFileImage):
         if bytesFrozenImage is None:
             bytesFrozenImage = bytesImage
         else:
-            assert(bytesFrozenImage.shape == bytesImage.shape)
-            assert((np.sum(np.square(bytesFrozenImage - bytesImage)) / bytesFrozenImage.size) < 1e-3)
+            assert (bytesFrozenImage.shape == bytesImage.shape)
+            assert ((np.sum(np.square(bytesFrozenImage - bytesImage)) / bytesFrozenImage.size) < 1e-3)
 
 
 def test_render_env():

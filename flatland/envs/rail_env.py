@@ -1021,6 +1021,8 @@ class RailEnv(Environment):
 
                 nbits = 0
                 tmp = self.rail.get_transitions((pos[0], pos[1]))
+                print(np.sum(self.rail.get_transitions((pos[0], pos[1],direction))),self.rail.get_transitions((pos[0], pos[1],direction)),self.rail.get_transitions((pos[0], pos[1])),(pos[0], pos[1],direction))
+
                 while tmp > 0:
                     nbits += (tmp & 1)
                     tmp = tmp >> 1
