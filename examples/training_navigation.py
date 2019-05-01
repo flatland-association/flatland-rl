@@ -30,13 +30,13 @@ env = RailEnv(width=20,
               rail_generator=complex_rail_generator(nr_start_goal=20, min_dist=10, max_dist=99999, seed=0),
               number_of_agents=5)
 
-"""
+
 env = RailEnv(width=20,
               height=20,
               rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
                   ['../env-data/tests/circle.npy']),
               number_of_agents=1)
-
+"""
 
 env_renderer = RenderTool(env, gl="QT")
 handle = env.get_agent_handles()
@@ -109,7 +109,7 @@ for trials in range(1, n_trials + 1):
         for a in range(env.number_of_agents):
             if demo:
                 eps = 0
-            action = 2 #agent.act(np.array(obs[a]), eps=eps)
+            action = agent.act(np.array(obs[a]), eps=eps)
             action_prob[action] += 1
             action_dict.update({a: action})
             #env.obs_builder.util_print_obs_subtree(tree=obs[a], num_features_per_node=5)

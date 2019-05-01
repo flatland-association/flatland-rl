@@ -243,6 +243,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
+        # TODO: Adjust this to the novel movement dynamics --> Only Forward present when one transition is possible.
         for branch_direction in [(orientation + 4 + i) % 4 for i in range(-1, 3)]:
             if self.env.rail.get_transition((position[0], position[1], orientation), branch_direction):
                 new_cell = self._new_position(position, branch_direction)
@@ -342,8 +343,8 @@ class TreeObsForRailEnv(ObservationBuilder):
 
             elif num_transitions == 0:
                 # Wrong cell type, but let's cover it and treat it as a dead-end, just in case
-                #print("WRONG CELL TYPE detected in tree-search (0 transitions possible) at cell", position[0],
-                #      position[1], direction)
+                print("WRONG CELL TYPE detected in tree-search (0 transitions possible) at cell", position[0],
+                      position[1], direction)
                 last_isTerminal = True
                 break
 
