@@ -1024,17 +1024,17 @@ class RailEnv(Environment):
                 while tmp > 0:
                     nbits += (tmp & 1)
                     tmp = tmp >> 1
-
+                print(nbits)
                 movement = direction
                 if action == 1:
                     movement = direction - 1
                     if nbits <= 2:
-                        transition_isValid == False
+                        transition_isValid = False
 
                 elif action == 3:
                     movement = direction + 1
                     if nbits <= 2:
-                        transition_isValid == False
+                        transition_isValid = False
                 if movement < 0:
                     movement += 4
                 if movement >= 4:
@@ -1079,6 +1079,7 @@ class RailEnv(Environment):
                             if valid_transition:
                                 movement = curv_dir
                             curv_dir = (curv_dir + 1) % 4
+
 
                 new_position = self._new_position(pos, movement)
                 # Is it a legal move?  1) transition allows the movement in the
