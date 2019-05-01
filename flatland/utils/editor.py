@@ -49,6 +49,7 @@ class JupEditor(object):
         self.gRCTrans = array([[-1, 0], [0, 1], [1, 0], [0, -1]])  # NESW in RC
 
         self.debug = False
+        self.debug_move = False
         self.wid_output = None
         self.drawMode = "Draw"
         self.env_filename = "temp.npy"
@@ -65,7 +66,11 @@ class JupEditor(object):
 
     def setDebug(self, dEvent):
         self.debug = dEvent["new"]
-        self.log("Debug:", self.debug)
+        self.log("Set Debug:", self.debug)
+
+    def setDebugMove(self, dEvent):
+        self.debug_move = dEvent["new"]
+        self.log("Set DebugMove:", self.debug)
 
     def setOutput(self, wid_output):
         self.wid_output = wid_output
@@ -89,6 +94,13 @@ class JupEditor(object):
         
         # self.log("agent", self.drawMode, self.iAgent, rcCell)
 
+        if self.debug:
+            self.log("debug:", event)
+            binTrans = self.env.rail.get_transitions(rcCell)
+            sbinTrans = format(binTrans, "#018b")[2:]
+            self.log("cell ", rcCell, "Transitions: ", binTrans, sbinTrans,
+                [sbinTrans[i:i+4] for i in range(0, len(sbinTrans), 4)])
+
         self.redraw()
 
     def event_handler(self, wid, event):
@@ -102,7 +114,7 @@ class JupEditor(object):
         bRedrawn = False
         writableData = None
 
-        if self.debug:
+        if self.debug and (event["buttons"] > 0 or self.debug_move):
             self.log("debug:", len(qEvents), len(rcHistory), event)
 
         assert wid == self.wid_img, "wid not same as wid_img"
