@@ -394,7 +394,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 observation = observation + branch_observation
 
             elif last_isSwitch and self.env.rail.get_transition((position[0], position[1], direction),
-                                                                ):
+                                                               (branch_direction + 2) % 4):
                 new_cell = self._new_position(position, branch_direction)
 
                 branch_observation = self._explore_branch(handle,

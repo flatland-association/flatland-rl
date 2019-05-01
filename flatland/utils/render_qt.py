@@ -7,7 +7,7 @@ import numpy as np
 
 class QTGL(GraphicsLayer):
     def __init__(self, width, height):
-        self.cell_pixels = 50
+        self.cell_pixels = 60
         self.tile_size = self.cell_pixels
 
         self.width = width
