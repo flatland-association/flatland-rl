@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-from flatland.envs.rail_env import RailEnv, rail_from_GridTransitionMap_generator
+from flatland.envs.rail_env import RailEnv
+from flatland.envs.generators import rail_from_GridTransitionMap_generator
 from flatland.core.transitions import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.core.env_observation_builder import GlobalObsForRailEnv
+
 
 """Tests for `flatland` package."""
 

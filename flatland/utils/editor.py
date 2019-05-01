@@ -167,26 +167,32 @@ class JupEditor(object):
                 # get the direction index for the 2 transitions
                 liTrans = []
                 for rcTrans in rc2Trans:
+                    # gRCTrans - rcTrans gives an array of vector differences between our rcTrans 
+                    # and the 4 directions stored in gRCTrans.
+                    # Where the vector difference is zero, we have a match...
+                    # np.all detects where the whole row,col vector is zero.
+                    # argwhere gives the index of the zero vector, ie the direction index
                     iTrans = np.argwhere(np.all(self.gRCTrans - rcTrans == 0, axis=1))
                     if len(iTrans) > 0:
                         iTrans = iTrans[0][0]
                         liTrans.append(iTrans)
 
+                # check that we have two transitions 
                 if len(liTrans) == 2:
                     # Set the transition
-                    # oEnv.rail.set_transition((*rcLast, iTransLast), iTrans, True) # does nothing
-                    iValCell = env.rail.transitions.set_transition(
-                        env.rail.grid[tuple(rcMiddle)], liTrans[0], liTrans[1], bTransition)
+                    env.rail.set_transition((*rcMiddle, liTrans[0]), liTrans[1], True)
+                    # iValCell = env.rail.transitions.set_transition(
+                    #    env.rail.grid[tuple(rcMiddle)], liTrans[0], liTrans[1], bTransition)
 
                     # Also set the reverse transition
-                    iValCell = env.rail.transitions.set_transition(
-                        iValCell,
-                        (liTrans[1] + 2) % 4,
-                        (liTrans[0] + 2) % 4,
-                        bTransition)
+                    # iValCell = env.rail.transitions.set_transition(
+                    #    iValCell,
+                    #    (liTrans[1] + 2) % 4, # use the reversed outbound transition for inbound
+                    #    (liTrans[0] + 2) % 4, # use the reversed inbound transition for outbound
+                    #    bTransition)
 
                     # Write the cell transition value back into the grid
-                    env.rail.grid[tuple(rcMiddle)] = iValCell
+                    # env.rail.grid[tuple(rcMiddle)] = iValCell
             
                 rcHistory.pop(0)  # remove the last-but-one
             

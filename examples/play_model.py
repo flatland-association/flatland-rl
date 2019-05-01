@@ -1,4 +1,5 @@
-from flatland.envs.rail_env import RailEnv, complex_rail_generator
+from flatland.envs.rail_env import RailEnv
+from flatland.envs.generators import complex_rail_generator
 # from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.utils.rendertools import RenderTool
 from flatland.baselines.dueling_double_dqn import Agent
