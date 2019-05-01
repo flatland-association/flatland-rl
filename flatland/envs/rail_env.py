@@ -1085,7 +1085,6 @@ class RailEnv(Environment):
                             curv_dir = (curv_dir + 1) % 4
                         """
                 new_position = self._new_position(pos, movement)
-                print(pos,new_position)
                 # Is it a legal move?  1) transition allows the movement in the
                 # cell,  2) the new cell is not empty (case 0),  3) the cell is
                 # free, i.e., no agent is currently in that cell
