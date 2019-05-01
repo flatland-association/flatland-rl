@@ -367,18 +367,6 @@ class RailEnv(Environment):
                         #    (pos[0], pos[1], direction),
                         #    movement)
                         movement = curv_dir
-                        """
-                        reverse_direction = (direction + 2) % 4
-                        curv_dir = (movement + 1) % 4
-                        while not valid_transition:
-                            if curv_dir != reverse_direction:
-                                valid_transition = self.rail.get_transition(
-                                    (pos[0], pos[1], direction),
-                                    curv_dir)
-                            if valid_transition:
-                                movement = curv_dir
-                            curv_dir = (curv_dir + 1) % 4
-                        """
                 new_position = self._new_position(pos, movement)
                 # Is it a legal move?  1) transition allows the movement in the
                 # cell,  2) the new cell is not empty (case 0),  3) the cell is
