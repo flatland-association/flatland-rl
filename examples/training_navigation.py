@@ -27,10 +27,17 @@ env = RailEnv(width=10,
 """
 env = RailEnv(width=20,
               height=20,
-              rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
-                  ['../flatland/baselines/test-editor.npy']),
-              number_of_agents=1)
+              rail_generator=complex_rail_generator(nr_start_goal=20, min_dist=10, max_dist=99999, seed=0),
+              number_of_agents=5)
+
 """
+env = RailEnv(width=20,
+              height=20,
+              rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
+                  ['../env-data/tests/circle.npy']),
+              number_of_agents=1)
+
+
 env_renderer = RenderTool(env, gl="QT")
 handle = env.get_agent_handles()
 
@@ -47,7 +54,7 @@ scores = []
 dones_list = []
 action_prob = [0] * 4
 agent = Agent(state_size, action_size, "FC", 0)
-agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
+agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint14900.pth'))
 
 demo = True
 
@@ -102,10 +109,10 @@ for trials in range(1, n_trials + 1):
         for a in range(env.number_of_agents):
             if demo:
                 eps = 0
-            action = agent.act(np.array(obs[a]), eps=eps)
+            action = 2 #agent.act(np.array(obs[a]), eps=eps)
             action_prob[action] += 1
             action_dict.update({a: action})
-
+            #env.obs_builder.util_print_obs_subtree(tree=obs[a], num_features_per_node=5)
         # Environment step
         next_obs, all_rewards, done, _ = env.step(action_dict)
         for a in range(env.number_of_agents):
@@ -120,7 +127,7 @@ for trials in range(1, n_trials + 1):
         if done['__all__']:
             env_done = 1
             break
-    # Epsioln decay
+    # Epsilon decay
     eps = max(eps_end, eps_decay * eps)  # decrease epsilon
 
     done_window.append(env_done)

@@ -13,6 +13,369 @@ from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 
 
+class AStarNode():
+    """A node class for A* Pathfinding"""
+
+    def __init__(self, parent=None, pos=None):
+        self.parent = parent
+        self.pos = pos
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.pos == other.pos
+
+    def update_if_better(self, other):
+        if other.g < self.g:
+            self.parent = other.parent
+            self.g = other.g
+            self.h = other.h
+            self.f = other.f
+
+
+def get_direction(pos1, pos2):
+    """
+    Assumes pos1 and pos2 are adjacent location on grid.
+    Returns direction (int) that can be used with transitions.
+    """
+    diff_0 = pos2[0] - pos1[0]
+    diff_1 = pos2[1] - pos1[1]
+    if diff_0 < 0:
+        return 0
+    if diff_0 > 0:
+        return 2
+    if diff_1 > 0:
+        return 1
+    if diff_1 < 0:
+        return 3
+    return 0
+
+
+def mirror(dir):
+    return (dir + 2) % 4
+
+
+def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_pos, end_pos):
+    # start by getting direction used to get to current node
+    # and direction from current node to possible child node
+    new_dir = get_direction(current_pos, new_pos)
+    if prev_pos is not None:
+        current_dir = get_direction(prev_pos, current_pos)
+    else:
+        current_dir = new_dir
+    # create new transition that would go to child
+    new_trans = rail_array[current_pos]
+    if prev_pos is None:
+        if new_trans == 0:
+            # need to flip direction because of how end points are defined
+            new_trans = rail_trans.set_transition(new_trans, mirror(current_dir), new_dir, 1)
+        else:
+            # check if matches existing layout
+            new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+            # new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+            # rail_trans.print(new_trans)
+    else:
+        # set the forward path
+        new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+        # set the backwards path
+        new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+    if new_pos == end_pos:
+        # need to validate end pos setup as well
+        new_trans_e = rail_array[end_pos]
+        if new_trans_e == 0:
+            # need to flip direction because of how end points are defined
+            new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, mirror(new_dir), 1)
+        else:
+            # check if matches existing layout
+            new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
+            # new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
+            # print("end:", end_pos, current_pos)
+            # rail_trans.print(new_trans_e)
+
+        # print("========> end trans")
+        # rail_trans.print(new_trans_e)
+        if not rail_trans.is_valid(new_trans_e):
+            # print("end failed", end_pos, current_pos)
+            return False
+        # else:
+        #    print("end ok!", end_pos, current_pos)
+
+    # is transition is valid?
+    # print("=======> trans")
+    # rail_trans.print(new_trans)
+    return rail_trans.is_valid(new_trans)
+
+
+def a_star(rail_trans, rail_array, start, end):
+    """
+    Returns a list of tuples as a path from the given start to end.
+    If no path is found, returns path to closest point to end.
+    """
+    rail_shape = rail_array.shape
+    start_node = AStarNode(None, start)
+    end_node = AStarNode(None, end)
+    open_list = []
+    closed_list = []
+
+    open_list.append(start_node)
+
+    # this could be optimized
+    def is_node_in_list(node, the_list):
+        for o_node in the_list:
+            if node == o_node:
+                return o_node
+        return None
+
+    while len(open_list) > 0:
+        # get node with current shortest est. path (lowest f)
+        current_node = open_list[0]
+        current_index = 0
+        for index, item in enumerate(open_list):
+            if item.f < current_node.f:
+                current_node = item
+                current_index = index
+
+        # pop current off open list, add to closed list
+        open_list.pop(current_index)
+        closed_list.append(current_node)
+
+        # print("a*:", current_node.pos)
+        # for cn in closed_list:
+        #    print("closed:", cn.pos)
+
+        # found the goal
+        if current_node == end_node:
+            path = []
+            current = current_node
+            while current is not None:
+                path.append(current.pos)
+                current = current.parent
+            # return reversed path
+            return path[::-1]
+
+        # generate children
+        children = []
+        if current_node.parent is not None:
+            prev_pos = current_node.parent.pos
+        else:
+            prev_pos = None
+        for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+            node_pos = (current_node.pos[0] + new_pos[0], current_node.pos[1] + new_pos[1])
+            if node_pos[0] >= rail_shape[0] or \
+                node_pos[0] < 0 or \
+                node_pos[1] >= rail_shape[1] or \
+                node_pos[1] < 0:
+                continue
+
+            # validate positions
+            # debug: avoid all current rails
+            # if rail_array.item(node_pos) != 0:
+            #    continue
+
+            # validate positions
+            if not validate_new_transition(rail_trans, rail_array, prev_pos, current_node.pos, node_pos, end_node.pos):
+                # print("A*: transition invalid")
+                continue
+
+            # create new node
+            new_node = AStarNode(current_node, node_pos)
+            children.append(new_node)
+
+        # loop through children
+        for child in children:
+            # already in closed list?
+            closed_node = is_node_in_list(child, closed_list)
+            if closed_node is not None:
+                continue
+
+            # create the f, g, and h values
+            child.g = current_node.g + 1
+            # this heuristic favors diagonal paths
+            # child.h = ((child.pos[0] - end_node.pos[0]) ** 2) + \
+            #           ((child.pos[1] - end_node.pos[1]) ** 2)
+            # this heuristic avoids diagonal paths
+            child.h = abs(child.pos[0] - end_node.pos[0]) + abs(child.pos[1] - end_node.pos[1])
+            child.f = child.g + child.h
+
+            # already in the open list?
+            open_node = is_node_in_list(child, open_list)
+            if open_node is not None:
+                open_node.update_if_better(child)
+                continue
+
+            # add the child to the open list
+            open_list.append(child)
+
+        # no full path found, return partial path
+        if len(open_list) == 0:
+            path = []
+            current = current_node
+            while current is not None:
+                path.append(current.pos)
+                current = current.parent
+            # return reversed path
+            print("partial:", start, end, path[::-1])
+            return path[::-1]
+
+
+def connect_rail(rail_trans, rail_array, start, end):
+    """
+    Creates a new path [start,end] in rail_array, based on rail_trans.
+    """
+    # in the worst case we will need to do a A* search, so we might as well set that up
+    path = a_star(rail_trans, rail_array, start, end)
+    # print("connecting path", path)
+    if len(path) < 2:
+        return
+    current_dir = get_direction(path[0], path[1])
+    end_pos = path[-1]
+    for index in range(len(path) - 1):
+        current_pos = path[index]
+        new_pos = path[index + 1]
+        new_dir = get_direction(current_pos, new_pos)
+
+        new_trans = rail_array[current_pos]
+        if index == 0:
+            if new_trans == 0:
+                # end-point
+                # need to flip direction because of how end points are defined
+                new_trans = rail_trans.set_transition(new_trans, mirror(current_dir), new_dir, 1)
+            else:
+                # into existing rail
+                new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+                # new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+                pass
+        else:
+            # set the forward path
+            new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+            # set the backwards path
+            new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+        rail_array[current_pos] = new_trans
+
+        if new_pos == end_pos:
+            # setup end pos setup
+            new_trans_e = rail_array[end_pos]
+            if new_trans_e == 0:
+                # end-point
+                new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, mirror(new_dir), 1)
+            else:
+                # into existing rail
+                new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
+                # new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
+            rail_array[end_pos] = new_trans_e
+
+        current_dir = new_dir
+
+
+def distance_on_rail(pos1, pos2):
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+
+def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
+    """
+    Parameters
+    -------
+    width : int
+        The width (number of cells) of the grid to generate.
+    height : int
+        The height (number of cells) of the grid to generate.
+
+    Returns
+    -------
+    numpy.ndarray of type numpy.uint16
+        The matrix with the correct 16-bit bitmaps for each cell.
+    """
+
+    def generator(width, height, num_resets=0):
+        rail_trans = RailEnvTransitions()
+        rail_array = np.zeros(shape=(width, height), dtype=np.uint16)
+
+        np.random.seed(seed + num_resets)
+
+        # generate rail array
+        # step 1:
+        # - generate a list of start and goal positions
+        # - use a min/max distance allowed as input for this
+        # - validate that start/goals are not placed too close to other start/goals
+        #
+        # step 2: (optional)
+        # - place random elements on rails array
+        #   - for instance "train station", etc.
+        #
+        # step 3:
+        # - iterate over all [start, goal] pairs:
+        #   - [first X pairs]
+        #     - draw a rail from [start,goal]
+        #     - draw either vertical or horizontal part first (randomly)
+        #     - if rail crosses existing rail then validate new connection
+        #       - if new connection is invalid turn 90 degrees to left/right
+        #       - possibility that this fails to create a path to goal
+        #         - on failure goto step1 and retry with seed+1
+        #     - [avoid crossing other start,goal positions] (optional)
+        #
+        #   - [after X pairs]
+        #     - find closest rail from start (Pa)
+        #       - iterating outwards in a "circle" from start until an existing rail cell is hit
+        #     - connect [start, Pa]
+        #       - validate crossing rails
+        #     - Do A* from Pa to find closest point on rail (Pb) to goal point
+        #       - Basically normal A* but find point on rail which is closest to goal
+        #       - since full path to goal is unlikely
+        #     - connect [Pb, goal]
+        #       - validate crossing rails
+        #
+        # step 4: (optional)
+        # - add more rails to map randomly
+        #
+        # step 5:
+        # - return transition map + list of [start, goal] points
+        #
+
+        start_goal = []
+        for _ in range(nr_start_goal):
+            sanity_max = 9000
+            for _ in range(sanity_max):
+                start = (np.random.randint(0, width), np.random.randint(0, height))
+                goal = (np.random.randint(0, height), np.random.randint(0, height))
+                # check to make sure start,goal pos is empty?
+                if rail_array[goal] != 0 or rail_array[start] != 0:
+                    continue
+                # check min/max distance
+                dist_sg = distance_on_rail(start, goal)
+                if dist_sg < min_dist:
+                    continue
+                if dist_sg > max_dist:
+                    continue
+                # check distance to existing points
+                sg_new = [start, goal]
+
+                def check_all_dist(sg_new):
+                    for sg in start_goal:
+                        for i in range(2):
+                            for j in range(2):
+                                dist = distance_on_rail(sg_new[i], sg[j])
+                                if dist < 2:
+                                    # print("too close:", dist, sg_new[i], sg[j])
+                                    return False
+                    return True
+
+                if check_all_dist(sg_new):
+                    break
+            start_goal.append([start, goal])
+            connect_rail(rail_trans, rail_array, start, goal)
+
+        print("Created #", len(start_goal), "pairs")
+        # print(start_goal)
+
+        return_rail = GridTransitionMap(width=width, height=height, transitions=rail_trans)
+        return_rail.grid = rail_array
+        # TODO: return start_goal
+        return return_rail
+
+    return generator
+
+
 def rail_from_manual_specifications_generator(rail_spec):
     """
     Utility to convert a rail given by manual specification as a map of tuples
@@ -32,6 +395,7 @@ def rail_from_manual_specifications_generator(rail_spec):
         Generator function that always returns a GridTransitionMap object with
         the matrix of correct 16-bit bitmaps for each cell.
     """
+
     def generator(width, height, num_resets=0):
         t_utils = RailEnvTransitions()
 
@@ -67,6 +431,7 @@ def rail_from_GridTransitionMap_generator(rail_map):
     function
         Generator function that always returns the given `rail_map' object.
     """
+
     def generator(width, height, num_resets=0):
         return rail_map
 
@@ -87,6 +452,7 @@ def rail_from_list_of_saved_GridTransitionMap_generator(list_of_filenames):
     function
         Generator function that always returns the given `rail_map' object.
     """
+
     def generator(width, height, num_resets=0):
         t_utils = RailEnvTransitions()
         rail_map = GridTransitionMap(width=width, height=height, transitions=t_utils)
@@ -148,7 +514,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
 
         transitions_templates_ = []
         transition_probabilities = []
-        for i in range(len(t_utils.transitions) - 1):  # don't include dead-ends
+        for i in range(len(t_utils.transitions) - 4):  # don't include dead-ends
             all_transitions = 0
             for dir_ in range(4):
                 trans = t_utils.get_transitions(t_utils.transitions[i], dir_)
@@ -163,9 +529,9 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
             # add all rotations
             for rot in [0, 90, 180, 270]:
                 transitions_templates_.append((template,
-                                              t_utils.rotate_transition(
-                                               t_utils.transitions[i],
-                                               rot)))
+                                               t_utils.rotate_transition(
+                                                   t_utils.transitions[i],
+                                                   rot)))
                 transition_probabilities.append(transition_probability[i])
                 template = [template[-1]] + template[:-1]
 
@@ -175,7 +541,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
                 is_match = True
                 for j in range(4):
                     if template[j] >= 0 and \
-                       template[j] != transitions_templates_[i][0][j]:
+                        template[j] != transitions_templates_[i][0][j]:
                         is_match = False
                         break
                 if is_match:
@@ -316,7 +682,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
             neigh_trans = rail[r][1]
             if neigh_trans is not None:
                 for k in range(4):
-                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2**4 - 1)
+                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2 ** 4 - 1)
                     max_bit = max_bit | (neigh_trans_from_direction & 1)
             if max_bit:
                 rail[r][0] = t_utils.rotate_transition(int('0010000000000000', 2), 270)
@@ -328,7 +694,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
             neigh_trans = rail[r][-2]
             if neigh_trans is not None:
                 for k in range(4):
-                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2**4 - 1)
+                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2 ** 4 - 1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 2))
             if max_bit:
                 rail[r][-1] = t_utils.rotate_transition(int('0010000000000000', 2),
@@ -342,7 +708,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
             neigh_trans = rail[1][c]
             if neigh_trans is not None:
                 for k in range(4):
-                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2**4 - 1)
+                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2 ** 4 - 1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 3))
             if max_bit:
                 rail[0][c] = int('0010000000000000', 2)
@@ -354,7 +720,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
             neigh_trans = rail[-2][c]
             if neigh_trans is not None:
                 for k in range(4):
-                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2**4 - 1)
+                    neigh_trans_from_direction = (neigh_trans >> ((3 - k) * 4)) & (2 ** 4 - 1)
                     max_bit = max_bit | (neigh_trans_from_direction & (1 << 1))
             if max_bit:
                 rail[-1][c] = t_utils.rotate_transition(int('0010000000000000', 2), 180)
@@ -478,9 +844,9 @@ class RailEnv(Environment):
 
     def check_agent_lists(self):
         for lAgents, name in zip(
-                [self.agents_handles, self.agents_position, self.agents_direction],
-                ["handles", "positions", "directions"]):
-            assert self.number_of_agents == len(lAgents), "Inconsistent agent list:"+name
+            [self.agents_handles, self.agents_position, self.agents_direction],
+            ["handles", "positions", "directions"]):
+            assert self.number_of_agents == len(lAgents), "Inconsistent agent list:" + name
 
     def check_agent_locdirpath(self, iAgent):
         valid_movements = []
@@ -495,7 +861,7 @@ class RailEnv(Environment):
         for m in valid_movements:
             new_position = self._new_position(self.agents_position[iAgent], m[1])
             if m[0] not in valid_starting_directions and \
-                    self._path_exists(new_position, m[0], self.agents_target[iAgent]):
+                self._path_exists(new_position, m[0], self.agents_target[iAgent]):
                 valid_starting_directions.append(m[0])
 
         if len(valid_starting_directions) == 0:
@@ -514,7 +880,7 @@ class RailEnv(Environment):
         for m in valid_movements:
             new_position = self._new_position(rcPos, m[1])
             if m[0] not in valid_starting_directions and \
-                    self._path_exists(new_position, m[0], rcTarget):
+                self._path_exists(new_position, m[0], rcTarget):
                 valid_starting_directions.append(m[0])
 
         if len(valid_starting_directions) == 0:
@@ -529,7 +895,7 @@ class RailEnv(Environment):
             rcPos = np.random.choice(len(self.valid_positions))
 
         iAgent = self.number_of_agents
-        
+
         self.agents_position.append(tuple(rcPos))  # ensure it's a tuple not a list
         self.agents_handles.append(max(self.agents_handles + [-1]) + 1)  # max(handles) + 1, starting at 0
 
@@ -540,9 +906,10 @@ class RailEnv(Environment):
         self.number_of_agents += 1
         self.check_agent_lists()
         return iAgent
-    
+
     def reset(self, regen_rail=True, replace_agents=True):
         if regen_rail or self.rail is None:
+            # TODO: Import not only rail information but also start and goal positions
             self.rail = self.rail_generator(self.width, self.height, self.num_resets)
             self.fill_valid_positions()
 
@@ -554,7 +921,7 @@ class RailEnv(Environment):
 
         # Use a TreeObsForRailEnv to compute distance maps to each agent's target, to sample initial
         # agent's orientations that allow a valid solution.
-
+        # TODO: Possibility ot fill valid positions from list of goals and start
         self.fill_valid_positions()
 
         if replace_agents:
@@ -598,7 +965,7 @@ class RailEnv(Environment):
                         for m in valid_movements:
                             new_position = self._new_position(self.agents_position[i], m[1])
                             if m[0] not in valid_starting_directions and \
-                                    self._path_exists(new_position, m[0], self.agents_target[i]):
+                                self._path_exists(new_position, m[0], self.agents_target[i]):
                                 valid_starting_directions.append(m[0])
 
                         if len(valid_starting_directions) == 0:
@@ -631,6 +998,7 @@ class RailEnv(Environment):
 
         for i in range(len(self.agents_handles)):
             handle = self.agents_handles[i]
+            transition_isValid = None
 
             if handle not in action_dict:
                 continue
@@ -648,12 +1016,24 @@ class RailEnv(Environment):
                 pos = self.agents_position[i]
                 direction = self.agents_direction[i]
 
+                # compute number of possible transitions in the current
+                # cell used to check for invalid actions
+
+                nbits = 0
+                tmp = self.rail.get_transitions((pos[0], pos[1]))
+                while tmp > 0:
+                    nbits += (tmp & 1)
+                    tmp = tmp >> 1
                 movement = direction
                 if action == 1:
                     movement = direction - 1
+                    if nbits <= 2:
+                        transition_isValid = False
+
                 elif action == 3:
                     movement = direction + 1
-
+                    if nbits <= 2:
+                        transition_isValid = False
                 if movement < 0:
                     movement += 4
                 if movement >= 4:
@@ -661,13 +1041,6 @@ class RailEnv(Environment):
 
                 is_deadend = False
                 if action == 2:
-                    # compute number of possible transitions in the current
-                    # cell
-                    nbits = 0
-                    tmp = self.rail.get_transitions((pos[0], pos[1]))
-                    while tmp > 0:
-                        nbits += (tmp & 1)
-                        tmp = tmp >> 1
                     if nbits == 1:
                         # dead-end;  assuming the rail network is consistent,
                         # this should match the direction the agent has come
@@ -689,13 +1062,31 @@ class RailEnv(Environment):
                             direction = reverse_direction
                             movement = reverse_direction
                             is_deadend = True
+                    if nbits == 2:
+                        # Checking for curves
+
+                        valid_transition = self.rail.get_transition(
+                            (pos[0], pos[1], direction),
+                            movement)
+                        reverse_direction = (direction + 2) % 4
+                        curv_dir = (movement + 1) % 4
+                        while not valid_transition:
+                            if curv_dir != reverse_direction:
+                                valid_transition = self.rail.get_transition(
+                                    (pos[0], pos[1], direction),
+                                    curv_dir)
+                            if valid_transition:
+                                movement = curv_dir
+                            curv_dir = (curv_dir + 1) % 4
+
+
                 new_position = self._new_position(pos, movement)
                 # Is it a legal move?  1) transition allows the movement in the
                 # cell,  2) the new cell is not empty (case 0),  3) the cell is
                 # free, i.e., no agent is currently in that cell
-                if new_position[1] >= self.width or\
-                   new_position[0] >= self.height or\
-                   new_position[0] < 0 or new_position[1] < 0:
+                if new_position[1] >= self.width or \
+                    new_position[0] >= self.height or \
+                    new_position[0] < 0 or new_position[1] < 0:
                     new_cell_isValid = False
 
                 elif self.rail.get_transitions((new_position[0], new_position[1])) > 0:
@@ -703,9 +1094,11 @@ class RailEnv(Environment):
                 else:
                     new_cell_isValid = False
 
-                transition_isValid = self.rail.get_transition(
-                    (pos[0], pos[1], direction),
-                    movement) or is_deadend
+                # If transition validity hasn't been checked yet.
+                if transition_isValid == None:
+                    transition_isValid = self.rail.get_transition(
+                        (pos[0], pos[1], direction),
+                        movement) or is_deadend
 
                 cell_isFree = True
                 for j in range(self.number_of_agents):
@@ -724,7 +1117,7 @@ class RailEnv(Environment):
 
             # if agent is not in target position, add step penalty
             if self.agents_position[i][0] == self.agents_target[i][0] and \
-               self.agents_position[i][1] == self.agents_target[i][1]:
+                self.agents_position[i][1] == self.agents_target[i][1]:
                 self.dones[handle] = True
             else:
                 self.rewards_dict[handle] += step_penalty
@@ -733,7 +1126,7 @@ class RailEnv(Environment):
         num_agents_in_target_position = 0
         for i in range(self.number_of_agents):
             if self.agents_position[i][0] == self.agents_target[i][0] and \
-               self.agents_position[i][1] == self.agents_target[i][1]:
+                self.agents_position[i][1] == self.agents_target[i][1]:
                 num_agents_in_target_position += 1
 
         if num_agents_in_target_position == self.number_of_agents:
@@ -746,7 +1139,7 @@ class RailEnv(Environment):
         return self._get_observations(), self.rewards_dict, self.dones, {}
 
     def _new_position(self, position, movement):
-        if movement == 0:    # NORTH
+        if movement == 0:  # NORTH
             return (position[0] - 1, position[1])
         elif movement == 1:  # EAST
             return (position[0], position[1] + 1)

@@ -531,9 +531,50 @@ class RailEnvTransitions(Grid4Transitions):
                        int('1001011000100001', 2),  # Case 4 - single slip
                        int('1100110000110011', 2),  # Case 5 - double slip
                        int('0101001000000010', 2),  # Case 6 - symmetrical
-                       int('0010000000000000', 2)]  # Case 7 - dead end
+                       int('0010000000000000', 2),  # Case 7 - dead end
+                       int('0100000000000010', 2),  # Case 1b (8)  - simple turn right
+                       int('0001001000000000', 2),  # Case 1c (9)  - simple turn left
+                       int('1100000000100010', 2)]  # Case 2b (10) - simple switch mirrored
 
     def __init__(self):
         super(RailEnvTransitions, self).__init__(
             transitions=self.transition_list
         )
+        # create this to make validation faster
+        self.transitions_all = []
+        for index, trans in enumerate(self.transitions):
+            self.transitions_all.append(trans)
+            if index in (2, 4, 6, 7, 8, 9, 10):
+                for _ in range(3):
+                    trans = self.rotate_transition(trans, rotation=90)
+                    self.transitions_all.append(trans)
+            elif index in (1, 5):
+                trans = self.rotate_transition(trans, rotation=90)
+                self.transitions_all.append(trans)
+
+    def print(self, cell_transition):
+        print("  NESW")
+        print("N", format(cell_transition >> (3*4) & 0xF, '04b'))
+        print("E", format(cell_transition >> (2*4) & 0xF, '04b'))
+        print("S", format(cell_transition >> (1*4) & 0xF, '04b'))
+        print("W", format(cell_transition >> (0*4) & 0xF, '04b'))
+
+    def is_valid(self, cell_transition):
+        """
+        Checks if a cell transition is a valid cell setup.
+
+        Parameters
+        ----------
+        cell_transition : int
+            64 bits used to encode the valid transitions for a cell.
+
+        Returns
+        -------
+        Boolean
+            True or False
+        """
+        for trans in self.transitions_all:
+            if cell_transition == trans:
+                return True
+        return False
+

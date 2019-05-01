@@ -33,6 +33,7 @@ class View(object):
 
 class JupEditor(object):
     def __init__(self, env, wid_img):
+        print("Correct editor")
         self.env = env
         self.wid_img = wid_img
 
