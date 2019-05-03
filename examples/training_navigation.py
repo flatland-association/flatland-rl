@@ -1,4 +1,5 @@
 from flatland.envs.rail_env import *
+from flatland.envs.generators import *
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.utils.rendertools import *
 from flatland.baselines.dueling_double_dqn import Agent
@@ -54,9 +55,9 @@ scores = []
 dones_list = []
 action_prob = [0] * 4
 agent = Agent(state_size, action_size, "FC", 0)
-agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint14900.pth'))
+#agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint14900.pth'))
 
-demo = True
+demo = False
 
 
 def max_lt(seq, val):

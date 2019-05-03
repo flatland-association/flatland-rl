@@ -236,6 +236,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         position = self.env.agents_position[handle]
         orientation = self.env.agents_direction[handle]
+        possible_transitions = self.env.rail.get_transitions((position[0], position[1], orientation))
 
         # Root node - current position
         observation = [0, 0, 0, 0, self.distance_map[handle, position[0], position[1], orientation]]
@@ -245,7 +246,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         # organize them as [left, forward, right, back], relative to the current orientation
         # TODO: Adjust this to the novel movement dynamics --> Only Forward present when one transition is possible.
         for branch_direction in [(orientation + 4 + i) % 4 for i in range(-1, 3)]:
-            if self.env.rail.get_transition((position[0], position[1], orientation), branch_direction):
+            if possible_transitions[branch_direction]:
                 new_cell = self._new_position(position, branch_direction)
 
                 branch_observation = self._explore_branch(handle, new_cell, branch_direction, root_observation, 1)
@@ -308,11 +309,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 break
 
             cell_transitions = self.env.rail.get_transitions((position[0], position[1], direction))
-            num_transitions = 0
-            for i in range(4):
-                if cell_transitions[i]:
-                    num_transitions += 1
-
+            num_transitions = np.count_nonzero(cell_transitions)
             exploring = False
             if num_transitions == 1:
                 # Check if dead-end, or if we can go forward along direction
@@ -328,13 +325,9 @@ class TreeObsForRailEnv(ObservationBuilder):
                 if not last_isDeadEnd:
                     # Keep walking through the tree along `direction'
                     exploring = True
-                    # TODO: Remove below calculation, this is computed already above and could be reused
-                    for i in range(4):
-                        if cell_transitions[i]:
-                            position = self._new_position(position, i)
-                            direction = i
-                            num_steps += 1
-                            break
+                    direction = np.argmax(cell_transitions)
+                    position = self._new_position(position, direction)
+                    num_steps += 1
 
             elif num_transitions > 0:
                 # Switch detected
@@ -383,13 +376,14 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
+        # Get the possible transitions
+        possible_transitions = self.env.rail.get_transitions((position[0], position[1], direction))
         for branch_direction in [(direction + 4 + i) % 4 for i in range(-1, 3)]:
             if last_isDeadEnd and self.env.rail.get_transition((position[0], position[1], direction),
                                                                (branch_direction + 2) % 4):
                 # Swap forward and back in case of dead-end, so that an agent can learn that going forward takes
                 # it back
                 new_cell = self._new_position(position, (branch_direction + 2) % 4)
-
                 branch_observation = self._explore_branch(handle,
                                                           new_cell,
                                                           (branch_direction + 2) % 4,
@@ -397,10 +391,8 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                           depth + 1)
                 observation = observation + branch_observation
 
-            elif last_isSwitch and self.env.rail.get_transition((position[0], position[1], direction),
-                                                                (branch_direction + 2) % 4):
+            elif last_isSwitch and possible_transitions[branch_direction]:
                 new_cell = self._new_position(position, branch_direction)
-
                 branch_observation = self._explore_branch(handle,
                                                           new_cell,
                                                           branch_direction,

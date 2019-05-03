@@ -323,6 +323,7 @@ class RailEnv(Environment):
                     nbits += (tmp & 1)
                     tmp = tmp >> 1
                 movement = direction
+                #print(nbits,np.sum(possible_transitions))
                 if action == 1:
                     movement = direction - 1
                     if nbits <= 2 or np.sum(possible_transitions) <= 1:
@@ -360,12 +361,14 @@ class RailEnv(Environment):
                             direction = reverse_direction
                             movement = reverse_direction
                             is_deadend = True
+
                     if np.sum(possible_transitions) == 1:
                         # Checking for curves
                         curv_dir = np.argmax(possible_transitions)
                         # valid_transition = self.rail.get_transition(
                         #    (pos[0], pos[1], direction),
                         #    movement)
+
                         movement = curv_dir
                 new_position = self._new_position(pos, movement)
                 # Is it a legal move?  1) transition allows the movement in the
