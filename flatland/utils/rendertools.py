@@ -208,6 +208,7 @@ class RenderTool(object):
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
 
         xyPos = np.matmul(rcPos - rcDir / 2, rt.grc2xy) + rt.xyHalf
+        print("Agent:", rcPos, iDir, rcDir, xyDir, xyPos)
         self.gl.scatter(*xyPos, color=color, marker="o", s=100)            # agent location
 
         xyDirLine = array([xyPos, xyPos + xyDir/2]).T  # line for agent orient.
@@ -523,6 +524,8 @@ class RenderTool(object):
                 # cell transition values
                 oCell = env.rail.get_transitions((r, c))
 
+                bCellValid = env.rail.cell_neighbours_valid((r, c))
+
                 # Special Case 7, with a single bit; terminate at center
                 nbits = 0
                 tmp = oCell
@@ -534,6 +537,10 @@ class RenderTool(object):
                 # as above - move the from coord to the centre
                 # it's a dead env.
                 bDeadEnd = nbits == 1
+
+                if not bCellValid:
+                    print("invalid:", r, c)
+                    self.gl.scatter(*xyCentre, color="r", s=50)
 
                 for orientation in range(4):  # ori is where we're heading
                     from_ori = (orientation + 2) % 4  # 0123=NESW -> 2301=SWNE

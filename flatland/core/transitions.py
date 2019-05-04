@@ -4,6 +4,8 @@ derived GridTransitions class, which allows for the specification of
 possible transitions over a 2D grid.
 """
 
+import numpy as np
+
 
 class Transitions:
     """
@@ -159,6 +161,11 @@ class Grid4Transitions(Transitions):
 
     def __init__(self, transitions):
         self.transitions = transitions
+        self.sDirs = "NESW"
+        self.lsDirs = list(self.sDirs)
+
+        # row,col delta for each direction
+        self.gDir2dRC = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])
 
     def get_transitions(self, cell_transition, orientation):
         """
@@ -216,6 +223,7 @@ class Grid4Transitions(Transitions):
             (new_transitions[1] & 1) << 2 | \
             (new_transitions[2] & 1) << 1 | \
             (new_transitions[3] & 1)
+        # new_transitions = np.packbits((0, 0, 0, 0) + new_transitions)  # alternative
 
         cell_transition = (cell_transition & negmask) | (new_transitions << ((3 - orientation) * 4))
 
@@ -559,6 +567,40 @@ class RailEnvTransitions(Grid4Transitions):
         print("S", format(cell_transition >> (1*4) & 0xF, '04b'))
         print("W", format(cell_transition >> (0*4) & 0xF, '04b'))
 
+    def repr(self, cell_transition, version=0):
+        """
+        Provide a string representation of the cell transitions.
+        This class doesn't represent an individual cell,
+        but a way of interpreting the contents of a cell.
+        So using the ad hoc name repr rather than __repr__.
+        """
+        # binary format string without leading 0b
+        sbinTrans = format(cell_transition, "#018b")[2:]
+        if version == 0:
+            sRepr = " ".join([
+                "{}:{}".format(sDir, sbinTrans[i:i+4])
+                for i, sDir in
+                    zip(
+                        range(0, len(sbinTrans), 4),
+                        self.lsDirs  # NESW
+                    )])
+            return sRepr
+
+        if version == 1:
+            lsRepr = []
+            for iDirIn in range(0, 4):
+                sDirTrans = sbinTrans[iDirIn*4:iDirIn*4+4]
+                if sDirTrans == "0000":
+                    continue
+                sDirsOut = [
+                    self.lsDirs[iDirOut]
+                    for iDirOut in range(0, 4)
+                    if sDirTrans[iDirOut] == "1"
+                    ]
+                lsRepr.append(self.lsDirs[iDirIn] + ":" + "".join(sDirsOut))
+
+            return ", ".join(lsRepr)
+
     def is_valid(self, cell_transition):
         """
         Checks if a cell transition is a valid cell setup.
@@ -578,3 +620,12 @@ class RailEnvTransitions(Grid4Transitions):
                 return True
         return False
 
+    def has_deadend(self, cell_transition):
+        binDeadends = 0b0010000110000100
+        if cell_transition & binDeadends > 0:
+            return True
+        else:
+            return False
+
+    # def remove_deadends(self, cell_transition)
+    

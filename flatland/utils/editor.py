@@ -17,6 +17,7 @@ from flatland.envs.rail_env import RailEnv, random_rail_generator
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 import flatland.utils.rendertools as rt
 from examples.play_model import Player
+from flatland.envs.env_utils import mirror
 
 
 class View(object):
@@ -105,7 +106,7 @@ class JupEditor(object):
         self.redraw()
 
     def event_handler(self, wid, event):
-        """Mouse motion event handler
+        """Mouse motion event handler for drawing.
         """
         x = event['canvasX']
         y = event['canvasY']
@@ -161,6 +162,11 @@ class JupEditor(object):
             while len(rcHistory) >= 3:
                 rc3Cells = array(rcHistory[:3])  # the 3 cells
                 rcMiddle = rc3Cells[1]  # the middle cell which we will update
+
+                # Save the original state of the cell
+                oTransrcMiddle = self.env.rail.get_transitions(rcMiddle)
+                sTransrcMiddle = self.env.rail.cell_repr(rcMiddle)
+
                 # get the 2 row, col deltas between the 3 cells, eg [-1,0] = North
                 rc2Trans = np.diff(rc3Cells, axis=0)
                 
@@ -181,21 +187,49 @@ class JupEditor(object):
                 if len(liTrans) == 2:
                     # Set the transition
                     env.rail.set_transition((*rcMiddle, liTrans[0]), liTrans[1], bTransition)
-                    # iValCell = env.rail.transitions.set_transition(
-                    #    env.rail.grid[tuple(rcMiddle)], liTrans[0], liTrans[1], bTransition)
 
                     # Also set the reverse transition
-                    # iValCell = env.rail.transitions.set_transition(
-                    #    iValCell,
-                    #    (liTrans[1] + 2) % 4, # use the reversed outbound transition for inbound
-                    #    (liTrans[0] + 2) % 4, # use the reversed inbound transition for outbound
-                    #    bTransition)
+                    # use the reversed outbound transition for inbound
+                    # and the reversed inbound transition for outbound
+                    env.rail.set_transition((*rcMiddle, mirror(liTrans[1])), mirror(liTrans[0]), bTransition)
 
-                    # Write the cell transition value back into the grid
-                    # env.rail.grid[tuple(rcMiddle)] = iValCell
-            
+                    bValid = env.rail.is_cell_valid(rcMiddle)
+                    if not bValid:
+                        # Reset cell transition values
+                        env.rail.grid[tuple(rcMiddle)] = oTransrcMiddle
+
+                self.log(rcMiddle, "Orig:", sTransrcMiddle, "Mod:", self.env.rail.cell_repr(rcMiddle))
                 rcHistory.pop(0)  # remove the last-but-one
-            
+
+            # If final cell empty, insert deadend:
+            if len(rcHistory) == 2 and (self.env.rail.get_transitions(rcHistory[1]) == 0):
+                rc2Cells = array(rcHistory[:2])  # the 2 cells
+                rcFinal = rc2Cells[1]  # the final cell which we will update
+
+                # get the row, col delta between the 2 cells, eg [-1,0] = North
+                rc2Trans = np.diff(rc2Cells, axis=0)
+                
+                # get the direction index for the 2 transitions
+                liTrans = []
+                for rcTrans in rc2Trans:
+                    iTrans = np.argwhere(np.all(self.gRCTrans - rcTrans == 0, axis=1))
+                    if len(iTrans) > 0:
+                        iTrans = iTrans[0][0]
+                        liTrans.append(iTrans)
+
+                # check that we have one transition
+                if len(liTrans) == 1:
+                    # Set the transition as a deadend
+                    env.rail.set_transition((*rcFinal, liTrans[0]), mirror(liTrans[0]), bTransition)
+
+                    bValid = env.rail.is_cell_valid(rcMiddle)
+                    if not bValid:
+                        # Reset cell transition values
+                        env.rail.grid[tuple(rcMiddle)] = oTransrcMiddle
+
+                self.log(rcMiddle, "Orig:", sTransrcMiddle, "Mod:", self.env.rail.cell_repr(rcMiddle))
+                rcHistory.pop(0)  # remove the last-but-one
+
             self.redraw()
             bRedrawn = True
 
