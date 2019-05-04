@@ -323,7 +323,7 @@ class RailEnv(Environment):
                     nbits += (tmp & 1)
                     tmp = tmp >> 1
                 movement = direction
-                #print(nbits,np.sum(possible_transitions))
+                # print(nbits,np.sum(possible_transitions))
                 if action == 1:
                     movement = direction - 1
                     if nbits <= 2 or np.sum(possible_transitions) <= 1:
