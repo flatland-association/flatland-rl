@@ -524,7 +524,7 @@ class RenderTool(object):
                 # cell transition values
                 oCell = env.rail.get_transitions((r, c))
 
-                bCellValid = env.rail.cell_neighbours_valid((r, c))
+                bCellValid = env.rail.cell_neighbours_valid((r, c), check_this_cell=True)
 
                 # Special Case 7, with a single bit; terminate at center
                 nbits = 0
