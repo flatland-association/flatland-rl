@@ -220,7 +220,7 @@ class GridTransitionMap(TransitionMap):
             return ()
         return self.transitions.get_transition(self.grid[cell_id[0]][cell_id[1]], cell_id[2], transition_index)
 
-    def set_transition(self, cell_id, transition_index, new_transition):
+    def set_transition(self, cell_id, transition_index, new_transition, remove_deadends=False):
         """
         Replaces the validity of transition to `transition_index' in cell
         `cell_id' with the new `new_transition'.
@@ -244,10 +244,12 @@ class GridTransitionMap(TransitionMap):
             print('GridTransitionMap.set_transition() ERROR: \
                    wrong cell_id tuple.')
             return
-        self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transition(self.grid[cell_id[0]][cell_id[1]],
-                                                                            cell_id[2],
-                                                                            transition_index,
-                                                                            new_transition)
+        self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transition(
+            self.grid[cell_id[0]][cell_id[1]],
+            cell_id[2],
+            transition_index,
+            new_transition,
+            remove_deadends)
 
     def save_transition_map(self, filename):
         """
