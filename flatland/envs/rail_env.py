@@ -268,7 +268,7 @@ class RailEnv(Environment):
                         break
                     else:
                         self.agents_direction[i] = direction
-                
+
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
 
@@ -314,60 +314,33 @@ class RailEnv(Environment):
                 # compute number of possible transitions in the current
                 # cell used to check for invalid actions
 
-                nbits = 0
-                tmp = self.rail.get_transitions((pos[0], pos[1]))
                 possible_transitions = self.rail.get_transitions((pos[0], pos[1], direction))
-                # print(np.sum(self.rail.get_transitions((pos[0], pos[1],direction))),
-                # self.rail.get_transitions((pos[0], pos[1],direction)),
-                # self.rail.get_transitions((pos[0], pos[1])),
-                # (pos[0], pos[1],direction))
+                num_transitions = np.count_nonzero(possible_transitions)
 
-                while tmp > 0:
-                    nbits += (tmp & 1)
-                    tmp = tmp >> 1
                 movement = direction
                 # print(nbits,np.sum(possible_transitions))
                 if action == 1:
                     movement = direction - 1
-                    if nbits <= 2 or np.sum(possible_transitions) <= 1:
+                    if num_transitions <= 1:
                         transition_isValid = False
 
                 elif action == 3:
                     movement = direction + 1
-                    if nbits <= 2 or np.sum(possible_transitions) <= 1:
+                    if num_transitions <= 1:
                         transition_isValid = False
+
                 if movement < 0:
                     movement += 4
                 if movement >= 4:
                     movement -= 4
 
-                is_deadend = False
                 if action == 2:
-                    if nbits == 1:
-                        # dead-end;  assuming the rail network is consistent,
-                        # this should match the direction the agent has come
-                        # from. But it's better to check in any case.
-                        reverse_direction = 0
-                        if direction == 0:
-                            reverse_direction = 2
-                        elif direction == 1:
-                            reverse_direction = 3
-                        elif direction == 2:
-                            reverse_direction = 0
-                        elif direction == 3:
-                            reverse_direction = 1
-
-                        valid_transition = self.rail.get_transition(
-                            (pos[0], pos[1], direction),
-                            reverse_direction)
-                        if valid_transition:
-                            direction = reverse_direction
-                            movement = reverse_direction
-                            is_deadend = True
-
-                    if np.sum(possible_transitions) == 1:
-                        # Take only available transition
+                    if num_transitions == 1:
+                        # - dead-end, straight line or curved line;
+                        # movement will be the only valid transition
+                        # - take only available transition
                         movement = np.argmax(possible_transitions)
+                        transition_isValid = True
 
                 new_position = self._new_position(pos, movement)
                 # Is it a legal move?  1) transition allows the movement in the
@@ -388,7 +361,7 @@ class RailEnv(Environment):
                 if transition_isValid is None:
                     transition_isValid = self.rail.get_transition(
                         (pos[0], pos[1], direction),
-                        movement) or is_deadend
+                        movement)
 
                 cell_isFree = True
                 for j in range(self.number_of_agents):

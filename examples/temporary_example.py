@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from flatland.envs.rail_env import *
+from flatland.envs.generators import *
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.utils.rendertools import *
 
@@ -61,6 +62,11 @@ specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (7, 0), (0, 0)],
          [(7, 270), (1, 90), (1, 90), (2, 270), (2, 0), (0, 0)],
          [(0, 0), (0, 0), (0, 0), (2, 180), (2, 90), (7, 90)],
          [(0, 0), (0, 0), (0, 0), (7, 180), (0, 0), (0, 0)]]
+
+# CURVED RAIL + DEAD-ENDS TEST
+specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0)],
+         [(7, 270), (1, 90), (1, 90), (8, 90), (0, 0), (0, 0)],
+         [(0, 0),   (7, 270),(1, 90), (8, 180), (0, 00), (0, 0)]]
 
 env = RailEnv(width=6,
               height=4,

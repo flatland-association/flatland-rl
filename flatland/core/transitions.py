@@ -551,7 +551,7 @@ class RailEnvTransitions(Grid4Transitions):
         super(RailEnvTransitions, self).__init__(
             transitions=self.transition_list
         )
-        
+
         # These bits represent all the possible dead ends
         self.maskDeadEnds = 0b0010000110000100
 
@@ -569,10 +569,10 @@ class RailEnvTransitions(Grid4Transitions):
 
     def print(self, cell_transition):
         print("  NESW")
-        print("N", format(cell_transition >> (3*4) & 0xF, '04b'))
-        print("E", format(cell_transition >> (2*4) & 0xF, '04b'))
-        print("S", format(cell_transition >> (1*4) & 0xF, '04b'))
-        print("W", format(cell_transition >> (0*4) & 0xF, '04b'))
+        print("N", format(cell_transition >> (3 * 4) & 0xF, '04b'))
+        print("E", format(cell_transition >> (2 * 4) & 0xF, '04b'))
+        print("S", format(cell_transition >> (1 * 4) & 0xF, '04b'))
+        print("W", format(cell_transition >> (0 * 4) & 0xF, '04b'))
 
     def repr(self, cell_transition, version=0):
         """
@@ -585,25 +585,23 @@ class RailEnvTransitions(Grid4Transitions):
         sbinTrans = format(cell_transition, "#018b")[2:]
         if version == 0:
             sRepr = " ".join([
-                "{}:{}".format(sDir, sbinTrans[i:i+4])
+                "{}:{}".format(sDir, sbinTrans[i:(i + 4)])
                 for i, sDir in
                     zip(
                         range(0, len(sbinTrans), 4),
-                        self.lsDirs  # NESW
-                    )])
+                        self.lsDirs)])  # NESW
             return sRepr
 
         if version == 1:
             lsRepr = []
             for iDirIn in range(0, 4):
-                sDirTrans = sbinTrans[iDirIn*4:iDirIn*4+4]
+                sDirTrans = sbinTrans[(iDirIn * 4):(iDirIn * 4 + 4)]
                 if sDirTrans == "0000":
                     continue
                 sDirsOut = [
                     self.lsDirs[iDirOut]
                     for iDirOut in range(0, 4)
-                    if sDirTrans[iDirOut] == "1"
-                    ]
+                    if sDirTrans[iDirOut] == "1"]
                 lsRepr.append(self.lsDirs[iDirIn] + ":" + "".join(sDirsOut))
 
             return ", ".join(lsRepr)

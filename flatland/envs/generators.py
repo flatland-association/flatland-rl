@@ -250,7 +250,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
 
         transitions_templates_ = []
         transition_probabilities = []
-        for i in range(len(t_utils.transitions)-4):  # don't include dead-ends
+        for i in range(len(t_utils.transitions) - 4):  # don't include dead-ends
             all_transitions = 0
             for dir_ in range(4):
                 trans = t_utils.get_transitions(t_utils.transitions[i], dir_)
@@ -475,4 +475,3 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
         return return_rail
 
     return generator
-

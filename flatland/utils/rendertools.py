@@ -145,7 +145,7 @@ class RenderTool(object):
             self.plotTrans(visit.rc, gTransRCAg, depth=str(visit.iDepth), color=color)
 
     def plotAgents(self, targets=True):
-        cmap = self.gl.get_cmap('hsv', lut=self.env.number_of_agents+1)
+        cmap = self.gl.get_cmap('hsv', lut=self.env.number_of_agents + 1)
         for iAgent in range(self.env.number_of_agents):
             oColor = cmap(iAgent)
 
@@ -208,16 +208,16 @@ class RenderTool(object):
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
 
         xyPos = np.matmul(rcPos - rcDir / 2, rt.grc2xy) + rt.xyHalf
-        #print("Agent:", rcPos, iDir, rcDir, xyDir, xyPos)
+        # print("Agent:", rcPos, iDir, rcDir, xyDir, xyPos)
         self.gl.scatter(*xyPos, color=color, marker="o", s=100)            # agent location
 
-        xyDirLine = array([xyPos, xyPos + xyDir/2]).T  # line for agent orient.
+        xyDirLine = array([xyPos, xyPos + xyDir / 2]).T  # line for agent orient.
         self.gl.plot(*xyDirLine, color=color, lw=5, ms=0, alpha=0.6)
 
         if target is not None:
             rcTarget = array(target)
             xyTarget = np.matmul(rcTarget, rt.grc2xy) + rt.xyHalf
-            self._draw_square(xyTarget, 1/3, color)
+            self._draw_square(xyTarget, 1 / 3, color)
 
     def plotTrans(self, rcPos, gTransRCAg, color="r", depth=None):
         """
@@ -587,7 +587,7 @@ class RenderTool(object):
 
         # Draw each agent + its orientation + its target
         if agents:
-            cmap = self.gl.get_cmap('hsv', lut=env.number_of_agents+1)
+            cmap = self.gl.get_cmap('hsv', lut=env.number_of_agents + 1)
             self.plotAgents(targets=True)
 
         if False:
@@ -659,4 +659,3 @@ class RenderTool(object):
 
     def getImage(self):
         return self.gl.getImage()
-

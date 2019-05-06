@@ -31,10 +31,10 @@ class EditorMVC(object):
 
         if env is None:
             env = RailEnv(width=10,
-              height=10,
-              rail_generator=random_rail_generator(cell_type_relative_proportion=[1, 1] + [0.5] * 6),
-              number_of_agents=0,
-              obs_builder_object=TreeObsForRailEnv(max_depth=2))
+                          height=10,
+                          rail_generator=random_rail_generator(cell_type_relative_proportion=[1, 1] + [0.5] * 6),
+                          number_of_agents=0,
+                          obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
         env.reset()
 
@@ -113,20 +113,19 @@ class View(object):
             wButton = ipywidgets.Button(description=dButton["name"])
             wButton.on_click(dButton["method"])
             self.lwButtons.append(wButton)
-            
+
         self.wVbox_controls = VBox([
             self.wFilename,  # self.wDrawMode,
             *self.lwButtons,
             self.wSize,
             self.wDebug, self.wDebug_move,
-            self.wProg_steps
-            ])
-        
+            self.wProg_steps])
+
         self.wMain = HBox([self.wImage, self.wVbox_controls])
 
     def drawStroke(self):
         pass
-    
+
     def new_env(self):
         self.oRT = rt.RenderTool(self.editor.env)
 
@@ -139,11 +138,11 @@ class View(object):
             img = self.oRT.getImage()
             plt.clf()
             plt.close()
-        
+
             self.wImage.data = img
             self.writableData = np.copy(self.wImage.data)
             return img
-    
+
     def redisplayImage(self):
         if self.writableData is not None:
             # This updates the image in the browser to be the new edited version
@@ -152,7 +151,7 @@ class View(object):
     def drag_path_element(self, x, y):
         # Draw a black square on the in-memory copy of the image
         if x > 10 and x < self.yxSize[1] and y > 10 and y < self.yxSize[0]:
-            self.writableData[y-2:y+2, x-2:x+2, :] = 0
+            self.writableData[(y - 2):(y + 2), (x - 2):(x + 2), :] = 0
 
     def xy_to_rc(self, x, y):
         rcCell = ((array([y, x]) - self.yxBase) / self.nPixCell).astype(int)
@@ -227,7 +226,7 @@ class Controller(object):
         # The intention was to avoid too many redraws.
         if event["buttons"] > 0:
             qEvents.append((time.time(), x, y))
-        
+
         # Process the events in our queue:
         # Draw a black square to indicate a trail
         # TODO: infer a vector of moves between these squares to avoid gaps
@@ -238,13 +237,13 @@ class Controller(object):
             if tNow - qEvents[0][0] > 0.1:   # wait before trying to draw
                 # height, width = wid.data.shape[:2]
                 # writableData = np.copy(self.wid_img.data)  # writable copy of image - wid_img.data is somehow readonly
-                
+
                 # with self.wid_img.hold_sync():
-                
+
                 while len(qEvents) > 0:
                     t, x, y = qEvents.popleft()  # get events from our queue
                     self.view.drag_path_element(x, y)
-                    
+
                     # Translate and scale from x,y to integer row,col (note order change)
                     # rcCell = ((array([y, x]) - self.yxBase) / self.nPixCell).astype(int)
                     rcCell = self.view.xy_to_rc(x, y)
@@ -266,13 +265,13 @@ class Controller(object):
     def refresh(self, event):
         self.debug("refresh")
         self.view.redraw()
-    
+
     def clear(self, event):
         self.model.clear()
 
     def regenerate(self, event):
         self.model.regenerate()
-    
+
     def setRegenSize(self, event):
         self.model.setRegenSize(event["new"])
 
@@ -342,14 +341,14 @@ class EditorModel(object):
         """Mouse motion event handler for drawing.
         """
         lrcStroke = self.lrcStroke
-                        
+
         # Store the row,col location of the click, if we have entered a new cell
         if len(lrcStroke) > 0:
             rcLast = lrcStroke[-1]
             if not np.array_equal(rcLast, rcCell):  # only save at transition
                 lrcStroke.append(rcCell)
                 self.debug("lrcStroke ", len(lrcStroke), rcCell)
-                
+
         else:
             # This is the first cell in a mouse stroke
             lrcStroke.append(rcCell)
@@ -427,14 +426,16 @@ class EditorModel(object):
             # Set the transition
             # If this transition spans 3 cells, it is not a deadend, so remove any deadends.
             # The user will need to resolve any conflicts.
-            self.env.rail.set_transition((*rcMiddle, liTrans[0]), liTrans[1], bAddRemove,
-                remove_deadends=not bDeadend)
+            self.env.rail.set_transition((*rcMiddle, liTrans[0]),
+                                         liTrans[1],
+                                         bAddRemove,
+                                         remove_deadends=not bDeadend)
 
             # Also set the reverse transition
             # use the reversed outbound transition for inbound
             # and the reversed inbound transition for outbound
             self.env.rail.set_transition((*rcMiddle, mirror(liTrans[1])),
-                mirror(liTrans[0]), bAddRemove, remove_deadends=not bDeadend)
+                                         mirror(liTrans[0]), bAddRemove, remove_deadends=not bDeadend)
 
             # bValid = self.env.rail.is_cell_valid(rcMiddle)
             # if not bValid:
@@ -457,7 +458,7 @@ class EditorModel(object):
 
         # get the row, col delta between the 2 cells, eg [-1,0] = North
         rc1Trans = np.diff(rc2Cells, axis=0)
-        
+
         # get the direction index for the transition
         liTrans = []
         for rcTrans in rc1Trans:
@@ -491,7 +492,7 @@ class EditorModel(object):
         self.env.agents_handles = []
         self.env.agents_target = []
         self.player = None
-        
+
         self.redraw()
 
     def setFilename(self, filename):
@@ -507,7 +508,7 @@ class EditorModel(object):
             self.redraw()
         else:
             self.log("File does not exist:", self.env_filename, " Working directory: ", os.getcwd())
-    
+
     def save(self):
         self.log("save to ", self.env_filename, " working dir: ", os.getcwd())
         self.env.rail.save_transition_map(self.env_filename)
@@ -515,17 +516,17 @@ class EditorModel(object):
     def regenerate(self):
         self.log("Regenerate size", self.regen_size)
         self.env = RailEnv(width=self.regen_size,
-              height=self.regen_size,
-              rail_generator=random_rail_generator(cell_type_relative_proportion=[1, 1] + [0.5] * 6),
-              number_of_agents=self.env.number_of_agents,
-              obs_builder_object=TreeObsForRailEnv(max_depth=2))
+                           height=self.regen_size,
+                           rail_generator=random_rail_generator(cell_type_relative_proportion=[1, 1] + [0.5] * 6),
+                           number_of_agents=self.env.number_of_agents,
+                           obs_builder_object=TreeObsForRailEnv(max_depth=2))
         self.env.reset(regen_rail=True)
         self.fix_env()
         self.set_env(self.env)
         self.player = Player(self.env)
         self.view.new_env()
         self.redraw()
-        
+
     def setRegenSize(self, size):
         self.regen_size = size
 
@@ -579,5 +580,9 @@ class EditorModel(object):
     def debug_cell(self, rcCell):
         binTrans = self.env.rail.get_transitions(rcCell)
         sbinTrans = format(binTrans, "#018b")[2:]
-        self.debug("cell ", rcCell, "Transitions: ", binTrans, sbinTrans,
-            [sbinTrans[i:i+4] for i in range(0, len(sbinTrans), 4)])
+        self.debug("cell ",
+                   rcCell,
+                   "Transitions: ",
+                   binTrans,
+                   sbinTrans,
+                   [sbinTrans[i:(i + 4)] for i in range(0, len(sbinTrans), 4)])

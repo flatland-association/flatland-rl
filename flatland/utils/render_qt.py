@@ -61,8 +61,8 @@ class QTGL(GraphicsLayer):
                 if lastx is not None:
                     # print("line", lastx, lasty, x, y)
                     self.qtr.drawLine(
-                        lastx*self.cell_pixels, -lasty*self.cell_pixels,
-                        x*self.cell_pixels, -y*self.cell_pixels)
+                        lastx * self.cell_pixels, -lasty * self.cell_pixels,
+                        x * self.cell_pixels, -y * self.cell_pixels)
                 lastx = x
                 lasty = y
         else:

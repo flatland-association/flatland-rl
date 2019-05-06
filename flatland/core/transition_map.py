@@ -314,14 +314,13 @@ class GridTransitionMap(TransitionMap):
         Checks that:
         - surrounding cells have inbound transitions for all the
             outbound transitions of this cell.
-        
+
         These are NOT checked - see transition.is_valid:
         - all transitions have the mirror transitions (N->E <=> W->S)
         - Reverse transitions (N -> S) only exist for a dead-end
         - a cell contains either no dead-ends or exactly one
 
         Returns: True (valid) or False (invalid)
-        
         """
         cell_transition = self.grid[tuple(rcPos)]
 
