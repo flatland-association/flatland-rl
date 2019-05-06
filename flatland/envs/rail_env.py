@@ -366,13 +366,9 @@ class RailEnv(Environment):
                             is_deadend = True
 
                     if np.sum(possible_transitions) == 1:
-                        # Checking for curves
-                        curv_dir = np.argmax(possible_transitions)
-                        # valid_transition = self.rail.get_transition(
-                        #    (pos[0], pos[1], direction),
-                        #    movement)
+                        # Take only available transition
+                        movement = np.argmax(possible_transitions)
 
-                        movement = curv_dir
                 new_position = self._new_position(pos, movement)
                 # Is it a legal move?  1) transition allows the movement in the
                 # cell,  2) the new cell is not empty (case 0),  3) the cell is

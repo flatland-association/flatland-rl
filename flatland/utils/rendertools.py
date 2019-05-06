@@ -208,7 +208,7 @@ class RenderTool(object):
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
 
         xyPos = np.matmul(rcPos - rcDir / 2, rt.grc2xy) + rt.xyHalf
-        print("Agent:", rcPos, iDir, rcDir, xyDir, xyPos)
+        #print("Agent:", rcPos, iDir, rcDir, xyDir, xyPos)
         self.gl.scatter(*xyPos, color=color, marker="o", s=100)            # agent location
 
         xyDirLine = array([xyPos, xyPos + xyDir/2]).T  # line for agent orient.

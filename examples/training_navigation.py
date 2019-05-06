@@ -35,13 +35,13 @@ env = RailEnv(width=20,
               rail_generator=complex_rail_generator(nr_start_goal=20, min_dist=10, max_dist=99999, seed=0),
               number_of_agents=5)
 
-
+"""
 env = RailEnv(width=20,
               height=20,
               rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
-                  ['../env-data/tests/circle.npy']),
+                      ['../notebooks/testing_11.npy']),
               number_of_agents=1)
-"""
+
 
 env_renderer = RenderTool(env, gl="QT")
 handle = env.get_agent_handles()
@@ -61,7 +61,7 @@ action_prob = [0] * 4
 agent = Agent(state_size, action_size, "FC", 0)
 agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint14900.pth'))
 
-demo = False
+demo = True
 
 
 def max_lt(seq, val):
