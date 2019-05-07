@@ -227,7 +227,7 @@ def generate_rail_from_list_of_manual_specifications(list_of_specifications)
 """
 
 
-def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
+def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
     """
     Dummy random level generator:
     - fill in cells at random in [width-2, height-2]
@@ -266,7 +266,10 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
 
         transitions_templates_ = []
         transition_probabilities = []
-        for i in range(len(t_utils.transitions) - 4):  # don't include dead-ends
+        for i in range(len(t_utils.transitions)):  # don't include dead-ends
+            if t_utils.transitions[i] == int('0010000000000000', 2):
+                continue
+
             all_transitions = 0
             for dir_ in range(4):
                 trans = t_utils.get_transitions(t_utils.transitions[i], dir_)
