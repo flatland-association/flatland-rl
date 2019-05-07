@@ -5,7 +5,7 @@ Definition of the RailEnv environment and related level-generation functions.
 Generator functions are functions that take width, height and num_resets as arguments and return
 a GridTransitionMap object.
 """
-# import numpy as np
+import numpy as np
 
 # from flatland.core.env import Environment
 # from flatland.core.env_observation_builder import TreeObsForRailEnv
@@ -271,3 +271,93 @@ def connect_rail(rail_trans, rail_array, start, end):
 
 def distance_on_rail(pos1, pos2):
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+
+def get_new_position(position, movement):
+    if movement == 0:  # NORTH
+        return (position[0] - 1, position[1])
+    elif movement == 1:  # EAST
+        return (position[0], position[1] + 1)
+    elif movement == 2:  # SOUTH
+        return (position[0] + 1, position[1])
+    elif movement == 3:  # WEST
+        return (position[0], position[1] - 1)
+
+
+def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):
+    """
+    Given a `rail' GridTransitionMap, return a random placement of agents (initial position, direction and target).
+
+    TODO: add extensive documentation, as users may need this function to simplify their custom level generators.
+    """
+
+    def _path_exists(rail, start, direction, end):
+        # BFS - Check if a path exists between the 2 nodes
+
+        visited = set()
+        stack = [(start, direction)]
+        while stack:
+            node = stack.pop()
+            if node[0][0] == end[0] and node[0][1] == end[1]:
+                return 1
+            if node not in visited:
+                visited.add(node)
+                moves = rail.get_transitions((node[0][0], node[0][1], node[1]))
+                for move_index in range(4):
+                    if moves[move_index]:
+                        stack.append((get_new_position(node[0], move_index),
+                                      move_index))
+
+                # If cell is a dead-end, append previous node with reversed
+                # orientation!
+                nbits = 0
+                tmp = rail.get_transitions((node[0][0], node[0][1]))
+                while tmp > 0:
+                    nbits += (tmp & 1)
+                    tmp = tmp >> 1
+                if nbits == 1:
+                    stack.append((node[0], (node[1] + 2) % 4))
+
+        return 0
+
+    valid_positions = []
+    for r in range(rail.height):
+        for c in range(rail.width):
+            if rail.get_transitions((r, c)) > 0:
+                valid_positions.append((r, c))
+
+    re_generate = True
+    while re_generate:
+        agents_position = [
+            valid_positions[i] for i in
+            np.random.choice(len(valid_positions), num_agents)]
+        agents_target = [
+            valid_positions[i] for i in
+            np.random.choice(len(valid_positions), num_agents)]
+
+        # agents_direction must be a direction for which a solution is
+        # guaranteed.
+        agents_direction = [0] * num_agents
+        re_generate = False
+        for i in range(num_agents):
+            valid_movements = []
+            for direction in range(4):
+                position = agents_position[i]
+                moves = rail.get_transitions((position[0], position[1], direction))
+                for move_index in range(4):
+                    if moves[move_index]:
+                        valid_movements.append((direction, move_index))
+
+            valid_starting_directions = []
+            for m in valid_movements:
+                new_position = get_new_position(agents_position[i], m[1])
+                if m[0] not in valid_starting_directions and \
+                   _path_exists(rail, new_position, m[0], agents_target[i]):
+                    valid_starting_directions.append(m[0])
+
+            if len(valid_starting_directions) == 0:
+                re_generate = True
+            else:
+                agents_direction[i] = valid_starting_directions[np.random.choice(len(valid_starting_directions), 1)[0]]
+
+    return agents_position, agents_direction, agents_target

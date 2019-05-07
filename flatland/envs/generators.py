@@ -5,7 +5,7 @@ import numpy as np
 
 from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.env_utils import distance_on_rail, connect_rail
+from flatland.envs.env_utils import distance_on_rail, connect_rail, get_rnd_agents_pos_tgt_dir_on_rail
 
 
 def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
@@ -23,7 +23,7 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
         The matrix with the correct 16-bit bitmaps for each cell.
     """
 
-    def generator(width, height, num_resets=0):
+    def generator(width, height, agents_handles, num_resets=0):
         rail_trans = RailEnvTransitions()
         rail_array = np.zeros(shape=(width, height), dtype=np.uint16)
 
@@ -106,8 +106,12 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
 
         return_rail = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         return_rail.grid = rail_array
-        # TODO: return start_goal
-        return return_rail
+
+        # TODO: return agents_position, agents_direction and agents_target!
+        # NOTE: the initial direction must be such that the target can be reached.
+        # See env_utils.get_rnd_agents_pos_tgt_dir_on_rail() for hints, if required.
+
+        return return_rail, [], [], []
 
     return generator
 
@@ -132,7 +136,7 @@ def rail_from_manual_specifications_generator(rail_spec):
         the matrix of correct 16-bit bitmaps for each cell.
     """
 
-    def generator(width, height, num_resets=0):
+    def generator(width, height, agents_handles, num_resets=0):
         t_utils = RailEnvTransitions()
 
         height = len(rail_spec)
@@ -147,7 +151,11 @@ def rail_from_manual_specifications_generator(rail_spec):
                     return []
                 rail.set_transitions((r, c), t_utils.rotate_transition(t_utils.transitions[cell[0]], cell[1]))
 
-        return rail
+        agents_position, agents_direction, agents_target = get_rnd_agents_pos_tgt_dir_on_rail(
+            rail,
+            len(agents_handles))
+
+        return rail, agents_position, agents_direction, agents_target
 
     return generator
 
@@ -168,8 +176,12 @@ def rail_from_GridTransitionMap_generator(rail_map):
         Generator function that always returns the given `rail_map' object.
     """
 
-    def generator(width, height, num_resets=0):
-        return rail_map
+    def generator(width, height, agents_handles, num_resets=0):
+        agents_position, agents_direction, agents_target = get_rnd_agents_pos_tgt_dir_on_rail(
+            rail_map,
+            len(agents_handles))
+
+        return rail_map, agents_position, agents_direction, agents_target
 
     return generator
 
@@ -189,7 +201,7 @@ def rail_from_list_of_saved_GridTransitionMap_generator(list_of_filenames):
         Generator function that always returns the given `rail_map' object.
     """
 
-    def generator(width, height, num_resets=0):
+    def generator(width, height, agents_handles, num_resets=0):
         t_utils = RailEnvTransitions()
         rail_map = GridTransitionMap(width=width, height=height, transitions=t_utils)
         rail_map.load_transition_map(list_of_filenames[num_resets % len(list_of_filenames)], override_gridsize=False)
@@ -197,7 +209,11 @@ def rail_from_list_of_saved_GridTransitionMap_generator(list_of_filenames):
         if rail_map.grid.dtype == np.uint64:
             rail_map.transitions = Grid8Transitions()
 
-        return rail_map
+        agents_position, agents_direction, agents_target = get_rnd_agents_pos_tgt_dir_on_rail(
+            rail_map,
+            len(agents_handles))
+
+        return rail_map, agents_position, agents_direction, agents_target
 
     return generator
 
@@ -243,7 +259,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
         The matrix with the correct 16-bit bitmaps for each cell.
     """
 
-    def generator(width, height, num_resets=0):
+    def generator(width, height, agents_handles, num_resets=0):
         t_utils = RailEnvTransitions()
 
         transition_probability = cell_type_relative_proportion
@@ -472,6 +488,11 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 8):
 
         return_rail = GridTransitionMap(width=width, height=height, transitions=t_utils)
         return_rail.grid = tmp_rail
-        return return_rail
+
+        agents_position, agents_direction, agents_target = get_rnd_agents_pos_tgt_dir_on_rail(
+            return_rail,
+            len(agents_handles))
+
+        return return_rail, agents_position, agents_direction, agents_target
 
     return generator

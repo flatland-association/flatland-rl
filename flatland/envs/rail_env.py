@@ -9,6 +9,7 @@ import numpy as np
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.envs.generators import random_rail_generator
+from flatland.envs.env_utils import get_new_position
 
 # from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 # from flatland.core.transition_map import GridTransitionMap
@@ -74,9 +75,10 @@ class RailEnv(Environment):
         Parameters
         -------
         rail_generator : function
-            The rail_generator function is a function that takes the width and
-            height of a  rail map along with the number of times the env has
-            been reset, and returns a GridTransitionMap object.
+            The rail_generator function is a function that takes the width,
+            height and agents handles of a  rail environment, along with the number of times
+            the env has been reset, and returns a GridTransitionMap object and a list of
+            starting positions, targets, and initial orientations for agent handle.
             Implemented functions are:
                 random_rail_generator : generate a random rail of given size
                 rail_from_GridTransitionMap_generator(rail_map) : generate a rail from
@@ -130,144 +132,22 @@ class RailEnv(Environment):
     def get_agent_handles(self):
         return self.agents_handles
 
-    def fill_valid_positions(self):
-        ''' Populate the valid_positions list for the current TransitionMap.
-        '''
-        self.valid_positions = valid_positions = []
-        for r in range(self.height):
-            for c in range(self.width):
-                if self.rail.get_transitions((r, c)) > 0:
-                    valid_positions.append((r, c))
-
-    def check_agent_lists(self):
-        ''' Check that the agent_handles, position and direction lists are all of length
-            number_of_agents.
-            (Suggest this is replaced with a single list of Agent objects :)
-        '''
-        for lAgents, name in zip(
-                [self.agents_handles, self.agents_position, self.agents_direction],
-                ["handles", "positions", "directions"]):
-            assert self.number_of_agents == len(lAgents), "Inconsistent agent list:" + name
-
-    def check_agent_locdirpath(self, iAgent):
-        ''' Check that agent iAgent has a valid location and direction,
-            with a path to its target.
-            (Not currently used?)
-        '''
-        valid_movements = []
-        for direction in range(4):
-            position = self.agents_position[iAgent]
-            moves = self.rail.get_transitions((position[0], position[1], direction))
-            for move_index in range(4):
-                if moves[move_index]:
-                    valid_movements.append((direction, move_index))
-
-        valid_starting_directions = []
-        for m in valid_movements:
-            new_position = self._new_position(self.agents_position[iAgent], m[1])
-            if m[0] not in valid_starting_directions and \
-                    self._path_exists(new_position, m[0], self.agents_target[iAgent]):
-                valid_starting_directions.append(m[0])
-
-        if len(valid_starting_directions) == 0:
-            return False
-        else:
-            return True
-
-    def pick_agent_direction(self, rcPos, rcTarget):
-        """ Pick and return a valid direction index (0..3) for an agent starting at
-            row,col rcPos with target rcTarget.
-            Return None if no path exists.
-            Picks random direction if more than one exists (uniformly).
-        """
-        valid_movements = []
-        for direction in range(4):
-            moves = self.rail.get_transitions((*rcPos, direction))
-            for move_index in range(4):
-                if moves[move_index]:
-                    valid_movements.append((direction, move_index))
-        # print("pos", rcPos, "targ", rcTarget, "valid movements", valid_movements)
-
-        valid_starting_directions = []
-        for m in valid_movements:
-            new_position = self._new_position(rcPos, m[1])
-            if m[0] not in valid_starting_directions and self._path_exists(new_position, m[0], rcTarget):
-                valid_starting_directions.append(m[0])
-
-        if len(valid_starting_directions) == 0:
-            return None
-        else:
-            return valid_starting_directions[np.random.choice(len(valid_starting_directions), 1)[0]]
-
-    def add_agent(self, rcPos=None, rcTarget=None, iDir=None):
-        """ Add a new agent at position rcPos with target rcTarget and
-            initial direction index iDir.
-            Should also store this initial position etc as environment "meta-data"
-            but this does not yet exist.
-        """
-        self.check_agent_lists()
-
-        if rcPos is None:
-            rcPos = np.random.choice(len(self.valid_positions))
-
-        iAgent = self.number_of_agents
-
-        if iDir is None:
-            iDir = self.pick_agent_direction(rcPos, rcTarget)
-        if iDir is None:
-            print("Error picking agent direction at pos:", rcPos)
-            return None
-
-        self.agents_position.append(tuple(rcPos))  # ensure it's a tuple not a list
-        self.agents_handles.append(max(self.agents_handles + [-1]) + 1)  # max(handles) + 1, starting at 0
-        self.agents_direction.append(iDir)
-        self.agents_target.append(rcPos)  # set the target to the origin initially
-        self.number_of_agents += 1
-        self.check_agent_lists()
-        return iAgent
-
     def reset(self, regen_rail=True, replace_agents=True):
+        """
+        TODO: replace_agents is ignored at the moment; agents will always be replaced.
+        """
         if regen_rail or self.rail is None:
-            # TODO: Import not only rail information but also start and goal positions
-            self.rail = self.rail_generator(self.width, self.height, self.num_resets)
-            self.fill_valid_positions()
+            self.rail, self.agents_position, self.agents_direction, self.agents_target = self.rail_generator(
+                self.width,
+                self.height,
+                self.agents_handles,
+                self.num_resets)
 
         self.num_resets += 1
 
         self.dones = {"__all__": False}
         for handle in self.agents_handles:
             self.dones[handle] = False
-
-        # Use a TreeObsForRailEnv to compute distance maps to each agent's target, to sample initial
-        # agent's orientations that allow a valid solution.
-        # TODO: Possibility ot fill valid positions from list of goals and start
-        self.fill_valid_positions()
-
-        if replace_agents:
-            re_generate = True
-            while re_generate:
-
-                # self.agents_position = random.sample(valid_positions,
-                #                                     self.number_of_agents)
-                self.agents_position = [
-                    self.valid_positions[i] for i in
-                    np.random.choice(len(self.valid_positions), self.number_of_agents)]
-                self.agents_target = [
-                    self.valid_positions[i] for i in
-                    np.random.choice(len(self.valid_positions), self.number_of_agents)]
-
-                # agents_direction must be a direction for which a solution is
-                # guaranteed.
-                self.agents_direction = [0] * self.number_of_agents
-                re_generate = False
-
-                for i in range(self.number_of_agents):
-                    direction = self.pick_agent_direction(self.agents_position[i], self.agents_target[i])
-                    if direction is None:
-                        re_generate = True
-                        break
-                    else:
-                        self.agents_direction[i] = direction
 
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
@@ -342,7 +222,7 @@ class RailEnv(Environment):
                         movement = np.argmax(possible_transitions)
                         transition_isValid = True
 
-                new_position = self._new_position(pos, movement)
+                new_position = get_new_position(pos, movement)
                 # Is it a legal move?  1) transition allows the movement in the
                 # cell,  2) the new cell is not empty (case 0),  3) the cell is
                 # free, i.e., no agent is currently in that cell
@@ -400,45 +280,6 @@ class RailEnv(Environment):
         # on the next step)
         self.actions = [0] * self.number_of_agents
         return self._get_observations(), self.rewards_dict, self.dones, {}
-
-    def _new_position(self, position, movement):
-        if movement == 0:  # NORTH
-            return (position[0] - 1, position[1])
-        elif movement == 1:  # EAST
-            return (position[0], position[1] + 1)
-        elif movement == 2:  # SOUTH
-            return (position[0] + 1, position[1])
-        elif movement == 3:  # WEST
-            return (position[0], position[1] - 1)
-
-    def _path_exists(self, start, direction, end):
-        # BFS - Check if a path exists between the 2 nodes
-
-        visited = set()
-        stack = [(start, direction)]
-        while stack:
-            node = stack.pop()
-            if node[0][0] == end[0] and node[0][1] == end[1]:
-                return 1
-            if node not in visited:
-                visited.add(node)
-                moves = self.rail.get_transitions((node[0][0], node[0][1], node[1]))
-                for move_index in range(4):
-                    if moves[move_index]:
-                        stack.append((self._new_position(node[0], move_index),
-                                      move_index))
-
-                # If cell is a dead-end, append previous node with reversed
-                # orientation!
-                nbits = 0
-                tmp = self.rail.get_transitions((node[0][0], node[0][1]))
-                while tmp > 0:
-                    nbits += (tmp & 1)
-                    tmp = tmp >> 1
-                if nbits == 1:
-                    stack.append((node[0], (node[1] + 2) % 4))
-
-        return 0
 
     def _get_observations(self):
         self.obs_dict = {}

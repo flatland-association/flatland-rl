@@ -54,8 +54,6 @@ env.agents_direction[0] = 1
 # TODO: watch out: if these variables are overridden, the obs_builder object has to be reset, too!
 env.obs_builder.reset()
 """
-
-
 """
 # INFINITE-LOOP TEST
 specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (7, 0), (0, 0)],
@@ -84,6 +82,7 @@ env.obs_builder.reset()
 env = RailEnv(width=7,
               height=7,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
+              # rail_generator=complex_rail_generator(nr_start_goal=2),
               number_of_agents=2)
 
 # Print the distance map of each cell to the target of the first agent
