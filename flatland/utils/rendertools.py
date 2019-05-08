@@ -501,7 +501,7 @@ class RenderTool(object):
 
         env = self.env
 
-        t1 = time.time()
+        # t1 = time.time()
 
         # Draw cells grid
         grid_color = [0.95, 0.95, 0.95]
@@ -658,7 +658,7 @@ class RenderTool(object):
 
         self.gl.endFrame()
 
-        t2 = time.time()
+        # t2 = time.time()
         # print(t2 - t1, "seconds")
 
         if show:
