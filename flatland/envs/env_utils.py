@@ -14,27 +14,6 @@ import numpy as np
 # from flatland.core.transition_map import GridTransitionMap
 
 
-class AStarNode():
-    """A node class for A* Pathfinding"""
-
-    def __init__(self, parent=None, pos=None):
-        self.parent = parent
-        self.pos = pos
-        self.g = 0
-        self.h = 0
-        self.f = 0
-
-    def __eq__(self, other):
-        return self.pos == other.pos
-
-    def update_if_better(self, other):
-        if other.g < self.g:
-            self.parent = other.parent
-            self.g = other.g
-            self.h = other.h
-            self.f = other.f
-
-
 def get_direction(pos1, pos2):
     """
     Assumes pos1 and pos2 are adjacent location on grid.
@@ -96,6 +75,27 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
 
     # is transition is valid?
     return rail_trans.is_valid(new_trans)
+
+
+class AStarNode():
+    """A node class for A* Pathfinding"""
+
+    def __init__(self, parent=None, pos=None):
+        self.parent = parent
+        self.pos = pos
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.pos == other.pos
+
+    def update_if_better(self, other):
+        if other.g < self.g:
+            self.parent = other.parent
+            self.g = other.g
+            self.h = other.h
+            self.f = other.f
 
 
 def a_star(rail_trans, rail_array, start, end):
@@ -188,16 +188,9 @@ def a_star(rail_trans, rail_array, start, end):
             # add the child to the open list
             open_list.append(child)
 
-        # no full path found, return partial path
+        # no full path found
         if len(open_list) == 0:
-            path = []
-            current = current_node
-            while current is not None:
-                path.append(current.pos)
-                current = current.parent
-            # return reversed path
-            # print("partial:", start, end, path[::-1])
-            return path[::-1]
+            return []
 
 
 def connect_rail(rail_trans, rail_array, start, end):

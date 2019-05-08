@@ -77,6 +77,7 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
         created_sanity = 0
         sanity_max = 9000
         while nr_created < nr_start_goal and created_sanity < sanity_max:
+            all_ok = False
             for _ in range(sanity_max):
                 start = (np.random.randint(0, width), np.random.randint(0, height))
                 goal = (np.random.randint(0, height), np.random.randint(0, height))
@@ -103,7 +104,13 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
                     return True
 
                 if check_all_dist(sg_new):
+                    all_ok = True
                     break
+
+            if not all_ok:
+                # we can might as well give up at this point
+                # print("\n> Complex Rail Gen: Sanity counter reached, giving up!")
+                break
 
             new_path = connect_rail(rail_trans, rail_array, start, goal)
             if len(new_path) >= 2:
@@ -116,7 +123,7 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
                 # print("failed...")
                 created_sanity += 1
 
-        # print("Created #", len(start_goal), "pairs")
+        print("\n> Complex Rail Gen: Created #", len(start_goal), "pairs")
         # print(start_goal)
 
         agents_position = [sg[0] for sg in start_goal]
