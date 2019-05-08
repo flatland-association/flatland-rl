@@ -553,7 +553,7 @@ class RenderTool(object):
                 bDeadEnd = nbits == 1
 
                 if not bCellValid:
-                    print("invalid:", r, c)
+                    # print("invalid:", r, c)
                     self.gl.scatter(*xyCentre, color="r", s=50)
 
                 for orientation in range(4):  # ori is where we're heading
@@ -659,7 +659,7 @@ class RenderTool(object):
         self.gl.endFrame()
 
         t2 = time.time()
-        print(t2 - t1, "seconds")
+        # print(t2 - t1, "seconds")
 
         if show:
             self.gl.show(block=False)

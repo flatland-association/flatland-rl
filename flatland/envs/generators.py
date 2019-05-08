@@ -5,7 +5,8 @@ import numpy as np
 
 from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.env_utils import distance_on_rail, connect_rail, get_rnd_agents_pos_tgt_dir_on_rail
+from flatland.envs.env_utils import distance_on_rail, connect_rail, get_direction, mirror
+from flatland.envs.env_utils import get_rnd_agents_pos_tgt_dir_on_rail
 
 
 def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
@@ -25,7 +26,9 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
 
     def generator(width, height, agents_handles, num_resets=0):
         rail_trans = RailEnvTransitions()
-        rail_array = np.zeros(shape=(width, height), dtype=np.uint16)
+        grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
+        rail_array = grid_map.grid
+        rail_array.fill(0)
 
         np.random.seed(seed + num_resets)
 
@@ -69,8 +72,11 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
         #
 
         start_goal = []
-        for _ in range(nr_start_goal):
-            sanity_max = 9000
+        start_dir = []
+        nr_created = 0
+        created_sanity = 0
+        sanity_max = 9000
+        while nr_created < nr_start_goal and created_sanity < sanity_max:
             for _ in range(sanity_max):
                 start = (np.random.randint(0, width), np.random.randint(0, height))
                 goal = (np.random.randint(0, height), np.random.randint(0, height))
@@ -98,20 +104,26 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
 
                 if check_all_dist(sg_new):
                     break
-            start_goal.append([start, goal])
-            connect_rail(rail_trans, rail_array, start, goal)
 
-        print("Created #", len(start_goal), "pairs")
+            new_path = connect_rail(rail_trans, rail_array, start, goal)
+            if len(new_path) >= 2:
+                nr_created += 1
+                # print(":::: path: ", new_path)
+                start_goal.append([start, goal])
+                start_dir.append(mirror(get_direction(new_path[0], new_path[1])))
+            else:
+                # after too many failures we will give up
+                # print("failed...")
+                created_sanity += 1
+
+        # print("Created #", len(start_goal), "pairs")
         # print(start_goal)
 
-        return_rail = GridTransitionMap(width=width, height=height, transitions=rail_trans)
-        return_rail.grid = rail_array
+        agents_position = [sg[0] for sg in start_goal]
+        agents_target = [sg[1] for sg in start_goal]
+        agents_direction = start_dir
 
-        # TODO: return agents_position, agents_direction and agents_target!
-        # NOTE: the initial direction must be such that the target can be reached.
-        # See env_utils.get_rnd_agents_pos_tgt_dir_on_rail() for hints, if required.
-
-        return return_rail, [], [], []
+        return grid_map, agents_position, agents_direction, agents_target
 
     return generator
 

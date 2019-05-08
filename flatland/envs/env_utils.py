@@ -75,7 +75,6 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
             # check if matches existing layout
             new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
             # new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
-            # rail_trans.print(new_trans)
     else:
         # set the forward path
         new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
@@ -91,20 +90,11 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
             # check if matches existing layout
             new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
             # new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
-            # print("end:", end_pos, current_pos)
-            # rail_trans.print(new_trans_e)
 
-        # print("========> end trans")
-        # rail_trans.print(new_trans_e)
         if not rail_trans.is_valid(new_trans_e):
-            # print("end failed", end_pos, current_pos)
             return False
-        # else:
-        #    print("end ok!", end_pos, current_pos)
 
     # is transition is valid?
-    # print("=======> trans")
-    # rail_trans.print(new_trans)
     return rail_trans.is_valid(new_trans)
 
 
@@ -141,10 +131,6 @@ def a_star(rail_trans, rail_array, start, end):
         open_list.pop(current_index)
         closed_list.append(current_node)
 
-        # print("a*:", current_node.pos)
-        # for cn in closed_list:
-        #    print("closed:", cn.pos)
-
         # found the goal
         if current_node == end_node:
             path = []
@@ -170,13 +156,7 @@ def a_star(rail_trans, rail_array, start, end):
                 continue
 
             # validate positions
-            # debug: avoid all current rails
-            # if rail_array.item(node_pos) != 0:
-            #    continue
-
-            # validate positions
             if not validate_new_transition(rail_trans, rail_array, prev_pos, current_node.pos, node_pos, end_node.pos):
-                # print("A*: transition invalid")
                 continue
 
             # create new node
@@ -216,7 +196,7 @@ def a_star(rail_trans, rail_array, start, end):
                 path.append(current.pos)
                 current = current.parent
             # return reversed path
-            print("partial:", start, end, path[::-1])
+            # print("partial:", start, end, path[::-1])
             return path[::-1]
 
 
@@ -226,9 +206,8 @@ def connect_rail(rail_trans, rail_array, start, end):
     """
     # in the worst case we will need to do a A* search, so we might as well set that up
     path = a_star(rail_trans, rail_array, start, end)
-    # print("connecting path", path)
     if len(path) < 2:
-        return
+        return []
     current_dir = get_direction(path[0], path[1])
     end_pos = path[-1]
     for index in range(len(path) - 1):
@@ -246,7 +225,6 @@ def connect_rail(rail_trans, rail_array, start, end):
                 # into existing rail
                 new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
                 # new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
-                pass
         else:
             # set the forward path
             new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
@@ -267,6 +245,7 @@ def connect_rail(rail_trans, rail_array, start, end):
             rail_array[end_pos] = new_trans_e
 
         current_dir = new_dir
+    return path
 
 
 def distance_on_rail(pos1, pos2):
