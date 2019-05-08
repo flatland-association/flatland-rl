@@ -27,34 +27,34 @@ import jpy_canvas
 
 
 class EditorMVC(object):
-    def __init__(self, env=None):
-
+    def __init__(self, env=None, sGL="MPL"):
         if env is None:
             env = RailEnv(width=10,
                           height=10,
-                          rail_generator=random_rail_generator(cell_type_relative_proportion=[1, 1] + [0.5] * 6),
+                          rail_generator=random_rail_generator(),
                           number_of_agents=0,
                           obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
         env.reset()
 
         self.editor = EditorModel(env)
-        self.editor.view = self.view = View(self.editor)
+        self.editor.view = self.view = View(self.editor, sGL=sGL)
         self.view.controller = self.editor.controller = self.controller = Controller(self.editor, self.view)
         self.view.init_canvas()
         self.view.init_widgets()   # has to be done after controller
 
 
 class View(object):
-    def __init__(self, editor):
+    def __init__(self, editor, sGL="MPL"):
         self.editor = self.model = editor
+        self.sGL = sGL
 
     def display(self):
         self.wOutput.clear_output()
         return self.wMain
 
     def init_canvas(self):
-        self.oRT = rt.RenderTool(self.editor.env)
+        self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL)
         plt.figure(figsize=(10, 10))
         self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
         img = self.oRT.getImage()
@@ -66,8 +66,10 @@ class View(object):
         self.wImage.register_click(self.controller.on_click)
 
         # TODO: These are currently estimated values
-        self.yxBase = array([6, 21])  # pixel offset
-        self.nPixCell = 700 / self.model.env.rail.width  # 35
+        # self.yxBase = array([6, 21])  # pixel offset
+        # self.nPixCell = 700 / self.model.env.rail.width  # 35
+        self.yxBase = self.oRT.gl.yxBase
+        self.nPixCell = self.oRT.gl.nPixCell
 
     def init_widgets(self):
         # Radiobutton for drawmode - TODO: replace with shift/ctrl/alt keys
@@ -151,7 +153,7 @@ class View(object):
     def drag_path_element(self, x, y):
         # Draw a black square on the in-memory copy of the image
         if x > 10 and x < self.yxSize[1] and y > 10 and y < self.yxSize[0]:
-            self.writableData[(y - 2):(y + 2), (x - 2):(x + 2), :] = 0
+            self.writableData[(y - 2):(y + 2), (x - 2):(x + 2), :3] = 0
 
     def xy_to_rc(self, x, y):
         rcCell = ((array([y, x]) - self.yxBase) / self.nPixCell).astype(int)
@@ -549,17 +551,18 @@ class EditorModel(object):
 
     def start_run(self):
         if self.thread is None:
-            self.thread = threading.Thread(target=self.bg_updater, args=())
+            self.thread = threading.Thread(target=self.bg_updater, args=(self.view.wProg_steps,))
             self.thread.start()
         else:
             self.log("thread already present")
 
-    def bg_updater(self):
+    def bg_updater(self, wProg_steps):
         try:
             for i in range(20):
                 # self.log("step ", i)
                 self.step()
                 time.sleep(0.2)
+                wProg_steps.value = i+1   # indicate progress on bar
         finally:
             self.thread = None
 

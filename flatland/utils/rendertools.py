@@ -2,19 +2,23 @@ from recordtype import recordtype
 
 import numpy as np
 from numpy import array
-import xarray as xr
+# import xarray as xr
 import matplotlib.pyplot as plt
 import time
 from collections import deque
 from flatland.utils.render_qt import QTGL
+from flatland.utils.graphics_pil import PILGL
 from flatland.utils.graphics_layer import GraphicsLayer
-
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
 
 class MPLGL(GraphicsLayer):
-    def __init__(self):
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.yxBase = array([6, 21])  # pixel offset
+        self.nPixCell = 700 / width
         pass
 
     def plot(self, *args, **kwargs):
@@ -62,9 +66,12 @@ class MPLGL(GraphicsLayer):
         return plt.get_cmap(*args, **kwargs)
 
     def beginFrame(self):
+        # plt.figure(figsize=(10, 10))
         pass
 
     def endFrame(self):
+        # plt.clf()
+        # plt.close()
         pass
 
     def getImage(self):
@@ -83,19 +90,19 @@ class RenderTool(object):
     lColors = list("brgcmyk")
     # \delta RC for NESW
     gTransRC = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])
-    nPixCell = 1
+    nPixCell = 1   # misnomer...
     nPixHalf = nPixCell / 2
     xyHalf = array([nPixHalf, -nPixHalf])
     grc2xy = array([[0, -nPixCell], [nPixCell, 0]])
     gGrid = array(np.meshgrid(np.arange(10), -np.arange(10))) * \
         array([[[nPixCell]], [[nPixCell]]])
-    xyPixHalf = xr.DataArray([nPixHalf, -nPixHalf],
-                             dims="xy",
-                             coords={"xy": ["x", "y"]})
-    gCentres = xr.DataArray(gGrid,
-                            dims=["xy", "p1", "p2"],
-                            coords={"xy": ["x", "y"]}) + xyPixHalf
-    gTheta = np.linspace(0, np.pi / 2, 10)
+    # xyPixHalf = xr.DataArray([nPixHalf, -nPixHalf],
+    #                         dims="xy",
+    #                         coords={"xy": ["x", "y"]})
+    # gCentres = xr.DataArray(gGrid,
+    #                        dims=["xy", "p1", "p2"],
+    #                        coords={"xy": ["x", "y"]}) + xyPixHalf
+    gTheta = np.linspace(0, np.pi / 2, 5)
     gArc = array([np.cos(gTheta), np.sin(gTheta)]).T  # from [1,0] to [0,1]
 
     def __init__(self, env, gl="MPL"):
@@ -105,7 +112,12 @@ class RenderTool(object):
         self.lTimes = deque()
         # self.gl = MPLGL()
 
-        self.gl = MPLGL() if gl == "MPL" else QTGL(env.width, env.height)
+        if gl == "MPL":
+            self.gl = MPLGL(env.width, env.height)
+        elif gl == "QT":
+            self.gl = QTGL(env.width, env.height)
+        elif gl == "PIL":
+            self.gl = PILGL(env.width, env.height)
 
     def plotTreeOnRail(self, lVisits, color="r"):
         """
@@ -489,16 +501,18 @@ class RenderTool(object):
 
         env = self.env
 
+        t1 = time.time()
+
         # Draw cells grid
         grid_color = [0.95, 0.95, 0.95]
         for r in range(env.height + 1):
             self.gl.plot([0, (env.width + 1) * cell_size],
                          [-r * cell_size, -r * cell_size],
-                         color=grid_color)
+                         color=grid_color, linewidth=2)
         for c in range(env.width + 1):
             self.gl.plot([c * cell_size, c * cell_size],
                          [0, -(env.height + 1) * cell_size],
-                         color=grid_color)
+                         color=grid_color, linewidth=2)
 
         # Draw each cell independently
         for r in range(env.height):
@@ -644,6 +658,9 @@ class RenderTool(object):
 
         self.gl.endFrame()
 
+        t2 = time.time()
+        print(t2 - t1, "seconds")
+
         if show:
             self.gl.show(block=False)
             self.gl.pause(0.00001)
@@ -659,3 +676,33 @@ class RenderTool(object):
 
     def getImage(self):
         return self.gl.getImage()
+
+    def plotTreeObs(self, gObs):
+        nBranchFactor = 4
+
+        gP0 = array([[0, 0, 0]]).T
+        nDepth = 2
+        for i in range(nDepth):
+            nDepthNodes = nBranchFactor**i
+            # rScale = nBranchFactor ** (nDepth - i)
+            rShrinkDepth = 1/(i+1)
+            # gX1 = np.linspace(-nDepthNodes / 2, nDepthNodes / 2, nDepthNodes) * rShrinkDepth
+            
+            gX1 = np.linspace(-(nDepthNodes-1), (nDepthNodes-1), nDepthNodes) * rShrinkDepth
+            gY1 = np.ones((nDepthNodes)) * i
+            gZ1 = np.zeros((nDepthNodes))
+            
+            gP1 = array([gX1, gY1, gZ1])
+            gP01 = np.append(gP0, gP1, axis=1)
+            
+            if nDepthNodes > 1:
+                nDepthNodesPrev = nDepthNodes / nBranchFactor
+                giP0 = np.repeat(np.arange(nDepthNodesPrev), nBranchFactor)
+                giP1 = np.arange(0, nDepthNodes) + nDepthNodesPrev
+                giLinePoints = np.stack([giP0, giP1]).ravel("F")
+                # print(gP01[:,:10])
+                print(giLinePoints)
+                self.gl.plot(gP01[0], -gP01[1], lines=giLinePoints, color="gray")
+
+            gP0 = array([gX1, gY1, gZ1])
+            

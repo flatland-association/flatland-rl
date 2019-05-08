@@ -64,7 +64,7 @@ class Agent:
         if os.path.exists(filename + ".target"):
             self.qnetwork_target.load_state_dict(torch.load(filename + ".target"))
 
-    def step(self, state, action, reward, next_state, done):
+    def step(self, state, action, reward, next_state, done, train=True):
         # Save experience in replay memory
         self.memory.add(state, action, reward, next_state, done)
 
@@ -74,7 +74,8 @@ class Agent:
             # If enough samples are available in memory, get random subset and learn
             if len(self.memory) > BATCH_SIZE:
                 experiences = self.memory.sample()
-                self.learn(experiences, GAMMA)
+                if train:
+                    self.learn(experiences, GAMMA)
 
     def act(self, state, eps=0.):
         """Returns actions for given state as per current policy.

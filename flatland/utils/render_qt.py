@@ -1,7 +1,7 @@
 from flatland.utils.graphics_qt import QtRenderer
 from numpy import array
 from flatland.utils.graphics_layer import GraphicsLayer
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 import numpy as np
 
 
@@ -36,20 +36,6 @@ class QTGL(GraphicsLayer):
         self.qtr.pop()
         self.qtr.endFrame()
 
-    def adaptColor(self, color):
-        if color == "red" or color == "r":
-            color = (255, 0, 0)
-        elif color == "gray":
-            color = (128, 128, 128)
-        elif type(color) is list:
-            color = array(color) * 255
-        elif type(color) is tuple:
-            gcolor = array(color)
-            color = gcolor[:3] * 255
-        else:
-            color = self.tColGrid
-        return color
-
     def plot(self, gX, gY, color=None, linewidth=2, **kwargs):
         color = self.adaptColor(color)
 
@@ -70,11 +56,11 @@ class QTGL(GraphicsLayer):
             gPoints = np.stack([array(gX), -array(gY)]).T * self.cell_pixels
             self.qtr.drawPolyline(gPoints)
 
-    def scatter(self, gX, gY, color=None, marker="o", size=5, *args, **kwargs):
+    def scatter(self, gX, gY, color=None, marker="o", s=50, *args, **kwargs):
         color = self.adaptColor(color)
         self.qtr.setColor(*color)
         self.qtr.setLineColor(*color)
-        r = np.sqrt(size)
+        r = np.sqrt(s)
         gPoints = np.stack([np.atleast_1d(gX), -np.atleast_1d(gY)]).T * self.cell_pixels
         for x, y in gPoints:
             self.qtr.drawCircle(x, y, r)
@@ -93,12 +79,6 @@ class QTGL(GraphicsLayer):
 
     def pause(self, seconds=0.00001):
         pass
-
-    def clf(self):
-        pass
-
-    def get_cmap(self, *args, **kwargs):
-        return plt.get_cmap(*args, **kwargs)
 
     def beginFrame(self):
         self.qtr.beginFrame()

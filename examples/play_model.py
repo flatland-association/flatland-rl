@@ -28,7 +28,8 @@ class Player(object):
         self.dones_list = []
         self.action_prob = [0]*4
         self.agent = Agent(self.state_size, self.action_size, "FC", 0)
-        self.agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
+        # self.agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
+        self.agent.qnetwork_local.load_state_dict(torch.load('../flatland/flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
         self.iFrame = 0
         self.tStart = time.time()
@@ -48,12 +49,15 @@ class Player(object):
 
     def step(self):
         env = self.env
+
+        # Pass the (stored) observation to the agent network and retrieve the action
         for a in range(env.number_of_agents):
             action = self.agent.act(np.array(self.obs[a]), eps=self.eps)
             self.action_prob[action] += 1
             self.action_dict.update({a: action})
 
-        # Environment step
+        # Environment step - pass the agent actions to the environment,
+        # retrieve the response - observations, rewards, dones
         next_obs, all_rewards, done, _ = self.env.step(self.action_dict)
 
         for a in range(env.number_of_agents):
@@ -62,7 +66,7 @@ class Player(object):
 
         # Update replay buffer and train agent
         for a in range(self.env.number_of_agents):
-            self.agent.step(self.obs[a], self.action_dict[a], all_rewards[a], next_obs[a], done[a])
+            self.agent.step(self.obs[a], self.action_dict[a], all_rewards[a], next_obs[a], done[a], train=False)
             self.score += all_rewards[a]
 
         self.iFrame += 1
