@@ -7,7 +7,7 @@ from flatland.envs.generators import rail_from_GridTransitionMap_generator
 from flatland.core.transitions import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.core.env_observation_builder import GlobalObsForRailEnv
-
+from flatland.envs.agent_utils import EnvAgent
 
 """Tests for `flatland` package."""
 
@@ -58,16 +58,21 @@ def test_rail_environment_single_agent():
         _ = rail_env.reset()
 
         # We do not care about target for the moment
-        rail_env.agents_target[0] = [-1, -1]
+        # rail_env.agents_target[0] = [-1, -1]
+        agent = rail_env.agents[0]
+        # rail_env.agents[0].target = [-1, -1]
+        agent.target = [-1, -1]
 
         # Check that trains are always initialized at a consistent position
         # or direction.
         # They should always be able to go somewhere.
         assert(transitions.get_transitions(
-            rail_map[rail_env.agents_position[0]],
-            rail_env.agents_direction[0]) != (0, 0, 0, 0))
+            # rail_map[rail_env.agents_position[0]],
+            # rail_env.agents_direction[0]) != (0, 0, 0, 0))
+            rail_map[agent.position],
+            agent.direction) != (0, 0, 0, 0))
 
-        initial_pos = rail_env.agents_position[0]
+        initial_pos = agent.position
 
         valid_active_actions_done = 0
         pos = initial_pos
@@ -78,13 +83,13 @@ def test_rail_environment_single_agent():
             _, _, _, _ = rail_env.step({0: action})
 
             prev_pos = pos
-            pos = rail_env.agents_position[0]
+            pos = agent.position  # rail_env.agents_position[0]
             if prev_pos != pos:
                 valid_active_actions_done += 1
 
         # After 6 movements on this railway network, the train should be back
         # to its original height on the map.
-        assert(initial_pos[0] == rail_env.agents_position[0][0])
+        assert(initial_pos[0] == agent.position[0])
 
         # We check that the train always attains its target after some time
         for _ in range(10):
@@ -135,13 +140,14 @@ def test_dead_end():
         # We run step to check that trains do not move anymore
         # after being done.
         for i in range(7):
-            prev_pos = rail_env.agents_position[0]
+            # prev_pos = rail_env.agents_position[0]
+            prev_pos = rail_env.agents[0].position
 
             # The train cannot turn, so we check that when it tries,
             # it stays where it is.
             _ = rail_env.step({0: 1})
             _ = rail_env.step({0: 3})
-            assert (rail_env.agents_position[0] == prev_pos)
+            assert (rail_env.agents[0].position == prev_pos)
             _, _, dones, _ = rail_env.step({0: 2})
 
             if i < 5:
@@ -151,15 +157,17 @@ def test_dead_end():
 
     # We try the configuration in the 4 directions:
     rail_env.reset()
-    rail_env.agents_target[0] = (0, 0)
-    rail_env.agents_position[0] = (0, 2)
-    rail_env.agents_direction[0] = 1
+    # rail_env.agents_target[0] = (0, 0)
+    # rail_env.agents_position[0] = (0, 2)
+    # rail_env.agents_direction[0] = 1
+    rail_env.agents = [EnvAgent(position=(0, 2), direction=1, target=(0, 0))]
     check_consistency(rail_env)
 
     rail_env.reset()
-    rail_env.agents_target[0] = (0, 4)
-    rail_env.agents_position[0] = (0, 2)
-    rail_env.agents_direction[0] = 3
+    # rail_env.agents_target[0] = (0, 4)
+    # rail_env.agents_position[0] = (0, 2)
+    # rail_env.agents_direction[0] = 3
+    rail_env.agents = [EnvAgent(position=(0, 2), direction=3, target=(0, 4))]
     check_consistency(rail_env)
 
     # In the vertical configuration:
@@ -181,13 +189,15 @@ def test_dead_end():
                        obs_builder_object=GlobalObsForRailEnv())
 
     rail_env.reset()
-    rail_env.agents_target[0] = (0, 0)
-    rail_env.agents_position[0] = (2, 0)
-    rail_env.agents_direction[0] = 2
+    # rail_env.agents_target[0] = (0, 0)
+    # rail_env.agents_position[0] = (2, 0)
+    # rail_env.agents_direction[0] = 2
+    rail_env.agents = [EnvAgent(position=(2, 0), direction=2, target=(0, 0))]
     check_consistency(rail_env)
 
     rail_env.reset()
-    rail_env.agents_target[0] = (4, 0)
-    rail_env.agents_position[0] = (2, 0)
-    rail_env.agents_direction[0] = 0
+    # rail_env.agents_target[0] = (4, 0)
+    # rail_env.agents_position[0] = (2, 0)
+    # rail_env.agents_direction[0] = 0
+    rail_env.agents = [EnvAgent(position=(2, 0), direction=0, target=(4, 0))]
     check_consistency(rail_env)
