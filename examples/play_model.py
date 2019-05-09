@@ -97,7 +97,7 @@ def main(render=True, delay=0.0):
 
     # Example generate a random rail
     env = RailEnv(width=15, height=15,
-                  rail_generator=complex_rail_generator(nr_start_goal=20, min_dist=12),
+                  rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12),
                   number_of_agents=5)
 
     if render:
