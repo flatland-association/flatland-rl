@@ -1,5 +1,17 @@
 image: themattrix/tox
 
+##########################################
+##########################################
+## We have to set the following env vars
+## in the admin interface :
+## - AWS_DEFAULT_REGION
+## - BUCKET_NAME
+## - AWS_ACCESS_KEY_ID
+## - AWS_SECRET_ACCESS_KEY
+
+stages:
+    - tests
+    - deploy_docs
 cache:
     paths:
         - .tox
@@ -13,3 +25,20 @@ tests:
         - apt install -y libgl1-mesa-glx xvfb
         - pip install tox
         - xvfb-run -s "-screen 0 800x600x24" tox
+
+build_and_deploy_docs:
+    image: "python:latest"
+    stage: deploy_docs
+    only:
+        - master
+    dependencies:
+        - tests
+    before_script:
+        - pip install awscli
+    script:
+        - pip install -r requirements_dev.txt
+        - make docs
+        - aws s3 sync ./docs/_build/html s3://${BUCKET_NAME}
+    environment:
+        name: ${CI_COMMIT_REF_SLUG}
+        url: http://${BUCKET_NAME}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com/
