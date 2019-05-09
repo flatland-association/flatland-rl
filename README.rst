@@ -18,6 +18,13 @@ Multi Agent Reinforcement Learning on Trains
 Getting Started
 ===============
 
+Online Docs
+------------
+
+The documentation for the latest code on the master branch is found at  `http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/ <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/>`_ 
+
+
+
 Generate Docs
 --------------
 
