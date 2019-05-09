@@ -61,19 +61,23 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.max_depth = max_depth
 
     def reset(self):
-        self.distance_map = np.inf * np.ones(shape=(self.env.number_of_agents,
+        agents = self.env.agents
+        nAgents = len(agents)
+        self.distance_map = np.inf * np.ones(shape=(nAgents,  # self.env.number_of_agents,
                                                     self.env.height,
                                                     self.env.width,
                                                     4))
-        self.max_dist = np.zeros(self.env.number_of_agents)
+        self.max_dist = np.zeros(nAgents)
 
-        for i in range(self.env.number_of_agents):
-            self.max_dist[i] = self._distance_map_walker(self.env.agents_target[i], i)
+        # for i in range(nAgents):
+        #     self.max_dist[i] = self._distance_map_walker(self.env.agents_target[i], i)
+        self.max_dist = [self._distance_map_walker(agent.target, i) for i, agent in enumerate(agents)]
 
         # Update local lookup table for all agents' target locations
         self.location_has_target = {}
-        for loc in self.env.agents_target:
-            self.location_has_target[(loc[0], loc[1])] = 1
+        # for loc in self.env.agents_target:
+        #    self.location_has_target[(loc[0], loc[1])] = 1
+        self.location_has_target = {agent.position: 1 for agent in agents}
 
     def _distance_map_walker(self, position, target_nr):
         """
@@ -229,28 +233,33 @@ class TreeObsForRailEnv(ObservationBuilder):
         """
 
         # Update local lookup table for all agents' positions
-        self.location_has_agent = {}
-        for loc in self.env.agents_position:
-            self.location_has_agent[(loc[0], loc[1])] = 1
+        # self.location_has_agent = {}
+        # for loc in self.env.agents_position:
+        #    self.location_has_agent[(loc[0], loc[1])] = 1
+        self.location_has_agent = {tuple(agent.position): 1 for agent in self.env.agents}
 
-        position = self.env.agents_position[handle]
-        orientation = self.env.agents_direction[handle]
-        possible_transitions = self.env.rail.get_transitions((position[0], position[1], orientation))
+        agent = self.env.agents[handle]  # TODO: handle being treated as index
+        # position = self.env.agents_position[handle]
+        # orientation = self.env.agents_direction[handle]
+        possible_transitions = self.env.rail.get_transitions((*agent.position, agent.direction))
         num_transitions = np.count_nonzero(possible_transitions)
         # Root node - current position
-        observation = [0, 0, 0, 0, self.distance_map[handle, position[0], position[1], orientation]]
+        # observation = [0, 0, 0, 0, self.distance_map[handle, position[0], position[1], orientation]]
+        observation = [0, 0, 0, 0, self.distance_map[(handle, *agent.position, agent.direction)]]
         root_observation = observation[:]
 
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # If only one transition is possible, the tree is oriented with this transition as the forward branch.
         # TODO: Test if this works as desired!
+        orientation = agent.direction
         if num_transitions == 1:
             orientation == np.argmax(possible_transitions)
 
-        for branch_direction in [(orientation + 4 + i) % 4 for i in range(-1, 3)]:
+        # for branch_direction in [(orientation + 4 + i) % 4 for i in range(-1, 3)]:
+        for branch_direction in [(orientation + i) % 4 for i in range(-1, 3)]:
             if possible_transitions[branch_direction]:
-                new_cell = self._new_position(position, branch_direction)
+                new_cell = self._new_position(agent.position, branch_direction)
 
                 branch_observation = self._explore_branch(handle, new_cell, branch_direction, root_observation, 1)
                 observation = observation + branch_observation
@@ -307,17 +316,18 @@ class TreeObsForRailEnv(ObservationBuilder):
             visited.add((position[0], position[1], direction))
 
             # If the target node is encountered, pick that as node. Also, no further branching is possible.
-            if position[0] == self.env.agents_target[handle][0] and position[1] == self.env.agents_target[handle][1]:
+            # if position[0] == self.env.agents_target[handle][0] and position[1] == self.env.agents_target[handle][1]:
+            if np.array_equal(position, self.env.agents[handle].target):
                 last_isTarget = True
                 break
 
-            cell_transitions = self.env.rail.get_transitions((position[0], position[1], direction))
+            cell_transitions = self.env.rail.get_transitions((*position, direction))
             num_transitions = np.count_nonzero(cell_transitions)
             exploring = False
             if num_transitions == 1:
                 # Check if dead-end, or if we can go forward along direction
                 nbits = 0
-                tmp = self.env.rail.get_transitions((position[0], position[1]))
+                tmp = self.env.rail.get_transitions(tuple(position))
                 while tmp > 0:
                     nbits += (tmp & 1)
                     tmp = tmp >> 1
@@ -380,9 +390,9 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # Get the possible transitions
-        possible_transitions = self.env.rail.get_transitions((position[0], position[1], direction))
+        possible_transitions = self.env.rail.get_transitions((*position, direction))
         for branch_direction in [(direction + 4 + i) % 4 for i in range(-1, 3)]:
-            if last_isDeadEnd and self.env.rail.get_transition((position[0], position[1], direction),
+            if last_isDeadEnd and self.env.rail.get_transition((*position, direction),
                                                                (branch_direction + 2) % 4):
                 # Swap forward and back in case of dead-end, so that an agent can learn that going forward takes
                 # it back
@@ -471,20 +481,21 @@ class GlobalObsForRailEnv(ObservationBuilder):
         #     self.targets[target_pos] += 1
 
     def get(self, handle):
-        obs_agents_targets_pos = np.zeros((4, self.env.height, self.env.width))
-        agent_pos = self.env.agents_position[handle]
-        obs_agents_targets_pos[0][agent_pos] += 1
-        for i in range(len(self.env.agents_position)):
-            if i != handle:
-                obs_agents_targets_pos[3][self.env.agents_position[i]] += 1
+        obs = np.zeros((4, self.env.height, self.env.width))
+        agents = self.env.agents
+        agent = agents[handle]
 
-        agent_target_pos = self.env.agents_target[handle]
-        obs_agents_targets_pos[1][agent_target_pos] += 1
-        for i in range(len(self.env.agents_target)):
-            if i != handle:
-                obs_agents_targets_pos[2][self.env.agents_target[i]] += 1
+        agent_pos = agents[handle].position
+        obs[0][agent_pos] += 1
+        obs[1][agent.target] += 1
+
+        for i in range(len(agents)):
+            if i != handle:   # TODO: handle used as index...?
+                agent2 = agents[i]
+                obs[3][agent2.position] += 1
+                obs[2][agent2.target] += 1
 
         direction = np.zeros(4)
-        direction[self.env.agents_direction[handle]] = 1
+        direction[agent.direction] = 1
 
-        return self.rail_obs, obs_agents_targets_pos, direction
+        return self.rail_obs, obs, direction
