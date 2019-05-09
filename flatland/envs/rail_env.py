@@ -10,32 +10,10 @@ from flatland.core.env import Environment
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.env_utils import get_new_position
+from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, EnvManager
 
 # from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 # from flatland.core.transition_map import GridTransitionMap
-
-
-class EnvAgentStatic(object):
-    """ TODO: EnvAgentStatic - To store initial position, direction and target.
-        This is like static data for the environment - it's where an agent starts,
-        rather than where it is at the moment.
-        The target should also be stored here.
-    """
-    def __init__(self, rcPos, iDir, rcTarget):
-        self.rcPos = rcPos
-        self.iDir = iDir
-        self.rcTarget = rcTarget
-
-
-class EnvAgent(object):
-    """ TODO: EnvAgent - replace separate agent lists with a single list
-        of agent objects.  The EnvAgent represent's the environment's view
-        of the dynamic agent state.  So target is not part of it - target is
-        static.
-    """
-    def __init__(self, rcPos, iDir):
-        self.rcPos = rcPos
-        self.iDir = iDir
 
 
 class RailEnv(Environment):
@@ -123,6 +101,7 @@ class RailEnv(Environment):
         # self.agents_position = []
         # self.agents_target = []
         # self.agents_direction = []
+        self.agents = []
         self.num_resets = 0
         self.reset()
         self.num_resets = 0
