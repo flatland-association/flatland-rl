@@ -1,6 +1,6 @@
 
 from attr import attrs, attrib
-from itertools import starmap
+from itertools import starmap, count
 import numpy as np
 
 @attrs
@@ -15,11 +15,13 @@ class EnvAgentStatic(object):
     target = attrib()
     handle = attrib()
 
+    next_handle = 0
+
     @classmethod
     def from_lists(positions, directions, targets):
         """ Create a list of EnvAgentStatics from lists of positions, directions and targets
         """
-        return starmap(EnvAgentStatic, zip(positions, directions, targets))
+        return starmap(EnvAgentStatic, zip(positions, directions, targets, count()))
         
 
 class EnvAgent(EnvAgentStatic):
@@ -33,6 +35,7 @@ class EnvAgent(EnvAgentStatic):
 class EnvManager(object):
     def __init__(self, env=None):
         self.env = env
+        
 
     def load_env(self, sFilename):
         pass
@@ -46,7 +49,28 @@ class EnvManager(object):
     def replace_agents(self):
         pass
 
-    def add_agent(self, rcPos=None, rcTarget=None, iDir=None):
+    def add_agent_static(self, agent_static):
+        """ Add a new agent_static
+        """
+        iAgent = self.number_of_agents
+
+        if iDir is None:
+            iDir = self.pick_agent_direction(rcPos, rcTarget)
+        if iDir is None:
+            print("Error picking agent direction at pos:", rcPos)
+            return None
+
+        self.agents_position.append(tuple(rcPos))  # ensure it's a tuple not a list
+        self.agents_handles.append(max(self.agents_handles + [-1]) + 1)  # max(handles) + 1, starting at 0
+        self.agents_direction.append(iDir)
+        self.agents_target.append(rcPos)  # set the target to the origin initially
+        self.number_of_agents += 1
+        self.check_agent_lists()
+        return iAgent
+
+
+
+    def add_agent_old(self, rcPos=None, rcTarget=None, iDir=None):
         """ Add a new agent at position rcPos with target rcTarget and
             initial direction index iDir.
             Should also store this initial position etc as environment "meta-data"

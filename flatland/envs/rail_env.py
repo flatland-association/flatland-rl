@@ -116,11 +116,15 @@ class RailEnv(Environment):
         TODO: replace_agents is ignored at the moment; agents will always be replaced.
         """
         if regen_rail or self.rail is None:
-            self.rail, self.agents_position, self.agents_direction, self.agents_target = self.rail_generator(
+            self.rail, agents_position, agents_direction, agents_target = self.rail_generator(
                 self.width,
                 self.height,
                 self.agents_handles,
                 self.num_resets)
+
+        if replace_agents:
+            self.agents_static = EnvAgentStatic.from_lists(agents_position, agents_direction, agents_target)
+            self.agents = copy(agents_static)
 
         self.num_resets += 1
 
