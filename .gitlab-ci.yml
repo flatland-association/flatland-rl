@@ -38,6 +38,7 @@ build_and_deploy_docs:
         - pip install awscli
     script:
         - pip install -r requirements_dev.txt
+        - python setup.py install
         - make docs
         - aws s3 sync ./docs/_build/html s3://${BUCKET_NAME}
     environment:
