@@ -29,7 +29,8 @@ class Player(object):
         self.action_prob = [0]*4
         self.agent = Agent(self.state_size, self.action_size, "FC", 0)
         # self.agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
-        self.agent.qnetwork_local.load_state_dict(torch.load('../flatland/flatland/baselines/Nets/avoid_checkpoint15000.pth'))
+        self.agent.qnetwork_local.load_state_dict(torch.load(
+            '../flatland/flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
         self.iFrame = 0
         self.tStart = time.time()
@@ -97,7 +98,7 @@ def main(render=True, delay=0.0):
 
     # Example generate a random rail
     env = RailEnv(width=15, height=15,
-                  rail_generator=complex_rail_generator(nr_start_goal=20, min_dist=12),
+                  rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12),
                   number_of_agents=5)
 
     if render:
@@ -202,7 +203,7 @@ def main(render=True, delay=0.0):
         if trials % 100 == 0:
             tNow = time.time()
             rFps = iFrame / (tNow - tStart)
-            print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' + 
+            print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' +
                    '\tEpsilon: {:.2f} fps: {:.2f} \t Action Probabilities: \t {}').format(
                    env.number_of_agents,
                    trials,

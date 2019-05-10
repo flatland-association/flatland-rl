@@ -10,32 +10,10 @@ from flatland.core.env import Environment
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.env_utils import get_new_position
+from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 
 # from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 # from flatland.core.transition_map import GridTransitionMap
-
-
-class EnvAgentStatic(object):
-    """ TODO: EnvAgentStatic - To store initial position, direction and target.
-        This is like static data for the environment - it's where an agent starts,
-        rather than where it is at the moment.
-        The target should also be stored here.
-    """
-    def __init__(self, rcPos, iDir, rcTarget):
-        self.rcPos = rcPos
-        self.iDir = iDir
-        self.rcTarget = rcTarget
-
-
-class EnvAgent(object):
-    """ TODO: EnvAgent - replace separate agent lists with a single list
-        of agent objects.  The EnvAgent represent's the environment's view
-        of the dynamic agent state.  So target is not part of it - target is
-        static.
-    """
-    def __init__(self, rcPos, iDir):
-        self.rcPos = rcPos
-        self.iDir = iDir
 
 
 class RailEnv(Environment):
@@ -123,6 +101,7 @@ class RailEnv(Environment):
         # self.agents_position = []
         # self.agents_target = []
         # self.agents_direction = []
+        self.agents = []
         self.num_resets = 0
         self.reset()
         self.num_resets = 0
@@ -137,14 +116,19 @@ class RailEnv(Environment):
         TODO: replace_agents is ignored at the moment; agents will always be replaced.
         """
         if regen_rail or self.rail is None:
-            self.rail, self.agents_position, self.agents_direction, self.agents_target = self.rail_generator(
+            self.rail, agents_position, agents_direction, agents_target = self.rail_generator(
                 self.width,
                 self.height,
                 self.agents_handles,
                 self.num_resets)
 
+        if replace_agents:
+            self.agents_static = EnvAgentStatic.from_lists(agents_position, agents_direction, agents_target)
+            self.agents = EnvAgent.list_from_static(self.agents_static[:len(self.agents_handles)])
+
         self.num_resets += 1
 
+        # perhaps dones should be part of each agent.
         self.dones = {"__all__": False}
         for handle in self.agents_handles:
             self.dones[handle] = False
@@ -174,11 +158,12 @@ class RailEnv(Environment):
         for i in range(len(self.agents_handles)):
             handle = self.agents_handles[i]
             transition_isValid = None
+            agent = self.agents[i]
 
-            if handle not in action_dict:
+            if handle not in action_dict:  # no action has been supplied for this agent
                 continue
 
-            if self.dones[handle]:
+            if self.dones[handle]:  # this agent has already completed...
                 continue
             action = action_dict[handle]
 
@@ -188,31 +173,28 @@ class RailEnv(Environment):
                 return
 
             if action > 0:
-                pos = self.agents_position[i]
-                direction = self.agents_direction[i]
+                # pos = agent.position #  self.agents_position[i]
+                # direction = agent.direction # self.agents_direction[i]
 
                 # compute number of possible transitions in the current
                 # cell used to check for invalid actions
 
-                possible_transitions = self.rail.get_transitions((pos[0], pos[1], direction))
+                possible_transitions = self.rail.get_transitions((*agent.position, agent.direction))
                 num_transitions = np.count_nonzero(possible_transitions)
 
-                movement = direction
+                movement = agent.direction
                 # print(nbits,np.sum(possible_transitions))
                 if action == 1:
-                    movement = direction - 1
+                    movement = agent.direction - 1
                     if num_transitions <= 1:
                         transition_isValid = False
 
                 elif action == 3:
-                    movement = direction + 1
+                    movement = agent.direction + 1
                     if num_transitions <= 1:
                         transition_isValid = False
 
-                if movement < 0:
-                    movement += 4
-                if movement >= 4:
-                    movement -= 4
+                movement %= 4
 
                 if action == 2:
                     if num_transitions == 1:
@@ -222,57 +204,72 @@ class RailEnv(Environment):
                         movement = np.argmax(possible_transitions)
                         transition_isValid = True
 
-                new_position = get_new_position(pos, movement)
-                # Is it a legal move?  1) transition allows the movement in the
-                # cell,  2) the new cell is not empty (case 0),  3) the cell is
-                # free, i.e., no agent is currently in that cell
-                if (
-                        new_position[1] >= self.width or
-                        new_position[0] >= self.height or
-                        new_position[0] < 0 or new_position[1] < 0):
-                    new_cell_isValid = False
+                new_position = get_new_position(agent.position, movement)
+                # Is it a legal move?
+                # 1) transition allows the movement in the cell,
+                # 2) the new cell is not empty (case 0),
+                # 3) the cell is free, i.e., no agent is currently in that cell
+                
+                # if (
+                #        new_position[1] >= self.width or
+                #        new_position[0] >= self.height or
+                #        new_position[0] < 0 or new_position[1] < 0):
+                #    new_cell_isValid = False
 
-                elif self.rail.get_transitions((new_position[0], new_position[1])) > 0:
-                    new_cell_isValid = True
-                else:
-                    new_cell_isValid = False
+                # if self.rail.get_transitions(new_position) == 0:
+                #     new_cell_isValid = False
+
+                new_cell_isValid = (
+                        np.array_equal(  # Check the new position is still in the grid
+                            new_position,
+                            np.clip(new_position, [0, 0], [self.height-1, self.width-1]))
+                        and  # check the new position has some transitions (ie is not an empty cell)
+                        self.rail.get_transitions(new_position) > 0)
 
                 # If transition validity hasn't been checked yet.
                 if transition_isValid is None:
                     transition_isValid = self.rail.get_transition(
-                        (pos[0], pos[1], direction),
+                        (*agent.position, agent.direction),
                         movement)
 
-                cell_isFree = True
-                for j in range(self.number_of_agents):
-                    if self.agents_position[j] == new_position:
-                        cell_isFree = False
-                        break
+                # cell_isFree = True
+                # for j in range(self.number_of_agents):
+                #    if self.agents_position[j] == new_position:
+                #        cell_isFree = False
+                #        break
+                # Check the new position is not the same as any of the existing agent positions
+                # (including itself, for simplicity, since it is moving)
+                cell_isFree = not np.any(
+                        np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
 
-                if new_cell_isValid and transition_isValid and cell_isFree:
+                if all([new_cell_isValid, transition_isValid, cell_isFree]):
                     # move and change direction to face the movement that was
                     # performed
-                    self.agents_position[i] = new_position
-                    self.agents_direction[i] = movement
+                    # self.agents_position[i] = new_position
+                    # self.agents_direction[i] = movement
+                    agent.position = new_position
+                    agent.direction = movement
                 else:
                     # the action was not valid, add penalty
                     self.rewards_dict[handle] += invalid_action_penalty
 
             # if agent is not in target position, add step penalty
-            if self.agents_position[i][0] == self.agents_target[i][0] and \
-                    self.agents_position[i][1] == self.agents_target[i][1]:
+            # if self.agents_position[i][0] == self.agents_target[i][0] and \
+            #        self.agents_position[i][1] == self.agents_target[i][1]:
+            #    self.dones[handle] = True
+            if np.equal(agent.position, agent.target).all():
                 self.dones[handle] = True
             else:
                 self.rewards_dict[handle] += step_penalty
 
         # Check for end of episode + add global reward to all rewards!
-        num_agents_in_target_position = 0
-        for i in range(self.number_of_agents):
-            if self.agents_position[i][0] == self.agents_target[i][0] and \
-                    self.agents_position[i][1] == self.agents_target[i][1]:
-                num_agents_in_target_position += 1
-
-        if num_agents_in_target_position == self.number_of_agents:
+        # num_agents_in_target_position = 0
+        # for i in range(self.number_of_agents):
+        #    if self.agents_position[i][0] == self.agents_target[i][0] and \
+        #            self.agents_position[i][1] == self.agents_target[i][1]:
+        #        num_agents_in_target_position += 1
+        # if num_agents_in_target_position == self.number_of_agents:
+        if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
             self.dones["__all__"] = True
             self.rewards_dict = [r + global_reward for r in self.rewards_dict]
 
@@ -290,3 +287,4 @@ class RailEnv(Environment):
     def render(self):
         # TODO:
         pass
+

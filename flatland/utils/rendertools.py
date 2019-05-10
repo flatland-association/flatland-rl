@@ -158,20 +158,9 @@ class RenderTool(object):
 
     def plotAgents(self, targets=True):
         cmap = self.gl.get_cmap('hsv', lut=self.env.number_of_agents + 1)
-        for iAgent in range(self.env.number_of_agents):
+        for iAgent, agent in enumerate(self.env.agents):
             oColor = cmap(iAgent)
-
-            rcPos = self.env.agents_position[iAgent]
-            iDir = self.env.agents_direction[iAgent]  # agent direction index
-
-            if targets:
-                target = self.env.agents_target[iAgent]
-            else:
-                target = None
-            self.plotAgent(rcPos, iDir, oColor, target=target)
-
-            # gTransRCAg = self.getTransRC(rcPos, iDir)
-            # self.plotTrans(rcPos, gTransRCAg)
+            self.plotAgent(agent.position, agent.direction, oColor, target=agent.target if targets else None)
 
     def getTransRC(self, rcPos, iDir, bgiTrans=False):
         """
@@ -554,7 +543,7 @@ class RenderTool(object):
 
                 if not bCellValid:
                     # print("invalid:", r, c)
-                    self.gl.scatter(*xyCentre, color="r", s=50)
+                    self.gl.scatter(*xyCentre, color="r", s=30)
 
                 for orientation in range(4):  # ori is where we're heading
                     from_ori = (orientation + 2) % 4  # 0123=NESW -> 2301=SWNE
