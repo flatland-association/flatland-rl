@@ -123,7 +123,7 @@ def complex_rail_generator(nr_start_goal=1, min_dist=2, max_dist=99999, seed=0):
                 # print("failed...")
                 created_sanity += 1
 
-        print("\n> Complex Rail Gen: Created #", len(start_goal), "pairs")
+        #print("\n> Complex Rail Gen: Created #", len(start_goal), "pairs")
         # print(start_goal)
 
         agents_position = [sg[0] for sg in start_goal]
