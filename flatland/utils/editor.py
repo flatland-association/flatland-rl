@@ -15,14 +15,16 @@ import os
 # from ipywidgets import IntSlider, link, VBox
 
 from flatland.envs.rail_env import RailEnv, random_rail_generator
+from flatland.envs.generators import complex_rail_generator
 # from flatland.core.transitions import RailEnvTransitions
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 import flatland.utils.rendertools as rt
 from examples.play_model import Player
 from flatland.envs.env_utils import mirror
+from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
 
 import ipywidgets
-from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text
+from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButtons, Tab
 import jpy_canvas
 
 
@@ -54,7 +56,8 @@ class View(object):
         return self.wMain
 
     def init_canvas(self):
-        self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL)
+        # update the rendertool with the env
+        self.new_env()
         plt.figure(figsize=(10, 10))
         self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
         img = self.oRT.getImage()
@@ -96,14 +99,34 @@ class View(object):
         self.wSize = IntSlider(value=10, min=5, max=30, step=5, description="Regen Size")
         self.wSize.observe(self.controller.setRegenSize, names="value")
 
+        # Number of Agents when regenerating
+        self.wNAgents = IntSlider(value=1, min=0, max=20, step=1, description="# Agents")
+
+        self.wRegenMethod = RadioButtons(description="Regen\nMethod", options=["Random Cell", "Path-based"])
+        self.wReplaceAgents = Checkbox(value=True, description="Replace Agents")
+
+        self.wTab = Tab()
+        tab_contents = ["Debug", "Regen"]
+        for i, title in enumerate(tab_contents):
+            self.wTab.set_title(i, title)
+        self.wTab.children = [
+            VBox([self.wDebug, self.wDebug_move]),
+            VBox([self.wRegenMethod, self.wReplaceAgents])
+            ]
+
         # Progress bar intended for stepping in the background (not yet working)
         self.wProg_steps = ipywidgets.IntProgress(value=0, min=0, max=20, step=1, description="Step")
 
         # abbreviated description of buttons and the methods they call
         ldButtons = [
-            dict(name="Refresh", method=self.controller.refresh),
-            dict(name="Clear", method=self.controller.clear),
-            dict(name="Regenerate", method=self.controller.regenerate),
+            dict(name="Refresh", method=self.controller.refresh, tip="Redraw only"),
+            dict(name="Clear", method=self.controller.clear, tip="Clear rails and agents"),
+            dict(name="Reset", method=self.controller.reset,
+                tip="Standard env reset, including regen rail + agents"),
+            dict(name="Restart Agents", method=self.controller.restartAgents,
+                tip="Move agents back to start positions"),
+            dict(name="Regenerate", method=self.controller.regenerate,
+                tip="Regenerate the rails using the method selected below"),
             dict(name="Load", method=self.controller.load),
             dict(name="Save", method=self.controller.save),
             dict(name="Step", method=self.controller.step),
@@ -112,7 +135,8 @@ class View(object):
 
         self.lwButtons = []
         for dButton in ldButtons:
-            wButton = ipywidgets.Button(description=dButton["name"])
+            wButton = ipywidgets.Button(description=dButton["name"],
+                tooltip=dButton["tip"] if "tip" in dButton else dButton["name"])
             wButton.on_click(dButton["method"])
             self.lwButtons.append(wButton)
 
@@ -120,8 +144,10 @@ class View(object):
             self.wFilename,  # self.wDrawMode,
             *self.lwButtons,
             self.wSize,
-            self.wDebug, self.wDebug_move,
-            self.wProg_steps])
+            self.wNAgents,
+            self.wProg_steps,
+            self.wTab
+            ])
 
         self.wMain = HBox([self.wImage, self.wVbox_controls])
 
@@ -129,17 +155,20 @@ class View(object):
         pass
 
     def new_env(self):
-        self.oRT = rt.RenderTool(self.editor.env)
+        """ Tell the view to update its graphics when a new env is created.
+        """
+        self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL)
 
     def redraw(self):
         # TODO: bit of a hack - can we suppress the console messages from MPL at source?
         # with redirect_stdout(stdout_dest):
         with self.wOutput:
-            plt.figure(figsize=(10, 10))
-            self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
+            # plt.figure(figsize=(10, 10))
+            self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray",
+                show=False, iSelectedAgent=self.model.iSelectedAgent)
             img = self.oRT.getImage()
-            plt.clf()
-            plt.close()
+            # plt.clf()
+            # plt.close()
 
             self.wImage.data = img
             self.writableData = np.copy(self.wImage.data)
@@ -193,7 +222,7 @@ class Controller(object):
         bShift = event["shiftKey"]
         bCtrl = event["ctrlKey"]
         if bCtrl and not bShift:
-            self.model.add_agent(rcCell)
+            self.model.click_agent(rcCell)
         elif bShift and bCtrl:
             self.model.add_target(rcCell)
 
@@ -271,8 +300,18 @@ class Controller(object):
     def clear(self, event):
         self.model.clear()
 
+    def reset(self, event):
+        self.log("Reset - nAgents:", self.view.wNAgents.value)
+        self.model.reset(replace_agents=self.view.wReplaceAgents.value,
+                         nAgents=self.view.wNAgents.value)
+
+    def restartAgents(self, event):
+        self.log("Restart Agents - nAgents:", self.view.wNAgents.value)
+        self.model.restartAgents()
+
     def regenerate(self, event):
-        self.model.regenerate()
+        method = self.view.wRegenMethod.value
+        self.model.regenerate(method)
 
     def setRegenSize(self, event):
         self.model.setRegenSize(event["new"])
@@ -315,7 +354,7 @@ class EditorModel(object):
         self.drawMode = "Draw"
         self.env_filename = "temp.npy"
         self.set_env(env)
-        self.iAgent = None
+        self.iSelectedAgent = None
         self.player = None
         self.thread = None
 
@@ -325,8 +364,8 @@ class EditorModel(object):
         """
         self.env = env
         self.yxBase = array([6, 21])  # pixel offset
-        self.nPixCell = 700 / self.env.rail.width  # 35
-        self.oRT = rt.RenderTool(env)
+        # self.nPixCell = 700 / self.env.rail.width  # 35
+        # self.oRT = rt.RenderTool(env)
 
     def setDebug(self, bDebug):
         self.bDebug = bDebug
@@ -489,12 +528,23 @@ class EditorModel(object):
     def clear(self):
         self.env.rail.grid[:, :] = 0
         self.env.number_of_agents = 0
-        self.env.agents_position = []
-        self.env.agents_direction = []
+        self.env.agents = []
+        self.env.agents_static = []
         self.env.agents_handles = []
-        self.env.agents_target = []
         self.player = None
 
+        self.redraw()
+
+    def reset(self, replace_agents=False, nAgents=0):
+        if replace_agents:
+            self.env.agents_handles = range(nAgents)
+        self.env.reset(regen_rail=True, replace_agents=replace_agents)
+        self.player = Player(self.env)
+        self.redraw()
+
+    def restartAgents(self):
+        self.env.agents = EnvAgent.list_from_static(self.env.agents_static)
+        self.player = Player(self.env)
         self.redraw()
 
     def setFilename(self, filename):
@@ -515,11 +565,17 @@ class EditorModel(object):
         self.log("save to ", self.env_filename, " working dir: ", os.getcwd())
         self.env.rail.save_transition_map(self.env_filename)
 
-    def regenerate(self):
+    def regenerate(self, method=None):
         self.log("Regenerate size", self.regen_size)
+
+        if method is None or method == "Random Cell":
+            fnMethod = random_rail_generator(cell_type_relative_proportion=[1] * 11)
+        else:
+            fnMethod = complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12)
+
         self.env = RailEnv(width=self.regen_size,
                            height=self.regen_size,
-                           rail_generator=random_rail_generator(cell_type_relative_proportion=[1, 1] + [0.5] * 6),
+                           rail_generator=fnMethod,
                            number_of_agents=self.env.number_of_agents,
                            obs_builder_object=TreeObsForRailEnv(max_depth=2))
         self.env.reset(regen_rail=True)
@@ -532,14 +588,49 @@ class EditorModel(object):
     def setRegenSize(self, size):
         self.regen_size = size
 
-    def add_agent(self, rcCell):
-        self.iAgent = self.env.add_agent(rcCell, rcCell, None)
-        self.player = None  # will need to start a new player
+    def find_agent_at(self, rcCell):
+        for iAgent, agent in enumerate(self.env.agents_static):
+            if tuple(agent.position) == tuple(rcCell):
+                return iAgent
+        return None
+
+    def click_agent(self, rcCell):
+        """ The user has clicked on a cell -
+            - If there is an agent, select it
+                - If that agent was already selected, then deselect it
+            - If there is no agent selected, and no agent in the cell, create one
+            - If there is an agent selected, and no agent in the cell, move the selected agent to the cell
+        """
+
+        # Has the user clicked on an existing agent?
+        iAgent = self.find_agent_at(rcCell)
+        
+        if iAgent is None:
+            # No
+            if self.iSelectedAgent is None:
+                # Create a new agent and select it.
+                agent_static = EnvAgentStatic(rcCell, 0, rcCell)
+                self.iSelectedAgent = self.env.add_agent_static(agent_static)
+                self.player = None  # will need to start a new player
+            else:
+                # Move the selected agent to this cell
+                agent_static = self.env.agents_static[self.iSelectedAgent]
+                agent_static.position = rcCell
+        else:
+            # Yes
+            # Have they clicked on the agent already selected?
+            if self.iSelectedAgent is not None and iAgent == self.iSelectedAgent:
+                # Yes - deselect the agent
+                self.iSelectedAgent = None
+            else:
+                # No - select the agent
+                self.iSelectedAgent = iAgent
+
         self.redraw()
 
     def add_target(self, rcCell):
-        if self.iAgent is not None:
-            self.env.agents_target[self.iAgent] = rcCell
+        if self.iSelectedAgent is not None:
+            self.env.agents_static[self.iSelectedAgent].target = rcCell
             self.redraw()
 
     def step(self):

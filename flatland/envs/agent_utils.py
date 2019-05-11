@@ -10,7 +10,7 @@ class EnvDescription(object):
     height = attrib()
     width = attrib()
     rail_generator = attrib()
-    obs_builder = attrib()
+    obs_builder = attrib()   # not sure if this should closer to the agent than the env
 
 
 @attrs

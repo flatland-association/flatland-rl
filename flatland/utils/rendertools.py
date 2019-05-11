@@ -61,12 +61,13 @@ class MPLGL(GraphicsLayer):
 
     def clf(self):
         plt.clf()
+        plt.close()
 
     def get_cmap(self, *args, **kwargs):
         return plt.get_cmap(*args, **kwargs)
 
     def beginFrame(self):
-        # plt.figure(figsize=(10, 10))
+        plt.figure(figsize=(10, 10))
         pass
 
     def endFrame(self):
@@ -125,29 +126,7 @@ class RenderTool(object):
         in direction iDir.
         Returns a list of Visits which are the nodes / vertices in the tree.
         """
-        # gGrid = np.meshgrid(np.arange(10), -np.arange(10))
         rt = self.__class__
-        # plt.scatter(*rt.gCentres, s=5, color="r")
-
-        if False:
-            for iAgent in range(self.env.number_of_agents):
-                sColor = rt.lColors[iAgent]
-
-                rcPos = self.env.agents_position[iAgent]
-                iDir = self.env.agents_direction[iAgent]  # agent dir index
-
-                self.plotAgent(rcPos, iDir, sColor)
-
-                # gTransRCAg = self.getTransRC(rcPos, iDir)
-                # self.plotTrans(rcPos, gTransRCAg, color=color)
-
-                if False:
-                    # TODO: this was `rcDir' but it was undefined
-                    rcNext = rcPos + iDir
-                    # transition for next cell
-                    tbTrans = self.env.rail.get_transitions((*rcNext, iDir))
-                    giTrans = np.where(tbTrans)[0]  # RC list of transitions
-                    gTransRCAg = rt.gTransRC[giTrans]
 
         for visit in lVisits:
             # transition for next cell
@@ -156,8 +135,15 @@ class RenderTool(object):
             gTransRCAg = rt.gTransRC[giTrans]
             self.plotTrans(visit.rc, gTransRCAg, depth=str(visit.iDepth), color=color)
 
-    def plotAgents(self, targets=True):
-        cmap = self.gl.get_cmap('hsv', lut=self.env.number_of_agents + 1)
+    def plotAgents(self, targets=True, iSelectedAgent=None):
+        cmap = self.gl.get_cmap('hsv',
+            lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
+
+        for iAgent, agent in enumerate(self.env.agents_static):
+            oColor = cmap(iAgent)
+            self.plotAgent(agent.position, agent.direction, oColor, target=agent.target if targets else None,
+                static=True, selected=iAgent == iSelectedAgent)
+
         for iAgent, agent in enumerate(self.env.agents):
             oColor = cmap(iAgent)
             self.plotAgent(agent.position, agent.direction, oColor, target=agent.target if targets else None)
@@ -198,7 +184,7 @@ class RenderTool(object):
         else:
             return gTransRCAg
 
-    def plotAgent(self, rcPos, iDir, color="r", target=None):
+    def plotAgent(self, rcPos, iDir, color="r", target=None, static=False, selected=False):
         """
         Plot a simple agent.
         Assumes a working graphics layer context (cf a MPL figure).
@@ -209,11 +195,16 @@ class RenderTool(object):
         xyDir = np.matmul(rcDir, rt.grc2xy)          # agent direction in xy
 
         xyPos = np.matmul(rcPos - rcDir / 2, rt.grc2xy) + rt.xyHalf
+
+        if static:
+            color = self.gl.adaptColor(color, lighten=True)
+
         # print("Agent:", rcPos, iDir, rcDir, xyDir, xyPos)
         self.gl.scatter(*xyPos, color=color, marker="o", s=100)            # agent location
-
         xyDirLine = array([xyPos, xyPos + xyDir / 2]).T  # line for agent orient.
         self.gl.plot(*xyDirLine, color=color, lw=5, ms=0, alpha=0.6)
+        if selected:
+            self._draw_square(xyPos, 1, color)
 
         if target is not None:
             rcTarget = array(target)
@@ -464,7 +455,8 @@ class RenderTool(object):
     def renderEnv(
             self, show=False, curves=True, spacing=False,
             arrows=False, agents=True, sRailColor="gray",
-            frames=False, iEpisode=None, iStep=None):
+            frames=False, iEpisode=None, iStep=None,
+            iSelectedAgent=None):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -591,7 +583,7 @@ class RenderTool(object):
         # Draw each agent + its orientation + its target
         if agents:
             cmap = self.gl.get_cmap('hsv', lut=env.number_of_agents + 1)
-            self.plotAgents(targets=True)
+            self.plotAgents(targets=True, iSelectedAgent=iSelectedAgent)
 
         if False:
             for i in range(env.number_of_agents):

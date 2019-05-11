@@ -101,30 +101,38 @@ class RailEnv(Environment):
         # self.agents_position = []
         # self.agents_target = []
         # self.agents_direction = []
-        self.agents = []
+        self.agents = []  # live agents
+        self.agents_static = []  # static agent information
         self.num_resets = 0
         self.reset()
-        self.num_resets = 0
+        self.num_resets = 0   # yes, set it to zero again!
 
         self.valid_positions = None
 
     def get_agent_handles(self):
         return self.agents_handles
 
+    def add_agent_static(self, agent_static):
+        """ Add static info for a single agent.
+            Returns the index of the new agent.
+        """
+        self.agents_static.append(agent_static)
+        return len(self.agents_static) - 1
+
     def reset(self, regen_rail=True, replace_agents=True):
         """
         TODO: replace_agents is ignored at the moment; agents will always be replaced.
         """
+        tRailAgents = self.rail_generator(self.width, self.height, self.agents_handles, self.num_resets)
+
         if regen_rail or self.rail is None:
-            self.rail, agents_position, agents_direction, agents_target = self.rail_generator(
-                self.width,
-                self.height,
-                self.agents_handles,
-                self.num_resets)
+            self.rail = tRailAgents[0]
 
         if replace_agents:
-            self.agents_static = EnvAgentStatic.from_lists(agents_position, agents_direction, agents_target)
-            self.agents = EnvAgent.list_from_static(self.agents_static[:len(self.agents_handles)])
+            self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:4])
+
+        # Take the agent static info and put (live) agents at the start positions
+        self.agents = EnvAgent.list_from_static(self.agents_static[:len(self.agents_handles)])
 
         self.num_resets += 1
 
@@ -288,3 +296,4 @@ class RailEnv(Environment):
         # TODO:
         pass
 
+    

@@ -37,18 +37,24 @@ class GraphicsLayer(object):
     def getImage(self):
         pass
 
-    def adaptColor(self, color):
-        if color == "red" or color == "r":
-            color = (255, 0, 0)
-        elif color == "gray":
-            color = (128, 128, 128)
+    def adaptColor(self, color, lighten=False):
+        if type(color) is str:
+            if color == "red" or color == "r":
+                color = (255, 0, 0)
+            elif color == "gray":
+                color = (128, 128, 128)
         elif type(color) is list:
             color = tuple((array(color) * 255).astype(int))
         elif type(color) is tuple:
-            gcolor = array(color)
-            color = tuple((gcolor[:3] * 255).astype(int))
+            if type(color[0]) is not int:
+                gcolor = array(color)
+                color = tuple((gcolor[:3] * 255).astype(int))
         else:
             color = self.tColGrid
+        
+        if lighten:
+            color = tuple([int(255 - (255 - iRGB) / 3) for iRGB in color])
+
         return color
 
     def get_cmap(self, *args, **kwargs):

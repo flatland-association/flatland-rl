@@ -39,9 +39,9 @@ class Player(object):
         # self.obs = self.env.reset()
         self.env.obs_builder.reset()
         self.obs = self.env._get_observations()
-        for a in range(self.env.number_of_agents):
-            norm = max(1, max_lt(self.obs[a], np.inf))
-            self.obs[a] = np.clip(np.array(self.obs[a]) / norm, -1, 1)
+        for envAgent in self.env.get_agent_handles():
+            norm = max(1, max_lt(self.obs[envAgent], np.inf))
+            self.obs[envAgent] = np.clip(np.array(self.obs[envAgent]) / norm, -1, 1)
 
         # env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
 
@@ -52,23 +52,25 @@ class Player(object):
         env = self.env
 
         # Pass the (stored) observation to the agent network and retrieve the action
-        for a in range(env.number_of_agents):
-            action = self.agent.act(np.array(self.obs[a]), eps=self.eps)
+        for handle in env.get_agent_handles():
+            action = self.agent.act(np.array(self.obs[handle]), eps=self.eps)
             self.action_prob[action] += 1
-            self.action_dict.update({a: action})
+            self.action_dict.update({handle: action})
 
         # Environment step - pass the agent actions to the environment,
         # retrieve the response - observations, rewards, dones
         next_obs, all_rewards, done, _ = self.env.step(self.action_dict)
 
-        for a in range(env.number_of_agents):
-            norm = max(1, max_lt(next_obs[a], np.inf))
-            next_obs[a] = np.clip(np.array(next_obs[a]) / norm, -1, 1)
+        for handle in env.get_agent_handles():
+            norm = max(1, max_lt(next_obs[handle], np.inf))
+            next_obs[handle] = np.clip(np.array(next_obs[handle]) / norm, -1, 1)
 
         # Update replay buffer and train agent
-        for a in range(self.env.number_of_agents):
-            self.agent.step(self.obs[a], self.action_dict[a], all_rewards[a], next_obs[a], done[a], train=False)
-            self.score += all_rewards[a]
+        for handle in self.env.get_agent_handles():
+            self.agent.step(self.obs[handle], self.action_dict[handle],
+                all_rewards[handle], next_obs[handle], done[handle],
+                train=False)
+            self.score += all_rewards[handle]
 
         self.iFrame += 1
 

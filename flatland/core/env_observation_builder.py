@@ -77,7 +77,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.location_has_target = {}
         # for loc in self.env.agents_target:
         #    self.location_has_target[(loc[0], loc[1])] = 1
-        self.location_has_target = {agent.position: 1 for agent in agents}
+        self.location_has_target = {tuple(agent.target): 1 for agent in agents}
 
     def _distance_map_walker(self, position, target_nr):
         """

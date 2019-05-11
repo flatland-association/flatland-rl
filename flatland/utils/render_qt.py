@@ -36,7 +36,7 @@ class QTGL(GraphicsLayer):
         self.qtr.pop()
         self.qtr.endFrame()
 
-    def plot(self, gX, gY, color=None, linewidth=2, **kwargs):
+    def plot(self, gX, gY, color=None, lw=2, **kwargs):
         color = self.adaptColor(color)
 
         self.qtr.setLineColor(*color)
@@ -54,6 +54,7 @@ class QTGL(GraphicsLayer):
         else:
             # print(gX, gY)
             gPoints = np.stack([array(gX), -array(gY)]).T * self.cell_pixels
+            self.qtr.setLineWidth(5)
             self.qtr.drawPolyline(gPoints)
 
     def scatter(self, gX, gY, color=None, marker="o", s=50, *args, **kwargs):
