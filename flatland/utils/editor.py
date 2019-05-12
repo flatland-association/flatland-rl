@@ -58,7 +58,6 @@ class View(object):
     def init_canvas(self):
         # update the rendertool with the env
         self.new_env()
-        #plt.figure(figsize=(10, 10))
         self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
         img = self.oRT.getImage()
         plt.clf()

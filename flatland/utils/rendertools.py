@@ -93,6 +93,7 @@ class MPLGL(GraphicsLayer):
         color = tuple([iRGBA / 255 for iRGBA in color])
         return color
 
+
 class RenderTool(object):
     Visit = recordtype("Visit", ["rc", "iDir", "iDepth", "prev"])
 

@@ -7,6 +7,7 @@ Tests for `flatland` package.
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 import numpy as np
 import os
+import sys
 
 import matplotlib.pyplot as plt
 
@@ -14,27 +15,28 @@ import flatland.utils.rendertools as rt
 from flatland.core.env_observation_builder import TreeObsForRailEnv
 
 
-def checkFrozenImage(sFileImage):
+def checkFrozenImage(oRT, sFileImage, resave=False):
     sDirRoot = "."
-    sTmpFileImage = sDirRoot + "/images/test/" + sFileImage
+    sDirImages = sDirRoot + "/images/"
 
-    if os.path.exists(sTmpFileImage):
-        os.remove(sTmpFileImage)
+    img_test = oRT.getImage()
 
-    plt.savefig(sTmpFileImage)
+    if resave:
+        np.savez_compressed(sDirImages + sFileImage, img=img_test)
+        return
 
-    bytesFrozenImage = None
-    for sDir in ["/images/", "/images/test/"]:
-        sfPath = sDirRoot + sDir + sFileImage
-        bytesImage = plt.imread(sfPath)
-        if bytesFrozenImage is None:
-            bytesFrozenImage = bytesImage
-        else:
-            assert (bytesFrozenImage.shape == bytesImage.shape)
-            assert ((np.sum(np.square(bytesFrozenImage - bytesImage)) / bytesFrozenImage.size) < 1e-3)
+    # this is now just for convenience - the file is not read back
+    np.savez_compressed(sDirImages + "test/" + sFileImage, img=img_test)
+
+    image_store = np.load(sDirImages + sFileImage)
+    img_expected = image_store["img"]
+
+    assert (img_test.shape == img_expected.shape)
+    assert ((np.sum(np.square(img_test - img_expected)) / img_expected.size / 256) < 1e-3), \
+        "Image {} does not match".format(sFileImage)
 
 
-def test_render_env():
+def test_render_env(save_new_images=False):
     # random.seed(100)
     np.random.seed(100)
     oEnv = RailEnv(width=10, height=10,
@@ -45,15 +47,14 @@ def test_render_env():
                    )
     sfTestEnv = "env-data/tests/test1.npy"
     oEnv.rail.load_transition_map(sfTestEnv)
-    oEnv.reset()
     oRT = rt.RenderTool(oEnv)
-    plt.figure(figsize=(10, 10))
     oRT.renderEnv()
+    
+    checkFrozenImage(oRT, "basic-env.npz", resave=save_new_images)
 
-    checkFrozenImage("basic-env.png")
-
-    plt.figure(figsize=(10, 10))
+    oRT = rt.RenderTool(oEnv, gl="PIL")
     oRT.renderEnv()
+    checkFrozenImage(oRT, "basic-env-PIL.npz", resave=save_new_images)
 
     # disable the tree / observation tests until env-agent save/load is available
     if False:
@@ -75,3 +76,14 @@ def test_render_env():
         oRT.plotPath(visitDest)
 
         checkFrozenImage("env-path.png")
+
+
+def main():
+    if len(sys.argv) == 2 and sys.argv[1] == "save":
+        test_render_env(save_new_images=True)
+    else:
+        print("Run 'python test_rendertools.py save' to regenerate images")
+
+
+if __name__ == "__main__":
+    main()
