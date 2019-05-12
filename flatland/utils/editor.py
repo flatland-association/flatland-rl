@@ -310,7 +310,8 @@ class Controller(object):
 
     def regenerate(self, event):
         method = self.view.wRegenMethod.value
-        self.model.regenerate(method)
+        nAgents = self.view.wNAgents.value
+        self.model.regenerate(method, nAgents)
 
     def setRegenSize(self, event):
         self.model.setRegenSize(event["new"])
@@ -351,7 +352,7 @@ class EditorModel(object):
         self.bDebug_move = False
         self.wid_output = None
         self.drawMode = "Draw"
-        self.env_filename = "temp.npy"
+        self.env_filename = "temp.pkl"
         self.set_env(env)
         self.iSelectedAgent = None
         self.player = None
@@ -526,17 +527,17 @@ class EditorModel(object):
 
     def clear(self):
         self.env.rail.grid[:, :] = 0
-        self.env.number_of_agents = 0
+        # self.env.number_of_agents = 0
         self.env.agents = []
         self.env.agents_static = []
-        self.env.agents_handles = []
+        # self.env.agents_handles = []
         self.player = None
 
         self.redraw()
 
     def reset(self, replace_agents=False, nAgents=0):
-        if replace_agents:
-            self.env.agents_handles = range(nAgents)
+        # if replace_agents:
+        #    self.env.agents_handles = range(nAgents)
         self.env.reset(regen_rail=True, replace_agents=replace_agents)
         self.player = Player(self.env)
         self.redraw()
@@ -553,7 +554,8 @@ class EditorModel(object):
     def load(self):
         if os.path.exists(self.env_filename):
             self.log("load file: ", self.env_filename)
-            self.env.rail.load_transition_map(self.env_filename, override_gridsize=True)
+            # self.env.rail.load_transition_map(self.env_filename, override_gridsize=True)
+            self.env.load(self.env_filename)
             self.fix_env()
             self.set_env(self.env)
             self.redraw()
@@ -562,9 +564,10 @@ class EditorModel(object):
 
     def save(self):
         self.log("save to ", self.env_filename, " working dir: ", os.getcwd())
-        self.env.rail.save_transition_map(self.env_filename)
+        # self.env.rail.save_transition_map(self.env_filename)
+        self.env.save(self.env_filename)
 
-    def regenerate(self, method=None):
+    def regenerate(self, method=None, nAgents=0):
         self.log("Regenerate size", self.regen_size)
 
         if method is None or method == "Random Cell":
@@ -575,7 +578,8 @@ class EditorModel(object):
         self.env = RailEnv(width=self.regen_size,
                            height=self.regen_size,
                            rail_generator=fnMethod,
-                           number_of_agents=self.env.number_of_agents,
+                           # number_of_agents=self.env.get_num_agents(),
+                           number_of_agents=nAgents,
                            obs_builder_object=TreeObsForRailEnv(max_depth=2))
         self.env.reset(regen_rail=True)
         self.fix_env()

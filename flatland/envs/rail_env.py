@@ -5,6 +5,7 @@ Generator functions are functions that take width, height and num_resets as argu
 a GridTransitionMap object.
 """
 import numpy as np
+import pickle
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import TreeObsForRailEnv
@@ -83,34 +84,43 @@ class RailEnv(Environment):
         self.width = width
         self.height = height
 
-        self.number_of_agents = number_of_agents
+        # use get_num_agents() instead
+        # self.number_of_agents = number_of_agents
 
         self.obs_builder = obs_builder_object
         self.obs_builder._set_env(self)
 
-        self.actions = [0] * self.number_of_agents
-        self.rewards = [0] * self.number_of_agents
+        self.actions = [0] * number_of_agents
+        self.rewards = [0] * number_of_agents
         self.done = False
 
-        self.dones = {"__all__": False}
+        self.dones = dict.fromkeys(list(range(number_of_agents)) + ["__all__"], False)
+
         self.obs_dict = {}
         self.rewards_dict = {}
 
-        self.agents_handles = list(range(self.number_of_agents))
+        # self.agents_handles = list(range(self.number_of_agents))
 
         # self.agents_position = []
         # self.agents_target = []
         # self.agents_direction = []
-        self.agents = []  # live agents
-        self.agents_static = []  # static agent information
+        self.agents = [None] * number_of_agents  # live agents
+        self.agents_static = [None] * number_of_agents  # static agent information
         self.num_resets = 0
         self.reset()
         self.num_resets = 0   # yes, set it to zero again!
 
         self.valid_positions = None
 
+    # no more agent_handles
     def get_agent_handles(self):
-        return self.agents_handles
+        return range(self.get_num_agents())
+
+    def get_num_agents(self, static=True):
+        if static:
+            return len(self.agents_static)
+        else:
+            return len(self.agents)
 
     def add_agent_static(self, agent_static):
         """ Add static info for a single agent.
@@ -119,11 +129,17 @@ class RailEnv(Environment):
         self.agents_static.append(agent_static)
         return len(self.agents_static) - 1
 
+    def restart_agents(self):
+        """ Reset the agents to their starting positions defined in agents_static
+        """
+        self.agents = EnvAgent.list_from_static(self.agents_static)
+
     def reset(self, regen_rail=True, replace_agents=True):
+        """ if regen_rail then regenerate the rails.
+            if replace_agents then regenerate the agents static.
+            Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
-        TODO: replace_agents is ignored at the moment; agents will always be replaced.
-        """
-        tRailAgents = self.rail_generator(self.width, self.height, self.agents_handles, self.num_resets)
+        tRailAgents = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
         if regen_rail or self.rail is None:
             self.rail = tRailAgents[0]
@@ -132,15 +148,16 @@ class RailEnv(Environment):
             self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:4])
 
         # Take the agent static info and put (live) agents at the start positions
-        self.agents = EnvAgent.list_from_static(self.agents_static[:len(self.agents_handles)])
+        # self.agents = EnvAgent.list_from_static(self.agents_static[:len(self.agents_handles)])
+        self.restart_agents()
 
         self.num_resets += 1
 
+        # for handle in self.agents_handles:
+        #    self.dones[handle] = False
+        self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
         # perhaps dones should be part of each agent.
-        self.dones = {"__all__": False}
-        for handle in self.agents_handles:
-            self.dones[handle] = False
-
+        
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
 
@@ -157,27 +174,30 @@ class RailEnv(Environment):
 
         # Reset the step rewards
         self.rewards_dict = dict()
-        for handle in self.agents_handles:
-            self.rewards_dict[handle] = 0
+        # for handle in self.agents_handles:
+        #    self.rewards_dict[handle] = 0
+        for iAgent in range(self.get_num_agents()):
+            self.rewards_dict[iAgent] = 0
 
         if self.dones["__all__"]:
             return self._get_observations(), self.rewards_dict, self.dones, {}
 
-        for i in range(len(self.agents_handles)):
-            handle = self.agents_handles[i]
+        # for i in range(len(self.agents_handles)):
+        for iAgent in range(self.get_num_agents()):
+            # handle = self.agents_handles[i]
             transition_isValid = None
-            agent = self.agents[i]
+            agent = self.agents[iAgent]
 
-            if handle not in action_dict:  # no action has been supplied for this agent
+            if iAgent not in action_dict:  # no action has been supplied for this agent
                 continue
 
-            if self.dones[handle]:  # this agent has already completed...
+            if self.dones[iAgent]:  # this agent has already completed...
                 continue
-            action = action_dict[handle]
+            action = action_dict[iAgent]
 
             if action < 0 or action > 3:
                 print('ERROR: illegal action=', action,
-                      'for agent with handle=', handle)
+                      'for agent with index=', iAgent)
                 return
 
             if action > 0:
@@ -259,16 +279,16 @@ class RailEnv(Environment):
                     agent.direction = movement
                 else:
                     # the action was not valid, add penalty
-                    self.rewards_dict[handle] += invalid_action_penalty
+                    self.rewards_dict[iAgent] += invalid_action_penalty
 
             # if agent is not in target position, add step penalty
             # if self.agents_position[i][0] == self.agents_target[i][0] and \
             #        self.agents_position[i][1] == self.agents_target[i][1]:
             #    self.dones[handle] = True
             if np.equal(agent.position, agent.target).all():
-                self.dones[handle] = True
+                self.dones[iAgent] = True
             else:
-                self.rewards_dict[handle] += step_penalty
+                self.rewards_dict[iAgent] += step_penalty
 
         # Check for end of episode + add global reward to all rewards!
         # num_agents_in_target_position = 0
@@ -283,17 +303,34 @@ class RailEnv(Environment):
 
         # Reset the step actions (in case some agent doesn't 'register_action'
         # on the next step)
-        self.actions = [0] * self.number_of_agents
+        self.actions = [0] * self.get_num_agents()
         return self._get_observations(), self.rewards_dict, self.dones, {}
 
     def _get_observations(self):
         self.obs_dict = {}
-        for handle in self.agents_handles:
-            self.obs_dict[handle] = self.obs_builder.get(handle)
+        # for handle in self.agents_handles:
+        for iAgent in range(self.get_num_agents()):
+            self.obs_dict[iAgent] = self.obs_builder.get(iAgent)
         return self.obs_dict
 
     def render(self):
         # TODO:
         pass
 
-    
+    def save(self, sFilename):
+        dSave = {
+            "grid": self.rail.grid,
+            "agents_static": self.agents_static
+            }
+        with open(sFilename, "wb") as fOut:
+            pickle.dump(dSave, fOut)
+
+    def load(self, sFilename):
+        with open(sFilename, "rb") as fIn:
+            dLoad = pickle.load(fIn)
+            self.rail.grid = dLoad["grid"]
+            self.height, self.width = self.rail.grid.shape
+            self.agents_static = dLoad["agents_static"]
+            self.agents = [None] * self.get_num_agents()
+            self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
+            

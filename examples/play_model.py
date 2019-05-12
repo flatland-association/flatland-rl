@@ -39,7 +39,7 @@ class Player(object):
         # self.obs = self.env.reset()
         self.env.obs_builder.reset()
         self.obs = self.env._get_observations()
-        for envAgent in self.env.get_agent_handles():
+        for envAgent in range(self.env.get_num_agents()):
             norm = max(1, max_lt(self.obs[envAgent], np.inf))
             self.obs[envAgent] = np.clip(np.array(self.obs[envAgent]) / norm, -1, 1)
 
@@ -52,6 +52,7 @@ class Player(object):
         env = self.env
 
         # Pass the (stored) observation to the agent network and retrieve the action
+        #for handle in env.get_agent_handles():
         for handle in env.get_agent_handles():
             action = self.agent.act(np.array(self.obs[handle]), eps=self.eps)
             self.action_prob[action] += 1
@@ -145,7 +146,7 @@ def main(render=True, delay=0.0):
         # Reset environment
         obs = env.reset()
 
-        for a in range(env.number_of_agents):
+        for a in range(env.get_num_agents()):
             norm = max(1, max_lt(obs[a], np.inf))
             obs[a] = np.clip(np.array(obs[a]) / norm, -1, 1)
 
@@ -160,18 +161,18 @@ def main(render=True, delay=0.0):
             # env_renderer.renderEnv(show=True)
             # print(step)
             # Action
-            for a in range(env.number_of_agents):
+            for a in range(env.get_num_agents()):
                 action = agent.act(np.array(obs[a]), eps=eps)
                 action_prob[action] += 1
                 action_dict.update({a: action})
 
             # Environment step
             next_obs, all_rewards, done, _ = env.step(action_dict)
-            for a in range(env.number_of_agents):
+            for a in range(env.get_num_agents()):
                 norm = max(1, max_lt(next_obs[a], np.inf))
                 next_obs[a] = np.clip(np.array(next_obs[a]) / norm, -1, 1)
             # Update replay buffer and train agent
-            for a in range(env.number_of_agents):
+            for a in range(env.get_num_agents()):
                 agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
                 score += all_rewards[a]
 
@@ -196,7 +197,7 @@ def main(render=True, delay=0.0):
 
         print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' +
                '\tEpsilon: {:.2f} \t Action Probabilities: \t {}').format(
-               env.number_of_agents,
+               env.get_num_agents(),
                trials,
                np.mean(scores_window),
                100 * np.mean(done_window),
@@ -207,7 +208,7 @@ def main(render=True, delay=0.0):
             rFps = iFrame / (tNow - tStart)
             print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' +
                    '\tEpsilon: {:.2f} fps: {:.2f} \t Action Probabilities: \t {}').format(
-                   env.number_of_agents,
+                   env.get_num_agents(),
                    trials,
                    np.mean(scores_window),
                    100 * np.mean(done_window),

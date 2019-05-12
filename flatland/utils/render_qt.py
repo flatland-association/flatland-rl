@@ -52,7 +52,6 @@ class QTGL(GraphicsLayer):
                 lastx = x
                 lasty = y
         else:
-            # print(gX, gY)
             gPoints = np.stack([array(gX), -array(gY)]).T * self.cell_pixels
             self.qtr.setLineWidth(5)
             self.qtr.drawPolyline(gPoints)
@@ -89,3 +88,17 @@ class QTGL(GraphicsLayer):
     def endFrame(self):
         self.qtr.pop()
         self.qtr.endFrame()
+
+
+def main():
+    gl = QTGL(10, 10)
+    for i in range(10):
+        gl.beginFrame()
+        gl.plot([3+i, 4], [-4-i, -5], color="r")
+        gl.endFrame()
+        import time
+        time.sleep(1)
+
+
+if __name__ == "__main__":
+    main()

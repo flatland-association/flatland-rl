@@ -149,11 +149,15 @@ class RenderTool(object):
             lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
 
         for iAgent, agent in enumerate(self.env.agents_static):
+            if agent is None:
+                continue
             oColor = cmap(iAgent)
             self.plotAgent(agent.position, agent.direction, oColor, target=agent.target if targets else None,
                 static=True, selected=iAgent == iSelectedAgent)
 
         for iAgent, agent in enumerate(self.env.agents):
+            if agent is None:
+                continue
             oColor = cmap(iAgent)
             self.plotAgent(agent.position, agent.direction, oColor, target=agent.target if targets else None)
 
@@ -591,37 +595,7 @@ class RenderTool(object):
 
         # Draw each agent + its orientation + its target
         if agents:
-            cmap = self.gl.get_cmap('hsv', lut=env.number_of_agents + 1)
             self.plotAgents(targets=True, iSelectedAgent=iSelectedAgent)
-
-        if False:
-            for i in range(env.number_of_agents):
-                self._draw_square((
-                    env.agents_position[i][1] *
-                    cell_size + cell_size / 2,
-                    -env.agents_position[i][0] *
-                    cell_size - cell_size / 2),
-                    cell_size / 8, cmap(i))
-            for i in range(env.number_of_agents):
-                self._draw_square((
-                    env.agents_target[i][1] *
-                    cell_size + cell_size / 2,
-                    -env.agents_target[i][0] *
-                    cell_size - cell_size / 2),
-                    cell_size / 3, [c for c in cmap(i)])
-
-                # orientation is a line connecting the center of the cell to the
-                # side of the square of the agent
-                new_position = env._new_position(env.agents_position[i], env.agents_direction[i])
-                new_position = ((
-                    new_position[0] + env.agents_position[i][0]) / 2 * cell_size,
-                    (new_position[1] + env.agents_position[i][1]) / 2 * cell_size)
-
-                self.gl.plot(
-                    [env.agents_position[i][1] * cell_size + cell_size / 2, new_position[1] + cell_size / 2],
-                    [-env.agents_position[i][0] * cell_size - cell_size / 2, -new_position[0] - cell_size / 2],
-                    color=cmap(i),
-                    linewidth=2.0)
 
         # Draw some textual information like fps
         yText = [-0.3, -0.6, -0.9]
@@ -646,6 +620,9 @@ class RenderTool(object):
 
         self.gl.prettify2(env.width, env.height, self.nPixCell)
 
+        # TODO: for MPL, we don't want to call clf (called by endframe)
+        # for QT, we need to call endFrame()
+        # if not show:
         self.gl.endFrame()
 
         # t2 = time.time()

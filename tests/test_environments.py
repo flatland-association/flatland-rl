@@ -201,3 +201,8 @@ def test_dead_end():
     # rail_env.agents_direction[0] = 0
     rail_env.agents = [EnvAgent(position=(2, 0), direction=0, target=(4, 0))]
     check_consistency(rail_env)
+
+
+if __name__ == "__main__":
+    test_rail_environment_single_agent()
+    test_dead_end()

@@ -83,3 +83,11 @@ def test_global_obs():
     # If this assertion is wrong, it means that the observation returned
     # places the agent on an empty cell
     assert(np.sum(rail_map * global_obs[0][1][0]) > 0)
+
+
+def main():
+    test_global_obs()
+
+
+if __name__ == "__main__":
+    main()

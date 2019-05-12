@@ -95,10 +95,10 @@ env = RailEnv(width=7,
 
 # Print the observation vector for agent 0
 obs, all_rewards, done, _ = env.step({0:0})
-for i in range(env.number_of_agents):
+for i in range(env.get_num_agents()):
     env.obs_builder.util_print_obs_subtree(tree=obs[i], num_features_per_node=5)
 
-env_renderer = RenderTool(env)
+env_renderer = RenderTool(env, gl="QT")
 env_renderer.renderEnv(show=True)
 
 print("Manual control: s=perform step, q=quit, [agent id] [1-2-3 action] \
