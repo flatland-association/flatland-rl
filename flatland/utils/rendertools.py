@@ -19,7 +19,7 @@ class MPLGL(GraphicsLayer):
         self.height = height
         self.yxBase = array([6, 21])  # pixel offset
         self.nPixCell = 700 / width
-        pass
+        self.img = None
 
     def plot(self, *args, **kwargs):
         plt.plot(*args, **kwargs)
@@ -67,23 +67,31 @@ class MPLGL(GraphicsLayer):
         return plt.get_cmap(*args, **kwargs)
 
     def beginFrame(self):
+        self.img = None
         plt.figure(figsize=(10, 10))
         pass
 
     def endFrame(self):
-        # plt.clf()
-        # plt.close()
-        pass
+        self.img = self.getImage(force=True)
+        plt.clf()
+        plt.close()
 
-    def getImage(self):
-        ax = plt.gca()
-        fig = ax.get_figure()
-        fig.tight_layout(pad=0)
-        fig.canvas.draw()
-        data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        return data
+    def getImage(self, force=False):
+        if self.img is None or force:
+            ax = plt.gca()
+            fig = ax.get_figure()
+            fig.tight_layout(pad=0)
+            fig.canvas.draw()
+            data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+            data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            self.img = data
+        return self.img
 
+    def adaptColor(self, color, lighten=False):
+        color = super(self.__class__, self).adaptColor(color, lighten)
+        # MPL has RGBA in [0,1]^4 not \mathbb{N} \cap [0,255]^4
+        color = tuple([iRGBA / 255 for iRGBA in color])
+        return color
 
 class RenderTool(object):
     Visit = recordtype("Visit", ["rc", "iDir", "iDepth", "prev"])
@@ -469,7 +477,7 @@ class RenderTool(object):
         # so for now I've changed it to 1 (from 10)
         cell_size = 1
         self.gl.beginFrame()
-        self.gl.clf()
+        # self.gl.clf()
         # if oFigure is None:
         #    oFigure = self.gl.figure()
 

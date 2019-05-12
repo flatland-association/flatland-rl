@@ -155,7 +155,7 @@ def main(render=True, delay=0.0):
         env_done = 0
 
         # Run episode
-        for step in range(50):
+        for step in range(100):
             # if trials > 114:
             # env_renderer.renderEnv(show=True)
             # print(step)
