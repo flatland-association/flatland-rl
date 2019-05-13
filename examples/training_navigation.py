@@ -23,7 +23,6 @@ transition_probability = [15,  # empty cell - Case 0
                           1,  # Case 1c (9)  - simple turn left
                           1]  # Case 2b (10) - simple switch mirrored
 
-
 # Example generate a random rail
 """
 env = RailEnv(width=10,
@@ -31,11 +30,10 @@ env = RailEnv(width=10,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
               number_of_agents=1)
 """
-env = RailEnv(width=15,
-              height=15,
+env = RailEnv(width=10,
+              height=10,
               rail_generator=complex_rail_generator(nr_start_goal=3, min_dist=5, max_dist=99999, seed=0),
               number_of_agents=3)
-
 """
 env = RailEnv(width=20,
               height=20,
@@ -61,7 +59,7 @@ scores = []
 dones_list = []
 action_prob = [0] * 4
 agent = Agent(state_size, action_size, "FC", 0)
-#agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
+#agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint1300.pth'))
 
 demo = False
 
@@ -94,15 +92,34 @@ def min_lt(seq, val):
     return min
 
 
+def norm_obs_clip(obs, clip_min=-1, clip_max=1):
+    """
+    This function returns the difference between min and max value of an observation
+    :param obs: Observation that should be normalized
+    :param clip_min: min value where observation will be clipped
+    :param clip_max: max value where observation will be clipped
+    :return: returnes normalized and clipped observatoin
+    """
+    max_obs = max(1, max_lt(obs, 1000))
+    min_obs = max(0, min_lt(obs, 0))
+    if max_obs == min_obs:
+        return np.clip(np.array(obs)/ max_obs, clip_min, clip_max)
+    norm = np.abs(max_obs - min_obs)
+    if norm == 0:
+        norm = 1.
+    return np.clip((np.array(obs)-min_obs)/ norm, clip_min, clip_max)
+
+
 for trials in range(1, n_trials + 1):
 
     # Reset environment
     obs = env.reset()
     final_obs = obs.copy()
     for a in range(env.get_num_agents()):
-        norm = max(1, max_lt(obs[a], np.inf))
-        obs[a] = np.clip(np.array(obs[a]) / norm, -1, 1)
-
+        data, distance = env.obs_builder.split_tree(tree=np.array(obs[a]), num_features_per_node=5, current_depth=0)
+        data = norm_obs_clip(data)
+        distance = norm_obs_clip(distance)
+        obs[a] = np.concatenate((data, distance))
     # env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
 
     score = 0
@@ -119,13 +136,17 @@ for trials in range(1, n_trials + 1):
             action = agent.act(np.array(obs[a]), eps=eps)
             action_prob[action] += 1
             action_dict.update({a: action})
-            #env.obs_builder.util_print_obs_subtree(tree=obs[a], num_features_per_node=5)
+
         # Environment step
         next_obs, all_rewards, done, _ = env.step(action_dict)
 
         for a in range(env.get_num_agents()):
-            norm = max(1, max_lt(next_obs[a], np.inf))
-            next_obs[a] = np.clip(np.array(next_obs[a]) / norm, -1, 1)
+            data, distance = env.obs_builder.split_tree(tree=np.array(next_obs[a]), num_features_per_node=5,
+                                                        current_depth=0)
+            data = norm_obs_clip(data)
+            distance = norm_obs_clip(distance)
+            next_obs[a] = np.concatenate((data, distance))
+
         # Update replay buffer and train agent
         for a in range(env.get_num_agents()):
             if done[a]:
@@ -134,7 +155,6 @@ for trials in range(1, n_trials + 1):
             if not demo and not done[a]:
                 agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
             score += all_rewards[a]
-
 
         obs = next_obs.copy()
         if done['__all__']:

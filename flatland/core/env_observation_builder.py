@@ -140,7 +140,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             new_cell = self._new_position(position, neigh_direction)
 
             if new_cell[0] >= 0 and new_cell[0] < self.env.height and \
-                    new_cell[1] >= 0 and new_cell[1] < self.env.width:
+                new_cell[1] >= 0 and new_cell[1] < self.env.width:
 
                 desired_movement_from_new_cell = (neigh_direction + 2) % 4
 
@@ -270,7 +270,6 @@ class TreeObsForRailEnv(ObservationBuilder):
                     num_cells_to_fill_in += pow4
                     pow4 *= 4
                 observation = observation + [-np.inf, -np.inf, -np.inf, -np.inf, -np.inf] * num_cells_to_fill_in
-
         return observation
 
     def _explore_branch(self, handle, position, direction, root_observation, depth):
@@ -292,21 +291,26 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         visited = set()
 
-        other_agent_encountered = False
-        other_target_encountered = False
+        # other_agent_encountered = False
+        # other_target_encountered = False
+        other_agent_encountered = np.inf
+        other_target_encountered = np.inf
+
         num_steps = 1
         while exploring:
             # #############################
             # #############################
             # Modify here to compute any useful data required to build the end node's features. This code is called
             # for each cell visited between the previous branching node and the next switch / target / dead-end.
-
             if position in self.location_has_agent:
-                other_agent_encountered = True
+                # other_agent_encountered = True
+                if num_steps < other_agent_encountered:
+                    other_agent_encountered = num_steps
 
             if position in self.location_has_target:
-                other_target_encountered = True
-
+                # other_target_encountered = True
+                if num_steps < other_target_encountered:
+                    other_target_encountered = num_steps
             # #############################
             # #############################
 
@@ -361,7 +365,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         # #############################
         # #############################
         # Modify here to append new / different features for each visited cell!
-
+        """
         if last_isTarget:
             observation = [0,
                            1 if other_target_encountered else 0,
@@ -381,12 +385,30 @@ class TreeObsForRailEnv(ObservationBuilder):
                            1 if other_agent_encountered else 0,
                            root_observation[3] + num_steps,
                            self.distance_map[handle, position[0], position[1], direction]]
+        """
+        if last_isTarget:
+            observation = [0,
+                           other_target_encountered,
+                           other_agent_encountered,
+                           root_observation[3] + num_steps,
+                           0]
 
+        elif last_isTerminal:
+            observation = [0,
+                           other_target_encountered,
+                           other_agent_encountered,
+                           np.inf,
+                           np.inf]
+        else:
+            observation = [0,
+                           other_target_encountered,
+                           other_agent_encountered,
+                           root_observation[3] + num_steps,
+                           self.distance_map[handle, position[0], position[1], direction]]
         # #############################
         # #############################
 
         new_root_observation = observation[:]
-
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # Get the possible transitions
@@ -450,6 +472,40 @@ class TreeObsForRailEnv(ObservationBuilder):
                                         prompt=prompt_[children],
                                         current_depth=current_depth + 1)
 
+    def split_tree(self, tree, num_features_per_node=5, current_depth=0):
+        """
+
+        :param tree:
+        :param num_features_per_node:
+        :param prompt:
+        :param current_depth:
+        :return:
+        """
+
+        if len(tree) < num_features_per_node:
+            return [], []
+
+        depth = 0
+        tmp = len(tree) / num_features_per_node - 1
+        pow4 = 4
+        while tmp > 0:
+            tmp -= pow4
+            depth += 1
+            pow4 *= 4
+        child_size = (len(tree) - num_features_per_node) // 4
+        tree_data = tree[0:num_features_per_node - 1].tolist()
+        distance_data = [tree[num_features_per_node - 1]]
+        for children in range(4):
+            child_tree = tree[(num_features_per_node + children * child_size):
+                              (num_features_per_node + (children + 1) * child_size)]
+            tmp_tree_data, tmp_distance_data = self.split_tree(child_tree,
+                                                               num_features_per_node,
+                                                               current_depth=current_depth + 1)
+            if len(tmp_tree_data) > 0:
+                tree_data.extend(tmp_tree_data)
+                distance_data.extend(tmp_distance_data)
+        return tree_data, distance_data
+
 
 class GlobalObsForRailEnv(ObservationBuilder):
     """
@@ -490,7 +546,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
         obs[1][agent.target] += 1
 
         for i in range(len(agents)):
-            if i != handle:   # TODO: handle used as index...?
+            if i != handle:  # TODO: handle used as index...?
                 agent2 = agents[i]
                 obs[3][agent2.position] += 1
                 obs[2][agent2.target] += 1
