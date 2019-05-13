@@ -30,10 +30,10 @@ env = RailEnv(width=10,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
               number_of_agents=1)
 """
-env = RailEnv(width=10,
-              height=10,
-              rail_generator=complex_rail_generator(nr_start_goal=3, min_dist=5, max_dist=99999, seed=0),
-              number_of_agents=3)
+env = RailEnv(width=50,
+              height=50,
+              rail_generator=complex_rail_generator(nr_start_goal=50, min_dist=5, max_dist=99999, seed=0),
+              number_of_agents=5)
 """
 env = RailEnv(width=20,
               height=20,
@@ -59,9 +59,9 @@ scores = []
 dones_list = []
 action_prob = [0] * 4
 agent = Agent(state_size, action_size, "FC", 0)
-#agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint1300.pth'))
+agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint1500.pth'))
 
-demo = False
+demo = True
 
 
 def max_lt(seq, val):
