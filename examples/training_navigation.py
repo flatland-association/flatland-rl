@@ -115,6 +115,7 @@ for trials in range(1, n_trials + 1):
     # Reset environment
     obs = env.reset()
     final_obs = obs.copy()
+    final_obs_next =  obs.copy()
     for a in range(env.get_num_agents()):
         data, distance = env.obs_builder.split_tree(tree=np.array(obs[a]), num_features_per_node=5, current_depth=0)
         data = norm_obs_clip(data)
@@ -150,7 +151,8 @@ for trials in range(1, n_trials + 1):
         # Update replay buffer and train agent
         for a in range(env.get_num_agents()):
             if done[a]:
-                final_obs[a] = obs[a]
+                final_obs[a] = obs[a].copy()
+                final_obs_next[a] = next_obs[a].copy()
                 final_action_dict.update({a: action_dict[a]})
             if not demo and not done[a]:
                 agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
@@ -159,7 +161,7 @@ for trials in range(1, n_trials + 1):
         obs = next_obs.copy()
         if done['__all__']:
             env_done = 1
-            agent.step(final_obs[a], final_action_dict[a], all_rewards[a], next_obs[a], done[a])
+            agent.step(final_obs[a], final_action_dict[a], all_rewards[a], final_obs_next[a], done[a])
             break
     # Epsilon decay
     eps = max(eps_end, eps_decay * eps)  # decrease epsilon

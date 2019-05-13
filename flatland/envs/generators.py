@@ -143,7 +143,7 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=10, min_dist=2, max_dist=99
             if len(new_path) >= 2:
                 nr_created += 1
 
-        #print("\n> Complex Rail Gen: Created #", len(start_goal), "pairs and #", nr_created, "extra connections")
+        # print("\n> Complex Rail Gen: Created #", len(start_goal), "pairs and #", nr_created, "extra connections")
         # print(start_goal)
 
         agents_position = [sg[0] for sg in start_goal]
