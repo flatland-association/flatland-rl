@@ -180,6 +180,7 @@ class RailEnv(Environment):
             self.rewards_dict[iAgent] = 0
 
         if self.dones["__all__"]:
+            self.rewards_dict = [r + global_reward for r in self.rewards_dict]
             return self._get_observations(), self.rewards_dict, self.dones, {}
 
         # for i in range(len(self.agents_handles)):
