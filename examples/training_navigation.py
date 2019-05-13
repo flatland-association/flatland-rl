@@ -161,7 +161,8 @@ for trials in range(1, n_trials + 1):
         obs = next_obs.copy()
         if done['__all__']:
             env_done = 1
-            agent.step(final_obs[a], final_action_dict[a], all_rewards[a], final_obs_next[a], done[a])
+            for a in range(env.get_num_agents()):
+                agent.step(final_obs[a], final_action_dict[a], all_rewards[a], final_obs_next[a], done[a])
             break
     # Epsilon decay
     eps = max(eps_end, eps_decay * eps)  # decrease epsilon
