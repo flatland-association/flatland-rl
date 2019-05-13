@@ -33,8 +33,8 @@ env = RailEnv(width=10,
 """
 env = RailEnv(width=15,
               height=15,
-              rail_generator=complex_rail_generator(nr_start_goal=15, min_dist=5, max_dist=99999, seed=0),
-              number_of_agents=10)
+              rail_generator=complex_rail_generator(nr_start_goal=3, min_dist=5, max_dist=99999, seed=0),
+              number_of_agents=3)
 
 """
 env = RailEnv(width=20,
@@ -54,15 +54,16 @@ eps = 1.
 eps_end = 0.005
 eps_decay = 0.998
 action_dict = dict()
+final_action_dict = dict()
 scores_window = deque(maxlen=100)
 done_window = deque(maxlen=100)
 scores = []
 dones_list = []
 action_prob = [0] * 4
 agent = Agent(state_size, action_size, "FC", 0)
-agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
+#agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
-demo = True
+demo = False
 
 
 def max_lt(seq, val):
@@ -97,7 +98,8 @@ for trials in range(1, n_trials + 1):
 
     # Reset environment
     obs = env.reset()
-    for a in range(env.number_of_agents):
+    final_obs = obs.copy()
+    for a in range(env.get_num_agents()):
         norm = max(1, max_lt(obs[a], np.inf))
         obs[a] = np.clip(np.array(obs[a]) / norm, -1, 1)
 
@@ -105,14 +107,13 @@ for trials in range(1, n_trials + 1):
 
     score = 0
     env_done = 0
-
     # Run episode
     for step in range(100):
         if demo:
             env_renderer.renderEnv(show=True)
         # print(step)
         # Action
-        for a in range(env.number_of_agents):
+        for a in range(env.get_num_agents()):
             if demo:
                 eps = 0
             action = agent.act(np.array(obs[a]), eps=eps)
@@ -121,18 +122,24 @@ for trials in range(1, n_trials + 1):
             #env.obs_builder.util_print_obs_subtree(tree=obs[a], num_features_per_node=5)
         # Environment step
         next_obs, all_rewards, done, _ = env.step(action_dict)
-        for a in range(env.number_of_agents):
+
+        for a in range(env.get_num_agents()):
             norm = max(1, max_lt(next_obs[a], np.inf))
             next_obs[a] = np.clip(np.array(next_obs[a]) / norm, -1, 1)
         # Update replay buffer and train agent
-        for a in range(env.number_of_agents):
-            if not demo:
+        for a in range(env.get_num_agents()):
+            if done[a]:
+                final_obs[a] = obs[a]
+                final_action_dict.update({a: action_dict[a]})
+            if not demo and not done[a]:
                 agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
             score += all_rewards[a]
+
 
         obs = next_obs.copy()
         if done['__all__']:
             env_done = 1
+            agent.step(final_obs[a], final_action_dict[a], all_rewards[a], next_obs[a], done[a])
             break
     # Epsilon decay
     eps = max(eps_end, eps_decay * eps)  # decrease epsilon
@@ -144,7 +151,7 @@ for trials in range(1, n_trials + 1):
 
     print(
         '\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
-            env.number_of_agents,
+            env.get_num_agents(),
             trials,
             np.mean(
                 scores_window),
@@ -155,7 +162,7 @@ for trials in range(1, n_trials + 1):
     if trials % 100 == 0:
         print(
             '\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
-                env.number_of_agents,
+                env.get_num_agents(),
                 trials,
                 np.mean(
                     scores_window),
