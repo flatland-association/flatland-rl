@@ -105,7 +105,7 @@ def main(render=True, delay=0.0):
                   number_of_agents=5)
 
     if render:
-        env_renderer = RenderTool(env, gl="QT")
+        env_renderer = RenderTool(env, gl="QTSVG")
     # plt.figure(figsize=(5,5))
     # fRedis = redis.Redis()
 
@@ -145,6 +145,7 @@ def main(render=True, delay=0.0):
 
         # Reset environment
         obs = env.reset()
+        env_renderer.set_new_rail()
 
         for a in range(env.get_num_agents()):
             norm = max(1, max_lt(obs[a], np.inf))
@@ -178,6 +179,7 @@ def main(render=True, delay=0.0):
 
             if render:
                 env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step)
+                #time.sleep(10)
                 if delay > 0:
                     time.sleep(delay)
 
@@ -219,4 +221,4 @@ def main(render=True, delay=0.0):
 
 
 if __name__ == "__main__":
-    main()
+    main(render=True, delay=0)

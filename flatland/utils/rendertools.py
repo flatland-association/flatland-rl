@@ -6,7 +6,7 @@ from numpy import array
 import matplotlib.pyplot as plt
 import time
 from collections import deque
-from flatland.utils.render_qt import QTGL
+from flatland.utils.render_qt import QTGL, QTSVG
 from flatland.utils.graphics_pil import PILGL
 from flatland.utils.graphics_layer import GraphicsLayer
 
@@ -128,6 +128,13 @@ class RenderTool(object):
             self.gl = QTGL(env.width, env.height)
         elif gl == "PIL":
             self.gl = PILGL(env.width, env.height)
+        elif gl == "QTSVG":
+            self.gl = QTSVG(env.width, env.height)
+        
+        self.new_rail = True
+
+    def set_new_rail(self):
+        self.new_rail = True
 
     def plotTreeOnRail(self, lVisits, color="r"):
         """
@@ -478,6 +485,13 @@ class RenderTool(object):
         (Use show=False from a Jupyter notebook with %matplotlib inline)
         """
 
+        if not self.gl.is_raster():
+            self.renderEnv2(show, curves, spacing,
+            arrows, agents, sRailColor,
+            frames, iEpisode, iStep,
+            iSelectedAgent)
+            return
+
         # cell_size is a bit pointless with matplotlib - it does not relate to pixels,
         # so for now I've changed it to 1 (from 10)
         cell_size = 1
@@ -672,4 +686,39 @@ class RenderTool(object):
                 self.gl.plot(gP01[0], -gP01[1], lines=giLinePoints, color="gray")
 
             gP0 = array([gX1, gY1, gZ1])
-            
+    
+    def renderEnv2(
+            self, show=False, curves=True, spacing=False,
+            arrows=False, agents=True, sRailColor="gray",
+            frames=False, iEpisode=None, iStep=None,
+            iSelectedAgent=None):
+        """
+        Draw the environment using matplotlib.
+        Draw into the figure if provided.
+
+        Call pyplot.show() if show==True.
+        (Use show=False from a Jupyter notebook with %matplotlib inline)
+        """
+
+        env = self.env
+
+        if self.new_rail:
+            self.new_rail = False
+            self.gl.clear_rails()
+            # Draw each cell independently
+            for r in range(env.height):
+                for c in range(env.width):
+
+                    binTrans = env.rail.grid[r, c]
+                    self.gl.setRailAt(r, c, binTrans)
+
+        for iAgent, agent in enumerate(self.env.agents):
+            if agent is None:
+                continue
+            self.gl.setAgentAt(iAgent, *agent.position, agent.direction, agent.direction)
+
+        self.gl.show()
+        self.gl.processEvents()
+
+        self.iFrame += 1
+        return

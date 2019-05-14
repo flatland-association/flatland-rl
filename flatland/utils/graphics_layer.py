@@ -7,6 +7,9 @@ class GraphicsLayer(object):
     def __init__(self):
         pass
 
+    def is_raster(self):
+        return True
+
     def plot(self, *args, **kwargs):
         pass
 
@@ -59,3 +62,9 @@ class GraphicsLayer(object):
 
     def get_cmap(self, *args, **kwargs):
         return plt.get_cmap(*args, **kwargs)
+
+    def setRailAt(self, row, col, binTrans):
+        pass
+    
+    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
+        pass

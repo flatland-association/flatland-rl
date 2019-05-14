@@ -3,6 +3,12 @@ from numpy import array
 from flatland.utils.graphics_layer import GraphicsLayer
 # from matplotlib import pyplot as plt
 import numpy as np
+import time
+from flatland.utils.svg import Track, Zug
+from flatland.envs.agent_utils import EnvAgent
+
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout
+from PyQt5 import QtSvg
 
 
 class QTGL(GraphicsLayer):
@@ -90,14 +96,140 @@ class QTGL(GraphicsLayer):
         self.qtr.endFrame()
 
 
-def main():
+class QTSVG(GraphicsLayer):
+    def __init__(self, width, height):
+        self.app = QApplication([])
+        self.wWinMain = QMainWindow()
+
+        self.wMain = QWidget(self.wWinMain)
+
+        self.wWinMain.setCentralWidget(self.wMain)
+
+        self.layout = QGridLayout()
+        self.layout.setSpacing(0)
+        self.wMain.setLayout(self.layout)
+        self.wWinMain.resize(1000, 1000)
+        self.wWinMain.show()
+        self.wWinMain.setFocus()
+        
+        self.track = self.track = Track()
+        self.lwTrack = []
+        self.zug = Zug()
+
+        self.lwAgents = []
+        self.agents_prev = []
+
+        svgWidget = None
+
+        iArt = 0
+        iCol = 0
+        iRow = 0
+        nCols = 10
+
+        if False:
+            for binTrans in self.track.dSvg.keys():
+                sSVG = self.track.dSvg[binTrans].to_string()
+
+                bySVG = bytearray(sSVG, encoding='utf-8')
+
+                svgWidget = QtSvg.QSvgWidget()
+                svgWidget.renderer().load(bySVG)
+                print(iRow, iCol)
+                self.layout.addWidget(svgWidget, iRow, iCol)
+
+                iArt += 1
+                iRow = int(iArt / nCols)
+                iCol = iArt % nCols
+
+            svgWidget2 = QtSvg.QSvgWidget()
+            svgWidget2.renderer().load(bySVG)
+
+            self.layout.addWidget(svgWidget2, 0, 0)
+
+    def is_raster(self):
+        return False
+
+    def processEvents(self):
+        self.app.processEvents()
+        time.sleep(0.001)
+    
+    def clear_rails(self):
+        # print("Clear rails: ", len(self.lwTrack))
+        for wRail in self.lwTrack:
+            self.layout.removeWidget(wRail)
+        self.lwTrack = []
+        self.clear_agents()
+    
+    def clear_agents(self):
+        # print("Clear Agents: ", len(self.lwAgents))
+        for wAgent in self.lwAgents:
+            self.layout.removeWidget(wAgent)
+        self.lwAgents = []
+        self.agents_prev = []
+        
+    def setRailAt(self, row, col, binTrans):
+        if binTrans in self.track.dSvg:
+            sSVG = self.track.dSvg[binTrans].to_string()
+            bySVG = bytearray(sSVG, encoding='utf-8')
+            svgWidget = QtSvg.QSvgWidget()
+            svgWidget.renderer().load(bySVG)
+            self.layout.addWidget(svgWidget, row, col)
+            self.lwTrack.append(svgWidget)
+
+    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
+        if iAgent < len(self.lwAgents):
+            wAgent = self.lwAgents[iAgent]
+            agentPrev = self.agents_prev[iAgent]
+            if wAgent is not None:
+                self.layout.removeWidget(wAgent)
+                self.layout.addWidget(wAgent, row, col)
+
+                if agentPrev.direction == iDirIn:
+                    # print("moved ", iAgent, row, col, iDirIn)
+                    return
+                else:
+                    # print("new dir:", iAgent, row, col, agentPrev.direction, iDirIn)
+                    agentPrev.direction = iDirIn
+                    sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut).to_string()
+                    bySVG = bytearray(sSVG, encoding='utf-8')
+                    wAgent.renderer().load(bySVG)
+                    return
+
+        else:
+            # Ensure we have adequate slots in the list lwAgents
+            for i in range(len(self.lwAgents), iAgent+1):
+                self.lwAgents.append(None)
+                self.agents_prev.append(None)
+
+        sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut).to_string()
+        bySVG = bytearray(sSVG, encoding='utf-8')
+        svgWidget = QtSvg.QSvgWidget()
+        svgWidget.renderer().load(bySVG)
+        self.lwAgents[iAgent] = svgWidget
+        self.agents_prev[iAgent] = EnvAgent((row, col), iDirIn, (0, 0))
+        self.layout.addWidget(svgWidget, row, col)
+        # print("Created ", iAgent, row, col)
+
+    def show(self, block=False):
+        self.wMain.update()
+
+
+def main2():
     gl = QTGL(10, 10)
     for i in range(10):
         gl.beginFrame()
         gl.plot([3+i, 4], [-4-i, -5], color="r")
         gl.endFrame()
-        import time
         time.sleep(1)
+
+
+def main():
+    gl = QTSVG()
+
+    for i in range(1000):
+        gl.processEvents()
+        time.sleep(0.1)
+    time.sleep(1)
 
 
 if __name__ == "__main__":
