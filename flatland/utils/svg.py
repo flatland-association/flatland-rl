@@ -7,8 +7,13 @@ from flatland.core.transitions import RailEnvTransitions
 
 
 class SVG(object):
-    def __init__(self, sfName):
-        self.svg = svgutils.transform.fromfile(sfName)
+    def __init__(self, sfName=None, svgETree=None):
+
+        if sfName is not None:
+            self.svg = svgutils.transform.fromfile(sfName)
+        elif svgETree is not None:
+            self.svg = svgETree
+
         self.init2()
 
     def init2(self):
@@ -18,8 +23,9 @@ class SVG(object):
         self.dStyles = dict(ltMatch)
 
     def copy(self):
-        self2 = copy.deepcopy(self)
-        self2.init2()
+        new_svg = copy.deepcopy(self.svg)
+
+        self2 = SVG(svgETree=new_svg)
         return self2
 
     def merge(self, svg2):
@@ -45,7 +51,17 @@ class SVG(object):
         
             sStyle2 = str(iStyle+offset)
 
-            sNewStyle = "\t.st"+sStyle2+"{"+self.dStyles[sStyle]+"}\n"
+            sNewStyle = "\t.st" + sStyle2 + "{" + self.dStyles[sStyle] + "}\n"
+            sNewStyles += sNewStyle
+        
+        self.eStyle.text = sNewStyles
+
+    def set_style_color(self, style_name, color):
+        sNewStyles = "\n"
+        for sKey, sValue in self.dStyles.items():
+            if sKey == style_name:
+                sValue = "fill:#" + "".join([format(col, "#04x")[2:] for col in color]) + ";"
+            sNewStyle = "\t.st" + sKey + "{" + sValue + "}\n"
             sNewStyles += sNewStyle
         
         self.eStyle.text = sNewStyles
@@ -63,7 +79,7 @@ class Zug(object):
         self.svg_curve1 = SVG("svg/Zug_1_Weiche_#0091ea.svg")
         self.svg_curve2 = SVG("svg/Zug_2_Weiche_#0091ea.svg")
 
-    def getSvg(self, iAgent, iDirIn, iDirOut):
+    def getSvg(self, iAgent, iDirIn, iDirOut, color=None):
         delta_dir = (iDirOut - iDirIn) % 4
         # if delta_dir != 0:
         #    print("Bend:", iAgent, iDirIn, iDirOut)
@@ -71,17 +87,19 @@ class Zug(object):
         if delta_dir in (0, 2):
             svg = self.svg_straight.copy()
             svg.set_rotate(iDirIn * 90)
-            return svg
         
         if delta_dir == 1:  # bend to right, eg N->E, E->S
             svg = self.svg_curve1.copy()
             svg.set_rotate((iDirIn - 1) * 90)
-            return svg
 
         elif delta_dir == 3:  # bend to left, eg N->W
             svg = self.svg_curve2.copy()
             svg.set_rotate(iDirIn * 90)
-            return svg
+
+        if color is not None:
+            svg.set_style_color("2", color)
+
+        return svg
 
 
 class Track(object):
@@ -145,17 +163,27 @@ class Track(object):
 
 
 def main():
-    svg1 = SVG("./svg/Gleis_vertikal.svg")
-    svg2 = SVG("./svg/Zug_1_Weiche_#0091ea.svg")
-    svg3 = svg2.merge(svg1)
-    svg3.set_rotate(90)
+    # svg1 = SVG("./svg/Gleis_vertikal.svg")
+    # svg2 = SVG("./svg/Zug_1_Weiche_#0091ea.svg")
+    
+    # svg3 = svg2.merge(svg1)
+    # svg3.set_rotate(90)
 
-    s = svg3.to_string()
-    print(s)
+    # s = svg3.to_string()
+    # print(s)
 
-    track = Track()
+    # svg4 = svg2.copy()
+    # svg4.set_style_color("2", (255, 0, 0))
+    # print(svg4.to_string())
+    # print(svg2.to_string())
 
-    print(len(track.dSvg))
+    # track = Track()
+    # print(len(track.dSvg))
+
+    zug = Zug()
+
+    svg = zug.getSvg(0, 0, 0, color=(255, 0, 0))
+    print(svg.to_string()[:800])
 
 
 if __name__ == "__main__":

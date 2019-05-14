@@ -714,9 +714,14 @@ class RenderTool(object):
                     binTrans = env.rail.grid[r, c]
                     self.gl.setRailAt(r, c, binTrans)
 
+        cmap = self.gl.get_cmap('hsv',
+            lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
+
         for iAgent, agent in enumerate(self.env.agents):
             if agent is None:
                 continue
+
+            oColor = self.gl.adaptColor(cmap(iAgent))
 
             new_direction = agent.direction
             action_isValid = False
@@ -726,7 +731,7 @@ class RenderTool(object):
                 new_direction, action_isValid = self.env.check_action(agent, iAction)
             
             if action_isValid:
-                self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
+                self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
             else:
                 pass
                 # print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)

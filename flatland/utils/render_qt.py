@@ -178,7 +178,7 @@ class QTSVG(GraphicsLayer):
         else:
             print("Illegal rail:", row, col, format(binTrans, "#018b")[2:])
 
-    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
+    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut, color=None):
         if iAgent < len(self.lwAgents):
             wAgent = self.lwAgents[iAgent]
             agentPrev = self.agents_prev[iAgent]
@@ -198,7 +198,7 @@ class QTSVG(GraphicsLayer):
                     # print("new dir:", iAgent, row, col, agentPrev.direction, iDirIn)
                     agentPrev.direction = iDirOut
                     agentPrev.old_direction = iDirIn
-                    sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut).to_string()
+                    sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut, color=color).to_string()
                     bySVG = bytearray(sSVG, encoding='utf-8')
                     wAgent.renderer().load(bySVG)
                     return
@@ -209,7 +209,7 @@ class QTSVG(GraphicsLayer):
             self.agents_prev.append(None)
 
         # Create a new widget for the agent
-        sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut).to_string()
+        sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut, color=color).to_string()
         bySVG = bytearray(sSVG, encoding='utf-8')
         svgWidget = QtSvg.QSvgWidget()
         svgWidget.renderer().load(bySVG)
