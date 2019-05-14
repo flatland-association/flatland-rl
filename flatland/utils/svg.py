@@ -65,19 +65,21 @@ class Zug(object):
 
     def getSvg(self, iAgent, iDirIn, iDirOut):
         delta_dir = (iDirOut - iDirIn) % 4
+        # if delta_dir != 0:
+        #    print("Bend:", iAgent, iDirIn, iDirOut)
 
         if delta_dir in (0, 2):
             svg = self.svg_straight.copy()
             svg.set_rotate(iDirIn * 90)
             return svg
         
-        if delta_dir == 1:
+        if delta_dir == 1:  # bend to right, eg N->E, E->S
             svg = self.svg_curve1.copy()
             svg.set_rotate((iDirIn - 1) * 90)
             return svg
 
-        elif delta_dir == 3:
-            svg = self.svg_curve1.copy()
+        elif delta_dir == 3:  # bend to left, eg N->W
+            svg = self.svg_curve2.copy()
             svg.set_rotate(iDirIn * 90)
             return svg
 
@@ -94,7 +96,7 @@ class Track(object):
             "ES NW": "Gleis_Kurve_unten_links.svg",
             "NE WS": "Gleis_Kurve_unten_rechts.svg",
             "NN SS": "Gleis_vertikal.svg",
-            "NN SS ES NW SE WN": "Weiche_Double_Slip.svg",
+            "NN SS EE WW ES NW SE WN": "Weiche_Double_Slip.svg",
             "EE WW EN SW": "Weiche_horizontal_oben_links.svg",
             "EE WW SE WN": "Weiche_horizontal_oben_rechts.svg",
             "EE WW ES NW": "Weiche_horizontal_unten_links.svg",

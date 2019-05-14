@@ -106,10 +106,7 @@ def main(render=True, delay=0.0):
 
     if render:
         env_renderer = RenderTool(env, gl="QTSVG")
-    # plt.figure(figsize=(5,5))
-    # fRedis = redis.Redis()
-
-    # handle = env.get_agent_handles()
+        # env_renderer = RenderTool(env, gl="QT")
 
     state_size = 105
     action_size = 4
@@ -167,6 +164,14 @@ def main(render=True, delay=0.0):
                 action_prob[action] += 1
                 action_dict.update({a: action})
 
+            if render:
+                env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step, action_dict=action_dict)
+                #time.sleep(10)
+                if delay > 0:
+                    time.sleep(delay)
+
+            iFrame += 1
+
             # Environment step
             next_obs, all_rewards, done, _ = env.step(action_dict)
             for a in range(env.get_num_agents()):
@@ -177,13 +182,6 @@ def main(render=True, delay=0.0):
                 agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
                 score += all_rewards[a]
 
-            if render:
-                env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step)
-                #time.sleep(10)
-                if delay > 0:
-                    time.sleep(delay)
-
-            iFrame += 1
 
             obs = next_obs.copy()
             if done['__all__']:

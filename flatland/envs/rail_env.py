@@ -208,34 +208,11 @@ class RailEnv(Environment):
                 # compute number of possible transitions in the current
                 # cell used to check for invalid actions
 
-                possible_transitions = self.rail.get_transitions((*agent.position, agent.direction))
-                num_transitions = np.count_nonzero(possible_transitions)
+                new_direction, transition_isValid = self.check_action(agent, action)
 
-                movement = agent.direction
-                # print(nbits,np.sum(possible_transitions))
-                if action == 1:
-                    movement = agent.direction - 1
-                    if num_transitions <= 1:
-                        transition_isValid = False
-
-                elif action == 3:
-                    movement = agent.direction + 1
-                    if num_transitions <= 1:
-                        transition_isValid = False
-
-                movement %= 4
-
-                if action == 2:
-                    if num_transitions == 1:
-                        # - dead-end, straight line or curved line;
-                        # movement will be the only valid transition
-                        # - take only available transition
-                        movement = np.argmax(possible_transitions)
-                        transition_isValid = True
-
-                new_position = get_new_position(agent.position, movement)
+                new_position = get_new_position(agent.position, new_direction)
                 # Is it a legal move?
-                # 1) transition allows the movement in the cell,
+                # 1) transition allows the new_direction in the cell,
                 # 2) the new cell is not empty (case 0),
                 # 3) the cell is free, i.e., no agent is currently in that cell
                 
@@ -259,7 +236,7 @@ class RailEnv(Environment):
                 if transition_isValid is None:
                     transition_isValid = self.rail.get_transition(
                         (*agent.position, agent.direction),
-                        movement)
+                        new_direction)
 
                 # cell_isFree = True
                 # for j in range(self.number_of_agents):
@@ -272,12 +249,13 @@ class RailEnv(Environment):
                         np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
 
                 if all([new_cell_isValid, transition_isValid, cell_isFree]):
-                    # move and change direction to face the movement that was
+                    # move and change direction to face the new_direction that was
                     # performed
                     # self.agents_position[i] = new_position
-                    # self.agents_direction[i] = movement
+                    # self.agents_direction[i] = new_direction
                     agent.position = new_position
-                    agent.direction = movement
+                    agent.old_direction = agent.direction
+                    agent.direction = new_direction
                 else:
                     # the action was not valid, add penalty
                     self.rewards_dict[iAgent] += invalid_action_penalty
@@ -306,6 +284,34 @@ class RailEnv(Environment):
         # on the next step)
         self.actions = [0] * self.get_num_agents()
         return self._get_observations(), self.rewards_dict, self.dones, {}
+
+    def check_action(self, agent, action):
+        transition_isValid = None
+        possible_transitions = self.rail.get_transitions((*agent.position, agent.direction))
+        num_transitions = np.count_nonzero(possible_transitions)
+
+        new_direction = agent.direction
+        # print(nbits,np.sum(possible_transitions))
+        if action == 1:
+            new_direction = agent.direction - 1
+            if num_transitions <= 1:
+                transition_isValid = False
+
+        elif action == 3:
+            new_direction = agent.direction + 1
+            if num_transitions <= 1:
+                transition_isValid = False
+
+        new_direction %= 4
+
+        if action == 2:
+            if num_transitions == 1:
+                # - dead-end, straight line or curved line;
+                # new_direction will be the only valid transition
+                # - take only available transition
+                new_direction = np.argmax(possible_transitions)
+                transition_isValid = True
+        return new_direction, transition_isValid
 
     def _get_observations(self):
         self.obs_dict = {}

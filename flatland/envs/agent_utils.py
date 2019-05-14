@@ -23,8 +23,7 @@ class EnvAgentStatic(object):
     position = attrib()
     direction = attrib()
     target = attrib()
-
-    next_handle = 0  # this is not properly implemented
+    old_direction = attrib(default=None)
 
     @classmethod
     def from_lists(cls, positions, directions, targets):

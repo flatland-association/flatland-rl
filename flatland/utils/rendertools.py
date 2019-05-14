@@ -476,7 +476,8 @@ class RenderTool(object):
             self, show=False, curves=True, spacing=False,
             arrows=False, agents=True, sRailColor="gray",
             frames=False, iEpisode=None, iStep=None,
-            iSelectedAgent=None):
+            iSelectedAgent=None,
+            action_dict=None):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -489,7 +490,7 @@ class RenderTool(object):
             self.renderEnv2(show, curves, spacing,
             arrows, agents, sRailColor,
             frames, iEpisode, iStep,
-            iSelectedAgent)
+            iSelectedAgent, action_dict)
             return
 
         # cell_size is a bit pointless with matplotlib - it does not relate to pixels,
@@ -691,7 +692,8 @@ class RenderTool(object):
             self, show=False, curves=True, spacing=False,
             arrows=False, agents=True, sRailColor="gray",
             frames=False, iEpisode=None, iStep=None,
-            iSelectedAgent=None):
+            iSelectedAgent=None,
+            action_dict=dict()):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -715,10 +717,24 @@ class RenderTool(object):
         for iAgent, agent in enumerate(self.env.agents):
             if agent is None:
                 continue
-            self.gl.setAgentAt(iAgent, *agent.position, agent.direction, agent.direction)
 
+            new_direction = agent.direction
+            action_isValid = False
+
+            if iAgent in action_dict:
+                iAction = action_dict[iAgent]
+                new_direction, action_isValid = self.env.check_action(agent, iAction)
+            
+            if action_isValid:
+                self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
+            else:
+                pass
+                # print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
+                # self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
+                
         self.gl.show()
-        self.gl.processEvents()
+        for i in range(3):
+            self.gl.processEvents()
 
         self.iFrame += 1
         return

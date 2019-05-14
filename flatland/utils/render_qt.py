@@ -175,38 +175,46 @@ class QTSVG(GraphicsLayer):
             svgWidget.renderer().load(bySVG)
             self.layout.addWidget(svgWidget, row, col)
             self.lwTrack.append(svgWidget)
+        else:
+            print("Illegal rail:", row, col, format(binTrans, "#018b")[2:])
 
     def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
         if iAgent < len(self.lwAgents):
             wAgent = self.lwAgents[iAgent]
             agentPrev = self.agents_prev[iAgent]
+
+            # If we have an existing agent widget, we can just move it
             if wAgent is not None:
                 self.layout.removeWidget(wAgent)
                 self.layout.addWidget(wAgent, row, col)
 
-                if agentPrev.direction == iDirIn:
-                    # print("moved ", iAgent, row, col, iDirIn)
+                # We can only reuse the image if noth new and old are straight and the same:
+                if iDirIn == iDirOut and \
+                        agentPrev.direction == iDirIn and \
+                        agentPrev.old_direction == agentPrev.direction:
                     return
                 else:
+                    # need to load new image
                     # print("new dir:", iAgent, row, col, agentPrev.direction, iDirIn)
-                    agentPrev.direction = iDirIn
+                    agentPrev.direction = iDirOut
+                    agentPrev.old_direction = iDirIn
                     sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut).to_string()
                     bySVG = bytearray(sSVG, encoding='utf-8')
                     wAgent.renderer().load(bySVG)
                     return
 
-        else:
-            # Ensure we have adequate slots in the list lwAgents
-            for i in range(len(self.lwAgents), iAgent+1):
-                self.lwAgents.append(None)
-                self.agents_prev.append(None)
+        # Ensure we have adequate slots in the list lwAgents
+        for i in range(len(self.lwAgents), iAgent+1):
+            self.lwAgents.append(None)
+            self.agents_prev.append(None)
 
+        # Create a new widget for the agent
         sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut).to_string()
         bySVG = bytearray(sSVG, encoding='utf-8')
         svgWidget = QtSvg.QSvgWidget()
         svgWidget.renderer().load(bySVG)
         self.lwAgents[iAgent] = svgWidget
-        self.agents_prev[iAgent] = EnvAgent((row, col), iDirIn, (0, 0))
+        self.agents_prev[iAgent] = EnvAgent((row, col), iDirOut, (0, 0), old_direction=iDirIn)
         self.layout.addWidget(svgWidget, row, col)
         # print("Created ", iAgent, row, col)
 
