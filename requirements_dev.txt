@@ -18,3 +18,4 @@ matplotlib==3.0.2
 PyQt5==5.12
 Pillow==5.4.1
 
+svgutils==0.3.1
