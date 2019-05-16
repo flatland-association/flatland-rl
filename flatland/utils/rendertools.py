@@ -472,12 +472,13 @@ class RenderTool(object):
                     xyMid + [-dx + dy, -dx - dy]])
                 self.gl.plot(*xyArrow.T, color=sColor)
 
-    def renderObs(self, agent_handles, observation_list):
+    def renderObs(self, agent_handles, observation_dict):
         """
+        Render the extent of the observation of each agent. All cells that appear in the agent obsrevation will be
+        highlighted.
+        :param agent_handles: List of agent indices to adapt color and get correct observation
+        :param observation_dict: dictionary containing sets of cells of the agent observation
 
-        :param agent_handles:
-        :param observation_list:
-        :return:
         """
         rt = self.__class__
 
@@ -485,7 +486,7 @@ class RenderTool(object):
 
         for agent in agent_handles:
             color = cmap(agent)
-            for visited_cell in observation_list[agent]:
+            for visited_cell in observation_dict[agent]:
                 cell_coord = array(visited_cell[:2])
                 cell_coord_trans = np.matmul(cell_coord, rt.grc2xy) + rt.xyHalf
                 self._draw_square(cell_coord_trans, 1 / 3, color)
