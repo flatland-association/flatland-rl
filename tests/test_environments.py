@@ -4,12 +4,37 @@ import numpy as np
 
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.generators import rail_from_GridTransitionMap_generator
+from flatland.envs.generators import complex_rail_generator
 from flatland.core.transitions import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.core.env_observation_builder import GlobalObsForRailEnv
 from flatland.envs.agent_utils import EnvAgent
 
 """Tests for `flatland` package."""
+
+
+def test_save_load():
+    env = RailEnv(width=10, height=10,
+                  rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=0),
+                  number_of_agents=2)
+    env.reset()
+    agent_1_pos = env.agents_static[0].position
+    agent_1_dir = env.agents_static[0].direction
+    agent_1_tar = env.agents_static[0].target
+    agent_2_pos = env.agents_static[1].position
+    agent_2_dir = env.agents_static[1].direction
+    agent_2_tar = env.agents_static[1].target
+    env.save("test_save.dat")
+    env.load("test_save.dat")
+    assert(env.width == 10)
+    assert(env.height == 10)
+    assert(len(env.agents) == 2)
+    assert(agent_1_pos == env.agents_static[0].position)
+    assert(agent_1_dir == env.agents_static[0].direction)
+    assert(agent_1_tar == env.agents_static[0].target)
+    assert(agent_2_pos == env.agents_static[1].position)
+    assert(agent_2_dir == env.agents_static[1].direction)
+    assert(agent_2_tar == env.agents_static[1].target)
 
 
 def test_rail_environment_single_agent():

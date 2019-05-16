@@ -111,7 +111,7 @@ class QTSVG(GraphicsLayer):
         self.wWinMain.resize(1000, 1000)
         self.wWinMain.show()
         self.wWinMain.setFocus()
-        
+
         self.track = self.track = Track()
         self.lwTrack = []
         self.zug = Zug()
@@ -152,21 +152,21 @@ class QTSVG(GraphicsLayer):
     def processEvents(self):
         self.app.processEvents()
         time.sleep(0.001)
-    
+
     def clear_rails(self):
         # print("Clear rails: ", len(self.lwTrack))
         for wRail in self.lwTrack:
             self.layout.removeWidget(wRail)
         self.lwTrack = []
         self.clear_agents()
-    
+
     def clear_agents(self):
         # print("Clear Agents: ", len(self.lwAgents))
         for wAgent in self.lwAgents:
             self.layout.removeWidget(wAgent)
         self.lwAgents = []
         self.agents_prev = []
-        
+
     def setRailAt(self, row, col, binTrans):
         if binTrans in self.track.dSvg:
             sSVG = self.track.dSvg[binTrans].to_string()
@@ -204,7 +204,7 @@ class QTSVG(GraphicsLayer):
                     return
 
         # Ensure we have adequate slots in the list lwAgents
-        for i in range(len(self.lwAgents), iAgent+1):
+        for i in range(len(self.lwAgents), iAgent + 1):
             self.lwAgents.append(None)
             self.agents_prev.append(None)
 
@@ -226,7 +226,7 @@ def main2():
     gl = QTGL(10, 10)
     for i in range(10):
         gl.beginFrame()
-        gl.plot([3+i, 4], [-4-i, -5], color="r")
+        gl.plot([3 + i, 4], [-4 - i, -5], color="r")
         gl.endFrame()
         time.sleep(1)
 

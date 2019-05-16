@@ -8,7 +8,7 @@ a GridTransitionMap object.
 import numpy as np
 
 # from flatland.core.env import Environment
-# from flatland.core.env_observation_builder import TreeObsForRailEnv
+# from flatland.envs.observations import TreeObsForRailEnv
 
 # from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 # from flatland.core.transition_map import GridTransitionMap

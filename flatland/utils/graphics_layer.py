@@ -54,7 +54,7 @@ class GraphicsLayer(object):
                 color = tuple((gcolor[:3] * 255).astype(int))
         else:
             color = self.tColGrid
-        
+
         if lighten:
             color = tuple([int(255 - (255 - iRGB) / 3) for iRGB in color])
 
@@ -65,6 +65,6 @@ class GraphicsLayer(object):
 
     def setRailAt(self, row, col, binTrans):
         pass
-    
+
     def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
         pass

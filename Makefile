@@ -71,7 +71,8 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	sphinx-apidoc -o docs/ flatland
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
-	export HOME=$(pwd)
+	# N.B. HOME variable required by pydeps!
+	export HOME=${PWD}
 	python3 -m pydeps flatland -o docs/_build/html/flatland.svg
 	$(BROWSER) docs/_build/html/index.html
 

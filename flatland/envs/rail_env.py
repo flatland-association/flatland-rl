@@ -5,10 +5,10 @@ Generator functions are functions that take width, height and num_resets as argu
 a GridTransitionMap object.
 """
 import numpy as np
-import pickle
+import msgpack
 
 from flatland.core.env import Environment
-from flatland.core.env_observation_builder import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.env_utils import get_new_position
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
@@ -157,7 +157,7 @@ class RailEnv(Environment):
         #    self.dones[handle] = False
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
         # perhaps dones should be part of each agent.
-        
+
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
 
@@ -215,7 +215,7 @@ class RailEnv(Environment):
                 # 1) transition allows the new_direction in the cell,
                 # 2) the new cell is not empty (case 0),
                 # 3) the cell is free, i.e., no agent is currently in that cell
-                
+
                 # if (
                 #        new_position[1] >= self.width or
                 #        new_position[0] >= self.height or
@@ -226,11 +226,11 @@ class RailEnv(Environment):
                 #     new_cell_isValid = False
 
                 new_cell_isValid = (
-                        np.array_equal(  # Check the new position is still in the grid
-                            new_position,
-                            np.clip(new_position, [0, 0], [self.height-1, self.width-1]))
-                        and  # check the new position has some transitions (ie is not an empty cell)
-                        self.rail.get_transitions(new_position) > 0)
+                    np.array_equal(  # Check the new position is still in the grid
+                        new_position,
+                        np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
+                    and  # check the new position has some transitions (ie is not an empty cell)
+                    self.rail.get_transitions(new_position) > 0)
 
                 # If transition validity hasn't been checked yet.
                 if transition_isValid is None:
@@ -246,7 +246,7 @@ class RailEnv(Environment):
                 # Check the new position is not the same as any of the existing agent positions
                 # (including itself, for simplicity, since it is moving)
                 cell_isFree = not np.any(
-                        np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
+                    np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
 
                 if all([new_cell_isValid, transition_isValid, cell_isFree]):
                     # move and change direction to face the new_direction that was
@@ -278,7 +278,7 @@ class RailEnv(Environment):
         # if num_agents_in_target_position == self.number_of_agents:
         if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
             self.dones["__all__"] = True
-            self.rewards_dict = [0*r+global_reward for r in self.rewards_dict]
+            self.rewards_dict = [0 * r + global_reward for r in self.rewards_dict]
 
         # Reset the step actions (in case some agent doesn't 'register_action'
         # on the next step)
@@ -324,20 +324,37 @@ class RailEnv(Environment):
         # TODO:
         pass
 
-    def save(self, sFilename):
-        dSave = {
-            "grid": self.rail.grid,
-            "agents_static": self.agents_static
-            }
-        with open(sFilename, "wb") as fOut:
-            pickle.dump(dSave, fOut)
+    def get_full_state_msg(self):
+        grid_data = self.rail.grid.tolist()
+        agent_static_data = [agent.to_list() for agent in self.agents_static]
+        agent_data = [agent.to_list() for agent in self.agents]
+        msg_data = {
+            "grid": grid_data,
+            "agents_static": agent_static_data,
+            "agents": agent_data}
+        return msgpack.packb(msg_data, use_bin_type=True)
 
-    def load(self, sFilename):
-        with open(sFilename, "rb") as fIn:
-            dLoad = pickle.load(fIn)
-            self.rail.grid = dLoad["grid"]
-            self.height, self.width = self.rail.grid.shape
-            self.agents_static = dLoad["agents_static"]
-            self.agents = [None] * self.get_num_agents()
-            self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-            
+    def get_agent_state_msg(self):
+        agent_data = [agent.to_list() for agent in self.agents]
+        msg_data = {
+            "agents": agent_data}
+        return msgpack.packb(msg_data, use_bin_type=True)
+
+    def set_full_state_msg(self, msg_data):
+        data = msgpack.unpackb(msg_data, use_list=False)
+        self.rail.grid = np.array(data[b"grid"])
+        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2]) for d in data[b"agents_static"]]
+        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4]) for d in data[b"agents"]]
+        # setup with loaded data
+        self.height, self.width = self.rail.grid.shape
+        # self.agents = [None] * self.get_num_agents()
+        self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
+
+    def save(self, filename):
+        with open(filename, "wb") as file_out:
+            file_out.write(self.get_full_state_msg())
+
+    def load(self, filename):
+        with open(filename, "rb") as file_in:
+            load_data = file_in.read()
+            self.set_full_state_msg(load_data)

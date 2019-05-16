@@ -1,6 +1,6 @@
 from flatland.envs.rail_env import *
 from flatland.envs.generators import *
-from flatland.core.env_observation_builder import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.utils.rendertools import *
 from flatland.baselines.dueling_double_dqn import Agent
 from collections import deque
@@ -32,8 +32,8 @@ env = RailEnv(width=10,
 """
 env = RailEnv(width=15,
               height=15,
-              rail_generator=complex_rail_generator(nr_start_goal=5, min_dist=5, max_dist=99999, seed=0),
-              number_of_agents=5)
+              rail_generator=complex_rail_generator(nr_start_goal=10, min_dist=5, max_dist=99999, seed=0),
+              number_of_agents=3)
 """
 env = RailEnv(width=20,
               height=20,
@@ -50,7 +50,7 @@ action_size = 4
 n_trials = 15000
 eps = 1.
 eps_end = 0.005
-eps_decay = 0.998
+eps_decay = 0.9995
 action_dict = dict()
 final_action_dict = dict()
 scores_window = deque(maxlen=100)
@@ -62,9 +62,9 @@ action_prob = [0] * 4
 agent_obs = [None] * env.get_num_agents()
 agent_next_obs = [None] * env.get_num_agents()
 agent = Agent(state_size, action_size, "FC", 0)
-# agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
+agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
-demo = False
+demo = True
 
 
 def max_lt(seq, val):
