@@ -130,7 +130,7 @@ class RenderTool(object):
             self.gl = PILGL(env.width, env.height)
         elif gl == "QTSVG":
             self.gl = QTSVG(env.width, env.height)
-
+        
         self.new_rail = True
 
     def set_new_rail(self):
@@ -153,14 +153,14 @@ class RenderTool(object):
 
     def plotAgents(self, targets=True, iSelectedAgent=None):
         cmap = self.gl.get_cmap('hsv',
-                                lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
+            lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
 
         for iAgent, agent in enumerate(self.env.agents_static):
             if agent is None:
                 continue
             oColor = cmap(iAgent)
             self.plotAgent(agent.position, agent.direction, oColor, target=agent.target if targets else None,
-                           static=True, selected=iAgent == iSelectedAgent)
+                static=True, selected=iAgent == iSelectedAgent)
 
         for iAgent, agent in enumerate(self.env.agents):
             if agent is None:
@@ -488,9 +488,9 @@ class RenderTool(object):
 
         if not self.gl.is_raster():
             self.renderEnv2(show, curves, spacing,
-                            arrows, agents, sRailColor,
-                            frames, iEpisode, iStep,
-                            iSelectedAgent, action_dict)
+            arrows, agents, sRailColor,
+            frames, iEpisode, iStep,
+            iSelectedAgent, action_dict)
             return
 
         # cell_size is a bit pointless with matplotlib - it does not relate to pixels,
@@ -667,16 +667,16 @@ class RenderTool(object):
         for i in range(nDepth):
             nDepthNodes = nBranchFactor**i
             # rScale = nBranchFactor ** (nDepth - i)
-            rShrinkDepth = 1 / (i + 1)
+            rShrinkDepth = 1/(i+1)
             # gX1 = np.linspace(-nDepthNodes / 2, nDepthNodes / 2, nDepthNodes) * rShrinkDepth
-
-            gX1 = np.linspace(-(nDepthNodes - 1), (nDepthNodes - 1), nDepthNodes) * rShrinkDepth
+            
+            gX1 = np.linspace(-(nDepthNodes-1), (nDepthNodes-1), nDepthNodes) * rShrinkDepth
             gY1 = np.ones((nDepthNodes)) * i
             gZ1 = np.zeros((nDepthNodes))
-
+            
             gP1 = array([gX1, gY1, gZ1])
             gP01 = np.append(gP0, gP1, axis=1)
-
+            
             if nDepthNodes > 1:
                 nDepthNodesPrev = nDepthNodes / nBranchFactor
                 giP0 = np.repeat(np.arange(nDepthNodesPrev), nBranchFactor)
@@ -687,7 +687,7 @@ class RenderTool(object):
                 self.gl.plot(gP01[0], -gP01[1], lines=giLinePoints, color="gray")
 
             gP0 = array([gX1, gY1, gZ1])
-
+    
     def renderEnv2(
             self, show=False, curves=True, spacing=False,
             arrows=False, agents=True, sRailColor="gray",
@@ -715,7 +715,7 @@ class RenderTool(object):
                     self.gl.setRailAt(r, c, binTrans)
 
         cmap = self.gl.get_cmap('hsv',
-                                lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
+            lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
 
         for iAgent, agent in enumerate(self.env.agents):
             if agent is None:
@@ -729,14 +729,14 @@ class RenderTool(object):
             if iAgent in action_dict:
                 iAction = action_dict[iAgent]
                 new_direction, action_isValid = self.env.check_action(agent, iAction)
-
+            
             if action_isValid:
                 self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
             else:
                 pass
                 # print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
                 # self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
-
+                
         self.gl.show()
         for i in range(3):
             self.gl.processEvents()
