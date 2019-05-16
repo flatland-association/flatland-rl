@@ -329,6 +329,11 @@ class RailEnv(Environment):
         grid_data = self.rail.grid.tolist()
         agent_static_data = [agent.to_list() for agent in self.agents_static]
         agent_data = [agent.to_list() for agent in self.agents]
+
+        msgpack.packb(grid_data)
+        msgpack.packb(agent_data)
+        msgpack.packb(agent_static_data)
+
         msg_data = {
             "grid": grid_data,
             "agents_static": agent_static_data,
