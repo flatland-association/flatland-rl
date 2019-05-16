@@ -23,14 +23,21 @@ class EnvAgentStatic(object):
     position = attrib()
     direction = attrib()
     target = attrib()
-    old_direction = attrib(default=None)
+
+    def __init__(self, position, direction, target):
+        self.position = position
+        self.direction = direction
+        self.target = target
 
     @classmethod
     def from_lists(cls, positions, directions, targets):
         """ Create a list of EnvAgentStatics from lists of positions, directions and targets
         """
         return list(starmap(EnvAgentStatic, zip(positions, directions, targets)))
-        
+
+    def to_list(self):
+        return [self.position, self.direction, self.target]
+
 
 @attrs
 class EnvAgent(EnvAgentStatic):
@@ -41,6 +48,15 @@ class EnvAgent(EnvAgentStatic):
         forcing the env to refer to it in the EnvAgentStatic
     """
     handle = attrib(default=None)
+    old_direction = attrib(default=None)
+
+    def __init__(self, position, direction, target, handle, old_direction):
+        super(EnvAgent, self).__init__(position, direction, target)
+        self.handle = handle
+        self.old_direction = old_direction 
+
+    def to_list(self):
+        return [self.position, self.direction, self.target, self.handle, self.old_direction]
 
     @classmethod
     def from_static(cls, oStatic):

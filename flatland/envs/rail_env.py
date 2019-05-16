@@ -5,7 +5,7 @@ Generator functions are functions that take width, height and num_resets as argu
 a GridTransitionMap object.
 """
 import numpy as np
-import pickle
+import msgpack
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import TreeObsForRailEnv
@@ -324,20 +324,39 @@ class RailEnv(Environment):
         # TODO:
         pass
 
-    def save(self, sFilename):
-        dSave = {
-            "grid": self.rail.grid,
-            "agents_static": self.agents_static
+    def get_full_state_msg(self):
+        grid_data = self.rail.grid.tolist()
+        agent_static_data = [agent.to_list() for agent in self.agents_static]
+        agent_data = [agent.to_list() for agent in self.agents]
+        msg_data = {
+            "grid": grid_data,
+            "agents_static": agent_static_data,
+            "agents": agent_data
             }
-        with open(sFilename, "wb") as fOut:
-            pickle.dump(dSave, fOut)
+        return msgpack.packb(msg_data, use_bin_type=True)
 
-    def load(self, sFilename):
-        with open(sFilename, "rb") as fIn:
-            dLoad = pickle.load(fIn)
-            self.rail.grid = dLoad["grid"]
-            self.height, self.width = self.rail.grid.shape
-            self.agents_static = dLoad["agents_static"]
-            self.agents = [None] * self.get_num_agents()
-            self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-            
+    def get_agent_state_msg(self):
+        agent_data = [agent.to_list() for agent in self.agents]
+        msg_data = {
+            "agents": agent_data
+            }
+        return msgpack.packb(msg_data, use_bin_type=True)
+
+    def set_full_state_msg(self, msg_data):
+        data = msgpack.unpackb(msg_data, use_list=False)
+        self.rail.grid = np.array(data[b"grid"])
+        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2]) for d in data[b"agents_static"]]
+        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4]) for d in data[b"agents"]]
+        # setup with loaded data
+        self.height, self.width = self.rail.grid.shape
+        # self.agents = [None] * self.get_num_agents()
+        self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
+
+    def save(self, filename):
+        with open(filename, "wb") as file_out:
+            file_out.write(self.get_full_state_msg())
+
+    def load(self, filename):
+        with open(filename, "rb") as file_in:
+            load_data = file_in.read()
+            self.set_full_state_msg(load_data)
