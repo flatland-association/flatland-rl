@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from flatland.envs.rail_env import *
 from flatland.envs.generators import *
-from flatland.core.env_observation_builder import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.utils.rendertools import *
 
 random.seed(0)

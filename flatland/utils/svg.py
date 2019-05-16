@@ -30,10 +30,10 @@ class SVG(object):
 
     def merge(self, svg2):
         svg3 = svg2.copy()
-        
+
         svg3.renumber_styles(offset=10)
         svg3.eStyle.text = self.eStyle.text + "\n" + svg3.eStyle.text
-        
+
         for child in self.svg.root:
             if not child.tag.endswith("style"):
                 svg3.svg.root.append(child)
@@ -48,12 +48,12 @@ class SVG(object):
             lEl = self.svg.root.xpath("//*[@class='{}']".format(sClass))
             for el in lEl:
                 el.attrib["class"] = "st{}".format(iStyle + offset)
-        
-            sStyle2 = str(iStyle+offset)
+
+            sStyle2 = str(iStyle + offset)
 
             sNewStyle = "\t.st" + sStyle2 + "{" + self.dStyles[sStyle] + "}\n"
             sNewStyles += sNewStyle
-        
+
         self.eStyle.text = sNewStyles
 
     def set_style_color(self, style_name, color):
@@ -63,7 +63,7 @@ class SVG(object):
                 sValue = "fill:#" + "".join([format(col, "#04x")[2:] for col in color]) + ";"
             sNewStyle = "\t.st" + sKey + "{" + sValue + "}\n"
             sNewStyles += sNewStyle
-        
+
         self.eStyle.text = sNewStyles
 
     def set_rotate(self, angle):
@@ -87,7 +87,7 @@ class Zug(object):
         if delta_dir in (0, 2):
             svg = self.svg_straight.copy()
             svg.set_rotate(iDirIn * 90)
-        
+
         if delta_dir == 1:  # bend to right, eg N->E, E->S
             svg = self.svg_curve1.copy()
             svg.set_rotate((iDirIn - 1) * 90)
@@ -124,8 +124,7 @@ class Track(object):
             "NN SS EN SW": "Weiche_vertikal_oben_links.svg",
             "NN SS SE WN": "Weiche_vertikal_oben_rechts.svg",
             "NN SS NW ES": "Weiche_vertikal_unten_links.svg",
-            "NN SS NE WS": "Weiche_vertikal_unten_rechts.svg",
-            }
+            "NN SS NE WS": "Weiche_vertikal_unten_rechts.svg"}
 
         self.dSvg = {}
 
@@ -136,8 +135,7 @@ class Track(object):
         svgBG = SVG("./svg/Background_#91D1DD.svg")
 
         for sTrans, sFile in dFiles.items():
-            
-            svg = SVG("./svg/"+sFile)
+            svg = SVG("./svg/" + sFile)
 
             lTrans16 = ["0"] * 16
             for sTran in sTrans.split(" "):
@@ -165,7 +163,7 @@ class Track(object):
 def main():
     # svg1 = SVG("./svg/Gleis_vertikal.svg")
     # svg2 = SVG("./svg/Zug_1_Weiche_#0091ea.svg")
-    
+
     # svg3 = svg2.merge(svg1)
     # svg3.set_rotate(90)
 
@@ -188,4 +186,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -39,7 +39,7 @@ class PILGL(GraphicsLayer):
         r = np.sqrt(s)
         gPoints = np.stack([np.atleast_1d(gX), -np.atleast_1d(gY)]).T * self.nPixCell
         for x, y in gPoints:
-            self.draw.rectangle([(x-r, y-r), (x+r, y+r)], fill=color, outline=color)
+            self.draw.rectangle([(x - r, y - r), (x + r, y + r)], fill=color, outline=color)
 
     def text(self, *args, **kwargs):
         pass
