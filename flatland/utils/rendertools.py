@@ -105,8 +105,7 @@ class RenderTool(object):
     nPixHalf = nPixCell / 2
     xyHalf = array([nPixHalf, -nPixHalf])
     grc2xy = array([[0, -nPixCell], [nPixCell, 0]])
-    gGrid = array(np.meshgrid(np.arange(10), -np.arange(10))) * \
-            array([[[nPixCell]], [[nPixCell]]])
+    gGrid = array(np.meshgrid(np.arange(10), -np.arange(10))) * array([[[nPixCell]], [[nPixCell]]])
     # xyPixHalf = xr.DataArray([nPixHalf, -nPixHalf],
     #                         dims="xy",
     #                         coords={"xy": ["x", "y"]})
@@ -400,11 +399,11 @@ class RenderTool(object):
 
     def drawTrans2(
         self,
-        xyLine, xyCentre,
-        rotation, bDeadEnd=False,
-        sColor="gray",
-        bArrow=True,
-        spacing=0.1):
+            xyLine, xyCentre,
+            rotation, bDeadEnd=False,
+            sColor="gray",
+            bArrow=True,
+            spacing=0.1):
         """
         gLine is a numpy 2d array of points,
         in the plotting space / coords.
@@ -493,10 +492,8 @@ class RenderTool(object):
 
     def renderEnv(
         self, show=False, curves=True, spacing=False,
-        arrows=False, agents=True, obsrender=True, sRailColor="gray",
-        frames=False, iEpisode=None, iStep=None,
-        iSelectedAgent=None,
-        action_dict=None):
+            arrows=False, agents=True, obsrender=True, sRailColor="gray", frames=False, iEpisode=None, iStep=None,
+            iSelectedAgent=None, action_dict=None):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -710,11 +707,9 @@ class RenderTool(object):
             gP0 = array([gX1, gY1, gZ1])
 
     def renderEnv2(
-        self, show=False, curves=True, spacing=False,
-        arrows=False, agents=True, sRailColor="gray",
-        frames=False, iEpisode=None, iStep=None,
-        iSelectedAgent=None,
-        action_dict=dict()):
+        self, show=False, curves=True, spacing=False, arrows=False, agents=True, renderobs=True, sRailColor="gray",
+            frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
+            action_dict=dict()):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
