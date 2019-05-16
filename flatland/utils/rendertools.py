@@ -471,6 +471,23 @@ class RenderTool(object):
                     xyMid,
                     xyMid + [-dx + dy, -dx - dy]])
                 self.gl.plot(*xyArrow.T, color=sColor)
+    def renderObs(self, agent_handles, observation_list):
+        """
+
+        :param agent_handles:
+        :param observation_list:
+        :return:
+        """
+        rt = self.__class__
+
+        cmap = self.gl.get_cmap('hsv',lut=max(len(self.env.agents),len(self.env.agents_static)+1))
+
+        for agent in agent_handles:
+            color = cmap(agent)
+            for visited_cell in observation_list[agent]:
+                cell_coord = array(visited_cell[:2])
+                cell_coord_trans = np.matmul(cell_coord,rt.grc2xy)+rt.xyHalf
+                self._draw_square(cell_coord_trans,1 / 3, color)
 
     def renderEnv(
             self, show=False, curves=True, spacing=False,
@@ -612,6 +629,7 @@ class RenderTool(object):
         if agents:
             self.plotAgents(targets=True, iSelectedAgent=iSelectedAgent)
 
+        self.renderObs(range(env.get_num_agents()), env.dev_obs_dict)
         # Draw some textual information like fps
         yText = [-0.3, -0.6, -0.9]
         if frames:

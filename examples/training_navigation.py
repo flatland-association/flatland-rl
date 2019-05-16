@@ -24,7 +24,7 @@ transition_probability = [15,  # empty cell - Case 0
                           1]  # Case 2b (10) - simple switch mirrored
 
 # Example generate a random rail
-"""
+
 env = RailEnv(width=10,
               height=10,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
@@ -34,6 +34,7 @@ env = RailEnv(width=15,
               height=15,
               rail_generator=complex_rail_generator(nr_start_goal=10, min_dist=5, max_dist=99999, seed=0),
               number_of_agents=3)
+"""
 """
 env = RailEnv(width=20,
               height=20,
@@ -116,7 +117,8 @@ def norm_obs_clip(obs, clip_min=-1, clip_max=1):
 for trials in range(1, n_trials + 1):
 
     # Reset environment
-    obs, _ = env.reset()
+    obs, dev_obs = env.reset()
+    env.dev_obs_dict = dev_obs
     final_obs = obs.copy()
     final_obs_next = obs.copy()
     for a in range(env.get_num_agents()):
@@ -148,8 +150,8 @@ for trials in range(1, n_trials + 1):
             action_dict.update({a: action})
 
         # Environment step
-        (next_obs,_), all_rewards, done, _ = env.step(action_dict)
-
+        (next_obs, dev_obs), all_rewards, done, _ = env.step(action_dict)
+        env.dev_obs_dict = dev_obs
         for a in range(env.get_num_agents()):
             data, distance = env.obs_builder.split_tree(tree=np.array(next_obs[a]), num_features_per_node=5,
                                                         current_depth=0)

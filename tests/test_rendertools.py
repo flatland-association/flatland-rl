@@ -6,10 +6,10 @@ Tests for `flatland` package.
 
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 import numpy as np
-<<<<<<< HEAD
-=======
+#<<<<<<< HEAD
+#=======
 # import os
->>>>>>> dc2fa1ee0244b15c76d89ab768c5e1bbd2716147
+#>>>>>>> dc2fa1ee0244b15c76d89ab768c5e1bbd2716147
 import sys
 
 import matplotlib.pyplot as plt

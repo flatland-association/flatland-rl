@@ -98,7 +98,7 @@ class RailEnv(Environment):
 
         self.obs_dict = {}
         self.rewards_dict = {}
-
+        self.dev_obs_dict = {}
         # self.agents_handles = list(range(self.number_of_agents))
 
         # self.agents_position = []
