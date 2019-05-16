@@ -8,7 +8,7 @@ import numpy as np
 import msgpack
 
 from flatland.core.env import Environment
-from flatland.core.env_observation_builder import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.env_utils import get_new_position
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
@@ -157,7 +157,7 @@ class RailEnv(Environment):
         #    self.dones[handle] = False
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
         # perhaps dones should be part of each agent.
-        
+
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
 
@@ -215,7 +215,7 @@ class RailEnv(Environment):
                 # 1) transition allows the new_direction in the cell,
                 # 2) the new cell is not empty (case 0),
                 # 3) the cell is free, i.e., no agent is currently in that cell
-                
+
                 # if (
                 #        new_position[1] >= self.width or
                 #        new_position[0] >= self.height or
@@ -226,11 +226,11 @@ class RailEnv(Environment):
                 #     new_cell_isValid = False
 
                 new_cell_isValid = (
-                        np.array_equal(  # Check the new position is still in the grid
-                            new_position,
-                            np.clip(new_position, [0, 0], [self.height-1, self.width-1]))
-                        and  # check the new position has some transitions (ie is not an empty cell)
-                        self.rail.get_transitions(new_position) > 0)
+                    np.array_equal(  # Check the new position is still in the grid
+                        new_position,
+                        np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
+                    and  # check the new position has some transitions (ie is not an empty cell)
+                    self.rail.get_transitions(new_position) > 0)
 
                 # If transition validity hasn't been checked yet.
                 if transition_isValid is None:
@@ -246,7 +246,7 @@ class RailEnv(Environment):
                 # Check the new position is not the same as any of the existing agent positions
                 # (including itself, for simplicity, since it is moving)
                 cell_isFree = not np.any(
-                        np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
+                    np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
 
                 if all([new_cell_isValid, transition_isValid, cell_isFree]):
                     # move and change direction to face the new_direction that was
@@ -278,7 +278,7 @@ class RailEnv(Environment):
         # if num_agents_in_target_position == self.number_of_agents:
         if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
             self.dones["__all__"] = True
-            self.rewards_dict = [0*r+global_reward for r in self.rewards_dict]
+            self.rewards_dict = [0 * r + global_reward for r in self.rewards_dict]
 
         # Reset the step actions (in case some agent doesn't 'register_action'
         # on the next step)
@@ -331,15 +331,13 @@ class RailEnv(Environment):
         msg_data = {
             "grid": grid_data,
             "agents_static": agent_static_data,
-            "agents": agent_data
-            }
+            "agents": agent_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def get_agent_state_msg(self):
         agent_data = [agent.to_list() for agent in self.agents]
         msg_data = {
-            "agents": agent_data
-            }
+            "agents": agent_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def set_full_state_msg(self, msg_data):

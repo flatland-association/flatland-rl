@@ -17,7 +17,7 @@ import os
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 from flatland.envs.generators import complex_rail_generator
 # from flatland.core.transitions import RailEnvTransitions
-from flatland.core.env_observation_builder import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 import flatland.utils.rendertools as rt
 from examples.play_model import Player
 from flatland.envs.env_utils import mirror
@@ -110,8 +110,7 @@ class View(object):
             self.wTab.set_title(i, title)
         self.wTab.children = [
             VBox([self.wDebug, self.wDebug_move]),
-            VBox([self.wRegenMethod, self.wReplaceAgents])
-            ]
+            VBox([self.wRegenMethod, self.wReplaceAgents])]
 
         # Progress bar intended for stepping in the background (not yet working)
         self.wProg_steps = ipywidgets.IntProgress(value=0, min=0, max=20, step=1, description="Step")
@@ -121,21 +120,20 @@ class View(object):
             dict(name="Refresh", method=self.controller.refresh, tip="Redraw only"),
             dict(name="Clear", method=self.controller.clear, tip="Clear rails and agents"),
             dict(name="Reset", method=self.controller.reset,
-                tip="Standard env reset, including regen rail + agents"),
+                 tip="Standard env reset, including regen rail + agents"),
             dict(name="Restart Agents", method=self.controller.restartAgents,
-                tip="Move agents back to start positions"),
+                 tip="Move agents back to start positions"),
             dict(name="Regenerate", method=self.controller.regenerate,
-                tip="Regenerate the rails using the method selected below"),
+                 tip="Regenerate the rails using the method selected below"),
             dict(name="Load", method=self.controller.load),
             dict(name="Save", method=self.controller.save),
             dict(name="Step", method=self.controller.step),
-            dict(name="Run Steps", method=self.controller.start_run),
-        ]
+            dict(name="Run Steps", method=self.controller.start_run)]
 
         self.lwButtons = []
         for dButton in ldButtons:
             wButton = ipywidgets.Button(description=dButton["name"],
-                tooltip=dButton["tip"] if "tip" in dButton else dButton["name"])
+                                        tooltip=dButton["tip"] if "tip" in dButton else dButton["name"])
             wButton.on_click(dButton["method"])
             self.lwButtons.append(wButton)
 
@@ -145,8 +143,7 @@ class View(object):
             self.wSize,
             self.wNAgents,
             self.wProg_steps,
-            self.wTab
-            ])
+            self.wTab])
 
         self.wMain = HBox([self.wImage, self.wVbox_controls])
 
@@ -164,7 +161,7 @@ class View(object):
         with self.wOutput:
             # plt.figure(figsize=(10, 10))
             self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray",
-                show=False, iSelectedAgent=self.model.iSelectedAgent)
+                               show=False, iSelectedAgent=self.model.iSelectedAgent)
             img = self.oRT.getImage()
             # plt.clf()
             # plt.close()
@@ -607,7 +604,7 @@ class EditorModel(object):
 
         # Has the user clicked on an existing agent?
         iAgent = self.find_agent_at(rcCell)
-        
+
         if iAgent is None:
             # No
             if self.iSelectedAgent is None:
@@ -656,7 +653,7 @@ class EditorModel(object):
                 # self.log("step ", i)
                 self.step()
                 time.sleep(0.2)
-                wProg_steps.value = i+1   # indicate progress on bar
+                wProg_steps.value = i + 1   # indicate progress on bar
         finally:
             self.thread = None
 
@@ -683,6 +680,3 @@ class EditorModel(object):
                    binTrans,
                    sbinTrans,
                    [sbinTrans[i:(i + 4)] for i in range(0, len(sbinTrans), 4)])
-
-
-    

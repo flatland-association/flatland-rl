@@ -1,6 +1,6 @@
 from flatland.envs.rail_env import *
 from flatland.envs.generators import *
-from flatland.core.env_observation_builder import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.utils.rendertools import *
 from flatland.baselines.dueling_double_dqn import Agent
 from collections import deque

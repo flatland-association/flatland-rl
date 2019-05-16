@@ -6,13 +6,12 @@ Tests for `flatland` package.
 
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 import numpy as np
-import os
 import sys
 
 import matplotlib.pyplot as plt
 
 import flatland.utils.rendertools as rt
-from flatland.core.env_observation_builder import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 
 
 def checkFrozenImage(oRT, sFileImage, resave=False):
@@ -49,7 +48,7 @@ def test_render_env(save_new_images=False):
     oEnv.rail.load_transition_map(sfTestEnv)
     oRT = rt.RenderTool(oEnv)
     oRT.renderEnv()
-    
+
     checkFrozenImage(oRT, "basic-env.npz", resave=save_new_images)
 
     oRT = rt.RenderTool(oEnv, gl="PIL")

@@ -53,7 +53,7 @@ class EnvAgent(EnvAgentStatic):
     def __init__(self, position, direction, target, handle, old_direction):
         super(EnvAgent, self).__init__(position, direction, target)
         self.handle = handle
-        self.old_direction = old_direction 
+        self.old_direction = old_direction
 
     def to_list(self):
         return [self.position, self.direction, self.target, self.handle, self.old_direction]
@@ -72,7 +72,6 @@ class EnvAgent(EnvAgentStatic):
         """
         if handles is None:
             handles = range(len(lEnvAgentStatic))
-            
+
         return [EnvAgent(**oEAS.__dict__, handle=handle)
                 for handle, oEAS in zip(handles, lEnvAgentStatic)]
-
