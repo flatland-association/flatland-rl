@@ -6,7 +6,7 @@ Tests for `flatland` package.
 
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 import numpy as np
-import os
+# import os
 import sys
 
 import matplotlib.pyplot as plt
