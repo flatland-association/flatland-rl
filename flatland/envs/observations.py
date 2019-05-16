@@ -396,6 +396,9 @@ class TreeObsForRailEnv(ObservationBuilder):
                 observation = observation + branch_observation
                 if len(branch_visited) != 0:
                     visited.union(branch_visited)
+                    print(visited)
+                    print(branch_visited)
+                    print("-------")
             else:
                 num_cells_to_fill_in = 0
                 pow4 = 1
