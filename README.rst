@@ -92,6 +92,10 @@ flatland
 ========
 TODO: explain the interface here
 
+Module Dependencies
+===================
+.. image:: flatland.svg
+
 
 Authors
 --------
@@ -102,6 +106,7 @@ Authors
 * Erik Nygren <erik.nygren@sbb.ch>
 * Adrian Egli <adrian.egli@sbb.ch>
 * Vaibhav Agrawal <theinfamouswayne@gmail.com>
+* Christian Eichenberger <christian.markus.eichenberger@sbb.ch>
 
 
 <please fill yourself in>
