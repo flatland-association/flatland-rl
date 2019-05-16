@@ -385,7 +385,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                                           depth + 1)
                 observation = observation + branch_observation
                 if len(branch_visited) != 0:
-                    visited.union(branch_visited)
+                    visited = visited.union(branch_visited)
             elif last_isSwitch and possible_transitions[branch_direction]:
                 new_cell = self._new_position(position, branch_direction)
                 branch_observation, branch_visited = self._explore_branch(handle,
@@ -395,10 +395,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                                           depth + 1)
                 observation = observation + branch_observation
                 if len(branch_visited) != 0:
-                    visited.union(branch_visited)
-                    print(visited)
-                    print(branch_visited)
-                    print("-------")
+                    visited = visited.union(branch_visited)
             else:
                 num_cells_to_fill_in = 0
                 pow4 = 1
