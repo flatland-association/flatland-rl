@@ -116,7 +116,7 @@ def norm_obs_clip(obs, clip_min=-1, clip_max=1):
 for trials in range(1, n_trials + 1):
 
     # Reset environment
-    obs = env.reset()
+    obs, _ = env.reset()
     final_obs = obs.copy()
     final_obs_next = obs.copy()
     for a in range(env.get_num_agents()):
@@ -148,7 +148,7 @@ for trials in range(1, n_trials + 1):
             action_dict.update({a: action})
 
         # Environment step
-        next_obs, all_rewards, done, _ = env.step(action_dict)
+        (next_obs,_), all_rewards, done, _ = env.step(action_dict)
 
         for a in range(env.get_num_agents()):
             data, distance = env.obs_builder.split_tree(tree=np.array(next_obs[a]), num_features_per_node=5,
