@@ -19,3 +19,4 @@ PyQt5==5.12
 Pillow==5.4.1
 
 msgpack==0.6.1
+svgutils==0.3.1
