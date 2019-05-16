@@ -229,7 +229,8 @@ class TreeObsForRailEnv(ObservationBuilder):
                     num_cells_to_fill_in += pow4
                     pow4 *= 4
                 observation = observation + [-np.inf, -np.inf, -np.inf, -np.inf, -np.inf] * num_cells_to_fill_in
-        return observation, visited
+        self.env.dev_obs_dict[handle] = visited
+        return observation
 
     def _explore_branch(self, handle, position, direction, root_observation, depth):
         """

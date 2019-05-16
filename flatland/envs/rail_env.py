@@ -318,8 +318,8 @@ class RailEnv(Environment):
         self.debug_obs_dict = {}
         # for handle in self.agents_handles:
         for iAgent in range(self.get_num_agents()):
-            self.obs_dict[iAgent], self.debug_obs_dict[iAgent] = self.obs_builder.get(iAgent)
-        return self.obs_dict, self.debug_obs_dict
+            self.obs_dict[iAgent] = self.obs_builder.get(iAgent)
+        return self.obs_dict
 
     def render(self):
         # TODO:
