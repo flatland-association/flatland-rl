@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from flatland.core.env_observation_builder import GlobalObsForRailEnv
+from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.core.transition_map import GridTransitionMap, Grid4Transitions
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.generators import rail_from_GridTransitionMap_generator
