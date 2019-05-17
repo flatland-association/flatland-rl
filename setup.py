@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
-
+import os
 from setuptools import setup, find_packages
 
 with open('README.rst') as readme_file:
@@ -11,11 +11,19 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click>=6.0', ]
-
-setup_requirements = ['pytest-runner', ]
-
-test_requirements = ['pytest', ]
+# Gather requirements from requirements_dev.txt
+# TODO : We could potentially split up the test/dev dependencies later
+install_reqs = []
+requirements_path = 'requirements_dev.txt'
+with open(requirements_path, 'r') as f:
+    install_reqs += [
+        s for s in [
+            line.strip(' \n') for line in f
+        ] if not s.startswith('#') and s != ''
+    ]
+requirements = install_reqs
+setup_requirements = install_reqs
+test_requirements = install_reqs
 
 setup(
     author="S.P. Mohanty",
