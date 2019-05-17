@@ -474,8 +474,8 @@ class RenderTool(object):
 
     def renderObs(self, agent_handles, observation_dict):
         """
-        Render the extent of the observation of each agent. All cells that appear in the agent obsrevation will be
-        highlighted.
+        Render the extent of the observation of each agent. All cells that appear in the agent
+        observation will be highlighted.
         :param agent_handles: List of agent indices to adapt color and get correct observation
         :param observation_dict: dictionary containing sets of cells of the agent observation
 
