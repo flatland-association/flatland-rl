@@ -86,7 +86,7 @@ class PILGL(GraphicsLayer):
     def create_layer(self, iLayer=0):
         if len(self.layers) <= iLayer:
             for i in range(len(self.layers), iLayer+1):
-                if i==0:
+                if i == 0:
                     opacity = 255  # "bottom" layer is opaque (for rails)
                 else:
                     opacity = 0   # subsequent layers are transparent

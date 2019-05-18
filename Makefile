@@ -53,8 +53,15 @@ clean-test: ## remove test and coverage artifacts
 lint: ## check style with flake8
 	flake8 flatland tests
 
+test:	export DISPLAY = :0
 test: ## run tests quickly with the default Python
-	export DISPLAY=:0.0
+	echo "$$DISPLAY"
+	py.test
+
+
+jw: 	export DISPLAY = :0.0
+jw:
+	echo "$$DISPLAY"
 	py.test
 
 test-all: ## run tests on every Python version with tox
