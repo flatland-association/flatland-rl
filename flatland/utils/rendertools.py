@@ -503,7 +503,6 @@ class RenderTool(object):
                 cell_coord_trans = np.matmul(cell_coord, rt.grc2xy) + rt.xyHalf
                 self._draw_square(cell_coord_trans, 1 / (agent+1.1), color, layer=1, opacity=100)
 
-
     def renderRail(self, spacing=False, sRailColor="gray", curves=True, arrows=False):
 
         cell_size = 1  # TODO: remove cell_size
@@ -629,8 +628,7 @@ class RenderTool(object):
             self.gl.beginFrame()
 
         if type(self.gl) is MPLGL:
-            #self.gl.clf()
-            # plt.clf()
+            # self.gl.clf()
             self.gl.beginFrame()
             pass
 
@@ -681,7 +679,7 @@ class RenderTool(object):
         if type(self.gl) is MPLGL:
             if show:
                 self.gl.show(block=False)
-            #self.gl.endFrame()
+            # self.gl.endFrame()
 
         self.gl.pause(0.00001)
 
