@@ -605,8 +605,6 @@ class RenderTool(object):
                                     "rot:", rotation,
                                 )
 
-
-
     def renderEnv(
         self, show=False, curves=True, spacing=False,
             arrows=False, agents=True, obsrender=True, sRailColor="gray", frames=False,
@@ -627,10 +625,6 @@ class RenderTool(object):
                             iSelectedAgent, action_dict)
             return
 
-        # cell_size is a bit pointless with matplotlib - it does not relate to pixels,
-        # so for now I've changed it to 1 (from 10)
-        cell_size = 1
-
         if type(self.gl) in (QTGL, PILGL):
             self.gl.beginFrame()
 
@@ -644,12 +638,7 @@ class RenderTool(object):
         # if oFigure is None:
         #    oFigure = self.gl.figure()
 
-
-
         env = self.env
-
-        # t1 = time.time()
-
 
         self.renderRail()
 
