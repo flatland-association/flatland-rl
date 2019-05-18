@@ -100,7 +100,7 @@ def max_lt(seq, val):
     return None
 
 
-def main(render=True, delay=0.0, n_trials=3, n_steps=50):
+def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="QT"):
     random.seed(1)
     np.random.seed(1)
 
@@ -111,7 +111,7 @@ def main(render=True, delay=0.0, n_trials=3, n_steps=50):
 
     if render:
         # env_renderer = RenderTool(env, gl="QTSVG")
-        env_renderer = RenderTool(env, gl="QT")
+        env_renderer = RenderTool(env, gl=sGL)
 
     oPlayer = Player(env)
 

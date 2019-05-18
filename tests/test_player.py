@@ -1,7 +1,8 @@
 
-from examples.play_model import main
+# from examples.play_model import main
+from examples.tkplay import tkmain
 
 
 def test_main():
-    main(n_trials=2)
+    tkmain(n_trials=2)
 
