@@ -61,7 +61,7 @@ test-all: ## run tests on every Python version with tox
 	tox
 
 coverage: ## check code coverage quickly with the default Python
-	xvfb-run coverage run --source flatland -m pytest
+	xvfb-run -a coverage run --source flatland -m pytest
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
