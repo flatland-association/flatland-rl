@@ -108,14 +108,14 @@ def a_star(rail_trans, rail_array, start, end):
     rail_shape = rail_array.shape
     start_node = AStarNode(None, start)
     end_node = AStarNode(None, end)
-    open_list = set()
-    closed_list = set()
-    open_list.add(start_node)
+    open_ = set()
+    closed_ = set()
+    open_.add(start_node)
 
-    while len(open_list) > 0:
+    while len(open_) > 0:
         # get node with current shortest est. path (lowest f)
         current_node = None
-        for index, item in enumerate(open_list):
+        for item in open_:
             if current_node is None:
                 current_node = item
                 continue
@@ -123,8 +123,8 @@ def a_star(rail_trans, rail_array, start, end):
                 current_node = item
 
         # pop current off open list, add to closed list
-        open_list.remove(current_node)
-        closed_list.add(current_node)
+        open_.remove(current_node)
+        closed_.add(current_node)
 
         # found the goal
         if current_node == end_node:
@@ -161,7 +161,7 @@ def a_star(rail_trans, rail_array, start, end):
         # loop through children
         for child in children:
             # already in closed list?
-            if child in closed_list:
+            if child in closed_:
                 continue
 
             # create the f, g, and h values
@@ -174,14 +174,14 @@ def a_star(rail_trans, rail_array, start, end):
             child.f = child.g + child.h
 
             # already in the open list?
-            if child in open_list:
+            if child in open_:
                 continue
 
             # add the child to the open list
-            open_list.add(child)
+            open_.add(child)
 
         # no full path found
-        if len(open_list) == 0:
+        if len(open_) == 0:
             return []
 
 
