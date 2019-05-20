@@ -1,11 +1,15 @@
-from flatland.envs.rail_env import *
-from flatland.envs.generators import *
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.utils.rendertools import *
-from flatland.baselines.dueling_double_dqn import Agent
-from collections import deque
-import torch, random
+import random
 import time
+from collections import deque
+
+import numpy as np
+import torch
+
+from flatland.baselines.dueling_double_dqn import Agent
+from flatland.envs.generators import complex_rail_generator
+from flatland.envs.rail_env import RailEnv
+from flatland.utils.rendertools import RenderTool
+
 random.seed(1)
 np.random.seed(1)
 
@@ -190,25 +194,34 @@ for trials in range(1, n_trials + 1):
     dones_list.append((np.mean(done_window)))
 
     print(
-        '\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
+        '\rTraining {} Agents.\t' +
+        'Episode {}\t' +
+        'Average Score: {:.0f}\t' +
+        'Dones: {:.2f}%\t' +
+        'Epsilon: {:.2f} \t ' +
+        'Action Probabilities: \t ' +
+        '{}'.format(
             env.get_num_agents(),
             trials,
-            np.mean(
-                scores_window),
-            100 * np.mean(
-                done_window),
+            np.mean(scores_window),
+            100 * np.mean(done_window),
             eps, action_prob / np.sum(action_prob)),
         end=" ")
     if trials % 100 == 0:
         print(
-            '\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
+            '\rTraining {} Agents.\t' +
+            'Episode {}\t' +
+            'Average Score: {:.0f}\t' +
+            'Dones: {:.2f}%\t' +
+            'Epsilon: {:.2f} \t ' +
+            'Action Probabilities: \t ' +
+            '{}'.format(
                 env.get_num_agents(),
                 trials,
-                np.mean(
-                    scores_window),
-                100 * np.mean(
-                    done_window),
-                eps, action_prob / np.sum(action_prob)))
+                np.mean(scores_window),
+                100 * np.mean(done_window),
+                eps,
+                action_prob / np.sum(action_prob)))
         torch.save(agent.qnetwork_local.state_dict(),
                    '../flatland/baselines/Nets/avoid_checkpoint' + str(trials) + '.pth')
         action_prob = [1] * 4
