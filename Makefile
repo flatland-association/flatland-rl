@@ -73,7 +73,7 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs html
 	# N.B. HOME variable required by pydeps!
 	export HOME=${PWD}
-	python3 -m pydeps flatland -o docs/_build/html/flatland.svg
+	pydeps flatland -o docs/_build/html/flatland.svg
 	$(BROWSER) docs/_build/html/index.html
 
 servedocs: docs ## compile the docs watching for changes
