@@ -205,7 +205,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         # observation = [0, 0, 0, 0, self.distance_map[handle, position[0], position[1], orientation]]
         observation = [0, 0, 0, 0, self.distance_map[(handle, *agent.position, agent.direction)]]
         root_observation = observation[:]
-
+        visited = set()
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # If only one transition is possible, the tree is oriented with this transition as the forward branch.
@@ -219,8 +219,10 @@ class TreeObsForRailEnv(ObservationBuilder):
             if possible_transitions[branch_direction]:
                 new_cell = self._new_position(agent.position, branch_direction)
 
-                branch_observation = self._explore_branch(handle, new_cell, branch_direction, root_observation, 1)
+                branch_observation, branch_visited = \
+                    self._explore_branch(handle, new_cell, branch_direction, root_observation, 1)
                 observation = observation + branch_observation
+                visited = visited.union(branch_visited)
             else:
                 num_cells_to_fill_in = 0
                 pow4 = 1
@@ -228,6 +230,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                     num_cells_to_fill_in += pow4
                     pow4 *= 4
                 observation = observation + [-np.inf, -np.inf, -np.inf, -np.inf, -np.inf] * num_cells_to_fill_in
+        self.env.dev_obs_dict[handle] = visited
         return observation
 
     def _explore_branch(self, handle, position, direction, root_observation, depth):
@@ -236,7 +239,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         """
         # [Recursive branch opened]
         if depth >= self.max_depth + 1:
-            return []
+            return [], []
 
         # Continue along direction until next switch or
         # until no transitions are possible along the current direction (i.e., dead-ends)
@@ -377,22 +380,24 @@ class TreeObsForRailEnv(ObservationBuilder):
                 # Swap forward and back in case of dead-end, so that an agent can learn that going forward takes
                 # it back
                 new_cell = self._new_position(position, (branch_direction + 2) % 4)
-                branch_observation = self._explore_branch(handle,
-                                                          new_cell,
-                                                          (branch_direction + 2) % 4,
-                                                          new_root_observation,
-                                                          depth + 1)
+                branch_observation, branch_visited = self._explore_branch(handle,
+                                                                          new_cell,
+                                                                          (branch_direction + 2) % 4,
+                                                                          new_root_observation,
+                                                                          depth + 1)
                 observation = observation + branch_observation
-
+                if len(branch_visited) != 0:
+                    visited = visited.union(branch_visited)
             elif last_isSwitch and possible_transitions[branch_direction]:
                 new_cell = self._new_position(position, branch_direction)
-                branch_observation = self._explore_branch(handle,
-                                                          new_cell,
-                                                          branch_direction,
-                                                          new_root_observation,
-                                                          depth + 1)
+                branch_observation, branch_visited = self._explore_branch(handle,
+                                                                          new_cell,
+                                                                          branch_direction,
+                                                                          new_root_observation,
+                                                                          depth + 1)
                 observation = observation + branch_observation
-
+                if len(branch_visited) != 0:
+                    visited = visited.union(branch_visited)
             else:
                 num_cells_to_fill_in = 0
                 pow4 = 1
@@ -401,7 +406,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                     pow4 *= 4
                 observation = observation + [-np.inf, -np.inf, -np.inf, -np.inf, -np.inf] * num_cells_to_fill_in
 
-        return observation
+        return observation, visited
 
     def util_print_obs_subtree(self, tree, num_features_per_node=5, prompt='', current_depth=0):
         """

@@ -1,6 +1,7 @@
 
 from attr import attrs, attrib
 from itertools import starmap
+import numpy as np
 # from flatland.envs.rail_env import RailEnv
 
 
@@ -36,7 +37,18 @@ class EnvAgentStatic(object):
         return list(starmap(EnvAgentStatic, zip(positions, directions, targets)))
 
     def to_list(self):
-        return [self.position, self.direction, self.target]
+
+        # I can't find an expression which works on both tuples, lists and ndarrays
+        # which converts them all to a list of native python ints.
+        lPos = self.position
+        if type(lPos) is np.ndarray:
+            lPos = lPos.tolist()
+
+        lTarget = self.target
+        if type(lTarget) is np.ndarray:
+            lTarget = lTarget.tolist()
+
+        return [lPos, int(self.direction), lTarget]
 
 
 @attrs

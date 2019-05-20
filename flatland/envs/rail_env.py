@@ -98,7 +98,7 @@ class RailEnv(Environment):
 
         self.obs_dict = {}
         self.rewards_dict = {}
-
+        self.dev_obs_dict = {}
         # self.agents_handles = list(range(self.number_of_agents))
 
         # self.agents_position = []
@@ -315,6 +315,7 @@ class RailEnv(Environment):
 
     def _get_observations(self):
         self.obs_dict = {}
+        self.debug_obs_dict = {}
         # for handle in self.agents_handles:
         for iAgent in range(self.get_num_agents()):
             self.obs_dict[iAgent] = self.obs_builder.get(iAgent)
@@ -328,6 +329,11 @@ class RailEnv(Environment):
         grid_data = self.rail.grid.tolist()
         agent_static_data = [agent.to_list() for agent in self.agents_static]
         agent_data = [agent.to_list() for agent in self.agents]
+
+        msgpack.packb(grid_data)
+        msgpack.packb(agent_data)
+        msgpack.packb(agent_static_data)
+
         msg_data = {
             "grid": grid_data,
             "agents_static": agent_static_data,

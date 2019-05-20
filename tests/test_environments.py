@@ -7,7 +7,7 @@ from flatland.envs.generators import rail_from_GridTransitionMap_generator
 from flatland.envs.generators import complex_rail_generator
 from flatland.core.transitions import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.core.env_observation_builder import GlobalObsForRailEnv
+from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.agent_utils import EnvAgent
 
 """Tests for `flatland` package."""

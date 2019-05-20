@@ -5,7 +5,7 @@ from flatland.utils.rendertools import *
 from flatland.baselines.dueling_double_dqn import Agent
 from collections import deque
 import torch, random
-
+import time
 random.seed(1)
 np.random.seed(1)
 
@@ -25,15 +25,16 @@ transition_probability = [15,  # empty cell - Case 0
 
 # Example generate a random rail
 """
-env = RailEnv(width=10,
-              height=10,
+env = RailEnv(width=20,
+              height=20,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
               number_of_agents=1)
 """
 env = RailEnv(width=15,
               height=15,
-              rail_generator=complex_rail_generator(nr_start_goal=10, min_dist=5, max_dist=99999, seed=0),
+              rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=30, min_dist=5, max_dist=99999, seed=0),
               number_of_agents=3)
+
 """
 env = RailEnv(width=20,
               height=20,
@@ -117,10 +118,13 @@ for trials in range(1, n_trials + 1):
 
     # Reset environment
     obs = env.reset()
+
     final_obs = obs.copy()
     final_obs_next = obs.copy()
+
     for a in range(env.get_num_agents()):
         data, distance = env.obs_builder.split_tree(tree=np.array(obs[a]), num_features_per_node=5, current_depth=0)
+
         data = norm_obs_clip(data)
         distance = norm_obs_clip(distance)
         obs[a] = np.concatenate((data, distance))
@@ -136,7 +140,8 @@ for trials in range(1, n_trials + 1):
     # Run episode
     for step in range(100):
         if demo:
-            env_renderer.renderEnv(show=True)
+            env_renderer.renderEnv(show=True, obsrender=True)
+            time.sleep(2)
         # print(step)
         # Action
         for a in range(env.get_num_agents()):
@@ -149,7 +154,6 @@ for trials in range(1, n_trials + 1):
 
         # Environment step
         next_obs, all_rewards, done, _ = env.step(action_dict)
-
         for a in range(env.get_num_agents()):
             data, distance = env.obs_builder.split_tree(tree=np.array(next_obs[a]), num_features_per_node=5,
                                                         current_depth=0)
