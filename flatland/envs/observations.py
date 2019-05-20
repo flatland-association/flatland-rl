@@ -219,8 +219,8 @@ class TreeObsForRailEnv(ObservationBuilder):
             if possible_transitions[branch_direction]:
                 new_cell = self._new_position(agent.position, branch_direction)
 
-                branch_observation, branch_visited = self._explore_branch(handle, new_cell, branch_direction, root_observation,
-                                                                   1)
+                branch_observation, branch_visited = \
+                    self._explore_branch(handle, new_cell, branch_direction, root_observation, 1)
                 observation = observation + branch_observation
                 visited = visited.union(branch_visited)
             else:
