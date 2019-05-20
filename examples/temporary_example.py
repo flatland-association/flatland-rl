@@ -1,7 +1,9 @@
 import random
 
-from flatland.envs.rail_env import *
+from flatland.envs.generators import random_rail_generator
+from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import *
+from flatland.utils.rendertools import RenderTool
 
 random.seed(0)
 np.random.seed(0)
