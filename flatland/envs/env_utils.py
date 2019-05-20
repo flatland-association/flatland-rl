@@ -54,7 +54,6 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
         else:
             # check if matches existing layout
             new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
-            # new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
     else:
         # set the forward path
         new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
@@ -69,7 +68,6 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
         else:
             # check if matches existing layout
             new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
-            # new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
 
         if not rail_trans.is_valid(new_trans_e):
             return False
@@ -113,12 +111,6 @@ def a_star(rail_trans, rail_array, start, end):
     open_list = set()
     closed_list = set()
     open_list.add(start_node)
-
-    # this could be optimized
-    def is_node_in_list(node, the_list):
-        if node in the_list:
-            return node
-        return None
 
     while len(open_list) > 0:
         # get node with current shortest est. path (lowest f)
@@ -169,8 +161,7 @@ def a_star(rail_trans, rail_array, start, end):
         # loop through children
         for child in children:
             # already in closed list?
-            closed_node = is_node_in_list(child, closed_list)
-            if closed_node is not None:
+            if child in closed_list:
                 continue
 
             # create the f, g, and h values
@@ -183,9 +174,7 @@ def a_star(rail_trans, rail_array, start, end):
             child.f = child.g + child.h
 
             # already in the open list?
-            open_node = is_node_in_list(child, open_list)
-            if open_node is not None:
-                open_node.update_if_better(child)
+            if child in open_list:
                 continue
 
             # add the child to the open list
