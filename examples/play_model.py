@@ -1,12 +1,14 @@
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.generators import complex_rail_generator
-from flatland.utils.rendertools import RenderTool
-from flatland.baselines.dueling_double_dqn import Agent
-from collections import deque
-import torch
 import random
-import numpy as np
 import time
+from collections import deque
+
+import numpy as np
+import torch
+
+from flatland.baselines.dueling_double_dqn import Agent
+from flatland.envs.generators import complex_rail_generator
+from flatland.envs.rail_env import RailEnv
+from flatland.utils.rendertools import RenderTool
 
 
 class Player(object):
@@ -25,7 +27,7 @@ class Player(object):
         self.done_window = deque(maxlen=100)
         self.scores = []
         self.dones_list = []
-        self.action_prob = [0]*4
+        self.action_prob = [0] * 4
         self.agent = Agent(self.state_size, self.action_size, "FC", 0)
         # self.agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
         self.agent.qnetwork_local.load_state_dict(torch.load(
@@ -33,7 +35,7 @@ class Player(object):
 
         self.iFrame = 0
         self.tStart = time.time()
-        
+
         # Reset environment
         # self.obs = self.env.reset()
         self.env.obs_builder.reset()
@@ -51,7 +53,6 @@ class Player(object):
         env = self.env
 
         # Pass the (stored) observation to the agent network and retrieve the action
-        #for handle in env.get_agent_handles():
         for handle in env.get_agent_handles():
             action = self.agent.act(np.array(self.obs[handle]), eps=self.eps)
             self.action_prob[action] += 1
@@ -68,8 +69,8 @@ class Player(object):
         # Update replay buffer and train agent
         for handle in self.env.get_agent_handles():
             self.agent.step(self.obs[handle], self.action_dict[handle],
-                all_rewards[handle], next_obs[handle], done[handle],
-                train=False)
+                            all_rewards[handle], next_obs[handle], done[handle],
+                            train=False)
             self.score += all_rewards[handle]
 
         self.iFrame += 1
@@ -85,7 +86,7 @@ def max_lt(seq, val):
     None is returned if seq was empty or all items in seq were >= val.
     """
 
-    idx = len(seq)-1
+    idx = len(seq) - 1
     while idx >= 0:
         if seq[idx] < val and seq[idx] >= 0:
             return seq[idx]
@@ -94,7 +95,6 @@ def max_lt(seq, val):
 
 
 def main(render=True, delay=0.0):
-
     random.seed(1)
     np.random.seed(1)
 
@@ -118,8 +118,9 @@ def main(render=True, delay=0.0):
     done_window = deque(maxlen=100)
     scores = []
     dones_list = []
-    action_prob = [0]*4
+    action_prob = [0] * 4
     agent = Agent(state_size, action_size, "FC", 0)
+
     # agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
 
     def max_lt(seq, val):
@@ -128,7 +129,7 @@ def main(render=True, delay=0.0):
         None is returned if seq was empty or all items in seq were >= val.
         """
 
-        idx = len(seq)-1
+        idx = len(seq) - 1
         while idx >= 0:
             if seq[idx] < val and seq[idx] >= 0:
                 return seq[idx]
@@ -141,7 +142,8 @@ def main(render=True, delay=0.0):
 
         # Reset environment
         obs = env.reset()
-        env_renderer.set_new_rail()
+        if render:
+            env_renderer.set_new_rail()
 
         for a in range(env.get_num_agents()):
             norm = max(1, max_lt(obs[a], np.inf))
@@ -165,7 +167,6 @@ def main(render=True, delay=0.0):
 
             if render:
                 env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step, action_dict=action_dict)
-                #time.sleep(10)
                 if delay > 0:
                     time.sleep(delay)
 
@@ -181,7 +182,6 @@ def main(render=True, delay=0.0):
                 agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
                 score += all_rewards[a]
 
-
             obs = next_obs.copy()
             if done['__all__']:
                 env_done = 1
@@ -196,25 +196,25 @@ def main(render=True, delay=0.0):
 
         print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' +
                '\tEpsilon: {:.2f} \t Action Probabilities: \t {}').format(
-               env.get_num_agents(),
-               trials,
-               np.mean(scores_window),
-               100 * np.mean(done_window),
-               eps, action_prob/np.sum(action_prob)),
+            env.get_num_agents(),
+            trials,
+            np.mean(scores_window),
+            100 * np.mean(done_window),
+            eps, action_prob / np.sum(action_prob)),
             end=" ")
         if trials % 100 == 0:
             tNow = time.time()
             rFps = iFrame / (tNow - tStart)
             print(('\rTraining {} Agents.\tEpisode {}\tAverage Score: {:.0f}\tDones: {:.2f}%' +
                    '\tEpsilon: {:.2f} fps: {:.2f} \t Action Probabilities: \t {}').format(
-                   env.get_num_agents(),
-                   trials,
-                   np.mean(scores_window),
-                   100 * np.mean(done_window),
-                   eps, rFps, action_prob / np.sum(action_prob)))
+                env.get_num_agents(),
+                trials,
+                np.mean(scores_window),
+                100 * np.mean(done_window),
+                eps, rFps, action_prob / np.sum(action_prob)))
             torch.save(agent.qnetwork_local.state_dict(),
-                    '../flatland/baselines/Nets/avoid_checkpoint' + str(trials) + '.pth')
-            action_prob = [1]*4
+                       '../flatland/baselines/Nets/avoid_checkpoint' + str(trials) + '.pth')
+            action_prob = [1] * 4
 
 
 if __name__ == "__main__":
