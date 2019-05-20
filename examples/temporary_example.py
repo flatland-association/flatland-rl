@@ -1,10 +1,6 @@
 import random
-import numpy as np
-import matplotlib.pyplot as plt
 
 from flatland.envs.rail_env import *
-from flatland.envs.generators import *
-from flatland.envs.observations import TreeObsForRailEnv
 from flatland.utils.rendertools import *
 
 random.seed(0)
@@ -94,7 +90,7 @@ env = RailEnv(width=7,
 #     print(env.obs_builder.distance_map[0, :, :, i])
 
 # Print the observation vector for agent 0
-obs, all_rewards, done, _ = env.step({0:0})
+obs, all_rewards, done, _ = env.step({0: 0})
 for i in range(env.get_num_agents()):
     env.obs_builder.util_print_obs_subtree(tree=obs[i], num_features_per_node=5)
 
@@ -113,6 +109,7 @@ for step in range(100):
     while i < len(cmds):
         if cmds[i] == 'q':
             import sys
+
             sys.exit()
         elif cmds[i] == 's':
             obs, all_rewards, done, _ = env.step(action_dict)
@@ -120,9 +117,9 @@ for step in range(100):
             print("Rewards: ", all_rewards, "  [done=", done, "]")
         else:
             agent_id = int(cmds[i])
-            action = int(cmds[i+1])
+            action = int(cmds[i + 1])
             action_dict[agent_id] = action
-            i = i+1
+            i = i + 1
         i += 1
 
     env_renderer.renderEnv(show=True)
