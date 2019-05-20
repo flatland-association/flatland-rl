@@ -25,7 +25,7 @@ tests:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb
         - pip install tox
-        - apt install -y graphviz
+        - apt install -y graphviz xdg-utils
         - xvfb-run -s "-screen 0 800x600x24" tox
 
 build_and_deploy_docs:
