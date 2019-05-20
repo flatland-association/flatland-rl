@@ -144,10 +144,7 @@ def a_star(rail_trans, rail_array, start, end):
             prev_pos = None
         for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
             node_pos = (current_node.pos[0] + new_pos[0], current_node.pos[1] + new_pos[1])
-            if node_pos[0] >= rail_shape[0] or \
-                node_pos[0] < 0 or \
-                node_pos[1] >= rail_shape[1] or \
-                node_pos[1] < 0:
+            if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
                 continue
 
             # validate positions
@@ -315,8 +312,7 @@ def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):
             valid_starting_directions = []
             for m in valid_movements:
                 new_position = get_new_position(agents_position[i], m[1])
-                if m[0] not in valid_starting_directions and \
-                    _path_exists(rail, new_position, m[0], agents_target[i]):
+                if m[0] not in valid_starting_directions and _path_exists(rail, new_position, m[0], agents_target[i]):
                     valid_starting_directions.append(m[0])
 
             if len(valid_starting_directions) == 0:
