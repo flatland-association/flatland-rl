@@ -71,6 +71,7 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	sphinx-apidoc -o docs/ flatland
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
+	pydeps --no-config --noshow flatland -o docs/_build/html/flatland.svg
 	$(BROWSER) docs/_build/html/index.html
 
 servedocs: docs ## compile the docs watching for changes

@@ -25,5 +25,6 @@ os.environ["SPHINXPROJ"] = "flatland"
 os.chdir('docs')
 subprocess.call(['python', '-msphinx', '-M', 'clean', '.', '_build'])
 subprocess.call(['python', '-msphinx', '-M', 'html', '.', '_build'])
+subprocess.call(['python', '-mpydeps', '../flatland', '-o', '_build/html/flatland.svg'])
 
 browser('_build/html/index.html')
