@@ -19,10 +19,5 @@ matplotlib==3.0.2
 PyQt5==5.12
 Pillow==5.4.1
 
-<<<<<<< HEAD
-svgutils==0.3.1
-
-=======
 msgpack==0.6.1
 svgutils==0.3.1
->>>>>>> 19fac96634f312ac3c014c0517fad0c1fe273655
