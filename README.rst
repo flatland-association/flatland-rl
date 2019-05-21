@@ -13,7 +13,26 @@ Flatland
 
 
 
-Multi Agent Reinforcement Learning on Trains
+Flatland is a toolkit for developing and comparing multi agent reinforcement learning algorithms on grids.
+The base environment is a two-dimensional grid which allows to place many agents. Each agent must solve a task in the grid world.
+Agent can navigate from cell to cell. The transitions between neighbour cells can be restricted.
+For each cell all possible transition can be separately defined. If no transition restriction is defined, the agent can move fully free at given cell.
+That means the agent can navigate to all eight neighbour cells (go up and left, go up, go up and right, go right, go down and right, go down, go down and left, go left).
+
+The general purpose of the implementation allows to write in very short time many different environments.
+Flatland is designed to write environment for Epidemiology research, resource allocation task and planning task for transportation (operation research).
+It can be used for many learning task where a two-dimensional grid could be the base of the environment.
+
+Flatland delivers a python implementation which can be easily extended. And it provides different baselines for different environments.
+Each environment enables an interesting task to solve. For example, the mutli-agent navigation task for railway train dispatching is a very exciting topic.
+It can be easily extended or adapted to airplane landing problem. This can be the basic implementation for many other transportation planning task.
+The railway environment has a very restricted transition behaviour. Trains can normally not run backwards and the have to follow rails.
+The can only switch cells along rails or the pass a switch in right direction. Thus the navigation behaviour of a train is very restricted.
+The planning problem where many agents share same infrastructure becomes mostly to an ordering problem.
+Trains have a departing location and a destination where they have to travel to. The agents have to learn to avoid each others or to learn to pass.
+Otherwise the can never successfully reach the destinations. In complex situation they have to learn to cooperate otherwise they get stocked in dead-lock situation.
+This make the railway planning problem a very complex mulit-agent reinforcement task.
+
 
 Getting Started
 ===============
