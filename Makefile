@@ -51,7 +51,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint: ## check style with flake8
-	flake8 flatland tests examples
+	flake8 flatland tests examples benchmarks
 
 test: ## run tests quickly with the default Python
 	echo "$$DISPLAY"
