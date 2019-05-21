@@ -599,7 +599,7 @@ class EditorModel(object):
         self.redraw()
 
     def setFilename(self, filename):
-        self.log("filename = ", filename, type(filename))
+        # self.log("filename = ", filename, type(filename))
         self.env_filename = filename
 
     def load(self):
