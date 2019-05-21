@@ -1,11 +1,12 @@
-
-import tkinter as tk
-from PIL import ImageTk, Image
-from examples.play_model import Player
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.generators import complex_rail_generator
-from flatland.utils.rendertools import RenderTool
 import time
+import tkinter as tk
+
+from PIL import ImageTk, Image
+
+from examples.play_model import Player
+from flatland.envs.generators import complex_rail_generator
+from flatland.envs.rail_env import RailEnv
+from flatland.utils.rendertools import RenderTool
 
 
 def tkmain(n_trials=2):
@@ -36,14 +37,14 @@ def tkmain(n_trials=2):
         for step in range(n_steps):
             oPlayer.step()
             env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step,
-                action_dict=oPlayer.action_dict)
+                                   action_dict=oPlayer.action_dict)
             img = env_renderer.getImage()
             img = Image.fromarray(img)
             tkimg = ImageTk.PhotoImage(img)
 
             if first:
-                panel = tk.Label(window, image = tkimg)
-                panel.pack(side = "bottom", fill = "both", expand = "yes")
+                panel = tk.Label(window, image=tkimg)
+                panel.pack(side="bottom", fill="both", expand="yes")
             else:
                 # update the image in situ
                 panel.configure(image=tkimg)
