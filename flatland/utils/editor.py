@@ -15,7 +15,7 @@ import os
 # from ipywidgets import IntSlider, link, VBox
 
 from flatland.envs.rail_env import RailEnv, random_rail_generator
-from flatland.envs.generators import complex_rail_generator
+from flatland.envs.generators import complex_rail_generator, empty_rail_generator
 # from flatland.core.transitions import RailEnvTransitions
 from flatland.envs.observations import TreeObsForRailEnv
 import flatland.utils.rendertools as rt
@@ -60,7 +60,7 @@ class View(object):
         self.new_env()
         self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
         img = self.oRT.getImage()
-        plt.clf()
+        plt.clf()  # TODO: remove this plt.clf() call
         self.wImage = jpy_canvas.Canvas(img)
         self.yxSize = self.wImage.data.shape[:2]
         self.writableData = np.copy(self.wImage.data)  # writable copy of image - wid_img.data is somehow readonly
@@ -86,6 +86,9 @@ class View(object):
         self.wDebug_move = Checkbox(description="Debug mouse move")
         self.wDebug_move.observe(self.controller.setDebugMove, names="value")
 
+        # Checkbox for rendering observations
+        self.wShowObs = Checkbox(description="Show Agent Observations")
+
         # This is like a cell widget where loggin goes
         self.wOutput = Output()
 
@@ -95,13 +98,15 @@ class View(object):
         self.wFilename.observe(self.controller.setFilename, names="value")
 
         # Size of environment when regenerating
-        self.wSize = IntSlider(value=10, min=5, max=30, step=5, description="Regen Size")
-        self.wSize.observe(self.controller.setRegenSize, names="value")
+        self.wRegenSize = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size",
+            tip="Click Regenerate after changing this")
+        self.wRegenSize.observe(self.controller.setRegenSize, names="value")
 
         # Number of Agents when regenerating
-        self.wNAgents = IntSlider(value=1, min=0, max=20, step=1, description="# Agents")
+        self.wRegenNAgents = IntSlider(value=1, min=0, max=20, step=1, description="# Agents",
+            tip="Click regenerate or reset after changing this")
 
-        self.wRegenMethod = RadioButtons(description="Regen\nMethod", options=["Random Cell", "Path-based"])
+        self.wRegenMethod = RadioButtons(description="Regen\nMethod", options=["Empty", "Random Cell", "Path-based"])
         self.wReplaceAgents = Checkbox(value=True, description="Replace Agents")
 
         self.wTab = Tab()
@@ -109,8 +114,8 @@ class View(object):
         for i, title in enumerate(tab_contents):
             self.wTab.set_title(i, title)
         self.wTab.children = [
-            VBox([self.wDebug, self.wDebug_move]),
-            VBox([self.wRegenMethod, self.wReplaceAgents])]
+            VBox([self.wDebug, self.wDebug_move, self.wShowObs]),
+            VBox([self.wRegenSize, self.wRegenNAgents, self.wRegenMethod, self.wReplaceAgents])]
 
         # Progress bar intended for stepping in the background (not yet working)
         self.wProg_steps = ipywidgets.IntProgress(value=0, min=0, max=20, step=1, description="Step")
@@ -140,8 +145,8 @@ class View(object):
         self.wVbox_controls = VBox([
             self.wFilename,  # self.wDrawMode,
             *self.lwButtons,
-            self.wSize,
-            self.wNAgents,
+            # self.wRegenSize,
+            # self.wRegenNAgents,
             self.wProg_steps,
             self.wTab])
 
@@ -161,13 +166,17 @@ class View(object):
         with self.wOutput:
             # plt.figure(figsize=(10, 10))
             self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray",
-                               show=False, iSelectedAgent=self.model.iSelectedAgent)
+                               show=False, iSelectedAgent=self.model.iSelectedAgent,
+                               show_observations=self.show_observations())
             img = self.oRT.getImage()
             # plt.clf()
             # plt.close()
 
             self.wImage.data = img
             self.writableData = np.copy(self.wImage.data)
+
+            # the size should only be updated on regenerate at most
+            self.yxSize = self.wImage.data.shape[:2]
             return img
 
     def redisplayImage(self):
@@ -190,6 +199,13 @@ class View(object):
                 print(*args, **kwargs)
         else:
             print(*args, **kwargs)
+
+    def show_observations(self):
+        ''' returns whether to show observations - boolean '''
+        if self.wShowObs.value:
+            return True
+        else:
+            return False
 
 
 class Controller(object):
@@ -297,17 +313,17 @@ class Controller(object):
         self.model.clear()
 
     def reset(self, event):
-        self.log("Reset - nAgents:", self.view.wNAgents.value)
+        self.log("Reset - nAgents:", self.view.wRegenNAgents.value)
         self.model.reset(replace_agents=self.view.wReplaceAgents.value,
-                         nAgents=self.view.wNAgents.value)
+                         nAgents=self.view.wRegenNAgents.value)
 
     def restartAgents(self, event):
-        self.log("Restart Agents - nAgents:", self.view.wNAgents.value)
+        self.log("Restart Agents - nAgents:", self.view.wRegenNAgents.value)
         self.model.restartAgents()
 
     def regenerate(self, event):
         method = self.view.wRegenMethod.value
-        nAgents = self.view.wNAgents.value
+        nAgents = self.view.wRegenNAgents.value
         self.model.regenerate(method, nAgents)
 
     def setRegenSize(self, event):
@@ -375,6 +391,43 @@ class EditorModel(object):
     def setDrawMode(self, sDrawMode):
         self.drawMode = sDrawMode
 
+    def interpolate_path(self, rcLast, rcCell):
+        if np.array_equal(rcLast, rcCell):
+            return []
+        rcLast = array(rcLast)
+        rcCell = array(rcCell)
+        rcDelta = rcCell - rcLast
+
+        lrcInterp = []  # extra row,col points
+
+        if np.any(np.abs(rcDelta) >= 1):
+            iDim0 = np.argmax(np.abs(rcDelta))  # the dimension with the bigger move
+            iDim1 = 1 - iDim0                   # the dim with the smaller move
+            rcRatio = rcDelta[iDim1] / rcDelta[iDim0]
+            delta0 = rcDelta[iDim0]
+            sgn0 = np.sign(delta0)
+
+            iDelta1 = 0
+
+            # count integers along the larger dimension
+            for iDelta0 in range(sgn0, delta0 + sgn0, sgn0):
+                rDelta1 = iDelta0 * rcRatio
+                
+                if np.abs(rDelta1 - iDelta1) >= 1:
+                    rcInterp = (iDelta0, iDelta1)  # fill in the "corner" for "Manhattan interpolation"
+                    lrcInterp.append(rcInterp)
+                    iDelta1 = int(rDelta1)
+                    
+                rcInterp = (iDelta0, int(rDelta1))
+                lrcInterp.append(rcInterp)
+            g2Interp = array(lrcInterp)
+            if iDim0 == 1:  # if necessary, swap c,r to make r,c
+                g2Interp = g2Interp[:, [1, 0]]
+            g2Interp += rcLast
+            # Convert the array to a list of tuples
+            lrcInterp = list(map(tuple, g2Interp))
+        return lrcInterp
+            
     def drag_path_element(self, rcCell):
         """Mouse motion event handler for drawing.
         """
@@ -384,8 +437,9 @@ class EditorModel(object):
         if len(lrcStroke) > 0:
             rcLast = lrcStroke[-1]
             if not np.array_equal(rcLast, rcCell):  # only save at transition
-                lrcStroke.append(rcCell)
-                self.debug("lrcStroke ", len(lrcStroke), rcCell)
+                lrcInterp = self.interpolate_path(rcLast, rcCell)
+                lrcStroke.extend(lrcInterp)
+                self.debug("lrcStroke ", len(lrcStroke), rcCell, "interp:", lrcInterp)
 
         else:
             # This is the first cell in a mouse stroke
@@ -567,7 +621,9 @@ class EditorModel(object):
     def regenerate(self, method=None, nAgents=0):
         self.log("Regenerate size", self.regen_size)
 
-        if method is None or method == "Random Cell":
+        if method is None or method == "Empty":
+            fnMethod = empty_rail_generator()
+        elif method == "Random Cell":
             fnMethod = random_rail_generator(cell_type_relative_proportion=[1] * 11)
         else:
             fnMethod = complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12)
@@ -583,6 +639,7 @@ class EditorModel(object):
         self.set_env(self.env)
         self.player = Player(self.env)
         self.view.new_env()
+        # self.view.init_canvas() # Can't do init_canvas - need to keep the same canvas widget!
         self.redraw()
 
     def setRegenSize(self, size):
