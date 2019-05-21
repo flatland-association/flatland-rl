@@ -9,6 +9,21 @@ from flatland.envs.env_utils import distance_on_rail, connect_rail, get_directio
 from flatland.envs.env_utils import get_rnd_agents_pos_tgt_dir_on_rail
 
 
+def empty_rail_generator():
+    """
+    Returns a generator which returns an empty rail mail with no agents.
+    Primarily used by the editor
+    """
+    def generator(width, height, num_agents=0, num_resets=0):
+        rail_trans = RailEnvTransitions()
+        grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
+        rail_array = grid_map.grid
+        rail_array.fill(0)
+
+        return grid_map, [], [], []
+    return generator
+
+
 def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=99999, seed=0):
     """
     Parameters
