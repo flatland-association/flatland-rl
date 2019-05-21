@@ -51,7 +51,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint: ## check style with flake8
-	flake8 flatland tests
+	flake8 flatland tests examples
 
 test: ## run tests quickly with the default Python
 	echo "$$DISPLAY"
@@ -72,6 +72,7 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	sphinx-apidoc -o docs/ flatland
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
+	pydeps --no-config --noshow flatland -o docs/_build/html/flatland.svg
 	$(BROWSER) docs/_build/html/index.html
 
 servedocs: docs ## compile the docs watching for changes

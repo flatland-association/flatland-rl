@@ -1,9 +1,8 @@
-
-
 import sys
+
 from PyQt5 import QtSvg
-from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QGridLayout, QWidget
 from PyQt5.QtCore import Qt, QByteArray
+from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QGridLayout, QWidget
 
 from flatland.utils import svg
 
@@ -75,4 +74,3 @@ window = MainWindow()
 window.show()
 
 app.exec_()
-
