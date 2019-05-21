@@ -37,6 +37,8 @@ build_and_deploy_docs:
         - tests
     before_script:
         - pip install awscli
+        - apt update
+        - apt install -y graphviz libgl1-mesa-glx xvfb xdg-utils
     script:
         - pip install -r requirements_dev.txt
         - python setup.py install
