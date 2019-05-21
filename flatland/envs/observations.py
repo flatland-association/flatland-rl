@@ -203,7 +203,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         num_transitions = np.count_nonzero(possible_transitions)
         # Root node - current position
         # observation = [0, 0, 0, 0, self.distance_map[handle, position[0], position[1], orientation]]
-        observation = [0, 0, 0, 0, self.distance_map[(handle, *agent.position,direc agent.direction)]]
+        observation = [0, 0, 0, 0, self.distance_map[(handle, *agent.position, agent.direction)]]
         root_observation = observation[:]
         visited = set()
         # Start from the current orientation, and see which transitions are available;
