@@ -51,7 +51,7 @@ class GraphicsLayer(object):
         elif type(color) is tuple:
             if type(color[0]) is not int:
                 gcolor = array(color)
-                color = tuple((gcolor[:4] * 255).astype(int))
+                color = tuple((gcolor[:3] * 255).astype(int))
         else:
             color = self.tColGrid
 
