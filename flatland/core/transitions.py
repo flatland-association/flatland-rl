@@ -556,16 +556,16 @@ class RailEnvTransitions(Grid4Transitions):
         self.maskDeadEnds = 0b0010000110000100
 
         # create this to make validation faster
-        self.transitions_all = []
+        self.transitions_all = set()
         for index, trans in enumerate(self.transitions):
-            self.transitions_all.append(trans)
+            self.transitions_all.add(trans)
             if index in (2, 4, 6, 7, 8, 9, 10):
                 for _ in range(3):
                     trans = self.rotate_transition(trans, rotation=90)
-                    self.transitions_all.append(trans)
+                    self.transitions_all.add(trans)
             elif index in (1, 5):
                 trans = self.rotate_transition(trans, rotation=90)
-                self.transitions_all.append(trans)
+                self.transitions_all.add(trans)
 
     def print(self, cell_transition):
         print("  NESW")
@@ -620,10 +620,7 @@ class RailEnvTransitions(Grid4Transitions):
         Boolean
             True or False
         """
-        for trans in self.transitions_all:
-            if cell_transition == trans:
-                return True
-        return False
+        return cell_transition in self.transitions_all
 
     def has_deadend(self, cell_transition):
         if cell_transition & self.maskDeadEnds > 0:

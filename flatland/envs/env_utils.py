@@ -1,11 +1,12 @@
-
 """
 Definition of the RailEnv environment and related level-generation functions.
 
 Generator functions are functions that take width, height and num_resets as arguments and return
 a GridTransitionMap object.
 """
+
 import numpy as np
+
 
 # from flatland.core.env import Environment
 # from flatland.envs.observations import TreeObsForRailEnv
@@ -53,7 +54,6 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
         else:
             # check if matches existing layout
             new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
-            # new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
     else:
         # set the forward path
         new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
@@ -68,7 +68,6 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
         else:
             # check if matches existing layout
             new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
-            # new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
 
         if not rail_trans.is_valid(new_trans_e):
             return False
@@ -90,6 +89,9 @@ class AStarNode():
     def __eq__(self, other):
         return self.pos == other.pos
 
+    def __hash__(self):
+        return hash(self.pos)
+
     def update_if_better(self, other):
         if other.g < self.g:
             self.parent = other.parent
@@ -106,30 +108,23 @@ def a_star(rail_trans, rail_array, start, end):
     rail_shape = rail_array.shape
     start_node = AStarNode(None, start)
     end_node = AStarNode(None, end)
-    open_list = []
-    closed_list = []
+    open_nodes = set()
+    closed_nodes = set()
+    open_nodes.add(start_node)
 
-    open_list.append(start_node)
-
-    # this could be optimized
-    def is_node_in_list(node, the_list):
-        for o_node in the_list:
-            if node == o_node:
-                return o_node
-        return None
-
-    while len(open_list) > 0:
+    while len(open_nodes) > 0:
         # get node with current shortest est. path (lowest f)
-        current_node = open_list[0]
-        current_index = 0
-        for index, item in enumerate(open_list):
+        current_node = None
+        for item in open_nodes:
+            if current_node is None:
+                current_node = item
+                continue
             if item.f < current_node.f:
                 current_node = item
-                current_index = index
 
         # pop current off open list, add to closed list
-        open_list.pop(current_index)
-        closed_list.append(current_node)
+        open_nodes.remove(current_node)
+        closed_nodes.add(current_node)
 
         # found the goal
         if current_node == end_node:
@@ -149,10 +144,7 @@ def a_star(rail_trans, rail_array, start, end):
             prev_pos = None
         for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
             node_pos = (current_node.pos[0] + new_pos[0], current_node.pos[1] + new_pos[1])
-            if node_pos[0] >= rail_shape[0] or \
-                    node_pos[0] < 0 or \
-                    node_pos[1] >= rail_shape[1] or \
-                    node_pos[1] < 0:
+            if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
                 continue
 
             # validate positions
@@ -166,8 +158,7 @@ def a_star(rail_trans, rail_array, start, end):
         # loop through children
         for child in children:
             # already in closed list?
-            closed_node = is_node_in_list(child, closed_list)
-            if closed_node is not None:
+            if child in closed_nodes:
                 continue
 
             # create the f, g, and h values
@@ -180,16 +171,14 @@ def a_star(rail_trans, rail_array, start, end):
             child.f = child.g + child.h
 
             # already in the open list?
-            open_node = is_node_in_list(child, open_list)
-            if open_node is not None:
-                open_node.update_if_better(child)
+            if child in open_nodes:
                 continue
 
             # add the child to the open list
-            open_list.append(child)
+            open_nodes.add(child)
 
         # no full path found
-        if len(open_list) == 0:
+        if len(open_nodes) == 0:
             return []
 
 
@@ -323,8 +312,7 @@ def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):
             valid_starting_directions = []
             for m in valid_movements:
                 new_position = get_new_position(agents_position[i], m[1])
-                if m[0] not in valid_starting_directions and \
-                   _path_exists(rail, new_position, m[0], agents_target[i]):
+                if m[0] not in valid_starting_directions and _path_exists(rail, new_position, m[0], agents_target[i]):
                     valid_starting_directions.append(m[0])
 
             if len(valid_starting_directions) == 0:
