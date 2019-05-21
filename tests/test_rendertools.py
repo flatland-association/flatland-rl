@@ -46,8 +46,8 @@ def test_render_env(save_new_images=False):
                    )
     sfTestEnv = "env-data/tests/test1.npy"
     oEnv.rail.load_transition_map(sfTestEnv)
-    oRT = rt.RenderTool(oEnv)
-    oRT.renderEnv()
+    oRT = rt.RenderTool(oEnv, gl="PIL", show=False)
+    oRT.renderEnv(show=False)
 
     checkFrozenImage(oRT, "basic-env.npz", resave=save_new_images)
 
