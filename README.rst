@@ -26,7 +26,7 @@ Flatland delivers a python implementation which can be easily extended. And it p
 Each environment enables an interesting task to solve. For example, the mutli-agent navigation task for railway train dispatching is a very exciting topic.
 It can be easily extended or adapted to the airplane landing problem. This can further be the basic implementation for many other tasks in transportation and logistics.
 
-Mapping a railway infrastructure into a grid world is an excellent example showing how the movement can of an agent can be easily restricted with the help of the cell's transition maps.
+Mapping a railway infrastructure into a grid world is an excellent example showing how the movement of an agent must be restricted.
 As trains can normally not run backwards and they have to follow rails the transition for one cell ot the other depends also the train's orientation.
 Trains can only change the traveling path at switches. There are two variants of switches. The first kind of switch is the splitting "switch", where trains can change rails and in consequence they can change the traveling path.
 The second kind of switch is the fusion switch, where train can change order. That means two rails come together. Thus, the navigation behavior of a train is very restricted.
