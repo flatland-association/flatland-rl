@@ -16,10 +16,11 @@ Flatland
 Flatland is a toolkit for developing and comparing multi agent reinforcement learning algorithms on grids.
 The base environment is a two-dimensional grid in which many agents can be placed. Each agent must solve one or more tasks in the grid world.
 In general, agents can freely navigate from cell to cell. However, cell-to-cell navigation can be restricted by transition maps.
-Each cell can hold an own transition map. By default, the cell doesn't have any restriction of movement defined in its transition map. So, the agent can freely move to any neighbor cell.
-With other world the agent can move to all eight neighbor cells (go up and left, go up, go up and right, go right, go down and right, go down, go down and left, go left).
+Each cell can hold an own transition map. By default, each cell has a default transition map defined which allows all transitions to its
+eight neighbor cells (go up and left, go up, go up and right, go right, go down and right, go down, go down and left, go left).
+So, the agents can freely move from cell to cell.
 
-The general purpose of the implementation allows to implement any kind of 2D gird based environments.
+The general purpose of the implementation allows to implement any kind of two-dimensional gird based environments.
 It can be used for many learning task where a two-dimensional grid could be the base of the environment.
 
 Flatland delivers a python implementation which can be easily extended. And it provides different baselines for different environments.
@@ -35,6 +36,7 @@ The railway planning problem where many agents share same infrastructure is a ve
 Furthermore, trains have a departing location where they cannot depart earlier than the committed departure time.
 Then they must arrive at destination not later than the committed arrival time. This makes the whole planning problem
 very complex. In such a complex environment cooperation is essential. Thus, agents must learn to cooperate in a way that all trains (agents) arrive on time.
+
 
 
 Getting Started
