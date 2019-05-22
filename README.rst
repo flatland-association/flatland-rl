@@ -16,8 +16,8 @@ Flatland
 Flatland is a toolkit for developing and comparing multi agent reinforcement learning algorithms on grids.
 The base environment is a two-dimensional grid in which many agents can be placed. Each agent must solve one or more tasks in the grid world.
 In general, agents can freely navigate from cell to cell. However, cell-to-cell navigation can be restricted by transition maps.
-Each cell can can hold an own transition map. If there is no transition map is defined for a given cell, the agent can freely move to a neighbor cell.
-That means the agent can navigate to all eight neighbour cells (go up and left, go up, go up and right, go right, go down and right, go down, go down and left, go left).
+Each cell can hold an own transition map. By default the cell doesn't have any restriction of movement defined in its transition map. So the agent can freely move to any neighbor cell.
+With other world the agent can move to all eight neighbour cells (go up and left, go up, go up and right, go right, go down and right, go down, go down and left, go left).
 
 The general purpose of the implementation allows to write in very short time many different environments.
 Flatland is designed to write environment for Epidemiology research, resource allocation task and planning task for transportation (operation research).
