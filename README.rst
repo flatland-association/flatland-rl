@@ -19,8 +19,7 @@ In general, agents can freely navigate from cell to cell. However, cell-to-cell 
 Each cell can hold an own transition map. By default the cell doesn't have any restriction of movement defined in its transition map. So the agent can freely move to any neighbor cell.
 With other world the agent can move to all eight neighbour cells (go up and left, go up, go up and right, go right, go down and right, go down, go down and left, go left).
 
-The general purpose of the implementation allows to write in very short time many different environments.
-Flatland is designed to write environment for Epidemiology research, resource allocation task and planning task for transportation (operation research).
+The general purpose of the implementation allows to implement any kind of 2D gird based environments.
 It can be used for many learning task where a two-dimensional grid could be the base of the environment.
 
 Flatland delivers a python implementation which can be easily extended. And it provides different baselines for different environments.
