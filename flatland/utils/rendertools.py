@@ -606,7 +606,7 @@ class RenderTool(object):
 
     def renderEnv(
         self, show=False, curves=True, spacing=False,
-            arrows=False, agents=True, obsrender=True, sRailColor="gray", frames=False,
+            arrows=False, agents=True, show_observations=True, sRailColor="gray", frames=False,
             iEpisode=None, iStep=None,
             iSelectedAgent=None, action_dict=None):
         """
@@ -643,7 +643,7 @@ class RenderTool(object):
         # Draw each agent + its orientation + its target
         if agents:
             self.plotAgents(targets=True, iSelectedAgent=iSelectedAgent)
-        if obsrender:
+        if show_observations:
             self.renderObs(range(env.get_num_agents()), env.dev_obs_dict)
         # Draw some textual information like fps
         yText = [-0.3, -0.6, -0.9]
