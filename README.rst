@@ -25,12 +25,15 @@ It can be used for many learning task where a two-dimensional grid could be the 
 Flatland delivers a python implementation which can be easily extended. And it provides different baselines for different environments.
 Each environment enables an interesting task to solve. For example, the mutli-agent navigation task for railway train dispatching is a very exciting topic.
 It can be easily extended or adapted to the airplane landing problem. This can further be the basic implementation for many other task in transporation and logcistics.
-The railway environment has a very restricted transition behaviour. Trains can normally not run backwards and the have to follow rails.
-The can only switch cells along rails or the pass a switch in right direction. Thus the navigation behaviour of a train is very restricted.
-The planning problem where many agents share same infrastructure becomes mostly to an ordering problem.
-Trains have a departing location and a destination where they have to travel to. The agents have to learn to avoid each others or to learn to pass.
-Otherwise the can never successfully reach the destinations. In complex situation they have to learn to cooperate otherwise they get stocked in dead-lock situation.
-This make the railway planning problem a very complex mulit-agent reinforcement task.
+
+Mapping a railway infrastructure into a grid world is an excellent example showing how the movement can of an agent can be easily restricted with the help of the cell's transition maps.
+As trains can normally not run backwards and they have to follow rails the transition for one cell ot the other depends also the train's orientation.
+Trains can only change the traveling path at switches. There a two variants of switches. The first kind of switch is the splitting "switch", where trains can change rails and in consequence the traveling path.
+The second kind of swtich is the fusion switch, where train can change order. That means two rails come together.  Thus the navigation behaviour of a train is very restricted.
+The railway planning problem where many agents share same infrastructure is a very complex problem. If trains can not change traveling path, the underlaying problem will be an ordering problem. Even the ordering
+problem is very hard to solve.
+Furthermore trains have a departing location where they can not depart earlier than a committed time. Then the have to arrive at destination not later than the second committed time. This makes the whole planning problem
+still more complicated. In such a complex environment cooperation is essential. Thus agents have to learn to cooperate in a way that all trains (agents) arrive on time.
 
 
 Getting Started
