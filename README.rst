@@ -24,7 +24,7 @@ It can be used for many learning task where a two-dimensional grid could be the 
 
 Flatland delivers a python implementation which can be easily extended. And it provides different baselines for different environments.
 Each environment enables an interesting task to solve. For example, the mutli-agent navigation task for railway train dispatching is a very exciting topic.
-It can be easily extended or adapted to the airplane landing problem. This can be the basic implementation for many other transportation planning task.
+It can be easily extended or adapted to the airplane landing problem. This can further be the basic implementation for many other transportation planning task.
 The railway environment has a very restricted transition behaviour. Trains can normally not run backwards and the have to follow rails.
 The can only switch cells along rails or the pass a switch in right direction. Thus the navigation behaviour of a train is very restricted.
 The planning problem where many agents share same infrastructure becomes mostly to an ordering problem.
