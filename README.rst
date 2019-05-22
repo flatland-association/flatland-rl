@@ -27,11 +27,11 @@ Each environment enables an interesting task to solve. For example, the mutli-ag
 It can be easily extended or adapted to the airplane landing problem. This can further be the basic implementation for many other tasks in transportation and logistics.
 
 Mapping a railway infrastructure into a grid world is an excellent example showing how the movement of an agent must be restricted.
-As trains can normally not run backwards and they have to follow rails the transition for one cell ot the other depends also the train's orientation.
+As trains can normally not run backwards and they have to follow rails the transition for one cell to the other depends also on train's orientation, respectively on train's travel direction.
 Trains can only change the traveling path at switches. There are two variants of switches. The first kind of switch is the splitting "switch", where trains can change rails and in consequence they can change the traveling path.
-The second kind of switch is the fusion switch, where train can change order. That means two rails come together. Thus, the navigation behavior of a train is very restricted.
-The railway planning problem where many agents share same infrastructure is a very complex problem. If trains cannot change traveling path, the underlaying problem will be an ordering problem. Even the ordering
-problem is very hard to solve.
+The second kind of switch is the fusion switch, where train can change the sequence. That means two rails come together. Thus, the navigation behavior of a train is very restricted.
+The railway planning problem where many agents share same infrastructure is a very complex problem. If trains cannot change traveling path, still to find the optimal sequence is very hard.
+
 Furthermore, trains have a departing location where they cannot depart earlier than a committed time. Then they must arrive at destination not later than the second committed time. This makes the whole planning problem
 still more complicated. In such a complex environment cooperation is essential. Thus, agents must learn to cooperate in a way that all trains (agents) arrive on time.
 
