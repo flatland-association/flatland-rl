@@ -36,7 +36,7 @@ env = RailEnv(width=20,
 """
 env = RailEnv(width=15,
               height=15,
-              rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=30, min_dist=5, max_dist=99999, seed=0),
+              rail_generator=complex_rail_generator(nr_start_goal=6, nr_extra=30, min_dist=10, max_dist=99999, seed=0),
               number_of_agents=3)
 
 """
@@ -144,8 +144,8 @@ for trials in range(1, n_trials + 1):
     # Run episode
     for step in range(100):
         if demo:
-            env_renderer.renderEnv(show=True, obsrender=True)
-            time.sleep(2)
+            env_renderer.renderEnv(show=True)
+
         # print(step)
         # Action
         for a in range(env.get_num_agents()):
@@ -193,29 +193,15 @@ for trials in range(1, n_trials + 1):
     scores.append(np.mean(scores_window))
     dones_list.append((np.mean(done_window)))
 
-    print(
-        '\rTraining {} Agents.\t' +
-        'Episode {}\t' +
-        'Average Score: {:.0f}\t' +
-        'Dones: {:.2f}%\t' +
-        'Epsilon: {:.2f} \t ' +
-        'Action Probabilities: \t ' +
-        '{}'.format(
+    print('\rTraining {} Agents.\t Episode {}\t Average Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
             env.get_num_agents(),
             trials,
             np.mean(scores_window),
             100 * np.mean(done_window),
-            eps, action_prob / np.sum(action_prob)),
-        end=" ")
+            eps, action_prob / np.sum(action_prob)), end=" ")
+
     if trials % 100 == 0:
-        print(
-            '\rTraining {} Agents.\t' +
-            'Episode {}\t' +
-            'Average Score: {:.0f}\t' +
-            'Dones: {:.2f}%\t' +
-            'Epsilon: {:.2f} \t ' +
-            'Action Probabilities: \t ' +
-            '{}'.format(
+        print('\rTraining {} Agents.\t Episode {}\t Average Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
                 env.get_num_agents(),
                 trials,
                 np.mean(scores_window),

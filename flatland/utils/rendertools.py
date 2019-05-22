@@ -683,6 +683,7 @@ class RenderTool(object):
 
         self.gl.pause(0.00001)
 
+
         return
 
     def _draw_square(self, center, size, color, opacity=255, layer=0):
