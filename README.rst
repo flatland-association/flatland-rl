@@ -34,7 +34,7 @@ The railway planning problem where many agents share same infrastructure is a ve
 
 Furthermore, trains have a departing location where they cannot depart earlier than the committed departure time.
 Then they must arrive at destination not later than the committed arrival time. This makes the whole planning problem
-still more complicated. In such a complex environment cooperation is essential. Thus, agents must learn to cooperate in a way that all trains (agents) arrive on time.
+very complex. In such a complex environment cooperation is essential. Thus, agents must learn to cooperate in a way that all trains (agents) arrive on time.
 
 
 Getting Started
