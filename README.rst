@@ -32,8 +32,8 @@ Trains can only change the traveling path at switches. There are two variants of
 The second kind of switch is the fusion switch, where train can change order. That means two rails come together. Thus, the navigation behavior of a train is very restricted.
 The railway planning problem where many agents share same infrastructure is a very complex problem. If trains cannot change traveling path, the underlaying problem will be an ordering problem. Even the ordering
 problem is very hard to solve.
-Furthermore, trains have a departing location where they cannot depart earlier than a committed time. Then they have to arrive at destination not later than the second committed time. This makes the whole planning problem
-still more complicated. In such a complex environment cooperation is essential. Thus, agents have to learn to cooperate in a way that all trains (agents) arrive on time.
+Furthermore, trains have a departing location where they cannot depart earlier than a committed time. Then they must arrive at destination not later than the second committed time. This makes the whole planning problem
+still more complicated. In such a complex environment cooperation is essential. Thus, agents must learn to cooperate in a way that all trains (agents) arrive on time.
 
 
 Getting Started
