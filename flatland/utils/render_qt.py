@@ -170,6 +170,7 @@ class QTSVG(GraphicsLayer):
     def setRailAt(self, row, col, binTrans):
         if binTrans in self.track.dSvg:
             sSVG = self.track.dSvg[binTrans].to_string()
+            sSVG = sSVG.replace("ASCII", "UTF-8")
             bySVG = bytearray(sSVG, encoding='utf-8')
             svgWidget = QtSvg.QSvgWidget()
             svgWidget.renderer().load(bySVG)

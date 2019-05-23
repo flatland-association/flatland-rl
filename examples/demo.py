@@ -131,10 +131,10 @@ class Demo:
         self.state_size = 105 * 2
         self.action_size = 4
         self.agent = Agent(self.state_size, self.action_size, "FC", 0)
-        self.agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
+        self.agent.qnetwork_local.load_state_dict(torch.load('./flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
     def create_renderer(self):
-        self.renderer = RenderTool(self.env, gl="QT")
+        self.renderer = RenderTool(self.env, gl="QTSVG")
         handle = self.env.get_agent_handles()
         return handle
 
@@ -201,14 +201,14 @@ if False:
     demo_001.run_demo()
     demo_001 = None
 
-demo_000 = Demo(Scenario_Generator.load_scenario('../env-data/railway/example_network_000.pkl'))
+demo_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_000.pkl'))
 demo_000.run_demo()
 demo_000 = None
 
-demo_001 = Demo(Scenario_Generator.load_scenario('../env-data/railway/example_network_001.pkl'))
+demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_001.pkl'))
 demo_001.run_demo()
 demo_001 = None
 
-demo_002 = Demo(Scenario_Generator.load_scenario('../env-data/railway/example_network_002.pkl'))
+demo_002 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_002.pkl'))
 demo_002.run_demo()
 demo_002 = None
