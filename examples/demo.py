@@ -201,6 +201,10 @@ if False:
     demo_001.run_demo()
     demo_001 = None
 
+demo_000 = Demo(Scenario_Generator.load_scenario('../env-data/railway/example_network_000.pkl'))
+demo_000.run_demo()
+demo_000 = None
+
 demo_001 = Demo(Scenario_Generator.load_scenario('../env-data/railway/example_network_001.pkl'))
 demo_001.run_demo()
 demo_001 = None
@@ -208,7 +212,3 @@ demo_001 = None
 demo_002 = Demo(Scenario_Generator.load_scenario('../env-data/railway/example_network_002.pkl'))
 demo_002.run_demo()
 demo_002 = None
-
-demo_003 = Demo(Scenario_Generator.load_scenario('../env-data/railway/example_network_003.pkl'))
-demo_003.run_demo()
-demo_003 = None
