@@ -46,7 +46,7 @@ env = RailEnv(width=20,
               number_of_agents=3)
 
 """
-env_renderer = RenderTool(env, gl="QT")
+env_renderer = RenderTool(env, gl="QTSVG")
 handle = env.get_agent_handles()
 
 state_size = 105 * 2
@@ -66,7 +66,7 @@ action_prob = [0] * 4
 agent_obs = [None] * env.get_num_agents()
 agent_next_obs = [None] * env.get_num_agents()
 agent = Agent(state_size, action_size, "FC", 0)
-agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
+agent.qnetwork_local.load_state_dict(torch.load('./flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
 demo = True
 
@@ -144,7 +144,6 @@ for trials in range(1, n_trials + 1):
     for step in range(100):
         if demo:
             env_renderer.renderEnv(show=True)
-            time.sleep(0.1)
         # print(step)
         # Action
         for a in range(env.get_num_agents()):
