@@ -36,8 +36,8 @@ env = RailEnv(width=20,
 """
 env = RailEnv(width=15,
               height=15,
-              rail_generator=complex_rail_generator(nr_start_goal=6, nr_extra=30, min_dist=10, max_dist=99999, seed=0),
-              number_of_agents=3)
+              rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=10, min_dist=10, max_dist=99999, seed=0),
+              number_of_agents=10)
 
 """
 env = RailEnv(width=20,
@@ -145,7 +145,7 @@ for trials in range(1, n_trials + 1):
     for step in range(100):
         if demo:
             env_renderer.renderEnv(show=True)
-
+            time.sleep(0.1)
         # print(step)
         # Action
         for a in range(env.get_num_agents()):
