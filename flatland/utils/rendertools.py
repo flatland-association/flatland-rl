@@ -137,6 +137,9 @@ class RenderTool(object):
 
         self.new_rail = True
 
+    def resize(self):
+        self.gl.resize(self.env)
+
     def set_new_rail(self):
         self.new_rail = True
 

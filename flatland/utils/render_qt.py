@@ -1,20 +1,22 @@
-from flatland.utils.graphics_qt import QtRenderer
-from numpy import array
-from flatland.utils.graphics_layer import GraphicsLayer
+import time
+
 # from matplotlib import pyplot as plt
 import numpy as np
-import time
-from flatland.utils.svg import Track, Zug
-from flatland.envs.agent_utils import EnvAgent
-
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout
 from PyQt5 import QtSvg
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout
+from numpy import array
+
+from flatland.envs.agent_utils import EnvAgent
+from flatland.utils.graphics_layer import GraphicsLayer
+from flatland.utils.graphics_qt import QtRenderer
+from flatland.utils.svg import Track, Zug
 
 
 def transform_string_svg(sSVG):
     sSVG = sSVG.replace("ASCII", "UTF-8")
     bySVG = bytearray(sSVG, encoding='utf-8')
     return bySVG
+
 
 def create_QtSvgWidget_from_svg_string(sSVG):
     svgWidget = QtSvg.QSvgWidget()
@@ -45,10 +47,10 @@ class QTGL(GraphicsLayer):
         # use the renderer to scale back to the desired size
         self.qtr.scale(self.tile_size / self.cell_pixels, self.tile_size / self.cell_pixels)
 
-        self.tColBg = (255, 255, 255)     # white background
+        self.tColBg = (255, 255, 255)  # white background
         # self.tColBg = (220, 120, 40)    # background color
-        self.tColRail = (0, 0, 0)         # black rails
-        self.tColGrid = (230,) * 3        # light grey for grid
+        self.tColRail = (0, 0, 0)  # black rails
+        self.tColGrid = (230,) * 3  # light grey for grid
 
         # Draw the background of the in-world cells
         self.qtr.fillRect(0, 0, self.widthPx, self.heightPx, *self.tColBg)
@@ -195,8 +197,8 @@ class QTSVG(GraphicsLayer):
 
                 # We can only reuse the image if noth new and old are straight and the same:
                 if iDirIn == iDirOut and \
-                        agentPrev.direction == iDirIn and \
-                        agentPrev.old_direction == agentPrev.direction:
+                    agentPrev.direction == iDirIn and \
+                    agentPrev.old_direction == agentPrev.direction:
                     return
                 else:
                     # need to load new image
@@ -221,6 +223,13 @@ class QTSVG(GraphicsLayer):
 
     def show(self, block=False):
         self.wMain.update()
+
+    def resize(self, env):
+        screen_resolution = self.app.desktop().screenGeometry()
+        width, height = screen_resolution.width(), screen_resolution.height()
+        w = np.ceil(width * 0.8 / env.width)
+        h = np.ceil(height * 0.8 / env.height)
+        self.wWinMain.resize(env.width * w, env.height * h)
 
 
 def main2():

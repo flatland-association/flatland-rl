@@ -173,3 +173,9 @@ demo_001 = None
 demo_002 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_002.pkl'))
 demo_002.run_demo()
 demo_002 = None
+
+
+demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
+demo_flatland_000.renderer.resize()
+demo_flatland_000.run_demo(100)
+demo_flatland_000 = None
