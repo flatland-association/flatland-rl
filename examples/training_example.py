@@ -1,7 +1,6 @@
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
 import numpy as np
-from flatland.utils.rendertools import RenderTool
 
 np.random.seed(1)
 

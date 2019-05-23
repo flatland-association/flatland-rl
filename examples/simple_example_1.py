@@ -1,10 +1,7 @@
-import random
-
-from flatland.envs.generators import random_rail_generator, rail_from_manual_specifications_generator
+from flatland.envs.generators import rail_from_manual_specifications_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.utils.rendertools import RenderTool
-import numpy as np
 
 # Example generate a rail given a manual specification,
 # a map of tuples (cell_type, rotation)

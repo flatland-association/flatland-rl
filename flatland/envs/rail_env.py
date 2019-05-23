@@ -91,7 +91,7 @@ class RailEnv(Environment):
         self.obs_builder._set_env(self)
 
         self.action_space = [1]
-        self.observation_space = self.obs_builder.observation_space # updated on resets?
+        self.observation_space = self.obs_builder.observation_space  # updated on resets?
 
         self.actions = [0] * number_of_agents
         self.rewards = [0] * number_of_agents
@@ -163,7 +163,7 @@ class RailEnv(Environment):
 
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
-        self.observation_space = self.obs_builder.observation_space # <-- change on reset?
+        self.observation_space = self.obs_builder.observation_space  # <-- change on reset?
 
         # Return the new observation vectors for each agent
         return self._get_observations()

@@ -1,9 +1,9 @@
 import random
 
-from flatland.envs.generators import random_rail_generator, random_rail_generator
+from flatland.envs.generators import random_rail_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
-from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.core.env_observation_builder import TreeObsForRailEnv
 import numpy as np
 
 random.seed(100)

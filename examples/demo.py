@@ -48,7 +48,11 @@ class Scenario_Generator:
     def generate_complex_scenario(number_of_agents=3):
         env = RailEnv(width=15,
                       height=15,
-                      rail_generator=complex_rail_generator(nr_start_goal=6, nr_extra=30, min_dist=10, max_dist=99999, seed=0),
+                      rail_generator=complex_rail_generator(nr_start_goal=6,
+                                                            nr_extra=30,
+                                                            min_dist=10,
+                                                            max_dist=99999,
+                                                            seed=0),
                       number_of_agents=number_of_agents)
 
         return env
@@ -150,7 +154,9 @@ class Demo:
         obs = self.env.reset(False, False)
 
         for a in range(self.env.get_num_agents()):
-            data, distance = self.env.obs_builder.split_tree(tree=np.array(obs[a]), num_features_per_node=5, current_depth=0)
+            data, distance = self.env.obs_builder.split_tree(tree=np.array(obs[a]),
+                                                             num_features_per_node=5,
+                                                             current_depth=0)
 
             data = norm_obs_clip(data)
             distance = norm_obs_clip(distance)
@@ -174,7 +180,7 @@ class Demo:
                 action_prob[action] += 1
                 action_dict.update({a: action})
 
-            self.renderer.renderEnv(show=True,action_dict=action_dict)
+            self.renderer.renderEnv(show=True, action_dict=action_dict)
 
             # Environment step
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
