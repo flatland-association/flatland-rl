@@ -144,8 +144,6 @@ class Demo:
                 action = 2 #np.random.choice(self.action_size) #self.agent.act(agent_obs[a])
                 action_dict.update({a: action})
 
-            print(action_dict)
-
             self.renderer.renderEnv(show=True,action_dict=action_dict)
 
             # Environment step
