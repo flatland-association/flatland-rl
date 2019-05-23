@@ -218,7 +218,6 @@ class QTSVG(GraphicsLayer):
         self.lwAgents[iAgent] = svgWidget
         self.agents_prev[iAgent] = EnvAgent((row, col), iDirOut, (0, 0), old_direction=iDirIn)
         self.layout.addWidget(svgWidget, row, col)
-        # print("Created ", iAgent, row, col)
 
     def show(self, block=False):
         self.wMain.update()
