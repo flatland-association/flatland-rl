@@ -353,6 +353,8 @@ class RailEnv(Environment):
         self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4]) for d in data[b"agents"]]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
+        self.rail.height = self.height
+        self.rail.width = self.width
         # self.agents = [None] * self.get_num_agents()
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
 
