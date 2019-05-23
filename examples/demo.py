@@ -192,7 +192,7 @@ class Demo:
                 break
 
 
-if False:
+if True:
     demo_000 = Demo(Scenario_Generator.generate_random_scenario())
     demo_000.run_demo()
     demo_000 = None
