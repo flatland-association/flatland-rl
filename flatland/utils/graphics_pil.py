@@ -1,6 +1,7 @@
 
 from flatland.utils.graphics_layer import GraphicsLayer
-from PIL import Image, ImageDraw   # , ImageFont
+from PIL import Image, ImageDraw, ImageTk   # , ImageFont
+import tkinter as tk
 from numpy import array
 import numpy as np
 
@@ -26,6 +27,9 @@ class PILGL(GraphicsLayer):
         self.tColRail = (0, 0, 0)         # black rails
         self.tColGrid = (230,) * 3        # light grey for grid
 
+        self.window_open = False
+        # self.bShow = show
+        self.firstFrame = True
         self.beginFrame()
 
     def plot(self, gX, gY, color=None, linewidth=3, layer=0, opacity=255, **kwargs):
@@ -45,6 +49,13 @@ class PILGL(GraphicsLayer):
         for x, y in gPoints:
             self.draws[layer].rectangle([(x - r, y - r), (x + r, y + r)], fill=color, outline=color)
 
+    def open_window(self):
+        assert self.window_open is False, "Window is already open!"
+        self.window = tk.Tk()
+        self.window.title("Flatland")
+        self.window.configure(background='grey')
+        self.window_open = True
+
     def text(self, *args, **kwargs):
         pass
 
@@ -59,8 +70,23 @@ class PILGL(GraphicsLayer):
         self.create_layer(1)
 
     def show(self, block=False):
-        pass
-        # plt.show(block=block)
+        img = self.alpha_composite_layers()
+        
+        if not self.window_open:
+            self.open_window()
+        
+        tkimg = ImageTk.PhotoImage(img)
+        
+        if self.firstFrame:
+            self.panel = tk.Label(self.window, image=tkimg)
+            self.panel.pack(side="bottom", fill="both", expand="yes")
+        else:
+            # update the image in situ
+            self.panel.configure(image=tkimg)
+            self.panel.image = tkimg
+
+        self.window.update()
+        self.firstFrame = False
 
     def pause(self, seconds=0.00001):
         pass

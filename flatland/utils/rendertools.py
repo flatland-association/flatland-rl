@@ -16,14 +16,15 @@ from flatland.utils.render_qt import QTGL, QTSVG
 
 
 class MPLGL(GraphicsLayer):
-    def __init__(self, width, height, show=False):
+    def __init__(self, width, height):
         self.width = width
         self.height = height
         self.yxBase = array([6, 21])  # pixel offset
         self.nPixCell = 700 / width
         self.img = None
-        if show:
-            plt.figure(figsize=(10, 10))
+
+    def open_window(self):
+        plt.figure(figsize=(10, 10))
 
     def plot(self, *args, **kwargs):
         plt.plot(*args, **kwargs)
@@ -127,7 +128,7 @@ class RenderTool(object):
         # self.gl = MPLGL()
 
         if gl == "MPL":
-            self.gl = MPLGL(env.width, env.height, show=show)
+            self.gl = MPLGL(env.width, env.height)
         elif gl == "QT":
             self.gl = QTGL(env.width, env.height)
         elif gl == "PIL":
@@ -680,6 +681,9 @@ class RenderTool(object):
             if show:
                 self.gl.show(block=False)
             # self.gl.endFrame()
+
+        if show and type(self.gl) is PILGL:
+            self.gl.show()
 
         self.gl.pause(0.00001)
 
