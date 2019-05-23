@@ -132,39 +132,16 @@ class Demo:
         handle = self.env.get_agent_handles()
         return handle
 
-    def run_demo(self, max_nbr_of_steps=100):
+    def run_demo(self, max_nbr_of_steps=30):
         action_dict = dict()
-        time_obs = deque(maxlen=2)
-        action_prob = [0] * 4
-        agent_obs = [None] * self.env.get_num_agents()
-        agent_next_obs = [None] * self.env.get_num_agents()
 
         # Reset environment
         obs = self.env.reset(False, False)
 
-        for a in range(self.env.get_num_agents()):
-            data, distance = self.env.obs_builder.split_tree(tree=np.array(obs[a]), num_features_per_node=5, current_depth=0)
-
-            data = norm_obs_clip(data)
-            distance = norm_obs_clip(distance)
-            obs[a] = np.concatenate((data, distance))
-
-        for i in range(2):
-            time_obs.append(obs)
-
-        # env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
-        for a in range(self.env.get_num_agents()):
-            agent_obs[a] = np.concatenate((time_obs[0][a], time_obs[1][a]))
-
         for step in range(max_nbr_of_steps):
-
-            time.sleep(.2)
-
-            # print(step)
             # Action
             for a in range(self.env.get_num_agents()):
-                action = np.random.choice(self.action_size) #self.agent.act(agent_obs[a])
-                action_prob[action] += 1
+                action = 2 #np.random.choice(self.action_size) #self.agent.act(agent_obs[a])
                 action_dict.update({a: action})
 
             print(action_dict)
@@ -173,20 +150,7 @@ class Demo:
 
             # Environment step
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
-            for a in range(self.env.get_num_agents()):
-                data, distance = self.env.obs_builder.split_tree(tree=np.array(next_obs[a]), num_features_per_node=5,
-                                                                 current_depth=0)
-                data = norm_obs_clip(data)
-                distance = norm_obs_clip(distance)
-                next_obs[a] = np.concatenate((data, distance))
 
-            # Update replay buffer and train agent
-            for a in range(self.env.get_num_agents()):
-                agent_next_obs[a] = np.concatenate((time_obs[0][a], time_obs[1][a]))
-
-            time_obs.append(next_obs)
-
-            agent_obs = agent_next_obs.copy()
             if done['__all__']:
                 break
 
