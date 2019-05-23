@@ -98,9 +98,15 @@ class View(object):
         self.wFilename.observe(self.controller.setFilename, names="value")
 
         # Size of environment when regenerating
-        self.wRegenSize = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size",
+
+
+        self.wRegenSizeWidth = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size (Width)",
             tip="Click Regenerate after changing this")
-        self.wRegenSize.observe(self.controller.setRegenSize, names="value")
+        self.wRegenSizeWidth.observe(self.controller.setRegenSizeWidth, names="value")
+
+        self.wRegenSizeHeight = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size (Height)",
+            tip="Click Regenerate after changing this")
+        self.wRegenSizeHeight.observe(self.controller.setRegenSizeHeight, names="value")
 
         # Number of Agents when regenerating
         self.wRegenNAgents = IntSlider(value=1, min=0, max=20, step=1, description="# Agents",
@@ -115,7 +121,7 @@ class View(object):
             self.wTab.set_title(i, title)
         self.wTab.children = [
             VBox([self.wDebug, self.wDebug_move, self.wShowObs]),
-            VBox([self.wRegenSize, self.wRegenNAgents, self.wRegenMethod, self.wReplaceAgents])]
+            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents, self.wRegenMethod, self.wReplaceAgents])]
 
         # Progress bar intended for stepping in the background (not yet working)
         self.wProg_steps = ipywidgets.IntProgress(value=0, min=0, max=20, step=1, description="Step")
@@ -314,6 +320,8 @@ class Controller(object):
 
     def reset(self, event):
         self.log("Reset - nAgents:", self.view.wRegenNAgents.value)
+        self.log("Reset - size:", self.model.regen_size_width)
+        self.log("Reset - size:", self.model.regen_size_height)
         self.model.reset(replace_agents=self.view.wReplaceAgents.value,
                          nAgents=self.view.wRegenNAgents.value)
 
@@ -326,8 +334,11 @@ class Controller(object):
         nAgents = self.view.wRegenNAgents.value
         self.model.regenerate(method, nAgents)
 
-    def setRegenSize(self, event):
-        self.model.setRegenSize(event["new"])
+    def setRegenSizeWidth(self, event):
+        self.model.setRegenSizeWidth(event["new"])
+
+    def setRegenSizeHeight(self, event):
+        self.model.setRegenSizeHeight(event["new"])
 
     def load(self, event):
         self.model.load()
@@ -355,7 +366,8 @@ class EditorModel(object):
     def __init__(self, env):
         self.view = None
         self.env = env
-        self.regen_size = 10
+        self.regen_size_width = 10
+        self.regen_size_height = 10
 
         self.lrcStroke = []
         self.iTransLast = -1
@@ -607,6 +619,13 @@ class EditorModel(object):
             self.log("load file: ", self.env_filename)
             # self.env.rail.load_transition_map(self.env_filename, override_gridsize=True)
             self.env.load(self.env_filename)
+
+            if not self.regen_size_height == self.env.height and not self.regen_size_width == self.env.width:
+                self.regen_size_height = self.env.height
+                self.regen_size_width = self.env.width
+                self.regenerate(None, 0, self.env)
+                self.env.load(self.env_filename)
+
             self.fix_env()
             self.set_env(self.env)
             self.redraw()
@@ -618,8 +637,10 @@ class EditorModel(object):
         # self.env.rail.save_transition_map(self.env_filename)
         self.env.save(self.env_filename)
 
-    def regenerate(self, method=None, nAgents=0):
-        self.log("Regenerate size", self.regen_size)
+    def regenerate(self, method=None, nAgents=0,env=None):
+        self.log("Regenerate size",
+                 self.regen_size_width,
+                 self.regen_size_height)
 
         if method is None or method == "Empty":
             fnMethod = empty_rail_generator()
@@ -628,12 +649,15 @@ class EditorModel(object):
         else:
             fnMethod = complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12)
 
-        self.env = RailEnv(width=self.regen_size,
-                           height=self.regen_size,
-                           rail_generator=fnMethod,
-                           # number_of_agents=self.env.get_num_agents(),
-                           number_of_agents=nAgents,
-                           obs_builder_object=TreeObsForRailEnv(max_depth=2))
+        if env is None:
+            self.env = RailEnv(width=self.regen_size_width,
+                               height=self.regen_size_height,
+                               rail_generator=fnMethod,
+                               # number_of_agents=self.env.get_num_agents(),
+                               number_of_agents=nAgents,
+                               obs_builder_object=TreeObsForRailEnv(max_depth=2))
+        else:
+            self.env = env
         self.env.reset(regen_rail=True)
         self.fix_env()
         self.set_env(self.env)
@@ -642,8 +666,13 @@ class EditorModel(object):
         # self.view.init_canvas() # Can't do init_canvas - need to keep the same canvas widget!
         self.redraw()
 
-    def setRegenSize(self, size):
-        self.regen_size = size
+
+    def setRegenSizeWidth(self, size):
+        self.regen_size_width = size
+
+    def setRegenSizeHeight(self, size):
+        self.regen_size_height = size
+
 
     def find_agent_at(self, rcCell):
         for iAgent, agent in enumerate(self.env.agents_static):
@@ -666,7 +695,8 @@ class EditorModel(object):
             # No
             if self.iSelectedAgent is None:
                 # Create a new agent and select it.
-                agent_static = EnvAgentStatic(rcCell, 0, rcCell)
+                ## ADRIAN
+                agent_static = EnvAgentStatic(rcCell, np.random.choice(4), rcCell)
                 self.iSelectedAgent = self.env.add_agent_static(agent_static)
                 self.player = None  # will need to start a new player
             else:
