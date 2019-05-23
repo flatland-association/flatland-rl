@@ -1,14 +1,15 @@
-from recordtype import recordtype
-
-import numpy as np
-from numpy import array
-# import xarray as xr
-import matplotlib.pyplot as plt
 import time
 from collections import deque
-from flatland.utils.render_qt import QTGL, QTSVG
-from flatland.utils.graphics_pil import PILGL
+
+# import xarray as xr
+import matplotlib.pyplot as plt
+import numpy as np
+from numpy import array
+from recordtype import recordtype
+
 from flatland.utils.graphics_layer import GraphicsLayer
+from flatland.utils.graphics_pil import PILGL
+from flatland.utils.render_qt import QTGL, QTSVG
 
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
@@ -409,13 +410,12 @@ class RenderTool(object):
             color=sColor
         )
 
-    def drawTrans2(
-        self,
-            xyLine, xyCentre,
-            rotation, bDeadEnd=False,
-            sColor="gray",
-            bArrow=True,
-            spacing=0.1):
+    def drawTrans2(self,
+                   xyLine, xyCentre,
+                   rotation, bDeadEnd=False,
+                   sColor="gray",
+                   bArrow=True,
+                   spacing=0.1):
         """
         gLine is a numpy 2d array of points,
         in the plotting space / coords.
@@ -501,7 +501,7 @@ class RenderTool(object):
             for visited_cell in observation_dict[agent]:
                 cell_coord = array(visited_cell[:2])
                 cell_coord_trans = np.matmul(cell_coord, rt.grc2xy) + rt.xyHalf
-                self._draw_square(cell_coord_trans, 1 / (agent+1.1), color, layer=1, opacity=100)
+                self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
 
     def renderRail(self, spacing=False, sRailColor="gray", curves=True, arrows=False):
 
@@ -604,11 +604,10 @@ class RenderTool(object):
                                     "rot:", rotation,
                                 )
 
-    def renderEnv(
-        self, show=False, curves=True, spacing=False,
-            arrows=False, agents=True, show_observations=True, sRailColor="gray", frames=False,
-            iEpisode=None, iStep=None,
-            iSelectedAgent=None, action_dict=None):
+    def renderEnv(self, show=False, curves=True, spacing=False,
+                  arrows=False, agents=True, show_observations=True, sRailColor="gray", frames=False,
+                  iEpisode=None, iStep=None,
+                  iSelectedAgent=None, action_dict=None):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -683,7 +682,6 @@ class RenderTool(object):
 
         self.gl.pause(0.00001)
 
-
         return
 
     def _draw_square(self, center, size, color, opacity=255, layer=0):
@@ -725,10 +723,9 @@ class RenderTool(object):
 
             gP0 = array([gX1, gY1, gZ1])
 
-    def renderEnv2(
-        self, show=False, curves=True, spacing=False, arrows=False, agents=True, renderobs=True, sRailColor="gray",
-            frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
-            action_dict=dict()):
+    def renderEnv2(self, show=False, curves=True, spacing=False, arrows=False, agents=True, renderobs=True,
+                   sRailColor="gray", frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
+                   action_dict=dict()):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
