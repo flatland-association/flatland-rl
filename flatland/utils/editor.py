@@ -29,11 +29,15 @@ import jpy_canvas
 
 
 class EditorMVC(object):
-    def __init__(self, env=None, sGL="MPL"):
+    """ EditorMVC - a class to encompass and assemble the Jupyter Editor Model-View-Controller.
+    """
+    def __init__(self, env=None, sGL="PIL"):
+        """ Create an Editor MVC assembly around a railenv, or create one if None.
+        """
         if env is None:
             env = RailEnv(width=10,
                           height=10,
-                          rail_generator=random_rail_generator(),
+                          rail_generator=empty_rail_generator(),
                           number_of_agents=0,
                           obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
@@ -47,6 +51,8 @@ class EditorMVC(object):
 
 
 class View(object):
+    """ The Jupyter Editor View - creates and holds the widgets comprising the Editor.
+    """
     def __init__(self, editor, sGL="MPL"):
         self.editor = self.model = editor
         self.sGL = sGL

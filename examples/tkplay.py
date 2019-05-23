@@ -9,7 +9,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
 
 
-def tkmain(n_trials=2):
+def tkmain(n_trials=2, n_steps=50):
     # This creates the main window of an application
     window = tk.Tk()
     window.title("Join")
@@ -24,7 +24,6 @@ def tkmain(n_trials=2):
 
     oPlayer = Player(env)
     n_trials = 1
-    n_steps = 20
     delay = 0
     for trials in range(1, n_trials + 1):
 
