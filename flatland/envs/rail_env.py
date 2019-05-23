@@ -112,6 +112,10 @@ class RailEnv(Environment):
 
         self.valid_positions = None
 
+        self.action_space = [1]
+        self.observation_space = self.obs_builder.observation_space # updated on resets?
+
+
     # no more agent_handles
     def get_agent_handles(self):
         return range(self.get_num_agents())
@@ -160,6 +164,7 @@ class RailEnv(Environment):
 
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
+        self.observation_space = self.obs_builder.observation_space # <-- change on reset?
 
         # Return the new observation vectors for each agent
         return self._get_observations()
