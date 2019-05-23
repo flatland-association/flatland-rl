@@ -37,7 +37,7 @@ env = RailEnv(width=20,
 env = RailEnv(width=15,
               height=15,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=10, min_dist=10, max_dist=99999, seed=0),
-              number_of_agents=10)
+              number_of_agents=5)
 
 """
 env = RailEnv(width=20,
