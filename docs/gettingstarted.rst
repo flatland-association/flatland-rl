@@ -143,11 +143,34 @@ Feel free to vary these parameters to see how your own agent holds up on differe
 cover the whole spectrum from easy to complex tasks.
 
 Once we are set with the environment we can load our preferred agent from either RLlib or any other ressource. Here we use a random agent to illustrate the code.
+
 .. code-block:: python
 
-    agent = RandomAgent(env., 4)
+    agent = RandomAgent(env.action_space, env.observation_space)
 
+We start every trial by resetting the environment
 
+.. code-block:: python
+
+    obs = env.reset()
+
+Which provides the initial observation for all agents (obs = array of all observations).
+In order for the environment to step forward in time we need a dictionar of actions for all active agents.
+
+.. code-block:: python
+
+        for handle in range(env.get_num_agents()):
+            action = agent.act(obs[handle])
+            action_dict.update({handle: action})
+
+This dictionary is then passed to the environment which checks the validity of all actions and update the environment state.
+
+.. code-block:: python
+
+    next_obs, all_rewards, done, _ = env.step(action_dict)
+    
+The environment returns an array of new observations, reward dictionary for all agents as well as a flag for which agents are done.
+This information can be used to update the policy of your agent and if done['__all__'] == True the episode terminates.
 
 Part 3 : Customizing Observations and Level Generators
 --------------
