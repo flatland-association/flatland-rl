@@ -45,13 +45,13 @@ class RandomAgent:
         return
 
 
-# Load the agent with the parameters corresponding to the environment and observation_builder
-agent = RandomAgent(env.get_observation_size(), env.get_action_size())
+# Initialize the agent with the parameters corresponding to the environment and observation_builder
+agent = RandomAgent(218, 4)
 n_trials = 1000
 
 # Empty dictionary for all agent action
 action_dict = dict()
-
+print("Starting Training...")
 for trials in range(1, n_trials + 1):
 
     # Reset environment and get initial observations for all agents
@@ -72,9 +72,11 @@ for trials in range(1, n_trials + 1):
         next_obs, all_rewards, done, _ = env.step(action_dict)
 
         # Update replay buffer and train agent
-        agent.step(obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a])
+        agent.step((obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a]))
         score += all_rewards[a]
 
         obs = next_obs.copy()
         if done['__all__']:
             break
+    print('Episode Nr. {}'.format(trials))
+

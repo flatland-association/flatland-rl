@@ -139,6 +139,8 @@ Next we configure the difficulty of our task by modifying the complex_rail_gener
 The difficulty of a railway network depends on the dimensions (width x height) and the number of agents in the network.
 By varying the number of start and goal connections (nr_start_goal) and the number of extra railway elements added (nr_extra)
 the number of alternative paths of each agents can be modified. The more possible paths an agent has to reach its target the easier the task becomes.
+Here we don't specify any observation builder but rather use the standard tree observation. If you would like to use a custom obervation please follow
+ the instructions in the next tutorial.
 Feel free to vary these parameters to see how your own agent holds up on different setting. The evalutation set of railway configurations will 
 cover the whole spectrum from easy to complex tasks.
 
