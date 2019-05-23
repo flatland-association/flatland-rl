@@ -146,7 +146,7 @@ of handle 'handle'.
 
 A RailEnv environment can then be created as usual:
 
-.. code-block: python
+.. code-block:: python
 
     env = RailEnv(width=7,
                   height=7,
@@ -162,9 +162,9 @@ num_agent agents, their initial orientation (0=North, 1=East, 2=South, 3=West),
 and the position of their targets.
 
 For example, the following custom rail map generator returns an empty map of 
-size (height, width), with no agents (regardless of num_agents)
+size (height, width), with no agents (regardless of num_agents):
 
-.. code-block: python
+.. code-block:: python
 
     def custom_rail_generator():
         def generator(width, height, num_agents=0, num_resets=0):
@@ -184,9 +184,9 @@ It is worth to note that helpful utilities to manage RailEnv environments and th
 related data structures are available in 'envs.env_utils'. In particular, 
 envs.env_utils.get_rnd_agents_pos_tgt_dir_on_rail is fairly handy to fill in 
 random (but consistent) agents along with their targets and initial directions, 
-given a rail map (GridTransitionMap object) and the desired number of agents
+given a rail map (GridTransitionMap object) and the desired number of agents:
 
-.. code-block: python
+.. code-block:: python
     agents_position, agents_direction, agents_target = get_rnd_agents_pos_tgt_dir_on_rail(
         rail_map,
         num_agents)
