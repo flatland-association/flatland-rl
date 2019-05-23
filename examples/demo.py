@@ -164,7 +164,6 @@ class Demo:
             agent_obs[a] = np.concatenate((time_obs[0][a], time_obs[1][a]))
 
         for step in range(max_nbr_of_steps):
-            self.renderer.renderEnv(show=True)
 
             time.sleep(.2)
 
@@ -174,6 +173,8 @@ class Demo:
                 action = self.agent.act(agent_obs[a])
                 action_prob[action] += 1
                 action_dict.update({a: action})
+
+            self.renderer.renderEnv(show=True,action_dict=action_dict)
 
             # Environment step
             next_obs, all_rewards, done, _ = self.env.step(action_dict)

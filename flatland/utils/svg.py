@@ -80,6 +80,7 @@ class Zug(object):
         self.svg_curve2 = SVG("svg/Zug_2_Weiche_#0091ea.svg")
 
     def getSvg(self, iAgent, iDirIn, iDirOut, color=None):
+
         delta_dir = (iDirOut - iDirIn) % 4
         # if delta_dir != 0:
         #    print("Bend:", iAgent, iDirIn, iDirOut)
