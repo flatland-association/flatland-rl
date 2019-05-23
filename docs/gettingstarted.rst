@@ -74,7 +74,7 @@ generated rail networks).
 
 Environments can be rendered using the utils.rendertools utilities, for example:
 
-.. code-block: python
+.. code-block:: python
 
     env_renderer = RenderTool(env, gl="QT")
     env_renderer.renderEnv(show=True)
@@ -85,7 +85,7 @@ with a dictionary of actions whose keys are agents' handles (returned by
 env.get_agent_handles() ) and the corresponding values the selected actions.
 For example, for a 2-agents environment:
 
-.. code-block: python
+.. code-block:: python
 
     handles = env.get_agent_handles()
     action_dict = {handles[0]:0, handles[1]:0}
@@ -95,6 +95,16 @@ where 'obs', 'all_rewards', and 'done' are also dictionary indexed by the agents
 handles, whose values correspond to the relevant observations, rewards and terminal 
 status for each agent. Further, the 'dones' dictionary returns an extra key 
 '__all__' that is set to True after all agents have reached their goals.
+
+
+In the specific case a TreeObsForRailEnv observation builder is used, it is 
+possible to print a representation of the returned observations with the 
+following code. Also, tree observation data is displayed by RenderTool by default.
+
+.. code-block:: python
+
+    for i in range(env.get_num_agents()):
+        env.obs_builder.util_print_obs_subtree(tree=obs[i], num_features_per_node=5)
 
 
 
