@@ -9,6 +9,6 @@ Following are three short tutorials to help new users get acquainted with how to
 
 To use flatland in a project::
 
-.. code-block:: Python
+.. code-block:: console
 
     import flatland
