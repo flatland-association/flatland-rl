@@ -1,10 +1,9 @@
 import random
 
-import numpy as np
-
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
+import numpy as np
 
 random.seed(0)
 np.random.seed(0)

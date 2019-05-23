@@ -25,7 +25,8 @@ tests:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb
         - pip install tox
-        - xvfb-run -s "-screen 0 800x600x24" tox
+        - apt install -y graphviz xdg-utils
+        - xvfb-run tox -v --recreate
 
 build_and_deploy_docs:
     image: "python:latest"
@@ -36,10 +37,12 @@ build_and_deploy_docs:
         - tests
     before_script:
         - pip install awscli
+        - apt update
+        - apt install -y graphviz libgl1-mesa-glx xvfb xdg-utils
     script:
         - pip install -r requirements_dev.txt
         - python setup.py install
-        - make docs
+        - xvfb-run make docs
         - aws s3 cp ./docs/_build/html/ s3://${BUCKET_NAME} --recursive
     environment:
         name: ${CI_COMMIT_REF_SLUG}

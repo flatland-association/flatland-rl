@@ -11,6 +11,19 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout
 from PyQt5 import QtSvg
 
 
+def transform_string_svg(sSVG):
+    sSVG = sSVG.replace("ASCII", "UTF-8")
+    bySVG = bytearray(sSVG, encoding='utf-8')
+    return bySVG
+
+def create_QtSvgWidget_from_svg_string(sSVG):
+    svgWidget = QtSvg.QSvgWidget()
+    ret = svgWidget.renderer().load(transform_string_svg(sSVG))
+    if ret == False:
+        print("create_QtSvgWidget_from_svg_string : failed to parse:", sSVG)
+    return svgWidget
+
+
 class QTGL(GraphicsLayer):
     def __init__(self, width, height):
         self.cell_pixels = 60
@@ -108,7 +121,7 @@ class QTSVG(GraphicsLayer):
         self.layout = QGridLayout()
         self.layout.setSpacing(0)
         self.wMain.setLayout(self.layout)
-        self.wWinMain.resize(1000, 1000)
+        self.wWinMain.resize(600, 600)
         self.wWinMain.show()
         self.wWinMain.setFocus()
 
@@ -129,13 +142,7 @@ class QTSVG(GraphicsLayer):
         if False:
             for binTrans in self.track.dSvg.keys():
                 sSVG = self.track.dSvg[binTrans].to_string()
-
-                bySVG = bytearray(sSVG, encoding='utf-8')
-
-                svgWidget = QtSvg.QSvgWidget()
-                svgWidget.renderer().load(bySVG)
-                print(iRow, iCol)
-                self.layout.addWidget(svgWidget, iRow, iCol)
+                self.layout.addWidget(create_QtSvgWidget_from_svg_string(sSVG), iRow, iCol)
 
                 iArt += 1
                 iRow = int(iArt / nCols)
@@ -170,9 +177,7 @@ class QTSVG(GraphicsLayer):
     def setRailAt(self, row, col, binTrans):
         if binTrans in self.track.dSvg:
             sSVG = self.track.dSvg[binTrans].to_string()
-            bySVG = bytearray(sSVG, encoding='utf-8')
-            svgWidget = QtSvg.QSvgWidget()
-            svgWidget.renderer().load(bySVG)
+            svgWidget = create_QtSvgWidget_from_svg_string(sSVG)
             self.layout.addWidget(svgWidget, row, col)
             self.lwTrack.append(svgWidget)
         else:
@@ -199,8 +204,7 @@ class QTSVG(GraphicsLayer):
                     agentPrev.direction = iDirOut
                     agentPrev.old_direction = iDirIn
                     sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut, color=color).to_string()
-                    bySVG = bytearray(sSVG, encoding='utf-8')
-                    wAgent.renderer().load(bySVG)
+                    wAgent.renderer().load(transform_string_svg(sSVG))
                     return
 
         # Ensure we have adequate slots in the list lwAgents
@@ -210,13 +214,10 @@ class QTSVG(GraphicsLayer):
 
         # Create a new widget for the agent
         sSVG = self.zug.getSvg(iAgent, iDirIn, iDirOut, color=color).to_string()
-        bySVG = bytearray(sSVG, encoding='utf-8')
-        svgWidget = QtSvg.QSvgWidget()
-        svgWidget.renderer().load(bySVG)
+        svgWidget = create_QtSvgWidget_from_svg_string(sSVG)
         self.lwAgents[iAgent] = svgWidget
         self.agents_prev[iAgent] = EnvAgent((row, col), iDirOut, (0, 0), old_direction=iDirIn)
         self.layout.addWidget(svgWidget, row, col)
-        # print("Created ", iAgent, row, col)
 
     def show(self, block=False):
         self.wMain.update()

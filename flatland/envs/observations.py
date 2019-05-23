@@ -195,7 +195,8 @@ class TreeObsForRailEnv(ObservationBuilder):
         # for loc in self.env.agents_position:
         #    self.location_has_agent[(loc[0], loc[1])] = 1
         self.location_has_agent = {tuple(agent.position): 1 for agent in self.env.agents}
-
+        if handle > len(self.env.agents):
+            print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
         agent = self.env.agents[handle]  # TODO: handle being treated as index
         # position = self.env.agents_position[handle]
         # orientation = self.env.agents_direction[handle]

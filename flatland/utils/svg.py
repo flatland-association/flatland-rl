@@ -80,6 +80,7 @@ class Zug(object):
         self.svg_curve2 = SVG("svg/Zug_2_Weiche_#0091ea.svg")
 
     def getSvg(self, iAgent, iDirIn, iDirOut, color=None):
+
         delta_dir = (iDirOut - iDirIn) % 4
         # if delta_dir != 0:
         #    print("Bend:", iAgent, iDirIn, iDirOut)
@@ -105,7 +106,7 @@ class Zug(object):
 class Track(object):
     def __init__(self):
         dFiles = {
-            "": "Background_#91D1DD.svg",
+            "": "Background_#9CCB89.svg",
             "WE": "Gleis_Deadend.svg",
             "WW EE NN SS": "Gleis_Diamond_Crossing.svg",
             "WW EE": "Gleis_horizontal.svg",
@@ -132,7 +133,7 @@ class Track(object):
 
         lDirs = list("NESW")
 
-        svgBG = SVG("./svg/Background_#91D1DD.svg")
+        svgBG = SVG("./svg/Background_#9CCB89.svg")
 
         for sTrans, sFile in dFiles.items():
             svg = SVG("./svg/" + sFile)

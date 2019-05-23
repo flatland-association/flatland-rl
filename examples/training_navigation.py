@@ -1,5 +1,4 @@
 import random
-import time
 from collections import deque
 
 import numpy as np
@@ -36,8 +35,8 @@ env = RailEnv(width=20,
 """
 env = RailEnv(width=15,
               height=15,
-              rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=30, min_dist=5, max_dist=99999, seed=0),
-              number_of_agents=3)
+              rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=10, min_dist=10, max_dist=99999, seed=0),
+              number_of_agents=5)
 
 """
 env = RailEnv(width=20,
@@ -47,7 +46,7 @@ env = RailEnv(width=20,
               number_of_agents=3)
 
 """
-env_renderer = RenderTool(env, gl="QT")
+env_renderer = RenderTool(env, gl="QTSVG")
 handle = env.get_agent_handles()
 
 state_size = 105 * 2
@@ -67,7 +66,7 @@ action_prob = [0] * 4
 agent_obs = [None] * env.get_num_agents()
 agent_next_obs = [None] * env.get_num_agents()
 agent = Agent(state_size, action_size, "FC", 0)
-agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint15000.pth'))
+agent.qnetwork_local.load_state_dict(torch.load('./flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
 demo = True
 
@@ -144,8 +143,7 @@ for trials in range(1, n_trials + 1):
     # Run episode
     for step in range(100):
         if demo:
-            env_renderer.renderEnv(show=True, obsrender=True)
-            time.sleep(2)
+            env_renderer.renderEnv(show=True)
         # print(step)
         # Action
         for a in range(env.get_num_agents()):
@@ -193,29 +191,18 @@ for trials in range(1, n_trials + 1):
     scores.append(np.mean(scores_window))
     dones_list.append((np.mean(done_window)))
 
-    print(
-        '\rTraining {} Agents.\t' +
-        'Episode {}\t' +
-        'Average Score: {:.0f}\t' +
-        'Dones: {:.2f}%\t' +
-        'Epsilon: {:.2f} \t ' +
-        'Action Probabilities: \t ' +
-        '{}'.format(
-            env.get_num_agents(),
-            trials,
-            np.mean(scores_window),
-            100 * np.mean(done_window),
-            eps, action_prob / np.sum(action_prob)),
-        end=" ")
+    print('\rTraining {} Agents.\t Episode {}\t Average Score: {:.0f}\tDones: {:.2f}%' +
+          '\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
+              env.get_num_agents(),
+              trials,
+              np.mean(scores_window),
+              100 * np.mean(done_window),
+              eps, action_prob / np.sum(action_prob)), end=" ")
+
     if trials % 100 == 0:
         print(
-            '\rTraining {} Agents.\t' +
-            'Episode {}\t' +
-            'Average Score: {:.0f}\t' +
-            'Dones: {:.2f}%\t' +
-            'Epsilon: {:.2f} \t ' +
-            'Action Probabilities: \t ' +
-            '{}'.format(
+            '\rTraining {} Agents.\t Episode {}\t Average Score: {:.0f}\tDones: {:.2f}%' +
+            '\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
                 env.get_num_agents(),
                 trials,
                 np.mean(scores_window),

@@ -1,26 +1,29 @@
-from recordtype import recordtype
-
-import numpy as np
-from numpy import array
-# import xarray as xr
-import matplotlib.pyplot as plt
 import time
 from collections import deque
-from flatland.utils.render_qt import QTGL, QTSVG
-from flatland.utils.graphics_pil import PILGL
+
+# import xarray as xr
+import matplotlib.pyplot as plt
+import numpy as np
+from numpy import array
+from recordtype import recordtype
+
 from flatland.utils.graphics_layer import GraphicsLayer
+from flatland.utils.graphics_pil import PILGL
+from flatland.utils.render_qt import QTGL, QTSVG
 
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
 
 class MPLGL(GraphicsLayer):
-    def __init__(self, width, height):
+    def __init__(self, width, height, show=False):
         self.width = width
         self.height = height
         self.yxBase = array([6, 21])  # pixel offset
         self.nPixCell = 700 / width
         self.img = None
+        if show:
+            plt.figure(figsize=(10, 10))
 
     def plot(self, *args, **kwargs):
         plt.plot(*args, **kwargs)
@@ -70,6 +73,7 @@ class MPLGL(GraphicsLayer):
     def beginFrame(self):
         self.img = None
         plt.figure(figsize=(10, 10))
+        plt.clf()
         pass
 
     def endFrame(self):
@@ -115,7 +119,7 @@ class RenderTool(object):
     gTheta = np.linspace(0, np.pi / 2, 5)
     gArc = array([np.cos(gTheta), np.sin(gTheta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env, gl="MPL"):
+    def __init__(self, env, gl="MPL", show=False):
         self.env = env
         self.iFrame = 0
         self.time1 = time.time()
@@ -123,7 +127,7 @@ class RenderTool(object):
         # self.gl = MPLGL()
 
         if gl == "MPL":
-            self.gl = MPLGL(env.width, env.height)
+            self.gl = MPLGL(env.width, env.height, show=show)
         elif gl == "QT":
             self.gl = QTGL(env.width, env.height)
         elif gl == "PIL":
@@ -219,17 +223,19 @@ class RenderTool(object):
         if static:
             color = self.gl.adaptColor(color, lighten=True)
 
+        color = color
+
         # print("Agent:", rcPos, iDir, rcDir, xyDir, xyPos)
-        self.gl.scatter(*xyPos, color=color, marker="o", s=100)  # agent location
+        self.gl.scatter(*xyPos, color=color, layer=1, marker="o", s=100)  # agent location
         xyDirLine = array([xyPos, xyPos + xyDir / 2]).T  # line for agent orient.
-        self.gl.plot(*xyDirLine, color=color, lw=5, ms=0, alpha=0.6)
+        self.gl.plot(*xyDirLine, color=color, layer=1, lw=5, ms=0, alpha=0.6)
         if selected:
             self._draw_square(xyPos, 1, color)
 
         if target is not None:
             rcTarget = array(target)
             xyTarget = np.matmul(rcTarget, rt.grc2xy) + rt.xyHalf
-            self._draw_square(xyTarget, 1 / 3, color)
+            self._draw_square(xyTarget, 1 / 3, color, layer=1)
 
     def plotTrans(self, rcPos, gTransRCAg, color="r", depth=None):
         """
@@ -397,13 +403,19 @@ class RenderTool(object):
                 visit = visit.prev
                 xyPrev = xy
 
-    def drawTrans2(
-        self,
-            xyLine, xyCentre,
-            rotation, bDeadEnd=False,
-            sColor="gray",
-            bArrow=True,
-            spacing=0.1):
+    def drawTrans(self, oFrom, oTo, sColor="gray"):
+        self.gl.plot(
+            [oFrom[0], oTo[0]],  # x
+            [oFrom[1], oTo[1]],  # y
+            color=sColor
+        )
+
+    def drawTrans2(self,
+                   xyLine, xyCentre,
+                   rotation, bDeadEnd=False,
+                   sColor="gray",
+                   bArrow=True,
+                   spacing=0.1):
         """
         gLine is a numpy 2d array of points,
         in the plotting space / coords.
@@ -474,8 +486,8 @@ class RenderTool(object):
 
     def renderObs(self, agent_handles, observation_dict):
         """
-        Render the extent of the observation of each agent. All cells that appear in the agent obsrevation will be
-        highlighted.
+        Render the extent of the observation of each agent. All cells that appear in the agent
+        observation will be highlighted.
         :param agent_handles: List of agent indices to adapt color and get correct observation
         :param observation_dict: dictionary containing sets of cells of the agent observation
 
@@ -489,46 +501,12 @@ class RenderTool(object):
             for visited_cell in observation_dict[agent]:
                 cell_coord = array(visited_cell[:2])
                 cell_coord_trans = np.matmul(cell_coord, rt.grc2xy) + rt.xyHalf
-                self._draw_square(cell_coord_trans, 1 / 3, color)
+                self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
 
-    def renderEnv(
-        self, show=False, curves=True, spacing=False,
-            arrows=False, agents=True, obsrender=True, sRailColor="gray", frames=False, iEpisode=None, iStep=None,
-            iSelectedAgent=None, action_dict=None):
-        """
-        Draw the environment using matplotlib.
-        Draw into the figure if provided.
+    def renderRail(self, spacing=False, sRailColor="gray", curves=True, arrows=False):
 
-        Call pyplot.show() if show==True.
-        (Use show=False from a Jupyter notebook with %matplotlib inline)
-        """
-
-        if not self.gl.is_raster():
-            self.renderEnv2(show, curves, spacing,
-                            arrows, agents, sRailColor,
-                            frames, iEpisode, iStep,
-                            iSelectedAgent, action_dict)
-            return
-
-        # cell_size is a bit pointless with matplotlib - it does not relate to pixels,
-        # so for now I've changed it to 1 (from 10)
-        cell_size = 1
-        self.gl.beginFrame()
-
-        # self.gl.clf()
-        # if oFigure is None:
-        #    oFigure = self.gl.figure()
-
-        def drawTrans(oFrom, oTo, sColor="gray"):
-            self.gl.plot(
-                [oFrom[0], oTo[0]],  # x
-                [oFrom[1], oTo[1]],  # y
-                color=sColor
-            )
-
+        cell_size = 1  # TODO: remove cell_size
         env = self.env
-
-        # t1 = time.time()
 
         # Draw cells grid
         grid_color = [0.95, 0.95, 0.95]
@@ -613,7 +591,7 @@ class RenderTool(object):
                                         rotation, spacing=spacing, bArrow=arrows,
                                         sColor=sRailColor)
                                 else:
-                                    drawTrans(from_xy, to_xy, sRailColor)
+                                    self.drawTrans(self, from_xy, to_xy, sRailColor)
 
                             if False:
                                 print(
@@ -626,10 +604,46 @@ class RenderTool(object):
                                     "rot:", rotation,
                                 )
 
+    def renderEnv(self, show=False, curves=True, spacing=False,
+                  arrows=False, agents=True, renderobs=True, show_observations=True, sRailColor="gray", frames=False,
+                  iEpisode=None, iStep=None,
+                  iSelectedAgent=None, action_dict=None):
+        """
+        Draw the environment using matplotlib.
+        Draw into the figure if provided.
+
+        Call pyplot.show() if show==True.
+        (Use show=False from a Jupyter notebook with %matplotlib inline)
+        """
+
+        if not self.gl.is_raster():
+            self.renderEnv2(show, curves, spacing,
+                            arrows, agents, renderobs,sRailColor,
+                            frames, iEpisode, iStep,
+                            iSelectedAgent, action_dict)
+
+            return
+
+        if type(self.gl) in (QTGL, PILGL):
+            self.gl.beginFrame()
+
+        if type(self.gl) is MPLGL:
+            # self.gl.clf()
+            self.gl.beginFrame()
+            pass
+
+        # self.gl.clf()
+        # if oFigure is None:
+        #    oFigure = self.gl.figure()
+
+        env = self.env
+
+        self.renderRail()
+
         # Draw each agent + its orientation + its target
         if agents:
             self.plotAgents(targets=True, iSelectedAgent=iSelectedAgent)
-        if obsrender:
+        if show_observations:
             self.renderObs(range(env.get_num_agents()), env.dev_obs_dict)
         # Draw some textual information like fps
         yText = [-0.3, -0.6, -0.9]
@@ -657,23 +671,26 @@ class RenderTool(object):
         # TODO: for MPL, we don't want to call clf (called by endframe)
         # for QT, we need to call endFrame()
         # if not show:
-        self.gl.endFrame()
+        if type(self.gl) is QTGL:
+            self.gl.endFrame()
+            if show:
+                self.gl.show(block=False)
 
-        # t2 = time.time()
-        # print(t2 - t1, "seconds")
+        if type(self.gl) is MPLGL:
+            if show:
+                self.gl.show(block=False)
+            # self.gl.endFrame()
 
-        if show:
-            self.gl.show(block=False)
-            self.gl.pause(0.00001)
+        self.gl.pause(0.00001)
 
         return
 
-    def _draw_square(self, center, size, color):
+    def _draw_square(self, center, size, color, opacity=255, layer=0):
         x0 = center[0] - size / 2
         x1 = center[0] + size / 2
         y0 = center[1] - size / 2
         y1 = center[1] + size / 2
-        self.gl.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color)
+        self.gl.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color, layer=layer, opacity=opacity)
 
     def getImage(self):
         return self.gl.getImage()
@@ -707,10 +724,9 @@ class RenderTool(object):
 
             gP0 = array([gX1, gY1, gZ1])
 
-    def renderEnv2(
-        self, show=False, curves=True, spacing=False, arrows=False, agents=True, renderobs=True, sRailColor="gray",
-            frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
-            action_dict=dict()):
+    def renderEnv2(self, show=False, curves=True, spacing=False, arrows=False, agents=True, renderobs=True,
+                   sRailColor="gray", frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
+                   action_dict=dict()):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -749,9 +765,9 @@ class RenderTool(object):
             if action_isValid:
                 self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
             else:
-                pass
-                # print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
-                # self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
+                #pass
+                print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
+                self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
 
         self.gl.show()
         for i in range(3):
