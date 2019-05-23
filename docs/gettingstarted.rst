@@ -129,7 +129,7 @@ from flatland.envs.rail_env import RailEnv
 The complex_rail_generator is used in order to guarantee feasible railway network configurations for training.
 Next we configure the difficulty of our task by modifying the complex_rail_generator parameters.
 
-..code-block:: python
+.. code-block:: python
 
 env = RailEnv(width=15,
               height=15,
