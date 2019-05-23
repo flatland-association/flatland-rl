@@ -479,11 +479,15 @@ class GlobalObsForRailEnv(ObservationBuilder):
         - transition map array with dimensions (env.height, env.width, 16),
           assuming 16 bits encoding of transitions.
 
-        - Four 2D arrays containing respectively the position of the given agent,
-          the position of its target, the positions of the other agents and of
-          their target.
+        - Three 2D arrays (map_height, map_width, 3) containing respectively the position of the given agent,
+          the position of its target and the positions of the other agents targets.
 
-        - A 4 elements array with one of encoding of the direction.
+        - A 3D array (map_height, map_width, 4) containing the one hot encoding of directions
+          of the other agents at their position coordinates.
+
+        - A 4 elements array with one of encoding of the direction of the agent of interest.
+
+
     """
 
     def __init__(self):
@@ -504,21 +508,22 @@ class GlobalObsForRailEnv(ObservationBuilder):
         #     self.targets[target_pos] += 1
 
     def get(self, handle):
-        obs = np.zeros((4, self.env.height, self.env.width))
+        obs_map_state = np.zeros((self.env.height, self.env.width, 3))
+        obs_other_agents_state = np.zeros((self.env.height, self.env.width, 4))
         agents = self.env.agents
         agent = agents[handle]
 
         agent_pos = agents[handle].position
-        obs[0][agent_pos] += 1
-        obs[1][agent.target] += 1
+        obs_map_state[agent_pos][0] += 1
+        obs_map_state[agent.target][1] += 1
 
         for i in range(len(agents)):
             if i != handle:  # TODO: handle used as index...?
                 agent2 = agents[i]
-                obs[3][agent2.position] += 1
-                obs[2][agent2.target] += 1
+                obs_other_agents_state[agent2.position][agent2.direction] = 1
+                obs_map_state[agent2.target][2] += 1
 
         direction = np.zeros(4)
         direction[agent.direction] = 1
 
-        return self.rail_obs, obs, direction
+        return self.rail_obs, obs_map_state, obs_other_agents_state,  direction
