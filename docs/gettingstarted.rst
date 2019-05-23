@@ -112,8 +112,40 @@ examples/simple_example_3.py
 
 
 
-Part 2 : Training a Simple DQN Agent
+Part 2 : Training a Simple an Agent on Flatland
 --------------
+This is a brief tutorial on how to train an agent on Flatland.
+Here we use a simple random agent to illustrate the process on how to interact with the environment.
+The corresponding code can be found in examples/training_example.py and in the baselines repository
+you find a tutorial to train a DQN agent to solve the navigation task.
+
+We start by importing the necessary Flatland libraries
+
+.. code-block:: python
+
+from flatland.envs.generators import complex_rail_generator
+from flatland.envs.rail_env import RailEnv
+
+The complex_rail_generator is used in order to guarantee feasible railway network configurations for training.
+Next we configure the difficulty of our task by modifying the complex_rail_generator parameters.
+
+..code-block:: python
+
+env = RailEnv(width=15,
+              height=15,
+              rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=10, min_dist=10, max_dist=99999, seed=0),
+              number_of_agents=5)
+              
+The difficulty of a railway network depends on the dimensions (width x height) and the number of agents in the network.
+By varying the number of start and goal connections (nr_start_goal) and the number of extra railway elements added (nr_extra)
+the number of alternative paths of each agents can be modified. The more possible paths an agent has to reach its target the easier the task becomes.
+Feel free to vary these parameters to see how your own agent holds up on different setting. The evalutation set of railway configurations will 
+cover the whole spectrum from easy to complex tasks.
+
+Once we are set with the environment we can load our preferred agent from either RLlib or any other ressource. Here we use a random agent to illustrate the code.
+.. code-block:: python
+
+agent = RandomAgent(env., 4)
 
 
 
