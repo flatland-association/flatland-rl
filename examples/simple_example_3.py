@@ -3,6 +3,7 @@ import random
 from flatland.envs.generators import random_rail_generator, random_rail_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
+from flatland.core.env_observation_builder import ObservationBuilder
 import numpy as np
 
 random.seed(100)
@@ -11,7 +12,8 @@ np.random.seed(100)
 env = RailEnv(width=7,
               height=7,
               rail_generator=random_rail_generator(),
-              number_of_agents=2)
+              number_of_agents=2,
+              obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
 # Print the distance map of each cell to the target of the first agent
 # for i in range(4):

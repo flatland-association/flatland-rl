@@ -491,7 +491,13 @@ class GlobalObsForRailEnv(ObservationBuilder):
     """
 
     def __init__(self):
+        self.observation_space = ()
         super(GlobalObsForRailEnv, self).__init__()
+
+    def _set_env(self, env):
+        super()._set_env(env)
+
+        self.observation_space = [4, self.env.height, self.env.width]
 
     def reset(self):
         self.rail_obs = np.zeros((self.env.height, self.env.width, 16))

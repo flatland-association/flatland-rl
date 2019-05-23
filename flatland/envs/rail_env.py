@@ -90,6 +90,9 @@ class RailEnv(Environment):
         self.obs_builder = obs_builder_object
         self.obs_builder._set_env(self)
 
+        self.action_space = [1]
+        self.observation_space = self.obs_builder.observation_space # updated on resets?
+
         self.actions = [0] * number_of_agents
         self.rewards = [0] * number_of_agents
         self.done = False
@@ -111,10 +114,6 @@ class RailEnv(Environment):
         self.num_resets = 0   # yes, set it to zero again!
 
         self.valid_positions = None
-
-        self.action_space = [1]
-        self.observation_space = self.obs_builder.observation_space # updated on resets?
-
 
     # no more agent_handles
     def get_agent_handles(self):
