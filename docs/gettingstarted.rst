@@ -14,4 +14,18 @@ To use flatland in a project:
     import flatland
 
 
+Part 1 : Basic Usage
+--------------
+
+
+
+Part 2 : Training a Simple DQN Agent
+--------------
+
+
+
+Part 3 : Customizing Observations and Level Generators
+--------------
+
+
 
