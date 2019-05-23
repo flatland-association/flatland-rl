@@ -123,15 +123,15 @@ We start by importing the necessary Flatland libraries
 
 .. code-block:: python
 
-from flatland.envs.generators import complex_rail_generator
-from flatland.envs.rail_env import RailEnv
+    from flatland.envs.generators import complex_rail_generator
+    from flatland.envs.rail_env import RailEnv
 
 The complex_rail_generator is used in order to guarantee feasible railway network configurations for training.
 Next we configure the difficulty of our task by modifying the complex_rail_generator parameters.
 
 .. code-block:: python
 
-env = RailEnv(width=15,
+    env = RailEnv(width=15,
               height=15,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=10, min_dist=10, max_dist=99999, seed=0),
               number_of_agents=5)
@@ -145,7 +145,7 @@ cover the whole spectrum from easy to complex tasks.
 Once we are set with the environment we can load our preferred agent from either RLlib or any other ressource. Here we use a random agent to illustrate the code.
 .. code-block:: python
 
-agent = RandomAgent(env., 4)
+    agent = RandomAgent(env., 4)
 
 
 
