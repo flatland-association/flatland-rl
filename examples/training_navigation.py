@@ -1,5 +1,4 @@
 import random
-import time
 from collections import deque
 
 import numpy as np
@@ -193,15 +192,18 @@ for trials in range(1, n_trials + 1):
     scores.append(np.mean(scores_window))
     dones_list.append((np.mean(done_window)))
 
-    print('\rTraining {} Agents.\t Episode {}\t Average Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
-            env.get_num_agents(),
-            trials,
-            np.mean(scores_window),
-            100 * np.mean(done_window),
-            eps, action_prob / np.sum(action_prob)), end=" ")
+    print('\rTraining {} Agents.\t Episode {}\t Average Score: {:.0f}\tDones: {:.2f}%' +
+          '\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
+              env.get_num_agents(),
+              trials,
+              np.mean(scores_window),
+              100 * np.mean(done_window),
+              eps, action_prob / np.sum(action_prob)), end=" ")
 
     if trials % 100 == 0:
-        print('\rTraining {} Agents.\t Episode {}\t Average Score: {:.0f}\tDones: {:.2f}%\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
+        print(
+            '\rTraining {} Agents.\t Episode {}\t Average Score: {:.0f}\tDones: {:.2f}%' +
+            '\tEpsilon: {:.2f} \t Action Probabilities: \t {}'.format(
                 env.get_num_agents(),
                 trials,
                 np.mean(scores_window),
