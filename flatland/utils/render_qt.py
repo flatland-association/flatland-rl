@@ -121,7 +121,7 @@ class QTSVG(GraphicsLayer):
         self.layout = QGridLayout()
         self.layout.setSpacing(0)
         self.wMain.setLayout(self.layout)
-        self.wWinMain.resize(1000, 1000)
+        self.wWinMain.resize(600, 600)
         self.wWinMain.show()
         self.wWinMain.setFocus()
 

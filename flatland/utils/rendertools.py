@@ -605,7 +605,7 @@ class RenderTool(object):
                                 )
 
     def renderEnv(self, show=False, curves=True, spacing=False,
-                  arrows=False, agents=True, show_observations=True, sRailColor="gray", frames=False,
+                  arrows=False, agents=True, renderobs=True, show_observations=True, sRailColor="gray", frames=False,
                   iEpisode=None, iStep=None,
                   iSelectedAgent=None, action_dict=None):
         """
@@ -618,9 +618,10 @@ class RenderTool(object):
 
         if not self.gl.is_raster():
             self.renderEnv2(show, curves, spacing,
-                            arrows, agents, sRailColor,
+                            arrows, agents, renderobs,sRailColor,
                             frames, iEpisode, iStep,
                             iSelectedAgent, action_dict)
+
             return
 
         if type(self.gl) in (QTGL, PILGL):
@@ -764,13 +765,13 @@ class RenderTool(object):
 
             # ** TODO ***
             # why should we only update if the action is valid ?
-            if False:
+            if True:
                 if action_isValid:
                     self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
                 else:
-                    pass
-                    # print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
-                    # self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
+                    # pass
+                    print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
+                    self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
             else:
                 self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
 
