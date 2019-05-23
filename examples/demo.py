@@ -6,7 +6,6 @@ import time
 import numpy as np
 import torch
 
-from flatland.baselines.dueling_double_dqn import Agent
 from flatland.envs.generators import complex_rail_generator
 # from flatland.envs.generators import rail_from_list_of_saved_GridTransitionMap_generator
 from flatland.envs.generators import random_rail_generator
@@ -126,13 +125,7 @@ class Demo:
     def __init__(self, env):
         self.env = env
         self.create_renderer()
-        self.load_agent()
-
-    def load_agent(self):
-        self.state_size = 105 * 2
         self.action_size = 4
-        self.agent = Agent(self.state_size, self.action_size, "FC", 0)
-        self.agent.qnetwork_local.load_state_dict(torch.load('./flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
     def create_renderer(self):
         self.renderer = RenderTool(self.env, gl="QTSVG")
@@ -170,9 +163,11 @@ class Demo:
             # print(step)
             # Action
             for a in range(self.env.get_num_agents()):
-                action = self.agent.act(agent_obs[a])
+                action = np.random.choice(self.action_size) #self.agent.act(agent_obs[a])
                 action_prob[action] += 1
                 action_dict.update({a: action})
+
+            print(action_dict)
 
             self.renderer.renderEnv(show=True,action_dict=action_dict)
 
@@ -196,7 +191,7 @@ class Demo:
                 break
 
 
-if True:
+if False:
     demo_000 = Demo(Scenario_Generator.generate_random_scenario())
     demo_000.run_demo()
     demo_000 = None

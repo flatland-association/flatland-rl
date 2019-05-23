@@ -132,6 +132,7 @@ class View(object):
             dict(name="Clear", method=self.controller.clear, tip="Clear rails and agents"),
             dict(name="Reset", method=self.controller.reset,
                  tip="Standard env reset, including regen rail + agents"),
+            dict(name="Rotate Agent", method=self.controller.rotate_agent, tip="Rotate selected agent"),
             dict(name="Restart Agents", method=self.controller.restartAgents,
                  tip="Move agents back to start positions"),
             dict(name="Regenerate", method=self.controller.regenerate,
@@ -324,6 +325,15 @@ class Controller(object):
         self.log("Reset - size:", self.model.regen_size_height)
         self.model.reset(replace_agents=self.view.wReplaceAgents.value,
                          nAgents=self.view.wRegenNAgents.value)
+
+    def rotate_agent(self,event):
+        self.log("Rotate Agent:", self.model.iSelectedAgent)
+        if self.model.iSelectedAgent is not None:
+            for iAgent, agent in enumerate(self.model.env.agents_static):
+                if agent is None:
+                    continue
+                agent.direction = (agent.direction + 1) % 4
+        self.model.redraw()
 
     def restartAgents(self, event):
         self.log("Restart Agents - nAgents:", self.view.wRegenNAgents.value)
@@ -695,8 +705,7 @@ class EditorModel(object):
             # No
             if self.iSelectedAgent is None:
                 # Create a new agent and select it.
-                ## ADRIAN
-                agent_static = EnvAgentStatic(rcCell, np.random.choice(4), rcCell)
+                agent_static = EnvAgentStatic(rcCell,0, rcCell)
                 self.iSelectedAgent = self.env.add_agent_static(agent_static)
                 self.player = None  # will need to start a new player
             else:
