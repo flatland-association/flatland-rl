@@ -19,6 +19,14 @@ class TreeObsForRailEnv(ObservationBuilder):
     def __init__(self, max_depth):
         self.max_depth = max_depth
 
+        # Compute the size of the returned observation vector
+        size = 0
+        pow4 = 1
+        for i in range(self.max_depth+1):
+            size += pow4
+            pow4 *= 4
+        self.observation_space = [size * 5]
+
     def reset(self):
         agents = self.env.agents
         nAgents = len(agents)
@@ -157,10 +165,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         The possible movements are sorted relative to the current orientation of the agent, rather than NESW as for
         the transitions. The order is:
             [data from 'left'] + [data from 'forward'] + [data from 'right'] + [data from 'back']
-
-
-
-
 
         Each branch data is organized as:
             [root node information] +
@@ -491,7 +495,13 @@ class GlobalObsForRailEnv(ObservationBuilder):
     """
 
     def __init__(self):
+        self.observation_space = ()
         super(GlobalObsForRailEnv, self).__init__()
+
+    def _set_env(self, env):
+        super()._set_env(env)
+
+        self.observation_space = [4, self.env.height, self.env.width]
 
     def reset(self):
         self.rail_obs = np.zeros((self.env.height, self.env.width, 16))

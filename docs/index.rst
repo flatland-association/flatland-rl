@@ -7,7 +7,7 @@ Welcome to flatland's documentation!
 
    readme
    installation
-   usage
+   gettingstarted
    modules
    FAQ
    contributing

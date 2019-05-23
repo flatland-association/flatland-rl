@@ -12,9 +12,13 @@ case of multi-agent environments.
 class ObservationBuilder:
     """
     ObservationBuilder base class.
+
+    Derived objects must implement and `observation_space' attribute as a tuple with the dimensuions of the returned
+    observations.
     """
 
     def __init__(self):
+        self.observation_space = ()
         pass
 
     def _set_env(self, env):
