@@ -762,18 +762,12 @@ class RenderTool(object):
                 iAction = action_dict[iAgent]
                 new_direction, action_isValid = self.env.check_action(agent, iAction)
 
-
-            # ** TODO ***
-            # why should we only update if the action is valid ?
-            if True:
-                if action_isValid:
-                    self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
-                else:
-                    # pass
-                    print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
-                    self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
-            else:
+            if action_isValid:
                 self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
+            else:
+                #pass
+                print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
+                self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
 
         self.gl.show()
         for i in range(3):
