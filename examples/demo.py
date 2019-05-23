@@ -6,7 +6,6 @@ import time
 import numpy as np
 import torch
 
-from flatland.baselines.dueling_double_dqn import Agent
 from flatland.envs.generators import complex_rail_generator
 # from flatland.envs.generators import rail_from_list_of_saved_GridTransitionMap_generator
 from flatland.envs.generators import random_rail_generator
@@ -48,11 +47,7 @@ class Scenario_Generator:
     def generate_complex_scenario(number_of_agents=3):
         env = RailEnv(width=15,
                       height=15,
-                      rail_generator=complex_rail_generator(nr_start_goal=6,
-                                                            nr_extra=30,
-                                                            min_dist=10,
-                                                            max_dist=99999,
-                                                            seed=0),
+                      rail_generator=complex_rail_generator(nr_start_goal=6, nr_extra=30, min_dist=10, max_dist=99999, seed=0),
                       number_of_agents=number_of_agents)
 
         return env
@@ -130,79 +125,35 @@ class Demo:
     def __init__(self, env):
         self.env = env
         self.create_renderer()
-        self.load_agent()
-
-    def load_agent(self):
-        self.state_size = 105 * 2
         self.action_size = 4
-        self.agent = Agent(self.state_size, self.action_size, "FC", 0)
-        self.agent.qnetwork_local.load_state_dict(torch.load('./flatland/baselines/Nets/avoid_checkpoint15000.pth'))
 
     def create_renderer(self):
         self.renderer = RenderTool(self.env, gl="QTSVG")
         handle = self.env.get_agent_handles()
         return handle
 
-    def run_demo(self, max_nbr_of_steps=100):
+    def run_demo(self, max_nbr_of_steps=30):
         action_dict = dict()
-        time_obs = deque(maxlen=2)
-        action_prob = [0] * 4
-        agent_obs = [None] * self.env.get_num_agents()
-        agent_next_obs = [None] * self.env.get_num_agents()
 
         # Reset environment
         obs = self.env.reset(False, False)
 
-        for a in range(self.env.get_num_agents()):
-            data, distance = self.env.obs_builder.split_tree(tree=np.array(obs[a]),
-                                                             num_features_per_node=5,
-                                                             current_depth=0)
-
-            data = norm_obs_clip(data)
-            distance = norm_obs_clip(distance)
-            obs[a] = np.concatenate((data, distance))
-
-        for i in range(2):
-            time_obs.append(obs)
-
-        # env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
-        for a in range(self.env.get_num_agents()):
-            agent_obs[a] = np.concatenate((time_obs[0][a], time_obs[1][a]))
-
         for step in range(max_nbr_of_steps):
-
-            time.sleep(.2)
-
-            # print(step)
             # Action
             for a in range(self.env.get_num_agents()):
-                action = self.agent.act(agent_obs[a])
-                action_prob[action] += 1
+                action = 2 #np.random.choice(self.action_size) #self.agent.act(agent_obs[a])
                 action_dict.update({a: action})
 
-            self.renderer.renderEnv(show=True, action_dict=action_dict)
+            self.renderer.renderEnv(show=True,action_dict=action_dict)
 
             # Environment step
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
-            for a in range(self.env.get_num_agents()):
-                data, distance = self.env.obs_builder.split_tree(tree=np.array(next_obs[a]), num_features_per_node=5,
-                                                                 current_depth=0)
-                data = norm_obs_clip(data)
-                distance = norm_obs_clip(distance)
-                next_obs[a] = np.concatenate((data, distance))
 
-            # Update replay buffer and train agent
-            for a in range(self.env.get_num_agents()):
-                agent_next_obs[a] = np.concatenate((time_obs[0][a], time_obs[1][a]))
-
-            time_obs.append(next_obs)
-
-            agent_obs = agent_next_obs.copy()
             if done['__all__']:
                 break
 
 
-if True:
+if False:
     demo_000 = Demo(Scenario_Generator.generate_random_scenario())
     demo_000.run_demo()
     demo_000 = None
@@ -211,14 +162,20 @@ if True:
     demo_001.run_demo()
     demo_001 = None
 
-demo_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_000.pkl'))
-demo_000.run_demo()
-demo_000 = None
+    demo_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_000.pkl'))
+    demo_000.run_demo()
+    demo_000 = None
 
-demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_001.pkl'))
-demo_001.run_demo()
-demo_001 = None
+    demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_001.pkl'))
+    demo_001.run_demo()
+    demo_001 = None
 
-demo_002 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_002.pkl'))
-demo_002.run_demo()
-demo_002 = None
+    demo_002 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_002.pkl'))
+    demo_002.run_demo()
+    demo_002 = None
+
+
+demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
+demo_flatland_000.renderer.resize()
+demo_flatland_000.run_demo(100)
+demo_flatland_000 = None

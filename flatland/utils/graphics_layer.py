@@ -68,3 +68,6 @@ class GraphicsLayer(object):
 
     def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
         pass
+
+    def resize(self,env):
+        pass
