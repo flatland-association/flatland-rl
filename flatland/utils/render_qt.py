@@ -230,7 +230,7 @@ class QTSVG(GraphicsLayer):
         w = np.ceil(width * 0.8 / env.width)
         h = np.ceil(height * 0.8 / env.height)
         self.wWinMain.resize(env.width * w, env.height * h)
-
+        self.wWinMain.move((width - env.width * w) / 2, (height - env.height * h) / 2)
 
 def main2():
     gl = QTGL(10, 10)
