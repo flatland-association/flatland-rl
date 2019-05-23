@@ -2,6 +2,7 @@ import os
 import random
 from collections import deque
 
+import time
 import numpy as np
 import torch
 
@@ -164,6 +165,8 @@ class Demo:
 
         for step in range(max_nbr_of_steps):
             self.renderer.renderEnv(show=True)
+
+            time.sleep(.2)
 
             # print(step)
             # Action
