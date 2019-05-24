@@ -332,7 +332,8 @@ class Controller(object):
             for iAgent, agent in enumerate(self.model.env.agents_static):
                 if agent is None:
                     continue
-                agent.direction = (agent.direction + 1) % 4
+                if iAgent == self.model.iSelectedAgent:
+                    agent.direction = (agent.direction + 1) % 4
         self.model.redraw()
 
     def restartAgents(self, event):
