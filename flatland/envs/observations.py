@@ -585,12 +585,12 @@ class LocalObsForRailEnv(ObservationBuilder):
         # top_offset = max(0, agent.position[0] - 1 - self.view_radius)
         # bottom_offset = min(0, agent.position[0] + 1 + self.view_radius)
 
-        local_rail_obs = self.rail_obs[agent.position[0]: agent.position[0]+2*self.view_radius +1,
-                         agent.position[1]:agent.position[1]+2*self.view_radius +1]
+        local_rail_obs = self.rail_obs[agent.position[0]: agent.position[0]+2*self.view_radius + 1,
+                                       agent.position[1]:agent.position[1]+2*self.view_radius + 1]
 
-        obs_map_state = np.zeros((2*self.view_radius +1, 2*self.view_radius + 1, 2))
+        obs_map_state = np.zeros((2*self.view_radius + 1, 2*self.view_radius + 1, 2))
 
-        obs_other_agents_state = np.zeros((2*self.view_radius +1, 2*self.view_radius +1, 4))
+        obs_other_agents_state = np.zeros((2*self.view_radius + 1, 2*self.view_radius + 1, 4))
 
         def relative_pos(pos):
             return [agent.position[0] - pos[0], agent.position[1] - pos[1]]
