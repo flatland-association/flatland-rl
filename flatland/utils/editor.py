@@ -99,7 +99,6 @@ class View(object):
 
         # Size of environment when regenerating
 
-
         self.wRegenSizeWidth = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size (Width)",
             tip="Click Regenerate after changing this")
         self.wRegenSizeWidth.observe(self.controller.setRegenSizeWidth, names="value")
@@ -121,7 +120,8 @@ class View(object):
             self.wTab.set_title(i, title)
         self.wTab.children = [
             VBox([self.wDebug, self.wDebug_move, self.wShowObs]),
-            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents, self.wRegenMethod, self.wReplaceAgents])]
+            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents,
+                  self.wRegenMethod, self.wReplaceAgents])]
 
         # Progress bar intended for stepping in the background (not yet working)
         self.wProg_steps = ipywidgets.IntProgress(value=0, min=0, max=20, step=1, description="Step")
@@ -326,7 +326,7 @@ class Controller(object):
         self.model.reset(replace_agents=self.view.wReplaceAgents.value,
                          nAgents=self.view.wRegenNAgents.value)
 
-    def rotate_agent(self,event):
+    def rotate_agent(self, event):
         self.log("Rotate Agent:", self.model.iSelectedAgent)
         if self.model.iSelectedAgent is not None:
             for iAgent, agent in enumerate(self.model.env.agents_static):
@@ -647,7 +647,7 @@ class EditorModel(object):
         # self.env.rail.save_transition_map(self.env_filename)
         self.env.save(self.env_filename)
 
-    def regenerate(self, method=None, nAgents=0,env=None):
+    def regenerate(self, method=None, nAgents=0, env=None):
         self.log("Regenerate size",
                  self.regen_size_width,
                  self.regen_size_height)
@@ -676,13 +676,11 @@ class EditorModel(object):
         # self.view.init_canvas() # Can't do init_canvas - need to keep the same canvas widget!
         self.redraw()
 
-
     def setRegenSizeWidth(self, size):
         self.regen_size_width = size
 
     def setRegenSizeHeight(self, size):
         self.regen_size_height = size
-
 
     def find_agent_at(self, rcCell):
         for iAgent, agent in enumerate(self.env.agents_static):
@@ -705,7 +703,7 @@ class EditorModel(object):
             # No
             if self.iSelectedAgent is None:
                 # Create a new agent and select it.
-                agent_static = EnvAgentStatic(rcCell,0, rcCell)
+                agent_static = EnvAgentStatic(rcCell, 0, rcCell)
                 self.iSelectedAgent = self.env.add_agent_static(agent_static)
                 self.player = None  # will need to start a new player
             else:

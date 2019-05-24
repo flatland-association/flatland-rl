@@ -6,7 +6,6 @@ Subpackages
 
 .. toctree::
 
-    flatland.baselines
     flatland.core
     flatland.envs
     flatland.utils

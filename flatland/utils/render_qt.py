@@ -21,7 +21,7 @@ def transform_string_svg(sSVG):
 def create_QtSvgWidget_from_svg_string(sSVG):
     svgWidget = QtSvg.QSvgWidget()
     ret = svgWidget.renderer().load(transform_string_svg(sSVG))
-    if ret == False:
+    if ret is False:
         print("create_QtSvgWidget_from_svg_string : failed to parse:", sSVG)
     return svgWidget
 
@@ -134,26 +134,26 @@ class QTSVG(GraphicsLayer):
         self.lwAgents = []
         self.agents_prev = []
 
-        svgWidget = None
+        # svgWidget = None
 
-        iArt = 0
-        iCol = 0
-        iRow = 0
-        nCols = 10
+        # iArt = 0
+        # iCol = 0
+        # iRow = 0
+        # nCols = 10
 
-        if False:
-            for binTrans in self.track.dSvg.keys():
-                sSVG = self.track.dSvg[binTrans].to_string()
-                self.layout.addWidget(create_QtSvgWidget_from_svg_string(sSVG), iRow, iCol)
-
-                iArt += 1
-                iRow = int(iArt / nCols)
-                iCol = iArt % nCols
-
-            svgWidget2 = QtSvg.QSvgWidget()
-            svgWidget2.renderer().load(bySVG)
-
-            self.layout.addWidget(svgWidget2, 0, 0)
+        # if False:
+        #     for binTrans in self.track.dSvg.keys():
+        #         sSVG = self.track.dSvg[binTrans].to_string()
+        #         self.layout.addWidget(create_QtSvgWidget_from_svg_string(sSVG), iRow, iCol)
+        #
+        #         iArt += 1
+        #         iRow = int(iArt / nCols)
+        #         iCol = iArt % nCols
+        #
+        #     svgWidget2 = QtSvg.QSvgWidget()
+        #     svgWidget2.renderer().load(bySVG)
+        #
+        #     self.layout.addWidget(svgWidget2, 0, 0)
 
     def is_raster(self):
         return False
@@ -197,8 +197,8 @@ class QTSVG(GraphicsLayer):
 
                 # We can only reuse the image if noth new and old are straight and the same:
                 if iDirIn == iDirOut and \
-                    agentPrev.direction == iDirIn and \
-                    agentPrev.old_direction == agentPrev.direction:
+                   agentPrev.direction == iDirIn and \
+                   agentPrev.old_direction == agentPrev.direction:
                     return
                 else:
                     # need to load new image
@@ -231,6 +231,7 @@ class QTSVG(GraphicsLayer):
         h = np.ceil(height * 0.8 / env.height)
         self.wWinMain.resize(env.width * w, env.height * h)
         self.wWinMain.move((width - env.width * w) / 2, (height - env.height * h) / 2)
+
 
 def main2():
     gl = QTGL(10, 10)

@@ -621,7 +621,7 @@ class RenderTool(object):
 
         if not self.gl.is_raster():
             self.renderEnv2(show, curves, spacing,
-                            arrows, agents, renderobs,sRailColor,
+                            arrows, agents, renderobs, sRailColor,
                             frames, iEpisode, iStep,
                             iSelectedAgent, action_dict)
 
@@ -768,7 +768,6 @@ class RenderTool(object):
             if action_isValid:
                 self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
             else:
-                #pass
                 print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
                 self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
 

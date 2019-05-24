@@ -1,6 +1,6 @@
 import random
 
-from flatland.envs.generators import random_rail_generator, rail_from_list_of_saved_GridTransitionMap_generator
+from flatland.envs.generators import random_rail_generator  # , rail_from_list_of_saved_GridTransitionMap_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.utils.rendertools import RenderTool

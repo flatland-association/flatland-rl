@@ -1,10 +1,7 @@
 import os
 import random
-from collections import deque
 
-import time
 import numpy as np
-import torch
 
 from flatland.envs.generators import complex_rail_generator
 # from flatland.envs.generators import rail_from_list_of_saved_GridTransitionMap_generator
@@ -47,7 +44,8 @@ class Scenario_Generator:
     def generate_complex_scenario(number_of_agents=3):
         env = RailEnv(width=15,
                       height=15,
-                      rail_generator=complex_rail_generator(nr_start_goal=6, nr_extra=30, min_dist=10, max_dist=99999, seed=0),
+                      rail_generator=complex_rail_generator(nr_start_goal=6, nr_extra=30, min_dist=10,
+                                                            max_dist=99999, seed=0),
                       number_of_agents=number_of_agents)
 
         return env
@@ -136,15 +134,15 @@ class Demo:
         action_dict = dict()
 
         # Reset environment
-        obs = self.env.reset(False, False)
+        _ = self.env.reset(False, False)
 
         for step in range(max_nbr_of_steps):
             # Action
             for a in range(self.env.get_num_agents()):
-                action = 2 #np.random.choice(self.action_size) #self.agent.act(agent_obs[a])
+                action = 2  # np.random.choice(self.action_size) #self.agent.act(agent_obs[a])
                 action_dict.update({a: action})
 
-            self.renderer.renderEnv(show=True,action_dict=action_dict)
+            self.renderer.renderEnv(show=True, action_dict=action_dict)
 
             # Environment step
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
