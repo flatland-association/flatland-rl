@@ -140,7 +140,7 @@ class Demo:
             # Action
             for iAgent in range(self.env.get_num_agents()):
                 action = 2
-                agent = self.env.agents.[iAgent]
+                agent = self.env.agents[iAgent]
                 if not self.env.check_action(agent, action)[1]:
                    action = np.random.choice(self.action_size)
                 action_dict.update({iAgent: action})
