@@ -234,16 +234,19 @@ class Controller(object):
     def on_click(self, wid, event):
         x = event['canvasX']
         y = event['canvasY']
-        self.debug("debug:", event)
+        self.debug("debug:", x,y)
 
         rcCell = self.view.xy_to_rc(x, y)
 
         bShift = event["shiftKey"]
         bCtrl = event["ctrlKey"]
-        if bCtrl and not bShift:
+        bAlt = event["altKey"]
+        if bCtrl and not bShift and not bAlt:
             self.model.click_agent(rcCell)
         elif bShift and bCtrl:
             self.model.add_target(rcCell)
+        elif bAlt and not bShift and not bCtrl:
+            self.model.clearCell(rcCell)
 
         self.debug("click in cell", rcCell)
         self.model.debug_cell(rcCell)
@@ -263,6 +266,7 @@ class Controller(object):
     def on_mouse_move(self, wid, event):
         """Mouse motion event handler for drawing.
         """
+
         x = event['canvasX']
         y = event['canvasY']
         qEvents = self.qEvents
@@ -309,6 +313,8 @@ class Controller(object):
                     #     # This is the first cell in a mouse stroke
                     #     lrcStroke.append(rcCell)
                 self.view.redisplayImage()
+
+
         else:
             self.model.mod_path(not event["shiftKey"])
 
@@ -607,6 +613,12 @@ class EditorModel(object):
         # self.env.agents_handles = []
         self.player = None
 
+        self.redraw()
+
+
+    def clearCell(self,rcCell):
+        self.debug_cell(rcCell)
+        self.env.rail.grid[rcCell[0],rcCell[1]] = 0
         self.redraw()
 
     def reset(self, replace_agents=False, nAgents=0):

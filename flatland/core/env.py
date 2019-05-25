@@ -34,7 +34,7 @@ class Environment:
             "train_0": False,    # train_0 is still running
             "train_1": True,     # train_1 is done
             "__all__": False,    # the env is not done
-        }
+        }h
         >>> print(infos)
         {
             "train_0": {},  # info for train_0
