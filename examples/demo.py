@@ -138,9 +138,12 @@ class Demo:
 
         for step in range(max_nbr_of_steps):
             # Action
-            for a in range(self.env.get_num_agents()):
-                action = 2  # np.random.choice(self.action_size) #self.agent.act(agent_obs[a])
-                action_dict.update({a: action})
+            for iAgent in range(self.env.get_num_agents()):
+                action = 2
+                agent = self.env.agents.copy()[iAgent]
+                if not self.env.check_action(agent, action)[1]:
+                   action = np.random.choice(self.action_size)
+                action_dict.update({iAgent: action})
 
             self.renderer.renderEnv(show=True, action_dict=action_dict)
 
@@ -171,7 +174,6 @@ if False:
     demo_002 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_002.pkl'))
     demo_002.run_demo()
     demo_002 = None
-
 
 demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
 demo_flatland_000.renderer.resize()

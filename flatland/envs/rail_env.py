@@ -4,14 +4,18 @@ Definition of the RailEnv environment and related level-generation functions.
 Generator functions are functions that take width, height and num_resets as arguments and return
 a GridTransitionMap object.
 """
-import numpy as np
+### TODO  _ this is a global method --> utils or remove later
+from inspect import currentframe
+
 import msgpack
+import numpy as np
 
 from flatland.core.env import Environment
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.generators import random_rail_generator
-from flatland.envs.env_utils import get_new_position
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
+from flatland.envs.env_utils import get_new_position
+from flatland.envs.generators import random_rail_generator
+from flatland.envs.observations import TreeObsForRailEnv
+
 
 # from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 # from flatland.core.transition_map import GridTransitionMap
@@ -111,7 +115,7 @@ class RailEnv(Environment):
         self.agents_static = [None] * number_of_agents  # static agent information
         self.num_resets = 0
         self.reset()
-        self.num_resets = 0   # yes, set it to zero again!
+        self.num_resets = 0  # yes, set it to zero again!
 
         self.valid_positions = None
 
@@ -197,6 +201,8 @@ class RailEnv(Environment):
                 continue
 
             if self.dones[iAgent]:  # this agent has already completed...
+                print("rail_env.py @", currentframe().f_back.f_lineno, " agent ", iAgent,
+                      "has already completed : why action will not be executed!!!!? ADRIAN")
                 continue
             action = action_dict[iAgent]
 

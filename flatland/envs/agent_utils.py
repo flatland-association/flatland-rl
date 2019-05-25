@@ -4,7 +4,6 @@ from itertools import starmap
 import numpy as np
 # from flatland.envs.rail_env import RailEnv
 
-
 @attrs
 class EnvDescription(object):
     n_agents = attrib()
