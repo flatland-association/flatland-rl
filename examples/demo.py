@@ -140,9 +140,14 @@ class Demo:
             # Action
             for iAgent in range(self.env.get_num_agents()):
                 action = 2
-                agent = self.env.agents[iAgent]
-                if not self.env.check_action(agent, action)[1]:
-                   action = np.random.choice(self.action_size)
+                if False:
+                    agent = self.env.agents[iAgent]
+                    trial = 0
+                    while not self.env.check_action(agent, action)[1]:
+                        action = np.random.choice(self.action_size)
+                        trial += 1
+                        if trial > 10:
+                            break
                 action_dict.update({iAgent: action})
 
             self.renderer.renderEnv(show=True, action_dict=action_dict)

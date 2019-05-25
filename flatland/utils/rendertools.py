@@ -769,7 +769,7 @@ class RenderTool(object):
                 self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
             else:
                 print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
-                self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
+                # self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
 
         self.gl.show()
         for i in range(3):
