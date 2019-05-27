@@ -16,10 +16,11 @@ def transform_string_svg(sSVG):
     bySVG = bytearray(sSVG, encoding='utf-8')
     return bySVG
 
+
 def create_QtSvgWidget_from_svg_string(sSVG):
     svgWidget = QtSvg.QSvgWidget()
     ret = svgWidget.renderer().load(transform_string_svg(sSVG))
-    if ret == False:
+    if ret is False:
         print("create_QtSvgWidget_from_svg_string : failed to parse:", sSVG)
     return svgWidget
 
@@ -132,26 +133,7 @@ class QTSVG(GraphicsLayer):
         self.lwAgents = []
         self.agents_prev = []
 
-        svgWidget = None
-
-        iArt = 0
-        iCol = 0
-        iRow = 0
-        nCols = 10
-
-        if False:
-            for binTrans in self.track.dSvg.keys():
-                sSVG = self.track.dSvg[binTrans].to_string()
-                self.layout.addWidget(create_QtSvgWidget_from_svg_string(sSVG), iRow, iCol)
-
-                iArt += 1
-                iRow = int(iArt / nCols)
-                iCol = iArt % nCols
-
-            svgWidget2 = QtSvg.QSvgWidget()
-            svgWidget2.renderer().load(bySVG)
-
-            self.layout.addWidget(svgWidget2, 0, 0)
+        # svgWidget = None
 
     def is_raster(self):
         return False

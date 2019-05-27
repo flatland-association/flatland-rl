@@ -12,6 +12,7 @@ import numpy as np
 import flatland.utils.rendertools as rt
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, random_rail_generator
+from flatland.envs.generators import empty_rail_generator
 
 
 def checkFrozenImage(oRT, sFileImage, resave=False):
@@ -39,14 +40,15 @@ def test_render_env(save_new_images=False):
     # random.seed(100)
     np.random.seed(100)
     oEnv = RailEnv(width=10, height=10,
-                   rail_generator=random_rail_generator(),
+                   # rail_generator=random_rail_generator(),
+                   rail_generator=empty_rail_generator(),
                    number_of_agents=0,
                    # obs_builder_object=GlobalObsForRailEnv())
                    obs_builder_object=TreeObsForRailEnv(max_depth=2)
                    )
     sfTestEnv = "env-data/tests/test1.npy"
     oEnv.rail.load_transition_map(sfTestEnv)
-    oRT = rt.RenderTool(oEnv, gl="PIL", show=False)
+    oRT = rt.RenderTool(oEnv, gl="PILSVG", show=False)
     oRT.renderEnv(show=False)
 
     checkFrozenImage(oRT, "basic-env.npz", resave=save_new_images)
@@ -82,6 +84,7 @@ def main():
         test_render_env(save_new_images=True)
     else:
         print("Run 'python test_rendertools.py save' to regenerate images")
+        test_render_env()
 
 
 if __name__ == "__main__":

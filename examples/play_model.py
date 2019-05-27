@@ -107,7 +107,7 @@ def max_lt(seq, val):
     return None
 
 
-def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="PIL"):
+def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="PILSVG"):
     random.seed(1)
     np.random.seed(1)
 
@@ -277,4 +277,4 @@ def main_old(render=True, delay=0.0):
 
 
 if __name__ == "__main__":
-    main(render=True, delay=0)
+    main(render=True, delay=0.5)

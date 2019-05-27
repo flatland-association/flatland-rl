@@ -104,6 +104,13 @@ class Zug(object):
 
 
 class Track(object):
+    """ Class to load and hold SVG track images.
+        Creates a mapping between
+        - cell entry and exit directions (ie transitions), and
+        - specific images provided by the SBB graphic artist.
+        The directions and images are also rotated by 90, 180 & 270 degrees.
+        (There is some redundancy in this process, given the images provided)
+    """
     def __init__(self):
         dFiles = {
             "": "Background_#9CCB89.svg",
@@ -138,6 +145,8 @@ class Track(object):
         for sTrans, sFile in dFiles.items():
             svg = SVG("./svg/" + sFile)
 
+            # Translate the ascii transition descption in the format  "NE WS" to the 
+            # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
             lTrans16 = ["0"] * 16
             for sTran in sTrans.split(" "):
                 if len(sTran) == 2:
@@ -149,11 +158,14 @@ class Track(object):
             binTrans = int(sTrans16, 2)
             print(sTrans, sTrans16, sFile)
 
+            # Merge the transition svg image with the background colour.
+            # This is a shortcut / hack and will need re-working.
             if binTrans > 0:
                 svg = svg.merge(svgBG)
 
             self.dSvg[binTrans] = svg
 
+            # Rotate both the transition binary and the image and save in the dict
             for nRot in [90, 180, 270]:
                 binTrans2 = transitions.rotate_transition(binTrans, nRot)
                 svg2 = svg.copy()
