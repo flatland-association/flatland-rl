@@ -147,8 +147,13 @@ class Demo:
 
                 if True:
                     if not ((step) % 2 == 0):
-                        if iAgent % 2 == 1:
+                        if iAgent == 3:
                             action = 0
+
+                    if not ((step) % 2 == 0):
+                        if iAgent == 4:
+                            action = 0
+
 
                 if False:
                     agent = self.env.agents[iAgent]
