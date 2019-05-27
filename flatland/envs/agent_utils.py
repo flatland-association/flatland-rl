@@ -6,6 +6,11 @@ import numpy as np
 
 @attrs
 class EnvDescription(object):
+    """ EnvDescription - This is a description of a random env,
+        based around the rail_generator and stats like size and n_agents.
+        It mirrors the parameters given to the RailEnv constructor.
+        Not currently used.
+    """
     n_agents = attrib()
     height = attrib()
     width = attrib()
@@ -15,7 +20,7 @@ class EnvDescription(object):
 
 @attrs
 class EnvAgentStatic(object):
-    """ TODO: EnvAgentStatic - To store initial position, direction and target.
+    """ EnvAgentStatic - Stores initial position, direction and target.
         This is like static data for the environment - it's where an agent starts,
         rather than where it is at the moment.
         The target should also be stored here.

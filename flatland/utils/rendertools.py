@@ -3,27 +3,26 @@ from collections import deque
 
 # import xarray as xr
 import matplotlib.pyplot as plt
-import numpy as np
-from numpy import array
-from recordtype import recordtype
-
-from flatland.utils.graphics_layer import GraphicsLayer
-from flatland.utils.graphics_pil import PILGL
 from flatland.utils.render_qt import QTGL, QTSVG
-
+from flatland.utils.graphics_pil import PILGL, PILSVG
+from flatland.utils.graphics_layer import GraphicsLayer
+from recordtype import recordtype
+from numpy import array
+import numpy as np
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
 
 class MPLGL(GraphicsLayer):
-    def __init__(self, width, height, show=False):
+    def __init__(self, width, height):
         self.width = width
         self.height = height
         self.yxBase = array([6, 21])  # pixel offset
         self.nPixCell = 700 / width
         self.img = None
-        if show:
-            plt.figure(figsize=(10, 10))
+
+    def open_window(self):
+        plt.figure(figsize=(10, 10))
 
     def plot(self, *args, **kwargs):
         plt.plot(*args, **kwargs)
@@ -127,11 +126,13 @@ class RenderTool(object):
         # self.gl = MPLGL()
 
         if gl == "MPL":
-            self.gl = MPLGL(env.width, env.height, show=show)
+            self.gl = MPLGL(env.width, env.height)
         elif gl == "QT":
             self.gl = QTGL(env.width, env.height)
         elif gl == "PIL":
             self.gl = PILGL(env.width, env.height)
+        elif gl == "PILSVG":
+            self.gl = PILSVG(env.width, env.height)
         elif gl == "QTSVG":
             self.gl = QTSVG(env.width, env.height)
 
@@ -620,11 +621,11 @@ class RenderTool(object):
         """
 
         if not self.gl.is_raster():
-            self.renderEnv2(show, curves, spacing,
-                            arrows, agents, renderobs, sRailColor,
-                            frames, iEpisode, iStep,
-                            iSelectedAgent, action_dict)
-
+            self.renderEnv2(show=show, curves=curves, spacing=spacing,
+                            arrows=arrows, agents=agents, show_observations=show_observations,
+                            sRailColor=sRailColor,
+                            frames=frames, iEpisode=iEpisode, iStep=iStep,
+                            iSelectedAgent=iSelectedAgent, action_dict=action_dict)
             return
 
         if type(self.gl) in (QTGL, PILGL):
@@ -684,6 +685,9 @@ class RenderTool(object):
                 self.gl.show(block=False)
             # self.gl.endFrame()
 
+        if show and type(self.gl) is PILGL:
+            self.gl.show()
+
         self.gl.pause(0.00001)
 
         return
@@ -727,9 +731,11 @@ class RenderTool(object):
 
             gP0 = array([gX1, gY1, gZ1])
 
-    def renderEnv2(self, show=False, curves=True, spacing=False, arrows=False, agents=True, renderobs=True,
-                   sRailColor="gray", frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
-                   action_dict=dict()):
+    def renderEnv2(
+        self, show=False, curves=True, spacing=False, arrows=False, agents=True, 
+            show_observations=True, sRailColor="gray",
+            frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
+            action_dict=dict()):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -739,6 +745,8 @@ class RenderTool(object):
         """
 
         env = self.env
+
+        self.gl.beginFrame()
 
         if self.new_rail:
             self.new_rail = False
@@ -765,13 +773,23 @@ class RenderTool(object):
                 iAction = action_dict[iAgent]
                 new_direction, action_isValid = self.env.check_action(agent, iAction)
 
-            if action_isValid:
+            # ** TODO ***
+            # why should we only update if the action is valid ?
+            if True:
+                if action_isValid:
+                    self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
+                else:
+                    # pass
+                    print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
+                    self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
+            else:
                 self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
             else:
                 print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
                 # self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
 
-        self.gl.show()
+        if show:
+            self.gl.show()
         for i in range(3):
             self.gl.processEvents()
 

@@ -7,6 +7,9 @@ class GraphicsLayer(object):
     def __init__(self):
         pass
 
+    def open_window(self):
+        pass
+
     def is_raster(self):
         return True
 

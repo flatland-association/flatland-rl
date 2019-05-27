@@ -135,6 +135,7 @@ class QTSVG(GraphicsLayer):
         self.agents_prev = []
 
         # svgWidget = None
+<<<<<<< HEAD
 
         # iArt = 0
         # iCol = 0
@@ -154,6 +155,8 @@ class QTSVG(GraphicsLayer):
         #     svgWidget2.renderer().load(bySVG)
         #
         #     self.layout.addWidget(svgWidget2, 0, 0)
+=======
+>>>>>>> 38-jw-SBB-graphics
 
     def is_raster(self):
         return False

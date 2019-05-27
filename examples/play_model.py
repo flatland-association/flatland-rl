@@ -63,7 +63,8 @@ class Player(object):
             # Real Agent
             # action = self.agent.act(np.array(self.obs[handle]), eps=self.eps)
             # Random actions
-            action = random.randint(0, 3)
+            # action = random.randint(0, 3)
+            action = np.random.choice([0, 1, 2, 3], 1, p=[0.2, 0.1, 0.6, 0.1])[0]
             # Numpy version uses single random sequence
             # action = np.random.randint(0, 4, size=1)
             self.action_prob[action] += 1
@@ -106,7 +107,7 @@ def max_lt(seq, val):
     return None
 
 
-def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="QT"):
+def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="PILSVG"):
     random.seed(1)
     np.random.seed(1)
 
@@ -116,8 +117,7 @@ def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="QT"):
                   number_of_agents=5)
 
     if render:
-        # env_renderer = RenderTool(env, gl="QTSVG")
-        env_renderer = RenderTool(env, gl=sGL)
+        env_renderer = RenderTool(env, gl=sGL, show=True)
 
     oPlayer = Player(env)
 
@@ -159,7 +159,7 @@ def main_old(render=True, delay=0.0):
                   number_of_agents=5)
 
     if render:
-        env_renderer = RenderTool(env, gl="QTSVG")
+        env_renderer = RenderTool(env, gl="PIL")
         # env_renderer = RenderTool(env, gl="QT")
 
     n_trials = 9999
@@ -277,4 +277,4 @@ def main_old(render=True, delay=0.0):
 
 
 if __name__ == "__main__":
-    main(render=True, delay=0)
+    main(render=True, delay=0.5)
