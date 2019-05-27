@@ -1,4 +1,5 @@
 import os
+import time
 import random
 
 import numpy as np
@@ -137,9 +138,18 @@ class Demo:
         _ = self.env.reset(False, False)
 
         for step in range(max_nbr_of_steps):
+
+            time.sleep(.1)
+
             # Action
             for iAgent in range(self.env.get_num_agents()):
                 action = 2
+
+                if True:
+                    if not ((step) % 2 == 0):
+                        if iAgent % 2 == 1:
+                            action = 0
+
                 if False:
                     agent = self.env.agents[iAgent]
                     trial = 0
@@ -149,6 +159,7 @@ class Demo:
                         if trial > 10:
                             break
                 action_dict.update({iAgent: action})
+
 
             self.renderer.renderEnv(show=True, action_dict=action_dict)
 
@@ -180,7 +191,18 @@ if False:
     demo_002.run_demo()
     demo_002 = None
 
-demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
+    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
+    demo_flatland_000.renderer.resize()
+    demo_flatland_000.run_demo(1800)
+    demo_flatland_000 = None
+
+    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
+    demo_flatland_000.renderer.resize()
+    demo_flatland_000.run_demo(1800)
+    demo_flatland_000 = None
+
+
+demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_003.pkl'))
 demo_flatland_000.renderer.resize()
 demo_flatland_000.run_demo(1800)
 demo_flatland_000 = None

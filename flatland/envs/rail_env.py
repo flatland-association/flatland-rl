@@ -201,8 +201,8 @@ class RailEnv(Environment):
                 continue
 
             if self.dones[iAgent]:  # this agent has already completed...
-                print("rail_env.py @", currentframe().f_back.f_lineno, " agent ", iAgent,
-                      "has already completed : why action will not be executed!!!!? ADRIAN")
+                # print("rail_env.py @", currentframe().f_back.f_lineno, " agent ", iAgent,
+                #       "has already completed : why action will not be executed!!!!? ADRIAN")
                 continue
             action = action_dict[iAgent]
 
