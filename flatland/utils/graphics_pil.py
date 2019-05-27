@@ -37,7 +37,10 @@ class PILGL(GraphicsLayer):
         self.window_open = False
         # self.bShow = show
         self.firstFrame = True
+<<<<<<< HEAD
         self.create_layers()
+=======
+>>>>>>> 8062e72b7eec9bab1e71f4c0beb4d9ec9cd67026
         self.beginFrame()
 
     def plot(self, gX, gY, color=None, linewidth=3, layer=0, opacity=255, **kwargs):
@@ -57,6 +60,7 @@ class PILGL(GraphicsLayer):
         for x, y in gPoints:
             self.draws[layer].rectangle([(x - r, y - r), (x + r, y + r)], fill=color, outline=color)
 
+<<<<<<< HEAD
     def drawImageXY(self, pil_img, xyPixLeftTop, layer=0):
         # self.layers[layer].alpha_composite(pil_img, offset=xyPixLeftTop)
         if (pil_img.mode == "RGBA"): 
@@ -71,6 +75,8 @@ class PILGL(GraphicsLayer):
         xyPixLeftTop = tuple((array(rcTopLeft) * self.nPixCell)[[1, 0]])
         self.drawImageXY(pil_img, xyPixLeftTop, layer=layer)
 
+=======
+>>>>>>> 8062e72b7eec9bab1e71f4c0beb4d9ec9cd67026
     def open_window(self):
         assert self.window_open is False, "Window is already open!"
         self.window = tk.Tk()
@@ -100,7 +106,10 @@ class PILGL(GraphicsLayer):
         tkimg = ImageTk.PhotoImage(img)
         
         if self.firstFrame:
+<<<<<<< HEAD
             # Do TK actions for a new panel (not sure what they really do)
+=======
+>>>>>>> 8062e72b7eec9bab1e71f4c0beb4d9ec9cd67026
             self.panel = tk.Label(self.window, image=tkimg)
             self.panel.pack(side="bottom", fill="both", expand="yes")
         else:
