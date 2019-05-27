@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from flatland.utils.render_qt import QTGL, QTSVG
 from flatland.utils.graphics_pil import PILGL, PILSVG
 from flatland.utils.graphics_layer import GraphicsLayer
-import recordtype
+from recordtype import recordtype
 from numpy import array
 import numpy as np
 
