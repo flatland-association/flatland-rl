@@ -77,6 +77,11 @@ class PILGL(GraphicsLayer):
         self.window.configure(background='grey')
         self.window_open = True
 
+    def close_window(self):
+        self.panel.destroy()
+        self.window.quit()
+        self.window.destroy()
+
     def text(self, *args, **kwargs):
         pass
 
@@ -211,7 +216,7 @@ class PILSVG(PILGL):
     def loadRailSVGs(self):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
         """
-        dFiles = {
+        dRailFiles = {
             "": "Background_#91D1DD.svg",
             "WE": "Gleis_Deadend.svg",
             "WW EE NN SS": "Gleis_Diamond_Crossing.svg",
@@ -233,7 +238,19 @@ class PILSVG(PILGL):
             "NN SS NW ES": "Weiche_vertikal_unten_links.svg",
             "NN SS NE WS": "Weiche_vertikal_unten_rechts.svg"}
 
-        self.dPil = {}
+        dTargetFiles = {
+            "EW": "Bahnhof_#d50000_Deadend_links.svg",
+            "NS": "Bahnhof_#d50000_Deadend_oben.svg",
+            "WE": "Bahnhof_#d50000_Deadend_rechts.svg",
+            "SN": "Bahnhof_#d50000_Deadend_unten.svg",
+            "EE WW": "Bahnhof_#d50000_Gleis_horizontal.svg",
+            "NN SS": "Bahnhof_#d50000_Gleis_vertikal.svg"}
+
+        self.dPilRail = self.loadSVGs(dRailFiles, rotate=True)
+        self.dPilTarget = self.loadSVGs(dTargetFiles, rotate=False)
+
+    def loadSVGs(self, dDirFile, rotate=False):
+        dPil = {}
 
         transitions = RailEnvTransitions()
 
@@ -241,10 +258,10 @@ class PILSVG(PILGL):
 
         # svgBG = SVG("./svg/Background_#91D1DD.svg")
 
-        for sTrans, sFile in dFiles.items():
+        for sTrans, sFile in dDirFile.items():
             sPathSvg = "./svg/" + sFile
 
-            # Translate the ascii transition descption in the format  "NE WS" to the 
+            # Translate the ascii transition description in the format  "NE WS" to the 
             # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
             lTrans16 = ["0"] * 16
             for sTran in sTrans.split(" "):
@@ -263,22 +280,31 @@ class PILSVG(PILGL):
             #    svg = svg.merge(svgBG)
 
             pilRail = self.pilFromSvgFile(sPathSvg)
-            self.dPil[binTrans] = pilRail
+            dPil[binTrans] = pilRail
 
-            # Rotate both the transition binary and the image and save in the dict
-            for nRot in [90, 180, 270]:
-                binTrans2 = transitions.rotate_transition(binTrans, nRot)
+            if rotate:
+                # Rotate both the transition binary and the image and save in the dict
+                for nRot in [90, 180, 270]:
+                    binTrans2 = transitions.rotate_transition(binTrans, nRot)
 
-                # PIL rotates anticlockwise for positive theta
-                pilRail2 = pilRail.rotate(-nRot)
-                self.dPil[binTrans2] = pilRail2
+                    # PIL rotates anticlockwise for positive theta
+                    pilRail2 = pilRail.rotate(-nRot)
+                    dPil[binTrans2] = pilRail2
+        return dPil
 
-    def setRailAt(self, row, col, binTrans):
-        if binTrans in self.dPil:
-            pilTrack = self.dPil[binTrans]
-            self.drawImageRC(pilTrack, (row, col))
+    def setRailAt(self, row, col, binTrans, target=None):
+        if target is None:
+            if binTrans in self.dPilRail:
+                pilTrack = self.dPilRail[binTrans]
+                self.drawImageRC(pilTrack, (row, col))
+            else:
+                print("Illegal rail:", row, col, format(binTrans, "#018b")[2:])
         else:
-            print("Illegal rail:", row, col, format(binTrans, "#018b")[2:])
+            if binTrans in self.dPilTarget:
+                pilTrack = self.dPilTarget[binTrans]
+                self.drawImageRC(pilTrack, (row, col))
+            else:
+                print("Illegal target rail:", row, col, format(binTrans, "#018b")[2:])
 
     def rgb_s2i(self, sRGB):
         """ convert a hex RGB string like 0091ea to 3-tuple of ints """

@@ -751,11 +751,23 @@ class RenderTool(object):
         if self.new_rail:
             self.new_rail = False
             self.gl.clear_rails()
+
+            # store the targets
+            dTargets = {}
+            for iAgent, agent in enumerate(self.env.agents_static):
+                if agent is None:
+                    continue
+                dTargets[agent.target] = iAgent
+
             # Draw each cell independently
             for r in range(env.height):
                 for c in range(env.width):
                     binTrans = env.rail.grid[r, c]
-                    self.gl.setRailAt(r, c, binTrans)
+                    if (r, c) in dTargets:
+                        target = dTargets[(r, c)]
+                    else:
+                        target = None
+                    self.gl.setRailAt(r, c, binTrans, target)
 
         for iAgent, agent in enumerate(self.env.agents):
             if agent is None:
