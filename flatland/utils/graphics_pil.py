@@ -325,7 +325,7 @@ class PILSVG(PILGL):
                     rgbaZug3[xy_color_mask, 0:3] = tnNewColor
                     self.dPilZug[(iDirIn2, iDirOut2, iColor)] = Image.fromarray(rgbaZug3)
 
-    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut, color=None):
+    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
         delta_dir = (iDirOut - iDirIn) % 4
         iColor = iAgent % self.nAgentColors
         # when flipping direction at a dead end, use the "iDirOut" direction.

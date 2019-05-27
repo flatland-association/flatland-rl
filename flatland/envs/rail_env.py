@@ -263,8 +263,9 @@ class RailEnv(Environment):
                     # performed
                     # self.agents_position[i] = new_position
                     # self.agents_direction[i] = new_direction
-                    agent.position = new_position
                     agent.old_direction = agent.direction
+                    agent.old_position = agent.position
+                    agent.position = new_position
                     agent.direction = new_direction
                 else:
                     # the action was not valid, add penalty

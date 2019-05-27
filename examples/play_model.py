@@ -277,4 +277,4 @@ def main_old(render=True, delay=0.0):
 
 
 if __name__ == "__main__":
-    main(render=True, delay=0.5)
+    main(render=True, delay=0)

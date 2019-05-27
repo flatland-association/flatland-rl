@@ -757,35 +757,20 @@ class RenderTool(object):
                     binTrans = env.rail.grid[r, c]
                     self.gl.setRailAt(r, c, binTrans)
 
-        cmap = self.gl.get_cmap('hsv',
-                                lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
-
         for iAgent, agent in enumerate(self.env.agents):
             if agent is None:
                 continue
 
-            oColor = self.gl.adaptColor(cmap(iAgent))
-
-            new_direction = agent.direction
-            action_isValid = False
-
-            if iAgent in action_dict:
-                iAction = action_dict[iAgent]
-                new_direction, action_isValid = self.env.check_action(agent, iAction)
-
-            # ** TODO ***
-            # why should we only update if the action is valid ?
-            if True:
-                if action_isValid:
-                    self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
-                else:
-                    # pass
-                    print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
-                    self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
+            if agent.old_position is not None:
+                position = agent.old_position
+                direction = agent.direction
+                old_direction = agent.old_direction
             else:
-                print("invalid action - agent ", iAgent, " bend ", agent.direction, new_direction)
-                self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction, color=oColor)
-                # self.gl.setAgentAt(iAgent, *agent.position, agent.direction, new_direction)
+                position = agent.position
+                direction = agent.direction
+                old_direction = agent.direction
+            
+            self.gl.setAgentAt(iAgent, *position, old_direction, direction)
 
         if show:
             self.gl.show()
