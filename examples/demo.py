@@ -154,7 +154,6 @@ class Demo:
                         if iAgent == 4:
                             action = 0
 
-
                 if False:
                     agent = self.env.agents[iAgent]
                     trial = 0
@@ -164,7 +163,6 @@ class Demo:
                         if trial > 10:
                             break
                 action_dict.update({iAgent: action})
-
 
             self.renderer.renderEnv(show=True, action_dict=action_dict)
 

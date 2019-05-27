@@ -4,8 +4,8 @@ Definition of the RailEnv environment and related level-generation functions.
 Generator functions are functions that take width, height and num_resets as arguments and return
 a GridTransitionMap object.
 """
-### TODO  _ this is a global method --> utils or remove later
-from inspect import currentframe
+# TODO:  _ this is a global method --> utils or remove later
+# from inspect import currentframe
 
 import msgpack
 import numpy as np

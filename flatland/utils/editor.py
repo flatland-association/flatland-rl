@@ -240,7 +240,7 @@ class Controller(object):
     def on_click(self, wid, event):
         x = event['canvasX']
         y = event['canvasY']
-        self.debug("debug:", x,y)
+        self.debug("debug:", x, y)
 
         rcCell = self.view.xy_to_rc(x, y)
 
@@ -319,7 +319,6 @@ class Controller(object):
                     #     # This is the first cell in a mouse stroke
                     #     lrcStroke.append(rcCell)
                 self.view.redisplayImage()
-
 
         else:
             self.model.mod_path(not event["shiftKey"])
@@ -621,10 +620,9 @@ class EditorModel(object):
 
         self.redraw()
 
-
-    def clearCell(self,rcCell):
+    def clearCell(self, rcCell):
         self.debug_cell(rcCell)
-        self.env.rail.grid[rcCell[0],rcCell[1]] = 0
+        self.env.rail.grid[rcCell[0], rcCell[1]] = 0
         self.redraw()
 
     def reset(self, replace_agents=False, nAgents=0):
