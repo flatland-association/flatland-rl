@@ -20,6 +20,8 @@ xarray==0.11.3
 matplotlib==3.0.2
 PyQt5==5.12
 Pillow==5.4.1
+CairoSVG==2.3.1
+pycairo==1.18.1
 
 msgpack==0.6.1
 svgutils==0.3.1
