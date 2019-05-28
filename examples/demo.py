@@ -139,7 +139,7 @@ class Demo:
 
         for step in range(max_nbr_of_steps):
 
-            time.sleep(.1)
+            # time.sleep(.1)
 
             # Action
             for iAgent in range(self.env.get_num_agents()):
@@ -173,7 +173,7 @@ class Demo:
                 break
 
 
-if False:
+if True:
     demo_000 = Demo(Scenario_Generator.generate_random_scenario())
     demo_000.run_demo()
     demo_000 = None
@@ -196,12 +196,12 @@ if False:
 
     demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
     demo_flatland_000.renderer.resize()
-    demo_flatland_000.run_demo(1800)
+    demo_flatland_000.run_demo(300)
     demo_flatland_000 = None
 
     demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
     demo_flatland_000.renderer.resize()
-    demo_flatland_000.run_demo(1800)
+    demo_flatland_000.run_demo(300)
     demo_flatland_000 = None
 
 
