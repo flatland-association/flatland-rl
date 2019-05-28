@@ -60,7 +60,7 @@ class SVG(object):
         sNewStyles = "\n"
         for sKey, sValue in self.dStyles.items():
             if sKey == style_name:
-                sValue = "fill:#" + "".join([format(col, "#04x")[2:] for col in color]) + ";"
+                sValue = "fill:#" + "".join([ ('{:#04x}'.format(int(255.0*col))[2:4]) for col in color[0:3]]) + ";"
             sNewStyle = "\t.st" + sKey + "{" + sValue + "}\n"
             sNewStyles += sNewStyle
 

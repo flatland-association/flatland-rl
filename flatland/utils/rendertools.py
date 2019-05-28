@@ -781,8 +781,9 @@ class RenderTool(object):
                 position = agent.position
                 direction = agent.direction
                 old_direction = agent.direction
-            
-            self.gl.setAgentAt(iAgent, *position, old_direction, direction)
+
+            cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
+            self.gl.setAgentAt(iAgent, *position, old_direction, direction,color=cmap(iAgent))
 
         if show:
             self.gl.show()
