@@ -157,7 +157,7 @@ class QTSVG(GraphicsLayer):
         self.lwAgents = []
         self.agents_prev = []
 
-    def setRailAt(self, row, col, binTrans, target=None):
+    def setRailAt(self, row, col, binTrans, iTarget=None):
         if binTrans in self.track.dSvg:
             sSVG = self.track.dSvg[binTrans].to_string()
             svgWidget = create_QtSvgWidget_from_svg_string(sSVG)
