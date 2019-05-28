@@ -137,6 +137,8 @@ class Demo:
         # Reset environment
         _ = self.env.reset(False, False)
 
+        time.sleep(0.0001)  # to satisfy lint...
+
         for step in range(max_nbr_of_steps):
 
             # time.sleep(.1)
@@ -171,6 +173,7 @@ class Demo:
 
             if done['__all__']:
                 break
+        self.renderer.close_window()
 
 
 if True:

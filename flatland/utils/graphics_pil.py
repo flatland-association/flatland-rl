@@ -33,11 +33,21 @@ class PILGL(GraphicsLayer):
         self.tColRail = (0, 0, 0)         # black rails
         self.tColGrid = (230,) * 3        # light grey for grid
 
+        sColors = "d50000#c51162#aa00ff#6200ea#304ffe#2962ff#0091ea#00b8d4#00bfa5#00c853" + \
+            "#64dd17#aeea00#ffd600#ffab00#ff6d00#ff3d00#5d4037#455a64"
+            
+        self.ltAgentColors = [self.rgb_s2i(sColor) for sColor in sColors.split("#")]
+        self.nAgentColors = len(self.ltAgentColors)
+
         self.window_open = False
         # self.bShow = show
         self.firstFrame = True
         self.create_layers()
         # self.beginFrame()
+
+    def rgb_s2i(self, sRGB):
+        """ convert a hex RGB string like 0091ea to 3-tuple of ints """
+        return tuple(int(sRGB[iRGB * 2:iRGB * 2 + 2], 16) for iRGB in [0, 1, 2])
 
     def plot(self, gX, gY, color=None, linewidth=3, layer=0, opacity=255, **kwargs):
         color = self.adaptColor(color)
@@ -246,10 +256,17 @@ class PILSVG(PILGL):
             "EE WW": "Bahnhof_#d50000_Gleis_horizontal.svg",
             "NN SS": "Bahnhof_#d50000_Gleis_vertikal.svg"}
 
+        # Dict of rail cell images indexed by binary transitions
         self.dPilRail = self.loadSVGs(dRailFiles, rotate=True)
-        self.dPilTarget = self.loadSVGs(dTargetFiles, rotate=False)
 
-    def loadSVGs(self, dDirFile, rotate=False):
+        # Load the target files (which have rails and transitions of their own)
+        # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
+        dPilRail2 = self.loadSVGs(dTargetFiles, rotate=False, agent_colors=self.ltAgentColors)
+        # Merge them with the regular rails.
+        # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
+        self.dPilRail = {**self.dPilRail, **dPilRail2}
+        
+    def loadSVGs(self, dDirFile, rotate=False, agent_colors=False):
         dPil = {}
 
         transitions = RailEnvTransitions()
@@ -280,9 +297,10 @@ class PILSVG(PILGL):
             #    svg = svg.merge(svgBG)
 
             pilRail = self.pilFromSvgFile(sPathSvg)
-            dPil[binTrans] = pilRail
-
+            
             if rotate:
+                # For rotations, we also store the base image
+                dPil[binTrans] = pilRail
                 # Rotate both the transition binary and the image and save in the dict
                 for nRot in [90, 180, 270]:
                     binTrans2 = transitions.rotate_transition(binTrans, nRot)
@@ -290,25 +308,44 @@ class PILSVG(PILGL):
                     # PIL rotates anticlockwise for positive theta
                     pilRail2 = pilRail.rotate(-nRot)
                     dPil[binTrans2] = pilRail2
+            
+            if agent_colors:
+                # For recoloring, we don't store the base image.
+                a3BaseColor = self.rgb_s2i("d50000")
+                lPils = self.recolorImage(pilRail, a3BaseColor, self.ltAgentColors)
+                for iColor, pilRail2 in enumerate(lPils):
+                    dPil[(binTrans, iColor)] = lPils[iColor]
+
         return dPil
 
-    def setRailAt(self, row, col, binTrans, target=None):
-        if target is None:
+    def setRailAt(self, row, col, binTrans, iTarget=None):
+        if iTarget is None:
             if binTrans in self.dPilRail:
                 pilTrack = self.dPilRail[binTrans]
                 self.drawImageRC(pilTrack, (row, col))
             else:
                 print("Illegal rail:", row, col, format(binTrans, "#018b")[2:])
         else:
-            if binTrans in self.dPilTarget:
-                pilTrack = self.dPilTarget[binTrans]
+            if (binTrans, iTarget) in self.dPilRail:
+                pilTrack = self.dPilRail[(binTrans, iTarget)]
                 self.drawImageRC(pilTrack, (row, col))
             else:
                 print("Illegal target rail:", row, col, format(binTrans, "#018b")[2:])
 
-    def rgb_s2i(self, sRGB):
-        """ convert a hex RGB string like 0091ea to 3-tuple of ints """
-        return tuple(int(sRGB[iRGB * 2:iRGB * 2 + 2], 16) for iRGB in [0, 1, 2])
+    def recolorImage(self, pil, a3BaseColor, ltColors):
+        rgbaImg = array(pil)
+        lPils = []
+
+        for iColor, tnColor in enumerate(ltColors):
+            # find the pixels which match the base paint color
+            xy_color_mask = np.all(rgbaImg[:, :, 0:3] - a3BaseColor == 0, axis=2)
+            rgbaImg2 = np.copy(rgbaImg)
+
+            # Repaint the base color with the new color
+            rgbaImg2[xy_color_mask, 0:3] = tnColor
+            pil2 = Image.fromarray(rgbaImg2)
+            lPils.append(pil2)
+        return lPils
 
     def loadAgentSVGs(self):
 
@@ -319,13 +356,8 @@ class PILSVG(PILGL):
             (0, 3): "svg/Zug_2_Weiche_#0091ea.svg"
             }
 
-        sColors = "d50000#c51162#aa00ff#6200ea#304ffe#2962ff#0091ea#00b8d4#00bfa5#00c853" + \
-            "#64dd17#aeea00#ffd600#ffab00#ff6d00#ff3d00#5d4037#455a64"
-        lColors = sColors.split("#")
-        self.nAgentColors = len(lColors)
-
         # "paint" color of the train images we load
-        a_base_color = self.rgb_s2i("0091ea")
+        a3BaseColor = self.rgb_s2i("0091ea")
 
         self.dPilZug = {}
 
@@ -342,16 +374,13 @@ class PILSVG(PILGL):
 
                 # PIL rotates anticlockwise for positive theta
                 pilZug2 = pilZug.rotate(-nDegRot)
-                rgbaZug2 = array(pilZug2)
 
-                for iColor, sColor in enumerate(lColors):
-                    tnNewColor = self.rgb_s2i(sColor)
-                    xy_color_mask = np.all(rgbaZug2[:, :, 0:3] - a_base_color == 0, axis=2)
-                    rgbaZug3 = np.copy(rgbaZug2)
-                    rgbaZug3[xy_color_mask, 0:3] = tnNewColor
-                    self.dPilZug[(iDirIn2, iDirOut2, iColor)] = Image.fromarray(rgbaZug3)
+                # Save colored versions of each rotation / variant
+                lPils = self.recolorImage(pilZug2, a3BaseColor, self.ltAgentColors)
+                for iColor, pilZug3 in enumerate(lPils):
+                    self.dPilZug[(iDirIn2, iDirOut2, iColor)] = lPils[iColor]
 
-    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut, color=None):
+    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
         delta_dir = (iDirOut - iDirIn) % 4
         iColor = iAgent % self.nAgentColors
         # when flipping direction at a dead end, use the "iDirOut" direction.
