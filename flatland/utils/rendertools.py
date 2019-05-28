@@ -758,7 +758,7 @@ class RenderTool(object):
             for iAgent, agent in enumerate(self.env.agents_static):
                 if agent is None:
                     continue
-                dTargets[agent.target] = iAgent
+                dTargets[tuple(agent.target)] = iAgent
 
             # Draw each cell independently
             for r in range(env.height):

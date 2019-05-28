@@ -174,10 +174,9 @@ class View(object):
         self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL)
 
     def redraw(self):
-        # TODO: bit of a hack - can we suppress the console messages from MPL at source?
-        # with redirect_stdout(stdout_dest):
         with self.wOutput:
             # plt.figure(figsize=(10, 10))
+            self.oRT.set_new_rail()
             self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray",
                                show=False, iSelectedAgent=self.model.iSelectedAgent,
                                show_observations=self.show_observations())
