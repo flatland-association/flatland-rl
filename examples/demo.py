@@ -127,7 +127,7 @@ class Demo:
         self.action_size = 4
 
     def create_renderer(self):
-        self.renderer = RenderTool(self.env, gl="QTSVG")
+        self.renderer = RenderTool(self.env, gl="PILSVG")
         handle = self.env.get_agent_handles()
         return handle
 
