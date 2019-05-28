@@ -49,6 +49,9 @@ class PILGL(GraphicsLayer):
         """ convert a hex RGB string like 0091ea to 3-tuple of ints """
         return tuple(int(sRGB[iRGB * 2:iRGB * 2 + 2], 16) for iRGB in [0, 1, 2])
 
+    def getAgentColor(self, iAgent):
+        return self.ltAgentColors[iAgent % self.nAgentColors]
+
     def plot(self, gX, gY, color=None, linewidth=3, layer=0, opacity=255, **kwargs):
         color = self.adaptColor(color)
         if len(color) == 3:

@@ -498,10 +498,11 @@ class RenderTool(object):
         """
         rt = self.__class__
 
-        cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
+        # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
 
         for agent in agent_handles:
-            color = cmap(agent)
+            # color = cmap(agent)
+            color = self.gl.getAgentColor(agent)
             for visited_cell in observation_dict[agent]:
                 cell_coord = array(visited_cell[:2])
                 cell_coord_trans = np.matmul(cell_coord, rt.grc2xy) + rt.xyHalf
@@ -785,6 +786,9 @@ class RenderTool(object):
             # setAgentAt uses the agent index for the color
             # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
             self.gl.setAgentAt(iAgent, *position, old_direction, direction)  # ,color=cmap(iAgent))
+
+        if show_observations:
+            self.renderObs(range(env.get_num_agents()), env.dev_obs_dict)
 
         if show:
             self.gl.show()
