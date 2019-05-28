@@ -767,7 +767,7 @@ class RenderTool(object):
                         target = dTargets[(r, c)]
                     else:
                         target = None
-                    self.gl.setRailAt(r, c, binTrans, target)
+                    self.gl.setRailAt(r, c, binTrans)
 
         for iAgent, agent in enumerate(self.env.agents):
             if agent is None:
