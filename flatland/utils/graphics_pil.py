@@ -10,10 +10,10 @@ from cairosvg import svg2png
 from flatland.core.transitions import RailEnvTransitions
 # from copy import copy
 
+from screeninfo import get_monitors
 
 class PILGL(GraphicsLayer):
     def __init__(self, width, height, nPixCell=60):
-        self.nPixCell = 60
         self.yxBase = (0, 0)
         self.linewidth = 4
         self.nAgentColors = 1  # overridden in loadAgent
@@ -21,6 +21,17 @@ class PILGL(GraphicsLayer):
 
         self.width = width
         self.height = height
+
+        self.screen_width = 99999
+        self.screen_height = 99999
+        for m in get_monitors():
+            self.screen_height = min(self.screen_height,m.height)
+            self.screen_width = min(self.screen_width,m.width)
+
+        self.widthPx = 0.95*self.screen_width/(self.width + 1 + self.linewidth)
+        self.heightPx = 0.95*self.screen_height/(self.height + 1 + self.linewidth)
+        self.nPixCell = int(max(1,np.floor(min(self.widthPx,self.heightPx))))
+
 
         # Total grid size at native scale
         self.widthPx = self.width * self.nPixCell + self.linewidth
