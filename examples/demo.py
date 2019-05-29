@@ -107,39 +107,23 @@ class Demo:
             # Action
             for iAgent in range(self.env.get_num_agents()):
 
-
+                # allways walk straight forward
                 action = 2
 
-                if False:
-                    if not ((step) % 2 == 0):
-                        if iAgent == 3:
-                            action = 0
-
-                    if not ((step) % 2 == 0):
-                        if iAgent == 4:
-                            action = 0
-
-                if False:
-                    agent = self.env.agents[iAgent]
-                    trial = 0
-                    while not self.env.check_action(agent, action)[1]:
-                        action = np.random.choice(self.action_size)
-                        trial += 1
-                        if trial > 10:
-                            break
-
+                # update the actions
                 action_dict.update({iAgent: action})
 
-            self.renderer.renderEnv(show=True)
-
-            # Environment step
+            # environment step (apply the actions to all agents)
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
+
+            # render
+            self.renderer.renderEnv(show=True)
 
             if done['__all__']:
                 break
 
 
-
+            
             if self.record_frames is not None:
                 self.renderer.gl.saveImage(self.record_frames.format(step))
 
