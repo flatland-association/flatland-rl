@@ -43,6 +43,9 @@ class GraphicsLayer(object):
     def getImage(self):
         pass
 
+    def saveImage(self,filename):
+        pass
+
     def adaptColor(self, color, lighten=False):
         if type(color) is str:
             if color == "red" or color == "r":

@@ -160,6 +160,13 @@ class PILGL(GraphicsLayer):
         img = self.alpha_composite_layers()
         return array(img)
 
+
+    def saveImage(self,filename):
+        print(filename)
+        img = self.alpha_composite_layers()
+        img.save(filename)
+
+
     def create_image(self, opacity=255):
         img = Image.new("RGBA", (self.widthPx, self.heightPx), (255, 255, 255, opacity))
         return img

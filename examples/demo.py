@@ -126,6 +126,10 @@ class Demo:
         self.create_renderer()
         self.action_size = 4
         self.max_frame_rate = 60
+        self.record_frames = None
+
+    def set_record_frames(self,record_frames):
+        self.record_frames = record_frames
 
     def create_renderer(self):
         self.renderer = RenderTool(self.env, gl="PILSVG")
@@ -151,7 +155,7 @@ class Demo:
             for iAgent in range(self.env.get_num_agents()):
                 action = 2
 
-                if True:
+                if False:
                     if not ((step) % 2 == 0):
                         if iAgent == 3:
                             action = 0
@@ -178,6 +182,10 @@ class Demo:
             if done['__all__']:
                 break
 
+
+
+            im = self.renderer.getImage()
+            self.renderer.gl.saveImage(self.record_frames.format(step))
 
             # ensure that the rendering is not faster then the maximal allowed frame rate
             end_frame_time_stamp = datetime.now()
@@ -212,18 +220,21 @@ if False:
     demo_002.run_demo()
     demo_002 = None
 
-demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
-demo_flatland_000.renderer.resize()
-demo_flatland_000.run_demo(60)
-demo_flatland_000 = None
+    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
+    demo_flatland_000.renderer.resize()
+    demo_flatland_000.run_demo(60)
+    demo_flatland_000 = None
+
+
+    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_003.pkl'))
+    demo_flatland_000.renderer.resize()
+    demo_flatland_000.set_max_framerate(5)
+    demo_flatland_000.run_demo(30)
+    demo_flatland_000 = None
+
 
 demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
 demo_flatland_000.renderer.resize()
+demo_flatland_000.set_record_frames('./rendering/frame_{:04d}.bmp')
 demo_flatland_000.run_demo(60)
-demo_flatland_000 = None
-
-demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_003.pkl'))
-demo_flatland_000.renderer.resize()
-demo_flatland_000.set_max_framerate(5)
-demo_flatland_000.run_demo(30)
 demo_flatland_000 = None

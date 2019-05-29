@@ -703,6 +703,7 @@ class RenderTool(object):
     def getImage(self):
         return self.gl.getImage()
 
+
     def plotTreeObs(self, gObs):
         nBranchFactor = 4
 
