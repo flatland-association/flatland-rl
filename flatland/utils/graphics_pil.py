@@ -30,7 +30,7 @@ from flatland.core.transitions import RailEnvTransitions
 
 
 class PILGL(GraphicsLayer):
-    def __init__(self, width, height, nPixCell=60):
+    def __init__(self, width, height, jupyter=False):
         self.yxBase = (0, 0)
         self.linewidth = 4
         self.nAgentColors = 1  # overridden in loadAgent
@@ -39,16 +39,20 @@ class PILGL(GraphicsLayer):
         self.width = width
         self.height = height
 
-        self.screen_width = 99999
-        self.screen_height = 99999
-        for m in get_monitors():
-            self.screen_height = min(self.screen_height,m.height)
-            self.screen_width = min(self.screen_width,m.width)
 
-        w = (self.screen_width-self.width-10)/(self.width + 1 + self.linewidth)
-        h = (self.screen_height-self.height-10)/(self.height + 1 + self.linewidth)
-        self.nPixCell = int(max(1,np.ceil(min(w,h))))
+        if jupyter == False:
+            self.screen_width = 99999
+            self.screen_height = 99999
+            for m in get_monitors():
+                self.screen_height = min(self.screen_height,m.height)
+                self.screen_width = min(self.screen_width,m.width)
 
+            w = (self.screen_width-self.width-10)/(self.width + 1 + self.linewidth)
+            h = (self.screen_height-self.height-10)/(self.height + 1 + self.linewidth)
+            self.nPixCell = int(max(1,np.ceil(min(w,h))))
+        else:
+            self.nPixCell = 40
+            
         # Total grid size at native scale
         self.widthPx = self.width * self.nPixCell + self.linewidth
         self.heightPx = self.height * self.nPixCell + self.linewidth
@@ -119,7 +123,7 @@ class PILGL(GraphicsLayer):
         self.window = tk.Tk()
         self.window.title("Flatland")
         self.window.configure(background='grey')
-        self.window.geometry('%dx%d+%d+%d' % (self.widthPx, self.heightPx, self.xPx, self.yPx))
+        #self.window.geometry('%dx%d+%d+%d' % (self.widthPx, self.heightPx, self.xPx, self.yPx))
         self.window_open = True
 
     def close_window(self):
@@ -213,11 +217,11 @@ class PILGL(GraphicsLayer):
 
 
 class PILSVG(PILGL):
-    def __init__(self, width, height):
+    def __init__(self, width, height,jupyter=False):
         print(self, type(self))
         oSuper = super()
         print(oSuper, type(oSuper))
-        oSuper.__init__(width, height)
+        oSuper.__init__(width, height,jupyter)
 
         # self.track = self.track = Track()
         # self.lwTrack = []

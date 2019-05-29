@@ -15,7 +15,7 @@ import numpy as np
 import os
 
 class MPLGL(GraphicsLayer):
-    def __init__(self, width, height):
+    def __init__(self, width, height,jupyter=False):
         self.width = width
         self.height = height
         self.yxBase = array([6, 21])  # pixel offset
@@ -119,7 +119,7 @@ class RenderTool(object):
     gTheta = np.linspace(0, np.pi / 2, 5)
     gArc = array([np.cos(gTheta), np.sin(gTheta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env, gl="MPL", show=False):
+    def __init__(self, env, gl="MPL", jupyter=False):
         self.env = env
         self.iFrame = 0
         self.time1 = time.time()
@@ -127,15 +127,15 @@ class RenderTool(object):
         # self.gl = MPLGL()
 
         if gl == "MPL":
-            self.gl = MPLGL(env.width, env.height)
+            self.gl = MPLGL(env.width, env.height,jupyter)
         elif gl == "QT":
-            self.gl = QTGL(env.width, env.height)
+            self.gl = QTGL(env.width, env.height,jupyter)
         elif gl == "PIL":
-            self.gl = PILGL(env.width, env.height)
+            self.gl = PILGL(env.width, env.height,jupyter)
         elif gl == "PILSVG":
-            self.gl = PILSVG(env.width, env.height)
+            self.gl = PILSVG(env.width, env.height,jupyter)
         elif gl == "QTSVG":
-            self.gl = QTSVG(env.width, env.height)
+            self.gl = QTSVG(env.width, env.height,jupyter)
 
         self.new_rail = True
 

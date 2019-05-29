@@ -112,7 +112,7 @@ class QTGL(GraphicsLayer):
 
 
 class QTSVG(GraphicsLayer):
-    def __init__(self, width, height):
+    def __init__(self, width, height, jupyter=False):
         self.app = QApplication([])
         self.wWinMain = QMainWindow()
 
