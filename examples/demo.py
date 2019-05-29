@@ -71,54 +71,7 @@ class Scenario_Generator:
             print("File does not exist:", filename, " Working directory: ", os.getcwd())
 
         return env
-
-
-def max_lt(seq, val):
-    """
-    Return greatest item in seq for which item < val applies.
-    None is returned if seq was empty or all items in seq were >= val.
-    """
-    max = 0
-    idx = len(seq) - 1
-    while idx >= 0:
-        if seq[idx] < val and seq[idx] >= 0 and seq[idx] > max:
-            max = seq[idx]
-        idx -= 1
-    return max
-
-
-def min_lt(seq, val):
-    """
-    Return smallest item in seq for which item > val applies.
-    None is returned if seq was empty or all items in seq were >= val.
-    """
-    min = np.inf
-    idx = len(seq) - 1
-    while idx >= 0:
-        if seq[idx] > val and seq[idx] < min:
-            min = seq[idx]
-        idx -= 1
-    return min
-
-
-def norm_obs_clip(obs, clip_min=-1, clip_max=1):
-    """
-    This function returns the difference between min and max value of an observation
-    :param obs: Observation that should be normalized
-    :param clip_min: min value where observation will be clipped
-    :param clip_max: max value where observation will be clipped
-    :return: returnes normalized and clipped observatoin
-    """
-    max_obs = max(1, max_lt(obs, 1000))
-    min_obs = max(0, min_lt(obs, 0))
-    if max_obs == min_obs:
-        return np.clip(np.array(obs) / max_obs, clip_min, clip_max)
-    norm = np.abs(max_obs - min_obs)
-    if norm == 0:
-        norm = 1.
-    return np.clip((np.array(obs) - min_obs) / norm, clip_min, clip_max)
-
-
+ 
 class Demo:
 
     def __init__(self, env):
@@ -184,8 +137,8 @@ class Demo:
 
 
 
-            im = self.renderer.getImage()
-            self.renderer.gl.saveImage(self.record_frames.format(step))
+            if self.record_frames is not None:
+                self.renderer.gl.saveImage(self.record_frames.format(step))
 
             # ensure that the rendering is not faster then the maximal allowed frame rate
             end_frame_time_stamp = datetime.now()
@@ -233,8 +186,19 @@ if False:
     demo_flatland_000 = None
 
 
-demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
-demo_flatland_000.renderer.resize()
-demo_flatland_000.set_record_frames('./rendering/frame_{:04d}.bmp')
-demo_flatland_000.run_demo(60)
-demo_flatland_000 = None
+    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
+    demo_flatland_000.renderer.resize()
+    demo_flatland_000.set_record_frames('./rendering/frame_{:04d}.bmp')
+    demo_flatland_000.run_demo(60)
+    demo_flatland_000 = None
+
+
+demo_000 = Demo(Scenario_Generator.generate_random_scenario())
+demo_000.run_demo()
+demo_000 = None
+
+
+demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/temp.pkl'))
+demo_001.set_record_frames('./rendering/frame_{:04d}.bmp')
+demo_001.run_demo()
+demo_001 = None
