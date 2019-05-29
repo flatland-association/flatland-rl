@@ -28,9 +28,9 @@ class PILGL(GraphicsLayer):
             self.screen_height = min(self.screen_height,m.height)
             self.screen_width = min(self.screen_width,m.width)
 
-        self.widthPx = 0.95*self.screen_width/(self.width + 1 + self.linewidth)
-        self.heightPx = 0.95*self.screen_height/(self.height + 1 + self.linewidth)
-        self.nPixCell = int(max(1,np.floor(min(self.widthPx,self.heightPx))))
+        w = 0.95*self.screen_width/(self.width + 1 + self.linewidth)
+        h = 0.95*self.screen_height/(self.height + 1 + self.linewidth)
+        self.nPixCell = int(max(1,np.floor(min(w,h))))
 
 
         # Total grid size at native scale
