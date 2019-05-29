@@ -85,7 +85,7 @@ class Demo:
         self.record_frames = record_frames
 
     def create_renderer(self):
-        self.renderer = RenderTool(self.env, gl="PILSVG")
+        self.renderer = RenderTool(self.env, gl="PIL")
         handle = self.env.get_agent_handles()
         return handle
 
@@ -123,7 +123,7 @@ class Demo:
                 break
 
 
-            
+
             if self.record_frames is not None:
                 self.renderer.gl.saveImage(self.record_frames.format(step))
 
@@ -178,11 +178,7 @@ if False:
     demo_flatland_000.set_record_frames('./rendering/frame_{:04d}.bmp')
     demo_flatland_000.run_demo(60)
     demo_flatland_000 = None
-
-
-demo_000 = Demo(Scenario_Generator.generate_random_scenario())
-demo_000.run_demo()
-demo_000 = None
+ 
 
 
 demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/temp.pkl'))
