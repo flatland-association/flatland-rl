@@ -2,6 +2,17 @@
 import matplotlib.pyplot as plt
 from numpy import array
 
+import os
+if os.name=='nt':
+    import site
+    import ctypes.util
+    default_os_path = os.environ['PATH']
+    os.environ['PATH'] = ''
+    for s in site.getsitepackages():
+        os.environ['PATH'] = os.environ['PATH'] + ';' + s + '\\cairo'
+    os.environ['PATH'] = os.environ['PATH'] + ';' + default_os_path
+    if ctypes.util.find_library('cairo') is not None:
+        print("cairo installed: OK")
 
 class GraphicsLayer(object):
     def __init__(self):

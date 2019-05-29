@@ -6,7 +6,12 @@ import numpy as np
 # from flatland.utils.svg import Track, Zug
 import time
 import io
+
+
 from cairosvg import svg2png
+
+from IPython.display import SVG
+
 from flatland.core.transitions import RailEnvTransitions
 # from copy import copy
 
@@ -234,6 +239,8 @@ class PILSVG(PILGL):
     def pilFromSvgFile(self, sfPath):
         with open(sfPath, "r") as fIn:
             bytesPNG = svg2png(file_obj=fIn, output_height=self.nPixCell, output_width=self.nPixCell)
+
+            image = SVG(url=sfPath)
         
         with io.BytesIO(bytesPNG) as fIn:
             pil_img = Image.open(fIn)

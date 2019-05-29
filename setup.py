@@ -4,12 +4,66 @@
 """The setup script."""
 import os
 from setuptools import setup, find_packages
+import sys
+import os
+
+import platform
+
+
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
+
+
+
+
+
+# install pycairo
+if os.name == 'nt':
+    p = platform.architecture()
+    is64bit = p[0] == '64bit'
+    if sys.version[0:3] == '3.5':
+        if is64bit:
+            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp35-cp35m-win_amd64.whl'
+        else:
+            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp35-cp35m-win32.whl'
+
+    if sys.version[0:3] == '3.6':
+        if is64bit:
+            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp36-cp36m-win_amd64.whl'
+        else:
+            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp36-cp36m-win32.whl'
+
+    if sys.version[0:3] == '3.7':
+        if is64bit:
+            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp37-cp37m-win_amd64.whl'
+        else:
+            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp37-cp37m-win32.whl'
+
+    try:
+        import pycairo
+    except:
+        call_cmd = "pip install " + url
+        os.system(call_cmd)
+
+        import site
+        import ctypes.util
+        default_os_path = os.environ['PATH']
+        os.environ['PATH'] = ''
+        for s in site.getsitepackages():
+            os.environ['PATH'] = os.environ['PATH']+';' + s+'\\cairo'
+        os.environ['PATH'] = os.environ['PATH']+';' + default_os_path
+        print(os.environ['PATH'])
+        if ctypes.util.find_library('cairo')is not None:
+            print("cairo installed: OK")
+else:
+    try:
+        import pycairo
+    except:
+        os.system("pip install pycairo==1.18.1")
 
 # Gather requirements from requirements_dev.txt
 # TODO : We could potentially split up the test/dev dependencies later
