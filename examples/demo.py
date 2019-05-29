@@ -1,8 +1,8 @@
 import os
 import time
 import random
-
 import numpy as np
+from datetime import datetime
 
 from flatland.envs.generators import complex_rail_generator
 # from flatland.envs.generators import rail_from_list_of_saved_GridTransitionMap_generator
@@ -125,11 +125,15 @@ class Demo:
         self.env = env
         self.create_renderer()
         self.action_size = 4
+        self.max_frame_rate = 60
 
     def create_renderer(self):
-        self.renderer = RenderTool(self.env, gl="QTSVG")
+        self.renderer = RenderTool(self.env, gl="PILSVG")
         handle = self.env.get_agent_handles()
         return handle
+
+    def set_max_framerate(self,max_frame_rate):
+        self.max_frame_rate = max_frame_rate
 
     def run_demo(self, max_nbr_of_steps=30):
         action_dict = dict()
@@ -137,9 +141,11 @@ class Demo:
         # Reset environment
         _ = self.env.reset(False, False)
 
+        time.sleep(0.0001)  # to satisfy lint...
+
         for step in range(max_nbr_of_steps):
 
-            # time.sleep(.1)
+            begin_frame_time_stamp = datetime.now()
 
             # Action
             for iAgent in range(self.env.get_num_agents()):
@@ -173,7 +179,19 @@ class Demo:
                 break
 
 
-if True:
+            # ensure that the rendering is not faster then the maximal allowed frame rate
+            end_frame_time_stamp = datetime.now()
+            frame_exe_time = end_frame_time_stamp - begin_frame_time_stamp
+            max_time = 1/self.max_frame_rate
+            delta = (max_time - frame_exe_time.total_seconds())
+            if delta > 0.0:
+                time.sleep(delta)
+
+
+        self.renderer.close_window()
+
+
+if False:
     demo_000 = Demo(Scenario_Generator.generate_random_scenario())
     demo_000.run_demo()
     demo_000 = None
@@ -194,18 +212,18 @@ if True:
     demo_002.run_demo()
     demo_002 = None
 
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.run_demo(300)
-    demo_flatland_000 = None
+demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
+demo_flatland_000.renderer.resize()
+demo_flatland_000.run_demo(60)
+demo_flatland_000 = None
 
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.run_demo(300)
-    demo_flatland_000 = None
-
+demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
+demo_flatland_000.renderer.resize()
+demo_flatland_000.run_demo(60)
+demo_flatland_000 = None
 
 demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_003.pkl'))
 demo_flatland_000.renderer.resize()
-demo_flatland_000.run_demo(1800)
+demo_flatland_000.set_max_framerate(5)
+demo_flatland_000.run_demo(30)
 demo_flatland_000 = None

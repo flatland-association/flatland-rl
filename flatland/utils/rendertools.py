@@ -498,10 +498,11 @@ class RenderTool(object):
         """
         rt = self.__class__
 
-        cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
+        # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
 
         for agent in agent_handles:
-            color = cmap(agent)
+            # color = cmap(agent)
+            color = self.gl.getAgentColor(agent)
             for visited_cell in observation_dict[agent]:
                 cell_coord = array(visited_cell[:2])
                 cell_coord_trans = np.matmul(cell_coord, rt.grc2xy) + rt.xyHalf
@@ -757,7 +758,7 @@ class RenderTool(object):
             for iAgent, agent in enumerate(self.env.agents_static):
                 if agent is None:
                     continue
-                dTargets[agent.target] = iAgent
+                dTargets[tuple(agent.target)] = iAgent
 
             # Draw each cell independently
             for r in range(env.height):
@@ -767,7 +768,7 @@ class RenderTool(object):
                         target = dTargets[(r, c)]
                     else:
                         target = None
-                    self.gl.setRailAt(r, c, binTrans)
+                    self.gl.setRailAt(r, c, binTrans, iTarget=target)
 
         for iAgent, agent in enumerate(self.env.agents):
             if agent is None:
@@ -782,8 +783,12 @@ class RenderTool(object):
                 direction = agent.direction
                 old_direction = agent.direction
 
-            cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
-            self.gl.setAgentAt(iAgent, *position, old_direction, direction,color=cmap(iAgent))
+            # setAgentAt uses the agent index for the color
+            # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
+            self.gl.setAgentAt(iAgent, *position, old_direction, direction)  # ,color=cmap(iAgent))
+
+        if show_observations:
+            self.renderObs(range(env.get_num_agents()), env.dev_obs_dict)
 
         if show:
             self.gl.show()
@@ -792,3 +797,6 @@ class RenderTool(object):
 
         self.iFrame += 1
         return
+
+    def close_window(self):
+        self.gl.close_window()
