@@ -225,5 +225,6 @@ if True:
 
 demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_003.pkl'))
 demo_flatland_000.renderer.resize()
+demo_flatland_000.set_max_framerate(2)
 demo_flatland_000.run_demo(60)
 demo_flatland_000 = None
