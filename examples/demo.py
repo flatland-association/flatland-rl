@@ -71,7 +71,7 @@ class Scenario_Generator:
             print("File does not exist:", filename, " Working directory: ", os.getcwd())
 
         return env
- 
+
 class Demo:
 
     def __init__(self, env):
@@ -106,6 +106,8 @@ class Demo:
 
             # Action
             for iAgent in range(self.env.get_num_agents()):
+
+
                 action = 2
 
                 if False:
@@ -125,9 +127,10 @@ class Demo:
                         trial += 1
                         if trial > 10:
                             break
+
                 action_dict.update({iAgent: action})
 
-            self.renderer.renderEnv(show=True, action_dict=action_dict)
+            self.renderer.renderEnv(show=True)
 
             # Environment step
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
