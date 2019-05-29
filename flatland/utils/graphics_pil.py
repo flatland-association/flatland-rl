@@ -19,16 +19,15 @@ def enable_windows_cairo_support():
         os.environ['PATH'] = os.environ['PATH'] + ';' + default_os_path
         if ctypes.util.find_library('cairo') is not None:
             print("cairo installed: OK")
-
 enable_windows_cairo_support()
 from cairosvg import svg2png
-
-from IPython.display import SVG
-
-from flatland.core.transitions import RailEnvTransitions
-# from copy import copy
-
 from screeninfo import get_monitors
+
+# from copy import copy
+from flatland.core.transitions import RailEnvTransitions
+
+
+
 
 class PILGL(GraphicsLayer):
     def __init__(self, width, height, nPixCell=60):
@@ -252,9 +251,6 @@ class PILSVG(PILGL):
     def pilFromSvgFile(self, sfPath):
         with open(sfPath, "r") as fIn:
             bytesPNG = svg2png(file_obj=fIn, output_height=self.nPixCell, output_width=self.nPixCell)
-
-            image = SVG(url=sfPath)
-        
         with io.BytesIO(bytesPNG) as fIn:
             pil_img = Image.open(fIn)
             pil_img.load()
