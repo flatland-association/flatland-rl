@@ -191,7 +191,7 @@ class Demo:
         self.renderer.close_window()
 
 
-if True:
+if False:
     demo_000 = Demo(Scenario_Generator.generate_random_scenario())
     demo_000.run_demo()
     demo_000 = None
@@ -212,19 +212,18 @@ if True:
     demo_002.run_demo()
     demo_002 = None
 
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.run_demo(60)
-    demo_flatland_000 = None
+demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
+demo_flatland_000.renderer.resize()
+demo_flatland_000.run_demo(60)
+demo_flatland_000 = None
 
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.run_demo(60)
-    demo_flatland_000 = None
-
+demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
+demo_flatland_000.renderer.resize()
+demo_flatland_000.run_demo(60)
+demo_flatland_000 = None
 
 demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_003.pkl'))
 demo_flatland_000.renderer.resize()
-demo_flatland_000.set_max_framerate(2)
-demo_flatland_000.run_demo(60)
+demo_flatland_000.set_max_framerate(5)
+demo_flatland_000.run_demo(30)
 demo_flatland_000 = None
