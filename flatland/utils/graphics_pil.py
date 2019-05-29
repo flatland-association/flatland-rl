@@ -7,6 +7,7 @@ import numpy as np
 import time
 import io
 import os
+import site
 
 def enable_windows_cairo_support():
     if os.name=='nt':
@@ -52,7 +53,7 @@ class PILGL(GraphicsLayer):
             self.nPixCell = int(max(1,np.ceil(min(w,h))))
         else:
             self.nPixCell = 40
-            
+
         # Total grid size at native scale
         self.widthPx = self.width * self.nPixCell + self.linewidth
         self.heightPx = self.height * self.nPixCell + self.linewidth
@@ -253,8 +254,17 @@ class PILSVG(PILGL):
         self.agents_prev = []
 
     def pilFromSvgFile(self, sfPath):
-        with open(sfPath, "r") as fIn:
-            bytesPNG = svg2png(file_obj=fIn, output_height=self.nPixCell, output_width=self.nPixCell)
+        try:
+            with open(sfPath, "r") as fIn:
+                bytesPNG = svg2png(file_obj=fIn, output_height=self.nPixCell, output_width=self.nPixCell)
+        except:
+            newList=''
+            for directory in site.getsitepackages():
+                x = [word for word in os.listdir(directory) if word.startswith('flatland')]
+                if len(x) > 0 :
+                    newList = directory+'/'+x[0]
+            with open(newList+'/'+sfPath, "r") as fIn:
+                bytesPNG = svg2png(file_obj=fIn, output_height=self.nPixCell, output_width=self.nPixCell)
         with io.BytesIO(bytesPNG) as fIn:
             pil_img = Image.open(fIn)
             pil_img.load()

@@ -65,6 +65,14 @@ else:
     except:
         os.system("pip install pycairo==1.18.1")
 
+
+def get_all_svg_files(directory='./svg/'):
+    ret = []
+    for f in os.listdir(directory):
+        ret.append(directory+f)
+    return ret
+
+
 # Gather requirements from requirements_dev.txt
 # TODO : We could potentially split up the test/dev dependencies later
 install_reqs = []
@@ -101,6 +109,7 @@ setup(
     keywords='flatland',
     name='flatland-rl',
     packages=find_packages('.'),
+    data_files=[('svg', get_all_svg_files())],
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
