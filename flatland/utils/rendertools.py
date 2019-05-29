@@ -12,6 +12,7 @@ import numpy as np
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
+import os
 
 class MPLGL(GraphicsLayer):
     def __init__(self, width, height):

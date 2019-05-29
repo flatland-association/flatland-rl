@@ -6,8 +6,21 @@ import numpy as np
 # from flatland.utils.svg import Track, Zug
 import time
 import io
+import os
 
+def enable_windows_cairo_support():
+    if os.name=='nt':
+        import site
+        import ctypes.util
+        default_os_path = os.environ['PATH']
+        os.environ['PATH'] = ''
+        for s in site.getsitepackages():
+            os.environ['PATH'] = os.environ['PATH'] + ';' + s + '\\cairo'
+        os.environ['PATH'] = os.environ['PATH'] + ';' + default_os_path
+        if ctypes.util.find_library('cairo') is not None:
+            print("cairo installed: OK")
 
+enable_windows_cairo_support()
 from cairosvg import svg2png
 
 from IPython.display import SVG
