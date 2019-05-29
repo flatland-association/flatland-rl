@@ -773,6 +773,7 @@ class RenderTool(object):
                     self.gl.setRailAt(r, c, binTrans, iTarget=target)
 
         for iAgent, agent in enumerate(self.env.agents):
+
             if agent is None:
                 continue
 

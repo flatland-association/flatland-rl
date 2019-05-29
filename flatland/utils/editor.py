@@ -177,7 +177,15 @@ class View(object):
         with self.wOutput:
             # plt.figure(figsize=(10, 10))
             self.oRT.set_new_rail()
-            self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray",
+
+            self.model.env.agents = self.model.env.agents_static
+            for a in self.model.env.agents:
+                if hasattr(a, 'old_position') == False:
+                    a.old_position = a.position
+                if hasattr(a, 'old_direction') == False:
+                    a.old_direction = a.direction
+
+            self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray",agents=True,
                                show=False, iSelectedAgent=self.model.iSelectedAgent,
                                show_observations=self.show_observations())
             img = self.oRT.getImage()
@@ -344,6 +352,7 @@ class Controller(object):
                     continue
                 if iAgent == self.model.iSelectedAgent:
                     agent.direction = (agent.direction + 1) % 4
+                    agent.old_direction = agent.direction
         self.model.redraw()
 
     def restartAgents(self, event):

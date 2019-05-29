@@ -147,7 +147,7 @@ class PILGL(GraphicsLayer):
 
     def show(self, block=False):
         img = self.alpha_composite_layers()
-        
+
         if not self.window_open:
             self.open_window()
         
