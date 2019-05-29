@@ -2,7 +2,6 @@ import os
 import time
 import random
 import numpy as np
-from datetime import datetime
 
 from flatland.envs.generators import complex_rail_generator
 # from flatland.envs.generators import rail_from_list_of_saved_GridTransitionMap_generator
@@ -85,7 +84,7 @@ class Demo:
         self.record_frames = record_frames
 
     def create_renderer(self):
-        self.renderer = RenderTool(self.env, gl="PIL")
+        self.renderer = RenderTool(self.env, gl="PILSVG")
         handle = self.env.get_agent_handles()
         return handle
 
@@ -102,8 +101,6 @@ class Demo:
 
         for step in range(max_nbr_of_steps):
 
-            begin_frame_time_stamp = datetime.now()
-
             # Action
             for iAgent in range(self.env.get_num_agents()):
 
@@ -117,7 +114,7 @@ class Demo:
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
 
             # render
-            self.renderer.renderEnv(show=True)
+            self.renderer.renderEnv(show=True,show_observations=False)
 
             if done['__all__']:
                 break
@@ -127,13 +124,6 @@ class Demo:
             if self.record_frames is not None:
                 self.renderer.gl.saveImage(self.record_frames.format(step))
 
-            # ensure that the rendering is not faster then the maximal allowed frame rate
-            end_frame_time_stamp = datetime.now()
-            frame_exe_time = end_frame_time_stamp - begin_frame_time_stamp
-            max_time = 1/self.max_frame_rate
-            delta = (max_time - frame_exe_time.total_seconds())
-            if delta > 0.0:
-                time.sleep(delta)
 
 
         self.renderer.close_window()
@@ -178,10 +168,10 @@ if False:
     demo_flatland_000.set_record_frames('./rendering/frame_{:04d}.bmp')
     demo_flatland_000.run_demo(60)
     demo_flatland_000 = None
- 
 
 
-demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/temp.pkl'))
+
+demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
 demo_001.set_record_frames('./rendering/frame_{:04d}.bmp')
-demo_001.run_demo()
+demo_001.run_demo(60)
 demo_001 = None
