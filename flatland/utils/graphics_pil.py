@@ -28,14 +28,17 @@ class PILGL(GraphicsLayer):
             self.screen_height = min(self.screen_height,m.height)
             self.screen_width = min(self.screen_width,m.width)
 
-        w = 0.95*self.screen_width/(self.width + 1 + self.linewidth)
-        h = 0.95*self.screen_height/(self.height + 1 + self.linewidth)
-        self.nPixCell = int(max(1,np.floor(min(w,h))))
-
+        w = (self.screen_width-self.width-10)/(self.width + 1 + self.linewidth)
+        h = (self.screen_height-self.height-10)/(self.height + 1 + self.linewidth)
+        self.nPixCell = int(max(1,np.ceil(min(w,h))))
 
         # Total grid size at native scale
         self.widthPx = self.width * self.nPixCell + self.linewidth
         self.heightPx = self.height * self.nPixCell + self.linewidth
+
+        self.xPx = int((self.screen_width - self.widthPx) / 2.0)
+        self.yPx = int((self.screen_height - self.heightPx) / 2.0)
+
         self.layers = []
         self.draws = []
 
@@ -99,6 +102,7 @@ class PILGL(GraphicsLayer):
         self.window = tk.Tk()
         self.window.title("Flatland")
         self.window.configure(background='grey')
+        self.window.geometry('%dx%d+%d+%d' % (self.widthPx, self.heightPx, self.xPx, self.yPx))
         self.window_open = True
 
     def close_window(self):
