@@ -654,12 +654,14 @@ class EditorModel(object):
             self.log("load file: ", self.env_filename)
             # self.env.rail.load_transition_map(self.env_filename, override_gridsize=True)
             self.env.load(self.env_filename)
-
-            if not self.regen_size_height == self.env.height and not self.regen_size_width == self.env.width:
+            if not self.regen_size_height == self.env.height or not self.regen_size_width == self.env.width:
                 self.regen_size_height = self.env.height
                 self.regen_size_width = self.env.width
                 self.regenerate(None, 0, self.env)
                 self.env.load(self.env_filename)
+
+            self.env.restart_agents()
+            self.env.reset(False,False)
 
             self.fix_env()
             self.set_env(self.env)
@@ -670,7 +672,12 @@ class EditorModel(object):
     def save(self):
         self.log("save to ", self.env_filename, " working dir: ", os.getcwd())
         # self.env.rail.save_transition_map(self.env_filename)
+        temp_store = self.env.agents
+        # clear agents before save , because we want the "init" position of the agent to expert
+        self.env.agents = []
         self.env.save(self.env_filename)
+        # reset agents current (current position)
+        self.env.agents = temp_store
 
     def regenerate(self, method=None, nAgents=0, env=None):
         self.log("Regenerate size",
