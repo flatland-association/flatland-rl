@@ -344,7 +344,7 @@ class PILSVG(PILGL):
                     lTrans16[iTrans] = "1"
             sTrans16 = "".join(lTrans16)
             binTrans = int(sTrans16, 2)
-            print(sTrans, sTrans16, sFile)
+            # print(sTrans, sTrans16, sFile)
 
             # Merge the transition svg image with the background colour.
             # This is a shortcut / hack and will need re-working.
