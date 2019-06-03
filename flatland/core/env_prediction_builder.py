@@ -1,24 +1,22 @@
 """
-ObservationBuilder objects are objects that can be passed to environments designed for customizability.
-The ObservationBuilder-derived custom classes implement 2 functions, reset() and get() or get(handle).
+PredictionBuilder objects are objects that can be passed to environments designed for customizability.
+The PredictionBuilder-derived custom classes implement 2 functions, reset() and get([handle]).
+If predictions are not required in every step or not for all agents, then
 
 + Reset() is called after each environment reset, to allow for pre-computing relevant data.
 
-+ Get() is called whenever an observation has to be computed, potentially for each agent independently in
++ Get() is called whenever an step has to be computed, potentially for each agent independently in
 case of multi-agent environments.
 """
 
 
-class ObservationBuilder:
+class PredictionBuilder:
     """
-    ObservationBuilder base class.
-
-    Derived objects must implement and `observation_space' attribute as a tuple with the dimensuions of the returned
-    observations.
+    PredictionBuilder base class.
     """
 
     def __init__(self):
-        self.observation_space = ()
+        pass
 
     def _set_env(self, env):
         self.env = env
@@ -42,6 +40,6 @@ class ObservationBuilder:
         Returns
         -------
         function
-            An observation structure, specific to the corresponding environment.
+            An prediction structure, specific to the corresponding environment.
         """
         raise NotImplementedError()
