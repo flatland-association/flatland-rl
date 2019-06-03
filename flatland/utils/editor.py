@@ -210,7 +210,11 @@ class View(object):
             self.writableData[(y - 2):(y + 2), (x - 2):(x + 2), :3] = 0
 
     def xy_to_rc(self, x, y):
-        rcCell = ((array([y, x]) - self.yxBase) / self.nPixCell).astype(int)
+        rcCell = ((array([y, x]) - self.yxBase))
+        nX = np.floor((self.yxSize[0] - self.yxBase[0])/ self.model.env.height)
+        nY = np.floor((self.yxSize[1] - self.yxBase[1])/ self.model.env.width)
+        rcCell[0] = max(0,min(np.floor(rcCell[0]/nY),self.model.env.height-1))
+        rcCell[1] = max(0,min(np.floor(rcCell[1]/nX),self.model.env.width-1))
         return rcCell
 
     def log(self, *args, **kwargs):
