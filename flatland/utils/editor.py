@@ -180,12 +180,12 @@ class View(object):
 
             self.model.env.agents = self.model.env.agents_static
             for a in self.model.env.agents:
-                if hasattr(a, 'old_position') == False:
+                if hasattr(a, 'old_position') is False:
                     a.old_position = a.position
-                if hasattr(a, 'old_direction') == False:
+                if hasattr(a, 'old_direction') is False:
                     a.old_direction = a.direction
 
-            self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray",agents=True,
+            self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", agents=True,
                                show=False, iSelectedAgent=self.model.iSelectedAgent,
                                show_observations=self.show_observations())
             img = self.oRT.getImage()
@@ -454,12 +454,12 @@ class EditorModel(object):
             # count integers along the larger dimension
             for iDelta0 in range(sgn0, delta0 + sgn0, sgn0):
                 rDelta1 = iDelta0 * rcRatio
-                
+
                 if np.abs(rDelta1 - iDelta1) >= 1:
                     rcInterp = (iDelta0, iDelta1)  # fill in the "corner" for "Manhattan interpolation"
                     lrcInterp.append(rcInterp)
                     iDelta1 = int(rDelta1)
-                    
+
                 rcInterp = (iDelta0, int(rDelta1))
                 lrcInterp.append(rcInterp)
             g2Interp = array(lrcInterp)
@@ -469,7 +469,7 @@ class EditorModel(object):
             # Convert the array to a list of tuples
             lrcInterp = list(map(tuple, g2Interp))
         return lrcInterp
-            
+
     def drag_path_element(self, rcCell):
         """Mouse motion event handler for drawing.
         """

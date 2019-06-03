@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import flatland.utils.rendertools as rt
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.rail_env import RailEnv, random_rail_generator
 from flatland.envs.generators import empty_rail_generator
+from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.rail_env import RailEnv
 
 
 def checkFrozenImage(oRT, sFileImage, resave=False):
@@ -28,11 +28,10 @@ def checkFrozenImage(oRT, sFileImage, resave=False):
     # this is now just for convenience - the file is not read back
     np.savez_compressed(sDirImages + "test/" + sFileImage, img=img_test)
 
-    image_store = np.load(sDirImages + sFileImage)
-    img_expected = image_store["img"]
+    np.load(sDirImages + sFileImage)
 
     # TODO fails!
-    #assert (img_test.shape == img_expected.shape)
+    # assert (img_test.shape == img_expected.shape)
     # assert ((np.sum(np.square(img_test - img_expected)) / img_expected.size / 256) < 1e-3), \
     #     "Image {} does not match".format(sFileImage)
 

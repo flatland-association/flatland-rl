@@ -3,19 +3,19 @@ from collections import deque
 
 # import xarray as xr
 import matplotlib.pyplot as plt
-from flatland.utils.render_qt import QTGL, QTSVG
-from flatland.utils.graphics_pil import PILGL, PILSVG
-from flatland.utils.graphics_layer import GraphicsLayer
-from recordtype import recordtype
-from numpy import array
 import numpy as np
+from numpy import array
+from recordtype import recordtype
+
+from flatland.utils.graphics_layer import GraphicsLayer
+from flatland.utils.graphics_pil import PILGL, PILSVG
+from flatland.utils.render_qt import QTGL, QTSVG
+
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
-import os
-
 class MPLGL(GraphicsLayer):
-    def __init__(self, width, height,jupyter=False):
+    def __init__(self, width, height, jupyter=False):
         self.width = width
         self.height = height
         self.yxBase = array([6, 21])  # pixel offset
@@ -127,15 +127,15 @@ class RenderTool(object):
         # self.gl = MPLGL()
 
         if gl == "MPL":
-            self.gl = MPLGL(env.width, env.height,jupyter)
+            self.gl = MPLGL(env.width, env.height, jupyter)
         elif gl == "QT":
-            self.gl = QTGL(env.width, env.height,jupyter)
+            self.gl = QTGL(env.width, env.height, jupyter)
         elif gl == "PIL":
-            self.gl = PILGL(env.width, env.height,jupyter)
+            self.gl = PILGL(env.width, env.height, jupyter)
         elif gl == "PILSVG":
-            self.gl = PILSVG(env.width, env.height,jupyter)
+            self.gl = PILSVG(env.width, env.height, jupyter)
         elif gl == "QTSVG":
-            self.gl = QTSVG(env.width, env.height,jupyter)
+            self.gl = QTSVG(env.width, env.height, jupyter)
 
         self.new_rail = True
 
@@ -704,7 +704,6 @@ class RenderTool(object):
     def getImage(self):
         return self.gl.getImage()
 
-
     def plotTreeObs(self, gObs):
         nBranchFactor = 4
 
@@ -735,10 +734,11 @@ class RenderTool(object):
             gP0 = array([gX1, gY1, gZ1])
 
     def renderEnv2(
-        self, show=False, curves=True, spacing=False, arrows=False, agents=True, 
-            show_observations=True, sRailColor="gray",
-            frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
-            action_dict=dict()):
+        self, show=False, curves=True, spacing=False, arrows=False, agents=True,
+        show_observations=True, sRailColor="gray",
+        frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
+        action_dict=dict()
+    ):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.

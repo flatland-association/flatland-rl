@@ -1,6 +1,6 @@
-
 import matplotlib.pyplot as plt
 from numpy import array
+
 
 class GraphicsLayer(object):
     def __init__(self):
@@ -42,7 +42,7 @@ class GraphicsLayer(object):
     def getImage(self):
         pass
 
-    def saveImage(self,filename):
+    def saveImage(self, filename):
         pass
 
     def adaptColor(self, color, lighten=False):
