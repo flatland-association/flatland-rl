@@ -1,0 +1,13 @@
+bumpversion==0.5.3
+wheel==0.32.1
+watchdog==0.9.0
+benchmarker==4.0.1
+coverage==4.5.1
+Sphinx==1.8.1
+flake8
+
+
+twine==1.12.1
+sphinx-rtd-theme==0.4.3
+# see setup.py pycairo==1.18.1
+CairoSVG==2.3.1
