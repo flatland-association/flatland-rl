@@ -84,6 +84,21 @@ class Environment:
         """
         raise NotImplementedError()
 
+    def predict(self):
+        """
+        Predictions step.
+
+        Returns predictions for the agents.
+        The returns are dicts mapping from agent_id strings to values.
+
+        Returns
+        -------
+        predictions : dict
+            New predictions for each ready agent.
+
+        """
+        raise NotImplementedError()
+
     def render(self):
         """
         Perform rendering of the environment.
