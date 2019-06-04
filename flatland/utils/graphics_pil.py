@@ -193,7 +193,7 @@ class PILGL(GraphicsLayer):
         img = Image.new("RGBA", (self.widthPx, self.heightPx), (255, 255, 255, opacity))
         return img
 
-    def clear_layer(self,iLayer=0, opacity = None):
+    def clear_layer(self, iLayer=0, opacity=None):
         if opacity is None:
             opacity = 0 if iLayer > 0 else 255
         self.layers[iLayer] = img = self.create_image(opacity)
@@ -216,11 +216,11 @@ class PILGL(GraphicsLayer):
             if clear:
                 self.clear_layer(iLayer)
 
-    def create_layers(self, clear=True):        
-        self.create_layer(0, clear=clear) # rail / background (scene)
-        self.create_layer(1, clear=clear) # agents
-        self.create_layer(2, clear=clear) # drawing layer for selected agent
-        self.create_layer(3, clear=clear) # drawing layer for selected agent's target
+    def create_layers(self, clear=True):
+        self.create_layer(0, clear=clear)  # rail / background (scene)
+        self.create_layer(1, clear=clear)  # agents
+        self.create_layer(2, clear=clear)  # drawing layer for selected agent
+        self.create_layer(3, clear=clear)  # drawing layer for selected agent's target
 
 
 class PILSVG(PILGL):
@@ -379,7 +379,7 @@ class PILSVG(PILGL):
 
         return dPil
 
-    def setRailAt(self, row, col, binTrans, iTarget=None,isSelected=False):
+    def setRailAt(self, row, col, binTrans, iTarget=None, isSelected=False):
         if iTarget is None:
             if binTrans in self.dPilRail:
                 pilTrack = self.dPilRail[binTrans]
@@ -395,9 +395,8 @@ class PILSVG(PILGL):
 
             if isSelected:
                 svgBG = self.pilFromSvgFile("./svg/Selected_Agent.svg")
-                self.clear_layer(3,0)
-                self.drawImageRC(svgBG,(row,col),layer=3)
-
+                self.clear_layer(3, 0)
+                self.drawImageRC(svgBG, (row, col), layer=3)
 
     def recolorImage(self, pil, a3BaseColor, ltColors):
         rgbaImg = array(pil)
@@ -447,7 +446,7 @@ class PILSVG(PILGL):
                 for iColor, pilZug3 in enumerate(lPils):
                     self.dPilZug[(iDirIn2, iDirOut2, iColor)] = lPils[iColor]
 
-    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut,isSelected):
+    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut, isSelected):
         delta_dir = (iDirOut - iDirIn) % 4
         iColor = iAgent % self.nAgentColors
         # when flipping direction at a dead end, use the "iDirOut" direction.
@@ -458,8 +457,8 @@ class PILSVG(PILGL):
 
         if isSelected:
             svgBG = self.pilFromSvgFile("./svg/Selected_Agent.svg")
-            self.clear_layer(2,0)
-            self.drawImageRC(svgBG,(row,col),layer=2)
+            self.clear_layer(2, 0)
+            self.drawImageRC(svgBG, (row, col), layer=2)
 
 
 def main2():
