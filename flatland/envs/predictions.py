@@ -54,8 +54,8 @@ class DummyPredictorForRailEnv(PredictionBuilder):
             for index in range(1, self.max_depth):
                 action_done = False
                 for action in action_priorities:
-                    cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = self.env._check_action_on_agent(action,
-                                                                                                                                     agent)
+                    cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
+                        self.env._check_action_on_agent(action, agent)
                     if all([new_cell_isValid, transition_isValid]):
                         # move and change direction to face the new_direction that was
                         # performed

@@ -27,21 +27,22 @@ if os.name == 'nt':
     is64bit = p[0] == '64bit'
     if sys.version[0:3] == '3.5':
         if is64bit:
-            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp35-cp35m-win_amd64.whl'
+
+            url = 'https://download.lfd.uci.edu/pythonlibs/t4jqbe6o/pycairo-1.18.0-cp35-cp35m-win_amd64.whl'
         else:
-            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp35-cp35m-win32.whl'
+            url = 'https://download.lfd.uci.edu/pythonlibs/t4jqbe6o/pycairo-1.18.0-cp35-cp35m-win32.whl'
 
     if sys.version[0:3] == '3.6':
         if is64bit:
-            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp36-cp36m-win_amd64.whl'
+            url = 'https://download.lfd.uci.edu/pythonlibs/t4jqbe6o/pycairo-1.18.0-cp36-cp36m-win_amd64.whl'
         else:
-            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp36-cp36m-win32.whl'
+            url = 'https://download.lfd.uci.edu/pythonlibs/t4jqbe6o/pycairo-1.18.0-cp36-cp36m-win32.whl'
 
     if sys.version[0:3] == '3.7':
         if is64bit:
-            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp37-cp37m-win_amd64.whl'
+            url = 'https://download.lfd.uci.edu/pythonlibs/t4jqbe6o/pycairo-1.18.0-cp37-cp37m-win_amd64.whl'
         else:
-            url = 'https://download.lfd.uci.edu/pythonlibs/q5gtlas7/pycairo-1.18.0-cp37-cp37m-win32.whl'
+            url = 'https://download.lfd.uci.edu/pythonlibs/t4jqbe6o/pycairo-1.18.0-cp37-cp37m-win32.whl'
 
     try:
         import pycairo

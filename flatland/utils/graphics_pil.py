@@ -395,8 +395,8 @@ class PILSVG(PILGL):
 
             if isSelected:
                 svgBG = self.pilFromSvgFile("./svg/Selected_Target.svg")
-                self.clear_layer(3,0)
-                self.drawImageRC(svgBG,(row,col),layer=3)
+                self.clear_layer(3, 0)
+                self.drawImageRC(svgBG, (row, col), layer=3)
 
     def recolorImage(self, pil, a3BaseColor, ltColors):
         rgbaImg = array(pil)
