@@ -19,7 +19,6 @@ class ObservationBuilder:
 
     def __init__(self):
         self.observation_space = ()
-        pass
 
     def _set_env(self, env):
         self.env = env

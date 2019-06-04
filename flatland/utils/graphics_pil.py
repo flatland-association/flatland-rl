@@ -394,9 +394,9 @@ class PILSVG(PILGL):
                 print("Illegal target rail:", row, col, format(binTrans, "#018b")[2:])
 
             if isSelected:
-                svgBG = self.pilFromSvgFile("./svg/Selected_Agent.svg")
-                self.clear_layer(3, 0)
-                self.drawImageRC(svgBG, (row, col), layer=3)
+                svgBG = self.pilFromSvgFile("./svg/Selected_Target.svg")
+                self.clear_layer(3,0)
+                self.drawImageRC(svgBG,(row,col),layer=3)
 
     def recolorImage(self, pil, a3BaseColor, ltColors):
         rgbaImg = array(pil)
