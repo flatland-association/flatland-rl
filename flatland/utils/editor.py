@@ -765,6 +765,7 @@ class EditorModel(object):
                 # No - select the agent
                 self.iSelectedAgent = iAgent
 
+        self.init_agents_static = None
         self.redraw()
 
     def add_target(self, rcCell):
