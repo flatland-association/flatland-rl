@@ -15,8 +15,8 @@ class PredictionBuilder:
     PredictionBuilder base class.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, max_depth: int = 20):
+        self.max_depth = max_depth
 
     def _set_env(self, env):
         self.env = env
@@ -25,12 +25,11 @@ class PredictionBuilder:
         """
         Called after each environment reset.
         """
-        raise NotImplementedError()
+        pass
 
     def get(self, handle=0):
         """
-        Called whenever an observation has to be computed for the `env' environment, possibly
-        for each agent independently (agent id `handle').
+        Called whenever step_prediction is called on the environment.
 
         Parameters
         -------
@@ -40,6 +39,6 @@ class PredictionBuilder:
         Returns
         -------
         function
-            An prediction structure, specific to the corresponding environment.
+            A prediction structure, specific to the corresponding environment.
         """
         raise NotImplementedError()

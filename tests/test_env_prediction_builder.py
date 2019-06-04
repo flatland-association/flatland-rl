@@ -3,13 +3,13 @@
 
 import numpy as np
 
-from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.core.transition_map import GridTransitionMap, Grid4Transitions
+from flatland.envs.generators import rail_from_GridTransitionMap_generator
+from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.generators import rail_from_GridTransitionMap_generator
 
-"""Tests for `flatland` package."""
+"""Test predictions for `flatland` package."""
 
 
 def test_predictions():
@@ -65,12 +65,106 @@ def test_predictions():
                   rail_generator=rail_from_GridTransitionMap_generator(rail),
                   number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv(),
-                  prediction_builder_object=DummyPredictorForRailEnv()
+                  prediction_builder_object=DummyPredictorForRailEnv(max_depth=20)
                   )
 
     env.reset()
 
+    # set initial position and direction for testing...
+    env.agents[0].position = (5, 6)
+    env.agents[0].direction = 0
+
     predictions = env.predict()
+    positions = np.array(list(map(lambda prediction: [prediction[1], prediction[2]], predictions[0])))
+    directions = np.array(list(map(lambda prediction: [prediction[3]], predictions[0])))
+    time_offsets = np.array(list(map(lambda prediction: [prediction[0]], predictions[0])))
+    actions = np.array(list(map(lambda prediction: [prediction[4]], predictions[0])))
+
+    # compare against expected values
+    expected_positions = np.array([[5., 6.],
+                                   [4., 6.],
+                                   [3., 6.],
+                                   [3., 5.],
+                                   [3., 4.],
+                                   [3., 3.],
+                                   [3., 2.],
+                                   [3., 1.],
+                                   [3., 0.],
+                                   [3., 1.],
+                                   [3., 2.],
+                                   [3., 3.],
+                                   [3., 4.],
+                                   [3., 5.],
+                                   [3., 6.],
+                                   [3., 7.],
+                                   [3., 8.],
+                                   [3., 9.],
+                                   [3., 8.],
+                                   [3., 7.]])
+    expected_directions = np.array([[0.],
+                                    [0.],
+                                    [0.],
+                                    [3.],
+                                    [3.],
+                                    [3.],
+                                    [3.],
+                                    [3.],
+                                    [3.],
+                                    [1.],
+                                    [1.],
+                                    [1.],
+                                    [1.],
+                                    [1.],
+                                    [1.],
+                                    [1.],
+                                    [1.],
+                                    [1.],
+                                    [3.],
+                                    [3.]])
+    expected_time_offsets = np.array([[0.],
+                                      [1.],
+                                      [2.],
+                                      [3.],
+                                      [4.],
+                                      [5.],
+                                      [6.],
+                                      [7.],
+                                      [8.],
+                                      [9.],
+                                      [10.],
+                                      [11.],
+                                      [12.],
+                                      [13.],
+                                      [14.],
+                                      [15.],
+                                      [16.],
+                                      [17.],
+                                      [18.],
+                                      [19.]])
+    expected_actions = np.array([[0.],
+                                 [2.],
+                                 [2.],
+                                 [1.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.],
+                                 [2.]])
+    assert np.array_equal(positions, expected_positions)
+    assert np.array_equal(directions, expected_directions)
+    assert np.array_equal(time_offsets, expected_time_offsets)
+    assert np.array_equal(actions, expected_actions)
 
 
 def main():
