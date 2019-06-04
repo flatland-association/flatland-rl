@@ -115,7 +115,7 @@ class View(object):
         self.wRegenSizeHeight.observe(self.controller.setRegenSizeHeight, names="value")
 
         # Number of Agents when regenerating
-        self.wRegenNAgents = IntSlider(value=1, min=0, max=20, step=1, description="# Agents",
+        self.wRegenNAgents = IntSlider(value=1, min=0, max=5, step=1, description="# Agents",
                                        tip="Click regenerate or reset after changing this")
 
         self.wRegenMethod = RadioButtons(description="Regen\nMethod", options=["Empty", "Random Cell", "Path-based"])
@@ -136,12 +136,11 @@ class View(object):
         # abbreviated description of buttons and the methods they call
         ldButtons = [
             dict(name="Refresh", method=self.controller.refresh, tip="Redraw only"),
-            dict(name="Clear", method=self.controller.clear, tip="Clear rails and agents"),
-            dict(name="Reset", method=self.controller.reset,
-                 tip="Standard env reset, including regen rail + agents"),
             dict(name="Rotate Agent", method=self.controller.rotate_agent, tip="Rotate selected agent"),
             dict(name="Restart Agents", method=self.controller.restartAgents,
                  tip="Move agents back to start positions"),
+            dict(name="Random", method=self.controller.reset,
+                 tip="Generate a randomized scene, including regen rail + agents"),
             dict(name="Regenerate", method=self.controller.regenerate,
                  tip="Regenerate the rails using the method selected below"),
             dict(name="Load", method=self.controller.load),
@@ -650,8 +649,7 @@ class EditorModel(object):
     def reset(self, replace_agents=False, nAgents=0):
         # if replace_agents:
         #    self.env.agents_handles = range(nAgents)
-        self.env.reset(regen_rail=True, replace_agents=replace_agents)
-        self.player = None
+        self.regenerate("complex", nAgents=nAgents)
         self.redraw()
 
     def restartAgents(self):
@@ -703,7 +701,7 @@ class EditorModel(object):
         elif method == "Random Cell":
             fnMethod = random_rail_generator(cell_type_relative_proportion=[1] * 11)
         else:
-            fnMethod = complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12)
+            fnMethod = complex_rail_generator(nr_start_goal=nAgents, nr_extra=20, min_dist=12, seed=int(time.time()))
 
         if env is None:
             self.env = RailEnv(width=self.regen_size_width,
