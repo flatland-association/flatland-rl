@@ -164,7 +164,12 @@ if False:
     demo_flatland_000.run_demo(60)
     demo_flatland_000 = None
 
-demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
-demo_001.set_record_frames('./rendering/frame_{:04d}.bmp')
-demo_001.run_demo(60)
+demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/temp.pkl'))
+demo_001.run_demo(10)
 demo_001 = None
+
+if True:
+    demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
+    demo_001.set_record_frames('./rendering/frame_{:04d}.bmp')
+    demo_001.run_demo(60)
+    demo_001 = None
