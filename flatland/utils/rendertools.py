@@ -757,10 +757,13 @@ class RenderTool(object):
 
             # store the targets
             dTargets = {}
+            dSelected = {}
             for iAgent, agent in enumerate(self.env.agents_static):
                 if agent is None:
                     continue
                 dTargets[tuple(agent.target)] = iAgent
+                dSelected[tuple(agent.target)] = (iAgent==iSelectedAgent)
+
 
             # Draw each cell independently
             for r in range(env.height):
@@ -768,9 +771,13 @@ class RenderTool(object):
                     binTrans = env.rail.grid[r, c]
                     if (r, c) in dTargets:
                         target = dTargets[(r, c)]
+                        isSelected = dSelected[(r, c)]
+                        print("isSelected=", isSelected)
                     else:
                         target = None
-                    self.gl.setRailAt(r, c, binTrans, iTarget=target)
+                        isSelected = False
+
+                    self.gl.setRailAt(r, c, binTrans, iTarget=target,isSelected=isSelected)
 
         for iAgent, agent in enumerate(self.env.agents):
 
@@ -788,7 +795,7 @@ class RenderTool(object):
 
             # setAgentAt uses the agent index for the color
             # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
-            self.gl.setAgentAt(iAgent, *position, old_direction, direction)  # ,color=cmap(iAgent))
+            self.gl.setAgentAt(iAgent, *position, old_direction, direction, iSelectedAgent==iAgent)  # ,color=cmap(iAgent))
 
         if show_observations:
             self.renderObs(range(env.get_num_agents()), env.dev_obs_dict)
