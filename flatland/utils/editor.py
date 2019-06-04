@@ -160,7 +160,7 @@ class View(object):
             *self.lwButtons,
             # self.wRegenSize,
             # self.wRegenNAgents,
-            self.wProg_steps,
+            # self.wProg_steps,
             self.wTab])
 
         self.wMain = HBox([self.wImage, self.wVbox_controls])
