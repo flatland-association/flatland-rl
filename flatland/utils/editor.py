@@ -134,19 +134,19 @@ class View(object):
 
         # abbreviated description of buttons and the methods they call
         ldButtons = [
-            dict(name="Refresh", method=self.controller.refresh, tip="Redraw only"),
-            dict(name="Clear", method=self.controller.clear, tip="Clear rails and agents"),
-            dict(name="Reset", method=self.controller.reset,
-                 tip="Standard env reset, including regen rail + agents"),
-            dict(name="Rotate Agent", method=self.controller.rotate_agent, tip="Rotate selected agent"),
-            dict(name="Restart Agents", method=self.controller.restartAgents,
-                 tip="Move agents back to start positions"),
-            dict(name="Regenerate", method=self.controller.regenerate,
-                 tip="Regenerate the rails using the method selected below"),
-            dict(name="Load", method=self.controller.load),
-            dict(name="Save", method=self.controller.save),
-            dict(name="Step", method=self.controller.step),
-            dict(name="Run Steps", method=self.controller.start_run)]
+                dict(name="Refresh", method=self.controller.refresh, tip="Redraw only"),
+                dict(name="Clear", method=self.controller.clear, tip="Clear rails and agents"),
+                dict(name="Reset", method=self.controller.reset,
+                     tip="Standard env reset, including regen rail + agents"),
+                dict(name="Rotate Agent", method=self.controller.rotate_agent, tip="Rotate selected agent"),
+                dict(name="Restart Agents", method=self.controller.restartAgents,
+                     tip="Move agents back to start positions"),
+                dict(name="Regenerate", method=self.controller.regenerate,
+                     tip="Regenerate the rails using the method selected below"),
+                dict(name="Load", method=self.controller.load),
+                dict(name="Save", method=self.controller.save),
+                dict(name="Step", method=self.controller.step)
+            ]
 
         self.lwButtons = []
         for dButton in ldButtons:
@@ -361,7 +361,17 @@ class Controller(object):
 
     def restartAgents(self, event):
         self.log("Restart Agents - nAgents:", self.view.wRegenNAgents.value)
-        self.model.restartAgents()
+        if self.model.init_agents_static is not None:
+            print("Restart Agents ...................")
+            print(self.model.env.agents_static)
+            self.model.env.agents_static = [EnvAgentStatic(d[0], d[1], d[2]) for d in self.model.init_agents_static ]
+            print(self.model.env.agents_static)
+            self.model.env.agents = None
+            self.model.init_agents_static = None
+            self.player = None
+            self.model.env.restart_agents()
+            self.model.env.reset(False,False)
+        self.refresh(event)
 
     def regenerate(self, event):
         method = self.view.wRegenMethod.value
@@ -383,8 +393,6 @@ class Controller(object):
     def step(self, event):
         self.model.step()
 
-    def start_run(self, event):
-        self.model.start_run()
 
     def log(self, *args, **kwargs):
         if self.view is None:
@@ -415,6 +423,7 @@ class EditorModel(object):
         self.set_env(env)
         self.iSelectedAgent = None
         self.player = None
+        self.init_agents_static = None
         self.thread = None
 
     def set_env(self, env):
@@ -641,12 +650,12 @@ class EditorModel(object):
         # if replace_agents:
         #    self.env.agents_handles = range(nAgents)
         self.env.reset(regen_rail=True, replace_agents=replace_agents)
-        self.player = Player(self.env)
+        self.player = None
         self.redraw()
 
     def restartAgents(self):
         self.env.agents = EnvAgent.list_from_static(self.env.agents_static)
-        self.player = Player(self.env)
+        self.player = None
         self.redraw()
 
     def setFilename(self, filename):
@@ -666,7 +675,7 @@ class EditorModel(object):
 
             self.env.restart_agents()
             self.env.reset(False,False)
-
+            self.init_agents_static = None
             self.fix_env()
             self.set_env(self.env)
             self.redraw()
@@ -707,7 +716,7 @@ class EditorModel(object):
         self.env.reset(regen_rail=True)
         self.fix_env()
         self.set_env(self.env)
-        self.player = Player(self.env)
+        self.player = None
         self.view.new_env()
         # self.view.init_canvas() # Can't do init_canvas - need to keep the same canvas widget!
         self.redraw()
@@ -761,21 +770,18 @@ class EditorModel(object):
     def add_target(self, rcCell):
         if self.iSelectedAgent is not None:
             self.env.agents_static[self.iSelectedAgent].target = rcCell
+            self.init_agents_static = None
             self.redraw()
 
     def step(self):
+        if self.init_agents_static is None:
+            self.init_agents_static = [agent.to_list() for agent in self.env.agents_static]
         if self.player is None:
             self.player = Player(self.env)
             self.env.reset(regen_rail=False, replace_agents=False)
         self.player.step()
         self.redraw()
 
-    def start_run(self):
-        if self.thread is None:
-            self.thread = threading.Thread(target=self.bg_updater, args=(self.view.wProg_steps,))
-            self.thread.start()
-        else:
-            self.log("thread already present")
 
     def bg_updater(self, wProg_steps):
         try:
