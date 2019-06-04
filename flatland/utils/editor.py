@@ -743,6 +743,8 @@ class EditorModel(object):
         # Has the user clicked on an existing agent?
         iAgent = self.find_agent_at(rcCell)
 
+        print("sel:", iAgent, self.iSelectedAgent)
+
         if iAgent is None:
             # No
             if self.iSelectedAgent is None:
@@ -754,6 +756,8 @@ class EditorModel(object):
                 # Move the selected agent to this cell
                 agent_static = self.env.agents_static[self.iSelectedAgent]
                 agent_static.position = rcCell
+                agent_static.old_position = rcCell
+                self.env.agents = []
         else:
             # Yes
             # Have they clicked on the agent already selected?
