@@ -5,7 +5,6 @@ import time
 import numpy as np
 
 from flatland.envs.generators import complex_rail_generator
-# from flatland.envs.generators import rail_from_list_of_saved_GridTransitionMap_generator
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
@@ -13,6 +12,8 @@ from flatland.utils.rendertools import RenderTool
 # ensure that every demo run behave constantly equal
 random.seed(1)
 np.random.seed(1)
+
+__file_dirname__ = os.path.dirname(os.path.realpath(__file__))
 
 
 class Scenario_Generator:
@@ -60,7 +61,7 @@ class Scenario_Generator:
         env = RailEnv(width=20,
                       height=20,
                       rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
-                          [filename]),
+                          [filename,
                       number_of_agents=number_of_agents)
         """
         if os.path.exists(filename):
@@ -135,41 +136,43 @@ if False:
     demo_001.run_demo()
     demo_001 = None
 
-    demo_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_000.pkl'))
+    demo_000 = Demo(Scenario_Generator.load_scenario(os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_network_000.pkl')))
     demo_000.run_demo()
     demo_000 = None
 
-    demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_001.pkl'))
+    demo_001 = Demo(Scenario_Generator.load_scenario(os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_network_001.pkl')))
     demo_001.run_demo()
     demo_001 = None
 
-    demo_002 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_002.pkl'))
+    demo_002 = Demo(Scenario_Generator.load_scenario(os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_network_002.pkl')))
     demo_002.run_demo()
     demo_002 = None
 
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
+    demo_flatland_000 = Demo(
+        Scenario_Generator.load_scenario(os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_flatland_000.pkl')))
     demo_flatland_000.renderer.resize()
     demo_flatland_000.run_demo(60)
     demo_flatland_000 = None
 
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_003.pkl'))
+    demo_flatland_000 = Demo(
+        Scenario_Generator.load_scenario(os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_network_003.pkl')))
     demo_flatland_000.renderer.resize()
     demo_flatland_000.set_max_framerate(5)
     demo_flatland_000.run_demo(30)
     demo_flatland_000 = None
 
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
+    demo_flatland_000 = Demo(
+        Scenario_Generator.load_scenario(os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_flatland_001.pkl')))
     demo_flatland_000.renderer.resize()
-    demo_flatland_000.set_record_frames('./rendering/frame_{:04d}.bmp')
+    demo_flatland_000.set_record_frames(os.path.join(__file_dirname__, '..', 'rendering', 'frame_{:04d}.bmp'))
     demo_flatland_000.run_demo(60)
     demo_flatland_000 = None
 
-demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/temp.pkl'))
+demo_001 = Demo(Scenario_Generator.load_scenario(os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'temp.pkl')))
 demo_001.run_demo(10)
 demo_001 = None
 
-if True:
-    demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
-    demo_001.set_record_frames('./rendering/frame_{:04d}.bmp')
-    demo_001.run_demo(60)
-    demo_001 = None
+demo_001 = Demo(Scenario_Generator.load_scenario(os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_flatland_001.pkl')))
+demo_001.set_record_frames(os.path.join(__file_dirname__, '..', 'rendering', 'frame_{:04d}.bmp'))
+demo_001.run_demo(60)
+demo_001 = None
