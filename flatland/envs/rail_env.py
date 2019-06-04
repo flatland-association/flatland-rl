@@ -220,9 +220,7 @@ class RailEnv(Environment):
 
             if action > 0:
                 cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = self._check_action_on_agent(action,
-                                                                                                                             agent,
-                                                                                                                             transition_isValid)
-
+                                                                                                                             agent)
                 if all([new_cell_isValid, transition_isValid, cell_isFree]):
                     # move and change direction to face the new_direction that was
                     # performed
