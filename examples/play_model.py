@@ -117,7 +117,7 @@ def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="PILSVG"):
                   number_of_agents=5)
 
     if render:
-        env_renderer = RenderTool(env, gl=sGL, show=True)
+        env_renderer = RenderTool(env, gl=sGL)
 
     oPlayer = Player(env)
 
