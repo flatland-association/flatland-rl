@@ -2,7 +2,8 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+# TODO fix sphinx warnings instead of suppressing them...
+SPHINXOPTS    = -Q
 SPHINXBUILD   = python -msphinx
 SPHINXPROJ    = flatland
 SOURCEDIR     = .
