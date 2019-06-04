@@ -5,7 +5,6 @@ import time
 import numpy as np
 
 from flatland.envs.generators import complex_rail_generator
-# from flatland.envs.generators import rail_from_list_of_saved_GridTransitionMap_generator
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
@@ -126,50 +125,14 @@ class Demo:
         self.renderer.close_window()
 
 
-if False:
-    demo_000 = Demo(Scenario_Generator.generate_random_scenario())
-    demo_000.run_demo()
-    demo_000 = None
+def test_temp_pk1():
+    demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/temp.pkl'))
+    demo_001.run_demo(10)
+    # TODO test assertions
 
-    demo_001 = Demo(Scenario_Generator.generate_complex_scenario())
-    demo_001.run_demo()
-    demo_001 = None
 
-    demo_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_000.pkl'))
-    demo_000.run_demo()
-    demo_000 = None
-
-    demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_001.pkl'))
-    demo_001.run_demo()
-    demo_001 = None
-
-    demo_002 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_002.pkl'))
-    demo_002.run_demo()
-    demo_002 = None
-
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_000.pkl'))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.run_demo(60)
-    demo_flatland_000 = None
-
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_network_003.pkl'))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.set_max_framerate(5)
-    demo_flatland_000.run_demo(30)
-    demo_flatland_000 = None
-
-    demo_flatland_000 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.set_record_frames('./rendering/frame_{:04d}.bmp')
-    demo_flatland_000.run_demo(60)
-    demo_flatland_000 = None
-
-demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/temp.pkl'))
-demo_001.run_demo(10)
-demo_001 = None
-
-if True:
+def test_flatland_001_pkl():
     demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/example_flatland_001.pkl'))
     demo_001.set_record_frames('./rendering/frame_{:04d}.bmp')
     demo_001.run_demo(60)
-    demo_001 = None
+    # TODO test assertions
