@@ -363,10 +363,7 @@ class Controller(object):
     def restartAgents(self, event):
         self.log("Restart Agents - nAgents:", self.view.wRegenNAgents.value)
         if self.model.init_agents_static is not None:
-            print("Restart Agents ...................")
-            print(self.model.env.agents_static)
             self.model.env.agents_static = [EnvAgentStatic(d[0], d[1], d[2]) for d in self.model.init_agents_static]
-            print(self.model.env.agents_static)
             self.model.env.agents = None
             self.model.init_agents_static = None
             self.player = None
@@ -742,8 +739,6 @@ class EditorModel(object):
 
         # Has the user clicked on an existing agent?
         iAgent = self.find_agent_at(rcCell)
-
-        print("sel:", iAgent, self.iSelectedAgent)
 
         if iAgent is None:
             # No

@@ -123,7 +123,6 @@ class RenderTool(object):
         self.iFrame = 0
         self.time1 = time.time()
         self.lTimes = deque()
-        # self.gl = MPLGL()
 
         if gl == "MPL":
             self.gl = MPLGL(env.width, env.height, jupyter)
@@ -721,7 +720,6 @@ class RenderTool(object):
                 giP1 = np.arange(0, nDepthNodes) + nDepthNodesPrev
                 giLinePoints = np.stack([giP0, giP1]).ravel("F")
                 # print(gP01[:,:10])
-                print(giLinePoints)
                 self.gl.plot(gP01[0], -gP01[1], lines=giLinePoints, color="gray")
 
             gP0 = array([gX1, gY1, gZ1])
@@ -764,7 +762,6 @@ class RenderTool(object):
                     if (r, c) in dTargets:
                         target = dTargets[(r, c)]
                         isSelected = dSelected[(r, c)]
-                        print("isSelected=", isSelected)
                     else:
                         target = None
                         isSelected = False

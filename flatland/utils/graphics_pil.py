@@ -21,8 +21,8 @@ def enable_windows_cairo_support():
         for s in site.getsitepackages():
             os.environ['PATH'] = os.environ['PATH'] + ';' + s + '\\cairo'
         os.environ['PATH'] = os.environ['PATH'] + ';' + default_os_path
-        if ctypes.util.find_library('cairo') is not None:
-            print("cairo installed: OK")
+        if ctypes.util.find_library('cairo') is None:
+            print("Error: cairo not installed")
 
 
 enable_windows_cairo_support()
@@ -185,7 +185,6 @@ class PILGL(GraphicsLayer):
         return array(img)
 
     def saveImage(self, filename):
-        print(filename)
         img = self.alpha_composite_layers()
         img.save(filename)
 
@@ -225,9 +224,7 @@ class PILGL(GraphicsLayer):
 
 class PILSVG(PILGL):
     def __init__(self, width, height, jupyter=False):
-        print(self, type(self))
         oSuper = super()
-        print(oSuper, type(oSuper))
         oSuper.__init__(width, height, jupyter)
 
         # self.track = self.track = Track()
@@ -248,7 +245,6 @@ class PILSVG(PILGL):
         time.sleep(0.001)
 
     def clear_rails(self):
-        print("Clear rails")
         self.create_layers()
         self.clear_agents()
 

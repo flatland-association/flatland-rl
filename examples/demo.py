@@ -64,7 +64,6 @@ class Scenario_Generator:
                       number_of_agents=number_of_agents)
         """
         if os.path.exists(filename):
-            print("load file: ", filename)
             env.load(filename)
             env.reset(False, False)
         else:
