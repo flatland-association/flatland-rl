@@ -460,7 +460,7 @@ class RailEnv(Environment):
     def set_full_state_msg(self, msg_data):
         data = msgpack.unpackb(msg_data, use_list=False)
         self.rail.grid = np.array(data[b"grid"])
-        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2]) for d in data[b"agents_static"]]
+        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3]) for d in data[b"agents_static"]]
         self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4]) for d in data[b"agents"]]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape

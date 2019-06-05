@@ -29,13 +29,13 @@ class EnvAgentStatic(object):
     position = attrib()
     direction = attrib()
     target = attrib()
-    moving = False
+    moving = attrib()
 
-    def __init__(self, position, direction, target):
+    def __init__(self, position, direction, target, moving=False):
         self.position = position
         self.direction = direction
         self.target = target
-        self.moving = False
+        self.moving = moving
 
     @classmethod
     def from_lists(cls, positions, directions, targets):

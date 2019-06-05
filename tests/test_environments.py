@@ -185,14 +185,14 @@ def test_dead_end():
     # rail_env.agents_target[0] = (0, 0)
     # rail_env.agents_position[0] = (0, 2)
     # rail_env.agents_direction[0] = 1
-    rail_env.agents = [EnvAgent(position=(0, 2), direction=1, target=(0, 0))]
+    rail_env.agents = [EnvAgent(position=(0, 2), direction=1, target=(0, 0), moving=False)]
     check_consistency(rail_env)
 
     rail_env.reset()
     # rail_env.agents_target[0] = (0, 4)
     # rail_env.agents_position[0] = (0, 2)
     # rail_env.agents_direction[0] = 3
-    rail_env.agents = [EnvAgent(position=(0, 2), direction=3, target=(0, 4))]
+    rail_env.agents = [EnvAgent(position=(0, 2), direction=3, target=(0, 4), moving=False)]
     check_consistency(rail_env)
 
     # In the vertical configuration:
