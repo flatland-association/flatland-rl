@@ -183,12 +183,18 @@ class RailEnv(Environment):
         return self._get_observations()
 
     def step(self, action_dict):
+        # TODO: possible re-factoring. The function may be re-written to better exploit the new agent.moving flag:
+        # actions set the motion and stopping of the agent, and then movement is performed checking the flag directly,
+        # rather than overwriting the agents' actions to 'forward'.
+
         alpha = 1.0
         beta = 1.0
 
-        invalid_action_penalty = 0 # -2 GIACOMO: we decided that invalid actions will carry no penalty
+        invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
         step_penalty = -1 * alpha
         global_reward = 1 * beta
+        stop_penalty = 0  # penalty for stopping a moving agent
+        start_penalty = 0  # penalty for starting a stopped agent
 
         # Reset the step rewards
         self.rewards_dict = dict()
@@ -234,11 +240,15 @@ class RailEnv(Environment):
                 action_dict[iAgent] = RailEnvActions.DO_NOTHING
                 action = RailEnvActions.DO_NOTHING
                 agent.moving = False
-                # TODO: possibly, penalty for stopping!
+                self.rewards_dict[iAgent] += stop_penalty
 
-            if not agent.moving and (action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_FORWARD or action == RailEnvActions.MOVE_RIGHT):
+            if not agent.moving and \
+               (action == RailEnvActions.MOVE_LEFT or
+               action == RailEnvActions.MOVE_FORWARD or
+               action == RailEnvActions.MOVE_RIGHT):
+
                 agent.moving = True
-                # TODO: possibly, may add a penalty for starting, but the best is only for stopping (GIACOMO's opinion)
+                self.rewards_dict[iAgent] += start_penalty
 
             if action != RailEnvActions.DO_NOTHING and action != RailEnvActions.STOP_MOVING:
                 # pos = agent.position #  self.agents_position[i]
@@ -297,8 +307,41 @@ class RailEnv(Environment):
                     agent.position = new_position
                     agent.direction = new_direction
                 else:
-                    # the action was not valid, add penalty
-                    self.rewards_dict[iAgent] += invalid_action_penalty
+                    # TODO: IMPROVE this UGLY redundant code; logic: if the chosen action is invalid,
+                    # and it was LEFT or RIGHT, and the agent was moving, then keep moving FORWARD.
+                    if action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_RIGHT and agent.moving:
+                        new_direction, transition_isValid = self.check_action(agent, RailEnvActions.MOVE_FORWARD)
+                        new_position = get_new_position(agent.position, new_direction)
+
+                        new_cell_isValid = (
+                            np.array_equal(  # Check the new position is still in the grid
+                                new_position,
+                                np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
+                            and  # check the new position has some transitions (ie is not an empty cell)
+                            self.rail.get_transitions(new_position) > 0)
+
+                        # If transition validity hasn't been checked yet.
+                        if transition_isValid is None:
+                            transition_isValid = self.rail.get_transition(
+                                (*agent.position, agent.direction),
+                                new_direction)
+
+                        cell_isFree = not np.any(
+                            np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
+
+                        if all([new_cell_isValid, transition_isValid, cell_isFree]):
+                            agent.old_direction = agent.direction
+                            agent.old_position = agent.position
+                            agent.position = new_position
+                            agent.direction = new_direction
+
+                        else:
+                            # the action was not valid, add penalty
+                            self.rewards_dict[iAgent] += invalid_action_penalty
+
+                    else:
+                        # the action was not valid, add penalty
+                        self.rewards_dict[iAgent] += invalid_action_penalty
 
             # if agent is not in target position, add step penalty
             # if self.agents_position[i][0] == self.agents_target[i][0] and \
