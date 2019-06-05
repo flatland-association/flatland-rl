@@ -9,6 +9,7 @@ a GridTransitionMap object.
 
 import msgpack
 import numpy as np
+from enum import IntEnum
 
 from flatland.core.env import Environment
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
@@ -19,6 +20,14 @@ from flatland.envs.observations import TreeObsForRailEnv
 
 # from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 # from flatland.core.transition_map import GridTransitionMap
+
+
+class RailEnvActions(IntEnum):
+    DO_NOTHING = 0
+    MOVE_LEFT = 1
+    MOVE_FORWARD = 2
+    MOVE_RIGHT = 3
+    STOP_MOVING = 4
 
 
 class RailEnv(Environment):
@@ -32,9 +41,10 @@ class RailEnv(Environment):
 
     The valid actions in the environment are:
         0: do nothing
-        1: turn left and move to the next cell
-        2: move to the next cell in front of the agent
-        3: turn right and move to the next cell
+        1: turn left and move to the next cell; if the agent was not moving, movement is started
+        2: move to the next cell in front of the agent; if the agent was not moving, movement is started
+        3: turn right and move to the next cell; if the agent was not moving, movement is started
+        4: stop moving
 
     Moving forward in a dead-end cell makes the agent turn 180 degrees and step
     to the cell it came from.
@@ -176,7 +186,7 @@ class RailEnv(Environment):
         alpha = 1.0
         beta = 1.0
 
-        invalid_action_penalty = -2
+        invalid_action_penalty = 0 # -2 GIACOMO: we decided that invalid actions will carry no penalty
         step_penalty = -1 * alpha
         global_reward = 1 * beta
 
@@ -198,7 +208,11 @@ class RailEnv(Environment):
             agent = self.agents[iAgent]
 
             if iAgent not in action_dict:  # no action has been supplied for this agent
-                continue
+                if agent.moving:
+                    # Keep moving
+                    action_dict[iAgent] = RailEnvActions.MOVE_FORWARD
+                else:
+                    action_dict[iAgent] = RailEnvActions.DO_NOTHING
 
             if self.dones[iAgent]:  # this agent has already completed...
                 # print("rail_env.py @", currentframe().f_back.f_lineno, " agent ", iAgent,
@@ -206,12 +220,27 @@ class RailEnv(Environment):
                 continue
             action = action_dict[iAgent]
 
-            if action < 0 or action > 3:
+            if action < 0 or action > len(RailEnvActions):
                 print('ERROR: illegal action=', action,
                       'for agent with index=', iAgent)
                 return
 
-            if action > 0:
+            if action == RailEnvActions.DO_NOTHING and agent.moving:
+                # Keep moving
+                action_dict[iAgent] = RailEnvActions.MOVE_FORWARD
+                action = RailEnvActions.MOVE_FORWARD
+
+            if action == RailEnvActions.STOP_MOVING and agent.moving:
+                action_dict[iAgent] = RailEnvActions.DO_NOTHING
+                action = RailEnvActions.DO_NOTHING
+                agent.moving = False
+                # TODO: possibly, penalty for stopping!
+
+            if not agent.moving and (action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_FORWARD or action == RailEnvActions.MOVE_RIGHT):
+                agent.moving = True
+                # TODO: possibly, may add a penalty for starting, but the best is only for stopping (GIACOMO's opinion)
+
+            if action != RailEnvActions.DO_NOTHING and action != RailEnvActions.STOP_MOVING:
                 # pos = agent.position #  self.agents_position[i]
                 # direction = agent.direction # self.agents_direction[i]
 
@@ -293,7 +322,7 @@ class RailEnv(Environment):
 
         # Reset the step actions (in case some agent doesn't 'register_action'
         # on the next step)
-        self.actions = [0] * self.get_num_agents()
+        self.actions = [RailEnvActions.DO_NOTHING] * self.get_num_agents()
         return self._get_observations(), self.rewards_dict, self.dones, {}
 
     def check_action(self, agent, action):
@@ -303,19 +332,19 @@ class RailEnv(Environment):
 
         new_direction = agent.direction
         # print(nbits,np.sum(possible_transitions))
-        if action == 1:
+        if action == RailEnvActions.MOVE_LEFT:
             new_direction = agent.direction - 1
             if num_transitions <= 1:
                 transition_isValid = False
 
-        elif action == 3:
+        elif action == RailEnvActions.MOVE_RIGHT:
             new_direction = agent.direction + 1
             if num_transitions <= 1:
                 transition_isValid = False
 
         new_direction %= 4
 
-        if action == 2:
+        if action == RailEnvActions.MOVE_FORWARD:
             if num_transitions == 1:
                 # - dead-end, straight line or curved line;
                 # new_direction will be the only valid transition
