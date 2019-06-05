@@ -61,7 +61,9 @@ class RailEnv(Environment):
                  height,
                  rail_generator=random_rail_generator(),
                  number_of_agents=1,
-                 obs_builder_object=TreeObsForRailEnv(max_depth=2)):
+                 obs_builder_object=TreeObsForRailEnv(max_depth=2),
+                 prediction_builder_object=None
+                 ):
         """
         Environment init.
 
@@ -103,6 +105,10 @@ class RailEnv(Environment):
 
         self.obs_builder = obs_builder_object
         self.obs_builder._set_env(self)
+
+        self.prediction_builder = prediction_builder_object
+        if self.prediction_builder:
+            self.prediction_builder._set_env(self)
 
         self.action_space = [1]
         self.observation_space = self.obs_builder.observation_space  # updated on resets?
@@ -183,10 +189,6 @@ class RailEnv(Environment):
         return self._get_observations()
 
     def step(self, action_dict):
-        # TODO: possible re-factoring. The function may be re-written to better exploit the new agent.moving flag:
-        # actions set the motion and stopping of the agent, and then movement is performed checking the flag directly,
-        # rather than overwriting the agents' actions to 'forward'.
-
         alpha = 1.0
         beta = 1.0
 
@@ -195,6 +197,7 @@ class RailEnv(Environment):
         global_reward = 1 * beta
         stop_penalty = 0  # penalty for stopping a moving agent
         start_penalty = 0  # penalty for starting a stopped agent
+
 
         # Reset the step rewards
         self.rewards_dict = dict()
@@ -251,90 +254,25 @@ class RailEnv(Environment):
                 self.rewards_dict[iAgent] += start_penalty
 
             if action != RailEnvActions.DO_NOTHING and action != RailEnvActions.STOP_MOVING:
-                # pos = agent.position #  self.agents_position[i]
-                # direction = agent.direction # self.agents_direction[i]
-
-                # compute number of possible transitions in the current
-                # cell used to check for invalid actions
-
-                new_direction, transition_isValid = self.check_action(agent, action)
-
-                new_position = get_new_position(agent.position, new_direction)
-                # Is it a legal move?
-                # 1) transition allows the new_direction in the cell,
-                # 2) the new cell is not empty (case 0),
-                # 3) the cell is free, i.e., no agent is currently in that cell
-
-                # if (
-                #        new_position[1] >= self.width or
-                #        new_position[0] >= self.height or
-                #        new_position[0] < 0 or new_position[1] < 0):
-                #    new_cell_isValid = False
-
-                # if self.rail.get_transitions(new_position) == 0:
-                #     new_cell_isValid = False
-
-                new_cell_isValid = (
-                    np.array_equal(  # Check the new position is still in the grid
-                        new_position,
-                        np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
-                    and  # check the new position has some transitions (ie is not an empty cell)
-                    self.rail.get_transitions(new_position) > 0)
-
-                # If transition validity hasn't been checked yet.
-                if transition_isValid is None:
-                    transition_isValid = self.rail.get_transition(
-                        (*agent.position, agent.direction),
-                        new_direction)
-
-                # cell_isFree = True
-                # for j in range(self.number_of_agents):
-                #    if self.agents_position[j] == new_position:
-                #        cell_isFree = False
-                #        break
-                # Check the new position is not the same as any of the existing agent positions
-                # (including itself, for simplicity, since it is moving)
-                cell_isFree = not np.any(
-                    np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
-
+                cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
+                    self._check_action_on_agent(action, agent)
                 if all([new_cell_isValid, transition_isValid, cell_isFree]):
-                    # move and change direction to face the new_direction that was
-                    # performed
-                    # self.agents_position[i] = new_position
-                    # self.agents_direction[i] = new_direction
                     agent.old_direction = agent.direction
                     agent.old_position = agent.position
                     agent.position = new_position
                     agent.direction = new_direction
                 else:
-                    # TODO: IMPROVE this UGLY redundant code; logic: if the chosen action is invalid,
+                    # Logic: if the chosen action is invalid,
                     # and it was LEFT or RIGHT, and the agent was moving, then keep moving FORWARD.
                     if action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_RIGHT and agent.moving:
-                        new_direction, transition_isValid = self.check_action(agent, RailEnvActions.MOVE_FORWARD)
-                        new_position = get_new_position(agent.position, new_direction)
-
-                        new_cell_isValid = (
-                            np.array_equal(  # Check the new position is still in the grid
-                                new_position,
-                                np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
-                            and  # check the new position has some transitions (ie is not an empty cell)
-                            self.rail.get_transitions(new_position) > 0)
-
-                        # If transition validity hasn't been checked yet.
-                        if transition_isValid is None:
-                            transition_isValid = self.rail.get_transition(
-                                (*agent.position, agent.direction),
-                                new_direction)
-
-                        cell_isFree = not np.any(
-                            np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
+                        cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
+                            self._check_action_on_agent(RailEnvActions.MOVE_FORWARD, agent)
 
                         if all([new_cell_isValid, transition_isValid, cell_isFree]):
                             agent.old_direction = agent.direction
                             agent.old_position = agent.position
                             agent.position = new_position
                             agent.direction = new_direction
-
                         else:
                             # the action was not valid, add penalty
                             self.rewards_dict[iAgent] += invalid_action_penalty
@@ -365,8 +303,93 @@ class RailEnv(Environment):
 
         # Reset the step actions (in case some agent doesn't 'register_action'
         # on the next step)
-        self.actions = [RailEnvActions.DO_NOTHING] * self.get_num_agents()
+        self.actions = [0] * self.get_num_agents()
         return self._get_observations(), self.rewards_dict, self.dones, {}
+
+    def _check_action_on_agent(self, action, agent):
+        # pos = agent.position #  self.agents_position[i]
+        # direction = agent.direction # self.agents_direction[i]
+        # compute number of possible transitions in the current
+        # cell used to check for invalid actions
+        new_direction, transition_isValid = self.check_action(agent, action)
+        new_position = get_new_position(agent.position, new_direction)
+        # Is it a legal move?
+        # 1) transition allows the new_direction in the cell,
+        # 2) the new cell is not empty (case 0),
+        # 3) the cell is free, i.e., no agent is currently in that cell
+        # if (
+        #        new_position[1] >= self.width or
+        #        new_position[0] >= self.height or
+        #        new_position[0] < 0 or new_position[1] < 0):
+        #    new_cell_isValid = False
+        # if self.rail.get_transitions(new_position) == 0:
+        #     new_cell_isValid = False
+        new_cell_isValid = (
+            np.array_equal(  # Check the new position is still in the grid
+                new_position,
+                np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
+            and  # check the new position has some transitions (ie is not an empty cell)
+            self.rail.get_transitions(new_position) > 0)
+        # If transition validity hasn't been checked yet.
+        if transition_isValid is None:
+            transition_isValid = self.rail.get_transition(
+                (*agent.position, agent.direction),
+                new_direction)
+        # cell_isFree = True
+        # for j in range(self.number_of_agents):
+        #    if self.agents_position[j] == new_position:
+        #        cell_isFree = False
+        #        break
+        # Check the new position is not the same as any of the existing agent positions
+        # (including itself, for simplicity, since it is moving)
+        cell_isFree = not np.any(
+            np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
+        return cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid
+
+    def _check_action_on_agent(self, action, agent):
+        # pos = agent.position #  self.agents_position[i]
+        # direction = agent.direction # self.agents_direction[i]
+        # compute number of possible transitions in the current
+        # cell used to check for invalid actions
+        new_direction, transition_isValid = self.check_action(agent, action)
+        new_position = get_new_position(agent.position, new_direction)
+        # Is it a legal move?
+        # 1) transition allows the new_direction in the cell,
+        # 2) the new cell is not empty (case 0),
+        # 3) the cell is free, i.e., no agent is currently in that cell
+        # if (
+        #        new_position[1] >= self.width or
+        #        new_position[0] >= self.height or
+        #        new_position[0] < 0 or new_position[1] < 0):
+        #    new_cell_isValid = False
+        # if self.rail.get_transitions(new_position) == 0:
+        #     new_cell_isValid = False
+        new_cell_isValid = (
+            np.array_equal(  # Check the new position is still in the grid
+                new_position,
+                np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
+            and  # check the new position has some transitions (ie is not an empty cell)
+            self.rail.get_transitions(new_position) > 0)
+        # If transition validity hasn't been checked yet.
+        if transition_isValid is None:
+            transition_isValid = self.rail.get_transition(
+                (*agent.position, agent.direction),
+                new_direction)
+        # cell_isFree = True
+        # for j in range(self.number_of_agents):
+        #    if self.agents_position[j] == new_position:
+        #        cell_isFree = False
+        #        break
+        # Check the new position is not the same as any of the existing agent positions
+        # (including itself, for simplicity, since it is moving)
+        cell_isFree = not np.any(
+            np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
+        return cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid
+
+    def predict(self):
+        if not self.prediction_builder:
+            return {}
+        return self.prediction_builder.get()
 
     def check_action(self, agent, action):
         transition_isValid = None
@@ -403,6 +426,11 @@ class RailEnv(Environment):
         for iAgent in range(self.get_num_agents()):
             self.obs_dict[iAgent] = self.obs_builder.get(iAgent)
         return self.obs_dict
+
+    def _get_predictions(self):
+        if not self.prediction_builder:
+            return {}
+        return {}
 
     def render(self):
         # TODO:

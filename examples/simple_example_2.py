@@ -1,10 +1,11 @@
 import random
 
-from flatland.envs.generators import random_rail_generator  # , rail_from_list_of_saved_GridTransitionMap_generator
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.utils.rendertools import RenderTool
 import numpy as np
+
+from flatland.envs.generators import random_rail_generator  # , rail_from_list_of_saved_GridTransitionMap_generator
+from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.rail_env import RailEnv
+from flatland.utils.rendertools import RenderTool
 
 random.seed(100)
 np.random.seed(100)
@@ -37,7 +38,7 @@ env = RailEnv(width=10,
 
 env.reset()
 
-env_renderer = RenderTool(env, gl="QT")
+env_renderer = RenderTool(env, gl="PILSVG")
 env_renderer.renderEnv(show=True)
 
 input("Press Enter to continue...")

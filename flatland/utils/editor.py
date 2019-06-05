@@ -1,36 +1,35 @@
-import numpy as np
-from numpy import array
+import os
 import time
 from collections import deque
-from matplotlib import pyplot as plt
-import threading
-import os
+
+import ipywidgets
+import jpy_canvas
+import numpy as np
+from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButtons, Tab
+from numpy import array
+
+import flatland.utils.rendertools as rt
+from examples.play_model import Player
+from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
+from flatland.envs.env_utils import mirror
+from flatland.envs.generators import complex_rail_generator, empty_rail_generator
+# from flatland.core.transitions import RailEnvTransitions
+from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.rail_env import RailEnv, random_rail_generator
+
 
 # from contextlib import redirect_stdout
 # import os
 # import sys
-
 # import io
 # from PIL import Image
 # from ipywidgets import IntSlider, link, VBox
-
-from flatland.envs.rail_env import RailEnv, random_rail_generator
-from flatland.envs.generators import complex_rail_generator, empty_rail_generator
-# from flatland.core.transitions import RailEnvTransitions
-from flatland.envs.observations import TreeObsForRailEnv
-import flatland.utils.rendertools as rt
-from examples.play_model import Player
-from flatland.envs.env_utils import mirror
-from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
-
-import ipywidgets
-from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButtons, Tab
-import jpy_canvas
 
 
 class EditorMVC(object):
     """ EditorMVC - a class to encompass and assemble the Jupyter Editor Model-View-Controller.
     """
+
     def __init__(self, env=None, sGL="PIL"):
         """ Create an Editor MVC assembly around a railenv, or create one if None.
         """
@@ -47,12 +46,13 @@ class EditorMVC(object):
         self.editor.view = self.view = View(self.editor, sGL=sGL)
         self.view.controller = self.editor.controller = self.controller = Controller(self.editor, self.view)
         self.view.init_canvas()
-        self.view.init_widgets()   # has to be done after controller
+        self.view.init_widgets()  # has to be done after controller
 
 
 class View(object):
     """ The Jupyter Editor View - creates and holds the widgets comprising the Editor.
     """
+
     def __init__(self, editor, sGL="MPL"):
         self.editor = self.model = editor
         self.sGL = sGL
@@ -66,21 +66,16 @@ class View(object):
         self.new_env()
         self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
         img = self.oRT.getImage()
-        plt.clf()  # TODO: remove this plt.clf() call
         self.wImage = jpy_canvas.Canvas(img)
         self.yxSize = self.wImage.data.shape[:2]
         self.writableData = np.copy(self.wImage.data)  # writable copy of image - wid_img.data is somehow readonly
         self.wImage.register_move(self.controller.on_mouse_move)
         self.wImage.register_click(self.controller.on_click)
 
-        # TODO: These are currently estimated values
-        # self.yxBase = array([6, 21])  # pixel offset
-        # self.nPixCell = 700 / self.model.env.rail.width  # 35
         self.yxBase = self.oRT.gl.yxBase
         self.nPixCell = self.oRT.gl.nPixCell
 
     def init_widgets(self):
-        # Radiobutton for drawmode - TODO: replace with shift/ctrl/alt keys
         # self.wDrawMode = RadioButtons(options=["Draw", "Erase", "Origin", "Destination"])
         # self.wDrawMode.observe(self.editor.setDrawMode, names="value")
 
@@ -94,6 +89,7 @@ class View(object):
 
         # Checkbox for rendering observations
         self.wShowObs = Checkbox(description="Show Agent Observations")
+        self.wShowObs.observe(self.controller.refresh, names="value")
 
         # This is like a cell widget where loggin goes
         self.wOutput = Output()
@@ -106,28 +102,33 @@ class View(object):
         # Size of environment when regenerating
 
         self.wRegenSizeWidth = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size (Width)",
-            tip="Click Regenerate after changing this")
+                                         tip="Click Regenerate after changing this")
         self.wRegenSizeWidth.observe(self.controller.setRegenSizeWidth, names="value")
 
         self.wRegenSizeHeight = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size (Height)",
-            tip="Click Regenerate after changing this")
+                                          tip="Click Regenerate after changing this")
         self.wRegenSizeHeight.observe(self.controller.setRegenSizeHeight, names="value")
 
         # Number of Agents when regenerating
-        self.wRegenNAgents = IntSlider(value=1, min=0, max=20, step=1, description="# Agents",
-            tip="Click regenerate or reset after changing this")
+        self.wRegenNAgents = IntSlider(value=1, min=0, max=5, step=1, description="# Agents",
+                                       tip="Click regenerate or reset after changing this")
 
         self.wRegenMethod = RadioButtons(description="Regen\nMethod", options=["Empty", "Random Cell", "Path-based"])
         self.wReplaceAgents = Checkbox(value=True, description="Replace Agents")
 
         self.wTab = Tab()
-        tab_contents = ["Debug", "Regen"]
+        tab_contents = ["Regen", "Observation"]
         for i, title in enumerate(tab_contents):
             self.wTab.set_title(i, title)
+        # self.wTab.children = [
+        #             VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents,
+        #               self.wRegenMethod, self.wReplaceAgents]),
+        #        VBox([self.wDebug, self.wDebug_move, self.wShowObs]),
+        #   ]
         self.wTab.children = [
-            VBox([self.wDebug, self.wDebug_move, self.wShowObs]),
-            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents,
-                  self.wRegenMethod, self.wReplaceAgents])]
+            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents]),
+            VBox([self.wShowObs]),
+        ]
 
         # Progress bar intended for stepping in the background (not yet working)
         self.wProg_steps = ipywidgets.IntProgress(value=0, min=0, max=20, step=1, description="Step")
@@ -135,18 +136,17 @@ class View(object):
         # abbreviated description of buttons and the methods they call
         ldButtons = [
             dict(name="Refresh", method=self.controller.refresh, tip="Redraw only"),
-            dict(name="Clear", method=self.controller.clear, tip="Clear rails and agents"),
-            dict(name="Reset", method=self.controller.reset,
-                 tip="Standard env reset, including regen rail + agents"),
             dict(name="Rotate Agent", method=self.controller.rotate_agent, tip="Rotate selected agent"),
             dict(name="Restart Agents", method=self.controller.restartAgents,
                  tip="Move agents back to start positions"),
+            dict(name="Random", method=self.controller.reset,
+                 tip="Generate a randomized scene, including regen rail + agents"),
             dict(name="Regenerate", method=self.controller.regenerate,
                  tip="Regenerate the rails using the method selected below"),
             dict(name="Load", method=self.controller.load),
             dict(name="Save", method=self.controller.save),
-            dict(name="Step", method=self.controller.step),
-            dict(name="Run Steps", method=self.controller.start_run)]
+            dict(name="Step", method=self.controller.step)
+        ]
 
         self.lwButtons = []
         for dButton in ldButtons:
@@ -160,7 +160,7 @@ class View(object):
             *self.lwButtons,
             # self.wRegenSize,
             # self.wRegenNAgents,
-            self.wProg_steps,
+            # self.wProg_steps,
             self.wTab])
 
         self.wMain = HBox([self.wImage, self.wVbox_controls])
@@ -180,12 +180,12 @@ class View(object):
 
             self.model.env.agents = self.model.env.agents_static
             for a in self.model.env.agents:
-                if hasattr(a, 'old_position') == False:
+                if hasattr(a, 'old_position') is False:
                     a.old_position = a.position
-                if hasattr(a, 'old_direction') == False:
+                if hasattr(a, 'old_direction') is False:
                     a.old_direction = a.direction
 
-            self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray",agents=True,
+            self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", agents=True,
                                show=False, iSelectedAgent=self.model.iSelectedAgent,
                                show_observations=self.show_observations())
             img = self.oRT.getImage()
@@ -210,7 +210,11 @@ class View(object):
             self.writableData[(y - 2):(y + 2), (x - 2):(x + 2), :3] = 0
 
     def xy_to_rc(self, x, y):
-        rcCell = ((array([y, x]) - self.yxBase) / self.nPixCell).astype(int)
+        rcCell = ((array([y, x]) - self.yxBase))
+        nX = np.floor((self.yxSize[0] - self.yxBase[0]) / self.model.env.height)
+        nY = np.floor((self.yxSize[1] - self.yxBase[1]) / self.model.env.width)
+        rcCell[0] = max(0, min(np.floor(rcCell[0] / nY), self.model.env.height - 1))
+        rcCell[1] = max(0, min(np.floor(rcCell[1] / nX), self.model.env.width - 1))
         return rcCell
 
     def log(self, *args, **kwargs):
@@ -235,6 +239,7 @@ class Controller(object):
     Calls the View directly for things which do not directly effect the model
     (this means the mouse drag path before it is interpreted as transitions)
     """
+
     def __init__(self, model, view):
         self.editor = self.model = model
         self.view = view
@@ -296,12 +301,11 @@ class Controller(object):
 
         # Process the events in our queue:
         # Draw a black square to indicate a trail
-        # TODO: infer a vector of moves between these squares to avoid gaps
         # Convert the xy position to a cell rc
         # Enqueue transitions across cells in another queue
         if len(qEvents) > 0:
             tNow = time.time()
-            if tNow - qEvents[0][0] > 0.1:   # wait before trying to draw
+            if tNow - qEvents[0][0] > 0.1:  # wait before trying to draw
                 # height, width = wid.data.shape[:2]
                 # writableData = np.copy(self.wid_img.data)  # writable copy of image - wid_img.data is somehow readonly
 
@@ -357,7 +361,14 @@ class Controller(object):
 
     def restartAgents(self, event):
         self.log("Restart Agents - nAgents:", self.view.wRegenNAgents.value)
-        self.model.restartAgents()
+        if self.model.init_agents_static is not None:
+            self.model.env.agents_static = [EnvAgentStatic(d[0], d[1], d[2]) for d in self.model.init_agents_static]
+            self.model.env.agents = None
+            self.model.init_agents_static = None
+            self.player = None
+            self.model.env.restart_agents()
+            self.model.env.reset(False, False)
+        self.refresh(event)
 
     def regenerate(self, event):
         method = self.view.wRegenMethod.value
@@ -378,9 +389,6 @@ class Controller(object):
 
     def step(self, event):
         self.model.step()
-
-    def start_run(self, event):
-        self.model.start_run()
 
     def log(self, *args, **kwargs):
         if self.view is None:
@@ -411,6 +419,7 @@ class EditorModel(object):
         self.set_env(env)
         self.iSelectedAgent = None
         self.player = None
+        self.init_agents_static = None
         self.thread = None
 
     def set_env(self, env):
@@ -444,7 +453,7 @@ class EditorModel(object):
 
         if np.any(np.abs(rcDelta) >= 1):
             iDim0 = np.argmax(np.abs(rcDelta))  # the dimension with the bigger move
-            iDim1 = 1 - iDim0                   # the dim with the smaller move
+            iDim1 = 1 - iDim0  # the dim with the smaller move
             rcRatio = rcDelta[iDim1] / rcDelta[iDim0]
             delta0 = rcDelta[iDim0]
             sgn0 = np.sign(delta0)
@@ -454,12 +463,12 @@ class EditorModel(object):
             # count integers along the larger dimension
             for iDelta0 in range(sgn0, delta0 + sgn0, sgn0):
                 rDelta1 = iDelta0 * rcRatio
-                
+
                 if np.abs(rDelta1 - iDelta1) >= 1:
                     rcInterp = (iDelta0, iDelta1)  # fill in the "corner" for "Manhattan interpolation"
                     lrcInterp.append(rcInterp)
                     iDelta1 = int(rDelta1)
-                    
+
                 rcInterp = (iDelta0, int(rDelta1))
                 lrcInterp.append(rcInterp)
             g2Interp = array(lrcInterp)
@@ -469,7 +478,7 @@ class EditorModel(object):
             # Convert the array to a list of tuples
             lrcInterp = list(map(tuple, g2Interp))
         return lrcInterp
-            
+
     def drag_path_element(self, rcCell):
         """Mouse motion event handler for drawing.
         """
@@ -489,6 +498,9 @@ class EditorModel(object):
             self.debug("lrcStroke ", len(lrcStroke), rcCell)
 
     def mod_path(self, bAddRemove):
+        # disabled functionality (no longer required)
+        if bAddRemove == False:
+            return
         # This elif means we wait until all the mouse events have been processed (black square drawn)
         # before trying to draw rails.  (We could change this behaviour)
         # Equivalent to waiting for mouse button to be lifted (and a mouse event is necessary:
@@ -636,13 +648,12 @@ class EditorModel(object):
     def reset(self, replace_agents=False, nAgents=0):
         # if replace_agents:
         #    self.env.agents_handles = range(nAgents)
-        self.env.reset(regen_rail=True, replace_agents=replace_agents)
-        self.player = Player(self.env)
+        self.regenerate("complex", nAgents=nAgents)
         self.redraw()
 
     def restartAgents(self):
         self.env.agents = EnvAgent.list_from_static(self.env.agents_static)
-        self.player = Player(self.env)
+        self.player = None
         self.redraw()
 
     def setFilename(self, filename):
@@ -654,13 +665,15 @@ class EditorModel(object):
             self.log("load file: ", self.env_filename)
             # self.env.rail.load_transition_map(self.env_filename, override_gridsize=True)
             self.env.load(self.env_filename)
-
-            if not self.regen_size_height == self.env.height and not self.regen_size_width == self.env.width:
+            if not self.regen_size_height == self.env.height or not self.regen_size_width == self.env.width:
                 self.regen_size_height = self.env.height
                 self.regen_size_width = self.env.width
                 self.regenerate(None, 0, self.env)
                 self.env.load(self.env_filename)
 
+            self.env.restart_agents()
+            self.env.reset(False, False)
+            self.init_agents_static = None
             self.fix_env()
             self.set_env(self.env)
             self.redraw()
@@ -670,7 +683,12 @@ class EditorModel(object):
     def save(self):
         self.log("save to ", self.env_filename, " working dir: ", os.getcwd())
         # self.env.rail.save_transition_map(self.env_filename)
+        temp_store = self.env.agents
+        # clear agents before save , because we want the "init" position of the agent to expert
+        self.env.agents = []
         self.env.save(self.env_filename)
+        # reset agents current (current position)
+        self.env.agents = temp_store
 
     def regenerate(self, method=None, nAgents=0, env=None):
         self.log("Regenerate size",
@@ -682,7 +700,7 @@ class EditorModel(object):
         elif method == "Random Cell":
             fnMethod = random_rail_generator(cell_type_relative_proportion=[1] * 11)
         else:
-            fnMethod = complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12)
+            fnMethod = complex_rail_generator(nr_start_goal=nAgents, nr_extra=20, min_dist=12, seed=int(time.time()))
 
         if env is None:
             self.env = RailEnv(width=self.regen_size_width,
@@ -696,7 +714,7 @@ class EditorModel(object):
         self.env.reset(regen_rail=True)
         self.fix_env()
         self.set_env(self.env)
-        self.player = Player(self.env)
+        self.player = None
         self.view.new_env()
         # self.view.init_canvas() # Can't do init_canvas - need to keep the same canvas widget!
         self.redraw()
@@ -735,6 +753,8 @@ class EditorModel(object):
                 # Move the selected agent to this cell
                 agent_static = self.env.agents_static[self.iSelectedAgent]
                 agent_static.position = rcCell
+                agent_static.old_position = rcCell
+                self.env.agents = []
         else:
             # Yes
             # Have they clicked on the agent already selected?
@@ -745,26 +765,23 @@ class EditorModel(object):
                 # No - select the agent
                 self.iSelectedAgent = iAgent
 
+        self.init_agents_static = None
         self.redraw()
 
     def add_target(self, rcCell):
         if self.iSelectedAgent is not None:
             self.env.agents_static[self.iSelectedAgent].target = rcCell
+            self.init_agents_static = None
             self.redraw()
 
     def step(self):
+        if self.init_agents_static is None:
+            self.init_agents_static = [agent.to_list() for agent in self.env.agents_static]
         if self.player is None:
             self.player = Player(self.env)
             self.env.reset(regen_rail=False, replace_agents=False)
         self.player.step()
         self.redraw()
-
-    def start_run(self):
-        if self.thread is None:
-            self.thread = threading.Thread(target=self.bg_updater, args=(self.view.wProg_steps,))
-            self.thread.start()
-        else:
-            self.log("thread already present")
 
     def bg_updater(self, wProg_steps):
         try:
@@ -772,7 +789,7 @@ class EditorModel(object):
                 # self.log("step ", i)
                 self.step()
                 time.sleep(0.2)
-                wProg_steps.value = i + 1   # indicate progress on bar
+                wProg_steps.value = i + 1  # indicate progress on bar
         finally:
             self.thread = None
 

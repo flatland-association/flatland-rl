@@ -1,6 +1,6 @@
-
 import matplotlib.pyplot as plt
 from numpy import array
+
 
 class GraphicsLayer(object):
     def __init__(self):
@@ -42,7 +42,7 @@ class GraphicsLayer(object):
     def getImage(self):
         pass
 
-    def saveImage(self,filename):
+    def saveImage(self, filename):
         pass
 
     def adaptColor(self, color, lighten=False):
@@ -68,7 +68,7 @@ class GraphicsLayer(object):
     def get_cmap(self, *args, **kwargs):
         return plt.get_cmap(*args, **kwargs)
 
-    def setRailAt(self, row, col, binTrans, iTarget=None):
+    def setRailAt(self, row, col, binTrans, iTarget=None, isSelected=False):
         """ Set the rail at cell (row, col) to have transitions binTrans.
             The target argument can contain the index of the agent to indicate
             that agent's target is at that cell, so that a station can be
@@ -76,7 +76,7 @@ class GraphicsLayer(object):
         """
         pass
 
-    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
+    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut, isSelected=False):
         pass
 
     def resize(self, env):

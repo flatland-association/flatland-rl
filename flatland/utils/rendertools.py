@@ -2,101 +2,14 @@ import time
 from collections import deque
 
 # import xarray as xr
-import matplotlib.pyplot as plt
-from flatland.utils.render_qt import QTGL, QTSVG
-from flatland.utils.graphics_pil import PILGL, PILSVG
-from flatland.utils.graphics_layer import GraphicsLayer
-from recordtype import recordtype
-from numpy import array
 import numpy as np
+from numpy import array
+from recordtype import recordtype
+
+from flatland.utils.graphics_pil import PILGL, PILSVG
+
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
-
-import os
-
-class MPLGL(GraphicsLayer):
-    def __init__(self, width, height,jupyter=False):
-        self.width = width
-        self.height = height
-        self.yxBase = array([6, 21])  # pixel offset
-        self.nPixCell = 700 / width
-        self.img = None
-
-    def open_window(self):
-        plt.figure(figsize=(10, 10))
-
-    def plot(self, *args, **kwargs):
-        plt.plot(*args, **kwargs)
-
-    def scatter(self, *args, **kwargs):
-        plt.scatter(*args, **kwargs)
-
-    def text(self, *args, **kwargs):
-        plt.text(*args, **kwargs)
-
-    def prettify(self, *args, **kwargs):
-        ax = plt.gca()
-        plt.xticks(range(int(ax.get_xlim()[1]) + 1))
-        plt.yticks(range(int(ax.get_ylim()[1]) + 1))
-        plt.grid()
-        plt.xlabel("Euclidean distance")
-        plt.ylabel("Tree / Transition Depth")
-
-    def prettify2(self, width, height, cell_size):
-        plt.xlim([0, width * cell_size])
-        plt.ylim([-height * cell_size, 0])
-
-        gTicks = (np.arange(0, height) + 0.5) * cell_size
-        gLabels = np.arange(0, height)
-        plt.xticks(gTicks, gLabels)
-
-        gTicks = np.arange(-height * cell_size, 0) + cell_size / 2
-        gLabels = np.arange(height - 1, -1, -1)
-        plt.yticks(gTicks, gLabels)
-
-        plt.xlim([0, width * cell_size])
-        plt.ylim([-height * cell_size, 0])
-
-    def show(self, block=False):
-        plt.show(block=block)
-
-    def pause(self, seconds=0.00001):
-        plt.pause(seconds)
-
-    def clf(self):
-        plt.clf()
-        plt.close()
-
-    def get_cmap(self, *args, **kwargs):
-        return plt.get_cmap(*args, **kwargs)
-
-    def beginFrame(self):
-        self.img = None
-        plt.figure(figsize=(10, 10))
-        plt.clf()
-        pass
-
-    def endFrame(self):
-        self.img = self.getImage(force=True)
-        plt.clf()
-        plt.close()
-
-    def getImage(self, force=False):
-        if self.img is None or force:
-            ax = plt.gca()
-            fig = ax.get_figure()
-            fig.tight_layout(pad=0)
-            fig.canvas.draw()
-            data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-            data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            self.img = data
-        return self.img
-
-    def adaptColor(self, color, lighten=False):
-        color = super(self.__class__, self).adaptColor(color, lighten)
-        # MPL has RGBA in [0,1]^4 not \mathbb{N} \cap [0,255]^4
-        color = tuple([iRGBA / 255 for iRGBA in color])
-        return color
 
 
 class RenderTool(object):
@@ -119,23 +32,19 @@ class RenderTool(object):
     gTheta = np.linspace(0, np.pi / 2, 5)
     gArc = array([np.cos(gTheta), np.sin(gTheta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env, gl="MPL", jupyter=False):
+    def __init__(self, env, gl="PILSVG", jupyter=False):
         self.env = env
         self.iFrame = 0
         self.time1 = time.time()
         self.lTimes = deque()
-        # self.gl = MPLGL()
 
-        if gl == "MPL":
-            self.gl = MPLGL(env.width, env.height,jupyter)
-        elif gl == "QT":
-            self.gl = QTGL(env.width, env.height,jupyter)
-        elif gl == "PIL":
-            self.gl = PILGL(env.width, env.height,jupyter)
+        if gl == "PIL":
+            self.gl = PILGL(env.width, env.height, jupyter)
         elif gl == "PILSVG":
-            self.gl = PILSVG(env.width, env.height,jupyter)
-        elif gl == "QTSVG":
-            self.gl = QTSVG(env.width, env.height,jupyter)
+            self.gl = PILSVG(env.width, env.height, jupyter)
+        else:
+            print("[", gl, "] not found, switch to PILSVG")
+            self.gl = PILSVG(env.width, env.height, jupyter)
 
         self.new_rail = True
 
@@ -630,13 +539,9 @@ class RenderTool(object):
                             iSelectedAgent=iSelectedAgent, action_dict=action_dict)
             return
 
-        if type(self.gl) in (QTGL, PILGL):
+        if type(self.gl) is PILGL:
             self.gl.beginFrame()
 
-        if type(self.gl) is MPLGL:
-            # self.gl.clf()
-            self.gl.beginFrame()
-            pass
 
         # self.gl.clf()
         # if oFigure is None:
@@ -675,17 +580,8 @@ class RenderTool(object):
         self.gl.prettify2(env.width, env.height, self.nPixCell)
 
         # TODO: for MPL, we don't want to call clf (called by endframe)
-        # for QT, we need to call endFrame()
         # if not show:
-        if type(self.gl) is QTGL:
-            self.gl.endFrame()
-            if show:
-                self.gl.show(block=False)
 
-        if type(self.gl) is MPLGL:
-            if show:
-                self.gl.show(block=False)
-            # self.gl.endFrame()
 
         if show and type(self.gl) is PILGL:
             self.gl.show()
@@ -703,7 +599,6 @@ class RenderTool(object):
 
     def getImage(self):
         return self.gl.getImage()
-
 
     def plotTreeObs(self, gObs):
         nBranchFactor = 4
@@ -729,16 +624,16 @@ class RenderTool(object):
                 giP1 = np.arange(0, nDepthNodes) + nDepthNodesPrev
                 giLinePoints = np.stack([giP0, giP1]).ravel("F")
                 # print(gP01[:,:10])
-                print(giLinePoints)
                 self.gl.plot(gP01[0], -gP01[1], lines=giLinePoints, color="gray")
 
             gP0 = array([gX1, gY1, gZ1])
 
     def renderEnv2(
-        self, show=False, curves=True, spacing=False, arrows=False, agents=True, 
-            show_observations=True, sRailColor="gray",
-            frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
-            action_dict=dict()):
+        self, show=False, curves=True, spacing=False, arrows=False, agents=True,
+        show_observations=True, sRailColor="gray",
+        frames=False, iEpisode=None, iStep=None, iSelectedAgent=None,
+        action_dict=dict()
+    ):
         """
         Draw the environment using matplotlib.
         Draw into the figure if provided.
@@ -757,10 +652,12 @@ class RenderTool(object):
 
             # store the targets
             dTargets = {}
+            dSelected = {}
             for iAgent, agent in enumerate(self.env.agents_static):
                 if agent is None:
                     continue
                 dTargets[tuple(agent.target)] = iAgent
+                dSelected[tuple(agent.target)] = (iAgent == iSelectedAgent)
 
             # Draw each cell independently
             for r in range(env.height):
@@ -768,9 +665,12 @@ class RenderTool(object):
                     binTrans = env.rail.grid[r, c]
                     if (r, c) in dTargets:
                         target = dTargets[(r, c)]
+                        isSelected = dSelected[(r, c)]
                     else:
                         target = None
-                    self.gl.setRailAt(r, c, binTrans, iTarget=target)
+                        isSelected = False
+
+                    self.gl.setRailAt(r, c, binTrans, iTarget=target, isSelected=isSelected)
 
         for iAgent, agent in enumerate(self.env.agents):
 
@@ -788,7 +688,7 @@ class RenderTool(object):
 
             # setAgentAt uses the agent index for the color
             # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
-            self.gl.setAgentAt(iAgent, *position, old_direction, direction)  # ,color=cmap(iAgent))
+            self.gl.setAgentAt(iAgent, *position, old_direction, direction, iSelectedAgent == iAgent)
 
         if show_observations:
             self.renderObs(range(env.get_num_agents()), env.dev_obs_dict)

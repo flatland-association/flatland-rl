@@ -76,7 +76,7 @@ Environments can be rendered using the utils.rendertools utilities, for example:
 
 .. code-block:: python
 
-    env_renderer = RenderTool(env, gl="QT")
+    env_renderer = RenderTool(env)
     env_renderer.renderEnv(show=True)
 
 

@@ -11,7 +11,7 @@ def tkmain(n_trials=2, n_steps=50, sGL="PIL"):
                   rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12),
                   number_of_agents=5)
 
-    env_renderer = RenderTool(env, gl=sGL, show=True)
+    env_renderer = RenderTool(env, gl=sGL)
 
     oPlayer = Player(env)
     n_trials = 1

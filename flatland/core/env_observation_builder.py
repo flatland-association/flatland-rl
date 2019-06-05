@@ -7,19 +7,19 @@ The ObservationBuilder-derived custom classes implement 2 functions, reset() and
 + Get() is called whenever an observation has to be computed, potentially for each agent independently in
 case of multi-agent environments.
 """
+import numpy as np
 
 
 class ObservationBuilder:
     """
     ObservationBuilder base class.
 
-    Derived objects must implement and `observation_space' attribute as a tuple with the dimensuions of the returned
+    Derived objects must implement and `observation_space' attribute as a tuple with the dimensions of the returned
     observations.
     """
 
     def __init__(self):
         self.observation_space = ()
-        pass
 
     def _set_env(self, env):
         self.env = env
@@ -46,3 +46,9 @@ class ObservationBuilder:
             An observation structure, specific to the corresponding environment.
         """
         raise NotImplementedError()
+
+    def _get_one_hot_for_agent_direction(self, agent):
+        """Retuns the agent's direction to one-hot encoding."""
+        direction = np.zeros(4)
+        direction[agent.direction] = 1
+        return direction

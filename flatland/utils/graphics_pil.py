@@ -1,16 +1,19 @@
-from flatland.utils.graphics_layer import GraphicsLayer
-from PIL import Image, ImageDraw, ImageTk   # , ImageFont
-import tkinter as tk
-from numpy import array
-import numpy as np
-# from flatland.utils.svg import Track, Zug
-import time
 import io
 import os
 import site
+# from flatland.utils.svg import Track, Zug
+import time
+import tkinter as tk
+
+import numpy as np
+from PIL import Image, ImageDraw, ImageTk  # , ImageFont
+from numpy import array
+
+from flatland.utils.graphics_layer import GraphicsLayer
+
 
 def enable_windows_cairo_support():
-    if os.name=='nt':
+    if os.name == 'nt':
         import site
         import ctypes.util
         default_os_path = os.environ['PATH']
@@ -18,16 +21,16 @@ def enable_windows_cairo_support():
         for s in site.getsitepackages():
             os.environ['PATH'] = os.environ['PATH'] + ';' + s + '\\cairo'
         os.environ['PATH'] = os.environ['PATH'] + ';' + default_os_path
-        if ctypes.util.find_library('cairo') is not None:
-            print("cairo installed: OK")
+        if ctypes.util.find_library('cairo') is None:
+            print("Error: cairo not installed")
+
+
 enable_windows_cairo_support()
-from cairosvg import svg2png
-from screeninfo import get_monitors
+from cairosvg import svg2png  # noqa: E402
+from screeninfo import get_monitors  # noqa: E402
 
 # from copy import copy
-from flatland.core.transitions import RailEnvTransitions
-
-
+from flatland.core.transitions import RailEnvTransitions  # noqa: E402
 
 
 class PILGL(GraphicsLayer):
@@ -40,17 +43,16 @@ class PILGL(GraphicsLayer):
         self.width = width
         self.height = height
 
-
-        if jupyter == False:
+        if jupyter is False:
             self.screen_width = 99999
             self.screen_height = 99999
             for m in get_monitors():
-                self.screen_height = min(self.screen_height,m.height)
-                self.screen_width = min(self.screen_width,m.width)
+                self.screen_height = min(self.screen_height, m.height)
+                self.screen_width = min(self.screen_width, m.width)
 
-            w = (self.screen_width-self.width-10)/(self.width + 1 + self.linewidth)
-            h = (self.screen_height-self.height-10)/(self.height + 1 + self.linewidth)
-            self.nPixCell = int(max(1,np.ceil(min(w,h))))
+            w = (self.screen_width - self.width - 10) / (self.width + 1 + self.linewidth)
+            h = (self.screen_height - self.height - 10) / (self.height + 1 + self.linewidth)
+            self.nPixCell = int(max(1, np.ceil(min(w, h))))
         else:
             self.nPixCell = 40
 
@@ -64,14 +66,14 @@ class PILGL(GraphicsLayer):
         self.layers = []
         self.draws = []
 
-        self.tColBg = (255, 255, 255)     # white background
+        self.tColBg = (255, 255, 255)  # white background
         # self.tColBg = (220, 120, 40)    # background color
-        self.tColRail = (0, 0, 0)         # black rails
-        self.tColGrid = (230,) * 3        # light grey for grid
+        self.tColRail = (0, 0, 0)  # black rails
+        self.tColGrid = (230,) * 3  # light grey for grid
 
         sColors = "d50000#c51162#aa00ff#6200ea#304ffe#2962ff#0091ea#00b8d4#00bfa5#00c853" + \
-            "#64dd17#aeea00#ffd600#ffab00#ff6d00#ff3d00#5d4037#455a64"
-            
+                  "#64dd17#aeea00#ffd600#ffab00#ff6d00#ff3d00#5d4037#455a64"
+
         self.ltAgentColors = [self.rgb_s2i(sColor) for sColor in sColors.split("#")]
         self.nAgentColors = len(self.ltAgentColors)
 
@@ -107,12 +109,12 @@ class PILGL(GraphicsLayer):
 
     def drawImageXY(self, pil_img, xyPixLeftTop, layer=0):
         # self.layers[layer].alpha_composite(pil_img, offset=xyPixLeftTop)
-        if (pil_img.mode == "RGBA"): 
+        if (pil_img.mode == "RGBA"):
             pil_mask = pil_img
         else:
             pil_mask = None
             # print(pil_img, pil_img.mode, xyPixLeftTop, layer)
-        
+
         self.layers[layer].paste(pil_img, xyPixLeftTop, pil_mask)
 
     def drawImageRC(self, pil_img, rcTopLeft, layer=0):
@@ -124,7 +126,7 @@ class PILGL(GraphicsLayer):
         self.window = tk.Tk()
         self.window.title("Flatland")
         self.window.configure(background='grey')
-        #self.window.geometry('%dx%d+%d+%d' % (self.widthPx, self.heightPx, self.xPx, self.yPx))
+        # self.window.geometry('%dx%d+%d+%d' % (self.widthPx, self.heightPx, self.xPx, self.yPx))
         self.window_open = True
 
     def close_window(self):
@@ -150,9 +152,9 @@ class PILGL(GraphicsLayer):
 
         if not self.window_open:
             self.open_window()
-        
+
         tkimg = ImageTk.PhotoImage(img)
-        
+
         if self.firstFrame:
             # Do TK actions for a new panel (not sure what they really do)
             self.panel = tk.Label(self.window, image=tkimg)
@@ -182,47 +184,48 @@ class PILGL(GraphicsLayer):
         img = self.alpha_composite_layers()
         return array(img)
 
-
-    def saveImage(self,filename):
-        print(filename)
+    def saveImage(self, filename):
         img = self.alpha_composite_layers()
         img.save(filename)
-
 
     def create_image(self, opacity=255):
         img = Image.new("RGBA", (self.widthPx, self.heightPx), (255, 255, 255, opacity))
         return img
 
+    def clear_layer(self, iLayer=0, opacity=None):
+        if opacity is None:
+            opacity = 0 if iLayer > 0 else 255
+        self.layers[iLayer] = img = self.create_image(opacity)
+        # We also need to maintain a Draw object for each layer
+        self.draws[iLayer] = ImageDraw.Draw(img)
+
     def create_layer(self, iLayer=0, clear=True):
         # If we don't have the layers already, create them
         if len(self.layers) <= iLayer:
-            for i in range(len(self.layers), iLayer+1):
+            for i in range(len(self.layers), iLayer + 1):
                 if i == 0:
                     opacity = 255  # "bottom" layer is opaque (for rails)
                 else:
-                    opacity = 0   # subsequent layers are transparent
+                    opacity = 0  # subsequent layers are transparent
                 img = self.create_image(opacity)
                 self.layers.append(img)
                 self.draws.append(ImageDraw.Draw(img))
         else:
             # We do already have this iLayer.  Clear it if requested.
             if clear:
-                opacity = 0 if iLayer > 0 else 255
-                self.layers[iLayer] = img = self.create_image(opacity)
-                # We also need to maintain a Draw object for each layer
-                self.draws[iLayer] = ImageDraw.Draw(img)
+                self.clear_layer(iLayer)
 
-    def create_layers(self, clear=True):        
-        self.create_layer(0, clear=clear)
-        self.create_layer(1, clear=clear)
+    def create_layers(self, clear=True):
+        self.create_layer(0, clear=clear)  # rail / background (scene)
+        self.create_layer(1, clear=clear)  # agents
+        self.create_layer(2, clear=clear)  # drawing layer for selected agent
+        self.create_layer(3, clear=clear)  # drawing layer for selected agent's target
 
 
 class PILSVG(PILGL):
-    def __init__(self, width, height,jupyter=False):
-        print(self, type(self))
+    def __init__(self, width, height, jupyter=False):
         oSuper = super()
-        print(oSuper, type(oSuper))
-        oSuper.__init__(width, height,jupyter)
+        oSuper.__init__(width, height, jupyter)
 
         # self.track = self.track = Track()
         # self.lwTrack = []
@@ -242,7 +245,6 @@ class PILSVG(PILGL):
         time.sleep(0.001)
 
     def clear_rails(self):
-        print("Clear rails")
         self.create_layers()
         self.clear_agents()
 
@@ -257,19 +259,19 @@ class PILSVG(PILGL):
         try:
             with open(sfPath, "r") as fIn:
                 bytesPNG = svg2png(file_obj=fIn, output_height=self.nPixCell, output_width=self.nPixCell)
-        except:
-            newList=''
+        except:  # noqa: E722
+            newList = ''
             for directory in site.getsitepackages():
                 x = [word for word in os.listdir(directory) if word.startswith('flatland')]
-                if len(x) > 0 :
-                    newList = directory+'/'+x[0]
-            with open(newList+'/'+sfPath, "r") as fIn:
+                if len(x) > 0:
+                    newList = directory + '/' + x[0]
+            with open(newList + '/' + sfPath, "r") as fIn:
                 bytesPNG = svg2png(file_obj=fIn, output_height=self.nPixCell, output_width=self.nPixCell)
         with io.BytesIO(bytesPNG) as fIn:
             pil_img = Image.open(fIn)
             pil_img.load()
             # print(pil_img.mode)
-        
+
         return pil_img
 
     def pilFromSvgBytes(self, bytesSVG):
@@ -320,7 +322,7 @@ class PILSVG(PILGL):
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
         self.dPilRail = {**self.dPilRail, **dPilRail2}
-        
+
     def loadSVGs(self, dDirFile, rotate=False, agent_colors=False):
         dPil = {}
 
@@ -344,7 +346,7 @@ class PILSVG(PILGL):
                     lTrans16[iTrans] = "1"
             sTrans16 = "".join(lTrans16)
             binTrans = int(sTrans16, 2)
-            print(sTrans, sTrans16, sFile)
+            # print(sTrans, sTrans16, sFile)
 
             # Merge the transition svg image with the background colour.
             # This is a shortcut / hack and will need re-working.
@@ -352,7 +354,7 @@ class PILSVG(PILGL):
             #    svg = svg.merge(svgBG)
 
             pilRail = self.pilFromSvgFile(sPathSvg)
-            
+
             if rotate:
                 # For rotations, we also store the base image
                 dPil[binTrans] = pilRail
@@ -363,7 +365,7 @@ class PILSVG(PILGL):
                     # PIL rotates anticlockwise for positive theta
                     pilRail2 = pilRail.rotate(-nRot)
                     dPil[binTrans2] = pilRail2
-            
+
             if agent_colors:
                 # For recoloring, we don't store the base image.
                 a3BaseColor = self.rgb_s2i("d50000")
@@ -373,7 +375,7 @@ class PILSVG(PILGL):
 
         return dPil
 
-    def setRailAt(self, row, col, binTrans, iTarget=None):
+    def setRailAt(self, row, col, binTrans, iTarget=None, isSelected=False):
         if iTarget is None:
             if binTrans in self.dPilRail:
                 pilTrack = self.dPilRail[binTrans]
@@ -386,6 +388,11 @@ class PILSVG(PILGL):
                 self.drawImageRC(pilTrack, (row, col))
             else:
                 print("Illegal target rail:", row, col, format(binTrans, "#018b")[2:])
+
+            if isSelected:
+                svgBG = self.pilFromSvgFile("./svg/Selected_Target.svg")
+                self.clear_layer(3, 0)
+                self.drawImageRC(svgBG, (row, col), layer=3)
 
     def recolorImage(self, pil, a3BaseColor, ltColors):
         rgbaImg = array(pil)
@@ -409,7 +416,7 @@ class PILSVG(PILGL):
             (0, 0): "svg/Zug_Gleis_#0091ea.svg",
             (1, 2): "svg/Zug_1_Weiche_#0091ea.svg",
             (0, 3): "svg/Zug_2_Weiche_#0091ea.svg"
-            }
+        }
 
         # "paint" color of the train images we load
         a3BaseColor = self.rgb_s2i("0091ea")
@@ -418,7 +425,7 @@ class PILSVG(PILGL):
 
         for tDirs, sPathSvg in dDirsFile.items():
             iDirIn, iDirOut = tDirs
-            
+
             pilZug = self.pilFromSvgFile(sPathSvg)
 
             # Rotate both the directions and the image and save in the dict
@@ -435,7 +442,7 @@ class PILSVG(PILGL):
                 for iColor, pilZug3 in enumerate(lPils):
                     self.dPilZug[(iDirIn2, iDirOut2, iColor)] = lPils[iColor]
 
-    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut):
+    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut, isSelected):
         delta_dir = (iDirOut - iDirIn) % 4
         iColor = iAgent % self.nAgentColors
         # when flipping direction at a dead end, use the "iDirOut" direction.
@@ -443,6 +450,11 @@ class PILSVG(PILGL):
             iDirIn = iDirOut
         pilZug = self.dPilZug[(iDirIn % 4, iDirOut % 4, iColor)]
         self.drawImageRC(pilZug, (row, col), layer=1)
+
+        if isSelected:
+            svgBG = self.pilFromSvgFile("./svg/Selected_Agent.svg")
+            self.clear_layer(2, 0)
+            self.drawImageRC(svgBG, (row, col), layer=2)
 
 
 def main2():
@@ -465,4 +477,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

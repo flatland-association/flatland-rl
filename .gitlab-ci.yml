@@ -41,8 +41,10 @@ build_and_deploy_docs:
         - apt update
         - apt install -y graphviz libgl1-mesa-glx xvfb xdg-utils
         - apt install -y libcairo2-dev libjpeg-dev libgif-dev
+        - echo "Bucket $BUCKET_NAME ${BUCKET_NAME}"
     script:
-        - pip install -r requirements_dev.txt
+        - echo "Bucket $BUCKET_NAME ${BUCKET_NAME}"
+        - pip install -r requirements_dev.txt -r requirements_continuous_integration.txt
         - python setup.py install
         - xvfb-run make docs
         - aws s3 cp ./docs/_build/html/ s3://${BUCKET_NAME} --recursive
