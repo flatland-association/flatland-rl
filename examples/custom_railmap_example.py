@@ -1,10 +1,11 @@
 import random
 
-from flatland.envs.rail_env import RailEnv
-from flatland.core.transitions import RailEnvTransitions
-from flatland.core.transition_map import GridTransitionMap
-from flatland.utils.rendertools import RenderTool
 import numpy as np
+
+from flatland.core.transition_map import GridTransitionMap
+from flatland.core.transitions import RailEnvTransitions
+from flatland.envs.rail_env import RailEnv
+from flatland.utils.rendertools import RenderTool
 
 random.seed(100)
 np.random.seed(100)
@@ -32,7 +33,7 @@ env = RailEnv(width=6,
 
 env.reset()
 
-env_renderer = RenderTool(env, gl="QT")
+env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
 
 input("Press Enter to continue...")

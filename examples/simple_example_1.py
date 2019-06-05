@@ -1,6 +1,6 @@
 from flatland.envs.generators import rail_from_manual_specifications_generator
-from flatland.envs.rail_env import RailEnv
 from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
 
 # Example generate a rail given a manual specification,
@@ -24,7 +24,7 @@ env = RailEnv(width=6,
 
 env.reset()
 
-env_renderer = RenderTool(env, gl="QT")
+env_renderer = RenderTool(env, gl="PILSVG")
 env_renderer.renderEnv(show=True)
 
 input("Press Enter to continue...")

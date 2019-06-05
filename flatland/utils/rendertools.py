@@ -9,7 +9,6 @@ from recordtype import recordtype
 
 from flatland.utils.graphics_layer import GraphicsLayer
 from flatland.utils.graphics_pil import PILGL, PILSVG
-from flatland.utils.render_qt import QTGL, QTSVG
 
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
@@ -128,14 +127,13 @@ class RenderTool(object):
 
         if gl == "MPL":
             self.gl = MPLGL(env.width, env.height, jupyter)
-        elif gl == "QT":
-            self.gl = QTGL(env.width, env.height, jupyter)
         elif gl == "PIL":
             self.gl = PILGL(env.width, env.height, jupyter)
         elif gl == "PILSVG":
             self.gl = PILSVG(env.width, env.height, jupyter)
-        elif gl == "QTSVG":
-            self.gl = QTSVG(env.width, env.height, jupyter)
+        else:
+            print("[", gl, "] not found, switch to PILSVG")
+            self.gl = PILSVG(env.width, env.height, jupyter)
 
         self.new_rail = True
 
@@ -630,7 +628,7 @@ class RenderTool(object):
                             iSelectedAgent=iSelectedAgent, action_dict=action_dict)
             return
 
-        if type(self.gl) in (QTGL, PILGL):
+        if type(self.gl) is PILGL:
             self.gl.beginFrame()
 
         if type(self.gl) is MPLGL:
@@ -675,12 +673,7 @@ class RenderTool(object):
         self.gl.prettify2(env.width, env.height, self.nPixCell)
 
         # TODO: for MPL, we don't want to call clf (called by endframe)
-        # for QT, we need to call endFrame()
         # if not show:
-        if type(self.gl) is QTGL:
-            self.gl.endFrame()
-            if show:
-                self.gl.show(block=False)
 
         if type(self.gl) is MPLGL:
             if show:
