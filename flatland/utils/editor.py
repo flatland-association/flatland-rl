@@ -6,7 +6,6 @@ import ipywidgets
 import jpy_canvas
 import numpy as np
 from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButtons, Tab
-from matplotlib import pyplot as plt
 from numpy import array
 
 import flatland.utils.rendertools as rt
@@ -67,21 +66,16 @@ class View(object):
         self.new_env()
         self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
         img = self.oRT.getImage()
-        plt.clf()  # TODO: remove this plt.clf() call
         self.wImage = jpy_canvas.Canvas(img)
         self.yxSize = self.wImage.data.shape[:2]
         self.writableData = np.copy(self.wImage.data)  # writable copy of image - wid_img.data is somehow readonly
         self.wImage.register_move(self.controller.on_mouse_move)
         self.wImage.register_click(self.controller.on_click)
 
-        # TODO: These are currently estimated values
-        # self.yxBase = array([6, 21])  # pixel offset
-        # self.nPixCell = 700 / self.model.env.rail.width  # 35
         self.yxBase = self.oRT.gl.yxBase
         self.nPixCell = self.oRT.gl.nPixCell
 
     def init_widgets(self):
-        # Radiobutton for drawmode - TODO: replace with shift/ctrl/alt keys
         # self.wDrawMode = RadioButtons(options=["Draw", "Erase", "Origin", "Destination"])
         # self.wDrawMode.observe(self.editor.setDrawMode, names="value")
 
@@ -95,6 +89,7 @@ class View(object):
 
         # Checkbox for rendering observations
         self.wShowObs = Checkbox(description="Show Agent Observations")
+        self.wShowObs.observe(self.controller.refresh, names="value")
 
         # This is like a cell widget where loggin goes
         self.wOutput = Output()
@@ -122,13 +117,18 @@ class View(object):
         self.wReplaceAgents = Checkbox(value=True, description="Replace Agents")
 
         self.wTab = Tab()
-        tab_contents = ["Debug", "Regen"]
+        tab_contents = ["Regen", "Observation"]
         for i, title in enumerate(tab_contents):
             self.wTab.set_title(i, title)
+        # self.wTab.children = [
+        #             VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents,
+        #               self.wRegenMethod, self.wReplaceAgents]),
+        #        VBox([self.wDebug, self.wDebug_move, self.wShowObs]),
+        #   ]
         self.wTab.children = [
-            VBox([self.wDebug, self.wDebug_move, self.wShowObs]),
-            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents,
-                  self.wRegenMethod, self.wReplaceAgents])]
+            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents]),
+            VBox([self.wShowObs]),
+        ]
 
         # Progress bar intended for stepping in the background (not yet working)
         self.wProg_steps = ipywidgets.IntProgress(value=0, min=0, max=20, step=1, description="Step")
@@ -301,7 +301,6 @@ class Controller(object):
 
         # Process the events in our queue:
         # Draw a black square to indicate a trail
-        # TODO: infer a vector of moves between these squares to avoid gaps
         # Convert the xy position to a cell rc
         # Enqueue transitions across cells in another queue
         if len(qEvents) > 0:
@@ -499,6 +498,9 @@ class EditorModel(object):
             self.debug("lrcStroke ", len(lrcStroke), rcCell)
 
     def mod_path(self, bAddRemove):
+        # disabled functionality (no longer required)
+        if bAddRemove == False:
+            return
         # This elif means we wait until all the mouse events have been processed (black square drawn)
         # before trying to draw rails.  (We could change this behaviour)
         # Equivalent to waiting for mouse button to be lifted (and a mouse event is necessary:
