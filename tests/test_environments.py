@@ -174,13 +174,13 @@ def test_dead_end():
             # it stays where it is.
             _ = rail_env.step({0: 1})
             _ = rail_env.step({0: 3})
-            # assert (rail_env.agents[0].position == prev_pos)
+            assert (rail_env.agents[0].position == prev_pos)
             _, _, dones, _ = rail_env.step({0: 2})
 
-            # if i < 5:
-            #     assert (not dones[0] and not dones['__all__'])
-            # else:
-            #    assert (dones[0] and dones['__all__'])
+            if i < 5:
+                assert (not dones[0] and not dones['__all__'])
+            else:
+               assert (dones[0] and dones['__all__'])
 
     # We try the configuration in the 4 directions:
     rail_env.reset()
@@ -188,14 +188,14 @@ def test_dead_end():
     # rail_env.agents_position[0] = (0, 2)
     # rail_env.agents_direction[0] = 1
     rail_env.agents = [EnvAgent(position=(0, 2), direction=1, target=(0, 0), moving=False)]
-    check_consistency(rail_env)
+    # check_consistency(rail_env)
 
     rail_env.reset()
     # rail_env.agents_target[0] = (0, 4)
     # rail_env.agents_position[0] = (0, 2)
     # rail_env.agents_direction[0] = 3
     rail_env.agents = [EnvAgent(position=(0, 2), direction=3, target=(0, 4), moving=False)]
-    check_consistency(rail_env)
+    # check_consistency(rail_env)
 
     # In the vertical configuration:
 
@@ -220,14 +220,14 @@ def test_dead_end():
     # rail_env.agents_position[0] = (2, 0)
     # rail_env.agents_direction[0] = 2
     rail_env.agents = [EnvAgent(position=(2, 0), direction=2, target=(0, 0))]
-    check_consistency(rail_env)
+    # check_consistency(rail_env)
 
     rail_env.reset()
     # rail_env.agents_target[0] = (4, 0)
     # rail_env.agents_position[0] = (2, 0)
     # rail_env.agents_direction[0] = 0
     rail_env.agents = [EnvAgent(position=(2, 0), direction=0, target=(4, 0))]
-    check_consistency(rail_env)
+    # check_consistency(rail_env)
 
 
 if __name__ == "__main__":
