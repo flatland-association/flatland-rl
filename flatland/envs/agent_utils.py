@@ -31,7 +31,7 @@ class EnvAgentStatic(object):
     target = attrib()
     moving = attrib()
 
-    def __init__(self, position, direction, target):
+    def __init__(self, position, direction, target, moving=False):
         self.position = position
         self.direction = direction
         self.target = target
