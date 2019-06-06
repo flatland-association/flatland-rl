@@ -23,10 +23,11 @@ tests:
     stage: tests
     script:
         - apt update
-        - apt install -y libgl1-mesa-glx xvfb
+        - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - pip install tox
-        - apt install -y graphviz xdg-utils
-        - apt install -y libcairo2-dev libjpeg-dev libgif-dev
+        - echo "BUCKET_NAME=${BUCKET_NAME}"
+        - echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}"
+        - echo "CI_COMMIT_REF_SLUG=${CI_COMMIT_REF_SLUG}"
         - xvfb-run tox -v --recreate
 
 build_and_deploy_docs:
@@ -37,11 +38,12 @@ build_and_deploy_docs:
     dependencies:
         - tests
     before_script:
-        - pip install awscli
         - apt update
-        - apt install -y graphviz libgl1-mesa-glx xvfb xdg-utils
-        - apt install -y libcairo2-dev libjpeg-dev libgif-dev
-        - echo "Bucket $BUCKET_NAME ${BUCKET_NAME}"
+        - apt install -y graphviz libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - pip install awscli
+        - echo "Bucket=${BUCKET_NAME}"
+        - echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}"
+        - echo "CI_COMMIT_REF_SLUG=${CI_COMMIT_REF_SLUG}"
     script:
         - echo "Bucket $BUCKET_NAME ${BUCKET_NAME}"
         - pip install -r requirements_dev.txt -r requirements_continuous_integration.txt
