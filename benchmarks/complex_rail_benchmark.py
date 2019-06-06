@@ -1,3 +1,4 @@
+"""Run benchmarks on complex rail flatland."""
 import random
 
 import numpy as np
@@ -7,7 +8,8 @@ from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
 
 
-def main():
+def run_benchmark():
+    """Run benchmark on a small number of agents in complex rail environment."""
     random.seed(1)
     np.random.seed(1)
 
@@ -66,4 +68,4 @@ if __name__ == "__main__":
     with Benchmarker(cycle=20, extra=1) as bench:
         @bench("Everything")
         def _(bm):
-            main()
+            run_benchmark()
