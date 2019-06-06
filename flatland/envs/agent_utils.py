@@ -1,7 +1,9 @@
-
-from attr import attrs, attrib
 from itertools import starmap
+
 import numpy as np
+from attr import attrs, attrib
+
+
 # from flatland.envs.rail_env import RailEnv
 
 
@@ -16,7 +18,7 @@ class EnvDescription(object):
     height = attrib()
     width = attrib()
     rail_generator = attrib()
-    obs_builder = attrib()   # not sure if this should closer to the agent than the env
+    obs_builder = attrib()  # not sure if this should closer to the agent than the env
 
 
 @attrs
@@ -41,7 +43,7 @@ class EnvAgentStatic(object):
     def from_lists(cls, positions, directions, targets):
         """ Create a list of EnvAgentStatics from lists of positions, directions and targets
         """
-        return list(starmap(EnvAgentStatic, zip(positions, directions, targets, [False]*len(positions))))
+        return list(starmap(EnvAgentStatic, zip(positions, directions, targets, [False] * len(positions))))
 
     def to_list(self):
 
@@ -78,7 +80,7 @@ class EnvAgent(EnvAgentStatic):
 
     def to_list(self):
         return [
-            self.position, self.direction, self.target, self.handle, 
+            self.position, self.direction, self.target, self.handle,
             self.old_direction, self.old_position, self.moving]
 
     @classmethod

@@ -319,7 +319,7 @@ class Grid4Transitions(Transitions):
             value = self.set_transitions(value, i, block_tuple)
 
         # Rotate the 4-bits blocks
-        value = ((value & (2**(rotation * 4) - 1)) << ((4 - rotation) * 4)) | (value >> (rotation * 4))
+        value = ((value & (2 ** (rotation * 4) - 1)) << ((4 - rotation) * 4)) | (value >> (rotation * 4))
 
         cell_transition = value
         return cell_transition
@@ -499,7 +499,7 @@ class Grid8Transitions(Transitions):
             value = self.set_transitions(value, i, block_tuple)
 
         # Rotate the 8bits blocks
-        value = ((value & (2**(rotation * 8) - 1)) << ((8 - rotation) * 8)) | (value >> (rotation * 8))
+        value = ((value & (2 ** (rotation * 8) - 1)) << ((8 - rotation) * 8)) | (value >> (rotation * 8))
 
         cell_transition = value
 
@@ -587,9 +587,9 @@ class RailEnvTransitions(Grid4Transitions):
             sRepr = " ".join([
                 "{}:{}".format(sDir, sbinTrans[i:(i + 4)])
                 for i, sDir in
-                    zip(
-                        range(0, len(sbinTrans), 4),
-                        self.lsDirs)])  # NESW
+                zip(
+                    range(0, len(sbinTrans), 4),
+                    self.lsDirs)])  # NESW
             return sRepr
 
         if version == 1:

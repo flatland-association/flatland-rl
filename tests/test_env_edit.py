@@ -1,7 +1,6 @@
-
-from flatland.envs.rail_env import RailEnv
 # from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.agent_utils import EnvAgentStatic
+from flatland.envs.rail_env import RailEnv
 
 
 def test_load_env():
@@ -11,5 +10,3 @@ def test_load_env():
     agent_static = EnvAgentStatic((0, 0), 2, (5, 5), False)
     env.add_agent_static(agent_static)
     assert env.get_num_agents() == 1
-
-
