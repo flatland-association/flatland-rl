@@ -2,6 +2,7 @@
 
 """Console script for flatland."""
 import sys
+
 import click
 
 

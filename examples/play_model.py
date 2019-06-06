@@ -1,7 +1,5 @@
-# import torch
 import random
 import time
-# from flatland.baselines.dueling_double_dqn import Agent
 from collections import deque
 
 import numpy as np
@@ -30,23 +28,15 @@ class Player(object):
         self.action_prob = [0] * 4
 
         # Removing refs to a real agent for now.
-        # self.agent = Agent(self.state_size, self.action_size, "FC", 0)
-        # self.agent.qnetwork_local.load_state_dict(torch.load('../flatland/baselines/Nets/avoid_checkpoint9900.pth'))
-        # self.agent.qnetwork_local.load_state_dict(torch.load(
-        #    '../flatland/flatland/baselines/Nets/avoid_checkpoint15000.pth'))
-
         self.iFrame = 0
         self.tStart = time.time()
 
         # Reset environment
-        # self.obs = self.env.reset()
         self.env.obs_builder.reset()
         self.obs = self.env._get_observations()
         for envAgent in range(self.env.get_num_agents()):
             norm = max(1, max_lt(self.obs[envAgent], np.inf))
             self.obs[envAgent] = np.clip(np.array(self.obs[envAgent]) / norm, -1, 1)
-
-        # env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
 
         self.score = 0
         self.env_done = 0
@@ -60,13 +50,9 @@ class Player(object):
 
         # Pass the (stored) observation to the agent network and retrieve the action
         for handle in env.get_agent_handles():
-            # Real Agent
-            # action = self.agent.act(np.array(self.obs[handle]), eps=self.eps)
             # Random actions
-            # action = random.randint(0, 3)
             action = np.random.choice([0, 1, 2, 3], 1, p=[0.2, 0.1, 0.6, 0.1])[0]
             # Numpy version uses single random sequence
-            # action = np.random.randint(0, 4, size=1)
             self.action_prob[action] += 1
             self.action_dict.update({handle: action})
 
@@ -127,17 +113,11 @@ def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="PILSVG"):
         oPlayer.reset()
         env_renderer.set_new_rail()
 
-        # env.obs_builder.util_print_obs_subtree(tree=obs[0], num_elements_per_node=5)
-
-        # score = 0
-        # env_done = 0
-
         # Run episode
         for step in range(n_steps):
             oPlayer.step()
             if render:
                 env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step)
-                # time.sleep(10)
                 if delay > 0:
                     time.sleep(delay)
 

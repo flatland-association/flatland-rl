@@ -3,10 +3,10 @@
 
 import numpy as np
 
-from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.core.transition_map import GridTransitionMap, Grid4Transitions
-from flatland.envs.rail_env import RailEnv
 from flatland.envs.generators import rail_from_GridTransitionMap_generator
+from flatland.envs.observations import GlobalObsForRailEnv
+from flatland.envs.rail_env import RailEnv
 
 """Tests for `flatland` package."""
 
@@ -66,11 +66,8 @@ def test_global_obs():
                   obs_builder_object=GlobalObsForRailEnv())
 
     global_obs = env.reset()
-    # env_renderer = RenderTool(env)
-    # env_renderer.renderEnv(show=True)
 
-    # global_obs.reset()
-    assert(global_obs[0][0].shape == rail_map.shape + (16,))
+    assert (global_obs[0][0].shape == rail_map.shape + (16,))
 
     rail_map_recons = np.zeros_like(rail_map)
     for i in range(global_obs[0][0].shape[0]):
@@ -78,11 +75,11 @@ def test_global_obs():
             rail_map_recons[i, j] = int(
                 ''.join(global_obs[0][0][i, j].astype(int).astype(str)), 2)
 
-    assert(rail_map_recons.all() == rail_map.all())
+    assert (rail_map_recons.all() == rail_map.all())
 
     # If this assertion is wrong, it means that the observation returned
     # places the agent on an empty cell
-    assert(np.sum(rail_map * global_obs[0][1][:, :, :4].sum(2)) > 0)
+    assert (np.sum(rail_map * global_obs[0][1][:, :, :4].sum(2)) > 0)
 
 
 def main():

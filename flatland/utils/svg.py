@@ -1,8 +1,8 @@
-
+import copy
+import re
 
 import svgutils
-import re
-import copy
+
 from flatland.core.transitions import RailEnvTransitions
 
 
@@ -60,7 +60,7 @@ class SVG(object):
         sNewStyles = "\n"
         for sKey, sValue in self.dStyles.items():
             if sKey == style_name:
-                sValue = "fill:#" + "".join([('{:#04x}'.format(int(255.0*col))[2:4]) for col in color[0:3]]) + ";"
+                sValue = "fill:#" + "".join([('{:#04x}'.format(int(255.0 * col))[2:4]) for col in color[0:3]]) + ";"
             sNewStyle = "\t.st" + sKey + "{" + sValue + "}\n"
             sNewStyles += sNewStyle
 
@@ -82,8 +82,6 @@ class Zug(object):
     def getSvg(self, iAgent, iDirIn, iDirOut, color=None):
 
         delta_dir = (iDirOut - iDirIn) % 4
-        # if delta_dir != 0:
-        #    print("Bend:", iAgent, iDirIn, iDirOut)
 
         if delta_dir in (0, 2):
             svg = self.svg_straight.copy()
@@ -111,6 +109,7 @@ class Track(object):
         The directions and images are also rotated by 90, 180 & 270 degrees.
         (There is some redundancy in this process, given the images provided)
     """
+
     def __init__(self):
         dFiles = {
             "": "Background_#9CCB89.svg",
@@ -174,23 +173,6 @@ class Track(object):
 
 
 def main():
-    # svg1 = SVG("./svg/Gleis_vertikal.svg")
-    # svg2 = SVG("./svg/Zug_1_Weiche_#0091ea.svg")
-
-    # svg3 = svg2.merge(svg1)
-    # svg3.set_rotate(90)
-
-    # s = svg3.to_string()
-    # print(s)
-
-    # svg4 = svg2.copy()
-    # svg4.set_style_color("2", (255, 0, 0))
-    # print(svg4.to_string())
-    # print(svg2.to_string())
-
-    # track = Track()
-    # print(len(track.dSvg))
-
     zug = Zug()
 
     svg = zug.getSvg(0, 0, 0, color=(255, 0, 0))

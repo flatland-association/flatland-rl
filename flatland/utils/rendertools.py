@@ -1,102 +1,14 @@
 import time
 from collections import deque
 
-# import xarray as xr
-import matplotlib.pyplot as plt
 import numpy as np
 from numpy import array
 from recordtype import recordtype
 
-from flatland.utils.graphics_layer import GraphicsLayer
 from flatland.utils.graphics_pil import PILGL, PILSVG
-from flatland.utils.render_qt import QTGL, QTSVG
 
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
-
-class MPLGL(GraphicsLayer):
-    def __init__(self, width, height, jupyter=False):
-        self.width = width
-        self.height = height
-        self.yxBase = array([6, 21])  # pixel offset
-        self.nPixCell = 700 / width
-        self.img = None
-
-    def open_window(self):
-        plt.figure(figsize=(10, 10))
-
-    def plot(self, *args, **kwargs):
-        plt.plot(*args, **kwargs)
-
-    def scatter(self, *args, **kwargs):
-        plt.scatter(*args, **kwargs)
-
-    def text(self, *args, **kwargs):
-        plt.text(*args, **kwargs)
-
-    def prettify(self, *args, **kwargs):
-        ax = plt.gca()
-        plt.xticks(range(int(ax.get_xlim()[1]) + 1))
-        plt.yticks(range(int(ax.get_ylim()[1]) + 1))
-        plt.grid()
-        plt.xlabel("Euclidean distance")
-        plt.ylabel("Tree / Transition Depth")
-
-    def prettify2(self, width, height, cell_size):
-        plt.xlim([0, width * cell_size])
-        plt.ylim([-height * cell_size, 0])
-
-        gTicks = (np.arange(0, height) + 0.5) * cell_size
-        gLabels = np.arange(0, height)
-        plt.xticks(gTicks, gLabels)
-
-        gTicks = np.arange(-height * cell_size, 0) + cell_size / 2
-        gLabels = np.arange(height - 1, -1, -1)
-        plt.yticks(gTicks, gLabels)
-
-        plt.xlim([0, width * cell_size])
-        plt.ylim([-height * cell_size, 0])
-
-    def show(self, block=False):
-        plt.show(block=block)
-
-    def pause(self, seconds=0.00001):
-        plt.pause(seconds)
-
-    def clf(self):
-        plt.clf()
-        plt.close()
-
-    def get_cmap(self, *args, **kwargs):
-        return plt.get_cmap(*args, **kwargs)
-
-    def beginFrame(self):
-        self.img = None
-        plt.figure(figsize=(10, 10))
-        plt.clf()
-        pass
-
-    def endFrame(self):
-        self.img = self.getImage(force=True)
-        plt.clf()
-        plt.close()
-
-    def getImage(self, force=False):
-        if self.img is None or force:
-            ax = plt.gca()
-            fig = ax.get_figure()
-            fig.tight_layout(pad=0)
-            fig.canvas.draw()
-            data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-            data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            self.img = data
-        return self.img
-
-    def adaptColor(self, color, lighten=False):
-        color = super(self.__class__, self).adaptColor(color, lighten)
-        # MPL has RGBA in [0,1]^4 not \mathbb{N} \cap [0,255]^4
-        color = tuple([iRGBA / 255 for iRGBA in color])
-        return color
 
 
 class RenderTool(object):
@@ -110,32 +22,22 @@ class RenderTool(object):
     xyHalf = array([nPixHalf, -nPixHalf])
     grc2xy = array([[0, -nPixCell], [nPixCell, 0]])
     gGrid = array(np.meshgrid(np.arange(10), -np.arange(10))) * array([[[nPixCell]], [[nPixCell]]])
-    # xyPixHalf = xr.DataArray([nPixHalf, -nPixHalf],
-    #                         dims="xy",
-    #                         coords={"xy": ["x", "y"]})
-    # gCentres = xr.DataArray(gGrid,
-    #                        dims=["xy", "p1", "p2"],
-    #                        coords={"xy": ["x", "y"]}) + xyPixHalf
     gTheta = np.linspace(0, np.pi / 2, 5)
     gArc = array([np.cos(gTheta), np.sin(gTheta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env, gl="MPL", jupyter=False):
+    def __init__(self, env, gl="PILSVG", jupyter=False):
         self.env = env
         self.iFrame = 0
         self.time1 = time.time()
         self.lTimes = deque()
-        # self.gl = MPLGL()
 
-        if gl == "MPL":
-            self.gl = MPLGL(env.width, env.height, jupyter)
-        elif gl == "QT":
-            self.gl = QTGL(env.width, env.height, jupyter)
-        elif gl == "PIL":
+        if gl == "PIL":
             self.gl = PILGL(env.width, env.height, jupyter)
         elif gl == "PILSVG":
             self.gl = PILSVG(env.width, env.height, jupyter)
-        elif gl == "QTSVG":
-            self.gl = QTSVG(env.width, env.height, jupyter)
+        else:
+            print("[", gl, "] not found, switch to PILSVG")
+            self.gl = PILSVG(env.width, env.height, jupyter)
 
         self.new_rail = True
 
@@ -199,13 +101,10 @@ class RenderTool(object):
 
         # HACK: workaround dead-end transitions
         if len(giTrans) == 0:
-            # print("Dead End", rcPos, iDir, tbTrans, giTrans)
             iDirReverse = (iDir + 2) % 4
             tbTrans = tuple(int(iDir2 == iDirReverse) for iDir2 in range(4))
             giTrans = np.where(tbTrans)[0]  # RC list of transitions
-            # print("Dead End2", rcPos, iDirReverse, tbTrans, giTrans)
 
-        # print("agent", array(list("NESW"))[giTrans], self.gTransRC[giTrans])
         gTransRCAg = self.__class__.gTransRC[giTrans]
 
         if bgiTrans:
@@ -230,7 +129,6 @@ class RenderTool(object):
 
         color = color
 
-        # print("Agent:", rcPos, iDir, rcDir, xyDir, xyPos)
         self.gl.scatter(*xyPos, color=color, layer=1, marker="o", s=100)  # agent location
         xyDirLine = array([xyPos, xyPos + xyDir / 2]).T  # line for agent orient.
         self.gl.plot(*xyDirLine, color=color, layer=1, lw=5, ms=0, alpha=0.6)
@@ -269,7 +167,6 @@ class RenderTool(object):
         iDepth = 0
         visited = set()
         lVisits = []
-        # stack = [ (rcPos,iDir,nDepth) ]
         stack = [rt.Visit(rcPos, iDir, iDepth, None)]
         while stack:
             visit = stack.pop(iPos)
@@ -281,20 +178,15 @@ class RenderTool(object):
             if rcd not in visited:
                 visited.add(rcd)
 
-                # moves = self._get_valid_transitions( node[0], node[1] )
                 gTransRCAg, giTrans = self.getTransRC(visit.rc,
                                                       visit.iDir,
                                                       bgiTrans=True)
-                # nodePos = node[0]
-
                 # enqueue the next nodes (ie transitions from this node)
                 for gTransRC2, iTrans in zip(gTransRCAg, giTrans):
-                    # print("Trans:", gTransRC2)
                     visitNext = rt.Visit(tuple(visit.rc + gTransRC2),
                                          iTrans,
                                          visit.iDepth + 1,
                                          visit)
-                    # print("node2: ", node2)
                     stack.append(visitNext)
 
                 # plot the available transitions from this node
@@ -326,24 +218,19 @@ class RenderTool(object):
                 iPos += 1
 
             rDist = np.linalg.norm(array(visit.rc) - array(xyTarg))
-            # sDist = "%.1f" % rDist
 
             xLoc = rDist + visit.iDir / 4
 
             # point labelled with distance
             self.gl.scatter(xLoc, visit.iDepth, color="k", s=2)
-            # plt.text(xLoc, visit.iDepth, sDist, color="k", rotation=45)
             self.gl.text(xLoc, visit.iDepth, visit.rc, color="k", rotation=45)
 
             # if len(dPos)>1:
             if visit.prev:
-                # print(dPos)
-                # print(tNodeDepth)
                 xLocPrev = dPos[visit.prev.rc]
 
                 rDistPrev = np.linalg.norm(array(visit.prev.rc) -
                                            array(xyTarg))
-                # sDist = "%.1f" % rDistPrev
 
                 xLocPrev = rDistPrev + visit.prev.iDir / 4
 
@@ -367,9 +254,7 @@ class RenderTool(object):
                                  color="r", alpha=0.5, lw=2)
                 xLocPrev = xLoc
                 visit = visit.prev
-            # prev = prev.prev
 
-        # self.gl.xticks(range(7)); self.gl.yticks(range(11))
         self.gl.prettify()
         return visitDest
 
@@ -499,10 +384,7 @@ class RenderTool(object):
         """
         rt = self.__class__
 
-        # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
-
         for agent in agent_handles:
-            # color = cmap(agent)
             color = self.gl.getAgentColor(agent)
             for visited_cell in observation_dict[agent]:
                 cell_coord = array(visited_cell[:2])
@@ -564,19 +446,14 @@ class RenderTool(object):
                 bDeadEnd = nbits == 1
 
                 if not bCellValid:
-                    # print("invalid:", r, c)
                     self.gl.scatter(*xyCentre, color="r", s=30)
 
                 for orientation in range(4):  # ori is where we're heading
                     from_ori = (orientation + 2) % 4  # 0123=NESW -> 2301=SWNE
                     from_xy = coords[from_ori]
 
-                    # renderer.push()
-                    # renderer.translate(c * CELL_PIXELS, r * CELL_PIXELS)
-
                     tMoves = env.rail.get_transitions((r, c, orientation))
 
-                    # to_ori = (orientation + 2) % 4
                     for to_ori in range(4):
                         to_xy = coords[to_ori]
                         rotation = (to_ori - from_ori) % 4
@@ -630,17 +507,8 @@ class RenderTool(object):
                             iSelectedAgent=iSelectedAgent, action_dict=action_dict)
             return
 
-        if type(self.gl) in (QTGL, PILGL):
+        if type(self.gl) is PILGL:
             self.gl.beginFrame()
-
-        if type(self.gl) is MPLGL:
-            # self.gl.clf()
-            self.gl.beginFrame()
-            pass
-
-        # self.gl.clf()
-        # if oFigure is None:
-        #    oFigure = self.gl.figure()
 
         env = self.env
 
@@ -675,17 +543,7 @@ class RenderTool(object):
         self.gl.prettify2(env.width, env.height, self.nPixCell)
 
         # TODO: for MPL, we don't want to call clf (called by endframe)
-        # for QT, we need to call endFrame()
         # if not show:
-        if type(self.gl) is QTGL:
-            self.gl.endFrame()
-            if show:
-                self.gl.show(block=False)
-
-        if type(self.gl) is MPLGL:
-            if show:
-                self.gl.show(block=False)
-            # self.gl.endFrame()
 
         if show and type(self.gl) is PILGL:
             self.gl.show()
@@ -711,9 +569,7 @@ class RenderTool(object):
         nDepth = 2
         for i in range(nDepth):
             nDepthNodes = nBranchFactor ** i
-            # rScale = nBranchFactor ** (nDepth - i)
             rShrinkDepth = 1 / (i + 1)
-            # gX1 = np.linspace(-nDepthNodes / 2, nDepthNodes / 2, nDepthNodes) * rShrinkDepth
 
             gX1 = np.linspace(-(nDepthNodes - 1), (nDepthNodes - 1), nDepthNodes) * rShrinkDepth
             gY1 = np.ones((nDepthNodes)) * i
@@ -727,8 +583,6 @@ class RenderTool(object):
                 giP0 = np.repeat(np.arange(nDepthNodesPrev), nBranchFactor)
                 giP1 = np.arange(0, nDepthNodes) + nDepthNodesPrev
                 giLinePoints = np.stack([giP0, giP1]).ravel("F")
-                # print(gP01[:,:10])
-                print(giLinePoints)
                 self.gl.plot(gP01[0], -gP01[1], lines=giLinePoints, color="gray")
 
             gP0 = array([gX1, gY1, gZ1])
@@ -771,7 +625,6 @@ class RenderTool(object):
                     if (r, c) in dTargets:
                         target = dTargets[(r, c)]
                         isSelected = dSelected[(r, c)]
-                        print("isSelected=", isSelected)
                     else:
                         target = None
                         isSelected = False
@@ -793,7 +646,6 @@ class RenderTool(object):
                 old_direction = agent.direction
 
             # setAgentAt uses the agent index for the color
-            # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
             self.gl.setAgentAt(iAgent, *position, old_direction, direction, iSelectedAgent == iAgent)
 
         if show_observations:

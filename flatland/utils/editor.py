@@ -6,7 +6,6 @@ import ipywidgets
 import jpy_canvas
 import numpy as np
 from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButtons, Tab
-from matplotlib import pyplot as plt
 from numpy import array
 
 import flatland.utils.rendertools as rt
@@ -14,17 +13,8 @@ from examples.play_model import Player
 from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
 from flatland.envs.env_utils import mirror
 from flatland.envs.generators import complex_rail_generator, empty_rail_generator
-# from flatland.core.transitions import RailEnvTransitions
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, random_rail_generator
-
-
-# from contextlib import redirect_stdout
-# import os
-# import sys
-# import io
-# from PIL import Image
-# from ipywidgets import IntSlider, link, VBox
 
 
 class EditorMVC(object):
@@ -67,24 +57,16 @@ class View(object):
         self.new_env()
         self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
         img = self.oRT.getImage()
-        plt.clf()  # TODO: remove this plt.clf() call
         self.wImage = jpy_canvas.Canvas(img)
         self.yxSize = self.wImage.data.shape[:2]
         self.writableData = np.copy(self.wImage.data)  # writable copy of image - wid_img.data is somehow readonly
         self.wImage.register_move(self.controller.on_mouse_move)
         self.wImage.register_click(self.controller.on_click)
 
-        # TODO: These are currently estimated values
-        # self.yxBase = array([6, 21])  # pixel offset
-        # self.nPixCell = 700 / self.model.env.rail.width  # 35
         self.yxBase = self.oRT.gl.yxBase
         self.nPixCell = self.oRT.gl.nPixCell
 
     def init_widgets(self):
-        # Radiobutton for drawmode - TODO: replace with shift/ctrl/alt keys
-        # self.wDrawMode = RadioButtons(options=["Draw", "Erase", "Origin", "Destination"])
-        # self.wDrawMode.observe(self.editor.setDrawMode, names="value")
-
         # Debug checkbox - enable logging in the Output widget
         self.wDebug = ipywidgets.Checkbox(description="Debug")
         self.wDebug.observe(self.controller.setDebug, names="value")
@@ -95,6 +77,7 @@ class View(object):
 
         # Checkbox for rendering observations
         self.wShowObs = Checkbox(description="Show Agent Observations")
+        self.wShowObs.observe(self.controller.refresh, names="value")
 
         # This is like a cell widget where loggin goes
         self.wOutput = Output()
@@ -115,20 +98,20 @@ class View(object):
         self.wRegenSizeHeight.observe(self.controller.setRegenSizeHeight, names="value")
 
         # Number of Agents when regenerating
-        self.wRegenNAgents = IntSlider(value=1, min=0, max=20, step=1, description="# Agents",
+        self.wRegenNAgents = IntSlider(value=1, min=0, max=5, step=1, description="# Agents",
                                        tip="Click regenerate or reset after changing this")
 
         self.wRegenMethod = RadioButtons(description="Regen\nMethod", options=["Empty", "Random Cell", "Path-based"])
         self.wReplaceAgents = Checkbox(value=True, description="Replace Agents")
 
         self.wTab = Tab()
-        tab_contents = ["Debug", "Regen"]
+        tab_contents = ["Regen", "Observation"]
         for i, title in enumerate(tab_contents):
             self.wTab.set_title(i, title)
         self.wTab.children = [
-            VBox([self.wDebug, self.wDebug_move, self.wShowObs]),
-            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents,
-                  self.wRegenMethod, self.wReplaceAgents])]
+            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents]),
+            VBox([self.wShowObs]),
+        ]
 
         # Progress bar intended for stepping in the background (not yet working)
         self.wProg_steps = ipywidgets.IntProgress(value=0, min=0, max=20, step=1, description="Step")
@@ -136,12 +119,11 @@ class View(object):
         # abbreviated description of buttons and the methods they call
         ldButtons = [
             dict(name="Refresh", method=self.controller.refresh, tip="Redraw only"),
-            dict(name="Clear", method=self.controller.clear, tip="Clear rails and agents"),
-            dict(name="Reset", method=self.controller.reset,
-                 tip="Standard env reset, including regen rail + agents"),
             dict(name="Rotate Agent", method=self.controller.rotate_agent, tip="Rotate selected agent"),
             dict(name="Restart Agents", method=self.controller.restartAgents,
                  tip="Move agents back to start positions"),
+            dict(name="Random", method=self.controller.reset,
+                 tip="Generate a randomized scene, including regen rail + agents"),
             dict(name="Regenerate", method=self.controller.regenerate,
                  tip="Regenerate the rails using the method selected below"),
             dict(name="Load", method=self.controller.load),
@@ -157,11 +139,8 @@ class View(object):
             self.lwButtons.append(wButton)
 
         self.wVbox_controls = VBox([
-            self.wFilename,  # self.wDrawMode,
+            self.wFilename,
             *self.lwButtons,
-            # self.wRegenSize,
-            # self.wRegenNAgents,
-            self.wProg_steps,
             self.wTab])
 
         self.wMain = HBox([self.wImage, self.wVbox_controls])
@@ -176,7 +155,6 @@ class View(object):
 
     def redraw(self):
         with self.wOutput:
-            # plt.figure(figsize=(10, 10))
             self.oRT.set_new_rail()
 
             self.model.env.agents = self.model.env.agents_static
@@ -190,8 +168,6 @@ class View(object):
                                show=False, iSelectedAgent=self.model.iSelectedAgent,
                                show_observations=self.show_observations())
             img = self.oRT.getImage()
-            # plt.clf()
-            # plt.close()
 
             self.wImage.data = img
             self.writableData = np.copy(self.wImage.data)
@@ -293,8 +269,6 @@ class Controller(object):
         if self.model.bDebug and (event["buttons"] > 0 or self.model.bDebug_move):
             self.debug("debug:", len(qEvents), event)
 
-        # assert wid == self.wid_img, "wid not same as wid_img"
-
         # If the mouse is held down, enqueue an event in our own queue
         # The intention was to avoid too many redraws.
         if event["buttons"] > 0:
@@ -302,35 +276,20 @@ class Controller(object):
 
         # Process the events in our queue:
         # Draw a black square to indicate a trail
-        # TODO: infer a vector of moves between these squares to avoid gaps
         # Convert the xy position to a cell rc
         # Enqueue transitions across cells in another queue
         if len(qEvents) > 0:
             tNow = time.time()
             if tNow - qEvents[0][0] > 0.1:  # wait before trying to draw
-                # height, width = wid.data.shape[:2]
-                # writableData = np.copy(self.wid_img.data)  # writable copy of image - wid_img.data is somehow readonly
-
-                # with self.wid_img.hold_sync():
 
                 while len(qEvents) > 0:
                     t, x, y = qEvents.popleft()  # get events from our queue
                     self.view.drag_path_element(x, y)
 
                     # Translate and scale from x,y to integer row,col (note order change)
-                    # rcCell = ((array([y, x]) - self.yxBase) / self.nPixCell).astype(int)
                     rcCell = self.view.xy_to_rc(x, y)
                     self.editor.drag_path_element(rcCell)
 
-                    #  Store the row,col location of the click, if we have entered a new cell
-                    # if len(lrcStroke) > 0:
-                    #     rcLast = lrcStroke[-1]
-                    #     if not np.array_equal(rcLast, rcCell):  # only save at transition
-                    #         # print(y, x, rcCell)
-                    #         lrcStroke.append(rcCell)
-                    # else:
-                    #     # This is the first cell in a mouse stroke
-                    #     lrcStroke.append(rcCell)
                 self.view.redisplayImage()
 
         else:
@@ -364,10 +323,7 @@ class Controller(object):
     def restartAgents(self, event):
         self.log("Restart Agents - nAgents:", self.view.wRegenNAgents.value)
         if self.model.init_agents_static is not None:
-            print("Restart Agents ...................")
-            print(self.model.env.agents_static)
             self.model.env.agents_static = [EnvAgentStatic(d[0], d[1], d[2]) for d in self.model.init_agents_static]
-            print(self.model.env.agents_static)
             self.model.env.agents = None
             self.model.init_agents_static = None
             self.player = None
@@ -432,9 +388,6 @@ class EditorModel(object):
         set a new env for the editor, used by load and regenerate.
         """
         self.env = env
-        # self.yxBase = array([6, 21])  # pixel offset
-        # self.nPixCell = 700 / self.env.rail.width  # 35
-        # self.oRT = rt.RenderTool(env)
 
     def setDebug(self, bDebug):
         self.bDebug = bDebug
@@ -503,6 +456,9 @@ class EditorModel(object):
             self.debug("lrcStroke ", len(lrcStroke), rcCell)
 
     def mod_path(self, bAddRemove):
+        # disabled functionality (no longer required)
+        if bAddRemove is False:
+            return
         # This elif means we wait until all the mouse events have been processed (black square drawn)
         # before trying to draw rails.  (We could change this behaviour)
         # Equivalent to waiting for mouse button to be lifted (and a mouse event is necessary:
@@ -549,10 +505,6 @@ class EditorModel(object):
         rcMiddle = rc3Cells[1]  # the middle cell which we will update
         bDeadend = np.all(lrcStroke[0] == lrcStroke[2])  # deadend means cell 0 == cell 2
 
-        # Save the original state of the cell
-        # oTransrcMiddle = self.env.rail.get_transitions(rcMiddle)
-        # sTransrcMiddle = self.env.rail.cell_repr(rcMiddle)
-
         # get the 2 row, col deltas between the 3 cells, eg [[-1,0],[0,1]] = North, East
         rc2Trans = np.diff(rc3Cells, axis=0)
 
@@ -585,12 +537,6 @@ class EditorModel(object):
             self.env.rail.set_transition((*rcMiddle, mirror(liTrans[1])),
                                          mirror(liTrans[0]), bAddRemove, remove_deadends=not bDeadend)
 
-            # bValid = self.env.rail.is_cell_valid(rcMiddle)
-            # if not bValid:
-            #    # Reset cell transition values
-            #    self.env.rail.grid[tuple(rcMiddle)] = oTransrcMiddle
-
-        # self.log(rcMiddle, "Orig:", sTransrcMiddle, "Mod:", self.env.rail.cell_repr(rcMiddle))
         if bPop:
             lrcStroke.pop(0)  # remove the first cell in the stroke
 
@@ -634,10 +580,8 @@ class EditorModel(object):
 
     def clear(self):
         self.env.rail.grid[:, :] = 0
-        # self.env.number_of_agents = 0
         self.env.agents = []
         self.env.agents_static = []
-        # self.env.agents_handles = []
         self.player = None
 
         self.redraw()
@@ -648,10 +592,7 @@ class EditorModel(object):
         self.redraw()
 
     def reset(self, replace_agents=False, nAgents=0):
-        # if replace_agents:
-        #    self.env.agents_handles = range(nAgents)
-        self.env.reset(regen_rail=True, replace_agents=replace_agents)
-        self.player = None
+        self.regenerate("complex", nAgents=nAgents)
         self.redraw()
 
     def restartAgents(self):
@@ -660,13 +601,11 @@ class EditorModel(object):
         self.redraw()
 
     def setFilename(self, filename):
-        # self.log("filename = ", filename, type(filename))
         self.env_filename = filename
 
     def load(self):
         if os.path.exists(self.env_filename):
             self.log("load file: ", self.env_filename)
-            # self.env.rail.load_transition_map(self.env_filename, override_gridsize=True)
             self.env.load(self.env_filename)
             if not self.regen_size_height == self.env.height or not self.regen_size_width == self.env.width:
                 self.regen_size_height = self.env.height
@@ -685,7 +624,6 @@ class EditorModel(object):
 
     def save(self):
         self.log("save to ", self.env_filename, " working dir: ", os.getcwd())
-        # self.env.rail.save_transition_map(self.env_filename)
         temp_store = self.env.agents
         # clear agents before save , because we want the "init" position of the agent to expert
         self.env.agents = []
@@ -703,13 +641,12 @@ class EditorModel(object):
         elif method == "Random Cell":
             fnMethod = random_rail_generator(cell_type_relative_proportion=[1] * 11)
         else:
-            fnMethod = complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12)
+            fnMethod = complex_rail_generator(nr_start_goal=nAgents, nr_extra=20, min_dist=12, seed=int(time.time()))
 
         if env is None:
             self.env = RailEnv(width=self.regen_size_width,
                                height=self.regen_size_height,
                                rail_generator=fnMethod,
-                               # number_of_agents=self.env.get_num_agents(),
                                number_of_agents=nAgents,
                                obs_builder_object=TreeObsForRailEnv(max_depth=2))
         else:
@@ -719,7 +656,6 @@ class EditorModel(object):
         self.set_env(self.env)
         self.player = None
         self.view.new_env()
-        # self.view.init_canvas() # Can't do init_canvas - need to keep the same canvas widget!
         self.redraw()
 
     def setRegenSizeWidth(self, size):
@@ -756,6 +692,8 @@ class EditorModel(object):
                 # Move the selected agent to this cell
                 agent_static = self.env.agents_static[self.iSelectedAgent]
                 agent_static.position = rcCell
+                agent_static.old_position = rcCell
+                self.env.agents = []
         else:
             # Yes
             # Have they clicked on the agent already selected?
@@ -787,7 +725,6 @@ class EditorModel(object):
     def bg_updater(self, wProg_steps):
         try:
             for i in range(20):
-                # self.log("step ", i)
                 self.step()
                 time.sleep(0.2)
                 wProg_steps.value = i + 1  # indicate progress on bar

@@ -1,7 +1,6 @@
 import io
 import os
 import site
-# from flatland.utils.svg import Track, Zug
 import time
 import tkinter as tk
 
@@ -21,15 +20,14 @@ def enable_windows_cairo_support():
         for s in site.getsitepackages():
             os.environ['PATH'] = os.environ['PATH'] + ';' + s + '\\cairo'
         os.environ['PATH'] = os.environ['PATH'] + ';' + default_os_path
-        if ctypes.util.find_library('cairo') is not None:
-            print("cairo installed: OK")
+        if ctypes.util.find_library('cairo') is None:
+            print("Error: cairo not installed")
 
 
 enable_windows_cairo_support()
 from cairosvg import svg2png  # noqa: E402
 from screeninfo import get_monitors  # noqa: E402
 
-# from copy import copy
 from flatland.core.transitions import RailEnvTransitions  # noqa: E402
 
 
@@ -38,7 +36,6 @@ class PILGL(GraphicsLayer):
         self.yxBase = (0, 0)
         self.linewidth = 4
         self.nAgentColors = 1  # overridden in loadAgent
-        # self.tile_size = self.nPixCell
 
         self.width = width
         self.height = height
@@ -67,7 +64,6 @@ class PILGL(GraphicsLayer):
         self.draws = []
 
         self.tColBg = (255, 255, 255)  # white background
-        # self.tColBg = (220, 120, 40)    # background color
         self.tColRail = (0, 0, 0)  # black rails
         self.tColGrid = (230,) * 3  # light grey for grid
 
@@ -78,10 +74,8 @@ class PILGL(GraphicsLayer):
         self.nAgentColors = len(self.ltAgentColors)
 
         self.window_open = False
-        # self.bShow = show
         self.firstFrame = True
         self.create_layers()
-        # self.beginFrame()
 
     def rgb_s2i(self, sRGB):
         """ convert a hex RGB string like 0091ea to 3-tuple of ints """
@@ -108,12 +102,10 @@ class PILGL(GraphicsLayer):
             self.draws[layer].rectangle([(x - r, y - r), (x + r, y + r)], fill=color, outline=color)
 
     def drawImageXY(self, pil_img, xyPixLeftTop, layer=0):
-        # self.layers[layer].alpha_composite(pil_img, offset=xyPixLeftTop)
         if (pil_img.mode == "RGBA"):
             pil_mask = pil_img
         else:
             pil_mask = None
-            # print(pil_img, pil_img.mode, xyPixLeftTop, layer)
 
         self.layers[layer].paste(pil_img, xyPixLeftTop, pil_mask)
 
@@ -126,7 +118,6 @@ class PILGL(GraphicsLayer):
         self.window = tk.Tk()
         self.window.title("Flatland")
         self.window.configure(background='grey')
-        # self.window.geometry('%dx%d+%d+%d' % (self.widthPx, self.heightPx, self.xPx, self.yPx))
         self.window_open = True
 
     def close_window(self):
@@ -169,7 +160,6 @@ class PILGL(GraphicsLayer):
 
     def pause(self, seconds=0.00001):
         pass
-        # plt.pause(seconds)
 
     def alpha_composite_layers(self):
         img = self.layers[0]
@@ -185,7 +175,6 @@ class PILGL(GraphicsLayer):
         return array(img)
 
     def saveImage(self, filename):
-        print(filename)
         img = self.alpha_composite_layers()
         img.save(filename)
 
@@ -225,14 +214,8 @@ class PILGL(GraphicsLayer):
 
 class PILSVG(PILGL):
     def __init__(self, width, height, jupyter=False):
-        print(self, type(self))
         oSuper = super()
-        print(oSuper, type(oSuper))
         oSuper.__init__(width, height, jupyter)
-
-        # self.track = self.track = Track()
-        # self.lwTrack = []
-        # self.zug = Zug()
 
         self.lwAgents = []
         self.agents_prev = []
@@ -244,16 +227,13 @@ class PILSVG(PILGL):
         return False
 
     def processEvents(self):
-        # self.app.processEvents()
         time.sleep(0.001)
 
     def clear_rails(self):
-        print("Clear rails")
         self.create_layers()
         self.clear_agents()
 
     def clear_agents(self):
-        # print("Clear Agents: ", len(self.lwAgents))
         for wAgent in self.lwAgents:
             self.layout.removeWidget(wAgent)
         self.lwAgents = []
@@ -274,7 +254,6 @@ class PILSVG(PILGL):
         with io.BytesIO(bytesPNG) as fIn:
             pil_img = Image.open(fIn)
             pil_img.load()
-            # print(pil_img.mode)
 
         return pil_img
 
@@ -350,12 +329,6 @@ class PILSVG(PILGL):
                     lTrans16[iTrans] = "1"
             sTrans16 = "".join(lTrans16)
             binTrans = int(sTrans16, 2)
-            # print(sTrans, sTrans16, sFile)
-
-            # Merge the transition svg image with the background colour.
-            # This is a shortcut / hack and will need re-working.
-            # if binTrans > 0:
-            #    svg = svg.merge(svgBG)
 
             pilRail = self.pilFromSvgFile(sPathSvg)
 
