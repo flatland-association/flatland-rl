@@ -1,7 +1,5 @@
-# import torch
 import random
 import time
-# from flatland.baselines.dueling_double_dqn import Agent
 from collections import deque
 
 import numpy as np

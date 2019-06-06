@@ -4,9 +4,6 @@ import numpy as np
 from attr import attrs, attrib
 
 
-# from flatland.envs.rail_env import RailEnv
-
-
 @attrs
 class EnvDescription(object):
     """ EnvDescription - This is a description of a random env,

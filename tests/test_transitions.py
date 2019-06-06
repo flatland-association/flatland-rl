@@ -5,7 +5,6 @@
 import numpy as np
 
 from flatland.core.transitions import RailEnvTransitions, Grid8Transitions
-# from flatland.envs.rail_env import validate_new_transition
 from flatland.envs.env_utils import validate_new_transition
 
 

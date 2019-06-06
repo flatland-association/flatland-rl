@@ -1,4 +1,3 @@
-# from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.agent_utils import EnvAgentStatic
 from flatland.envs.rail_env import RailEnv
 

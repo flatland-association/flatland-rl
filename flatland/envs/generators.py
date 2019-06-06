@@ -6,10 +6,6 @@ from flatland.envs.env_utils import distance_on_rail, connect_rail, get_directio
 from flatland.envs.env_utils import get_rnd_agents_pos_tgt_dir_on_rail
 
 
-# from flatland.core.env import Environment
-# from flatland.envs.observations import TreeObsForRailEnv
-
-
 def empty_rail_generator():
     """
     Returns a generator which returns an empty rail mail with no agents.

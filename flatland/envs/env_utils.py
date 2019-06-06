@@ -8,13 +8,6 @@ a GridTransitionMap object.
 import numpy as np
 
 
-# from flatland.core.env import Environment
-# from flatland.envs.observations import TreeObsForRailEnv
-
-# from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
-# from flatland.core.transition_map import GridTransitionMap
-
-
 def get_direction(pos1, pos2):
     """
     Assumes pos1 and pos2 are adjacent location on grid.

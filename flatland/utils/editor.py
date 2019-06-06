@@ -13,17 +13,8 @@ from examples.play_model import Player
 from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
 from flatland.envs.env_utils import mirror
 from flatland.envs.generators import complex_rail_generator, empty_rail_generator
-# from flatland.core.transitions import RailEnvTransitions
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, random_rail_generator
-
-
-# from contextlib import redirect_stdout
-# import os
-# import sys
-# import io
-# from PIL import Image
-# from ipywidgets import IntSlider, link, VBox
 
 
 class EditorMVC(object):
