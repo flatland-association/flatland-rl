@@ -21,13 +21,12 @@ with open('HISTORY.rst') as history_file:
 
 
 
-# install pycairo
+# install pycairo on Windows
 if os.name == 'nt':
     p = platform.architecture()
     is64bit = p[0] == '64bit'
     if sys.version[0:3] == '3.5':
         if is64bit:
-
             url = 'https://download.lfd.uci.edu/pythonlibs/t4jqbe6o/pycairo-1.18.0-cp35-cp35m-win_amd64.whl'
         else:
             url = 'https://download.lfd.uci.edu/pythonlibs/t4jqbe6o/pycairo-1.18.0-cp35-cp35m-win32.whl'
@@ -47,7 +46,7 @@ if os.name == 'nt':
     try:
         import pycairo
     except:
-        call_cmd = "pip install " + url
+        call_cmd = "pip install --user " + url
         os.system(call_cmd)
 
         import site
