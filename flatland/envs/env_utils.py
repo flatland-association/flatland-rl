@@ -157,7 +157,7 @@ def a_star(rail_trans, rail_array, start, end):
             # create the f, g, and h values
             child.g = current_node.g + 1
             # this heuristic favors diagonal paths:
-            # child.h = ((child.pos[0] - end_node.pos[0]) ** 2) + ((child.pos[1] - end_node.pos[1]) ** 2) \ #  noqa: E800
+            # child.h = ((child.pos[0] - end_node.pos[0]) ** 2) + ((child.pos[1] - end_node.pos[1]) ** 2) \#  noqa: E800
             # this heuristic avoids diagonal paths
             child.h = abs(child.pos[0] - end_node.pos[0]) + abs(child.pos[1] - end_node.pos[1])
             child.f = child.g + child.h
