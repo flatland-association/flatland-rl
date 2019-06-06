@@ -23,6 +23,7 @@ def custom_rail_generator():
         agents_target = []
 
         return grid_map, agents_positions, agents_direction, agents_target
+
     return generator
 
 

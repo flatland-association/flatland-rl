@@ -1,4 +1,3 @@
-
 from examples.play_model import Player
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
@@ -26,7 +25,7 @@ def tkmain(n_trials=2, n_steps=50, sGL="PIL"):
             env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step,
                                    action_dict=oPlayer.action_dict)
 
-    env_renderer.close_window()            
+    env_renderer.close_window()
 
 
 if __name__ == "__main__":

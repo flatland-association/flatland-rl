@@ -7,9 +7,10 @@ a GridTransitionMap object.
 # TODO:  _ this is a global method --> utils or remove later
 # from inspect import currentframe
 
+from enum import IntEnum
+
 import msgpack
 import numpy as np
-from enum import IntEnum
 
 from flatland.core.env import Environment
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent

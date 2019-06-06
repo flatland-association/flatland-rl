@@ -1,12 +1,13 @@
 import numpy as np
 
-# from flatland.core.env import Environment
-# from flatland.envs.observations import TreeObsForRailEnv
-
-from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
 from flatland.envs.env_utils import distance_on_rail, connect_rail, get_direction, mirror
 from flatland.envs.env_utils import get_rnd_agents_pos_tgt_dir_on_rail
+
+
+# from flatland.core.env import Environment
+# from flatland.envs.observations import TreeObsForRailEnv
 
 
 def empty_rail_generator():
@@ -14,6 +15,7 @@ def empty_rail_generator():
     Returns a generator which returns an empty rail mail with no agents.
     Primarily used by the editor
     """
+
     def generator(width, height, num_agents=0, num_resets=0):
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
@@ -21,6 +23,7 @@ def empty_rail_generator():
         rail_array.fill(0)
 
         return grid_map, [], [], []
+
     return generator
 
 
@@ -41,7 +44,7 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
 
     def generator(width, height, num_agents, num_resets=0):
         if num_agents > nr_start_goal:
-            num_agents = nr_start_goal 
+            num_agents = nr_start_goal
             print("complex_rail_generator: num_agents > nr_start_goal, changing num_agents")
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)

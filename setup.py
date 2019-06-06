@@ -3,23 +3,16 @@
 
 """The setup script."""
 import os
-from setuptools import setup, find_packages
-import sys
-import os
-
 import platform
+import sys
 
-
+from setuptools import setup, find_packages
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
-
-
-
-
 
 # install pycairo on Windows
 if os.name == 'nt':
@@ -51,13 +44,14 @@ if os.name == 'nt':
 
         import site
         import ctypes.util
+
         default_os_path = os.environ['PATH']
         os.environ['PATH'] = ''
         for s in site.getsitepackages():
-            os.environ['PATH'] = os.environ['PATH']+';' + s+'\\cairo'
-        os.environ['PATH'] = os.environ['PATH']+';' + default_os_path
+            os.environ['PATH'] = os.environ['PATH'] + ';' + s + '\\cairo'
+        os.environ['PATH'] = os.environ['PATH'] + ';' + default_os_path
         print(os.environ['PATH'])
-        if ctypes.util.find_library('cairo')is not None:
+        if ctypes.util.find_library('cairo') is not None:
             print("cairo installed: OK")
 else:
     try:
@@ -69,7 +63,7 @@ else:
 def get_all_svg_files(directory='./svg/'):
     ret = []
     for f in os.listdir(directory):
-        ret.append(directory+f)
+        ret.append(directory + f)
     return ret
 
 
