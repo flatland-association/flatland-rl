@@ -71,6 +71,9 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Jupyter Notebooks converted to python
+notebooks/*.py
+
 # PyCharm
 .idea/
 
