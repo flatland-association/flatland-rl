@@ -5,7 +5,6 @@ Generator functions are functions that take width, height and num_resets as argu
 a GridTransitionMap object.
 """
 # TODO:  _ this is a global method --> utils or remove later
-# from inspect import currentframe
 
 from enum import IntEnum
 
@@ -17,10 +16,6 @@ from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 from flatland.envs.env_utils import get_new_position
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
-
-
-# from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
-# from flatland.core.transition_map import GridTransitionMap
 
 
 class RailEnvActions(IntEnum):

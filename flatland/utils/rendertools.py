@@ -1,7 +1,6 @@
 import time
 from collections import deque
 
-# import xarray as xr
 import numpy as np
 from numpy import array
 from recordtype import recordtype

@@ -223,7 +223,6 @@ class Grid4Transitions(Transitions):
             (new_transitions[1] & 1) << 2 | \
             (new_transitions[2] & 1) << 1 | \
             (new_transitions[3] & 1)
-        # new_transitions = np.packbits((0, 0, 0, 0) + new_transitions)  # alternative
 
         cell_transition = (cell_transition & negmask) | (new_transitions << ((3 - orientation) * 4))
 

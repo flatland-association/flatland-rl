@@ -1,7 +1,6 @@
 import io
 import os
 import site
-# from flatland.utils.svg import Track, Zug
 import time
 import tkinter as tk
 
@@ -29,7 +28,6 @@ enable_windows_cairo_support()
 from cairosvg import svg2png  # noqa: E402
 from screeninfo import get_monitors  # noqa: E402
 
-# from copy import copy
 from flatland.core.transitions import RailEnvTransitions  # noqa: E402
 
 
