@@ -4,8 +4,8 @@ Collection of environment-specific PredictionBuilder.
 
 import numpy as np
 
-from envs.rail_env import RailEnvActions
 from flatland.core.env_prediction_builder import PredictionBuilder
+from flatland.envs.rail_env import RailEnvActions
 
 
 class DummyPredictorForRailEnv(PredictionBuilder):
