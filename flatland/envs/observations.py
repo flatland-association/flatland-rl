@@ -191,7 +191,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         #7: agent in the opposite drection
             1 = agent present other direction than myself (so conflict)
-                (possible future use: number of other agents in other direction in this branch, i.e. number of conflicts)
+                (possible future use: number of other agents in other direction in this branch, ie. number of conflicts)
             0 = no agent present other direction than myself
 
 
