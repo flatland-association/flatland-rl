@@ -25,9 +25,6 @@ tests:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - pip install tox
-        - echo "BUCKET_NAME=${BUCKET_NAME}"
-        - echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}"
-        - echo "CI_COMMIT_REF_SLUG=${CI_COMMIT_REF_SLUG}"
         - xvfb-run tox -v --recreate
 
 build_and_deploy_docs:
@@ -41,11 +38,10 @@ build_and_deploy_docs:
         - apt update
         - apt install -y graphviz libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - pip install awscli
+    script:
         - echo "Bucket=${BUCKET_NAME}"
         - echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}"
         - echo "CI_COMMIT_REF_SLUG=${CI_COMMIT_REF_SLUG}"
-    script:
-        - echo "Bucket $BUCKET_NAME ${BUCKET_NAME}"
         - pip install -r requirements_dev.txt -r requirements_continuous_integration.txt
         - python setup.py install
         - xvfb-run make docs
