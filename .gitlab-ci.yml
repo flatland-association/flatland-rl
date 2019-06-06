@@ -42,9 +42,7 @@ build_and_deploy_docs:
         - echo "Bucket=${BUCKET_NAME}"
         - echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}"
         - echo "CI_COMMIT_REF_SLUG=${CI_COMMIT_REF_SLUG}"
-        - pip install -r requirements_dev.txt -r requirements_continuous_integration.txt
-        - python setup.py install
-        - xvfb-run make docs
+        - xvfb-run tox -v -e docs
         - aws s3 cp ./docs/_build/html/ s3://${BUCKET_NAME} --recursive
     environment:
         name: ${CI_COMMIT_REF_SLUG}
