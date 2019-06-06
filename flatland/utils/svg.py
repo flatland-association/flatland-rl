@@ -82,8 +82,6 @@ class Zug(object):
     def getSvg(self, iAgent, iDirIn, iDirOut, color=None):
 
         delta_dir = (iDirOut - iDirIn) % 4
-        # if delta_dir != 0:
-        #    print("Bend:", iAgent, iDirIn, iDirOut)
 
         if delta_dir in (0, 2):
             svg = self.svg_straight.copy()
@@ -175,23 +173,6 @@ class Track(object):
 
 
 def main():
-    # svg1 = SVG("./svg/Gleis_vertikal.svg")
-    # svg2 = SVG("./svg/Zug_1_Weiche_#0091ea.svg")
-
-    # svg3 = svg2.merge(svg1)
-    # svg3.set_rotate(90)
-
-    # s = svg3.to_string()
-    # print(s)
-
-    # svg4 = svg2.copy()
-    # svg4.set_style_color("2", (255, 0, 0))
-    # print(svg4.to_string())
-    # print(svg2.to_string())
-
-    # track = Track()
-    # print(len(track.dSvg))
-
     zug = Zug()
 
     svg = zug.getSvg(0, 0, 0, color=(255, 0, 0))

@@ -30,12 +30,6 @@ env = RailEnv(width=10,
               number_of_agents=3,
               obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
-# env = RailEnv(width=10,
-#               height=10,
-#               rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(['examples/sample_10_10_rail.npy']),
-#               number_of_agents=3,
-#               obs_builder_object=TreeObsForRailEnv(max_depth=2))
-
 env.reset()
 
 env_renderer = RenderTool(env, gl="PILSVG")

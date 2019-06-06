@@ -156,9 +156,8 @@ def a_star(rail_trans, rail_array, start, end):
 
             # create the f, g, and h values
             child.g = current_node.g + 1
-            # this heuristic favors diagonal paths
-            # child.h = ((child.pos[0] - end_node.pos[0]) ** 2) + \
-            #           ((child.pos[1] - end_node.pos[1]) ** 2)
+            # this heuristic favors diagonal paths:
+            # child.h = ((child.pos[0] - end_node.pos[0]) ** 2) + ((child.pos[1] - end_node.pos[1]) ** 2) \#  noqa: E800
             # this heuristic avoids diagonal paths
             child.h = abs(child.pos[0] - end_node.pos[0]) + abs(child.pos[1] - end_node.pos[1])
             child.f = child.g + child.h
@@ -199,7 +198,6 @@ def connect_rail(rail_trans, rail_array, start, end):
             else:
                 # into existing rail
                 new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
-                # new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
         else:
             # set the forward path
             new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
@@ -216,7 +214,6 @@ def connect_rail(rail_trans, rail_array, start, end):
             else:
                 # into existing rail
                 new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
-                # new_trans_e = rail_trans.set_transition(new_trans_e, mirror(new_dir), mirror(new_dir), 1)
             rail_array[end_pos] = new_trans_e
 
         current_dir = new_dir

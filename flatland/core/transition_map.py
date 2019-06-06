@@ -335,7 +335,6 @@ class GridTransitionMap(TransitionMap):
         binTrans = self.get_transitions(rcPos)  # 16bit integer - all trans in/out
         lnBinTrans = array([binTrans >> 8, binTrans & 0xff], dtype=np.uint8)  # 2 x uint8
         g2binTrans = np.unpackbits(lnBinTrans).reshape(4, 4)  # 4x4 x uint8 binary(0,1)
-        # gDirIn = g2binTrans.any(axis=1)     # inbound directions as boolean array (4)
         gDirOut = g2binTrans.any(axis=0)  # outbound directions as boolean array (4)
         giDirOut = np.argwhere(gDirOut)[:, 0]  # valid outbound directions as array of int
 

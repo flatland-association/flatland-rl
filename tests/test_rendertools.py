@@ -31,19 +31,16 @@ def checkFrozenImage(oRT, sFileImage, resave=False):
     np.load(sDirImages + sFileImage)
 
     # TODO fails!
-    # assert (img_test.shape == img_expected.shape)
-    # assert ((np.sum(np.square(img_test - img_expected)) / img_expected.size / 256) < 1e-3), \
-    #     "Image {} does not match".format(sFileImage)
+    #  assert (img_test.shape == img_expected.shape) \ #  noqa: E800
+    #  assert ((np.sum(np.square(img_test - img_expected)) / img_expected.size / 256) < 1e-3), \ #  noqa: E800
+    #      "Image {} does not match".format(sFileImage) \ #  noqa: E800
 
 
 def test_render_env(save_new_images=False):
-    # random.seed(100)
     np.random.seed(100)
     oEnv = RailEnv(width=10, height=10,
-                   # rail_generator=random_rail_generator(),
                    rail_generator=empty_rail_generator(),
                    number_of_agents=0,
-                   # obs_builder_object=GlobalObsForRailEnv())
                    obs_builder_object=TreeObsForRailEnv(max_depth=2)
                    )
     sfTestEnv = "env-data/tests/test1.npy"

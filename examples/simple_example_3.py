@@ -16,10 +16,6 @@ env = RailEnv(width=7,
               number_of_agents=2,
               obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
-# Print the distance map of each cell to the target of the first agent
-# for i in range(4):
-#     print(env.obs_builder.distance_map[0, :, :, i])
-
 # Print the observation vector for agent 0
 obs, all_rewards, done, _ = env.step({0: 0})
 for i in range(env.get_num_agents()):
