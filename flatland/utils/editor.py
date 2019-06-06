@@ -499,7 +499,7 @@ class EditorModel(object):
 
     def mod_path(self, bAddRemove):
         # disabled functionality (no longer required)
-        if bAddRemove == False:
+        if bAddRemove is False:
             return
         # This elif means we wait until all the mouse events have been processed (black square drawn)
         # before trying to draw rails.  (We could change this behaviour)

@@ -1,6 +1,7 @@
+import numpy as np
+
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
-import numpy as np
 
 np.random.seed(1)
 
@@ -11,6 +12,7 @@ env = RailEnv(width=15,
               height=15,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=10, min_dist=10, max_dist=99999, seed=0),
               number_of_agents=5)
+
 
 # Import your own Agent or use RLlib to train agents on Flatland
 # As an example we use a random agent here
@@ -42,9 +44,10 @@ class RandomAgent:
         # Store the current policy
         return
 
-    def load(self,filename):
+    def load(self, filename):
         # Load a policy
         return
+
 
 # Initialize the agent with the parameters corresponding to the environment and observation_builder
 agent = RandomAgent(218, 4)
@@ -80,5 +83,4 @@ for trials in range(1, n_trials + 1):
         obs = next_obs.copy()
         if done['__all__']:
             break
-    print('Episode Nr. {}\t Score = {}'.format(trials,score))
-
+    print('Episode Nr. {}\t Score = {}'.format(trials, score))

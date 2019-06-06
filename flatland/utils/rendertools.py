@@ -542,7 +542,6 @@ class RenderTool(object):
         if type(self.gl) is PILGL:
             self.gl.beginFrame()
 
-
         # self.gl.clf()
         # if oFigure is None:
         #    oFigure = self.gl.figure()
@@ -581,7 +580,6 @@ class RenderTool(object):
 
         # TODO: for MPL, we don't want to call clf (called by endframe)
         # if not show:
-
 
         if show and type(self.gl) is PILGL:
             self.gl.show()
