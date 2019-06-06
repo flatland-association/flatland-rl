@@ -13,16 +13,17 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import os
+import sys
+
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
 # relative to the documentation root, use os.path.abspath to make it
 # absolute, like shown here.
 #
 import flatland
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
 
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- General configuration ---------------------------------------------
 
@@ -78,14 +79,12 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
-
 # -- Options for HTML output -------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
-
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
@@ -98,12 +97,10 @@ html_theme = "sphinx_rtd_theme"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-
 # -- Options for HTMLHelp output ---------------------------------------
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'flatlanddoc'
-
 
 # -- Options for LaTeX output ------------------------------------------
 
@@ -134,7 +131,6 @@ latex_documents = [
      u'S.P. Mohanty', 'manual'),
 ]
 
-
 # -- Options for manual page output ------------------------------------
 
 # One entry per manual page. List of tuples
@@ -144,7 +140,6 @@ man_pages = [
      u'flatland Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output ----------------------------------------
 

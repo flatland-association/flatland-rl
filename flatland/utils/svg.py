@@ -1,8 +1,8 @@
-
+import copy
+import re
 
 import svgutils
-import re
-import copy
+
 from flatland.core.transitions import RailEnvTransitions
 
 
@@ -60,7 +60,7 @@ class SVG(object):
         sNewStyles = "\n"
         for sKey, sValue in self.dStyles.items():
             if sKey == style_name:
-                sValue = "fill:#" + "".join([('{:#04x}'.format(int(255.0*col))[2:4]) for col in color[0:3]]) + ";"
+                sValue = "fill:#" + "".join([('{:#04x}'.format(int(255.0 * col))[2:4]) for col in color[0:3]]) + ";"
             sNewStyle = "\t.st" + sKey + "{" + sValue + "}\n"
             sNewStyles += sNewStyle
 
@@ -111,6 +111,7 @@ class Track(object):
         The directions and images are also rotated by 90, 180 & 270 degrees.
         (There is some redundancy in this process, given the images provided)
     """
+
     def __init__(self):
         dFiles = {
             "": "Background_#9CCB89.svg",

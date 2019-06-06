@@ -1,10 +1,10 @@
 import random
 
+import numpy as np
+
+from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.rail_env import RailEnv
-from flatland.core.env_observation_builder import ObservationBuilder
-
-import numpy as np
 
 random.seed(100)
 np.random.seed(100)
@@ -18,7 +18,7 @@ class CustomObs(ObservationBuilder):
         return
 
     def get(self, handle):
-        observation = handle*np.ones((5,))
+        observation = handle * np.ones((5,))
         return observation
 
 

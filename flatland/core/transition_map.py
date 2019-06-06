@@ -297,8 +297,8 @@ class GridTransitionMap(TransitionMap):
                 self.grid = np.zeros((self.height, self.width), dtype=np.uint64)
 
             self.grid[0:min(self.height, new_height),
-                      0:min(self.width, new_width)] = new_grid[0:min(self.height, new_height),
-                                                               0:min(self.width, new_width)]
+            0:min(self.width, new_width)] = new_grid[0:min(self.height, new_height),
+                                            0:min(self.width, new_width)]
 
     def is_cell_valid(self, rcPos):
         cell_transition = self.grid[tuple(rcPos)]
@@ -336,8 +336,8 @@ class GridTransitionMap(TransitionMap):
         lnBinTrans = array([binTrans >> 8, binTrans & 0xff], dtype=np.uint8)  # 2 x uint8
         g2binTrans = np.unpackbits(lnBinTrans).reshape(4, 4)  # 4x4 x uint8 binary(0,1)
         # gDirIn = g2binTrans.any(axis=1)     # inbound directions as boolean array (4)
-        gDirOut = g2binTrans.any(axis=0)    # outbound directions as boolean array (4)
-        giDirOut = np.argwhere(gDirOut)[:, 0]   # valid outbound directions as array of int
+        gDirOut = g2binTrans.any(axis=0)  # outbound directions as boolean array (4)
+        giDirOut = np.argwhere(gDirOut)[:, 0]  # valid outbound directions as array of int
 
         # loop over available outbound directions (indices) for rcPos
         for iDirOut in giDirOut:

@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
 import os
-import webbrowser
 import subprocess
+import webbrowser
 from urllib.request import pathname2url
+
 
 def browser(pathname):
     webbrowser.open("file:" + pathname2url(os.path.abspath(pathname)))
+
 
 def remove_exists(filename):
     try:
