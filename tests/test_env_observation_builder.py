@@ -66,10 +66,7 @@ def test_global_obs():
                   obs_builder_object=GlobalObsForRailEnv())
 
     global_obs = env.reset()
-    # env_renderer = RenderTool(env)
-    # env_renderer.renderEnv(show=True)
 
-    # global_obs.reset()
     assert (global_obs[0][0].shape == rail_map.shape + (16,))
 
     rail_map_recons = np.zeros_like(rail_map)

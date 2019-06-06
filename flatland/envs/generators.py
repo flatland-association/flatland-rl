@@ -95,7 +95,6 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
                             for j in range(2):
                                 dist = distance_on_rail(sg_new[i], sg[j])
                                 if dist < 2:
-                                    # print("too close:", dist, sg_new[i], sg[j])
                                     return False
                     return True
 
@@ -105,18 +104,15 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
 
             if not all_ok:
                 # we can might as well give up at this point
-                # print("\n> Complex Rail Gen: Sanity counter reached, giving up!")
                 break
 
             new_path = connect_rail(rail_trans, rail_array, start, goal)
             if len(new_path) >= 2:
                 nr_created += 1
-                # print(":::: path: ", new_path)
                 start_goal.append([start, goal])
                 start_dir.append(mirror(get_direction(new_path[0], new_path[1])))
             else:
                 # after too many failures we will give up
-                # print("failed...")
                 created_sanity += 1
 
         # add extra connections between existing rail
@@ -138,9 +134,6 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
             new_path = connect_rail(rail_trans, rail_array, start, goal)
             if len(new_path) >= 2:
                 nr_created += 1
-
-        # print("\n> Complex Rail Gen: Created #", len(start_goal), "pairs and #", nr_created, "extra connections")
-        # print(start_goal)
 
         agents_position = [sg[0] for sg in start_goal[:num_agents]]
         agents_target = [sg[1] for sg in start_goal[:num_agents]]
@@ -351,7 +344,6 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
 
             num_insertions = 0
             while num_insertions < MAX_INSERTIONS and len(cells_to_fill) > 0:
-                # cell = random.sample(cells_to_fill, 1)[0]
                 cell = cells_to_fill[np.random.choice(len(cells_to_fill), 1)[0]]
                 cells_to_fill.remove(cell)
                 row = cell[0]

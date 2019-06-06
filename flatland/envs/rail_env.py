@@ -96,9 +96,6 @@ class RailEnv(Environment):
         self.width = width
         self.height = height
 
-        # use get_num_agents() instead
-        # self.number_of_agents = number_of_agents
-
         self.obs_builder = obs_builder_object
         self.obs_builder._set_env(self)
 
@@ -118,11 +115,7 @@ class RailEnv(Environment):
         self.obs_dict = {}
         self.rewards_dict = {}
         self.dev_obs_dict = {}
-        # self.agents_handles = list(range(self.number_of_agents))
 
-        # self.agents_position = []
-        # self.agents_target = []
-        # self.agents_direction = []
         self.agents = [None] * number_of_agents  # live agents
         self.agents_static = [None] * number_of_agents  # static agent information
         self.num_resets = 0
@@ -166,16 +159,12 @@ class RailEnv(Environment):
         if replace_agents:
             self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:4])
 
-        # Take the agent static info and put (live) agents at the start positions
-        # self.agents = EnvAgent.list_from_static(self.agents_static[:len(self.agents_handles)])
         self.restart_agents()
 
         self.num_resets += 1
 
-        # for handle in self.agents_handles:
-        #    self.dones[handle] = False
+        # TODO perhaps dones should be part of each agent.
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-        # perhaps dones should be part of each agent.
 
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
@@ -196,8 +185,6 @@ class RailEnv(Environment):
 
         # Reset the step rewards
         self.rewards_dict = dict()
-        # for handle in self.agents_handles:
-        #    self.rewards_dict[handle] = 0
         for iAgent in range(self.get_num_agents()):
             self.rewards_dict[iAgent] = 0
 
@@ -207,8 +194,6 @@ class RailEnv(Environment):
 
         # for i in range(len(self.agents_handles)):
         for iAgent in range(self.get_num_agents()):
-            # handle = self.agents_handles[i]
-            transition_isValid = None
             agent = self.agents[iAgent]
 
             if iAgent not in action_dict:  # no action has been supplied for this agent
@@ -219,8 +204,6 @@ class RailEnv(Environment):
                     action_dict[iAgent] = RailEnvActions.DO_NOTHING
 
             if self.dones[iAgent]:  # this agent has already completed...
-                # print("rail_env.py @", currentframe().f_back.f_lineno, " agent ", iAgent,
-                #       "has already completed : why action will not be executed!!!!? ADRIAN")
                 continue
             action = action_dict[iAgent]
 
@@ -275,22 +258,12 @@ class RailEnv(Environment):
                         # the action was not valid, add penalty
                         self.rewards_dict[iAgent] += invalid_action_penalty
 
-            # if agent is not in target position, add step penalty
-            # if self.agents_position[i][0] == self.agents_target[i][0] and \
-            #        self.agents_position[i][1] == self.agents_target[i][1]:
-            #    self.dones[handle] = True
             if np.equal(agent.position, agent.target).all():
                 self.dones[iAgent] = True
             else:
                 self.rewards_dict[iAgent] += step_penalty
 
         # Check for end of episode + add global reward to all rewards!
-        # num_agents_in_target_position = 0
-        # for i in range(self.number_of_agents):
-        #    if self.agents_position[i][0] == self.agents_target[i][0] and \
-        #            self.agents_position[i][1] == self.agents_target[i][1]:
-        #        num_agents_in_target_position += 1
-        # if num_agents_in_target_position == self.number_of_agents:
         if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
             self.dones["__all__"] = True
             self.rewards_dict = [0 * r + global_reward for r in self.rewards_dict]
@@ -301,8 +274,6 @@ class RailEnv(Environment):
         return self._get_observations(), self.rewards_dict, self.dones, {}
 
     def _check_action_on_agent(self, action, agent):
-        # pos = agent.position #  self.agents_position[i]
-        # direction = agent.direction # self.agents_direction[i]
         # compute number of possible transitions in the current
         # cell used to check for invalid actions
         new_direction, transition_isValid = self.check_action(agent, action)
@@ -311,13 +282,6 @@ class RailEnv(Environment):
         # 1) transition allows the new_direction in the cell,
         # 2) the new cell is not empty (case 0),
         # 3) the cell is free, i.e., no agent is currently in that cell
-        # if (
-        #        new_position[1] >= self.width or
-        #        new_position[0] >= self.height or
-        #        new_position[0] < 0 or new_position[1] < 0):
-        #    new_cell_isValid = False
-        # if self.rail.get_transitions(new_position) == 0:
-        #     new_cell_isValid = False
         new_cell_isValid = (
             np.array_equal(  # Check the new position is still in the grid
                 new_position,
@@ -329,11 +293,6 @@ class RailEnv(Environment):
             transition_isValid = self.rail.get_transition(
                 (*agent.position, agent.direction),
                 new_direction)
-        # cell_isFree = True
-        # for j in range(self.number_of_agents):
-        #    if self.agents_position[j] == new_position:
-        #        cell_isFree = False
-        #        break
         # Check the new position is not the same as any of the existing agent positions
         # (including itself, for simplicity, since it is moving)
         cell_isFree = not np.any(
@@ -351,7 +310,6 @@ class RailEnv(Environment):
         num_transitions = np.count_nonzero(possible_transitions)
 
         new_direction = agent.direction
-        # print(nbits,np.sum(possible_transitions))
         if action == RailEnvActions.MOVE_LEFT:
             new_direction = agent.direction - 1
             if num_transitions <= 1:
@@ -376,7 +334,6 @@ class RailEnv(Environment):
     def _get_observations(self):
         self.obs_dict = {}
         self.debug_obs_dict = {}
-        # for handle in self.agents_handles:
         for iAgent in range(self.get_num_agents()):
             self.obs_dict[iAgent] = self.obs_builder.get(iAgent)
         return self.obs_dict
@@ -421,7 +378,6 @@ class RailEnv(Environment):
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
         self.rail.width = self.width
-        # self.agents = [None] * self.get_num_agents()
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
 
     def save(self, filename):

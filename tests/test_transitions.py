@@ -59,10 +59,11 @@ def test_adding_new_valid_transition():
 def test_valid_railenv_transitions():
     rail_env_trans = RailEnvTransitions()
 
-    # dir_map = {'N': 0,
-    #            'E': 1,
-    #            'S': 2,
-    #            'W': 3}
+    # directions:
+    #            'N': 0
+    #            'E': 1
+    #            'S': 2
+    #            'W': 3
 
     for i in range(2):
         assert (rail_env_trans.get_transitions(

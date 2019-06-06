@@ -22,12 +22,6 @@ class RenderTool(object):
     xyHalf = array([nPixHalf, -nPixHalf])
     grc2xy = array([[0, -nPixCell], [nPixCell, 0]])
     gGrid = array(np.meshgrid(np.arange(10), -np.arange(10))) * array([[[nPixCell]], [[nPixCell]]])
-    # xyPixHalf = xr.DataArray([nPixHalf, -nPixHalf],
-    #                         dims="xy",
-    #                         coords={"xy": ["x", "y"]})
-    # gCentres = xr.DataArray(gGrid,
-    #                        dims=["xy", "p1", "p2"],
-    #                        coords={"xy": ["x", "y"]}) + xyPixHalf
     gTheta = np.linspace(0, np.pi / 2, 5)
     gArc = array([np.cos(gTheta), np.sin(gTheta)]).T  # from [1,0] to [0,1]
 
@@ -107,13 +101,10 @@ class RenderTool(object):
 
         # HACK: workaround dead-end transitions
         if len(giTrans) == 0:
-            # print("Dead End", rcPos, iDir, tbTrans, giTrans)
             iDirReverse = (iDir + 2) % 4
             tbTrans = tuple(int(iDir2 == iDirReverse) for iDir2 in range(4))
             giTrans = np.where(tbTrans)[0]  # RC list of transitions
-            # print("Dead End2", rcPos, iDirReverse, tbTrans, giTrans)
 
-        # print("agent", array(list("NESW"))[giTrans], self.gTransRC[giTrans])
         gTransRCAg = self.__class__.gTransRC[giTrans]
 
         if bgiTrans:
@@ -138,7 +129,6 @@ class RenderTool(object):
 
         color = color
 
-        # print("Agent:", rcPos, iDir, rcDir, xyDir, xyPos)
         self.gl.scatter(*xyPos, color=color, layer=1, marker="o", s=100)  # agent location
         xyDirLine = array([xyPos, xyPos + xyDir / 2]).T  # line for agent orient.
         self.gl.plot(*xyDirLine, color=color, layer=1, lw=5, ms=0, alpha=0.6)
@@ -177,7 +167,6 @@ class RenderTool(object):
         iDepth = 0
         visited = set()
         lVisits = []
-        # stack = [ (rcPos,iDir,nDepth) ]
         stack = [rt.Visit(rcPos, iDir, iDepth, None)]
         while stack:
             visit = stack.pop(iPos)
@@ -189,20 +178,15 @@ class RenderTool(object):
             if rcd not in visited:
                 visited.add(rcd)
 
-                # moves = self._get_valid_transitions( node[0], node[1] )
                 gTransRCAg, giTrans = self.getTransRC(visit.rc,
                                                       visit.iDir,
                                                       bgiTrans=True)
-                # nodePos = node[0]
-
                 # enqueue the next nodes (ie transitions from this node)
                 for gTransRC2, iTrans in zip(gTransRCAg, giTrans):
-                    # print("Trans:", gTransRC2)
                     visitNext = rt.Visit(tuple(visit.rc + gTransRC2),
                                          iTrans,
                                          visit.iDepth + 1,
                                          visit)
-                    # print("node2: ", node2)
                     stack.append(visitNext)
 
                 # plot the available transitions from this node
@@ -234,24 +218,19 @@ class RenderTool(object):
                 iPos += 1
 
             rDist = np.linalg.norm(array(visit.rc) - array(xyTarg))
-            # sDist = "%.1f" % rDist
 
             xLoc = rDist + visit.iDir / 4
 
             # point labelled with distance
             self.gl.scatter(xLoc, visit.iDepth, color="k", s=2)
-            # plt.text(xLoc, visit.iDepth, sDist, color="k", rotation=45)
             self.gl.text(xLoc, visit.iDepth, visit.rc, color="k", rotation=45)
 
             # if len(dPos)>1:
             if visit.prev:
-                # print(dPos)
-                # print(tNodeDepth)
                 xLocPrev = dPos[visit.prev.rc]
 
                 rDistPrev = np.linalg.norm(array(visit.prev.rc) -
                                            array(xyTarg))
-                # sDist = "%.1f" % rDistPrev
 
                 xLocPrev = rDistPrev + visit.prev.iDir / 4
 
@@ -275,9 +254,7 @@ class RenderTool(object):
                                  color="r", alpha=0.5, lw=2)
                 xLocPrev = xLoc
                 visit = visit.prev
-            # prev = prev.prev
 
-        # self.gl.xticks(range(7)); self.gl.yticks(range(11))
         self.gl.prettify()
         return visitDest
 
@@ -407,10 +384,7 @@ class RenderTool(object):
         """
         rt = self.__class__
 
-        # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
-
         for agent in agent_handles:
-            # color = cmap(agent)
             color = self.gl.getAgentColor(agent)
             for visited_cell in observation_dict[agent]:
                 cell_coord = array(visited_cell[:2])
@@ -472,19 +446,14 @@ class RenderTool(object):
                 bDeadEnd = nbits == 1
 
                 if not bCellValid:
-                    # print("invalid:", r, c)
                     self.gl.scatter(*xyCentre, color="r", s=30)
 
                 for orientation in range(4):  # ori is where we're heading
                     from_ori = (orientation + 2) % 4  # 0123=NESW -> 2301=SWNE
                     from_xy = coords[from_ori]
 
-                    # renderer.push()
-                    # renderer.translate(c * CELL_PIXELS, r * CELL_PIXELS)
-
                     tMoves = env.rail.get_transitions((r, c, orientation))
 
-                    # to_ori = (orientation + 2) % 4
                     for to_ori in range(4):
                         to_xy = coords[to_ori]
                         rotation = (to_ori - from_ori) % 4
@@ -540,10 +509,6 @@ class RenderTool(object):
 
         if type(self.gl) is PILGL:
             self.gl.beginFrame()
-
-        # self.gl.clf()
-        # if oFigure is None:
-        #    oFigure = self.gl.figure()
 
         env = self.env
 
@@ -604,9 +569,7 @@ class RenderTool(object):
         nDepth = 2
         for i in range(nDepth):
             nDepthNodes = nBranchFactor ** i
-            # rScale = nBranchFactor ** (nDepth - i)
             rShrinkDepth = 1 / (i + 1)
-            # gX1 = np.linspace(-nDepthNodes / 2, nDepthNodes / 2, nDepthNodes) * rShrinkDepth
 
             gX1 = np.linspace(-(nDepthNodes - 1), (nDepthNodes - 1), nDepthNodes) * rShrinkDepth
             gY1 = np.ones((nDepthNodes)) * i
@@ -620,7 +583,6 @@ class RenderTool(object):
                 giP0 = np.repeat(np.arange(nDepthNodesPrev), nBranchFactor)
                 giP1 = np.arange(0, nDepthNodes) + nDepthNodesPrev
                 giLinePoints = np.stack([giP0, giP1]).ravel("F")
-                # print(gP01[:,:10])
                 self.gl.plot(gP01[0], -gP01[1], lines=giLinePoints, color="gray")
 
             gP0 = array([gX1, gY1, gZ1])
@@ -684,7 +646,6 @@ class RenderTool(object):
                 old_direction = agent.direction
 
             # setAgentAt uses the agent index for the color
-            # cmap = self.gl.get_cmap('hsv', lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
             self.gl.setAgentAt(iAgent, *position, old_direction, direction, iSelectedAgent == iAgent)
 
         if show_observations:

@@ -82,17 +82,13 @@ def test_rail_environment_single_agent():
         _ = rail_env.reset()
 
         # We do not care about target for the moment
-        # rail_env.agents_target[0] = [-1, -1]
         agent = rail_env.agents[0]
-        # rail_env.agents[0].target = [-1, -1]
         agent.target = [-1, -1]
 
         # Check that trains are always initialized at a consistent position
         # or direction.
         # They should always be able to go somewhere.
         assert (transitions.get_transitions(
-            # rail_map[rail_env.agents_position[0]],
-            # rail_env.agents_direction[0]) != (0, 0, 0, 0))
             rail_map[agent.position],
             agent.direction) != (0, 0, 0, 0))
 
@@ -165,7 +161,6 @@ def test_dead_end():
         # TODO: GIACOMO: this is deprecated and should be updated; thenew behavior is that agents keep moving
         # until they are manually stopped.
         for i in range(7):
-            # prev_pos = rail_env.agents_position[0]
             prev_pos = rail_env.agents[0].position
 
             # The train cannot turn, so we check that when it tries,
@@ -182,21 +177,12 @@ def test_dead_end():
 
     # We try the configuration in the 4 directions:
     rail_env.reset()
-    # rail_env.agents_target[0] = (0, 0)
-    # rail_env.agents_position[0] = (0, 2)
-    # rail_env.agents_direction[0] = 1
     rail_env.agents = [EnvAgent(position=(0, 2), direction=1, target=(0, 0), moving=False)]
-    # check_consistency(rail_env)
 
     rail_env.reset()
-    # rail_env.agents_target[0] = (0, 4)
-    # rail_env.agents_position[0] = (0, 2)
-    # rail_env.agents_direction[0] = 3
     rail_env.agents = [EnvAgent(position=(0, 2), direction=3, target=(0, 4), moving=False)]
-    # check_consistency(rail_env)
 
     # In the vertical configuration:
-
     rail_map = np.array(
         [[dead_end_from_south]] + [[straight_vertical]] * 3 +
         [[transitions.rotate_transition(dead_end_from_south, 180)]],
@@ -214,18 +200,10 @@ def test_dead_end():
                        obs_builder_object=GlobalObsForRailEnv())
 
     rail_env.reset()
-    # rail_env.agents_target[0] = (0, 0)
-    # rail_env.agents_position[0] = (2, 0)
-    # rail_env.agents_direction[0] = 2
     rail_env.agents = [EnvAgent(position=(2, 0), direction=2, target=(0, 0), moving=False)]
-    # check_consistency(rail_env)
 
     rail_env.reset()
-    # rail_env.agents_target[0] = (4, 0)
-    # rail_env.agents_position[0] = (2, 0)
-    # rail_env.agents_direction[0] = 0
     rail_env.agents = [EnvAgent(position=(2, 0), direction=0, target=(4, 0), moving=False)]
-    # check_consistency(rail_env)
 
 
 if __name__ == "__main__":

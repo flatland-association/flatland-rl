@@ -37,14 +37,9 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                     4))
         self.max_dist = np.zeros(nAgents)
 
-        # for i in range(nAgents):
-        #     self.max_dist[i] = self._distance_map_walker(self.env.agents_target[i], i)
         self.max_dist = [self._distance_map_walker(agent.target, i) for i, agent in enumerate(agents)]
 
         # Update local lookup table for all agents' target locations
-        self.location_has_target = {}
-        # for loc in self.env.agents_target:
-        #    self.location_has_target[(loc[0], loc[1])] = 1
         self.location_has_target = {tuple(agent.target): 1 for agent in agents}
 
     def _distance_map_walker(self, position, target_nr):
@@ -57,7 +52,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.distance_map[target_nr, position[0], position[1], :] = 0
 
         # Fill in the (up to) 4 neighboring nodes
-        # nodes_queue = []  # list of tuples (row, col, direction, distance);
         # direction is the direction of movement, meaning that at least a possible orientation of an agent
         # in cell (row,col) allows a movement in direction `direction'
         nodes_queue = deque(self._get_and_update_neighbors(position, target_nr, 0, enforce_target_direction=-1))
@@ -200,9 +194,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         """
 
         # Update local lookup table for all agents' positions
-        # self.location_has_agent = {}
-        # for loc in self.env.agents_position:
-        #    self.location_has_agent[(loc[0], loc[1])] = 1
         self.location_has_agent = {tuple(agent.position): 1 for agent in self.env.agents}
         if handle > len(self.env.agents):
             print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
@@ -259,8 +250,6 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         visited = set()
 
-        # other_agent_encountered = False
-        # other_target_encountered = False
         other_agent_encountered = np.inf
         other_target_encountered = np.inf
 
@@ -271,12 +260,10 @@ class TreeObsForRailEnv(ObservationBuilder):
             # Modify here to compute any useful data required to build the end node's features. This code is called
             # for each cell visited between the previous branching node and the next switch / target / dead-end.
             if position in self.location_has_agent:
-                # other_agent_encountered = True
                 if num_steps < other_agent_encountered:
                     other_agent_encountered = num_steps
 
             if position in self.location_has_target:
-                # other_target_encountered = True
                 if num_steps < other_target_encountered:
                     other_target_encountered = num_steps
             # #############################
@@ -519,12 +506,6 @@ class GlobalObsForRailEnv(ObservationBuilder):
                 bitlist = [int(digit) for digit in bin(self.env.rail.get_transitions((i, j)))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i, j] = np.array(bitlist)
-                # self.rail_obs[i, j] = np.array(
-                #     list(f'{self.env.rail.get_transitions((i, j)):016b}')).astype(int)
-
-        # self.targets = np.zeros(self.env.height, self.env.width)
-        # for target_pos in self.env.agents_target:
-        #     self.targets[target_pos] += 1
 
     def get(self, handle):
         obs_targets = np.zeros((self.env.height, self.env.width, 2))
@@ -583,12 +564,6 @@ class GlobalObsForRailEnvDirectionDependent(ObservationBuilder):
                 bitlist = [int(digit) for digit in bin(self.env.rail.get_transitions((i, j)))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i, j] = np.array(bitlist)
-                # self.rail_obs[i, j] = np.array(
-                #     list(f'{self.env.rail.get_transitions((i, j)):016b}')).astype(int)
-
-        # self.targets = np.zeros(self.env.height, self.env.width)
-        # for target_pos in self.env.agents_target:
-        #     self.targets[target_pos] += 1
 
     def get(self, handle):
         obs_targets = np.zeros((self.env.height, self.env.width, 2))
@@ -666,11 +641,6 @@ class LocalObsForRailEnv(ObservationBuilder):
     def get(self, handle):
         agents = self.env.agents
         agent = agents[handle]
-
-        # left_offset = max(0, agent.position[1] - 1 - self.view_radius)
-        # right_offset = min(self.env.width, agent.position[1] + 1 + self.view_radius)
-        # top_offset = max(0, agent.position[0] - 1 - self.view_radius)
-        # bottom_offset = min(0, agent.position[0] + 1 + self.view_radius)
 
         local_rail_obs = self.rail_obs[agent.position[0]: agent.position[0] + 2 * self.view_radius + 1,
                          agent.position[1]:agent.position[1] + 2 * self.view_radius + 1]
