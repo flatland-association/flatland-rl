@@ -199,7 +199,8 @@ class RailEnv(Environment):
             if iAgent not in action_dict:  # no action has been supplied for this agent
                 if agent.moving:
                     # Keep moving
-                    action_dict[iAgent] = RailEnvActions.MOVE_FORWARD
+                    # CHange MOVE_FORWARD to DO_NOTHING
+                    action_dict[iAgent] = RailEnvActions.DO_NOTHING
                 else:
                     action_dict[iAgent] = RailEnvActions.DO_NOTHING
 
@@ -214,12 +215,14 @@ class RailEnv(Environment):
 
             if action == RailEnvActions.DO_NOTHING and agent.moving:
                 # Keep moving
-                action_dict[iAgent] = RailEnvActions.MOVE_FORWARD
+                # Changed MOVE_FORWARD to DO_NOTHING
+                action_dict[iAgent] = RailEnvActions.DO_NOTHING
                 action = RailEnvActions.MOVE_FORWARD
 
             if action == RailEnvActions.STOP_MOVING and agent.moving:
-                action_dict[iAgent] = RailEnvActions.DO_NOTHING
-                action = RailEnvActions.DO_NOTHING
+                #action_dict[iAgent] = RailEnvActions.DO_NOTHING
+                # CHanged DO_NOTHING to STOP_MOVING
+                action = RailEnvActions.STOP_MOVING
                 agent.moving = False
                 self.rewards_dict[iAgent] += stop_penalty
 
