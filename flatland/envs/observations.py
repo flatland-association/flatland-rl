@@ -489,7 +489,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             depth += 1
             pow4 *= 4
         child_size = (len(tree) - num_features_per_node) // 4
-        tree_data = tree[0:num_features_per_node - 1].tolist()
+        tree_data = tree[0:num_features_per_node - 3].tolist()
         distance_data = [tree[num_features_per_node - 3]]
         agent_data = tree[-2:].tolist()
         for children in range(4):
