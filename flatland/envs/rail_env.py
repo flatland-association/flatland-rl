@@ -214,22 +214,14 @@ class RailEnv(Environment):
 
             if action == RailEnvActions.DO_NOTHING and agent.moving:
                 # Keep moving
-                # Changed MOVE_FORWARD to DO_NOTHING
-                #action_dict[iAgent] = RailEnvActions.DO_NOTHING
                 action = RailEnvActions.MOVE_FORWARD
 
             if action == RailEnvActions.STOP_MOVING and agent.moving:
-                #action_dict[iAgent] = RailEnvActions.DO_NOTHING
-                # CHanged DO_NOTHING to STOP_MOVING
-                # action = RailEnvActions.STOP_MOVING
                 agent.moving = False
                 self.rewards_dict[iAgent] += stop_penalty
 
             if not agent.moving and action == RailEnvActions.MOVE_FORWARD:
                 # Only allow agent to start moving by pressing forward.
-                #(action == RailEnvActions.MOVE_LEFT or
-                # action == RailEnvActions.MOVE_FORWARD or
-                # action == RailEnvActions.MOVE_RIGHT):
                 agent.moving = True
                 self.rewards_dict[iAgent] += start_penalty
 
