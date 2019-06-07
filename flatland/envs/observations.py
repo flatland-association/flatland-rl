@@ -479,7 +479,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         """
 
         if len(tree) < num_features_per_node:
-            return [], []
+            return [], [], []
 
         depth = 0
         tmp = len(tree) / num_features_per_node - 1
