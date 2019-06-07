@@ -215,21 +215,14 @@ class RailEnv(Environment):
 
             if action == RailEnvActions.DO_NOTHING and agent.moving:
                 # Keep moving
-                # Changed MOVE_FORWARD to DO_NOTHING
-                # action_dict[iAgent] = RailEnvActions.DO_NOTHING
                 action = RailEnvActions.MOVE_FORWARD
 
             if action == RailEnvActions.STOP_MOVING and agent.moving:
-                # action_dict[iAgent] = RailEnvActions.DO_NOTHING
-                # CHanged DO_NOTHING to STOP_MOVING
-                # action = RailEnvActions.STOP_MOVING
                 agent.moving = False
                 self.rewards_dict[iAgent] += stop_penalty
 
-            if not agent.moving and \
-                (action == RailEnvActions.MOVE_LEFT or
-                 action == RailEnvActions.MOVE_FORWARD or
-                 action == RailEnvActions.MOVE_RIGHT):
+            if not agent.moving and action == RailEnvActions.MOVE_FORWARD:
+                # Only allow agent to start moving by pressing forward.
                 agent.moving = True
                 self.rewards_dict[iAgent] += start_penalty
 
@@ -244,7 +237,7 @@ class RailEnv(Environment):
                 else:
                     # Logic: if the chosen action is invalid,
                     # and it was LEFT or RIGHT, and the agent was moving, then keep moving FORWARD.
-                    if action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_RIGHT and agent.moving:
+                    if (action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_RIGHT) and agent.moving:
                         cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
                             self._check_action_on_agent(RailEnvActions.MOVE_FORWARD, agent)
 
