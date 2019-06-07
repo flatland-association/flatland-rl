@@ -216,11 +216,11 @@ class RailEnv(Environment):
             if action == RailEnvActions.DO_NOTHING and agent.moving:
                 # Keep moving
                 # Changed MOVE_FORWARD to DO_NOTHING
-                #action_dict[iAgent] = RailEnvActions.DO_NOTHING
+                # action_dict[iAgent] = RailEnvActions.DO_NOTHING
                 action = RailEnvActions.MOVE_FORWARD
 
             if action == RailEnvActions.STOP_MOVING and agent.moving:
-                #action_dict[iAgent] = RailEnvActions.DO_NOTHING
+                # action_dict[iAgent] = RailEnvActions.DO_NOTHING
                 # CHanged DO_NOTHING to STOP_MOVING
                 # action = RailEnvActions.STOP_MOVING
                 agent.moving = False
@@ -391,3 +391,8 @@ class RailEnv(Environment):
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
             self.set_full_state_msg(load_data)
+
+    def load_resource(self, package, resource):
+        from importlib_resources import read_binary
+        load_data = read_binary(package, resource)
+        self.set_full_state_msg(load_data)
