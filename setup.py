@@ -39,7 +39,7 @@ if os.name == 'nt':
     try:
         import pycairo
     except:
-        call_cmd = "pip install --user " + url
+        call_cmd = "pip install " + url
         os.system(call_cmd)
 
         import site
