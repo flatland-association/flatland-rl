@@ -25,7 +25,6 @@ class RailEnvActions(IntEnum):
     MOVE_RIGHT = 3
     STOP_MOVING = 4
 
-
 class RailEnv(Environment):
     """
     RailEnv environment class.
