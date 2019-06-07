@@ -266,7 +266,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         other_agent_same_direction = 0
         other_agent_opposite_direction = 0
 
-
         num_steps = 1
         while exploring:
             # #############################
@@ -377,7 +376,6 @@ class TreeObsForRailEnv(ObservationBuilder):
                            other_agent_opposite_direction
                            ]
         """
-
 
         if last_isTarget:
             observation = [0,
