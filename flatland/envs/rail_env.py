@@ -221,7 +221,7 @@ class RailEnv(Environment):
                 agent.moving = False
                 self.rewards_dict[iAgent] += stop_penalty
 
-            if not agent.moving and action == RailEnvActions.MOVE_FORWARD:
+            if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                 # Only allow agent to start moving by pressing forward.
                 agent.moving = True
                 self.rewards_dict[iAgent] += start_penalty
