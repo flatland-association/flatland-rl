@@ -7,8 +7,8 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
 
-random.seed(10)
-np.random.seed(10)
+random.seed(1)
+np.random.seed(1)
 
 env = RailEnv(width=7,
               height=7,
@@ -19,9 +19,10 @@ env = RailEnv(width=7,
 # Print the observation vector for agent 0
 obs, all_rewards, done, _ = env.step({0: 0})
 for i in range(env.get_num_agents()):
-    env.obs_builder.util_print_obs_subtree(tree=obs[i], num_features_per_node=5)
+    env.obs_builder.util_print_obs_subtree(tree=obs[i], num_features_per_node=7)
 
 env_renderer = RenderTool(env, gl="PIL")
+env_renderer.renderEnv(show=True, frames=True)
 env_renderer.renderEnv(show=True, frames=True)
 
 print("Manual control: s=perform step, q=quit, [agent id] [1-2-3 action] \

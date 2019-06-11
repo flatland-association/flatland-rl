@@ -173,7 +173,9 @@ class RailEnv(Environment):
         # Return the new observation vectors for each agent
         return self._get_observations()
 
-    def step(self, action_dict):
+    def step(self, action_dict_):
+        action_dict = action_dict_.copy()
+
         alpha = 1.0
         beta = 1.0
 
@@ -221,7 +223,7 @@ class RailEnv(Environment):
                 agent.moving = False
                 self.rewards_dict[iAgent] += stop_penalty
 
-            if not agent.moving and action == RailEnvActions.MOVE_FORWARD:
+            if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                 # Only allow agent to start moving by pressing forward.
                 agent.moving = True
                 self.rewards_dict[iAgent] += start_penalty

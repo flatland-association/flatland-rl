@@ -31,19 +31,32 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.location_has_agent = {}
         self.location_has_agent_direction = {}
 
+        self.agents_previous_reset = None
+
     def reset(self):
         agents = self.env.agents
         nAgents = len(agents)
-        self.distance_map = np.inf * np.ones(shape=(nAgents,  # self.env.number_of_agents,
-                                                    self.env.height,
-                                                    self.env.width,
-                                                    4))
-        self.max_dist = np.zeros(nAgents)
 
-        self.max_dist = [self._distance_map_walker(agent.target, i) for i, agent in enumerate(agents)]
+        compute_distance_map = True
+        if self.agents_previous_reset is not None:
+            if nAgents == len(self.agents_previous_reset):
+                compute_distance_map = False
+                for i in range(nAgents):
+                    if agents[i].target != self.agents_previous_reset[i].target:
+                        compute_distance_map = True
+        self.agents_previous_reset = agents
 
-        # Update local lookup table for all agents' target locations
-        self.location_has_target = {tuple(agent.target): 1 for agent in agents}
+        if compute_distance_map:
+            self.distance_map = np.inf * np.ones(shape=(nAgents,  # self.env.number_of_agents,
+                                                        self.env.height,
+                                                        self.env.width,
+                                                        4))
+            self.max_dist = np.zeros(nAgents)
+
+            self.max_dist = [self._distance_map_walker(agent.target, i) for i, agent in enumerate(agents)]
+
+            # Update local lookup table for all agents' target locations
+            self.location_has_target = {tuple(agent.target): 1 for agent in agents}
 
     def _distance_map_walker(self, position, target_nr):
         """
