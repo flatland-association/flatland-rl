@@ -234,8 +234,9 @@ class TreeObsForRailEnv(ObservationBuilder):
         # If only one transition is possible, the tree is oriented with this transition as the forward branch.
         # TODO: Test if this works as desired!
         orientation = agent.direction
+
         if num_transitions == 1:
-            orientation == np.argmax(possible_transitions)
+            orientation = np.argmax(possible_transitions)
 
         for branch_direction in [(orientation + i) % 4 for i in range(-1, 3)]:
             if possible_transitions[branch_direction]:
