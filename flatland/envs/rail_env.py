@@ -173,7 +173,9 @@ class RailEnv(Environment):
         # Return the new observation vectors for each agent
         return self._get_observations()
 
-    def step(self, action_dict):
+    def step(self, action_dict_):
+        action_dict = action_dict_.copy()
+
         alpha = 1.0
         beta = 1.0
 

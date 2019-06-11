@@ -20,5 +20,6 @@ env.reset()
 
 env_renderer = RenderTool(env, gl="PILSVG")
 env_renderer.renderEnv(show=True)
+env_renderer.renderEnv(show=True)
 
 input("Press Enter to continue...")
