@@ -65,7 +65,7 @@ def test_predictions():
                   rail_generator=rail_from_GridTransitionMap_generator(rail),
                   number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv(),
-                  prediction_builder_object=DummyPredictorForRailEnv(max_depth=20)
+                  prediction_builder_object=DummyPredictorForRailEnv(max_depth=10)
                   )
 
     env.reset()
@@ -73,6 +73,7 @@ def test_predictions():
     # set initial position and direction for testing...
     env.agents[0].position = (5, 6)
     env.agents[0].direction = 0
+    env.agents[0].target = (3., 0.)
 
     predictions = env.predict()
     positions = np.array(list(map(lambda prediction: [prediction[1], prediction[2]], predictions[0])))
@@ -89,18 +90,11 @@ def test_predictions():
                                    [3., 3.],
                                    [3., 2.],
                                    [3., 1.],
+                                   # at target (3,0): stay in this position from here on
                                    [3., 0.],
-                                   [3., 1.],
-                                   [3., 2.],
-                                   [3., 3.],
-                                   [3., 4.],
-                                   [3., 5.],
-                                   [3., 6.],
-                                   [3., 7.],
-                                   [3., 8.],
-                                   [3., 9.],
-                                   [3., 8.],
-                                   [3., 7.]])
+                                   [3., 0.],
+                                   [3., 0.],
+                                   ])
     expected_directions = np.array([[0.],
                                     [0.],
                                     [0.],
@@ -109,18 +103,11 @@ def test_predictions():
                                     [3.],
                                     [3.],
                                     [3.],
+                                    # at target (3,0): stay in this position from here on
                                     [3.],
-                                    [1.],
-                                    [1.],
-                                    [1.],
-                                    [1.],
-                                    [1.],
-                                    [1.],
-                                    [1.],
-                                    [1.],
-                                    [1.],
                                     [3.],
-                                    [3.]])
+                                    [3.]
+                                    ])
     expected_time_offsets = np.array([[0.],
                                       [1.],
                                       [2.],
@@ -132,15 +119,7 @@ def test_predictions():
                                       [8.],
                                       [9.],
                                       [10.],
-                                      [11.],
-                                      [12.],
-                                      [13.],
-                                      [14.],
-                                      [15.],
-                                      [16.],
-                                      [17.],
-                                      [18.],
-                                      [19.]])
+                                      ])
     expected_actions = np.array([[0.],
                                  [2.],
                                  [2.],
@@ -149,18 +128,12 @@ def test_predictions():
                                  [2.],
                                  [2.],
                                  [2.],
+                                 # reaching target by straight
                                  [2.],
-                                 [2.],
-                                 [2.],
-                                 [2.],
-                                 [2.],
-                                 [2.],
-                                 [2.],
-                                 [2.],
-                                 [2.],
-                                 [2.],
-                                 [2.],
-                                 [2.]])
+                                 # at target: stopped moving
+                                 [4.],
+                                 [4.],
+                                 ])
     assert np.array_equal(positions, expected_positions)
     assert np.array_equal(directions, expected_directions)
     assert np.array_equal(time_offsets, expected_time_offsets)
