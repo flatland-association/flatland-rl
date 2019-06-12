@@ -53,17 +53,9 @@ class Scenario_Generator:
         return env
 
     @staticmethod
-    def load_scenario(resource, package='env-data.railway', number_of_agents=3):
+    def load_scenario(resource, package='env_data.railway', number_of_agents=3):
         env = RailEnv(width=2 * (1 + number_of_agents),
                       height=1 + number_of_agents)
-
-        """
-        env = RailEnv(width=20,
-                      height=20,
-                      rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
-                          [filename,
-                      number_of_agents=number_of_agents)
-        """
         env.load_resource(package, resource)
         env.reset(False, False)
 

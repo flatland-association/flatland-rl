@@ -214,47 +214,6 @@ def rail_from_GridTransitionMap_generator(rail_map):
     return generator
 
 
-def rail_from_list_of_saved_GridTransitionMap_generator(list_of_filenames):
-    """
-    Utility to sequentially and cyclically return GridTransitionMap-s from a list of files, on each environment reset.
-
-    Parameters
-    -------
-    list_of_filenames : list
-        List of filenames with the saved grids to load.
-
-    Returns
-    -------
-    function
-        Generator function that always returns the given `rail_map' object.
-    """
-
-    def generator(width, height, num_agents, num_resets=0):
-        t_utils = RailEnvTransitions()
-        rail_map = GridTransitionMap(width=width, height=height, transitions=t_utils)
-        rail_map.load_transition_map(list_of_filenames[num_resets % len(list_of_filenames)], override_gridsize=False)
-
-        if rail_map.grid.dtype == np.uint64:
-            rail_map.transitions = Grid8Transitions()
-
-        agents_position, agents_direction, agents_target = get_rnd_agents_pos_tgt_dir_on_rail(
-            rail_map,
-            num_agents)
-
-        return rail_map, agents_position, agents_direction, agents_target
-
-    return generator
-
-
-"""
-def generate_rail_from_list_of_manual_specifications(list_of_specifications)
-    def generator(width, height, num_resets=0):
-        return generate_rail_from_manual_specifications(list_of_specifications)
-
-    return generator
-"""
-
-
 def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
     """
     Dummy random level generator:
