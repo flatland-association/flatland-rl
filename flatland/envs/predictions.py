@@ -18,7 +18,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
 
     def get(self, handle=None):
         """
-        Called whenever step_prediction is called on the environment.
+        Called whenever predict is called on the environment.
 
         Parameters
         -------

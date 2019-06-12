@@ -29,7 +29,7 @@ class PredictionBuilder:
 
     def get(self, handle=0):
         """
-        Called whenever step_prediction is called on the environment.
+        Called whenever predict is called on the environment.
 
         Parameters
         -------
