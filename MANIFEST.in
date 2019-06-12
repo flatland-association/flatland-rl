@@ -4,6 +4,7 @@ include HISTORY.rst
 include LICENSE
 include README.rst
 include requirements_dev.txt
+include requirements_continuous_integration.txt
 
 
 
