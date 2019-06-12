@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 23.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Ebene_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 240 240" style="enable-background:new 0 0 240 240;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;}
+	.st1{fill:#978679;}
+	.st2{fill:#3D3D3D;}
+	.st3{fill:#D9D9D9;}
+</style>
+<g>
+	<rect y="0" class="st0" width="240" height="240"/>
+</g>
+<g>
+	<rect x="70" y="10" class="st1" width="100" height="20"/>
+	<rect x="70" y="210" class="st1" width="100" height="20"/>
+	<rect x="70" y="170" class="st1" width="100" height="20"/>
+	<rect x="70" y="130" class="st1" width="100" height="20"/>
+	<rect x="70" y="90" class="st1" width="100" height="20"/>
+	<rect x="70" y="50" class="st1" width="100" height="20"/>
+</g>
+<g>
+	<rect x="79.01" class="st2" width="9.98" height="240"/>
+	<rect x="151.01" class="st2" width="9.98" height="240"/>
+</g>
+<rect x="-75" y="95" transform="matrix(5.043987e-06 -1 1 5.043987e-06 -85.0002 154.9994)" class="st3" width="220" height="50"/>
+<rect x="95" y="95" transform="matrix(5.043987e-06 -1 1 5.043987e-06 84.999 324.9994)" class="st3" width="220" height="50"/>
+</svg>
