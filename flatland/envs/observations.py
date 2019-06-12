@@ -17,7 +17,7 @@ class TreeObsForRailEnv(ObservationBuilder):
     network to simplify the representation of the state of the environment for each agent.
     """
 
-    def __init__(self, max_depth):
+    def __init__(self, max_depth, predictor=None):
         self.max_depth = max_depth
 
         # Compute the size of the returned observation vector
@@ -30,6 +30,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.observation_space = [size * self.observation_dim]
         self.location_has_agent = {}
         self.location_has_agent_direction = {}
+        self.predictor = predictor
 
         self.agents_previous_reset = None
 
@@ -174,7 +175,8 @@ class TreeObsForRailEnv(ObservationBuilder):
         """
 
         # TODO: @Erik this is where the predictions should be computed, storing any temporary data inside this object.
-
+        if self.predictor:
+            print(self.predictor.get(0))
         observations = {}
         for h in handles:
             observations[h] = self.get(h)
@@ -536,6 +538,11 @@ class TreeObsForRailEnv(ObservationBuilder):
                 distance_data.extend(tmp_distance_data)
                 agent_data.extend(tmp_agent_data)
         return tree_data, distance_data, agent_data
+
+    def _set_env(self, env):
+        self.env = env
+        if self.predictor:
+            self.predictor._set_env(self.env)
 
 
 class GlobalObsForRailEnv(ObservationBuilder):
