@@ -12,6 +12,11 @@ from flatland.utils.graphics_pil import PILGL, PILSVG
 
 
 class RenderTool(object):
+    """ Class to render the RailEnv and agents.
+        Uses two layers, layer 0 for rails (mostly static), layer 1 for agents etc (dynamic)
+        The lower / rail layer 0 is only redrawn after set_new_rail() has been called.
+        Created with a "GraphicsLayer" or gl - now either PIL or PILSVG
+    """
     Visit = recordtype("Visit", ["rc", "iDir", "iDepth", "prev"])
 
     lColors = list("brgcmyk")
@@ -45,10 +50,14 @@ class RenderTool(object):
         self.gl.resize(self.env)
 
     def set_new_rail(self):
+        """ Tell the renderer that the rail has changed.
+            eg when the rail has been regenerated, or updated in the editor.
+        """
         self.new_rail = True
 
     def plotTreeOnRail(self, lVisits, color="r"):
         """
+        DEFUNCT
         Derives and plots a tree of transitions starting at position rcPos
         in direction iDir.
         Returns a list of Visits which are the nodes / vertices in the tree.
@@ -158,6 +167,7 @@ class RenderTool(object):
 
     def getTreeFromRail(self, rcPos, iDir, nDepth=10, bBFS=True, bPlot=False):
         """
+        DEFUNCT
         Generate a tree from the env starting at rcPos, iDir.
         """
         rt = self.__class__
@@ -487,16 +497,22 @@ class RenderTool(object):
                                     "rot:", rotation,
                                 )
 
-    def renderEnv(self, show=False, curves=True, spacing=False,
-                  arrows=False, agents=True, renderobs=True, show_observations=True, sRailColor="gray", frames=False,
-                  iEpisode=None, iStep=None,
-                  iSelectedAgent=None, action_dict=None):
-        """
-        Draw the environment using matplotlib.
-        Draw into the figure if provided.
-
-        Call pyplot.show() if show==True.
-        (Use show=False from a Jupyter notebook with %matplotlib inline)
+    def renderEnv(self,
+                show=False,             # whether to call matplotlib show() or equivalent after completion
+                                        # use false when calling from Jupyter.  (and matplotlib no longer supported!)
+                curves=True,            # draw turns as curves instead of straight diagonal lines
+                spacing=False,          # defunct - size of spacing between rails 
+                arrows=False,           # defunct - draw arrows on rail lines
+                agents=True,            # whether to include agents
+                show_observations=True,  # whether to include observations
+                sRailColor="gray",      # color to use in drawing rails (not used with SVG)
+                frames=False,           # frame counter to show (intended since invocation)
+                iEpisode=None,          # int episode number to show
+                iStep=None,             # int step number to show in image
+                iSelectedAgent=None,    # indicate which agent is "selected" in the editor
+                action_dict=None):      # defunct - was used to indicate agent intention to turn
+        """ Draw the environment using the GraphicsLayer this RenderTool was created with.
+            (Use show=False from a Jupyter notebook with %matplotlib inline)
         """
 
         if not self.gl.is_raster():
