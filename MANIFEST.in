@@ -8,7 +8,7 @@ include requirements_dev.txt
 
 
 graft svg
-graft env-data
+graft env_data
 
 
 recursive-include tests *
