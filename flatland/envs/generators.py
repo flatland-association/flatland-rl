@@ -1,7 +1,7 @@
 import numpy as np
 
 from flatland.core.transition_map import GridTransitionMap
-from flatland.core.transitions import Grid8Transitions, RailEnvTransitions
+from flatland.core.transitions import RailEnvTransitions
 from flatland.envs.env_utils import distance_on_rail, connect_rail, get_direction, mirror
 from flatland.envs.env_utils import get_rnd_agents_pos_tgt_dir_on_rail
 
