@@ -396,7 +396,8 @@ class PILSVG(PILGL):
         }
 
         # "paint" color of the train images we load
-        a3BaseColor = self.rgb_s2i("0091ea")
+        # a3BaseColor = self.rgb_s2i("0091ea")
+        a3BaseColor = self.rgb_s2i("d50000")
 
         self.dPilZug = {}
 
