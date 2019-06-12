@@ -323,7 +323,7 @@ class Controller(object):
     def restartAgents(self, event):
         self.log("Restart Agents - nAgents:", self.view.wRegenNAgents.value)
         if self.model.init_agents_static is not None:
-            self.model.env.agents_static = [EnvAgentStatic(d[0], d[1], d[2]) for d in self.model.init_agents_static]
+            self.model.env.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in self.model.init_agents_static]
             self.model.env.agents = None
             self.model.init_agents_static = None
             self.player = None
@@ -685,7 +685,7 @@ class EditorModel(object):
             # No
             if self.iSelectedAgent is None:
                 # Create a new agent and select it.
-                agent_static = EnvAgentStatic(rcCell, 0, rcCell)
+                agent_static = EnvAgentStatic(rcCell, 0, rcCell, moving=False)
                 self.iSelectedAgent = self.env.add_agent_static(agent_static)
                 self.player = None  # will need to start a new player
             else:
