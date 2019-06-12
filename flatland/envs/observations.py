@@ -167,6 +167,19 @@ class TreeObsForRailEnv(ObservationBuilder):
         elif movement == 3:  # WEST
             return (position[0], position[1] - 1)
 
+    def get_many(self, handles=[]):
+        """
+        Called whenever an observation has to be computed for the `env' environment, for each agent with handle
+        in the `handles' list.
+        """
+
+        # TODO: @Erik this is where the predictions should be computed, storing any temporary data inside this object.
+
+        observations = {}
+        for h in handles:
+            observations[h] = self.get(h)
+        return observations
+
     def get(self, handle):
         """
         Computes the current observation for agent `handle' in env

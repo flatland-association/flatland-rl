@@ -330,20 +330,13 @@ class RailEnv(Environment):
         return new_direction, transition_isValid
 
     def _get_observations(self):
-        self.obs_dict = {}
-        self.debug_obs_dict = {}
-        for iAgent in range(self.get_num_agents()):
-            self.obs_dict[iAgent] = self.obs_builder.get(iAgent)
+        self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
         return self.obs_dict
 
     def _get_predictions(self):
         if not self.prediction_builder:
             return {}
         return {}
-
-    def render(self):
-        # TODO:
-        pass
 
     def get_full_state_msg(self):
         grid_data = self.rail.grid.tolist()
