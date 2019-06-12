@@ -15,7 +15,6 @@ import images.test
 from flatland.envs.generators import empty_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
-import env_data.tests
 
 
 def checkFrozenImage(oRT, sFileImage, resave=False):
@@ -28,7 +27,7 @@ def checkFrozenImage(oRT, sFileImage, resave=False):
         np.savez_compressed(sDirImages + sFileImage, img=img_test)
         return
 
-    with path(images.test, sFileImage) as file_in:
+    with path(images, sFileImage) as file_in:
         np.load(file_in)
 
     # TODO fails!
