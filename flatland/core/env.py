@@ -84,6 +84,7 @@ class Environment:
         """
         raise NotImplementedError()
 
+
     def get_agent_handles(self):
         """
         Returns a list of agents' handles to be used as keys in the step()
