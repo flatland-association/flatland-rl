@@ -295,7 +295,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         other_target_encountered = np.inf
         other_agent_same_direction = 0
         other_agent_opposite_direction = 0
-        possible_conflict = 0
 
         num_steps = 1
         while exploring:
