@@ -63,7 +63,7 @@ else:
 def get_all_svg_files(directory='./svg/'):
     ret = []
     for f in os.listdir(directory):
-        if f != '__pycache__':
+        if os.path.isfile(os.path.join(directory, f)):
             ret.append(directory + f)
     return ret
 
