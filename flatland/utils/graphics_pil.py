@@ -395,7 +395,9 @@ class PILSVG(PILGL):
             (0, 3): "svg/Zug_2_Weiche_#0091ea.svg"
         }
 
-        # "paint" color of the train images we load
+        # "paint" color of the train images we load - this is the color we will change.
+        # a3BaseColor = self.rgb_s2i("0091ea")
+        # temporary workaround for trains / agents renamed with different colour:
         a3BaseColor = self.rgb_s2i("d50000")
 
         self.dPilZug = {}

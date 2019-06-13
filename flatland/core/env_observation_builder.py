@@ -30,6 +30,27 @@ class ObservationBuilder:
         """
         raise NotImplementedError()
 
+    def get_many(self, handles=[]):
+        """
+        Called whenever an observation has to be computed for the `env' environment, for each agent with handle
+        in the `handles' list.
+
+        Parameters
+        -------
+        handles : list of handles (optional)
+            List with the handles of the agents for which to compute the observation vector.
+
+        Returns
+        -------
+        function
+            A dictionary of observation structures, specific to the corresponding environment, with handles from
+            `handles' as keys.
+        """
+        observations = {}
+        for h in handles:
+            observations[h] = self.get(h)
+        return observations
+
     def get(self, handle=0):
         """
         Called whenever an observation has to be computed for the `env' environment, possibly
