@@ -9,7 +9,11 @@ Development
 
 * G Spigler <giacomo.spigler@gmail.com>
 
-* A Egli <adrian.egli@sbb.ch> 
+* A Egli <adrian.egli@sbb.ch>
+
+* E Nygren <erik.nygren@sbb.ch>
+
+* Ch. Eichenberger <christian.markus.eichenberger@sbb.ch>
 
 * Mattias Ljungström
 

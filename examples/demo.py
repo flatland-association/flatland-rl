@@ -53,22 +53,11 @@ class Scenario_Generator:
         return env
 
     @staticmethod
-    def load_scenario(filename, number_of_agents=3):
+    def load_scenario(resource, package='env_data.railway', number_of_agents=3):
         env = RailEnv(width=2 * (1 + number_of_agents),
                       height=1 + number_of_agents)
-
-        """
-        env = RailEnv(width=20,
-                      height=20,
-                      rail_generator=rail_from_list_of_saved_GridTransitionMap_generator(
-                          [filename,
-                      number_of_agents=number_of_agents)
-        """
-        if os.path.exists(filename):
-            env.load(filename)
-            env.reset(False, False)
-        else:
-            print("File does not exist:", filename, " Working directory: ", os.getcwd())
+        env.load_resource(package, resource)
+        env.reset(False, False)
 
         return env
 
@@ -125,55 +114,57 @@ class Demo:
 
         self.renderer.close_window()
 
+    @staticmethod
+    def run_generate_random_scenario():
+        demo_000 = Demo(Scenario_Generator.generate_random_scenario())
+        demo_000.run_demo()
 
-if False:
-    demo_000 = Demo(Scenario_Generator.generate_random_scenario())
-    demo_000.run_demo()
-    demo_000 = None
+    @staticmethod
+    def run_generate_complex_scenario():
+        demo_001 = Demo(Scenario_Generator.generate_complex_scenario())
+        demo_001.run_demo()
 
-    demo_001 = Demo(Scenario_Generator.generate_complex_scenario())
-    demo_001.run_demo()
-    demo_001 = None
+    @staticmethod
+    def run_example_network_000():
+        demo_000 = Demo(Scenario_Generator.load_scenario('example_network_000.pkl'))
+        demo_000.run_demo()
 
-    demo_000 = Demo(Scenario_Generator.load_scenario(
-        os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_network_000.pkl')))
-    demo_000.run_demo()
-    demo_000 = None
+    @staticmethod
+    def run_example_network_001():
+        demo_001 = Demo(Scenario_Generator.load_scenario('example_network_001.pkl'))
+        demo_001.run_demo()
 
-    demo_001 = Demo(Scenario_Generator.load_scenario(
-        os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_network_001.pkl')))
-    demo_001.run_demo()
-    demo_001 = None
+    @staticmethod
+    def run_example_network_002():
+        demo_002 = Demo(Scenario_Generator.load_scenario('example_network_002.pkl'))
+        demo_002.run_demo()
 
-    demo_002 = Demo(Scenario_Generator.load_scenario(
-        os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_network_002.pkl')))
-    demo_002.run_demo()
-    demo_002 = None
+    @staticmethod
+    def run_example_network_003():
+        demo_flatland_000 = Demo(Scenario_Generator.load_scenario('example_network_003.pkl'))
+        demo_flatland_000.renderer.resize()
+        demo_flatland_000.set_max_framerate(5)
+        demo_flatland_000.run_demo(30)
 
-    demo_flatland_000 = Demo(
-        Scenario_Generator.load_scenario(
-            os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_flatland_000.pkl')))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.run_demo(60)
-    demo_flatland_000 = None
+    @staticmethod
+    def run_example_flatland_000():
+        demo_flatland_000 = Demo(Scenario_Generator.load_scenario('example_flatland_000.pkl'))
+        demo_flatland_000.renderer.resize()
+        demo_flatland_000.run_demo(60)
 
-    demo_flatland_000 = Demo(
-        Scenario_Generator.load_scenario(
-            os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_network_003.pkl')))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.set_max_framerate(5)
-    demo_flatland_000.run_demo(30)
-    demo_flatland_000 = None
+    @staticmethod
+    def run_example_flatland_001():
+        demo_flatland_000 = Demo(Scenario_Generator.load_scenario('example_flatland_001.pkl'))
+        demo_flatland_000.renderer.resize()
+        demo_flatland_000.set_record_frames(os.path.join(__file_dirname__, '..', 'rendering', 'frame_{:04d}.bmp'))
+        demo_flatland_000.run_demo(60)
 
-    demo_flatland_000 = Demo(
-        Scenario_Generator.load_scenario(
-            os.path.join(__file_dirname__, '..', 'env-data', 'railway', 'example_flatland_001.pkl')))
-    demo_flatland_000.renderer.resize()
-    demo_flatland_000.set_record_frames(os.path.join(__file_dirname__, '..', 'rendering', 'frame_{:04d}.bmp'))
-    demo_flatland_000.run_demo(60)
-    demo_flatland_000 = None
+    @staticmethod
+    def run_complex_scene():
+        demo_001 = Demo(Scenario_Generator.load_scenario('complex_scene.pkl'))
+        demo_001.set_record_frames(os.path.join(__file_dirname__, '..', 'rendering', 'frame_{:04d}.bmp'))
+        demo_001.run_demo(360)
 
-demo_001 = Demo(Scenario_Generator.load_scenario('./env-data/railway/complex_scene.pkl'))
-demo_001.set_record_frames('./rendering/frame_{:04d}.bmp')
-demo_001.run_demo(360)
-demo_001 = None
+
+if __name__ == "__main__":
+    Demo.run_complex_scene()

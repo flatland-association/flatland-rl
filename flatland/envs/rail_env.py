@@ -364,3 +364,8 @@ class RailEnv(Environment):
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
             self.set_full_state_msg(load_data)
+
+    def load_resource(self, package, resource):
+        from importlib_resources import read_binary
+        load_data = read_binary(package, resource)
+        self.set_full_state_msg(load_data)

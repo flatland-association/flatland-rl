@@ -1,12 +1,12 @@
 import io
 import os
-import site
 import time
 import tkinter as tk
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageTk  # , ImageFont
 from numpy import array
+from pkg_resources import resource_string as resource_bytes
 
 from flatland.utils.graphics_layer import GraphicsLayer
 
@@ -239,18 +239,9 @@ class PILSVG(PILGL):
         self.lwAgents = []
         self.agents_prev = []
 
-    def pilFromSvgFile(self, sfPath):
-        try:
-            with open(sfPath, "r") as fIn:
-                bytesPNG = svg2png(file_obj=fIn, output_height=self.nPixCell, output_width=self.nPixCell)
-        except:  # noqa: E722
-            newList = ''
-            for directory in site.getsitepackages():
-                x = [word for word in os.listdir(directory) if word.startswith('flatland')]
-                if len(x) > 0:
-                    newList = directory + '/' + x[0]
-            with open(newList + '/' + sfPath, "r") as fIn:
-                bytesPNG = svg2png(file_obj=fIn, output_height=self.nPixCell, output_width=self.nPixCell)
+    def pilFromSvgFile(self, package, resource):
+        bytestring = resource_bytes(package, resource)
+        bytesPNG = svg2png(bytestring=bytestring, output_height=self.nPixCell, output_width=self.nPixCell)
         with io.BytesIO(bytesPNG) as fIn:
             pil_img = Image.open(fIn)
             pil_img.load()
@@ -313,10 +304,7 @@ class PILSVG(PILGL):
 
         lDirs = list("NESW")
 
-        # svgBG = SVG("./svg/Background_#91D1DD.svg")
-
         for sTrans, sFile in dDirFile.items():
-            sPathSvg = "./svg/" + sFile
 
             # Translate the ascii transition description in the format  "NE WS" to the 
             # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
@@ -330,7 +318,7 @@ class PILSVG(PILGL):
             sTrans16 = "".join(lTrans16)
             binTrans = int(sTrans16, 2)
 
-            pilRail = self.pilFromSvgFile(sPathSvg)
+            pilRail = self.pilFromSvgFile('svg', sFile)
 
             if rotate:
                 # For rotations, we also store the base image
@@ -367,7 +355,7 @@ class PILSVG(PILGL):
                 print("Illegal target rail:", row, col, format(binTrans, "#018b")[2:])
 
             if isSelected:
-                svgBG = self.pilFromSvgFile("./svg/Selected_Target.svg")
+                svgBG = self.pilFromSvgFile("svg", "Selected_Target.svg")
                 self.clear_layer(3, 0)
                 self.drawImageRC(svgBG, (row, col), layer=3)
 
@@ -390,9 +378,9 @@ class PILSVG(PILGL):
 
         # Seed initial train/zug files indexed by tuple(iDirIn, iDirOut):
         dDirsFile = {
-            (0, 0): "svg/Zug_Gleis_#0091ea.svg",
-            (1, 2): "svg/Zug_1_Weiche_#0091ea.svg",
-            (0, 3): "svg/Zug_2_Weiche_#0091ea.svg"
+            (0, 0): "Zug_Gleis_#0091ea.svg",
+            (1, 2): "Zug_1_Weiche_#0091ea.svg",
+            (0, 3): "Zug_2_Weiche_#0091ea.svg"
         }
 
         # "paint" color of the train images we load - this is the color we will change.
@@ -405,7 +393,7 @@ class PILSVG(PILGL):
         for tDirs, sPathSvg in dDirsFile.items():
             iDirIn, iDirOut = tDirs
 
-            pilZug = self.pilFromSvgFile(sPathSvg)
+            pilZug = self.pilFromSvgFile("svg", sPathSvg)
 
             # Rotate both the directions and the image and save in the dict
             for iDirRot in range(4):
@@ -431,7 +419,7 @@ class PILSVG(PILGL):
         self.drawImageRC(pilZug, (row, col), layer=1)
 
         if isSelected:
-            svgBG = self.pilFromSvgFile("./svg/Selected_Agent.svg")
+            svgBG = self.pilFromSvgFile("svg", "Selected_Agent.svg")
             self.clear_layer(2, 0)
             self.drawImageRC(svgBG, (row, col), layer=2)
 

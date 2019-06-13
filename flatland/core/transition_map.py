@@ -3,6 +3,7 @@ TransitionMap and derived classes.
 """
 
 import numpy as np
+from importlib_resources import path
 from numpy import array
 
 from .transitions import Grid4Transitions, Grid8Transitions, RailEnvTransitions
@@ -263,7 +264,7 @@ class GridTransitionMap(TransitionMap):
         """
         np.save(filename, self.grid)
 
-    def load_transition_map(self, filename, override_gridsize=True):
+    def load_transition_map(self, package, resource, override_gridsize=True):
         """
         Load the transitions grid from `filename' (npy format).
         The load function only updates the transitions grid, and possibly width and height, but the object has to be
@@ -271,8 +272,10 @@ class GridTransitionMap(TransitionMap):
 
         Parameters
         ----------
-        filename : string
-            Name of the file from which to load the transitions grid.
+        package : string
+            Name of the package from which to load the transitions grid.
+        resource : string
+            Name of the file from which to load the transitions grid within the package.
         override_gridsize : bool
             If override_gridsize=True, the width and height of the GridTransitionMap object are replaced with the size
             of the map loaded from `filename'. If override_gridsize=False, the transitions grid is either cropped (if
@@ -280,7 +283,8 @@ class GridTransitionMap(TransitionMap):
             (height,width) )
 
         """
-        new_grid = np.load(filename)
+        with path(package, resource) as file_in:
+            new_grid = np.load(file_in)
 
         new_height = new_grid.shape[0]
         new_width = new_grid.shape[1]
