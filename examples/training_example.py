@@ -16,7 +16,7 @@ env = RailEnv(width=20,
               height=20,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
               obs_builder_object=TreeObservation,
-              number_of_agents=2)
+              number_of_agents=1)
 
 
 # Import your own Agent or use RLlib to train agents on Flatland

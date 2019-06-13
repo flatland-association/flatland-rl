@@ -135,7 +135,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                             if target_dist < min_dist:
                                 min_dist = target_dist
                                 new_direction = direct
-                                new_position = self._new_position(agent.position, new_direction)
+                    new_position = self._new_position(agent.position, new_direction)
 
                 agent.position = new_position
                 agent.direction = new_direction
