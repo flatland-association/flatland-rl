@@ -82,6 +82,5 @@ class GraphicsLayer(object):
     def resize(self, env):
         pass
 
-
-    def build_background_map(self,dTargets):
+    def build_background_map(self, dTargets):
         pass

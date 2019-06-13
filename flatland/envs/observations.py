@@ -174,11 +174,11 @@ class TreeObsForRailEnv(ObservationBuilder):
         in the `handles' list.
         """
 
-
         if self.predictor:
             self.predicted_pos = {}
             self.predicted_dir = {}
             self.predictions = self.predictor.get()
+
             for t in range(len(self.predictions[0])):
                 pos_list = []
                 dir_list = []
@@ -187,6 +187,10 @@ class TreeObsForRailEnv(ObservationBuilder):
                     dir_list.append(self.predictions[a][t][3])
                 self.predicted_pos.update({t: coordinate_to_position(self.env.width, pos_list)})
                 self.predicted_dir.update({t: dir_list})
+
+            pred_pos = np.concatenate([[x[:, 1:3]] for x in list(self.predictions.values())], axis=0)
+            pred_pos = list(map(list, zip(*pred_pos)))
+
         observations = {}
         for h in handles:
             observations[h] = self.get(h)
@@ -325,6 +329,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                     other_agent_opposite_direction += 1
 
             if self.predictor:
+                continue
             # Register possible conflict
 
             if position in self.location_has_target:
