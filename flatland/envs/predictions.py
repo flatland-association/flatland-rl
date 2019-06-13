@@ -127,14 +127,15 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                 if np.sum(cell_transitions) == 1:
                     new_direction = np.argmax(cell_transitions)
                     new_position = self._new_position(agent.position, new_direction)
-                else:
+                elif np.sum(cell_transitions) > 1:
+                    min_dist = np.inf
                     for direct in range(4):
-                        min_dist = np.inf
-                        target_dist = distancemap[agent_idx, agent.position[0], agent.position[1], direct]
-                        if target_dist < min_dist:
-                            min_dist = target_dist
-                            new_direction = direct
-                            new_position = self._new_position(agent.position, new_direction)
+                        if cell_transitions[direct] == 1:
+                            target_dist = distancemap[agent_idx, agent.position[0], agent.position[1], direct]
+                            if target_dist < min_dist:
+                                min_dist = target_dist
+                                new_direction = direct
+                                new_position = self._new_position(agent.position, new_direction)
 
                 agent.position = new_position
                 agent.direction = new_direction
