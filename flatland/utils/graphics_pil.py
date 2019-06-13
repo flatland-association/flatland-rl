@@ -299,8 +299,7 @@ class PILSVG(PILGL):
 
         self.dBuildings = []
         for sFile in dBuildingFiles:
-            sPathSvg = "./svg/" + sFile
-            img = self.pilFromSvgFile(sPathSvg)
+            img = self.pilFromSvgFile('svg',sFile)
             self.dBuildings.append(img)
 
     def loadScenerySVGs(self):
@@ -319,8 +318,7 @@ class PILSVG(PILGL):
         }
         self.dScenery = []
         for sFile in dSceneryFiles:
-            sPathSvg = "./svg/" + sFile
-            img = self.pilFromSvgFile(sPathSvg)
+            img = self.pilFromSvgFile('svg',sFile)
             self.dScenery.append(img)
 
     def loadRailSVGs(self):
