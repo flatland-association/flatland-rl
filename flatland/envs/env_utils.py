@@ -92,7 +92,7 @@ def coordinate_to_position(width, coords):
     position = []
     for t in coords:
         position.append((t[1] * width + t[0]))
-    return np.array(position)
+    return np.asarray(position).flatten()
 
 class AStarNode():
     """A node class for A* Pathfinding"""
