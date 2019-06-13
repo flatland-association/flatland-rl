@@ -429,10 +429,15 @@ class PILSVG(PILGL):
                     if self.background_grid[col][row] < 4:
                         a = int(self.background_grid[col][row])
                         a = a % len(self.dBuildings)
-                        pilTrack = self.dBuildings[a]
+                        if (col + row) % 10 > 2:
+                            pilTrack = self.dScenery[0]
+                        else:
+                            pilTrack = self.dBuildings[a]
                     elif self.background_grid[col][row] > 5:
                         a = int(self.background_grid[col][row]) - 5
                         a = a % len(self.dScenery)
+                        if (col + row + col * row) % 10 > 2:
+                            a = 0
                         pilTrack = self.dScenery[a]
 
                 self.drawImageRC(pilTrack, (row, col))
