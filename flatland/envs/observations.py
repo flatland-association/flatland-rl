@@ -178,6 +178,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             self.predicted_pos = {}
             self.predicted_dir = {}
             self.predictions = self.predictor.get(self.distance_map)
+            print(self.predictions)
             for t in range(len(self.predictions[0])):
                 pos_list = []
                 dir_list = []
@@ -333,6 +334,14 @@ class TreeObsForRailEnv(ObservationBuilder):
             if self.predictor and num_steps < self.max_prediction_depth:
                 if coordinate_to_position(self.env.width, [position]) in np.delete(self.predicted_pos[num_steps],
                                                                                    handle):
+                    potential_conflict = 1
+                if coordinate_to_position(self.env.width, [position]) in np.delete(
+                    self.predicted_pos[max(0, num_steps - 1)],
+                    handle):
+                    potential_conflict = 1
+                if coordinate_to_position(self.env.width, [position]) in np.delete(
+                    self.predicted_pos[min(self.max_prediction_depth - 1, num_steps + 1)],
+                    handle):
                     potential_conflict = 1
 
             if position in self.location_has_target and position != agent.target:
