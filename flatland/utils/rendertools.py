@@ -47,7 +47,6 @@ class RenderTool(object):
         self.new_rail = True
         self.update_background()
 
-
     def update_background(self):
         # create background map
         dTargets = {}
@@ -509,19 +508,19 @@ class RenderTool(object):
                                 )
 
     def renderEnv(self,
-                show=False,             # whether to call matplotlib show() or equivalent after completion
-                                        # use false when calling from Jupyter.  (and matplotlib no longer supported!)
-                curves=True,            # draw turns as curves instead of straight diagonal lines
-                spacing=False,          # defunct - size of spacing between rails 
-                arrows=False,           # defunct - draw arrows on rail lines
-                agents=True,            # whether to include agents
-                show_observations=True,  # whether to include observations
-                sRailColor="gray",      # color to use in drawing rails (not used with SVG)
-                frames=False,           # frame counter to show (intended since invocation)
-                iEpisode=None,          # int episode number to show
-                iStep=None,             # int step number to show in image
-                iSelectedAgent=None,    # indicate which agent is "selected" in the editor
-                action_dict=None):      # defunct - was used to indicate agent intention to turn
+                  show=False,  # whether to call matplotlib show() or equivalent after completion
+                  # use false when calling from Jupyter.  (and matplotlib no longer supported!)
+                  curves=True,  # draw turns as curves instead of straight diagonal lines
+                  spacing=False,  # defunct - size of spacing between rails
+                  arrows=False,  # defunct - draw arrows on rail lines
+                  agents=True,  # whether to include agents
+                  show_observations=True,  # whether to include observations
+                  sRailColor="gray",  # color to use in drawing rails (not used with SVG)
+                  frames=False,  # frame counter to show (intended since invocation)
+                  iEpisode=None,  # int episode number to show
+                  iStep=None,  # int step number to show in image
+                  iSelectedAgent=None,  # indicate which agent is "selected" in the editor
+                  action_dict=None):  # defunct - was used to indicate agent intention to turn
         """ Draw the environment using the GraphicsLayer this RenderTool was created with.
             (Use show=False from a Jupyter notebook with %matplotlib inline)
         """

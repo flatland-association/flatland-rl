@@ -363,7 +363,8 @@ class PILSVG(PILGL):
 
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
-        dPilRail2 = self.loadSVGs(dTargetFiles, rotate=False, agent_colors=self.ltAgentColors, backgroundImage="Background_rail.svg",
+        dPilRail2 = self.loadSVGs(dTargetFiles, rotate=False, agent_colors=self.ltAgentColors,
+                                  backgroundImage="Background_rail.svg",
                                   whitefilter="Background_white_filter.svg")
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
