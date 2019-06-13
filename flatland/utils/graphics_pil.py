@@ -433,7 +433,7 @@ class PILSVG(PILGL):
                             pilTrack = self.dScenery[0]
                         else:
                             pilTrack = self.dBuildings[a]
-                    elif self.background_grid[col][row] > 5:
+                    elif self.background_grid[col][row] > 5 or ((col + row + col * row) % 10 > 7):
                         a = int(self.background_grid[col][row]) - 5
                         a = a % len(self.dScenery)
                         if (col + row + col * row) % 10 > 2:
