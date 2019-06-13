@@ -396,7 +396,7 @@ class PILSVG(PILGL):
         }
 
         # "paint" color of the train images we load - this is the color we will change.
-        # a3BaseColor = self.rgb_s2i("0091ea")
+        # a3BaseColor = self.rgb_s2i("0091ea") \#  noqa: E800
         # temporary workaround for trains / agents renamed with different colour:
         a3BaseColor = self.rgb_s2i("d50000")
 
