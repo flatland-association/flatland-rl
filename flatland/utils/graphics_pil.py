@@ -40,6 +40,8 @@ class PILGL(GraphicsLayer):
         self.width = width
         self.height = height
 
+        self.background_grid = np.zeros(shape=(self.width, self.height))
+
         if jupyter is False:
             self.screen_width = 99999
             self.screen_height = 99999
@@ -76,6 +78,20 @@ class PILGL(GraphicsLayer):
         self.window_open = False
         self.firstFrame = True
         self.create_layers()
+
+
+    def build_background_map(self,dTargets):
+        self.background_grid = np.zeros(shape=(self.width, self.height))
+        for x in range(self.width):
+            for y in range(self.height):
+                distance = int(np.floor(np.sqrt(self.width*2.0 + self.height)))
+                for rc in dTargets:
+                    r = rc[1]
+                    c = rc[0]
+                    d = int(np.floor(np.sqrt((x-r)**2 + (y-c)**2)))
+                    distance = min(d,distance)
+                self.background_grid[x][y] = distance
+
 
     def rgb_s2i(self, sRGB):
         """ convert a hex RGB string like 0091ea to 3-tuple of ints """
@@ -220,6 +236,9 @@ class PILSVG(PILGL):
         self.lwAgents = []
         self.agents_prev = []
 
+
+        self.loadBuildingSVGs()
+        self.loadScenerySVGs()
         self.loadRailSVGs()
         self.loadAgentSVGs()
 
@@ -262,6 +281,56 @@ class PILSVG(PILGL):
         with io.BytesIO(bytesPNG) as fIn:
             pil_img = Image.open(fIn)
             return pil_img
+
+
+
+    def loadBuildingSVGs(self):
+        dBuildingFiles = {
+            "Buildings/Bank.svg",
+            "Buildings/Bar.svg",
+            "Buildings/Fabrik_A.svg",
+            "Buildings/Fabrik_B.svg",
+            "Buildings/Fabrik_C.svg",
+            "Buildings/Fabrik_D.svg",
+            "Buildings/Fabrik_E.svg",
+            "Buildings/Fabrik_F.svg",
+            "Buildings/Fabrik_G.svg",
+            "Buildings/Fabrik_H.svg",
+            "Buildings/Fabrik_I.svg",
+            "Buildings/Hochhaus.svg",
+            "Buildings/Hotel.svg",
+            "Buildings/Office.svg",
+            "Buildings/Polizei.svg",
+            "Buildings/Post.svg",
+            "Buildings/Supermarkt.svg",
+            "Buildings/Tankstelle.svg",
+            "Buildings/Wohnhaus.svg"}
+
+        self.dBuildings = []
+        for sFile in dBuildingFiles:
+            sPathSvg = "./svg/" + sFile
+            img = self.pilFromSvgFile(sPathSvg)
+            self.dBuildings.append(img)
+
+    def loadScenerySVGs(self):
+        dSceneryFiles = {
+            "Scenery/Bergwelt_A_Teil_1_links.svg",
+            "Scenery/Bergwelt_A_Teil_2_mitte.svg",
+            "Scenery/Bergwelt_A_Teil_3_rechts.svg",
+            "Scenery/Bergwelt_B.svg",
+            "Scenery/Bergwelt_C_Teil_1_links.svg",
+            "Scenery/Bergwelt_C_Teil_2_rechts.svg",
+            "Scenery/Laubbaume_A.svg",
+            "Scenery/Laubbaume_B.svg",
+            "Scenery/Laubbaume_C.svg",
+            "Scenery/Nadelbaume_A.svg",
+            "Scenery/Nadelbaume_B.svg",
+        }
+        self.dScenery = []
+        for sFile in dSceneryFiles:
+            sPathSvg = "./svg/" + sFile
+            img = self.pilFromSvgFile(sPathSvg)
+            self.dScenery.append(img)
 
     def loadRailSVGs(self):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
@@ -356,6 +425,17 @@ class PILSVG(PILGL):
         if iTarget is None:
             if binTrans in self.dPilRail:
                 pilTrack = self.dPilRail[binTrans]
+
+                if binTrans == 0 :
+                    if self.background_grid[col][row] < 4:
+                        a = int(self.background_grid[col][row])
+                        a = a % len(self.dBuildings)
+                        pilTrack = self.dBuildings[a]
+                    else:
+                        a = int(self.background_grid[col][row])
+                        a = a % len(self.dScenery)
+                        pilTrack = self.dScenery[a]
+
                 self.drawImageRC(pilTrack, (row, col))
             else:
                 print("Illegal rail:", row, col, format(binTrans, "#018b")[2:])

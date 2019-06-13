@@ -45,6 +45,17 @@ class RenderTool(object):
             self.gl = PILSVG(env.width, env.height, jupyter)
 
         self.new_rail = True
+        self.update_background()
+
+
+    def update_background(self):
+        # create background map
+        dTargets = {}
+        for iAgent, agent in enumerate(self.env.agents_static):
+            if agent is None:
+                continue
+            dTargets[tuple(agent.target)] = iAgent
+        self.gl.build_background_map(dTargets)
 
     def resize(self):
         self.gl.resize(self.env)
