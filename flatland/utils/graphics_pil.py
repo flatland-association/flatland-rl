@@ -276,7 +276,7 @@ class PILSVG(PILGL):
 
 
     def loadBuildingSVGs(self):
-        dBuildingFiles = {
+        dBuildingFiles = [
             "Buildings/Bank.svg",
             "Buildings/Bar.svg",
             "Buildings/Fabrik_A.svg",
@@ -295,7 +295,7 @@ class PILSVG(PILGL):
             "Buildings/Post.svg",
             "Buildings/Supermarkt.svg",
             "Buildings/Tankstelle.svg",
-            "Buildings/Wohnhaus.svg"}
+            "Buildings/Wohnhaus.svg"]
 
         self.dBuildings = []
         for sFile in dBuildingFiles:
@@ -303,19 +303,19 @@ class PILSVG(PILGL):
             self.dBuildings.append(img)
 
     def loadScenerySVGs(self):
-        dSceneryFiles = {
-            "Scenery/Bergwelt_A_Teil_1_links.svg",
-            "Scenery/Bergwelt_A_Teil_2_mitte.svg",
-            "Scenery/Bergwelt_A_Teil_3_rechts.svg",
-            "Scenery/Bergwelt_B.svg",
-            "Scenery/Bergwelt_C_Teil_1_links.svg",
-            "Scenery/Bergwelt_C_Teil_2_rechts.svg",
+        dSceneryFiles = [
             "Scenery/Laubbaume_A.svg",
             "Scenery/Laubbaume_B.svg",
             "Scenery/Laubbaume_C.svg",
             "Scenery/Nadelbaume_A.svg",
             "Scenery/Nadelbaume_B.svg",
-        }
+            "Scenery/Bergwelt_B.svg",
+            "Scenery/Bergwelt_C_Teil_1_links.svg",
+            "Scenery/Bergwelt_C_Teil_2_rechts.svg",
+            "Scenery/Bergwelt_A_Teil_1_links.svg",
+            "Scenery/Bergwelt_A_Teil_2_mitte.svg",
+            "Scenery/Bergwelt_A_Teil_3_rechts.svg",
+        ]
         self.dScenery = []
         for sFile in dSceneryFiles:
             img = self.pilFromSvgFile('svg',sFile)
@@ -418,7 +418,7 @@ class PILSVG(PILGL):
                         a = a % len(self.dBuildings)
                         pilTrack = self.dBuildings[a]
                     else:
-                        a = int(self.background_grid[col][row])
+                        a = int(self.background_grid[col][row]) - 4
                         a = a % len(self.dScenery)
                         pilTrack = self.dScenery[a]
 

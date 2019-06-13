@@ -63,10 +63,8 @@ else:
 def get_all_svg_files(directory='./svg/'):
     ret = []
     for f in os.listdir(directory):
-        if f != '__pycache__':
-            if f != "Buildings" and f != "Scenery":
-                ret.append(directory + f)
-    print("install svg:" , ret)
+        if os.path.isfile(os.path.join(directory, f)):
+            ret.append(directory + f)
     return ret
 
 
@@ -105,7 +103,7 @@ setup(
     keywords='flatland',
     name='flatland-rl',
     packages=find_packages('.'),
-    data_files=[('svg', get_all_svg_files()),('svg/Buildings', get_all_svg_files('svg/Buildings/')),('svg/Scenery', get_all_svg_files('svg/Scenery/'))],
+    data_files=[('svg', get_all_svg_files())],
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
