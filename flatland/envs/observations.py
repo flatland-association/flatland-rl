@@ -173,10 +173,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         Called whenever an observation has to be computed for the `env' environment, for each agent with handle
         in the `handles' list.
         """
-
-        # TODO: @Erik this is where the predictions should be computed, storing any temporary data inside this object.
-        if self.predictor:
-            print(self.predictor.get(0))
         observations = {}
         for h in handles:
             observations[h] = self.get(h)
