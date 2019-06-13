@@ -328,8 +328,6 @@ class TreeObsForRailEnv(ObservationBuilder):
                     # Cummulate the number of agents on branch with other direction
                     other_agent_opposite_direction += 1
 
-            if self.predictor:
-                continue
             # Register possible conflict
 
             if position in self.location_has_target:
