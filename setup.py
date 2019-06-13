@@ -63,12 +63,12 @@ else:
 def get_all_svg_files(directory='./svg/'):
     ret = []
     for f in os.listdir(directory):
-        ret.append(directory + f)
+        if f != '__pycache__':
+            ret.append(directory + f)
     return ret
 
 
 # Gather requirements from requirements_dev.txt
-# TODO : We could potentially split up the test/dev dependencies later
 install_reqs = []
 requirements_path = 'requirements_dev.txt'
 with open(requirements_path, 'r') as f:

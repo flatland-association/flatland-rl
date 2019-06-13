@@ -8,8 +8,10 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
+from importlib_resources import path
 
 import flatland.utils.rendertools as rt
+import images.test
 from flatland.envs.generators import empty_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -25,10 +27,8 @@ def checkFrozenImage(oRT, sFileImage, resave=False):
         np.savez_compressed(sDirImages + sFileImage, img=img_test)
         return
 
-    # this is now just for convenience - the file is not read back
-    np.savez_compressed(sDirImages + "test/" + sFileImage, img=img_test)
-
-    np.load(sDirImages + sFileImage)
+    with path(images, sFileImage) as file_in:
+        np.load(file_in)
 
     # TODO fails!
     #  assert (img_test.shape == img_expected.shape) \ #  noqa: E800
@@ -43,8 +43,7 @@ def test_render_env(save_new_images=False):
                    number_of_agents=0,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2)
                    )
-    sfTestEnv = "env-data/tests/test1.npy"
-    oEnv.rail.load_transition_map(sfTestEnv)
+    oEnv.rail.load_transition_map('env_data.tests', "test1.npy")
     oRT = rt.RenderTool(oEnv, gl="PILSVG")
     oRT.renderEnv(show=False)
 

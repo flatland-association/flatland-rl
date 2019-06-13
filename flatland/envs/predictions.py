@@ -18,7 +18,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
 
     def get(self, handle=None):
         """
-        Called whenever step_prediction is called on the environment.
+        Called whenever predict is called on the environment.
 
         Parameters
         -------
@@ -45,10 +45,16 @@ class DummyPredictorForRailEnv(PredictionBuilder):
             action_priorities = [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]
             _agent_initial_position = agent.position
             _agent_initial_direction = agent.direction
-            prediction = np.zeros(shape=(self.max_depth, 5))
+            prediction = np.zeros(shape=(self.max_depth + 1, 5))
             prediction[0] = [0, _agent_initial_position[0], _agent_initial_position[1], _agent_initial_direction, 0]
-            for index in range(1, self.max_depth):
+            for index in range(1, self.max_depth + 1):
                 action_done = False
+                # if we're at the target, stop moving...
+                if agent.position == agent.target:
+                    prediction[index] = [index, agent.target[0], agent.target[1], agent.direction,
+                                         RailEnvActions.STOP_MOVING]
+
+                    continue
                 for action in action_priorities:
                     cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
                         self.env._check_action_on_agent(action, agent)
@@ -61,7 +67,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
                         action_done = True
                         break
                 if not action_done:
-                    print("Cannot move further.")
+                    raise Exception("Cannot move further. Something is wrong")
             prediction_dict[agent.handle] = prediction
             agent.position = _agent_initial_position
             agent.direction = _agent_initial_direction
