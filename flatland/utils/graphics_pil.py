@@ -79,19 +79,17 @@ class PILGL(GraphicsLayer):
         self.firstFrame = True
         self.create_layers()
 
-
-    def build_background_map(self,dTargets):
+    def build_background_map(self, dTargets):
         self.background_grid = np.zeros(shape=(self.width, self.height))
         for x in range(self.width):
             for y in range(self.height):
-                distance = int(np.floor(np.sqrt(self.width*2.0 + self.height)))
+                distance = int(np.floor(np.sqrt(self.width * 2.0 + self.height)))
                 for rc in dTargets:
                     r = rc[1]
                     c = rc[0]
-                    d = int(np.floor(np.sqrt((x-r)**2 + (y-c)**2)))
-                    distance = min(d,distance)
+                    d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)))
+                    distance = min(d, distance)
                 self.background_grid[x][y] = distance
-
 
     def rgb_s2i(self, sRGB):
         """ convert a hex RGB string like 0091ea to 3-tuple of ints """
@@ -236,7 +234,6 @@ class PILSVG(PILGL):
         self.lwAgents = []
         self.agents_prev = []
 
-
         self.loadBuildingSVGs()
         self.loadScenerySVGs()
         self.loadRailSVGs()
@@ -273,12 +270,18 @@ class PILSVG(PILGL):
             pil_img = Image.open(fIn)
             return pil_img
 
-
-
     def loadBuildingSVGs(self):
         dBuildingFiles = [
             "Buildings/Bank.svg",
             "Buildings/Bar.svg",
+            "Buildings/Wohnhaus.svg",
+            "Buildings/Hochhaus.svg",
+            "Buildings/Hotel.svg",
+            "Buildings/Office.svg",
+            "Buildings/Polizei.svg",
+            "Buildings/Post.svg",
+            "Buildings/Supermarkt.svg",
+            "Buildings/Tankstelle.svg",
             "Buildings/Fabrik_A.svg",
             "Buildings/Fabrik_B.svg",
             "Buildings/Fabrik_C.svg",
@@ -288,18 +291,14 @@ class PILSVG(PILGL):
             "Buildings/Fabrik_G.svg",
             "Buildings/Fabrik_H.svg",
             "Buildings/Fabrik_I.svg",
-            "Buildings/Hochhaus.svg",
-            "Buildings/Hotel.svg",
-            "Buildings/Office.svg",
-            "Buildings/Polizei.svg",
-            "Buildings/Post.svg",
-            "Buildings/Supermarkt.svg",
-            "Buildings/Tankstelle.svg",
-            "Buildings/Wohnhaus.svg"]
+        ]
+
+        imgBg = self.pilFromSvgFile('svg', "Background_city.svg")
 
         self.dBuildings = []
         for sFile in dBuildingFiles:
-            img = self.pilFromSvgFile('svg',sFile)
+            img = self.pilFromSvgFile('svg', sFile)
+            img = Image.alpha_composite(imgBg, img)
             self.dBuildings.append(img)
 
     def loadScenerySVGs(self):
@@ -316,16 +315,20 @@ class PILSVG(PILGL):
             "Scenery/Bergwelt_A_Teil_2_mitte.svg",
             "Scenery/Bergwelt_A_Teil_3_rechts.svg",
         ]
+
+        imgBg = self.pilFromSvgFile('svg', "Background_Light_green.svg")
+
         self.dScenery = []
         for sFile in dSceneryFiles:
-            img = self.pilFromSvgFile('svg',sFile)
+            img = self.pilFromSvgFile('svg', sFile)
+            img = Image.alpha_composite(imgBg, img)
             self.dScenery.append(img)
 
     def loadRailSVGs(self):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
         """
         dRailFiles = {
-            "": "Background_#91D1DD.svg",
+            "": "Background_Light_green.svg",
             "WE": "Gleis_Deadend.svg",
             "WW EE NN SS": "Gleis_Diamond_Crossing.svg",
             "WW EE": "Gleis_horizontal.svg",
@@ -355,16 +358,18 @@ class PILSVG(PILGL):
             "NN SS": "Bahnhof_#d50000_Gleis_vertikal.svg"}
 
         # Dict of rail cell images indexed by binary transitions
-        self.dPilRail = self.loadSVGs(dRailFiles, rotate=True)
+        self.dPilRail = self.loadSVGs(dRailFiles, rotate=True, backgroundImage="Background_rail.svg",
+                                      whitefilter="Background_white_filter.svg")
 
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
-        dPilRail2 = self.loadSVGs(dTargetFiles, rotate=False, agent_colors=self.ltAgentColors)
+        dPilRail2 = self.loadSVGs(dTargetFiles, rotate=False, agent_colors=self.ltAgentColors, backgroundImage="Background_rail.svg",
+                                  whitefilter="Background_white_filter.svg")
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
         self.dPilRail = {**self.dPilRail, **dPilRail2}
 
-    def loadSVGs(self, dDirFile, rotate=False, agent_colors=False):
+    def loadSVGs(self, dDirFile, rotate=False, agent_colors=False, backgroundImage=None, whitefilter=None):
         dPil = {}
 
         transitions = RailEnvTransitions()
@@ -386,6 +391,14 @@ class PILSVG(PILGL):
             binTrans = int(sTrans16, 2)
 
             pilRail = self.pilFromSvgFile('svg', sFile)
+
+            if backgroundImage is not None:
+                imgBg = self.pilFromSvgFile('svg', backgroundImage)
+                pilRail = Image.alpha_composite(imgBg, pilRail)
+
+            if whitefilter is not None:
+                imgBg = self.pilFromSvgFile('svg', whitefilter)
+                pilRail = Image.alpha_composite(pilRail, imgBg)
 
             if rotate:
                 # For rotations, we also store the base image
@@ -412,13 +425,13 @@ class PILSVG(PILGL):
             if binTrans in self.dPilRail:
                 pilTrack = self.dPilRail[binTrans]
 
-                if binTrans == 0 :
+                if binTrans == 0:
                     if self.background_grid[col][row] < 4:
                         a = int(self.background_grid[col][row])
                         a = a % len(self.dBuildings)
                         pilTrack = self.dBuildings[a]
-                    else:
-                        a = int(self.background_grid[col][row]) - 4
+                    elif self.background_grid[col][row] > 5:
+                        a = int(self.background_grid[col][row]) - 5
                         a = a % len(self.dScenery)
                         pilTrack = self.dScenery[a]
 
