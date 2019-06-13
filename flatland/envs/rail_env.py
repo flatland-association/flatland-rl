@@ -58,7 +58,6 @@ class RailEnv(Environment):
                  rail_generator=random_rail_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
-                 prediction_builder_object=None
                  ):
         """
         Environment init.
@@ -98,10 +97,6 @@ class RailEnv(Environment):
 
         self.obs_builder = obs_builder_object
         self.obs_builder._set_env(self)
-
-        self.prediction_builder = prediction_builder_object
-        if self.prediction_builder:
-            self.prediction_builder._set_env(self)
 
         self.action_space = [1]
         self.observation_space = self.obs_builder.observation_space  # updated on resets?
@@ -297,11 +292,6 @@ class RailEnv(Environment):
             np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
         return cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid
 
-    def predict(self):
-        if not self.prediction_builder:
-            return {}
-        return self.prediction_builder.get()
-
     def check_action(self, agent, action):
         transition_isValid = None
         possible_transitions = self.rail.get_transitions((*agent.position, agent.direction))
@@ -330,20 +320,8 @@ class RailEnv(Environment):
         return new_direction, transition_isValid
 
     def _get_observations(self):
-        self.obs_dict = {}
-        self.debug_obs_dict = {}
-        for iAgent in range(self.get_num_agents()):
-            self.obs_dict[iAgent] = self.obs_builder.get(iAgent)
+        self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
         return self.obs_dict
-
-    def _get_predictions(self):
-        if not self.prediction_builder:
-            return {}
-        return {}
-
-    def render(self):
-        # TODO:
-        pass
 
     def get_full_state_msg(self):
         grid_data = self.rail.grid.tolist()

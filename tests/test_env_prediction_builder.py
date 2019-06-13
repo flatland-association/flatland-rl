@@ -5,7 +5,7 @@ import numpy as np
 
 from flatland.core.transition_map import GridTransitionMap, Grid4Transitions
 from flatland.envs.generators import rail_from_GridTransitionMap_generator
-from flatland.envs.observations import GlobalObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 
@@ -64,8 +64,7 @@ def test_predictions():
                   height=rail_map.shape[0],
                   rail_generator=rail_from_GridTransitionMap_generator(rail),
                   number_of_agents=1,
-                  obs_builder_object=GlobalObsForRailEnv(),
-                  prediction_builder_object=DummyPredictorForRailEnv(max_depth=20)
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=20)),
                   )
 
     env.reset()
@@ -74,7 +73,7 @@ def test_predictions():
     env.agents[0].position = (5, 6)
     env.agents[0].direction = 0
 
-    predictions = env.predict()
+    predictions = env.obs_builder.predictor.get()
     positions = np.array(list(map(lambda prediction: [prediction[1], prediction[2]], predictions[0])))
     directions = np.array(list(map(lambda prediction: [prediction[3]], predictions[0])))
     time_offsets = np.array(list(map(lambda prediction: [prediction[0]], predictions[0])))
