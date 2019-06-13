@@ -89,10 +89,12 @@ def coordinate_to_position(width, coords):
     :param coords:
     :return:
     """
-    position = []
+    position = np.empty(len(coords), dtype=int)
+    idx = 0
     for t in coords:
-        position.append((t[1] * width + t[0]))
-    return np.asarray(position).flatten()
+        position[idx] = int(t[1] * width + t[0])
+        idx += 1
+    return position
 
 
 class AStarNode():

@@ -1,6 +1,8 @@
 import numpy as np
 
 from flatland.envs.generators import complex_rail_generator
+from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.predictions import DummyPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 
 np.random.seed(1)
@@ -8,10 +10,13 @@ np.random.seed(1)
 # Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
 # Training on simple small tasks is the best way to get familiar with the environment
 #
-env = RailEnv(width=15,
-              height=15,
-              rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=10, min_dist=10, max_dist=99999, seed=0),
-              number_of_agents=5)
+
+TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv())
+env = RailEnv(width=20,
+              height=20,
+              rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
+              obs_builder_object=TreeObservation,
+              number_of_agents=2)
 
 
 # Import your own Agent or use RLlib to train agents on Flatland
@@ -56,6 +61,7 @@ n_trials = 5
 # Empty dictionary for all agent action
 action_dict = dict()
 print("Starting Training...")
+
 for trials in range(1, n_trials + 1):
 
     # Reset environment and get initial observations for all agents
@@ -74,7 +80,8 @@ for trials in range(1, n_trials + 1):
         # Environment step which returns the observations for all agents, their corresponding
         # reward and whether their are done
         next_obs, all_rewards, done, _ = env.step(action_dict)
-
+        TreeObservation.util_print_obs_subtree(next_obs[0], num_features_per_node=8)
+        print(len(next_obs[0]))
         # Update replay buffer and train agent
         for a in range(env.get_num_agents()):
             agent.step((obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a]))
