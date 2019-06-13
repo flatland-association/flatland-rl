@@ -658,6 +658,8 @@ class RenderTool(object):
 
                     self.gl.setRailAt(r, c, binTrans, iTarget=target, isSelected=isSelected)
 
+            self.gl.build_background_map(dTargets)
+
         for iAgent, agent in enumerate(self.env.agents):
 
             if agent is None:
