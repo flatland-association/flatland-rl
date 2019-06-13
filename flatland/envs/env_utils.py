@@ -69,6 +69,31 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
     return rail_trans.is_valid(new_trans)
 
 
+def position_to_coordinate(width, position):
+    """
+
+    :param width:
+    :param position:
+    :return:
+    """
+    coords = ()
+    for p in position:
+        coords = coords + ((int(p) % width, int(p) // width),)  # changed x_dim to y_dim
+    return coords
+
+
+def coordinate_to_position(width, coords):
+    """
+
+    :param width:
+    :param coords:
+    :return:
+    """
+    position = []
+    for t in coords:
+        position.append((t[1] * width + t[0]))
+    return np.array(position)
+
 class AStarNode():
     """A node class for A* Pathfinding"""
 

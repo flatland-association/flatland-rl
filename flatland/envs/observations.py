@@ -173,10 +173,13 @@ class TreeObsForRailEnv(ObservationBuilder):
         in the `handles' list.
         """
 
-        self.predictions = []
+
         if self.predictor:
-            for a in range(len(handles)):
-                self.predictions.append(self.predictor.get(a))
+            self.predictions = self.predictor.get()
+            pred_pos = np.concatenate([[x[:, 1:3]] for x in list(self.predictions.values())], axis=0)
+            pred_pos = list(map(list, zip(*pred_pos)))
+            pred_dir = [x[:, 2] for x in list(self.predictions.values())]
+
         observations = {}
         for h in handles:
             observations[h] = self.get(h)
