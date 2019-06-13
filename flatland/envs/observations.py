@@ -234,6 +234,9 @@ class TreeObsForRailEnv(ObservationBuilder):
             0 = no agent present other direction than myself
 
         #8: possible conflict detected
+            1 = Other agent predicts to pass along this cell at the same time as the agent
+
+            0 = No other agent reserve the same cell at similar time
 
 
         Missing/padding nodes are filled in with -inf (truncated).
@@ -547,8 +550,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         child_size = (len(tree) - num_features_per_node) // 4
         tree_data = tree[0:4].tolist()
         distance_data = [tree[4]]
-        agent_data = tree[-3:].tolist()
-
+        agent_data = tree[num_features_per_node - 3:num_features_per_node].tolist()
         for children in range(4):
             child_tree = tree[(num_features_per_node + children * child_size):
                               (num_features_per_node + (children + 1) * child_size)]
