@@ -74,7 +74,7 @@ def test_predictions():
     env.agents[0].direction = 0
     env.agents[0].target = (3., 0.)
 
-    predictions = env.obs_builder.predictor.get()
+    predictions = env.obs_builder.predictor.get(None)
     positions = np.array(list(map(lambda prediction: [prediction[1], prediction[2]], predictions[0])))
     directions = np.array(list(map(lambda prediction: [prediction[3]], predictions[0])))
     time_offsets = np.array(list(map(lambda prediction: [prediction[0]], predictions[0])))
