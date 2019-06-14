@@ -178,6 +178,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             self.predicted_pos = {}
             self.predicted_dir = {}
             self.predictions = self.predictor.get(self.distance_map)
+            print(self.predictions)
             for t in range(len(self.predictions[0])):
                 pos_list = []
                 dir_list = []

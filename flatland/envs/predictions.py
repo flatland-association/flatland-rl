@@ -114,12 +114,14 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
             prediction[0] = [0, _agent_initial_position[0], _agent_initial_position[1], _agent_initial_direction, 0]
             for index in range(1, self.max_depth + 1):
-                action_done = False
                 # if we're at the target, stop moving...
                 if agent.position == agent.target:
                     prediction[index] = [index, agent.target[0], agent.target[1], agent.direction,
                                          RailEnvActions.STOP_MOVING]
-
+                    continue
+                if not agent.moving:
+                    prediction[index] = [index, agent.position[0], agent.position[1], agent.direction,
+                                         RailEnvActions.STOP_MOVING]
                     continue
                 # Take shortest possible path
                 cell_transitions = self.env.rail.get_transitions((*agent.position, agent.direction))
