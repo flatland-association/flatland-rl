@@ -108,7 +108,6 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
         prediction_dict = {}
         agent_idx = 0
         for agent in agents:
-            action_priorities = [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]
             _agent_initial_position = agent.position
             _agent_initial_direction = agent.direction
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
