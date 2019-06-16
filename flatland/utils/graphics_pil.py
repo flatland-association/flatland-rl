@@ -83,12 +83,15 @@ class PILGL(GraphicsLayer):
         self.background_grid = np.zeros(shape=(self.width, self.height))
         for x in range(self.width):
             for y in range(self.height):
-                distance = int(np.floor(np.sqrt(self.width * 2.0 + self.height)))
+                distance = None
                 for rc in dTargets:
                     r = rc[1]
                     c = rc[0]
                     d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)))
-                    distance = min(d, distance)
+                    if distance is None:
+                        distance = d
+                    else:
+                        distance = min(d, distance)
                 self.background_grid[x][y] = distance
 
     def rgb_s2i(self, sRGB):
@@ -309,11 +312,11 @@ class PILSVG(PILGL):
             "Scenery/Nadelbaume_A.svg",
             "Scenery/Nadelbaume_B.svg",
             "Scenery/Bergwelt_B.svg",
-            "Scenery/Bergwelt_C_Teil_1_links.svg",
-            "Scenery/Bergwelt_C_Teil_2_rechts.svg",
-            "Scenery/Bergwelt_A_Teil_1_links.svg",
-            "Scenery/Bergwelt_A_Teil_2_mitte.svg",
-            "Scenery/Bergwelt_A_Teil_3_rechts.svg",
+            # "Scenery/Bergwelt_C_Teil_1_links.svg",
+            # "Scenery/Bergwelt_C_Teil_2_rechts.svg",
+            # "Scenery/Bergwelt_A_Teil_1_links.svg",
+            # "Scenery/Bergwelt_A_Teil_2_mitte.svg",
+            # "Scenery/Bergwelt_A_Teil_3_rechts.svg",
         ]
 
         imgBg = self.pilFromSvgFile('svg', "Background_Light_green.svg")
@@ -430,7 +433,7 @@ class PILSVG(PILGL):
                     if self.background_grid[col][row] < 4:
                         a = int(self.background_grid[col][row])
                         a = a % len(self.dBuildings)
-                        if (col + row) % 10 > 2:
+                        if (col + row) % 10 > 7:
                             pilTrack = self.dScenery[0]
                         else:
                             if (col + row + col * row) % 2 == 0:
