@@ -722,6 +722,7 @@ class EditorModel(object):
                 agent_static = EnvAgentStatic(rcCell, 0, rcCell, moving=False)
                 self.iSelectedAgent = self.env.add_agent_static(agent_static)
                 self.player = None  # will need to start a new player
+                self.view.oRT.update_background()
             else:
                 # Move the selected agent to this cell
                 agent_static = self.env.agents_static[self.iSelectedAgent]
@@ -745,6 +746,7 @@ class EditorModel(object):
         if self.iSelectedAgent is not None:
             self.env.agents_static[self.iSelectedAgent].target = rcCell
             self.init_agents_static = None
+            self.view.oRT.update_background()
             self.redraw()
 
     def step(self):

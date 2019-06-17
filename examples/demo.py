@@ -96,6 +96,7 @@ class Demo:
             for iAgent in range(self.env.get_num_agents()):
                 # allways walk straight forward
                 action = 2
+                action = np.random.choice([0, 1, 2, 3], 1, p=[0.0, 0.5, 0.5, 0.0])[0]
 
                 # update the actions
                 action_dict.update({iAgent: action})
@@ -161,7 +162,7 @@ class Demo:
 
     @staticmethod
     def run_complex_scene():
-        demo_001 = Demo(Scenario_Generator.load_scenario('complex_scene.pkl'))
+        demo_001 = Demo(Scenario_Generator.load_scenario('demo_001.pkl'))
         demo_001.set_record_frames(os.path.join(__file_dirname__, '..', 'rendering', 'frame_{:04d}.bmp'))
         demo_001.run_demo(120)
  
