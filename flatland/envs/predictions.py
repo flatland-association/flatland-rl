@@ -112,7 +112,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
         agents = self.env.agents
         if handle:
             agents = [self.env.agents[handle]]
-        assert custom_args
+        assert custom_args is not None
         distance_map = custom_args.get('distance_map')
         assert distance_map is not None
 
