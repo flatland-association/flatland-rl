@@ -8,4 +8,4 @@ random.seed(1)
 np.random.seed(1)
 
 if __name__ == "__main__":
-    Demo.run_example_flatland_003()
+    Demo.run_example_network_003()
