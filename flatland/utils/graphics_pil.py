@@ -439,7 +439,7 @@ class PILSVG(PILGL):
                     elif (self.background_grid[col][row] > 4) or ((col ** 3 + row ** 2 + col * row) % 10 == 0):
                         a = int(self.background_grid[col][row]) - 4
                         a = (a + (col + row + col * row + col ** 3 + row ** 4)) % len(self.dScenery)
-                        if (col + row + col * row ) % 10 > 2:
+                        if (col + row + col * row) % 10 > 2:
                             a = 0
                         pilTrack = self.dScenery[a]
 

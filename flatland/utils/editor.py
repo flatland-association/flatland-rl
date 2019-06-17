@@ -328,7 +328,6 @@ class Controller(object):
         else:
             self.model.mod_path(not event["shiftKey"])
 
-
     def refresh(self, event):
         self.debug("refresh")
         self.view.redraw()
