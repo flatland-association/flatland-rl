@@ -3,6 +3,7 @@ The transitions module defines the base Transitions class and a
 derived GridTransitions class, which allows for the specification of
 possible transitions over a 2D grid.
 """
+from enum import IntEnum
 
 import numpy as np
 
@@ -128,6 +129,16 @@ class Transitions:
 
         """
         raise NotImplementedError()
+
+    def get_direction_enum(self) -> IntEnum:
+        raise NotImplementedError()
+
+
+class Grid4TransitionsEnum(IntEnum):
+    NORTH = 0
+    EAST = 1
+    SOUTH = 2
+    WEST = 3
 
 
 class Grid4Transitions(Transitions):
@@ -323,6 +334,20 @@ class Grid4Transitions(Transitions):
         cell_transition = value
         return cell_transition
 
+    def get_direction_enum(self) -> IntEnum:
+        return Grid4TransitionsEnum
+
+
+class Grid8TransitionsEnum(IntEnum):
+    NORTH = 0
+    NORTH_EAST = 1
+    EAST = 2
+    SOUTH_EAST = 3
+    SOUTH = 4
+    SOUTH_WEST = 5
+    WEST = 6
+    NORTH_WEST = 7
+
 
 class Grid8Transitions(Transitions):
     """
@@ -503,6 +528,9 @@ class Grid8Transitions(Transitions):
         cell_transition = value
 
         return cell_transition
+
+    def get_direction_enum(self) -> IntEnum:
+        return Grid8TransitionsEnum
 
 
 class RailEnvTransitions(Grid4Transitions):
