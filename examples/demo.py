@@ -164,7 +164,3 @@ class Demo:
         demo_001 = Demo(Scenario_Generator.load_scenario('complex_scene.pkl'))
         demo_001.set_record_frames(os.path.join(__file_dirname__, '..', 'rendering', 'frame_{:04d}.bmp'))
         demo_001.run_demo(120)
- 
-
-if __name__ == "__main__":
-    Demo.run_complex_scene()

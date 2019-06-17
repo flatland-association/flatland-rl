@@ -11,6 +11,7 @@ image: themattrix/tox
 
 stages:
     - tests
+    - benchmarks_and_profiling
     - deploy_docs
 cache:
     paths:
@@ -51,10 +52,11 @@ build_and_deploy_docs:
 benchmarks_and_profiling:
     dependencies:
         - tests
-    stage: tests
+    stage: benchmarks_and_profiling
     only:
-#        - master
-          variables:
+#        refs:
+#            - master
+        variables:
             - $BENCHMARKS_AND_PROFILING
     script:
         - apt update
