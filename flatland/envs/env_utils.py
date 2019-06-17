@@ -7,6 +7,8 @@ a GridTransitionMap object.
 
 import numpy as np
 
+from flatland.core.transitions import Grid4TransitionsEnum
+
 
 def get_direction(pos1, pos2):
     """
@@ -253,13 +255,14 @@ def distance_on_rail(pos1, pos2):
 
 
 def get_new_position(position, movement):
-    if movement == 0:  # NORTH
+    """ Utility function that converts a compass movement over a 2D grid to new positions (r, c). """
+    if movement == Grid4TransitionsEnum.NORTH:
         return (position[0] - 1, position[1])
-    elif movement == 1:  # EAST
+    elif movement == Grid4TransitionsEnum.EAST:
         return (position[0], position[1] + 1)
-    elif movement == 2:  # SOUTH
+    elif movement == Grid4TransitionsEnum.SOUTH:
         return (position[0] + 1, position[1])
-    elif movement == 3:  # WEST
+    elif movement == Grid4TransitionsEnum.WEST:
         return (position[0], position[1] - 1)
 
 

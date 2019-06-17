@@ -204,8 +204,3 @@ def test_dead_end():
 
     rail_env.reset()
     rail_env.agents = [EnvAgent(position=(2, 0), direction=0, target=(4, 0), moving=False)]
-
-
-if __name__ == "__main__":
-    test_rail_environment_single_agent()
-    test_dead_end()
