@@ -166,7 +166,7 @@ def test_shortest_path_predictor(rendering=False):
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
         renderer.renderEnv(show=True, show_observations=False)
-        # input("Continue?")
+        input("Continue?")
 
     agent = env.agents[0]
     assert agent.position == (5, 6)

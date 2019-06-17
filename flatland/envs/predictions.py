@@ -31,7 +31,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
         Returns
         -------
         np.array
-            Returns a dictionary indexed by the agent handle and for each agent a vector of (max_depth + 1) x 5 elements:
+            Returns a dictionary indexed by the agent handle and for each agent a vector of (max_depth + 1)x5 elements:
             - time_offset
             - position axis 0
             - position axis 1
@@ -101,7 +101,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
         Returns
         -------
         np.array
-            Returns a dictionary indexed by the agent handle and for each agent a vector of (max_depth + 1) x 5 elements:
+            Returns a dictionary indexed by the agent handle and for each agent a vector of (max_depth + 1)x5 elements:
             - time_offset
             - position axis 0
             - position axis 1
