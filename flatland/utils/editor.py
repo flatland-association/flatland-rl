@@ -277,6 +277,7 @@ class Controller(object):
 
         # If the mouse is held down, enqueue an event in our own queue
         # The intention was to avoid too many redraws.
+        # Reset the lrcStroke list, if ALT, CTRL or SHIFT pressed
         if event["buttons"] > 0:
             qEvents.append((time.time(), x, y))
             bShift = event["shiftKey"]
@@ -299,7 +300,6 @@ class Controller(object):
                 return
         else:
             self.lrcStroke = []
-             
 
         if self.model.iSelectedAgent is not None:
             self.lrcStroke = []
