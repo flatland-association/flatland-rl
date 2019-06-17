@@ -650,6 +650,7 @@ class EditorModel(object):
             self.env.restart_agents()
             self.env.reset(False, False)
             self.init_agents_static = None
+            self.view.oRT.update_background()
             self.fix_env()
             self.set_env(self.env)
             self.redraw()
