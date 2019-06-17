@@ -48,16 +48,19 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.agents_previous_reset = agents
 
         if compute_distance_map:
-            self.distance_map = np.inf * np.ones(shape=(nAgents,  # self.env.number_of_agents,
-                                                        self.env.height,
-                                                        self.env.width,
-                                                        4))
-            self.max_dist = np.zeros(nAgents)
+            self._compute_distance_map()
 
-            self.max_dist = [self._distance_map_walker(agent.target, i) for i, agent in enumerate(agents)]
-
-            # Update local lookup table for all agents' target locations
-            self.location_has_target = {tuple(agent.target): 1 for agent in agents}
+    def _compute_distance_map(self):
+        agents = self.env.agents
+        nAgents = len(agents)
+        self.distance_map = np.inf * np.ones(shape=(nAgents,  # self.env.number_of_agents,
+                                                    self.env.height,
+                                                    self.env.width,
+                                                    4))
+        self.max_dist = np.zeros(nAgents)
+        self.max_dist = [self._distance_map_walker(agent.target, i) for i, agent in enumerate(agents)]
+        # Update local lookup table for all agents' target locations
+        self.location_has_target = {tuple(agent.target): 1 for agent in agents}
 
     def _distance_map_walker(self, position, target_nr):
         """
@@ -177,7 +180,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         if self.predictor:
             self.predicted_pos = {}
             self.predicted_dir = {}
-            self.predictions = self.predictor.get(self.distance_map)
+            self.predictions = self.predictor.get(custom_args={'distance_map': self.distance_map})
             for t in range(len(self.predictions[0])):
                 pos_list = []
                 dir_list = []
@@ -796,8 +799,3 @@ class LocalObsForRailEnv(ObservationBuilder):
         direction = self._get_one_hot_for_agent_direction(agent)
 
         return local_rail_obs, obs_map_state, obs_other_agents_state, direction
-
-# class LocalObsForRailEnvImproved(ObservationBuilder):
-#     """
-#     Returns a local observation around the given agent
-#     """

@@ -13,6 +13,7 @@ case of multi-agent environments.
 class PredictionBuilder:
     """
     PredictionBuilder base class.
+
     """
 
     def __init__(self, max_depth: int = 20):
@@ -27,12 +28,15 @@ class PredictionBuilder:
         """
         pass
 
-    def get(self, handle=0):
+    def get(self, custom_args=None, handle=0):
         """
-        Called whenever predict is called on the environment.
+        Called whenever get_many in the observation build is called.
 
         Parameters
         -------
+        custom_args: dict
+            Implementation-dependent custom arguments, see the sub-classes.
+
         handle : int (optional)
             Handle of the agent for which to compute the observation vector.
 
