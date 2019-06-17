@@ -71,30 +71,42 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
     return rail_trans.is_valid(new_trans)
 
 
-def position_to_coordinate(width, position):
+def position_to_coordinate(depth, position):
     """
+         [ (0,0) (0,1) ..  (0,w)
+           (1,0) (1,1)     (1,w)
+           ...
+           (d,0) (d,1)     (d,w) ]
 
-    :param width:
+         -->
+
+         [ 0      1    ..   w
+           w+1    w+2  ..   2w
+           ...
+           d*w+1  d*w+
+
+    :param depth:
     :param position:
     :return:
     """
     coords = ()
     for p in position:
-        coords = coords + ((int(p) % width, int(p) // width),)  # changed x_dim to y_dim
+        coords = coords + ((int(p) % depth, int(p) // depth),)  # changed x_dim to y_dim
     return coords
 
 
-def coordinate_to_position(width, coords):
+def coordinate_to_position(depth, coords):
     """
+    Helper function to
 
-    :param width:
+    :param depth:
     :param coords:
     :return:
     """
     position = np.empty(len(coords), dtype=int)
     idx = 0
     for t in coords:
-        position[idx] = int(t[1] * width + t[0])
+        position[idx] = int(t[1] * depth + t[0])
         idx += 1
     return position
 
