@@ -10,7 +10,7 @@ import numpy as np
 from flatland.core.transitions import Grid4TransitionsEnum
 
 
-def get_direction(pos1, pos2):
+def get_direction(pos1, pos2) -> Grid4TransitionsEnum:
     """
     Assumes pos1 and pos2 are adjacent location on grid.
     Returns direction (int) that can be used with transitions.
@@ -25,7 +25,7 @@ def get_direction(pos1, pos2):
         return 1
     if diff_1 < 0:
         return 3
-    return 0
+    raise Exception("Could not determine direction {}->{}".format(pos1, pos2))
 
 
 def mirror(dir):
@@ -71,33 +71,46 @@ def validate_new_transition(rail_trans, rail_array, prev_pos, current_pos, new_p
     return rail_trans.is_valid(new_trans)
 
 
-def position_to_coordinate(depth, position):
-    """
-         [ (0,0) (0,1) ..  (0,w)
-           (1,0) (1,1)     (1,w)
+def position_to_coordinate(depth, positions):
+    """Converts coordinates to positions:
+         [ (0,0) (0,1) ..  (0,w-1)
+           (1,0) (1,1)     (1,w-1)
            ...
-           (d,0) (d,1)     (d,w) ]
+           (d-1,0) (d-1,1)     (d-1,w-1)
+          ]
 
          -->
 
-         [ 0      1    ..   w
-           w+1    w+2  ..   2w
+         [ 0      d    ..  (w-1)*d
+           1      d+1
            ...
-           d*w+1  d*w+
+           d-1    2d-1     w*d-1
+         ]
 
     :param depth:
-    :param position:
+    :param positions:
     :return:
     """
     coords = ()
-    for p in position:
+    for p in positions:
         coords = coords + ((int(p) % depth, int(p) // depth),)  # changed x_dim to y_dim
     return coords
 
 
 def coordinate_to_position(depth, coords):
     """
-    Helper function to
+    Converts positions to coordinates:
+         [ 0      d    ..  (w-1)*d
+           1      d+1
+           ...
+           d-1    2d-1     w*d-1
+         ]
+         -->
+         [ (0,0) (0,1) ..  (0,w-1)
+           (1,0) (1,1)     (1,w-1)
+           ...
+           (d-1,0) (d-1,1)     (d-1,w-1)
+          ]
 
     :param depth:
     :param coords:
@@ -109,6 +122,18 @@ def coordinate_to_position(depth, coords):
         position[idx] = int(t[1] * depth + t[0])
         idx += 1
     return position
+
+
+def get_new_position(position, movement):
+    """ Utility function that converts a compass movement over a 2D grid to new positions (r, c). """
+    if movement == Grid4TransitionsEnum.NORTH:
+        return (position[0] - 1, position[1])
+    elif movement == Grid4TransitionsEnum.EAST:
+        return (position[0], position[1] + 1)
+    elif movement == Grid4TransitionsEnum.SOUTH:
+        return (position[0] + 1, position[1])
+    elif movement == Grid4TransitionsEnum.WEST:
+        return (position[0], position[1] - 1)
 
 
 class AStarNode():
@@ -264,18 +289,6 @@ def connect_rail(rail_trans, rail_array, start, end):
 
 def distance_on_rail(pos1, pos2):
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
-
-
-def get_new_position(position, movement):
-    """ Utility function that converts a compass movement over a 2D grid to new positions (r, c). """
-    if movement == Grid4TransitionsEnum.NORTH:
-        return (position[0] - 1, position[1])
-    elif movement == Grid4TransitionsEnum.EAST:
-        return (position[0], position[1] + 1)
-    elif movement == Grid4TransitionsEnum.SOUTH:
-        return (position[0] + 1, position[1])
-    elif movement == Grid4TransitionsEnum.WEST:
-        return (position[0], position[1] - 1)
 
 
 def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):

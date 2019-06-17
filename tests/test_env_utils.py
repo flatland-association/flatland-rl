@@ -1,6 +1,8 @@
 import numpy as np
+import pytest
 
-from flatland.envs.env_utils import position_to_coordinate, coordinate_to_position
+from flatland.core.transitions import Grid4TransitionsEnum
+from flatland.envs.env_utils import position_to_coordinate, coordinate_to_position, get_direction
 
 depth_to_test = 5
 positions_to_test = [0, 5, 1, 6, 20, 30]
@@ -19,3 +21,13 @@ def test_coordinate_to_position():
     expected_positions = positions_to_test
     assert np.array_equal(actual_positions, expected_positions), \
         "converted positions {}, expected {}".format(actual_positions, expected_positions)
+
+
+def test_get_direction():
+    assert get_direction((0,0),(0,1)) == Grid4TransitionsEnum.EAST
+    assert get_direction((0,0),(0,2)) == Grid4TransitionsEnum.EAST
+    assert get_direction((0,0),(1,0)) == Grid4TransitionsEnum.SOUTH
+    assert get_direction((1,0),(0,0)) == Grid4TransitionsEnum.NORTH
+    assert get_direction((1,0),(0,0)) == Grid4TransitionsEnum.NORTH
+    with pytest.raises(Exception,match="Could not determine direction"):
+        get_direction((0,0),(0,0)) == Grid4TransitionsEnum.NORTH
