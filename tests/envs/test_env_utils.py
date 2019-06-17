@@ -24,10 +24,10 @@ def test_coordinate_to_position():
 
 
 def test_get_direction():
-    assert get_direction((0,0),(0,1)) == Grid4TransitionsEnum.EAST
-    assert get_direction((0,0),(0,2)) == Grid4TransitionsEnum.EAST
-    assert get_direction((0,0),(1,0)) == Grid4TransitionsEnum.SOUTH
-    assert get_direction((1,0),(0,0)) == Grid4TransitionsEnum.NORTH
-    assert get_direction((1,0),(0,0)) == Grid4TransitionsEnum.NORTH
-    with pytest.raises(Exception,match="Could not determine direction"):
-        get_direction((0,0),(0,0)) == Grid4TransitionsEnum.NORTH
+    assert get_direction((0, 0), (0, 1)) == Grid4TransitionsEnum.EAST
+    assert get_direction((0, 0), (0, 2)) == Grid4TransitionsEnum.EAST
+    assert get_direction((0, 0), (1, 0)) == Grid4TransitionsEnum.SOUTH
+    assert get_direction((1, 0), (0, 0)) == Grid4TransitionsEnum.NORTH
+    assert get_direction((1, 0), (0, 0)) == Grid4TransitionsEnum.NORTH
+    with pytest.raises(Exception, match="Could not determine direction"):
+        get_direction((0, 0), (0, 0)) == Grid4TransitionsEnum.NORTH

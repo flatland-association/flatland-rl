@@ -291,18 +291,6 @@ def distance_on_rail(pos1, pos2):
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 
-def get_new_position(position, movement):
-    """ Utility function that converts a compass movement over a 2D grid to new positions (r, c). """
-    if movement == Grid4TransitionsEnum.NORTH:
-        return (position[0] - 1, position[1])
-    elif movement == Grid4TransitionsEnum.EAST:
-        return (position[0], position[1] + 1)
-    elif movement == Grid4TransitionsEnum.SOUTH:
-        return (position[0] + 1, position[1])
-    elif movement == Grid4TransitionsEnum.WEST:
-        return (position[0], position[1] - 1)
-
-
 def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):
     """
     Given a `rail' GridTransitionMap, return a random placement of agents (initial position, direction and target).
