@@ -249,6 +249,9 @@ class Controller(object):
         self.debug("click in cell", rcCell)
         self.model.debug_cell(rcCell)
 
+        if self.model.iSelectedAgent is not None:
+            self.lrcStroke = []
+
     def setDebug(self, dEvent):
         self.model.setDebug(dEvent["new"])
 
@@ -276,6 +279,33 @@ class Controller(object):
         # The intention was to avoid too many redraws.
         if event["buttons"] > 0:
             qEvents.append((time.time(), x, y))
+            bShift = event["shiftKey"]
+            bCtrl = event["ctrlKey"]
+            bAlt = event["altKey"]
+            if bShift:
+                self.lrcStroke = []
+                while len(qEvents) > 0:
+                    t, x, y = qEvents.popleft()
+                return
+            if bCtrl:
+                self.lrcStroke = []
+                while len(qEvents) > 0:
+                    t, x, y = qEvents.popleft()
+                return
+            if bAlt:
+                self.lrcStroke = []
+                while len(qEvents) > 0:
+                    t, x, y = qEvents.popleft()
+                return
+        else:
+            self.lrcStroke = []
+             
+
+        if self.model.iSelectedAgent is not None:
+            self.lrcStroke = []
+            while len(qEvents) > 0:
+                t, x, y = qEvents.popleft()
+            return
 
         # Process the events in our queue:
         # Draw a black square to indicate a trail
@@ -297,6 +327,7 @@ class Controller(object):
 
         else:
             self.model.mod_path(not event["shiftKey"])
+
 
     def refresh(self, event):
         self.debug("refresh")

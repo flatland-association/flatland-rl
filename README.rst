@@ -110,7 +110,7 @@ Once you have a copy of the source, you can install it with ::
 Jupyter Canvas Widget
 ---------------------
 If you work with jupyter notebook you need to install the Jupyer Canvas Widget. To install the Jupyter Canvas Widget read also
-https://github.com/Who8MyLunch/Jupyter_Canvas_Widget#installation 
+https://github.com/Who8MyLunch/Jupyter_Canvas_Widget#installation
 
 Usage
 =====
