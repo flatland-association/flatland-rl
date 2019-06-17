@@ -83,15 +83,12 @@ class PILGL(GraphicsLayer):
         self.background_grid = np.zeros(shape=(self.width, self.height))
         for x in range(self.width):
             for y in range(self.height):
-                distance = None
+                distance = int(np.ceil(np.sqrt(self.width ** 2.0 + self.height ** 2.0)))
                 for rc in dTargets:
                     r = rc[1]
                     c = rc[0]
                     d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)))
-                    if distance is None:
-                        distance = d
-                    else:
-                        distance = min(d, distance)
+                    distance = min(d, distance)
                 self.background_grid[x][y] = distance
 
     def rgb_s2i(self, sRGB):
