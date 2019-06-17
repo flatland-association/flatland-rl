@@ -83,7 +83,7 @@ class PILGL(GraphicsLayer):
         self.background_grid = np.zeros(shape=(self.width, self.height))
         for x in range(self.width):
             for y in range(self.height):
-                distance = int(np.ceil(np.sqrt(self.width**2.0 + self.height**2.0)))
+                distance = int(np.ceil(np.sqrt(self.width ** 2.0 + self.height ** 2.0)))
                 for rc in dTargets:
                     r = rc[1]
                     c = rc[0]
