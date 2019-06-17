@@ -6,6 +6,7 @@ from collections import deque
 import numpy as np
 
 from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.core.transitions import Grid4TransitionsEnum
 from flatland.envs.env_utils import coordinate_to_position
 
 
@@ -162,13 +163,13 @@ class TreeObsForRailEnv(ObservationBuilder):
         """
         Utility function that converts a compass movement over a 2D grid to new positions (r, c).
         """
-        if movement == 0:  # NORTH
+        if movement == Grid4TransitionsEnum.NORTH:
             return (position[0] - 1, position[1])
-        elif movement == 1:  # EAST
+        elif movement == Grid4TransitionsEnum.EAST:
             return (position[0], position[1] + 1)
-        elif movement == 2:  # SOUTH
+        elif movement == Grid4TransitionsEnum.SOUTH:
             return (position[0] + 1, position[1])
-        elif movement == 3:  # WEST
+        elif movement == Grid4TransitionsEnum.WEST:
             return (position[0], position[1] - 1)
 
     def get_many(self, handles=[]):
