@@ -47,3 +47,19 @@ build_and_deploy_docs:
     environment:
         name: ${CI_COMMIT_REF_SLUG}
         url: http://${BUCKET_NAME}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com/
+
+benchmarks_and_profiling:
+    dependencies:
+        - tests
+    stage: tests
+    only:
+#        - master
+          variables:
+            - $BENCHMARKS_AND_PROFILING
+    script:
+        - apt update
+        - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - pip install tox
+        - xvfb-run tox -e benchmarks -v --recreate
+
+
