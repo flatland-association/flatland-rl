@@ -238,10 +238,13 @@ class Controller(object):
         bAlt = event["altKey"]
         if bCtrl and not bShift and not bAlt:
             self.model.click_agent(rcCell)
+            self.lrcStroke = []
         elif bShift and bCtrl:
             self.model.add_target(rcCell)
+            self.lrcStroke = []
         elif bAlt and not bShift and not bCtrl:
             self.model.clearCell(rcCell)
+            self.lrcStroke = []
 
         self.debug("click in cell", rcCell)
         self.model.debug_cell(rcCell)
