@@ -358,17 +358,17 @@ class PILSVG(PILGL):
             "NN SS": "Bahnhof_#d50000_Gleis_vertikal.svg"}
 
         # Dict of rail cell images indexed by binary transitions
-        self.dPilRail = self.loadSVGs(dRailFiles, rotate=True, backgroundImage="Background_rail.svg",
+        dPilRailFiles = self.loadSVGs(dRailFiles, rotate=True, backgroundImage="Background_rail.svg",
                                       whitefilter="Background_white_filter.svg")
 
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
-        dPilRail2 = self.loadSVGs(dTargetFiles, rotate=False, agent_colors=self.ltAgentColors,
-                                  backgroundImage="Background_rail.svg",
-                                  whitefilter="Background_white_filter.svg")
+        dPilTargetFiles = self.loadSVGs(dTargetFiles, rotate=False, agent_colors=self.ltAgentColors,
+                                        backgroundImage="Background_rail.svg",
+                                        whitefilter="Background_white_filter.svg")
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
-        self.dPilRail = {**self.dPilRail, **dPilRail2}
+        self.dPilRail = {**dPilRailFiles, **dPilTargetFiles}
 
     def loadSVGs(self, dDirFile, rotate=False, agent_colors=False, backgroundImage=None, whitefilter=None):
         dPil = {}
@@ -445,13 +445,13 @@ class PILSVG(PILGL):
 
                 self.drawImageRC(pilTrack, (row, col))
             else:
-                print("Illegal rail:", row, col, format(binTrans, "#018b")[2:])
+                print("Illegal rail:", row, col, format(binTrans, "#018b")[2:], binTrans)
         else:
             if (binTrans, iTarget) in self.dPilRail:
                 pilTrack = self.dPilRail[(binTrans, iTarget)]
                 self.drawImageRC(pilTrack, (row, col))
             else:
-                print("Illegal target rail:", row, col, format(binTrans, "#018b")[2:])
+                print("Illegal target rail:", row, col, format(binTrans, "#018b")[2:], (binTrans, iTarget))
 
             if isSelected:
                 svgBG = self.pilFromSvgFile("svg", "Selected_Target.svg")
