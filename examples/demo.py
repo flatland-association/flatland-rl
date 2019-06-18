@@ -150,12 +150,14 @@ class Demo:
     def run_example_flatland_000():
         demo_flatland_000 = Demo(Scenario_Generator.load_scenario('example_flatland_000.pkl'))
         demo_flatland_000.renderer.resize()
+        demo_flatland_000.set_max_framerate(5)
         demo_flatland_000.run_demo(60)
 
     @staticmethod
     def run_example_flatland_001():
         demo_flatland_000 = Demo(Scenario_Generator.load_scenario('example_flatland_001.pkl'))
         demo_flatland_000.renderer.resize()
+        demo_flatland_000.set_max_framerate(5)
         demo_flatland_000.set_record_frames(os.path.join(__file_dirname__, '..', 'rendering', 'frame_{:04d}.bmp'))
         demo_flatland_000.run_demo(60)
 
