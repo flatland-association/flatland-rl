@@ -151,7 +151,7 @@ class RailEnv(Environment):
             self.rail = tRailAgents[0]
 
         if replace_agents:
-            self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:4])
+            self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:5])
 
         self.restart_agents()
 
@@ -191,7 +191,7 @@ class RailEnv(Environment):
         # for i in range(len(self.agents_handles)):
         for iAgent in range(self.get_num_agents()):
             agent = self.agents[iAgent]
-            agent.speed_data['speed']=0.5
+            print(agent.speed_data['speed'])
 
             if self.dones[iAgent]:  # this agent has already completed...
                 continue

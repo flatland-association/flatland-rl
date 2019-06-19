@@ -47,12 +47,14 @@ class EnvAgentStatic(object):
         self.speed_data = speed_data
 
     @classmethod
-    def from_lists(cls, positions, directions, targets):
+    def from_lists(cls, positions, directions, targets, speeds=None):
         """ Create a list of EnvAgentStatics from lists of positions, directions and targets
         """
         speed_datas = []
         for i in range(len(positions)):
-            speed_datas.append({'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0})
+            speed_datas.append({'position_fraction': 0.0,
+                                'speed': speeds[i] if speeds is not None else 1.0,
+                                'transition_action_on_cellexit': 0})
         return list(starmap(EnvAgentStatic, zip(positions, directions, targets, [False] * len(positions), speed_datas)))
 
     def to_list(self):
