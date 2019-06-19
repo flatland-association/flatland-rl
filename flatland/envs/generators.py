@@ -75,8 +75,9 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
         while nr_created < nr_start_goal and created_sanity < sanity_max:
             all_ok = False
             for _ in range(sanity_max):
-                start = (np.random.randint(0, width), np.random.randint(0, height))
-                goal = (np.random.randint(0, height), np.random.randint(0, height))
+                start = (np.random.randint(0, height), np.random.randint(0, width))
+                goal = (np.random.randint(0, height), np.random.randint(0, width))
+
                 # check to make sure start,goal pos is empty?
                 if rail_array[goal] != 0 or rail_array[start] != 0:
                     continue
@@ -121,8 +122,8 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
         while nr_created < nr_extra and created_sanity < sanity_max:
             all_ok = False
             for _ in range(sanity_max):
-                start = (np.random.randint(0, width), np.random.randint(0, height))
-                goal = (np.random.randint(0, height), np.random.randint(0, height))
+                start = (np.random.randint(0, height), np.random.randint(0, width))
+                goal = (np.random.randint(0, height), np.random.randint(0, width))
                 # check to make sure start,goal pos are not empty
                 if rail_array[goal] == 0 or rail_array[start] == 0:
                     continue
