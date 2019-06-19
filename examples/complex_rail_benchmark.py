@@ -2,7 +2,6 @@
 import random
 
 import numpy as np
-from benchmarker import Benchmarker
 
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
@@ -65,7 +64,4 @@ def run_benchmark():
 
 
 if __name__ == "__main__":
-    with Benchmarker(cycle=20, extra=1) as bench:
-        @bench("Everything")
-        def _(bm):
-            run_benchmark()
+    run_benchmark()
