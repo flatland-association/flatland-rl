@@ -95,8 +95,8 @@ class View(object):
         # Number of Agents when regenerating
         self.wRegenNAgents = IntSlider(value=1, min=0, max=5, step=1, description="# Agents",
                                        tip="Click regenerate or reset after changing this")
+        self.wRegenMethod = RadioButtons(description="Regen\nMethod", options=["Empty", "Random Cell"])
 
-        self.wRegenMethod = RadioButtons(description="Regen\nMethod", options=["Empty", "Random Cell"])  # , "Path-based"])
         self.wReplaceAgents = Checkbox(value=True, description="Replace Agents")
 
         self.wTab = Tab()
