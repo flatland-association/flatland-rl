@@ -556,12 +556,8 @@ class RailEnvTransitions(Grid4Transitions):
     In the example, the agent can move from North to South and viceversa.
     """
 
-    """
-    transitions[] is indexed by case type/id, and returns the 4x4-bit [NESW]
-    transitions available as a function of the agent's orientation
-    (north, east, south, west)
-    """
-
+    # Contains the basic transitions;
+    # the set of all valid transitions is obtained by successive 90-degree rotation of one of these basic transitions.
     transition_list = [int('0000000000000000', 2),  # empty cell - Case 0
                        int('1000000000100000', 2),  # Case 1 - straight
                        int('1001001000100000', 2),  # Case 2 - simple switch

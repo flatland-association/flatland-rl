@@ -8,6 +8,31 @@ from flatland.core.transitions import RailEnvTransitions, Grid8Transitions
 from flatland.envs.env_utils import validate_new_transition
 
 
+def test_rotate_railenv_transition():
+    rail_env_transitions = RailEnvTransitions()
+    transition_cycles = [
+        # empty cell - Case 0
+        [int('0000000000000000', 2), int('0000000000000000', 2), int('0000000000000000', 2), int('0000000000000000', 2)],
+            # Case 1 - straight
+        [int('1000000000100000', 2), int('0000000100000100', 2)],
+    ]
+
+    for cycle in transition_cycles:
+        for i in range(4):
+            assert rail_env_transitions.rotate_transition(cycle[0], i) == cycle[i % len(cycle)]
+
+    #
+    #                int('1001001000100000', 2),  # Case 2 - simple switch
+    #                int('1000010000100001', 2),  # Case 3 - diamond drossing
+    #                int('1001011000100001', 2),  # Case 4 - single slip
+    #                int('1100110000110011', 2),  # Case 5 - double slip
+    #                int('0101001000000010', 2),  # Case 6 - symmetrical
+    #                int('0010000000000000', 2),  # Case 7 - dead end
+    #                int('0100000000000010', 2),  # Case 1b (8)  - simple turn right
+    #                int('0001001000000000', 2),  # Case 1c (9)  - simple turn left
+    #                int('1100000000100010', 2)]  # Case 2b (10) - simple switch mirrored
+
+
 def test_is_valid_railenv_transitions():
     rail_env_trans = RailEnvTransitions()
     transition_list = rail_env_trans.transitions
