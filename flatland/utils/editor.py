@@ -74,10 +74,6 @@ class View(object):
         self.wDebug_move = Checkbox(description="Debug mouse move")
         self.wDebug_move.observe(self.controller.setDebugMove, names="value")
 
-        # Checkbox for rendering observations
-        self.wShowObs = Checkbox(description="Show Agent Observations")
-        self.wShowObs.observe(self.controller.refresh, names="value")
-
         # This is like a cell widget where loggin goes
         self.wOutput = Output()
 
@@ -108,8 +104,7 @@ class View(object):
         for i, title in enumerate(tab_contents):
             self.wTab.set_title(i, title)
         self.wTab.children = [
-            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents]),
-            VBox([self.wShowObs]),
+            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents])
         ]
 
         # abbreviated description of buttons and the methods they call
@@ -161,7 +156,7 @@ class View(object):
 
             self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", agents=True,
                                show=False, iSelectedAgent=self.model.iSelectedAgent,
-                               show_observations=self.show_observations())
+                               show_observations=False)
             img = self.oRT.getImage()
 
             self.wImage.data = img
@@ -195,13 +190,6 @@ class View(object):
                 print(*args, **kwargs)
         else:
             print(*args, **kwargs)
-
-    def show_observations(self):
-        ''' returns whether to show observations - boolean '''
-        if self.wShowObs.value:
-            return True
-        else:
-            return False
 
 
 class Controller(object):
