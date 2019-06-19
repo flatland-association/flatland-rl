@@ -9,7 +9,6 @@ from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButto
 from numpy import array
 
 import flatland.utils.rendertools as rt
-from examples.play_model import Player
 from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
 from flatland.envs.env_utils import mirror
 from flatland.envs.generators import complex_rail_generator, empty_rail_generator
@@ -75,10 +74,6 @@ class View(object):
         self.wDebug_move = Checkbox(description="Debug mouse move")
         self.wDebug_move.observe(self.controller.setDebugMove, names="value")
 
-        # Checkbox for rendering observations
-        self.wShowObs = Checkbox(description="Show Agent Observations")
-        self.wShowObs.observe(self.controller.refresh, names="value")
-
         # This is like a cell widget where loggin goes
         self.wOutput = Output()
 
@@ -109,12 +104,8 @@ class View(object):
         for i, title in enumerate(tab_contents):
             self.wTab.set_title(i, title)
         self.wTab.children = [
-            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents]),
-            VBox([self.wShowObs]),
+            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents])
         ]
-
-        # Progress bar intended for stepping in the background (not yet working)
-        self.wProg_steps = ipywidgets.IntProgress(value=0, min=0, max=20, step=1, description="Step")
 
         # abbreviated description of buttons and the methods they call
         ldButtons = [
@@ -128,7 +119,6 @@ class View(object):
                  tip="Regenerate the rails using the method selected below"),
             dict(name="Load", method=self.controller.load),
             dict(name="Save", method=self.controller.save),
-            dict(name="Step", method=self.controller.step)
         ]
 
         self.lwButtons = []
@@ -166,7 +156,7 @@ class View(object):
 
             self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", agents=True,
                                show=False, iSelectedAgent=self.model.iSelectedAgent,
-                               show_observations=self.show_observations())
+                               show_observations=False)
             img = self.oRT.getImage()
 
             self.wImage.data = img
@@ -200,13 +190,6 @@ class View(object):
                 print(*args, **kwargs)
         else:
             print(*args, **kwargs)
-
-    def show_observations(self):
-        ''' returns whether to show observations - boolean '''
-        if self.wShowObs.value:
-            return True
-        else:
-            return False
 
 
 class Controller(object):
@@ -360,7 +343,6 @@ class Controller(object):
                                             self.model.init_agents_static]
             self.model.env.agents = None
             self.model.init_agents_static = None
-            self.player = None
             self.model.env.restart_agents()
             self.model.env.reset(False, False)
         self.refresh(event)
@@ -413,7 +395,6 @@ class EditorModel(object):
         self.env_filename = "temp.pkl"
         self.set_env(env)
         self.iSelectedAgent = None
-        self.player = None
         self.init_agents_static = None
         self.thread = None
 
@@ -616,7 +597,6 @@ class EditorModel(object):
         self.env.rail.grid[:, :] = 0
         self.env.agents = []
         self.env.agents_static = []
-        self.player = None
 
         self.redraw()
 
@@ -631,7 +611,6 @@ class EditorModel(object):
 
     def restartAgents(self):
         self.env.agents = EnvAgent.list_from_static(self.env.agents_static)
-        self.player = None
         self.redraw()
 
     def setFilename(self, filename):
@@ -650,6 +629,7 @@ class EditorModel(object):
             self.env.restart_agents()
             self.env.reset(False, False)
             self.init_agents_static = None
+            self.view.oRT.update_background()
             self.fix_env()
             self.set_env(self.env)
             self.redraw()
@@ -688,7 +668,6 @@ class EditorModel(object):
         self.env.reset(regen_rail=True)
         self.fix_env()
         self.set_env(self.env)
-        self.player = None
         self.view.new_env()
         self.redraw()
 
@@ -721,7 +700,7 @@ class EditorModel(object):
                 # Create a new agent and select it.
                 agent_static = EnvAgentStatic(rcCell, 0, rcCell, moving=False)
                 self.iSelectedAgent = self.env.add_agent_static(agent_static)
-                self.player = None  # will need to start a new player
+                self.view.oRT.update_background()
             else:
                 # Move the selected agent to this cell
                 agent_static = self.env.agents_static[self.iSelectedAgent]
@@ -745,25 +724,8 @@ class EditorModel(object):
         if self.iSelectedAgent is not None:
             self.env.agents_static[self.iSelectedAgent].target = rcCell
             self.init_agents_static = None
+            self.view.oRT.update_background()
             self.redraw()
-
-    def step(self):
-        if self.init_agents_static is None:
-            self.init_agents_static = [agent.to_list() for agent in self.env.agents_static]
-        if self.player is None:
-            self.player = Player(self.env)
-            self.env.reset(regen_rail=False, replace_agents=False)
-        self.player.step()
-        self.redraw()
-
-    def bg_updater(self, wProg_steps):
-        try:
-            for i in range(20):
-                self.step()
-                time.sleep(0.2)
-                wProg_steps.value = i + 1  # indicate progress on bar
-        finally:
-            self.thread = None
 
     def fix_env(self):
         self.env.width = self.env.rail.width
