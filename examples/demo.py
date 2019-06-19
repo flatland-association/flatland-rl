@@ -96,6 +96,7 @@ class Demo:
             for iAgent in range(self.env.get_num_agents()):
                 # allways walk straight forward
                 action = 2
+                action = np.random.choice([0, 1, 2, 3], 1, p=[0.0, 0.5, 0.5, 0.0])[0]
 
                 # update the actions
                 action_dict.update({iAgent: action})
