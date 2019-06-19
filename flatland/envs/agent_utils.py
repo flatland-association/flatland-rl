@@ -28,19 +28,32 @@ class EnvAgentStatic(object):
     position = attrib()
     direction = attrib()
     target = attrib()
-    moving = attrib()
+    moving = attrib(default=False)
+    # speed_data: speed is added to position_fraction on each moving step, until position_fraction>=1.0,
+    # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
+    # cell if speed=1, as default)
+    speed_data = attrib(default=dict({'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0}))
 
-    def __init__(self, position, direction, target, moving=False):
+    def __init__(self,
+                 position,
+                 direction,
+                 target,
+                 moving=False,
+                 speed_data={'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0}):
         self.position = position
         self.direction = direction
         self.target = target
         self.moving = moving
+        self.speed_data = speed_data
 
     @classmethod
     def from_lists(cls, positions, directions, targets):
         """ Create a list of EnvAgentStatics from lists of positions, directions and targets
         """
-        return list(starmap(EnvAgentStatic, zip(positions, directions, targets, [False] * len(positions))))
+        speed_datas = []
+        for i in range(len(positions)):
+            speed_datas.append({'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0})
+        return list(starmap(EnvAgentStatic, zip(positions, directions, targets, [False] * len(positions), speed_datas)))
 
     def to_list(self):
 
@@ -54,7 +67,7 @@ class EnvAgentStatic(object):
         if type(lTarget) is np.ndarray:
             lTarget = lTarget.tolist()
 
-        return [lPos, int(self.direction), lTarget, int(self.moving)]
+        return [lPos, int(self.direction), lTarget, int(self.moving), self.speed_data]
 
 
 @attrs
@@ -78,7 +91,7 @@ class EnvAgent(EnvAgentStatic):
     def to_list(self):
         return [
             self.position, self.direction, self.target, self.handle,
-            self.old_direction, self.old_position, self.moving]
+            self.old_direction, self.old_position, self.moving, self.speed_data]
 
     @classmethod
     def from_static(cls, oStatic):
