@@ -4,7 +4,7 @@ import numpy as np
 
 from flatland.core.transition_map import GridTransitionMap
 from flatland.core.transitions import Grid4Transitions
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.generators import rail_from_GridTransitionMap_generator
 from flatland.envs.observations import GlobalObsForRailEnv
@@ -12,6 +12,13 @@ from flatland.envs.rail_env import RailEnv
 
 """Tests for `flatland` package."""
 
+def test_load_env():
+    env = RailEnv(10, 10)
+    env.load_resource('env_data.tests', 'test-10x10.mpk')
+
+    agent_static = EnvAgentStatic((0, 0), 2, (5, 5), False)
+    env.add_agent_static(agent_static)
+    assert env.get_num_agents() == 1
 
 def test_save_load():
     env = RailEnv(width=10, height=10,

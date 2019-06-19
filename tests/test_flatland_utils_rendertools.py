@@ -79,7 +79,7 @@ def main():
     if len(sys.argv) == 2 and sys.argv[1] == "save":
         test_render_env(save_new_images=True)
     else:
-        print("Run 'python test_rendertools.py save' to regenerate images")
+        print("Run 'python test_flatland_utils_rendertools.py save' to regenerate images")
         test_render_env()
 
 

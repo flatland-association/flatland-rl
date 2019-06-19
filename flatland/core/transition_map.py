@@ -264,7 +264,7 @@ class GridTransitionMap(TransitionMap):
         """
         np.save(filename, self.grid)
 
-    def load_transition_map(self, package, resource, override_gridsize=True):
+    def load_transition_map(self, package, resource):
         """
         Load the transitions grid from `filename' (npy format).
         The load function only updates the transitions grid, and possibly width and height, but the object has to be
@@ -289,28 +289,9 @@ class GridTransitionMap(TransitionMap):
         new_height = new_grid.shape[0]
         new_width = new_grid.shape[1]
 
-        if override_gridsize:
-            self.width = new_width
-            self.height = new_height
-            self.grid = new_grid
-
-        else:
-            if new_grid.dtype == np.uint16:
-                self.grid = np.zeros((self.height, self.width), dtype=np.uint16)
-            elif new_grid.dtype == np.uint64:
-                self.grid = np.zeros((self.height, self.width), dtype=np.uint64)
-
-            self.grid[0:min(self.height, new_height),
-            0:min(self.width, new_width)] = new_grid[0:min(self.height, new_height),
-                                            0:min(self.width, new_width)]
-
-    def is_cell_valid(self, rcPos):
-        cell_transition = self.grid[tuple(rcPos)]
-
-        if not self.transitions.is_valid(cell_transition):
-            return False
-        else:
-            return True
+        self.width = new_width
+        self.height = new_height
+        self.grid = new_grid
 
     def cell_neighbours_valid(self, rcPos, check_this_cell=False):
         """
@@ -363,9 +344,6 @@ class GridTransitionMap(TransitionMap):
                 return False
 
         return True
-
-    def cell_repr(self, rcPos):
-        return self.transitions.repr(self.get_transitions(rcPos))
 
 # TODO: GIACOMO: is it better to provide those methods with lists of cell_ids
 # (most general implementation) or to make Grid-class specific methods for
