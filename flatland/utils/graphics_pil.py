@@ -131,7 +131,9 @@ class PILGL(GraphicsLayer):
         assert self.window_open is False, "Window is already open!"
         # use tk.Toplevel() instead of tk.Tk()
         # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
-        self.window = tk.Toplevel()
+        root = tk.Tk()
+        root.withdraw()
+        self.window = tk.Toplevel(root)
         self.window.title("Flatland")
         self.window.configure(background='grey')
         self.window_open = True
