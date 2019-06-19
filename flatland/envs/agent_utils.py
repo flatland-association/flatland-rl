@@ -34,7 +34,12 @@ class EnvAgentStatic(object):
     # cell if speed=1, as default)
     speed_data = attrib(default=dict({'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0}))
 
-    def __init__(self, position, direction, target, moving=False, speed_data={'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0}):
+    def __init__(self,
+                 position,
+                 direction,
+                 target,
+                 moving=False,
+                 speed_data={'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0}):
         self.position = position
         self.direction = direction
         self.target = target
@@ -47,7 +52,7 @@ class EnvAgentStatic(object):
         """
         speed_datas = []
         for i in range(len(positions)):
-            speed_datas.append( {'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0} )
+            speed_datas.append({'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0})
         return list(starmap(EnvAgentStatic, zip(positions, directions, targets, [False] * len(positions), speed_datas)))
 
     def to_list(self):

@@ -227,9 +227,13 @@ class RailEnv(Environment):
             if action != RailEnvActions.DO_NOTHING and action != RailEnvActions.STOP_MOVING:
                 # Now perform a movement.
                 # If the agent is in an initial position within a new cell (agent.speed_data['position_fraction']<eps)
-                #       store the desired action in `transition_action_on_cellexit' (only if the desired transition is allowed! otherwise DO_NOTHING!)
-                # Then in any case (if agent.moving) and the `transition_action_on_cellexit' is valid, increment the position_fraction by the speed of the agent   (regardless of action taken, as long as no STOP_MOVING, but that makes agent.moving=False)
-                # If the new position fraction is >= 1, reset to 0, and perform the stored transition_action_on_cellexit
+                #   store the desired action in `transition_action_on_cellexit' (only if the desired transition is
+                #   allowed! otherwise DO_NOTHING!)
+                # Then in any case (if agent.moving) and the `transition_action_on_cellexit' is valid, increment the
+                #   position_fraction by the speed of the agent   (regardless of action taken, as long as no
+                #   STOP_MOVING, but that makes agent.moving=False)
+                # If the new position fraction is >= 1, reset to 0, and perform the stored
+                #   transition_action_on_cellexit
 
                 if agent.speed_data['position_fraction'] < 0.01:
                     # Is the desired transition valid?
@@ -266,7 +270,8 @@ class RailEnv(Environment):
 
                     # Perform stored action to transition to the next cell
 
-                    # Now 'transition_action_on_cellexit' will be guaranteed to be valid; it was checked on entering the cell
+                    # Now 'transition_action_on_cellexit' will be guaranteed to be valid; it was checked on entering
+                    # the cell
                     cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
                         self._check_action_on_agent(agent.speed_data['transition_action_on_cellexit'], agent)
                     agent.old_direction = agent.direction
