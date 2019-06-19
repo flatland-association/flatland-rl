@@ -44,7 +44,7 @@ class EnvAgentStatic(object):
         """
         speed_datas = []
         for i in range(len(positions)):
-            speed_datas.append( speed_data={'position_fraction':0.0, 'speed':1.0, 'transition_action_on_cellexit':2} )
+            speed_datas.append( {'position_fraction':0.0, 'speed':1.0, 'transition_action_on_cellexit':2} )
         return list(starmap(EnvAgentStatic, zip(positions, directions, targets, [False] * len(positions), speed_datas)))
 
     def to_list(self):
