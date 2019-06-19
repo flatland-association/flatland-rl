@@ -3,7 +3,7 @@
 import numpy as np
 
 from flatland.core.transition_map import GridTransitionMap
-from flatland.core.transitions import Grid4Transitions
+from flatland.core.transitions import Grid4Transitions, RailEnvTransitions
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.generators import rail_from_GridTransitionMap_generator
@@ -53,7 +53,7 @@ def test_rail_environment_single_agent():
     # | |  |
     # \_/\_/
 
-    transitions = Grid4Transitions([])
+    transitions = RailEnvTransitions()
     vertical_line = cells[1]
     south_symmetrical_switch = cells[6]
     north_symmetrical_switch = transitions.rotate_transition(south_symmetrical_switch, 180)
@@ -107,6 +107,7 @@ def test_rail_environment_single_agent():
             if prev_pos != pos:
                 valid_active_actions_done += 1
 
+
         # After 6 movements on this railway network, the train should be back
         # to its original height on the map.
         assert (initial_pos[0] == agent.position[0])
@@ -121,9 +122,9 @@ def test_rail_environment_single_agent():
                 action = np.random.randint(4)
 
                 _, _, dones, _ = rail_env.step({0: action})
-
                 done = dones['__all__']
 
+test_rail_environment_single_agent()
 
 def test_dead_end():
     transitions = Grid4Transitions([])

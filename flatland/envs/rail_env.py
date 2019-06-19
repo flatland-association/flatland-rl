@@ -191,15 +191,9 @@ class RailEnv(Environment):
         # for i in range(len(self.agents_handles)):
         for iAgent in range(self.get_num_agents()):
             agent = self.agents[iAgent]
-            print(agent.speed_data['speed'])
 
             if self.dones[iAgent]:  # this agent has already completed...
                 continue
-
-            if np.equal(agent.position, agent.target).all():
-                self.dones[iAgent] = True
-            else:
-                self.rewards_dict[iAgent] += step_penalty * agent.speed_data['speed']
 
             if iAgent not in action_dict:  # no action has been supplied for this agent
                 action_dict[iAgent] = RailEnvActions.DO_NOTHING
@@ -287,6 +281,11 @@ class RailEnv(Environment):
                 agent.old_position = agent.position
                 agent.position = new_position
                 agent.direction = new_direction
+
+            if np.equal(agent.position, agent.target).all():
+                self.dones[iAgent] = True
+            else:
+                self.rewards_dict[iAgent] += step_penalty * agent.speed_data['speed']
 
         # Check for end of episode + add global reward to all rewards!
         if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
