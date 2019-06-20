@@ -5,7 +5,7 @@ Collection of environment-specific PredictionBuilder.
 import numpy as np
 
 from flatland.core.env_prediction_builder import PredictionBuilder
-from flatland.envs.env_utils import get_new_position
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.rail_env import RailEnvActions
 
 

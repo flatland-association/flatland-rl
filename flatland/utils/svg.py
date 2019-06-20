@@ -14,9 +14,6 @@ class SVG(object):
         elif svgETree is not None:
             self.svg = svgETree
 
-        self.init2()
-
-    def init2(self):
         expr = "//*[local-name() = $name]"
         self.eStyle = self.svg.root.xpath(expr, name="style")[0]
         ltMatch = re.findall(r".st([a-zA-Z0-9]+)[{]([^}]*)}", self.eStyle.text)
@@ -25,8 +22,7 @@ class SVG(object):
     def copy(self):
         new_svg = copy.deepcopy(self.svg)
 
-        self2 = SVG(svgETree=new_svg)
-        return self2
+        return SVG(svgETree=new_svg)
 
     def merge(self, svg2):
         svg3 = svg2.copy()

@@ -7,7 +7,7 @@ import numpy as np
 
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.env_utils import coordinate_to_position
+from flatland.core.grid.grid_utils import coordinate_to_position
 
 
 class TreeObsForRailEnv(ObservationBuilder):

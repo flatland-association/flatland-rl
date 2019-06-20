@@ -2,7 +2,8 @@ import numpy as np
 import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.env_utils import position_to_coordinate, coordinate_to_position, get_direction
+from flatland.core.grid.grid_utils import position_to_coordinate, coordinate_to_position
+from flatland.core.grid.grid4_utils import get_direction
 
 depth_to_test = 5
 positions_to_test = [0, 5, 1, 6, 20, 30]
