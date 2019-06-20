@@ -43,9 +43,6 @@ class RailEnvTransitions(Grid4Transitions):
             transitions=self.transition_list
         )
 
-        # These bits represent all the possible dead ends
-        self.maskDeadEnds = 0b0010000110000100
-
         # create this to make validation faster
         self.transitions_all = set()
         for index, trans in enumerate(self.transitions):
@@ -112,13 +109,3 @@ class RailEnvTransitions(Grid4Transitions):
             True or False
         """
         return cell_transition in self.transitions_all
-
-    def has_deadend(self, cell_transition):
-        if cell_transition & self.maskDeadEnds > 0:
-            return True
-        else:
-            return False
-
-    def remove_deadends(self, cell_transition):
-        cell_transition &= cell_transition & (~self.maskDeadEnds) & 0xffff
-        return cell_transition

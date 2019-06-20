@@ -49,6 +49,9 @@ class Grid4Transitions(Transitions):
         # row,col delta for each direction
         self.gDir2dRC = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])
 
+        # These bits represent all the possible dead ends
+        self.maskDeadEnds = 0b0010000110000100
+
     def get_type(self):
         return np.uint16
 
@@ -210,3 +213,19 @@ class Grid4Transitions(Transitions):
 
     def get_direction_enum(self) -> IntEnum:
         return Grid4TransitionsEnum
+
+    def has_deadend(self, cell_transition):
+        """
+        Checks if one entry can only by exited by a turn-around.
+        """
+        if cell_transition & self.maskDeadEnds > 0:
+            return True
+        else:
+            return False
+
+    def remove_deadends(self, cell_transition):
+        """
+        Remove all turn-arounds (e.g. N-S, S-N, E-W,...).
+        """
+        cell_transition &= cell_transition & (~self.maskDeadEnds) & 0xffff
+        return cell_transition

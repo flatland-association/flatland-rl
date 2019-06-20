@@ -4,17 +4,19 @@
 """Tests for `flatland` package."""
 import numpy as np
 
+from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid8 import Grid8Transitions
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.env_utils import validate_new_transition
 
 
+# remove whitespace in string; keep whitespace below for easier reading
+def rw(s):
+    return s.replace(" ", "")
+
+
 def test_rotate_railenv_transition():
     rail_env_transitions = RailEnvTransitions()
-
-    # remove whitespace in string; keep whitespace below for easier reading
-    def rw(s):
-        return s.replace(" ", "")
 
     # TODO test all cases
     transition_cycles = [
@@ -68,9 +70,17 @@ def test_rotate_railenv_transition():
         # int('1100110000110011', 2),   \ #  noqa: E800
         # Case 6 - symmetrical
         # int('0101001000000010', 2),   \ #  noqa: E800
-        # Case 7 - dead end
-        # int('0010000000000000', 2),   \ #  noqa: E800
 
+        # Case 7 - dead end
+        #
+        #
+        #     |
+        [
+            int(rw('0010 0000 0000 0000'), 2),
+            int(rw('0000 0001 0000 0000'), 2),
+            int(rw('0000 0000 1000 0000'), 2),
+            int(rw('0000 0000 0000 0100'), 2),
+        ],
     ]
 
     for index, cycle in enumerate(transition_cycles):
@@ -206,3 +216,33 @@ def test_diagonal_transitions():
 
     assert (diagonal_trans_env.rotate_transition(
         south_northeast_transition, 180) == north_southwest_transition)
+
+
+def test_rail_env_has_deadend():
+    deadends = set([int(rw('0010 0000 0000 0000'), 2),
+                    int(rw('0000 0001 0000 0000'), 2),
+                    int(rw('0000 0000 1000 0000'), 2),
+                    int(rw('0000 0000 0000 0100'), 2)])
+    ret = RailEnvTransitions()
+    transitions_all = ret.transitions_all
+    for t in transitions_all:
+        expected_has_deadend = t in deadends
+        actual_had_deadend = ret.has_deadend(t)
+        assert actual_had_deadend == expected_has_deadend, \
+            "{} should be deadend = {}, actual = {}".format(t, )
+
+
+def test_rail_env_remove_deadend():
+    ret = Grid4Transitions([])
+    rail_env_deadends = set([int(rw('0010 0000 0000 0000'), 2),
+                             int(rw('0000 0001 0000 0000'), 2),
+                             int(rw('0000 0000 1000 0000'), 2),
+                             int(rw('0000 0000 0000 0100'), 2)])
+    for t in rail_env_deadends:
+        expected_has_deadend = 0
+        actual_had_deadend = ret.remove_deadends(t)
+        assert actual_had_deadend == expected_has_deadend, \
+            "{} should be deadend = {}, actual = {}".format(t, )
+
+    assert ret.remove_deadends(int(rw('0010 0001 1000 0100'), 2)) == 0
+    assert ret.remove_deadends(int(rw('0010 0001 1000 0110'), 2)) == int(rw('0000 0000 0000 0010'), 2)
