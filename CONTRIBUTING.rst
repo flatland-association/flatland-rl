@@ -70,6 +70,12 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     $ cd flatland/
     $ python setup.py develop
 
+    You can also use the virtual environment created by the getting_started scripts:
+
+        getting_started/run_notebooks.bat
+        getting_started/run_notebooks.sh
+
+
 4. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature

@@ -47,6 +47,15 @@ Online Docs
 
 The documentation for the latest code on the master branch is found at  `http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/ <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/>`_ 
 
+Run Notebooks with Examples with one Click
+------------------------------------------
+Under getting_started, there are two scripts
+
+    getting_started/run_notebooks.bat
+    getting_started/run_notebooks.sh
+
+They require git and Python>=3.6 installed with venv (python3-venv has to be installed under Linux).
+They create a virtual environment, install Flatland and all dependencies into into and start they Jupyter notebooks in your browser.
 
 
 Generate Docs
