@@ -7,7 +7,7 @@ import numpy as np
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid8 import Grid8Transitions
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
-from flatland.envs.env_utils import validate_new_transition
+from flatland.core.grid.grid4_utils import validate_new_transition
 
 
 # remove whitespace in string; keep whitespace below for easier reading

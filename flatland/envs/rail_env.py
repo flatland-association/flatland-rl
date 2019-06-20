@@ -13,7 +13,7 @@ import numpy as np
 
 from flatland.core.env import Environment
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
-from flatland.envs.env_utils import get_new_position
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 

@@ -62,38 +62,6 @@ class RailEnvTransitions(Grid4Transitions):
         print("S", format(cell_transition >> (1 * 4) & 0xF, '04b'))
         print("W", format(cell_transition >> (0 * 4) & 0xF, '04b'))
 
-    def repr(self, cell_transition, version=0):
-        """
-        Provide a string representation of the cell transitions.
-        This class doesn't represent an individual cell,
-        but a way of interpreting the contents of a cell.
-        So using the ad hoc name repr rather than __repr__.
-        """
-        # binary format string without leading 0b
-        sbinTrans = format(cell_transition, "#018b")[2:]
-        if version == 0:
-            sRepr = " ".join([
-                "{}:{}".format(sDir, sbinTrans[i:(i + 4)])
-                for i, sDir in
-                zip(
-                    range(0, len(sbinTrans), 4),
-                    self.lsDirs)])  # NESW
-            return sRepr
-
-        if version == 1:
-            lsRepr = []
-            for iDirIn in range(0, 4):
-                sDirTrans = sbinTrans[(iDirIn * 4):(iDirIn * 4 + 4)]
-                if sDirTrans == "0000":
-                    continue
-                sDirsOut = [
-                    self.lsDirs[iDirOut]
-                    for iDirOut in range(0, 4)
-                    if sDirTrans[iDirOut] == "1"]
-                lsRepr.append(self.lsDirs[iDirIn] + ":" + "".join(sDirsOut))
-
-            return ", ".join(lsRepr)
-
     def is_valid(self, cell_transition):
         """
         Checks if a cell transition is a valid cell setup.

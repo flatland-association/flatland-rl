@@ -5,20 +5,6 @@ from attr import attrs, attrib
 
 
 @attrs
-class EnvDescription(object):
-    """ EnvDescription - This is a description of a random env,
-        based around the rail_generator and stats like size and n_agents.
-        It mirrors the parameters given to the RailEnv constructor.
-        Not currently used.
-    """
-    n_agents = attrib()
-    height = attrib()
-    width = attrib()
-    rail_generator = attrib()
-    obs_builder = attrib()  # not sure if this should closer to the agent than the env
-
-
-@attrs
 class EnvAgentStatic(object):
     """ EnvAgentStatic - Stores initial position, direction and target.
         This is like static data for the environment - it's where an agent starts,
@@ -33,18 +19,6 @@ class EnvAgentStatic(object):
     # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
     # cell if speed=1, as default)
     speed_data = attrib(default=dict({'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0}))
-
-    def __init__(self,
-                 position,
-                 direction,
-                 target,
-                 moving=False,
-                 speed_data={'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0}):
-        self.position = position
-        self.direction = direction
-        self.target = target
-        self.moving = moving
-        self.speed_data = speed_data
 
     @classmethod
     def from_lists(cls, positions, directions, targets, speeds=None):
@@ -83,12 +57,6 @@ class EnvAgent(EnvAgentStatic):
     handle = attrib(default=None)
     old_direction = attrib(default=None)
     old_position = attrib(default=None)
-
-    def __init__(self, position, direction, target, handle, old_direction, old_position):
-        super(EnvAgent, self).__init__(position, direction, target)
-        self.handle = handle
-        self.old_direction = old_direction
-        self.old_position = old_position
 
     def to_list(self):
         return [
