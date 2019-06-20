@@ -3,14 +3,16 @@
 import numpy as np
 
 from flatland.core.transition_map import GridTransitionMap
-from flatland.core.transitions import Grid4Transitions
-from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
+from flatland.core.transitions import Grid4Transitions, RailEnvTransitions
+from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgentStatic
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.generators import rail_from_GridTransitionMap_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 
 """Tests for `flatland` package."""
+
 
 def test_load_env():
     env = RailEnv(10, 10)
@@ -19,6 +21,7 @@ def test_load_env():
     agent_static = EnvAgentStatic((0, 0), 2, (5, 5), False)
     env.add_agent_static(agent_static)
     assert env.get_num_agents() == 1
+
 
 def test_save_load():
     env = RailEnv(width=10, height=10,
@@ -60,7 +63,7 @@ def test_rail_environment_single_agent():
     # | |  |
     # \_/\_/
 
-    transitions = Grid4Transitions([])
+    transitions = RailEnvTransitions()
     vertical_line = cells[1]
     south_symmetrical_switch = cells[6]
     north_symmetrical_switch = transitions.rotate_transition(south_symmetrical_switch, 180)
@@ -128,8 +131,10 @@ def test_rail_environment_single_agent():
                 action = np.random.randint(4)
 
                 _, _, dones, _ = rail_env.step({0: action})
-
                 done = dones['__all__']
+
+
+test_rail_environment_single_agent()
 
 
 def test_dead_end():

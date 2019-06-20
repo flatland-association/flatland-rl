@@ -62,6 +62,6 @@ benchmarks_and_profiling:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - pip install tox
-        - xvfb-run tox -e benchmarks -v --recreate
+        - xvfb-run tox -e benchmarks,profiling -v --recreate
 
 

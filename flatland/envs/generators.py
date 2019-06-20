@@ -18,7 +18,7 @@ def empty_rail_generator():
         rail_array = grid_map.grid
         rail_array.fill(0)
 
-        return grid_map, [], [], []
+        return grid_map, [], [], [], []
 
     return generator
 
@@ -75,8 +75,9 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
         while nr_created < nr_start_goal and created_sanity < sanity_max:
             all_ok = False
             for _ in range(sanity_max):
-                start = (np.random.randint(0, width), np.random.randint(0, height))
-                goal = (np.random.randint(0, height), np.random.randint(0, height))
+                start = (np.random.randint(0, height), np.random.randint(0, width))
+                goal = (np.random.randint(0, height), np.random.randint(0, width))
+
                 # check to make sure start,goal pos is empty?
                 if rail_array[goal] != 0 or rail_array[start] != 0:
                     continue
@@ -121,8 +122,8 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
         while nr_created < nr_extra and created_sanity < sanity_max:
             all_ok = False
             for _ in range(sanity_max):
-                start = (np.random.randint(0, width), np.random.randint(0, height))
-                goal = (np.random.randint(0, height), np.random.randint(0, height))
+                start = (np.random.randint(0, height), np.random.randint(0, width))
+                goal = (np.random.randint(0, height), np.random.randint(0, width))
                 # check to make sure start,goal pos are not empty
                 if rail_array[goal] == 0 or rail_array[start] == 0:
                     continue
@@ -139,7 +140,7 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
         agents_target = [sg[1] for sg in start_goal[:num_agents]]
         agents_direction = start_dir[:num_agents]
 
-        return grid_map, agents_position, agents_direction, agents_target
+        return grid_map, agents_position, agents_direction, agents_target, [1.0]*len(agents_position)
 
     return generator
 
@@ -187,7 +188,7 @@ def rail_from_manual_specifications_generator(rail_spec):
             rail,
             num_agents)
 
-        return rail, agents_position, agents_direction, agents_target
+        return rail, agents_position, agents_direction, agents_target, [1.0]*len(agents_position)
 
     return generator
 
@@ -213,7 +214,7 @@ def rail_from_GridTransitionMap_generator(rail_map):
             rail_map,
             num_agents)
 
-        return rail_map, agents_position, agents_direction, agents_target
+        return rail_map, agents_position, agents_direction, agents_target, [1.0]*len(agents_position)
 
     return generator
 
@@ -486,6 +487,6 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
             return_rail,
             num_agents)
 
-        return return_rail, agents_position, agents_direction, agents_target
+        return return_rail, agents_position, agents_direction, agents_target, [1.0]*len(agents_position)
 
     return generator
