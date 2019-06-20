@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 
-from flatland.envs.generators import random_rail_generator, complex_rail_generator
+from flatland.envs.generators import random_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
