@@ -41,7 +41,7 @@ def test_rotate_railenv_transition():
         #     |
         #     |
 
-        #                int('0001001000000000', 2),
+        # int('0001001000000000', 2),\ #  noqa: E800
 
         # Case 2 - simple left switch
         #  _ _|
@@ -57,12 +57,19 @@ def test_rotate_railenv_transition():
         #     |
         #     |
         #     |
-        #                int('1100000000100010', 2)]
-        #                int('1000010000100001', 2),  # Case 3 - diamond drossing
-        #                int('1001011000100001', 2),  # Case 4 - single slip
-        #                int('1100110000110011', 2),  # Case 5 - double slip
-        #                int('0101001000000010', 2),  # Case 6 - symmetrical
-        #                int('0010000000000000', 2),  # Case 7 - dead end
+
+        # int('1100000000100010', 2) \ #  noqa: E800
+
+        # Case 3 - diamond drossing
+        # int('1000010000100001', 2),   \ #  noqa: E800
+        # Case 4 - single slip
+        # int('1001011000100001', 2),   \ #  noqa: E800
+        # Case 5 - double slip
+        # int('1100110000110011', 2),   \ #  noqa: E800
+        # Case 6 - symmetrical
+        # int('0101001000000010', 2),   \ #  noqa: E800
+        # Case 7 - dead end
+        # int('0010000000000000', 2),   \ #  noqa: E800
 
     ]
 
@@ -72,8 +79,8 @@ def test_rotate_railenv_transition():
             expected_transition = cycle[i % len(cycle)]
             try:
                 assert actual_transition == expected_transition, \
-                    "Case {}: rotate_transition({}, {}) should equal {} but was {}." \
-                        .format(i, cycle[0], i, expected_transition, actual_transition)
+                    "Case {}: rotate_transition({}, {}) should equal {} but was {}.".format(
+                        i, cycle[0], i, expected_transition, actual_transition)
             except Exception as e:
                 print("expected:")
                 rail_env_transitions.print(expected_transition)
