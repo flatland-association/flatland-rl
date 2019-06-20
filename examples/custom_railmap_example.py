@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 from flatland.core.transition_map import GridTransitionMap
-from flatland.core.transitions import RailEnvTransitions
+from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
 

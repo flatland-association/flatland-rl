@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
+from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.core.transitions import Grid4Transitions, RailEnvTransitions
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.agent_utils import EnvAgentStatic
 from flatland.envs.generators import complex_rail_generator

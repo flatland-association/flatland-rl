@@ -4,7 +4,8 @@
 """Tests for `flatland` package."""
 import numpy as np
 
-from flatland.core.transitions import RailEnvTransitions, Grid8Transitions
+from flatland.core.grid.grid8 import Grid8Transitions
+from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.env_utils import validate_new_transition
 
 
@@ -194,7 +195,7 @@ def test_diagonal_transitions():
 
     # Allowing transition from north to southwest: Facing south, going SW
     north_southwest_transition = \
-        diagonal_trans_env.set_transitions(int('0' * 64, 2), 4, (0, 0, 0, 0, 0, 1, 0, 0))
+        diagonal_trans_env.set_transitions(0, 4, (0, 0, 0, 0, 0, 1, 0, 0))
 
     assert (diagonal_trans_env.rotate_transition(
         south_northeast_transition, 180) == north_southwest_transition)
