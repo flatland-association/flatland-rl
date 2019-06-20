@@ -75,6 +75,7 @@ class PILGL(GraphicsLayer):
         self.ltAgentColors = [self.rgb_s2i(sColor) for sColor in sColors.split("#")]
         self.nAgentColors = len(self.ltAgentColors)
 
+        self.window_root = None
         self.window_open = False
         self.firstFrame = True
         self.create_layers()
@@ -131,7 +132,9 @@ class PILGL(GraphicsLayer):
         assert self.window_open is False, "Window is already open!"
         # use tk.Toplevel() instead of tk.Tk()
         # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
-        self.window = tk.Toplevel()
+        self.window_root = tk.Tk()
+        self.window_root.withdraw()
+        self.window = tk.Toplevel(self.window_root)
         self.window.title("Flatland")
         self.window.configure(background='grey')
         self.window_open = True
@@ -140,6 +143,8 @@ class PILGL(GraphicsLayer):
         self.panel.destroy()
         self.window.quit()
         self.window.destroy()
+        self.window_root.destroy()
+        self.window = None
 
     def text(self, *args, **kwargs):
         pass

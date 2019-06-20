@@ -107,7 +107,6 @@ def test_rail_environment_single_agent():
             if prev_pos != pos:
                 valid_active_actions_done += 1
 
-
         # After 6 movements on this railway network, the train should be back
         # to its original height on the map.
         assert (initial_pos[0] == agent.position[0])
@@ -124,7 +123,9 @@ def test_rail_environment_single_agent():
                 _, _, dones, _ = rail_env.step({0: action})
                 done = dones['__all__']
 
+
 test_rail_environment_single_agent()
+
 
 def test_dead_end():
     transitions = Grid4Transitions([])
