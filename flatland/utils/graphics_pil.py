@@ -28,7 +28,7 @@ enable_windows_cairo_support()
 from cairosvg import svg2png  # noqa: E402
 from screeninfo import get_monitors  # noqa: E402
 
-from flatland.core.transitions import RailEnvTransitions  # noqa: E402
+from flatland.core.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
 
 
 class PILGL(GraphicsLayer):

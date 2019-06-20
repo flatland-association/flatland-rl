@@ -6,7 +6,7 @@ from collections import deque
 import numpy as np
 
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.transitions import Grid4TransitionsEnum
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.env_utils import coordinate_to_position
 
 

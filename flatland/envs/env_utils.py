@@ -7,7 +7,7 @@ a GridTransitionMap object.
 
 import numpy as np
 
-from flatland.core.transitions import Grid4TransitionsEnum
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 
 
 def get_direction(pos1, pos2) -> Grid4TransitionsEnum:

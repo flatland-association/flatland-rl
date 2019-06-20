@@ -3,7 +3,7 @@ import re
 
 import svgutils
 
-from flatland.core.transitions import RailEnvTransitions
+from flatland.core.grid.rail_env_grid import RailEnvTransitions
 
 
 class SVG(object):

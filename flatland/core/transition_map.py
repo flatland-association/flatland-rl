@@ -6,7 +6,7 @@ import numpy as np
 from importlib_resources import path
 from numpy import array
 
-from .transitions import Grid4Transitions, Grid8Transitions, RailEnvTransitions
+from flatland.core.grid.grid4 import Grid4Transitions
 
 
 class TransitionMap:
@@ -73,7 +73,7 @@ class TransitionMap:
 
         Returns
         -------
-        int or float (depending on derived class)
+        int or float (depending on Transitions used)
             Validity of the requested transition (e.g.,
             0/1 allowed/not allowed, a probability in [0,1], etc...)
 
@@ -95,7 +95,7 @@ class TransitionMap:
             Index of the transition to probe, as index in the tuple returned by
             get_transitions(). e.g., the NESW direction of movement, for agents
             on a grid.
-        new_transition : int or float (depending on derived class)
+        new_transition : int or float (depending on Transitions used)
             Validity of the requested transition (e.g.,
             0/1 allowed/not allowed, a probability in [0,1], etc...)
 
@@ -130,10 +130,7 @@ class GridTransitionMap(TransitionMap):
         self.height = height
         self.transitions = transitions
 
-        if isinstance(self.transitions, Grid4Transitions) or isinstance(self.transitions, RailEnvTransitions):
-            self.grid = np.ndarray((height, width), dtype=np.uint16)
-        elif isinstance(self.transitions, Grid8Transitions):
-            self.grid = np.ndarray((height, width), dtype=np.uint64)
+        self.grid = np.zeros((height, width), dtype=self.transitions.get_type())
 
     def get_transitions(self, cell_id):
         """
@@ -156,14 +153,12 @@ class GridTransitionMap(TransitionMap):
             List of the validity of transitions in the cell.
 
         """
+        assert len(cell_id) in (2, 3), \
+            'GridTransitionMap.get_transitions() ERROR: cell_id tuple must have length 2 or 3.'
         if len(cell_id) == 3:
             return self.transitions.get_transitions(self.grid[cell_id[0]][cell_id[1]], cell_id[2])
         elif len(cell_id) == 2:
             return self.grid[cell_id[0]][cell_id[1]]
-        else:
-            print('GridTransitionMap.get_transitions() ERROR: \
-                   wrong cell_id tuple.')
-            return ()
 
     def set_transitions(self, cell_id, new_transitions):
         """
@@ -182,15 +177,14 @@ class GridTransitionMap(TransitionMap):
             Tuple of new transitions validitiy for the cell.
 
         """
+        assert len(cell_id) in (2, 3), \
+            'GridTransitionMap.set_transitions() ERROR: cell_id tuple must have length 2 or 3.'
         if len(cell_id) == 3:
             self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transitions(self.grid[cell_id[0]][cell_id[1]],
                                                                                  cell_id[2],
                                                                                  new_transitions)
         elif len(cell_id) == 2:
             self.grid[cell_id[0]][cell_id[1]] = new_transitions
-        else:
-            print('GridTransitionMap.get_transitions() ERROR: \
-                   wrong cell_id tuple.')
 
     def get_transition(self, cell_id, transition_index):
         """
@@ -210,15 +204,14 @@ class GridTransitionMap(TransitionMap):
 
         Returns
         -------
-        int or float (depending on derived class)
+        int or float (depending on Transitions used in the )
             Validity of the requested transition (e.g.,
             0/1 allowed/not allowed, a probability in [0,1], etc...)
 
         """
-        if len(cell_id) != 3:
-            print('GridTransitionMap.get_transition() ERROR: \
-                   wrong cell_id tuple.')
-            return ()
+
+        assert len(cell_id) == 3, \
+            'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
         return self.transitions.get_transition(self.grid[cell_id[0]][cell_id[1]], cell_id[2], transition_index)
 
     def set_transition(self, cell_id, transition_index, new_transition, remove_deadends=False):
@@ -236,15 +229,13 @@ class GridTransitionMap(TransitionMap):
             Index of the transition to probe, as index in the tuple returned by
             get_transitions(). e.g., the NESW direction of movement, for agents
             on a grid.
-        new_transition : int or float (depending on derived class)
+        new_transition : int or float (depending on Transitions used in the map.)
             Validity of the requested transition (e.g.,
             0/1 allowed/not allowed, a probability in [0,1], etc...)
 
         """
-        if len(cell_id) != 3:
-            print('GridTransitionMap.set_transition() ERROR: \
-                   wrong cell_id tuple.')
-            return
+        assert len(cell_id) == 3, \
+            'GridTransitionMap.set_transition() ERROR: cell_id tuple must have length 3.'
         self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transition(
             self.grid[cell_id[0]][cell_id[1]],
             cell_id[2],
@@ -264,7 +255,7 @@ class GridTransitionMap(TransitionMap):
         """
         np.save(filename, self.grid)
 
-    def load_transition_map(self, package, resource, override_gridsize=True):
+    def load_transition_map(self, package, resource):
         """
         Load the transitions grid from `filename' (npy format).
         The load function only updates the transitions grid, and possibly width and height, but the object has to be
@@ -289,28 +280,9 @@ class GridTransitionMap(TransitionMap):
         new_height = new_grid.shape[0]
         new_width = new_grid.shape[1]
 
-        if override_gridsize:
-            self.width = new_width
-            self.height = new_height
-            self.grid = new_grid
-
-        else:
-            if new_grid.dtype == np.uint16:
-                self.grid = np.zeros((self.height, self.width), dtype=np.uint16)
-            elif new_grid.dtype == np.uint64:
-                self.grid = np.zeros((self.height, self.width), dtype=np.uint64)
-
-            self.grid[0:min(self.height, new_height),
-            0:min(self.width, new_width)] = new_grid[0:min(self.height, new_height),
-                                            0:min(self.width, new_width)]
-
-    def is_cell_valid(self, rcPos):
-        cell_transition = self.grid[tuple(rcPos)]
-
-        if not self.transitions.is_valid(cell_transition):
-            return False
-        else:
-            return True
+        self.width = new_width
+        self.height = new_height
+        self.grid = new_grid
 
     def cell_neighbours_valid(self, rcPos, check_this_cell=False):
         """
@@ -363,9 +335,6 @@ class GridTransitionMap(TransitionMap):
                 return False
 
         return True
-
-    def cell_repr(self, rcPos):
-        return self.transitions.repr(self.get_transitions(rcPos))
 
 # TODO: GIACOMO: is it better to provide those methods with lists of cell_ids
 # (most general implementation) or to make Grid-class specific methods for

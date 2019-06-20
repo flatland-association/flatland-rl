@@ -1,7 +1,7 @@
 import numpy as np
 
 from flatland.core.transition_map import GridTransitionMap
-from flatland.core.transitions import RailEnvTransitions
+from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.env_utils import distance_on_rail, connect_rail, get_direction, mirror
 from flatland.envs.env_utils import get_rnd_agents_pos_tgt_dir_on_rail
 
@@ -154,7 +154,7 @@ def rail_from_manual_specifications_generator(rail_spec):
     Parameters
     -------
     rail_spec : list of list of tuples
-        List (rows) of lists (columns) of tuples, each specifying a cell for
+        List (rows) of lists (columns) of tuples, each specifying a rail_spec_of_cell for
         the RailEnv environment as (cell_type, rotation), with rotation being
         clock-wise and in [0, 90, 180, 270].
 
@@ -162,23 +162,27 @@ def rail_from_manual_specifications_generator(rail_spec):
     -------
     function
         Generator function that always returns a GridTransitionMap object with
-        the matrix of correct 16-bit bitmaps for each cell.
+        the matrix of correct 16-bit bitmaps for each rail_spec_of_cell.
     """
 
     def generator(width, height, num_agents, num_resets=0):
-        t_utils = RailEnvTransitions()
+        rail_env_transitions = RailEnvTransitions()
 
         height = len(rail_spec)
         width = len(rail_spec[0])
-        rail = GridTransitionMap(width=width, height=height, transitions=t_utils)
+        rail = GridTransitionMap(width=width, height=height, transitions=rail_env_transitions)
 
         for r in range(height):
             for c in range(width):
-                cell = rail_spec[r][c]
-                if cell[0] < 0 or cell[0] >= len(t_utils.transitions):
-                    print("ERROR - invalid cell type=", cell[0])
+                rail_spec_of_cell = rail_spec[r][c]
+                index_basic_type_of_cell_ = rail_spec_of_cell[0]
+                rotation_cell_ = rail_spec_of_cell[1]
+                if index_basic_type_of_cell_ < 0 or index_basic_type_of_cell_ >= len(rail_env_transitions.transitions):
+                    print("ERROR - invalid rail_spec_of_cell type=", index_basic_type_of_cell_)
                     return []
-                rail.set_transitions((r, c), t_utils.rotate_transition(t_utils.transitions[cell[0]], cell[1]))
+                basic_type_of_cell_ = rail_env_transitions.transitions[index_basic_type_of_cell_]
+                effective_transition_cell = rail_env_transitions.rotate_transition(basic_type_of_cell_, rotation_cell_)
+                rail.set_transitions((r, c), effective_transition_cell)
 
         agents_position, agents_direction, agents_target = get_rnd_agents_pos_tgt_dir_on_rail(
             rail,
