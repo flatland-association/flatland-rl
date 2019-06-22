@@ -1,7 +1,7 @@
 from itertools import starmap
 
 import numpy as np
-from attr import attrs, attrib
+from attr import attrs, attrib, Factory
 
 
 @attrs
@@ -18,7 +18,9 @@ class EnvAgentStatic(object):
     # speed_data: speed is added to position_fraction on each moving step, until position_fraction>=1.0,
     # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
     # cell if speed=1, as default)
-    speed_data = attrib(default=dict({'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0}))
+    # N.B. we need to use factory since default arguments are not recreated on each call!
+    speed_data = attrib(
+        default=Factory(lambda: dict({'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0})))
 
     @classmethod
     def from_lists(cls, positions, directions, targets, speeds=None):

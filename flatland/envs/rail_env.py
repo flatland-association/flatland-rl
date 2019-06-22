@@ -12,8 +12,8 @@ import msgpack
 import numpy as np
 
 from flatland.core.env import Environment
-from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 
@@ -196,7 +196,7 @@ class RailEnv(Environment):
         for iAgent in range(self.get_num_agents()):
             agent = self.agents[iAgent]
             if iAgent % 2 == 0:
-                agent.speed_data["speed"] = 1./10.
+                agent.speed_data["speed"] = 1. / 10.
             if self.dones[iAgent]:  # this agent has already completed...
                 continue
 
@@ -277,7 +277,6 @@ class RailEnv(Environment):
 
             if agent.speed_data['position_fraction'] >= 1.0:
 
-
                 # Perform stored action to transition to the next cell
 
                 # Now 'transition_action_on_cellexit' will be guaranteed to be valid; it was checked on entering
@@ -291,8 +290,6 @@ class RailEnv(Environment):
                     agent.position = new_position
                     agent.direction = new_direction
                     agent.speed_data['position_fraction'] = 0.0
-
-
 
             if np.equal(agent.position, agent.target).all():
                 self.dones[iAgent] = True
