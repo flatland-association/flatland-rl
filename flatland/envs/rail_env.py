@@ -191,7 +191,8 @@ class RailEnv(Environment):
         # for i in range(len(self.agents_handles)):
         for iAgent in range(self.get_num_agents()):
             agent = self.agents[iAgent]
-
+            if iAgent % 2 == 0:
+                agent.speed_data["speed"] = 1./3.
             if self.dones[iAgent]:  # this agent has already completed...
                 continue
 
@@ -269,7 +270,7 @@ class RailEnv(Environment):
                 agent.speed_data['position_fraction'] += agent.speed_data['speed']
 
             if agent.speed_data['position_fraction'] >= 1.0:
-                agent.speed_data['position_fraction'] = 0.0
+
 
                 # Perform stored action to transition to the next cell
 
@@ -277,10 +278,15 @@ class RailEnv(Environment):
                 # the cell
                 cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
                     self._check_action_on_agent(agent.speed_data['transition_action_on_cellexit'], agent)
-                agent.old_direction = agent.direction
-                agent.old_position = agent.position
-                agent.position = new_position
-                agent.direction = new_direction
+
+                if all([new_cell_isValid, transition_isValid, cell_isFree]):
+                    agent.old_direction = agent.direction
+                    agent.old_position = agent.position
+                    agent.position = new_position
+                    agent.direction = new_direction
+                    agent.speed_data['position_fraction'] = 0.0
+
+
 
             if np.equal(agent.position, agent.target).all():
                 self.dones[iAgent] = True
