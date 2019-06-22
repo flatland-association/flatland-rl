@@ -195,8 +195,6 @@ class RailEnv(Environment):
         # for i in range(len(self.agents_handles)):
         for iAgent in range(self.get_num_agents()):
             agent = self.agents[iAgent]
-            if iAgent % 2 == 0:
-                agent.speed_data["speed"] = 1. / 10.
             if self.dones[iAgent]:  # this agent has already completed...
                 continue
 
