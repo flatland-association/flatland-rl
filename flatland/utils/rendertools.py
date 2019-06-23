@@ -673,8 +673,13 @@ class RenderTool(object):
                 direction = agent.direction
                 old_direction = agent.direction
 
-            # setAgentAt uses the agent index for the color
-            self.gl.setAgentAt(iAgent, *position, old_direction, direction, iSelectedAgent == iAgent)
+            if agent.position == agent.target:
+                # setAgentAt uses the agent index for the color
+                self.gl.setCellOccupied(iAgent, *(agent.position))
+            else:
+                # setAgentAt uses the agent index for the color
+                self.gl.setCellOccupied(iAgent, *(agent.position))
+                self.gl.setAgentAt(iAgent, *position, old_direction, direction, iSelectedAgent == iAgent)
 
         if show_observations:
             self.renderObs(range(env.get_num_agents()), env.dev_obs_dict)

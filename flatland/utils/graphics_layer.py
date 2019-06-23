@@ -79,6 +79,9 @@ class GraphicsLayer(object):
     def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut, isSelected=False):
         pass
 
+    def setCellOccupied(self, iAgent, row, col):
+        pass
+
     def resize(self, env):
         pass
 
