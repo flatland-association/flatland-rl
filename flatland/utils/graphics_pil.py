@@ -383,7 +383,6 @@ class PILSVG(PILGL):
         station = self.pilFromSvgFile("svg", "Bahnhof_#d50000_target.svg")
         self.ltStationColors = self.recolorImage(station, [0, 0, 0], self.ltAgentColors, False)
 
-
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
         self.dPilRail = {**dPilRailFiles, **dPilTargetFiles}
