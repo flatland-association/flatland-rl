@@ -73,6 +73,11 @@ class PILGL(GraphicsLayer):
                   "#64dd17#aeea00#ffd600#ffab00#ff6d00#ff3d00#5d4037#455a64"
 
         self.ltAgentColors = [self.rgb_s2i(sColor) for sColor in sColors.split("#")]
+        permute = np.random.permutation(len(self.ltAgentColors))
+        tmp = []
+        for p in permute:
+            tmp.append(self.ltAgentColors[p])
+        self.ltAgentColors = tmp
         self.nAgentColors = len(self.ltAgentColors)
 
         self.window_root = None
@@ -373,6 +378,12 @@ class PILSVG(PILGL):
         dPilTargetFiles = self.loadSVGs(dTargetFiles, rotate=False, agent_colors=self.ltAgentColors,
                                         backgroundImage="Background_rail.svg",
                                         whitefilter="Background_white_filter.svg")
+
+        # Load station and recolorize them
+        station = self.pilFromSvgFile("svg", "Bahnhof_#d50000_target.svg")
+        self.ltStationColors = self.recolorImage(station, [0, 0, 0], self.ltAgentColors, False)
+
+
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
         self.dPilRail = {**dPilRailFiles, **dPilTargetFiles}
@@ -429,49 +440,48 @@ class PILSVG(PILGL):
         return dPil
 
     def setRailAt(self, row, col, binTrans, iTarget=None, isSelected=False):
-        if iTarget is None:
-            if binTrans in self.dPilRail:
-                pilTrack = self.dPilRail[binTrans]
+        if binTrans in self.dPilRail:
+            pilTrack = self.dPilRail[binTrans]
+            if iTarget is not None:
+                pilTrack = Image.alpha_composite(pilTrack, self.ltStationColors[iTarget % len(self.ltStationColors)])
 
-                if binTrans == 0:
-                    if self.background_grid[col][row] < 4:
-                        a = int(self.background_grid[col][row])
-                        a = a % len(self.dBuildings)
-                        if (col + row) % 10 > 7:
-                            pilTrack = self.dScenery[0]
-                        else:
-                            if (col + row + col * row) % 3 == 0:
-                                a = (a + (col + row + col * row)) % len(self.dBuildings)
-                            pilTrack = self.dBuildings[a]
-                    elif (self.background_grid[col][row] > 4) or ((col ** 3 + row ** 2 + col * row) % 10 == 0):
-                        a = int(self.background_grid[col][row]) - 4
-                        a = (a + (col + row + col * row + col ** 3 + row ** 4)) % len(self.dScenery)
-                        if (col + row + col * row) % 10 > 2:
-                            a = 0
-                        pilTrack = self.dScenery[a]
+            if binTrans == 0:
+                if self.background_grid[col][row] < 4:
+                    a = int(self.background_grid[col][row])
+                    a = a % len(self.dBuildings)
+                    if (col + row) % 10 > 7:
+                        pilTrack = self.dScenery[0]
+                    else:
+                        if (col + row + col * row) % 3 == 0:
+                            a = (a + (col + row + col * row)) % len(self.dBuildings)
+                        pilTrack = self.dBuildings[a]
+                elif (self.background_grid[col][row] > 4) or ((col ** 3 + row ** 2 + col * row) % 10 == 0):
+                    a = int(self.background_grid[col][row]) - 4
+                    a = (a + (col + row + col * row + col ** 3 + row ** 4)) % len(self.dScenery)
+                    if (col + row + col * row) % 10 > 2:
+                        a = 0
+                    pilTrack = self.dScenery[a]
 
-                self.drawImageRC(pilTrack, (row, col))
-            else:
-                print("Illegal rail:", row, col, format(binTrans, "#018b")[2:], binTrans)
+            self.drawImageRC(pilTrack, (row, col))
         else:
-            if (binTrans, iTarget) in self.dPilRail:
-                pilTrack = self.dPilRail[(binTrans, iTarget)]
-                self.drawImageRC(pilTrack, (row, col))
-            else:
-                print("Illegal target rail:", row, col, format(binTrans, "#018b")[2:], (binTrans, iTarget))
+            print("Illegal rail:", row, col, format(binTrans, "#018b")[2:], binTrans)
 
+        if iTarget is not None:
             if isSelected:
                 svgBG = self.pilFromSvgFile("svg", "Selected_Target.svg")
                 self.clear_layer(3, 0)
                 self.drawImageRC(svgBG, (row, col), layer=3)
 
-    def recolorImage(self, pil, a3BaseColor, ltColors):
+    def recolorImage(self, pil, a3BaseColor, ltColors, invert=False):
         rgbaImg = array(pil)
         lPils = []
 
         for iColor, tnColor in enumerate(ltColors):
             # find the pixels which match the base paint color
-            xy_color_mask = np.all(rgbaImg[:, :, 0:3] - a3BaseColor == 0, axis=2)
+            if invert:
+                xy_color_mask = np.all(rgbaImg[:, :, 0:3] - a3BaseColor != 0, axis=2)
+            else:
+                xy_color_mask = np.all(rgbaImg[:, :, 0:3] - a3BaseColor == 0, axis=2)
             rgbaImg2 = np.copy(rgbaImg)
 
             # Repaint the base color with the new color
