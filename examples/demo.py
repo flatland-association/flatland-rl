@@ -101,11 +101,12 @@ class Demo:
                 # update the actions
                 action_dict.update({iAgent: action})
 
+            # render
+            self.renderer.renderEnv(show=True, show_observations=False)
+
             # environment step (apply the actions to all agents)
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
 
-            # render
-            self.renderer.renderEnv(show=True, show_observations=False)
 
             if done['__all__']:
                 break
