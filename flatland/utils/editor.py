@@ -9,8 +9,8 @@ from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButto
 from numpy import array
 
 import flatland.utils.rendertools as rt
-from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
 from flatland.core.grid.grid4_utils import mirror
+from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
 from flatland.envs.generators import complex_rail_generator, empty_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, random_rail_generator
@@ -698,7 +698,7 @@ class EditorModel(object):
             # No
             if self.iSelectedAgent is None:
                 # Create a new agent and select it.
-                agent_static = EnvAgentStatic(rcCell, 0, rcCell, moving=False)
+                agent_static = EnvAgentStatic(position=rcCell, direction=0, target=rcCell, moving=False)
                 self.iSelectedAgent = self.env.add_agent_static(agent_static)
                 self.view.oRT.update_background()
             else:

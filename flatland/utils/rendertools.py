@@ -673,7 +673,7 @@ class RenderTool(object):
                 direction = agent.direction
                 old_direction = agent.direction
 
-            if agent.position == agent.target:
+            if agent.position[0] == agent.target[0] and agent.position[1] == agent.target[1]:
                 # setAgentAt uses the agent index for the color
                 self.gl.setCellOccupied(iAgent, *(agent.position))
             else:
