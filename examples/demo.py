@@ -107,7 +107,6 @@ class Demo:
             # environment step (apply the actions to all agents)
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
 
-
             if done['__all__']:
                 break
 
