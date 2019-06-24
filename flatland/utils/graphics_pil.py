@@ -69,7 +69,7 @@ class PILGL(GraphicsLayer):
         self.tColRail = (0, 0, 0)  # black rails
         self.tColGrid = (230,) * 3  # light grey for grid
 
-        sColors = "ff0000#00ff00#0000ff#ffcc00#00FFFF#ff00ff#ff00FF#000000#808080" + \
+        sColors = "ff0000#ff00FF#0000ff#00ff00#00FFFF#FFFF00#808080#000000" + \
                   "#d50000#c51162#aa00ff#6200ea#304ffe#2962ff#0091ea#00b8d4#00bfa5#00c853" + \
                   "#64dd17#aeea00#ffd600#ffab00#ff6d00#ff3d00#5d4037#455a64"
 
