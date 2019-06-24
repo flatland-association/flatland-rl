@@ -2,6 +2,7 @@
 <!-- Generator: Adobe Illustrator 23.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 
 <svg
+   xmlns:osb="http://www.openswatchbook.org/uri/2009/osb"
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -24,6 +25,11 @@
          rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title /></cc:Work></rdf:RDF></metadata>
     <defs
    id="defs9"><linearGradient
+     id="linearGradient846"
+     osb:paint="solid"><stop
+       style="stop-color:#000000;stop-opacity:1;"
+       offset="0"
+       id="stop844" /></linearGradient><linearGradient
      inkscape:collect="always"
      id="linearGradient856"><stop
        style="stop-color:#000000;stop-opacity:1;"
@@ -40,7 +46,7 @@
      fx="119.00967"
      fy="112.00168"
      r="77.302353"
-     gradientTransform="matrix(1.5534883,0,0,1.5558139,-64.791826,-54.1623)"
+     gradientTransform="matrix(0.83488368,0,0,0.8697674,20.189755,8.4739991)"
      gradientUnits="userSpaceOnUse" /></defs>
     <sodipodi:namedview
    pagecolor="#ffffff"
@@ -56,7 +62,7 @@
    id="namedview7"
    showgrid="false"
    inkscape:zoom="2.7812867"
-   inkscape:cx="24.994769"
+   inkscape:cx="103.55553"
    inkscape:cy="123.32931"
    inkscape:window-x="-8"
    inkscape:window-y="-8"
@@ -72,10 +78,10 @@
     <rect
    style="opacity:1;fill:url(#radialGradient858);fill-opacity:1;stroke:none;stroke-width:0.99999994;stroke-opacity:1"
    id="rect842"
-   width="240.17661"
-   height="240.53615"
-   x="5.5438005e-07"
-   y="-0.1766029" /><g
+   width="129.07695"
+   height="134.47014"
+   x="55.010517"
+   y="38.654343" /><g
    id="g859"
    transform="matrix(0.70674421,0,0,0.65767922,35.123774,54.022125)"
    style="stroke-width:1.46676934"><rect
