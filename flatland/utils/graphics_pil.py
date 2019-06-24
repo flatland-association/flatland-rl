@@ -383,6 +383,9 @@ class PILSVG(PILGL):
         station = self.pilFromSvgFile("svg", "Bahnhof_#d50000_target.svg")
         self.ltStationColors = self.recolorImage(station, [0, 0, 0], self.ltAgentColors, False)
 
+        cellOccupied = self.pilFromSvgFile("svg", "Cell_occupied.svg")
+        self.ltCellOccupied = self.recolorImage(cellOccupied, [0, 0, 0], self.ltAgentColors, False)
+
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
         self.dPilRail = {**dPilRailFiles, **dPilTargetFiles}
@@ -537,6 +540,10 @@ class PILSVG(PILGL):
             svgBG = self.pilFromSvgFile("svg", "Selected_Agent.svg")
             self.clear_layer(2, 0)
             self.drawImageRC(svgBG, (row, col), layer=2)
+
+    def setCellOccupied(self, iAgent, row, col):
+        occIm = self.ltCellOccupied[iAgent % len(self.ltCellOccupied)]
+        self.drawImageRC(occIm, (row, col), 1)
 
 
 def main2():
