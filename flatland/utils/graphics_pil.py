@@ -393,7 +393,8 @@ class PILSVG(PILGL):
             "NN SS SE WN": "Weiche_vertikal_oben_rechts.svg",
             "NN SS NW ES": "Weiche_vertikal_unten_links.svg",
             "NN SS NE WS": "Weiche_vertikal_unten_rechts.svg",
-            "NE NW ES WS SS NN WW EE": "Weiche_Symetrical_gerade.svg"
+            "NE NW ES WS SS NN": "Weiche_Symetrical_gerade.svg",
+            "NE EN SW WS": "Gleis_Kurve_oben_links_unten_rechts.svg"
         }
 
         dTargetFiles = {
