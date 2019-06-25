@@ -316,12 +316,18 @@ class PILSVG(PILGL):
             "Scenery/Laubbaume_C.svg",
             "Scenery/Nadelbaume_A.svg",
             "Scenery/Nadelbaume_B.svg",
-            "Scenery/Bergwelt_B.svg",
-            # "Scenery/Bergwelt_C_Teil_1_links.svg",
-            # "Scenery/Bergwelt_C_Teil_2_rechts.svg",
-            # "Scenery/Bergwelt_A_Teil_1_links.svg",
-            # "Scenery/Bergwelt_A_Teil_2_mitte.svg",
-            # "Scenery/Bergwelt_A_Teil_3_rechts.svg",
+            "Scenery/Bergwelt_B.svg"
+        ]
+
+        dSceneryFilesDim2 = [
+            "Scenery/Bergwelt_C_Teil_1_links.svg",
+            "Scenery/Bergwelt_C_Teil_2_rechts.svg"
+        ]
+
+        dSceneryFilesDim3 = [
+            "Scenery/Bergwelt_A_Teil_3_rechts.svg",
+            "Scenery/Bergwelt_A_Teil_2_mitte.svg",
+            "Scenery/Bergwelt_A_Teil_1_links.svg"
         ]
 
         imgBg = self.pilFromSvgFile('svg', "Background_Light_green.svg")
@@ -331,6 +337,18 @@ class PILSVG(PILGL):
             img = self.pilFromSvgFile('svg', sFile)
             img = Image.alpha_composite(imgBg, img)
             self.dScenery.append(img)
+
+        self.dSceneryDim2 = []
+        for sFile in dSceneryFilesDim2:
+            img = self.pilFromSvgFile('svg', sFile)
+            img = Image.alpha_composite(imgBg, img)
+            self.dSceneryDim2.append(img)
+
+        self.dSceneryDim3 = []
+        for sFile in dSceneryFilesDim3:
+            img = self.pilFromSvgFile('svg', sFile)
+            img = Image.alpha_composite(imgBg, img)
+            self.dSceneryDim3.append(img)
 
     def loadRailSVGs(self):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
@@ -437,7 +455,7 @@ class PILSVG(PILGL):
 
         return dPil
 
-    def setRailAt(self, row, col, binTrans, iTarget=None, isSelected=False):
+    def setRailAt(self, row, col, binTrans, iTarget=None, isSelected=False, rail_grid=None):
         if binTrans in self.dPilRail:
             pilTrack = self.dPilRail[binTrans]
             if iTarget is not None:
@@ -447,18 +465,18 @@ class PILSVG(PILGL):
                 if self.background_grid[col][row] < 4:
                     a = int(self.background_grid[col][row])
                     a = a % len(self.dBuildings)
-                    if (col + row) % 10 > 7:
-                        pilTrack = self.dScenery[0]
+                    if (col + row + col * row) % 13 > 11:
+                        pilTrack = self.dScenery[a % len(self.dScenery)]
                     else:
                         if (col + row + col * row) % 3 == 0:
                             a = (a + (col + row + col * row)) % len(self.dBuildings)
                         pilTrack = self.dBuildings[a]
                 elif (self.background_grid[col][row] > 4) or ((col ** 3 + row ** 2 + col * row) % 10 == 0):
                     a = int(self.background_grid[col][row]) - 4
-                    a = (a + (col + row + col * row + col ** 3 + row ** 4)) % len(self.dScenery)
-                    if (col + row + col * row) % 10 > 2:
-                        a = 0
-                    pilTrack = self.dScenery[a]
+                    a2 = (a + (col + row + col * row + col ** 3 + row ** 4))
+                    if a2 % 17 > 11:
+                        a = a2
+                    pilTrack = self.dScenery[a % len(self.dScenery)]
 
             self.drawImageRC(pilTrack, (row, col))
         else:

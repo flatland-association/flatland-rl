@@ -655,7 +655,7 @@ class RenderTool(object):
                         target = None
                         isSelected = False
 
-                    self.gl.setRailAt(r, c, binTrans, iTarget=target, isSelected=isSelected)
+                    self.gl.setRailAt(r, c, binTrans, iTarget=target, isSelected=isSelected, rail_grid=env.rail.grid)
 
             self.gl.build_background_map(dTargets)
 
