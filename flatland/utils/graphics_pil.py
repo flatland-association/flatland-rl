@@ -79,19 +79,38 @@ class PILGL(GraphicsLayer):
         self.window_root = None
         self.window_open = False
         self.firstFrame = True
+        self.old_background_image = (None, None, None)
         self.create_layers()
 
     def build_background_map(self, dTargets):
-        self.background_grid = np.zeros(shape=(self.width, self.height))
-        for x in range(self.width):
-            for y in range(self.height):
-                distance = int(np.ceil(np.sqrt(self.width ** 2.0 + self.height ** 2.0)))
-                for rc in dTargets:
-                    r = rc[1]
-                    c = rc[0]
-                    d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)))
-                    distance = min(d, distance)
-                self.background_grid[x][y] = distance
+        x = self.old_background_image
+        rebuild = False
+        if x[0] is None:
+            rebuild = True
+        else:
+            if len(x[0]) != len(dTargets):
+                rebuild = True
+            else:
+                if x[0] != dTargets:
+                    rebuild = True
+                if x[1] != self.width:
+                    rebuild = True
+                if x[2] != self.height:
+                    rebuild = True
+
+        if rebuild:
+            self.background_grid = np.zeros(shape=(self.width, self.height))
+            for x in range(self.width):
+                for y in range(self.height):
+                    distance = int(np.ceil(np.sqrt(self.width ** 2.0 + self.height ** 2.0)))
+                    for rc in dTargets:
+                        r = rc[1]
+                        c = rc[0]
+                        d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)))
+                        distance = min(d, distance)
+                    self.background_grid[x][y] = distance
+
+            self.old_background_image = (dTargets, self.width, self.height)
 
     def rgb_s2i(self, sRGB):
         """ convert a hex RGB string like 0091ea to 3-tuple of ints """
