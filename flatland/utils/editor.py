@@ -119,6 +119,7 @@ class View(object):
                  tip="Regenerate the rails using the method selected below"),
             dict(name="Load", method=self.controller.load),
             dict(name="Save", method=self.controller.save),
+            dict(name="Save as image", method=self.controller.saveImage)
         ]
 
         self.lwButtons = []
@@ -364,6 +365,9 @@ class Controller(object):
     def save(self, event):
         self.model.save()
 
+    def saveImage(self, event):
+        self.model.saveImage()
+
     def step(self, event):
         self.model.step()
 
@@ -397,6 +401,7 @@ class EditorModel(object):
         self.iSelectedAgent = None
         self.init_agents_static = None
         self.thread = None
+        self.saveImageCnt = 0
 
     def set_env(self, env):
         """
@@ -644,6 +649,11 @@ class EditorModel(object):
         self.env.save(self.env_filename)
         # reset agents current (current position)
         self.env.agents = temp_store
+
+    def saveImage(self):
+        self.view.oRT.gl.saveImage('frame_{:04d}.bmp'.format(self.saveImageCnt))
+        self.saveImageCnt += 1
+        self.view.redraw()
 
     def regenerate(self, method=None, nAgents=0, env=None):
         self.log("Regenerate size",

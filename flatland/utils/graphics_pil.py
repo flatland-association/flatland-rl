@@ -483,7 +483,7 @@ class PILSVG(PILGL):
                 pilTrack = Image.alpha_composite(pilTrack, self.ltStationColors[iTarget % len(self.ltStationColors)])
 
             if binTrans == 0:
-                if self.background_grid[col][row] < 4:
+                if self.background_grid[col][row] <= 4:
                     a = int(self.background_grid[col][row])
                     a = a % len(self.dBuildings)
                     if (col + row + col * row) % 13 > 11:
