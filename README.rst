@@ -39,8 +39,12 @@ very complex. In such a complex environment cooperation is essential. Thus, agen
 
 
 .. image:: docs/gifs/complex.gif
+  :align: center
+  :width: 300
 
 .. image:: docs/gifs/many_agents.gif
+  :align: center
+  :width: 300
 
 
 Getting Started
@@ -123,7 +127,9 @@ https://github.com/Who8MyLunch/Jupyter_Canvas_Widget#installation
 Basic Usage
 ============
 
-Basic usage of the RailEnv environment used by the Flatland Challenge ::
+Basic usage of the RailEnv environment used by the Flatland Challenge
+
+.. code-block:: python
 
     import numpy as np
     import time
