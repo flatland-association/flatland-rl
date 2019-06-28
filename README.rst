@@ -39,6 +39,14 @@ very complex. In such a complex environment cooperation is essential. Thus, agen
 
 
 
+.. image:: docs/gifs/complex.gif
+    :width: 200px
+
+.. image:: docs/gifs/many_agents.gif
+    :width: 100px
+    :align: center
+
+
 Getting Started
 ===============
 
@@ -110,6 +118,12 @@ Once you have a copy of the source, you can install it with ::
     $ python setup.py install
     
 
+Jupyter Canvas Widget
+---------------------
+If you work with jupyter notebook you need to install the Jupyer Canvas Widget. To install the Jupyter Canvas Widget read also
+https://github.com/Who8MyLunch/Jupyter_Canvas_Widget#installation
+
+
 Basic Usage
 ============
 
@@ -132,28 +146,9 @@ Basic usage of the RailEnv environment used by the Flatland Challenge ::
         time.sleep(0.3)
 
 
-Jupyter Canvas Widget
----------------------
-If you work with jupyter notebook you need to install the Jupyer Canvas Widget. To install the Jupyter Canvas Widget read also
-https://github.com/Who8MyLunch/Jupyter_Canvas_Widget#installation
-
-Usage
-=====
-To use flatland in a project ::
-    
-    import flatland
-    
-flatland
-========
-TODO: explain the interface here
-
-Module Dependencies
-===================
-.. image:: flatland.svg
-
-
 Authors
---------
+============
+
 * Sharada Mohanty <mohanty@aicrowd.com>
 * Giacomo Spigler <giacomo.spigler@gmail.com>
 * Mattias Ljungström
