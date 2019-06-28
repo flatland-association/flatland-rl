@@ -46,6 +46,7 @@ Online Docs
 ------------
 
 The documentation for the latest code on the master branch is found at  `http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/ <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/>`_ 
+The documentation includes a few tutorials in http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/gettingstarted.html.
 
 Run Notebooks with Examples with one Click
 ------------------------------------------
@@ -81,12 +82,6 @@ The docs have a lot more details about how to interact with this codebase.
     python make_docs.py
 
 
-Features
---------
-
-TODO
-
-
 Installation
 ============
 
@@ -114,6 +109,27 @@ Once you have a copy of the source, you can install it with ::
 
     $ python setup.py install
     
+
+Basic Usage
+============
+
+Basic usage of the RailEnv environment used by the Flatland Challenge ::
+
+    import numpy as np
+    import time
+    from flatland.envs.generators import complex_rail_generator
+    from flatland.envs.rail_env import RailEnv
+    from flatland.utils.rendertools import RenderTool
+    
+    env = RailEnv(width=7, height=7, rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999, seed=0), number_of_agents=2)
+    
+    env_renderer = RenderTool(env, gl="PILSVG")
+    
+    for step in range(100):
+        obs, all_rewards, done, _ = env.step({0:np.random.randint(0, 5), 1:np.random.randint(0, 5)})
+        print("Rewards: ", all_rewards, "  [done=", done, "]")
+        env_renderer.renderEnv(show=True, frames=False, show_observations=False)
+        time.sleep(0.3)
 
 
 Jupyter Canvas Widget
