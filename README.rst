@@ -54,7 +54,7 @@ Online Docs
 ------------
 
 The documentation for the latest code on the master branch is found at  `http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/ <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/>`_ 
-The documentation includes a few tutorials in http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/gettingstarted.html.
+The documentation includes a few tutorials at http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/gettingstarted.html.
 
 Run Notebooks with Examples with one Click
 ------------------------------------------
@@ -70,9 +70,7 @@ They create a virtual environment, install Flatland and all dependencies into in
 Generate Docs
 --------------
 
-The docs have a lot more details about how to interact with this codebase.  
-
-**TODO**: Mohanty to add atleast a neat outline herefor the contents to the docs here ::
+The docs have a lot more details about how to interact with this codebase. ::
 
     git clone git@gitlab.aicrowd.com:flatland/flatland.git
     cd flatland
@@ -81,7 +79,6 @@ The docs have a lot more details about how to interact with this codebase.
 * On, Linux and macOS ::
 
     make docs
-
 
 * On, Windows ::
 
