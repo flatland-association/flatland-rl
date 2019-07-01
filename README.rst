@@ -53,12 +53,13 @@ Getting Started
 Online Docs
 ------------
 
-The documentation for the latest code on the master branch is found at  `http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/ <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/>`_ 
-The documentation includes a few tutorials at http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/gettingstarted.html.
+The documentation for the latest code on the master branch is found at : `flatland-rl-docs <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/>`_ 
+
+The documentation includes a few tutorials at : `Getting Started <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/gettingstarted.html>`_
 
 Run Notebooks with Examples with one Click
 ------------------------------------------
-Under getting_started, there are two scripts
+Under getting_started, there are two scripts ::
 
     getting_started/run_notebooks.bat
     getting_started/run_notebooks.sh
