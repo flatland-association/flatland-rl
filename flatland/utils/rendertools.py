@@ -1,5 +1,6 @@
 import time
 from collections import deque
+from enum import IntEnum
 
 import numpy as np
 from numpy import array
@@ -9,6 +10,13 @@ from flatland.utils.graphics_pil import PILGL, PILSVG
 
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
+
+class AgentRenderVariant(IntEnum):
+    BOX_ONLY = 0
+    ONE_STEP_BEHIND = 1
+    AGENT_SHOWS_OPTIONS = 2
+    ONE_STEP_BEHIND_AND_BOX = 3
+    AGENT_SHOWS_OPTIONS_AND_BOX = 4
 
 
 class RenderTool(object):
@@ -30,11 +38,13 @@ class RenderTool(object):
     gTheta = np.linspace(0, np.pi / 2, 5)
     gArc = array([np.cos(gTheta), np.sin(gTheta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env, gl="PILSVG", jupyter=False):
+    def __init__(self, env, gl="PILSVG", jupyter=False, agentRenderVariant=AgentRenderVariant.AGENT_SHOWS_OPTIONS):
         self.env = env
         self.iFrame = 0
         self.time1 = time.time()
         self.lTimes = deque()
+
+        self.agentRenderVariant = agentRenderVariant
 
         if gl == "PIL":
             self.gl = PILGL(env.width, env.height, jupyter)
@@ -664,18 +674,39 @@ class RenderTool(object):
             if agent is None:
                 continue
 
-            if agent.old_position is not None:
-                position = agent.old_position
-                direction = agent.direction
-                old_direction = agent.old_direction
+            if self.agentRenderVariant == AgentRenderVariant.BOX_ONLY:
+                self.gl.setCellOccupied(iAgent, *(agent.position))
+            elif self.agentRenderVariant == AgentRenderVariant.ONE_STEP_BEHIND or \
+                    self.agentRenderVariant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
+                if agent.old_position is not None:
+                    position = agent.old_position
+                    direction = agent.direction
+                    old_direction = agent.old_direction
+                else:
+                    position = agent.position
+                    direction = agent.direction
+                    old_direction = agent.direction
+
+                # setAgentAt uses the agent index for the color
+                if self.agentRenderVariant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
+                    self.gl.setCellOccupied(iAgent, *(agent.position))
+                self.gl.setAgentAt(iAgent, *position, old_direction, direction, iSelectedAgent == iAgent)
             else:
                 position = agent.position
                 direction = agent.direction
-                old_direction = agent.direction
+                for possible_directions in range(4):
+                    # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
+                    isValid = env.rail.get_transition((*agent.position, agent.direction), possible_directions)
+                    if isValid:
+                        direction = possible_directions
 
-            # setAgentAt uses the agent index for the color
-            self.gl.setCellOccupied(iAgent, *(agent.position))
-            self.gl.setAgentAt(iAgent, *position, old_direction, direction, iSelectedAgent == iAgent)
+                        # setAgentAt uses the agent index for the color
+                        self.gl.setAgentAt(iAgent, *position, agent.direction, direction, iSelectedAgent == iAgent)
+
+                # setAgentAt uses the agent index for the color
+                if self.agentRenderVariant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:
+                    self.gl.setCellOccupied(iAgent, *(agent.position))
+                self.gl.setAgentAt(iAgent, *position, agent.direction, direction, iSelectedAgent == iAgent)
 
         if show_observations:
             self.renderObs(range(env.get_num_agents()), env.dev_obs_dict)
