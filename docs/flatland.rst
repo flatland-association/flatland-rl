@@ -21,14 +21,6 @@ flatland.cli module
     :undoc-members:
     :show-inheritance:
 
-flatland.flatland module
-------------------------
-
-.. automodule:: flatland.flatland
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

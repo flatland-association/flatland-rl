@@ -40,11 +40,11 @@ very complex. In such a complex environment cooperation is essential. Thus, agen
 
 .. image:: docs/gifs/complex.gif
   :align: center
-  :width: 300
+  :width: 600px
 
 .. image:: docs/gifs/many_agents.gif
   :align: center
-  :width: 300
+  :width: 600px
 
 
 Getting Started
@@ -174,4 +174,4 @@ Authors
 Acknowledgements
 ====================
 * Vaibhav Agrawal <theinfamouswayne@gmail.com>
-* Anurag Ghosh
+* Anurag Ghosh  
