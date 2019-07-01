@@ -68,7 +68,9 @@ generated rail networks).
     # Example generate a random rail
     env = RailEnv(width=10,
                   height=10,
-                  rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
+                  rail_generator=random_rail_generator(
+                            cell_type_relative_proportion=transition_probability
+                            ),
                   number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
