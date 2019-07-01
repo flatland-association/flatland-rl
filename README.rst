@@ -134,13 +134,26 @@ Basic usage of the RailEnv environment used by the Flatland Challenge
     from flatland.envs.rail_env import RailEnv
     from flatland.utils.rendertools import RenderTool
     
-    env = RailEnv(width=7, height=7, rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999, seed=0), number_of_agents=2)
+    env = RailEnv(
+                width=7,
+                height=7,
+                rail_generator=complex_rail_generator(
+                                        nr_start_goal=10,
+                                        nr_extra=1,
+                                        min_dist=8,
+                                        max_dist=99999,
+                                        seed=0),
+                number_of_agents=2)
     
     env_renderer = RenderTool(env, gl="PILSVG")
     
     for step in range(100):
-        obs, all_rewards, done, _ = env.step({0:np.random.randint(0, 5), 1:np.random.randint(0, 5)})
-        print("Rewards: ", all_rewards, "  [done=", done, "]")
+        obs, all_rewards, done, _ = env.step(
+                                {
+                                    0:np.random.randint(0, 5),
+                                    1:np.random.randint(0, 5)
+                                })
+        print("Rewards: {}, [done={}]".format( all_rewards, done)
         env_renderer.renderEnv(show=True, frames=False, show_observations=False)
         time.sleep(0.3)
 
@@ -154,9 +167,11 @@ Authors
 * Jeremy Watson
 * Erik Nygren <erik.nygren@sbb.ch>
 * Adrian Egli <adrian.egli@sbb.ch>
-* Vaibhav Agrawal <theinfamouswayne@gmail.com>
 * Christian Eichenberger <christian.markus.eichenberger@sbb.ch>
 * Guillaume Mollard <guillaume.mollard2@gmail.com>
 
 
-<please fill yourself in>
+Acknowledgements
+====================
+* Vaibhav Agrawal <theinfamouswayne@gmail.com>
+* Anurag Ghosh
