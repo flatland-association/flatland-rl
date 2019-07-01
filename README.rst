@@ -156,6 +156,7 @@ Authors
 * Adrian Egli <adrian.egli@sbb.ch>
 * Vaibhav Agrawal <theinfamouswayne@gmail.com>
 * Christian Eichenberger <christian.markus.eichenberger@sbb.ch>
+* Guillaume Mollard <guillaume.mollard2@gmail.com>
 
 
 <please fill yourself in>
