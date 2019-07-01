@@ -38,11 +38,11 @@ Then they must arrive at destination not later than the committed arrival time. 
 very complex. In such a complex environment cooperation is essential. Thus, agents must learn to cooperate in a way that all trains (agents) arrive on time.
 
 
-.. image:: docs/gifs/complex.gif
+.. image:: https://i.imgur.com/KQTVPto.gif
   :align: center
   :width: 600px
 
-.. image:: docs/gifs/many_agents.gif
+.. image:: https://i.imgur.com/xgWGRse.gif
   :align: center
   :width: 600px
 
