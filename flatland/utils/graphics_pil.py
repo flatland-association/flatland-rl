@@ -48,6 +48,8 @@ class PILGL(GraphicsLayer):
             self.screen_height = 600
 
             if platform.system() == "Windows" or platform.system() == "Linux":
+                self.screen_width = 9999
+                self.screen_height = 9999
                 for m in get_monitors():
                     self.screen_height = min(self.screen_height, m.height)
                     self.screen_width = min(self.screen_width, m.width)
