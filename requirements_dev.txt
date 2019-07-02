@@ -3,7 +3,6 @@ tox==3.5.2
 twine==1.12.1
 pytest==3.8.2
 pytest-runner==4.2
-pytest-xvfb==1.2.0
 numpy==1.16.4
 recordtype==1.3
 xarray==0.11.3
