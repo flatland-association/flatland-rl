@@ -1,5 +1,6 @@
 import io
 import os
+import platform
 import time
 import tkinter as tk
 
@@ -43,11 +44,16 @@ class PILGL(GraphicsLayer):
         self.background_grid = np.zeros(shape=(self.width, self.height))
 
         if jupyter is False:
-            self.screen_width = 99999
-            self.screen_height = 99999
-            for m in get_monitors():
-                self.screen_height = min(self.screen_height, m.height)
-                self.screen_width = min(self.screen_width, m.width)
+            self.screen_width = 800
+            self.screen_height = 600
+
+            if platform.system() == "Windows" or platform.system() == "Linux":
+                for m in get_monitors():
+                    self.screen_height = min(self.screen_height, m.height)
+                    self.screen_width = min(self.screen_width, m.width)
+                # Note: screeninfo doesnot have proper support for 
+                # OSX yet, hence the default values of 800,600
+                # will be used for the same.
 
             w = (self.screen_width - self.width - 10) / (self.width + 1 + self.linewidth)
             h = (self.screen_height - self.height - 10) / (self.height + 1 + self.linewidth)
