@@ -189,7 +189,7 @@ class RailEnv(Environment):
             self.rewards_dict[iAgent] = 0
 
         if self.dones["__all__"]:
-            self.rewards_dict = {i:r + global_reward for i,r in self.rewards_dict.items()}
+            self.rewards_dict = {i: r + global_reward for i, r in self.rewards_dict.items()}
             return self._get_observations(), self.rewards_dict, self.dones, {}
 
         # for i in range(len(self.agents_handles)):
@@ -297,7 +297,7 @@ class RailEnv(Environment):
         # Check for end of episode + add global reward to all rewards!
         if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
             self.dones["__all__"] = True
-            self.rewards_dict = {i:0 * r + global_reward for i,r in self.rewards_dict.items()}
+            self.rewards_dict = {i: 0 * r + global_reward for i, r in self.rewards_dict.items()}
 
         return self._get_observations(), self.rewards_dict, self.dones, {}
 
