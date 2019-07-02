@@ -195,6 +195,8 @@ class RailEnv(Environment):
         # for i in range(len(self.agents_handles)):
         for iAgent in range(self.get_num_agents()):
             agent = self.agents[iAgent]
+            agent.old_direction = agent.direction
+            agent.old_position = agent.position
             if self.dones[iAgent]:  # this agent has already completed...
                 continue
 
@@ -283,8 +285,6 @@ class RailEnv(Environment):
                     self._check_action_on_agent(agent.speed_data['transition_action_on_cellexit'], agent)
 
                 if all([new_cell_isValid, transition_isValid, cell_isFree]):
-                    agent.old_direction = agent.direction
-                    agent.old_position = agent.position
                     agent.position = new_position
                     agent.direction = new_direction
                     agent.speed_data['position_fraction'] = 0.0
