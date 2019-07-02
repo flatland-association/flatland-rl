@@ -11,5 +11,6 @@ flake8-eradicate==0.2.0
 twine==1.12.1
 pydeps==1.7.2
 jupyter==1.0.0
+pytest-xvfb==1.2.0
 git+https://github.com/who8mylunch/Jupyter_Canvas_Widget.git@bd151ae1509c50b5809944dd3294f58b7b069c86
 
