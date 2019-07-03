@@ -75,7 +75,7 @@ class Demo:
         self.record_frames = record_frames
 
     def create_renderer(self):
-        self.renderer = RenderTool(self.env, gl="PILSVG")
+        self.renderer = RenderTool(self.env)
         handle = self.env.get_agent_handles()
         return handle
 

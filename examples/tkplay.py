@@ -1,4 +1,8 @@
-from examples.play_model import Player
+try:
+    from examples.play_model import Player
+except ImportError:
+    from play_model import Player
+
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool

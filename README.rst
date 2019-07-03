@@ -147,7 +147,7 @@ Basic usage of the RailEnv environment used by the Flatland Challenge
                                         seed=0),
                 number_of_agents=2)
     
-    env_renderer = RenderTool(env, gl="PILSVG")
+    env_renderer = RenderTool(env)
     
     for step in range(100):
         obs, all_rewards, done, _ = env.step(

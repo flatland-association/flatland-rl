@@ -93,7 +93,7 @@ def max_lt(seq, val):
     return None
 
 
-def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="PILSVG"):
+def main(render=True, delay=0.0, n_trials=3, n_steps=50):
     random.seed(1)
     np.random.seed(1)
 
@@ -103,7 +103,7 @@ def main(render=True, delay=0.0, n_trials=3, n_steps=50, sGL="PILSVG"):
                   number_of_agents=5)
 
     if render:
-        env_renderer = RenderTool(env, gl=sGL)
+        env_renderer = RenderTool(env)
 
     oPlayer = Player(env)
 

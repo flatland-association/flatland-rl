@@ -18,7 +18,7 @@ env = RailEnv(width=6,
 
 env.reset()
 
-env_renderer = RenderTool(env, gl="PILSVG")
+env_renderer = RenderTool(env)
 env_renderer.renderEnv(show=True)
 env_renderer.renderEnv(show=True)
 
