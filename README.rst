@@ -12,6 +12,7 @@ Flatland
      :alt: Test Coverage
 
 .. image:: https://i.imgur.com/rKGEmsk.gif
+  :width: 400
   :align: center
 
 Flatland is a opensource toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (or ridiculously large !) gridworlds.
