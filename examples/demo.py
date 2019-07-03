@@ -7,7 +7,7 @@ import numpy as np
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.rail_env import RailEnv
-from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+from flatland.utils.rendertools import RenderTool
 
 # ensure that every demo run behave constantly equal
 random.seed(1)
