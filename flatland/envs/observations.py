@@ -215,24 +215,25 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         Finally, each node information is composed of 5 floating point values:
 
-        #1: 1 if own target lies on the explored branch
+        #1: if own target lies on the explored branch the current distance from the agent in number of cells is stored.
 
-        #2: distance toa target of another agent is detected between the previous node and the current one.
+        #2: if another agents target is detected the distance in number of cells from the agents current locaiton
+        is stored
 
-        #3: distance to another agent is detected between the previous node and the current one.
 
-        #4: distance of agent to the current branch node
+        #3: if another agent is detected the distance in number of cells from current agent position is stored.
 
-        #5: minimum distance from node to the agent's target (when landing to the node following the corresponding
-            branch.
+        #4: This feature stores the distance in number of cells to the next branching store (current node)
+
+        #5: minimum distance from node to the agent's target given the direction of the agent if this path is chosen
 
         #6: agent in the same direction
-            1 = agent present same direction
+            n = number of agents present same direction
                 (possible future use: number of other agents in the same direction in this branch)
             0 = no agent present same direction
 
         #7: agent in the opposite drection
-            1 = agent present other direction than myself (so conflict)
+            n = number of agents present other direction than myself (so conflict)
                 (possible future use: number of other agents in other direction in this branch, ie. number of conflicts)
             0 = no agent present other direction than myself
 
