@@ -4,6 +4,26 @@
 Installation
 ============
 
+Software Runtime & Dependencies
+-------------------------------
+
+This is the recommended way of installation and running flatland's dependencies.
+
+* Install `Anaconda <https://www.anaconda.com/distribution/>`_ by following the instructions `here <https://www.anaconda.com/distribution/>`_
+* Create a new conda environment 
+
+.. code-block:: console
+
+    $ conda create python=3.6 --name flatland-rl
+    $ conda activate flatland-rl
+
+* Install the necessary dependencies
+
+.. code-block:: console
+
+    $ conda install -c conda-forge cairosvg pycairo
+    $ conda install -c anaconda tk  
+
 
 Stable release
 --------------
