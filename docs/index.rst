@@ -12,7 +12,6 @@ Welcome to flatland's documentation!
    FAQ
    contributing
    authors
-   history
 
 Indices and tables
 ==================
