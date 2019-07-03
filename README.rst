@@ -22,7 +22,7 @@ This library was developed by `SBB <https://www.sbb.ch/en/>`_ , `AIcrowd <https:
 This library was developed specifically for the `Flatland Challenge <https://www.aicrowd.com/challenges/flatland-challenge>`_ in which we strongly encourage you to take part in. 
 
 
-**NOTE This document is best viewed in the official documentation site at `Flatland-RL Docs <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/readme.html>`_.**
+**NOTE This document is best viewed in the official documentation site at** `Flatland-RL Docs <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/readme.html>`_
 
 Contents
 ===========
