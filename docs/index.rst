@@ -6,6 +6,7 @@ Welcome to flatland's documentation!
    :caption: Contents:
 
    readme
+   about
    installation
    gettingstarted
    modules
