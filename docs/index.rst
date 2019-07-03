@@ -6,8 +6,8 @@ Welcome to flatland's documentation!
    :caption: Contents:
 
    readme
-   about
    installation
+   about_flatland
    gettingstarted
    modules
    FAQ

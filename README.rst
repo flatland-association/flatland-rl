@@ -27,6 +27,7 @@ This library was developed specifically for the `Flatland Challenge <https://www
 Contents
 ===========
 * `Official Documentation <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/readme.html>`_
+* `About Flatland <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/about_flatland.html>`_
 * `Installation <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/installation.html>`_
 * `Getting Started <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/gettingstarted.html>`_
 * `Frequently Asked Questions <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/FAQ.html>`_
