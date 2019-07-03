@@ -64,16 +64,14 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 
     $ git clone git@gitlab.aicrowd.com:flatland/flatland.git
 
-3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
+3. Install the software dependencies via Anaconda. (This assumes you have Anaconda installed by following the instructions `here <https://www.anaconda.com/distribution>`_)
 
-    $ mkvirtualenv flatland
-    $ cd flatland/
-    $ python setup.py develop
-
-    You can also use the virtual environment created by the getting_started scripts:
-
-        getting_started/run_notebooks.bat
-        getting_started/run_notebooks.sh
+    $ conda create python=3.6 --name flatland-rl
+    $ conda activate flatland-rl
+    $ conda install -c conda-forge cairosvg pycairo
+    $ conda install -c anaconda tk
+    $ cd flatland
+    $ pip install -e .
 
 
 4. Create a branch for local development::
