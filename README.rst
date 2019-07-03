@@ -13,7 +13,6 @@ Flatland
 
 .. image:: https://i.imgur.com/rKGEmsk.gif
   :align: center
-  :width: 400px
 
 Flatland is a toolkit for developing and comparing multi agent reinforcement learning algorithms on grids.
 The base environment is a two-dimensional grid in which many agents can be placed. Each agent must solve one or more tasks in the grid world.
