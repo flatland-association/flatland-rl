@@ -8,7 +8,6 @@ import pkg_resources
 from importlib_resources import path
 
 from benchmarks.benchmark_utils import swap_attr
-from flatland.utils import graphics_pil
 
 
 def profile(resource, entry):
@@ -24,8 +23,6 @@ def profile(resource, entry):
 
             cProfile.run('my_func()', sort='time')
 
-
-graphics_pil.unattended_switch = True
 
 for entry in [entry for entry in importlib_resources.contents('examples') if
               not pkg_resources.resource_isdir('examples', entry)

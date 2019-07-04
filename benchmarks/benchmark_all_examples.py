@@ -9,10 +9,6 @@ import pkg_resources
 from benchmarker import Benchmarker
 from importlib_resources import path
 
-from flatland.utils import graphics_pil
-
-graphics_pil.unattended_switch = True
-
 for entry in [entry for entry in importlib_resources.contents('examples') if
               not pkg_resources.resource_isdir('examples', entry)
               and entry.endswith(".py")

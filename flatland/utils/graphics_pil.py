@@ -33,8 +33,9 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
 
 
 class PILGL(GraphicsLayer):
-    # hack: in continuous integration, we run multiple
-    unattended_switch = False
+    # tk.Tk() must be a singleton!
+    # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
+    window = tk.Tk()
 
     def __init__(self, width, height, jupyter=False):
         self.yxBase = (0, 0)
@@ -86,7 +87,6 @@ class PILGL(GraphicsLayer):
         self.ltAgentColors = [self.rgb_s2i(sColor) for sColor in sColors.split("#")]
         self.nAgentColors = len(self.ltAgentColors)
 
-        self.window_root = None
         self.window_open = False
         self.firstFrame = True
         self.old_background_image = (None, None, None)
@@ -160,24 +160,14 @@ class PILGL(GraphicsLayer):
 
     def open_window(self):
         assert self.window_open is False, "Window is already open!"
-        if self.unattended_switch:
-            # use tk.Toplevel() instead of tk.Tk() since we run all examples from the same python script
-            # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
-            self.window_root = tk.Toplevel()
-        else:
-            self.window_root = tk.Tk()
-        self.window_root.withdraw()
-        self.window = tk.Toplevel(self.window_root)
-        self.window.title("Flatland")
-        self.window.configure(background='grey')
+        self.__class__.window.title("Flatland")
+        self.__class__.window.configure(background='grey')
         self.window_open = True
 
     def close_window(self):
         self.panel.destroy()
-        self.window.quit()
-        self.window.destroy()
-        self.window_root.destroy()
-        self.window = None
+        # quit but not destroy!
+        self.__class__.window.quit()
 
     def text(self, *args, **kwargs):
         pass
@@ -209,7 +199,7 @@ class PILGL(GraphicsLayer):
             self.panel.configure(image=tkimg)
             self.panel.image = tkimg
 
-        self.window.update()
+        self.__class__.window.update()
         self.firstFrame = False
 
     def pause(self, seconds=0.00001):
