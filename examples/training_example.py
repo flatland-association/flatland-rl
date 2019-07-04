@@ -76,8 +76,6 @@ for trials in range(1, n_trials + 1):
         for a in range(env.get_num_agents()):
             action = agent.act(obs[a])
             action_dict.update({a: action})
-            # Uncomment next line to print observation of an agent
-            # TreeObservation.util_print_obs_subtree((obs[a]))
 
         # Environment step which returns the observations for all agents, their corresponding
         # reward and whether their are done
