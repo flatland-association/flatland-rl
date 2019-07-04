@@ -26,8 +26,6 @@ tests:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - pip install tox
-        - xvfb-run tox -v -e examples -v --recreate
-        - xvfb-run tox -v -e benchmarks,profiling -v --recreate
         - xvfb-run tox -v --recreate
 
 build_and_deploy_docs:
