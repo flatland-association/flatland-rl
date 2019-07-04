@@ -283,7 +283,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             if possible_transitions[branch_direction]:
                 new_cell = self._new_position(agent.position, branch_direction)
                 branch_observation, branch_visited = \
-                    self._explore_branch(handle, new_cell, branch_direction, root_observation, 0, 1)
+                    self._explore_branch(handle, new_cell, branch_direction, root_observation, 1, 1)
                 observation = observation + branch_observation
                 visited = visited.union(branch_visited)
             else:
@@ -351,22 +351,23 @@ class TreeObsForRailEnv(ObservationBuilder):
                     post_step = min(self.max_prediction_depth - 1, tot_dist + 1)
 
                     # Look for opposing paths at distance num_step
-                    if int_position in np.delete(self.predicted_pos[tot_dist], handle):
-                        conflicting_agent = np.where(np.delete(self.predicted_pos[tot_dist], handle) == int_position)
-                        for ca in conflicting_agent:
-                            if direction != self.predicted_dir[tot_dist][ca[0]] and tot_dist < potential_conflict:
+                    if int_position in np.delete(self.predicted_pos[tot_dist], handle, 0):
+                        conflicting_agent = np.where(self.predicted_pos[tot_dist] == int_position)
+                        for ca in conflicting_agent[0]:
+
+                            if direction != self.predicted_dir[tot_dist][ca] and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
                     # Look for opposing paths at distance num_step-1
-                    elif int_position in np.delete(self.predicted_pos[pre_step], handle):
+                    elif int_position in np.delete(self.predicted_pos[pre_step], handle, 0):
                         conflicting_agent = np.where(self.predicted_pos[pre_step] == int_position)
-                        for ca in conflicting_agent:
-                            if direction != self.predicted_dir[pre_step][ca[0]] and tot_dist < potential_conflict:
+                        for ca in conflicting_agent[0]:
+                            if direction != self.predicted_dir[pre_step][ca] and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
                     # Look for opposing paths at distance num_step+1
-                    elif int_position in np.delete(self.predicted_pos[post_step], handle):
-                        conflicting_agent = np.where(np.delete(self.predicted_pos[post_step], handle) == int_position)
-                        for ca in conflicting_agent:
-                            if direction != self.predicted_dir[post_step][ca[0]] and tot_dist < potential_conflict:
+                    elif int_position in np.delete(self.predicted_pos[post_step], handle, 0):
+                        conflicting_agent = np.where(self.predicted_pos[post_step] == int_position)
+                        for ca in conflicting_agent[0]:
+                            if direction != self.predicted_dir[post_step][ca] and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
 
             if position in self.location_has_target and position != agent.target:
@@ -436,41 +437,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         # #############################
         # #############################
         # Modify here to append new / different features for each visited cell!
-        """
-        other_agent_same_direction = \
-            1 if position in self.location_has_agent and self.location_has_agent_direction[position] == direction else 0
-        other_agent_opposite_direction = \
-            1 if position in self.location_has_agent and self.location_has_agent_direction[position] != direction else 0
-
-        if last_isTarget:
-            observation = [0,
-                           other_target_encountered,
-                           other_agent_encountered,
-                           root_observation[3] + num_steps,
-                           0,
-                           other_agent_same_direction,
-                           other_agent_opposite_direction
-                           ]
-
-        elif last_isTerminal:
-            observation = [0,
-                           other_target_encountered,
-                           other_agent_encountered,
-                           np.inf,
-                           np.inf,
-                           other_agent_same_direction,
-                           other_agent_opposite_direction
-                           ]
-        else:
-            observation = [0,
-                           other_target_encountered,
-                           other_agent_encountered,
-                           root_observation[3] + num_steps,
-                           self.distance_map[handle, position[0], position[1], direction],
-                           other_agent_same_direction,
-                           other_agent_opposite_direction
-                           ]
-        """
 
         if last_isTarget:
             observation = [own_target_encountered,

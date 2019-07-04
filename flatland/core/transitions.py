@@ -12,7 +12,7 @@ class Transitions:
 
     Generic class that implements checks to control whether a
     certain transition is allowed (agent facing a direction
-    `orientation' and moving into direction `direction')
+    `orientation' and moving into direction `orientation')
     """
 
     def get_type(self):
