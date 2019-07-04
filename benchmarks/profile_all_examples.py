@@ -2,19 +2,17 @@ import cProfile
 import runpy
 import sys
 from io import StringIO
-from test.support import swap_attr
 
 import importlib_resources
 import pkg_resources
 from importlib_resources import path
 
+from benchmarks.benchmark_utils import swap_attr
+
 
 def profile(resource, entry):
     with path(resource, entry) as file_in:
-        # we use the test package, which is meant for internal use by Python only internal and
-        # Any use of this package outside of Python’s standard library is discouraged as code (..)
-        # can change or be removed without notice between releases of Python.
-        # https://docs.python.org/3/library/test.html
+
         # TODO remove input() from examples
         print("*****************************************************************")
         print("Profiling {}".format(entry))

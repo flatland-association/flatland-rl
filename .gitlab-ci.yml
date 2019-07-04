@@ -26,9 +26,7 @@ tests:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - pip install tox
-        - which python
-        - ls /usr/lib/python3.7/
-        - python -c 'from test.support import swap_attr2'
+        - xvfb-run tox -e benchmarks,profiling -v --recreate
         - xvfb-run tox -v --recreate
 
 build_and_deploy_docs:
