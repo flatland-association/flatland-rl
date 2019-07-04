@@ -33,6 +33,9 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
 
 
 class PILGL(GraphicsLayer):
+    # hack: in continuous integration, we run multiple
+    unattended_switch = False
+
     def __init__(self, width, height, jupyter=False):
         self.yxBase = (0, 0)
         self.linewidth = 4
@@ -157,9 +160,14 @@ class PILGL(GraphicsLayer):
 
     def open_window(self):
         assert self.window_open is False, "Window is already open!"
-        # use tk.Toplevel() instead of tk.Tk()
-        # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
-        self.window_root = tk.Tk()
+        if self.unattended_switch:
+            # use tk.Toplevel() instead of tk.Tk() since we run all examples from the same python script
+            # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
+            tk.Toplevel()
+        else:
+            tk.Tk()
+
+        self.window_root = tk.Toplevel()
         self.window_root.withdraw()
         self.window = tk.Toplevel(self.window_root)
         self.window.title("Flatland")

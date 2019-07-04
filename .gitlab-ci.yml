@@ -54,8 +54,6 @@ benchmarks_and_profiling:
         - tests
     stage: benchmarks_and_profiling
     only:
-#        refs:
-#            - master
         variables:
             - $BENCHMARKS_AND_PROFILING
     script:
