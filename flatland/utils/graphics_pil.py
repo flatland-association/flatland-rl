@@ -163,11 +163,9 @@ class PILGL(GraphicsLayer):
         if self.unattended_switch:
             # use tk.Toplevel() instead of tk.Tk() since we run all examples from the same python script
             # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
-            tk.Toplevel()
+            self.window_root = tk.Toplevel()
         else:
-            tk.Tk()
-
-        self.window_root = tk.Toplevel()
+            self.window_root = tk.Tk()
         self.window_root.withdraw()
         self.window = tk.Toplevel(self.window_root)
         self.window.title("Flatland")
