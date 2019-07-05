@@ -9,7 +9,6 @@ from flatland.envs.generators import rail_from_GridTransitionMap_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env import RailEnvActions
 from flatland.utils.rendertools import RenderTool
 from simple_rail import make_simple_rail
 
@@ -145,7 +144,6 @@ def test_shortest_path_predictor(rendering=False):
     positions = np.array(list(map(lambda prediction: [*prediction[1:3]], predictions[0])))
     directions = np.array(list(map(lambda prediction: [prediction[3]], predictions[0])))
     time_offsets = np.array(list(map(lambda prediction: [prediction[0]], predictions[0])))
-    actions = np.array(list(map(lambda prediction: [prediction[4]], predictions[0])))
 
     # test if data meets expectations
     expected_positions = [
@@ -219,38 +217,12 @@ def test_shortest_path_predictor(rendering=False):
         [20.],
     ])
 
-    expected_actions = np.array([
-        [RailEnvActions.DO_NOTHING],  # next [5,6]
-        [RailEnvActions.MOVE_FORWARD],  # next [4,6]
-        [RailEnvActions.MOVE_FORWARD],  # next [3,6]
-        [RailEnvActions.MOVE_RIGHT],  # next [3,7]
-        [RailEnvActions.MOVE_FORWARD],  # next [3,8]
-        [RailEnvActions.MOVE_FORWARD],  # next [3,9]
-        [RailEnvActions.STOP_MOVING],  # at [3,9] == target
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-        [RailEnvActions.STOP_MOVING],
-    ])
-
     assert np.array_equal(positions, expected_positions), \
         "positions {}, expected {}".format(positions, expected_positions)
     assert np.array_equal(directions, expected_directions), \
         "directions {}, expected {}".format(directions, expected_directions)
     assert np.array_equal(time_offsets, expected_time_offsets), \
         "time_offsets {}, expected {}".format(time_offsets, expected_time_offsets)
-    assert np.array_equal(actions, expected_actions), \
-        "actions {}, expected {}".format(actions, expected_actions)
 
 
 def test_shortest_path_predictor_conflicts(rendering=False):

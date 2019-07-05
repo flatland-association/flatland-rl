@@ -142,7 +142,8 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                     min_dist = np.inf
                     for direction in range(4):
                         if cell_transitions[direction] == 1:
-                            target_dist = distance_map[agent.handle, agent.position[0], agent.position[1], direction]
+                            neighbour_cell = get_new_position(agent.position, direction)
+                            target_dist = distance_map[agent.handle, neighbour_cell[0], neighbour_cell[1], direction]
                             if target_dist < min_dist:
                                 min_dist = target_dist
                                 new_direction = direction
@@ -150,21 +151,12 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                 else:
                     raise Exception("No transition possible {}".format(cell_transitions))
 
-                # which action to take for the transition?
-                action = None
-                for _action in [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT, RailEnvActions.MOVE_LEFT]:
-                    _, _, _new_direction, _new_position, _ = self.env._check_action_on_agent(_action, agent)
-                    if np.array_equal(_new_position, new_position):
-                        action = _action
-                        break
-                assert action is not None
-
                 # update the agent's position and direction
                 agent.position = new_position
                 agent.direction = new_direction
 
                 # prediction is ready
-                prediction[index] = [index, *new_position, new_direction, action]
+                prediction[index] = [index, *new_position, new_direction, 0]
             prediction_dict[agent.handle] = prediction
 
             # cleanup: reset initial position
