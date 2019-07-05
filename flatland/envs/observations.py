@@ -20,6 +20,8 @@ class TreeObsForRailEnv(ObservationBuilder):
     network to simplify the representation of the state of the environment for each agent.
     """
 
+    observation_dim = 9
+
     def __init__(self, max_depth, predictor=None):
         self.max_depth = max_depth
 
@@ -29,7 +31,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         for i in range(self.max_depth + 1):
             size += pow4
             pow4 *= 4
-        self.observation_dim = 9
         self.observation_space = [size * self.observation_dim]
         self.location_has_agent = {}
         self.location_has_agent_direction = {}

@@ -265,8 +265,8 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     pp.pprint(tree_0)
 
     # check the expectations
-    expected_conflicts_0 = [('F','R')]
-    expected_conflicts_1 = [('F','L')]
+    expected_conflicts_0 = [('F', 'R')]
+    expected_conflicts_1 = [('F', 'L')]
     _check_expected_conflicts(expected_conflicts_0, obs_builder, tree_0, "agent[0]: ")
     _check_expected_conflicts(expected_conflicts_1, obs_builder, tree_1, "agent[1]: ")
 
