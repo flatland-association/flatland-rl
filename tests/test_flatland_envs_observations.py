@@ -6,7 +6,7 @@ import numpy as np
 from flatland.envs.generators import rail_from_GridTransitionMap_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
-from simple_rail import make_simple_rail
+from tests.simple_rail import make_simple_rail
 
 """Tests for `flatland` package."""
 
