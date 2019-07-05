@@ -1,6 +1,7 @@
 """
 Collection of environment-specific ObservationBuilder.
 """
+import pprint
 from collections import deque
 
 import numpy as np
@@ -19,6 +20,8 @@ class TreeObsForRailEnv(ObservationBuilder):
     network to simplify the representation of the state of the environment for each agent.
     """
 
+    observation_dim = 9
+
     def __init__(self, max_depth, predictor=None):
         self.max_depth = max_depth
 
@@ -28,12 +31,13 @@ class TreeObsForRailEnv(ObservationBuilder):
         for i in range(self.max_depth + 1):
             size += pow4
             pow4 *= 4
-        self.observation_dim = 9
         self.observation_space = [size * self.observation_dim]
         self.location_has_agent = {}
         self.location_has_agent_direction = {}
         self.predictor = predictor
         self.agents_previous_reset = None
+        self.tree_explored_actions = [1, 2, 3, 0]
+        self.tree_explorted_actions_char = ['L', 'F', 'R', 'B']
 
     def reset(self):
         agents = self.env.agents
@@ -126,19 +130,6 @@ class TreeObsForRailEnv(ObservationBuilder):
 
                 desired_movement_from_new_cell = (neigh_direction + 2) % 4
 
-                """
-                # Is the next cell a dead-end?
-                isNextCellDeadEnd = False
-                nbits = 0
-                tmp = self.env.rail.get_transitions((new_cell[0], new_cell[1]))
-                while tmp > 0:
-                    nbits += (tmp & 1)
-                    tmp = tmp >> 1
-                if nbits == 1:
-                    # Dead-end!
-                    isNextCellDeadEnd = True
-                """
-
                 # Check all possible transitions in new_cell
                 for agent_orientation in range(4):
                     # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
@@ -213,7 +204,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             [... from 'right] +
             [... from 'back']
 
-        Finally, each node information is composed of 5 floating point values:
+        Finally, each node information is composed of 8 floating point values:
 
         #1: if own target lies on the explored branch the current distance from the agent in number of cells is stored.
 
@@ -240,7 +231,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 (possible future use: number of other agents in the same direction in this branch)
             0 = no agent present same direction
 
-        #9: agent in the opposite drection
+        #9: agent in the opposite direction
             n = number of agents present other direction than myself (so conflict)
                 (possible future use: number of other agents in other direction in this branch, ie. number of conflicts)
             0 = no agent present other direction than myself
@@ -273,7 +264,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # If only one transition is possible, the tree is oriented with this transition as the forward branch.
-        # TODO: Test if this works as desired!
         orientation = agent.direction
 
         if num_transitions == 1:
@@ -287,14 +277,19 @@ class TreeObsForRailEnv(ObservationBuilder):
                 observation = observation + branch_observation
                 visited = visited.union(branch_visited)
             else:
-                num_cells_to_fill_in = 0
-                pow4 = 1
-                for i in range(self.max_depth):
-                    num_cells_to_fill_in += pow4
-                    pow4 *= 4
-                observation = observation + ([-np.inf] * self.observation_dim) * num_cells_to_fill_in
+                # add cells filled with infinity if no transition is possible
+                observation = observation + [-np.inf] * self._num_cells_to_fill_in(self.max_depth)
         self.env.dev_obs_dict[handle] = visited
         return observation
+
+    def _num_cells_to_fill_in(self, remaining_depth):
+        """Computes the length of observation vector: sum_{i=0,depth-1} 2^i * observation_dim."""
+        num_observations = 0
+        pow4 = 1
+        for i in range(remaining_depth):
+            num_observations += pow4
+            pow4 *= 4
+        return num_observations * self.observation_dim
 
     def _explore_branch(self, handle, position, direction, root_observation, tot_dist, depth):
         """
@@ -343,7 +338,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                     # Cummulate the number of agents on branch with other direction
                     other_agent_opposite_direction += 1
 
-            # Register possible conflict
+            # Register possible future conflict
             if self.predictor and num_steps < self.max_prediction_depth:
                 int_position = coordinate_to_position(self.env.width, [position])
                 if tot_dist < self.max_prediction_depth:
@@ -505,41 +500,47 @@ class TreeObsForRailEnv(ObservationBuilder):
                 if len(branch_visited) != 0:
                     visited = visited.union(branch_visited)
             else:
-                num_cells_to_fill_in = 0
-                pow4 = 1
-                for i in range(self.max_depth - depth):
-                    num_cells_to_fill_in += pow4
-                    pow4 *= 4
-                observation = observation + ([-np.inf] * self.observation_dim) * num_cells_to_fill_in
+                # no exploring possible, add just cells with infinity
+                observation = observation + [-np.inf] * self._num_cells_to_fill_in(self.max_depth - depth)
 
         return observation, visited
 
-    def util_print_obs_subtree(self, tree, num_features_per_node=9, prompt='', current_depth=0):
+    def util_print_obs_subtree(self, tree):
         """
         Utility function to pretty-print tree observations returned by this object.
         """
-        if len(tree) < num_features_per_node:
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(self.unfold_observation_tree(tree))
+
+    def unfold_observation_tree(self, tree, current_depth=0, actions_for_display=True):
+        """
+        Utility function to pretty-print tree observations returned by this object.
+        """
+        if len(tree) < self.observation_dim:
             return
 
         depth = 0
-        tmp = len(tree) / num_features_per_node - 1
+        tmp = len(tree) / self.observation_dim - 1
         pow4 = 4
         while tmp > 0:
             tmp -= pow4
             depth += 1
             pow4 *= 4
 
-        prompt_ = ['L:', 'F:', 'R:', 'B:']
-
-        print("  " * current_depth + prompt, tree[0:num_features_per_node])
-        child_size = (len(tree) - num_features_per_node) // 4
-        for children in range(4):
-            child_tree = tree[(num_features_per_node + children * child_size):
-                              (num_features_per_node + (children + 1) * child_size)]
-            self.util_print_obs_subtree(child_tree,
-                                        num_features_per_node,
-                                        prompt=prompt_[children],
-                                        current_depth=current_depth + 1)
+        unfolded = {}
+        unfolded[''] = tree[0:self.observation_dim]
+        child_size = (len(tree) - self.observation_dim) // 4
+        for child in range(4):
+            child_tree = tree[(self.observation_dim + child * child_size):
+                              (self.observation_dim + (child + 1) * child_size)]
+            observation_tree = self.unfold_observation_tree(child_tree, current_depth=current_depth + 1)
+            if observation_tree is not None:
+                if actions_for_display:
+                    label = self.tree_explorted_actions_char[child]
+                else:
+                    label = self.tree_explored_actions[child]
+                unfolded[label] = observation_tree
+        return unfolded
 
     def _set_env(self, env):
         self.env = env
@@ -708,8 +709,6 @@ class LocalObsForRailEnv(ObservationBuilder):
                 bitlist = [int(digit) for digit in bin(self.env.rail.get_transitions((i, j)))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i + self.view_radius, j + self.view_radius] = np.array(bitlist)
-                # self.rail_obs[i+self.view_radius, j+self.view_radius] = np.array(
-                #     list(f'{self.env.rail.get_transitions((i, j)):016b}')).astype(int)
 
     def get(self, handle):
         agents = self.env.agents
