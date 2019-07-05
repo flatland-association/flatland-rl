@@ -147,6 +147,9 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                             if target_dist < min_dist:
                                 min_dist = target_dist
                                 new_direction = direction
+                    if new_direction == None:
+                        prediction[index] = [index, *agent.position, agent.direction, RailEnvActions.STOP_MOVING]
+                        continue
                     new_position = get_new_position(agent.position, new_direction)
                 else:
                     raise Exception("No transition possible {}".format(cell_transitions))
