@@ -676,8 +676,7 @@ class RenderTool(object):
 
             if self.agentRenderVariant == AgentRenderVariant.BOX_ONLY:
                 self.gl.setCellOccupied(iAgent, *(agent.position))
-            elif self.agentRenderVariant == AgentRenderVariant.ONE_STEP_BEHIND or \
-                self.agentRenderVariant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
+            elif self.agentRenderVariant == AgentRenderVariant.ONE_STEP_BEHIND or self.agentRenderVariant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
                 if agent.old_position is not None:
                     position = agent.old_position
                     direction = agent.direction
