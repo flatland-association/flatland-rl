@@ -86,7 +86,7 @@ class RenderTool(object):
 
         for visit in lVisits:
             # transition for next cell
-            tbTrans = self.env.rail.get_transitions((*visit.rc, visit.iDir))
+            tbTrans = self.env.rail.get_transitions(*visit.rc, visit.iDir)
             giTrans = np.where(tbTrans)[0]  # RC list of transitions
             gTransRCAg = rt.gTransRC[giTrans]
             self.plotTrans(visit.rc, gTransRCAg, depth=str(visit.iDepth), color=color)
@@ -125,7 +125,7 @@ class RenderTool(object):
         )
         """
 
-        tbTrans = self.env.rail.get_transitions((*rcPos, iDir))
+        tbTrans = self.env.rail.get_transitions(*rcPos, iDir)
         giTrans = np.where(tbTrans)[0]  # RC list of transitions
 
         # HACK: workaround dead-end transitions
@@ -459,7 +459,7 @@ class RenderTool(object):
                 xyCentre = array([x0, y1]) + cell_size / 2
 
                 # cell transition values
-                oCell = env.rail.get_transitions((r, c))
+                oCell = env.rail.get_full_transitions(r, c)
 
                 bCellValid = env.rail.cell_neighbours_valid((r, c), check_this_cell=True)
 
@@ -482,7 +482,7 @@ class RenderTool(object):
                     from_ori = (orientation + 2) % 4  # 0123=NESW -> 2301=SWNE
                     from_xy = coords[from_ori]
 
-                    tMoves = env.rail.get_transitions((r, c, orientation))
+                    tMoves = env.rail.get_transitions(r, c, orientation)
 
                     for to_ori in range(4):
                         to_xy = coords[to_ori]

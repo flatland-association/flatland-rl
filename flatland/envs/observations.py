@@ -253,7 +253,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         if handle > len(self.env.agents):
             print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
         agent = self.env.agents[handle]  # TODO: handle being treated as index
-        possible_transitions = self.env.rail.get_transitions((*agent.position, agent.direction))
+        possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
         # Root node - current position
@@ -383,8 +383,8 @@ class TreeObsForRailEnv(ObservationBuilder):
                 last_is_target = True
                 break
 
-            cell_transitions = self.env.rail.get_transitions((*position, direction))
-            total_transitions = bin(self.env.rail.get_transitions(position)).count("1")
+            cell_transitions = self.env.rail.get_transitions(*position, direction)
+            total_transitions = bin(self.env.rail.get_full_transitions(*position)).count("1")
             num_transitions = np.count_nonzero(cell_transitions)
             exploring = False
             # Detect Switches that can only be used by other agents.
@@ -394,7 +394,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             if num_transitions == 1:
                 # Check if dead-end, or if we can go forward along direction
                 nbits = 0
-                tmp = self.env.rail.get_transitions(tuple(position))
+                tmp = self.env.rail.get_full_transitions(*position)
                 while tmp > 0:
                     nbits += (tmp & 1)
                     tmp = tmp >> 1
@@ -469,7 +469,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # Get the possible transitions
-        possible_transitions = self.env.rail.get_transitions((*position, direction))
+        possible_transitions = self.env.rail.get_transitions(*position, direction)
         for branch_direction in [(direction + 4 + i) % 4 for i in range(-1, 3)]:
             if last_is_dead_end and self.env.rail.get_transition((*position, direction),
                                                                  (branch_direction + 2) % 4):
@@ -572,7 +572,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
         self.rail_obs = np.zeros((self.env.height, self.env.width, 16))
         for i in range(self.rail_obs.shape[0]):
             for j in range(self.rail_obs.shape[1]):
-                bitlist = [int(digit) for digit in bin(self.env.rail.get_transitions((i, j)))[2:]]
+                bitlist = [int(digit) for digit in bin(self.env.rail.get_full_transitions(i, j))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i, j] = np.array(bitlist)
 
@@ -630,7 +630,7 @@ class GlobalObsForRailEnvDirectionDependent(ObservationBuilder):
         self.rail_obs = np.zeros((self.env.height, self.env.width, 16))
         for i in range(self.rail_obs.shape[0]):
             for j in range(self.rail_obs.shape[1]):
-                bitlist = [int(digit) for digit in bin(self.env.rail.get_transitions((i, j)))[2:]]
+                bitlist = [int(digit) for digit in bin(self.env.rail.get_full_transitions(i, j))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i, j] = np.array(bitlist)
 
@@ -701,7 +701,7 @@ class LocalObsForRailEnv(ObservationBuilder):
                                   self.env.width + 2 * self.view_radius, 16))
         for i in range(self.env.height):
             for j in range(self.env.width):
-                bitlist = [int(digit) for digit in bin(self.env.rail.get_transitions((i, j)))[2:]]
+                bitlist = [int(digit) for digit in bin(self.env.rail.get_full_transitions(i, j))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i + self.view_radius, j + self.view_radius] = np.array(bitlist)
 

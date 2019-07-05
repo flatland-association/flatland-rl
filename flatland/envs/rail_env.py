@@ -322,7 +322,7 @@ class RailEnv(Environment):
                 new_position,
                 np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
             and  # check the new position has some transitions (ie is not an empty cell)
-            self.rail.get_transitions(new_position) > 0)
+            self.rail.get_full_transitions(*new_position) > 0)
 
         # If transition validity hasn't been checked yet.
         if transition_isValid is None:
@@ -338,7 +338,7 @@ class RailEnv(Environment):
 
     def check_action(self, agent, action):
         transition_isValid = None
-        possible_transitions = self.rail.get_transitions((*agent.position, agent.direction))
+        possible_transitions = self.rail.get_transitions(*agent.position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
         new_direction = agent.direction

@@ -131,7 +131,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                     prediction[index] = [index, *agent.position, agent.direction, RailEnvActions.STOP_MOVING]
                     continue
                 # Take shortest possible path
-                cell_transitions = self.env.rail.get_transitions((*agent.position, agent.direction))
+                cell_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
 
                 new_position = None
                 new_direction = None
