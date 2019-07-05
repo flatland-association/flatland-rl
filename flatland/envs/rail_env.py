@@ -202,7 +202,7 @@ class RailEnv(Environment):
             self.rewards_dict = {i: r + global_reward for i, r in self.rewards_dict.items()}
             return self._get_observations(), self.rewards_dict, self.dones, {}
 
-        for i_agent, agent in enumerate(self.get_num_agents()):
+        for i_agent, agent in enumerate(self.agents):
             agent.old_direction = agent.direction
             agent.old_position = agent.position
             if self.dones[i_agent]:  # this agent has already completed...
