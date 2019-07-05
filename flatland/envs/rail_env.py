@@ -231,7 +231,7 @@ class RailEnv(Environment):
                 self.rewards_dict[iAgent] += stop_penalty
 
             if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
-                # Only allow agent to start moving by pressing forward.
+                # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[iAgent] += start_penalty
 
@@ -270,6 +270,7 @@ class RailEnv(Environment):
                             else:
                                 # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
                                 self.rewards_dict[iAgent] += invalid_action_penalty
+                                self.rewards_dict[iAgent] += step_penalty * agent.speed_data['speed']
                                 agent.moving = False
                                 self.rewards_dict[iAgent] += stop_penalty
 
@@ -277,6 +278,7 @@ class RailEnv(Environment):
                         else:
                             # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
                             self.rewards_dict[iAgent] += invalid_action_penalty
+                            self.rewards_dict[iAgent] += step_penalty * agent.speed_data['speed']
                             agent.moving = False
                             self.rewards_dict[iAgent] += stop_penalty
 
