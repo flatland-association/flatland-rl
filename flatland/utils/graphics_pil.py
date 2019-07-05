@@ -219,6 +219,10 @@ class PILGL(GraphicsLayer):
         return array(img)
 
     def saveImage(self, filename):
+        """
+        Renders the current scene into a image file
+        :param filename: filename where to store the rendering output (supported image format *.bmp , .. , *.png)
+        """
         img = self.alpha_composite_layers()
         img.save(filename)
 
