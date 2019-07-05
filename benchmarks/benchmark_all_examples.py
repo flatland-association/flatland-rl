@@ -1,13 +1,14 @@
 import runpy
 import sys
 from io import StringIO
-from test.support import swap_attr
 from time import sleep
 
 import importlib_resources
 import pkg_resources
 from benchmarker import Benchmarker
 from importlib_resources import path
+
+from benchmarks.benchmark_utils import swap_attr
 
 for entry in [entry for entry in importlib_resources.contents('examples') if
               not pkg_resources.resource_isdir('examples', entry)
