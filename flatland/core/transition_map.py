@@ -336,8 +336,4 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
-# TODO: GIACOMO: is it better to provide those methods with lists of cell_ids
-# (most general implementation) or to make Grid-class specific methods for
-# slicing over the 3 dimensions?  I'd say both perhaps.
-
-# TODO: override __getitem__ and __setitem__ (cell contents, not transitions?)
+# TODO: improvement override __getitem__ and __setitem__ (cell contents, not transitions?)

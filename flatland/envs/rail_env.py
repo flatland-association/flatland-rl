@@ -165,8 +165,8 @@ class RailEnv(Environment):
 
         self.restart_agents()
 
-        for i_agemt in range(self.get_num_agents()):
-            agent = self.agents[i_agemt]
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
             agent.speed_data['position_fraction'] = 0.0
 
         self.num_resets += 1
@@ -195,31 +195,31 @@ class RailEnv(Environment):
 
         # Reset the step rewards
         self.rewards_dict = dict()
-        for i_agemt in range(self.get_num_agents()):
-            self.rewards_dict[i_agemt] = 0
+        for i_agent in range(self.get_num_agents()):
+            self.rewards_dict[i_agent] = 0
 
         if self.dones["__all__"]:
             self.rewards_dict = {i: r + global_reward for i, r in self.rewards_dict.items()}
             return self._get_observations(), self.rewards_dict, self.dones, {}
 
         # for i in range(len(self.agents_handles)):
-        for i_agemt in range(self.get_num_agents()):
-            agent = self.agents[i_agemt]
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
             agent.old_direction = agent.direction
             agent.old_position = agent.position
-            if self.dones[i_agemt]:  # this agent has already completed...
+            if self.dones[i_agent]:  # this agent has already completed...
                 continue
 
-            if i_agemt not in action_dict:  # no action has been supplied for this agent
-                action_dict[i_agemt] = RailEnvActions.DO_NOTHING
+            if i_agent not in action_dict:  # no action has been supplied for this agent
+                action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
-            if action_dict[i_agemt] < 0 or action_dict[i_agemt] > len(RailEnvActions):
-                print('ERROR: illegal action=', action_dict[i_agemt],
-                      'for agent with index=', i_agemt,
+            if action_dict[i_agent] < 0 or action_dict[i_agent] > len(RailEnvActions):
+                print('ERROR: illegal action=', action_dict[i_agent],
+                      'for agent with index=', i_agent,
                       '"DO NOTHING" will be executed instead')
-                action_dict[i_agemt] = RailEnvActions.DO_NOTHING
+                action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
-            action = action_dict[i_agemt]
+            action = action_dict[i_agent]
 
             if action == RailEnvActions.DO_NOTHING and agent.moving:
                 # Keep moving
@@ -228,12 +228,12 @@ class RailEnv(Environment):
             if action == RailEnvActions.STOP_MOVING and agent.moving and agent.speed_data['position_fraction'] == 0.:
                 # Only allow halting an agent on entering new cells.
                 agent.moving = False
-                self.rewards_dict[i_agemt] += stop_penalty
+                self.rewards_dict[i_agent] += stop_penalty
 
             if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
                 agent.moving = True
-                self.rewards_dict[i_agemt] += start_penalty
+                self.rewards_dict[i_agent] += start_penalty
 
             # Now perform a movement.
             # If the agent is in an initial position within a new cell (agent.speed_data['position_fraction']<eps)
@@ -269,18 +269,18 @@ class RailEnv(Environment):
 
                             else:
                                 # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
-                                self.rewards_dict[i_agemt] += invalid_action_penalty
-                                self.rewards_dict[i_agemt] += step_penalty * agent.speed_data['speed']
+                                self.rewards_dict[i_agent] += invalid_action_penalty
+                                self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                                 agent.moving = False
-                                self.rewards_dict[i_agemt] += stop_penalty
+                                self.rewards_dict[i_agent] += stop_penalty
 
                                 continue
                         else:
                             # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
-                            self.rewards_dict[i_agemt] += invalid_action_penalty
-                            self.rewards_dict[i_agemt] += step_penalty * agent.speed_data['speed']
+                            self.rewards_dict[i_agent] += invalid_action_penalty
+                            self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                             agent.moving = False
-                            self.rewards_dict[i_agemt] += stop_penalty
+                            self.rewards_dict[i_agent] += stop_penalty
 
                             continue
 
@@ -302,9 +302,9 @@ class RailEnv(Environment):
                     agent.speed_data['position_fraction'] = 0.0
 
             if np.equal(agent.position, agent.target).all():
-                self.dones[i_agemt] = True
+                self.dones[i_agent] = True
             else:
-                self.rewards_dict[i_agemt] += step_penalty * agent.speed_data['speed']
+                self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
 
         # Check for end of episode + add global reward to all rewards!
         if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
