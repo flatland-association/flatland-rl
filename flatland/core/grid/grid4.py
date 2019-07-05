@@ -11,6 +11,13 @@ class Grid4TransitionsEnum(IntEnum):
     SOUTH = 2
     WEST = 3
 
+    @staticmethod
+    def to_char(int: int):
+        return {0: 'N',
+                1: 'E',
+                2: 'S',
+                3: 'W'}[int]
+
 
 class Grid4Transitions(Transitions):
     """
