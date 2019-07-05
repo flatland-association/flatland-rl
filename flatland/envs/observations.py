@@ -230,7 +230,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 (possible future use: number of other agents in the same direction in this branch)
             0 = no agent present same direction
 
-        #9: agent in the opposite drection
+        #9: agent in the opposite direction
             n = number of agents present other direction than myself (so conflict)
                 (possible future use: number of other agents in other direction in this branch, ie. number of conflicts)
             0 = no agent present other direction than myself

@@ -265,18 +265,17 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     pp.pprint(tree_0)
 
     # check the expectations
-    # TODO check with Erik, this should be symmetric, should it not?
-    expected_conflicts_0 = [('F', 'R'), ('F', 'L')]
-    expected_conflicts_1 = [('F'), ('F', 'L')]
+    expected_conflicts_0 = [('F','R')]
+    expected_conflicts_1 = [('F','L')]
     _check_expected_conflicts(expected_conflicts_0, obs_builder, tree_0, "agent[0]: ")
     _check_expected_conflicts(expected_conflicts_1, obs_builder, tree_1, "agent[1]: ")
 
 
 def _check_expected_conflicts(expected_conflicts, obs_builder, tree_0, prompt=''):
-    assert (tree_0[''][7] > 0) == (() in expected_conflicts), "{}[]".format(prompt)
+    assert (tree_0[''][8] > 0) == (() in expected_conflicts), "{}[]".format(prompt)
     for a_1 in obs_builder.tree_explorted_actions_char:
-        conflict = tree_0[a_1][''][7]
+        conflict = tree_0[a_1][''][8]
         assert (conflict > 0) == ((a_1) in expected_conflicts), "{}[{}]".format(prompt, a_1)
         for a_2 in obs_builder.tree_explorted_actions_char:
-            conflict = tree_0[a_1][a_2][''][7]
+            conflict = tree_0[a_1][a_2][''][8]
             assert (conflict > 0) == ((a_1, a_2) in expected_conflicts), "{}[{}][{}]".format(prompt, a_1, a_2)
