@@ -4,7 +4,6 @@ Definition of the RailEnv environment and related level-generation functions.
 Generator functions are functions that take width, height and num_resets as arguments and return
 a GridTransitionMap object.
 """
-# TODO:  _ this is a global method --> utils or remove later
 
 from enum import IntEnum
 
@@ -85,7 +84,6 @@ class RailEnv(Environment):
                                         a GridTransitionMap object
                 rail_from_manual_sp ecifications_generator(rail_spec) : generate a rail from
                                         a rail specifications array
-                TODO: generate_rail_from_saved_list or from list of ndarray bitmaps ---
         width : int
             The width of the rail map. Potentially in the future,
             a range of widths to sample from.

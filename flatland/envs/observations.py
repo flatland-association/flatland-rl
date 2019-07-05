@@ -466,8 +466,6 @@ class TreeObsForRailEnv(ObservationBuilder):
                            ]
         # #############################
         # #############################
-
-        new_root_observation = observation[:]
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # Get the possible transitions
