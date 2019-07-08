@@ -140,13 +140,15 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                     new_position = get_new_position(agent.position, new_direction)
                 elif np.sum(cell_transitions) > 1:
                     min_dist = np.inf
+                    no_dist_found = True
                     for direction in range(4):
                         if cell_transitions[direction] == 1:
                             neighbour_cell = get_new_position(agent.position, direction)
                             target_dist = distance_map[agent.handle, neighbour_cell[0], neighbour_cell[1], direction]
-                            if target_dist < min_dist:
+                            if target_dist < min_dist or no_dist_found:
                                 min_dist = target_dist
                                 new_direction = direction
+                                no_dist_found = False
                     new_position = get_new_position(agent.position, new_direction)
                 else:
                     raise Exception("No transition possible {}".format(cell_transitions))

@@ -4,6 +4,7 @@ Definition of the RailEnv environment and related level-generation functions.
 Generator functions are functions that take width, height and num_resets as arguments and return
 a GridTransitionMap object.
 """
+# TODO:  _ this is a global method --> utils or remove later
 
 from enum import IntEnum
 
@@ -84,6 +85,7 @@ class RailEnv(Environment):
                                         a GridTransitionMap object
                 rail_from_manual_sp ecifications_generator(rail_spec) : generate a rail from
                                         a rail specifications array
+                TODO: generate_rail_from_saved_list or from list of ndarray bitmaps ---
         width : int
             The width of the rail map. Potentially in the future,
             a range of widths to sample from.
@@ -107,7 +109,7 @@ class RailEnv(Environment):
         self.obs_builder._set_env(self)
 
         self.action_space = [1]
-        self.observation_space = self.obs_builder.observation_space
+        self.observation_space = self.obs_builder.observation_space  # updated on resets?
 
         self.rewards = [0] * number_of_agents
         self.done = False
@@ -163,8 +165,8 @@ class RailEnv(Environment):
 
         self.restart_agents()
 
-        for iAgent in range(self.get_num_agents()):
-            agent = self.agents[iAgent]
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
             agent.speed_data['position_fraction'] = 0.0
 
         self.num_resets += 1
@@ -200,7 +202,9 @@ class RailEnv(Environment):
             self.rewards_dict = {i: r + global_reward for i, r in self.rewards_dict.items()}
             return self._get_observations(), self.rewards_dict, self.dones, {}
 
-        for i_agent, agent in enumerate(self.agents):
+        # for i in range(len(self.agents_handles)):
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
             agent.old_direction = agent.direction
             agent.old_position = agent.position
             if self.dones[i_agent]:  # this agent has already completed...
@@ -227,7 +231,7 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] += stop_penalty
 
             if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
-                # Only allow agent to start moving by pressing forward.
+                # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[i_agent] += start_penalty
 
@@ -245,10 +249,10 @@ class RailEnv(Environment):
             action_selected = False
             if agent.speed_data['position_fraction'] == 0.:
                 if action != RailEnvActions.DO_NOTHING and action != RailEnvActions.STOP_MOVING:
-                    cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
+                    cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
                         self._check_action_on_agent(action, agent)
 
-                    if all([new_cell_isValid, transition_isValid]):
+                    if all([new_cell_valid, transition_valid]):
                         agent.speed_data['transition_action_on_cellexit'] = action
                         action_selected = True
 
@@ -256,26 +260,26 @@ class RailEnv(Environment):
                         # But, if the chosen invalid action was LEFT/RIGHT, and the agent is moving,
                         # try to keep moving forward!
                         if (action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_RIGHT) and agent.moving:
-                            cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
+                            cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
                                 self._check_action_on_agent(RailEnvActions.MOVE_FORWARD, agent)
 
-                            if all([new_cell_isValid, transition_isValid]):
+                            if all([new_cell_valid, transition_valid]):
                                 agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.MOVE_FORWARD
                                 action_selected = True
 
                             else:
                                 # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
                                 self.rewards_dict[i_agent] += invalid_action_penalty
-                                agent.moving = False
+                                self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                                 self.rewards_dict[i_agent] += stop_penalty
-
+                                agent.moving = False
                                 continue
                         else:
                             # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
                             self.rewards_dict[i_agent] += invalid_action_penalty
-                            agent.moving = False
+                            self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                             self.rewards_dict[i_agent] += stop_penalty
-
+                            agent.moving = False
                             continue
 
             if agent.moving and (action_selected or agent.speed_data['position_fraction'] > 0.0):
@@ -287,10 +291,10 @@ class RailEnv(Environment):
 
                 # Now 'transition_action_on_cellexit' will be guaranteed to be valid; it was checked on entering
                 # the cell
-                cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
+                cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
                     self._check_action_on_agent(agent.speed_data['transition_action_on_cellexit'], agent)
 
-                if all([new_cell_isValid, transition_isValid, cell_isFree]):
+                if all([new_cell_valid, transition_valid, cell_free]):
                     agent.position = new_position
                     agent.direction = new_direction
                     agent.speed_data['position_fraction'] = 0.0
@@ -310,14 +314,14 @@ class RailEnv(Environment):
     def _check_action_on_agent(self, action, agent):
         # compute number of possible transitions in the current
         # cell used to check for invalid actions
-        new_direction, transition_isValid = self.check_action(agent, action)
+        new_direction, transition_valid = self.check_action(agent, action)
         new_position = get_new_position(agent.position, new_direction)
 
         # Is it a legal move?
         # 1) transition allows the new_direction in the cell,
         # 2) the new cell is not empty (case 0),
         # 3) the cell is free, i.e., no agent is currently in that cell
-        new_cell_isValid = (
+        new_cell_valid = (
             np.array_equal(  # Check the new position is still in the grid
                 new_position,
                 np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
@@ -325,19 +329,19 @@ class RailEnv(Environment):
             self.rail.get_full_transitions(*new_position) > 0)
 
         # If transition validity hasn't been checked yet.
-        if transition_isValid is None:
-            transition_isValid = self.rail.get_transition(
+        if transition_valid is None:
+            transition_valid = self.rail.get_transition(
                 (*agent.position, agent.direction),
                 new_direction)
 
         # Check the new position is not the same as any of the existing agent positions
         # (including itself, for simplicity, since it is moving)
-        cell_isFree = not np.any(
+        cell_free = not np.any(
             np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
-        return cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid
+        return cell_free, new_cell_valid, new_direction, new_position, transition_valid
 
     def check_action(self, agent, action):
-        transition_isValid = None
+        transition_valid = None
         possible_transitions = self.rail.get_transitions(*agent.position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
@@ -345,12 +349,12 @@ class RailEnv(Environment):
         if action == RailEnvActions.MOVE_LEFT:
             new_direction = agent.direction - 1
             if num_transitions <= 1:
-                transition_isValid = False
+                transition_valid = False
 
         elif action == RailEnvActions.MOVE_RIGHT:
             new_direction = agent.direction + 1
             if num_transitions <= 1:
-                transition_isValid = False
+                transition_valid = False
 
         new_direction %= 4
 
@@ -360,8 +364,8 @@ class RailEnv(Environment):
                 # new_direction will be the only valid transition
                 # - take only available transition
                 new_direction = np.argmax(possible_transitions)
-                transition_isValid = True
-        return new_direction, transition_isValid
+                transition_valid = True
+        return new_direction, transition_valid
 
     def _get_observations(self):
         self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
