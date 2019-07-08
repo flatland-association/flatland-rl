@@ -25,11 +25,11 @@ tests:
     script:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
-#        - pip install tox
-#        - xvfb-run tox -v --recreate
         - wget https://repo.anaconda.com/archive/Anaconda3-5.3.1-Linux-x86_64.sh -O /tmp/Anaconda3-5.3.1-Linux-x86_64.sh
         - bash /tmp/Anaconda3-5.3.1-Linux-x86_64.sh -b -p /tmp/anaconda3
         - export PATH=/tmp/anaconda3/bin:$PATH; bash getting_started/getting_started.sh
+        - pip install tox
+        - xvfb-run tox -v --recreate
 
 build_and_deploy_docs:
     image: "python:latest"
