@@ -30,7 +30,6 @@ call python -m pip install --upgrade pip || goto :error
 python setup.py install || goto :error
 
 # ensure jupyter is installed in the virtualenv
-
 python -m pip install --upgrade -r %FLATLAND_BASEDIR%/requirements_dev.txt -r %FLATLAND_BASEDIR%/requirements_continuous_integration.txt || goto :error
 
 
@@ -41,6 +40,11 @@ jupyter nbextension install --py --sys-prefix widgetsnbextension || goto :error
 jupyter nbextension enable --py --sys-prefix widgetsnbextension || goto :error
 jupyter nbextension install --py --sys-prefix jpy_canvas || goto :error
 jupyter nbextension enable --py --sys-prefix jpy_canvas || goto :error
+
+
+@echo off
+echo "************ RUN JUPYTER NOTEBOOKS *************************"
+@echo on
 jupyter notebook || goto :error
 
 
