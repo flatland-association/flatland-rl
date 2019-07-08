@@ -1,0 +1,12 @@
+# auto detect text files and perform LF normalization
+* text=auto
+
+# shell scripts will always have LF only (even in Windows environment)
+*.sh text eol=lf
+
+# perl scripts will always have LF only (even in Windows environment)
+*.pl text eol=lf
+
+# denote all files that are truly binary and should not be modified
+*.png binary
+*.jpg binary
