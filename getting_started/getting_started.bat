@@ -8,16 +8,15 @@ echo "************ TESTING PREREQUISITES PYTHON3 + GIT + GIT *******************
 
 git --version || goto :error
 python --version || goto :error
-rem deactivae in case we're in virtualenv
-call deactivate
-conda --version || goto :error
+rem deactivate in case we're in virtualenv
+call conda deactivate || call deactivate
 
 
 @echo off
 echo "************ SETUP VIRTUAL ENVIRONMENT FLATLAND *************************"
 @echo on
 (conda info --envs | findstr flatland-rl) || conda create python=3.6 -y --name flatland-rl || goto :error
-call activate flatland-rl || goto :error
+(call conda activate flatland-rl || call activate flatland-rl) || goto :error
 
 
 @echo off
