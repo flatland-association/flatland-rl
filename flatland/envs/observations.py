@@ -16,8 +16,10 @@ class TreeObsForRailEnv(ObservationBuilder):
     TreeObsForRailEnv object.
 
     This object returns observation vectors for agents in the RailEnv environment.
-    The information is local to each agent and exploits the tree structure of the rail
+    The information is local to each agent and exploits the graph structure of the rail
     network to simplify the representation of the state of the environment for each agent.
+
+    For details about the features in the tree observation see the get() function.
     """
 
     observation_dim = 9
@@ -204,7 +206,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             [... from 'right] +
             [... from 'back']
 
-        Finally, each node information is composed of 8 floating point values:
+        Each node information is composed of 9 features:
 
         #1: if own target lies on the explored branch the current distance from the agent in number of cells is stored.
 
