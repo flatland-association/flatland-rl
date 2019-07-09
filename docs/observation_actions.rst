@@ -18,7 +18,7 @@ Observation Spaces
 ==================
 In the **Flatland** environment we have included three basic observations to get started. The figure below illustrates the observation range of the different basic observation: Global, Local Grid and Local Tree.
 .. image:: WGfFtP7.png
-   :target: https://i.imgur.com/
+   :target: https://i.imgur.com/WGfFtP7.png
    
 Global Observation
 ------------------
