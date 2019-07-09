@@ -64,6 +64,7 @@ Figure bellow illustrates how such a tree observation is build:
 Note that we always start with the left branch according to the agent orientation. Thus the tree observation is independent of the orientation of cells and only consideres relative orientation of transition object to the agent.
 
 The colors in the figure bellow illustrate what branch the cell belongs two. If there are multiple colors in a cell, this cell is visited by different branches of the tree observation.
+The right side of the figure shows the resulting tree of the railway network on the left. Cross means no branch was build. If a node has no children it either was a terminal node (dead-end, max depth reached or no transition possible). Circle indicate nodes that are filled with the corresponding infromation as stated below in Node Information.
 
 
 .. image:: https://i.imgur.com/C4LbqPJ.png
