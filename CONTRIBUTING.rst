@@ -73,6 +73,12 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     $ cd flatland
     $ pip install -e .
 
+    These steps are performed if you run
+
+    $ getting_started/getting_started.bat/.sh
+
+    from Anaconda prompt. Only prerequisites: git and Anaconda.
+
 
 4. Create a branch for local development::
 
