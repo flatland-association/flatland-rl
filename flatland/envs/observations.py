@@ -678,10 +678,10 @@ class LocalObsForRailEnv(ObservationBuilder):
           with dimensions (2*view_radius + 1, 2*view_radius + 1, 16),
           assuming 16 bits encoding of transitions.
 
-        - Two 2D arrays containing respectively, if they are in the agent's vision range,
-          its target position, the positions of the other targets.
+        - Two 2D arrays (2*view_radius + 1, 2*view_radius + 1, 2) containing respectively,
+        if they are in the agent's vision range, its target position, the positions of the other targets.
 
-        - A 3D array (map_height, map_width, 4) containing the one hot encoding of directions
+        - A 3D array (2*view_radius + 1, 2*view_radius + 1, 4) containing the one hot encoding of directions
           of the other agents at their position coordinates, if they are in the agent's vision range.
 
         - A 4 elements array with one hot encoding of the direction.
