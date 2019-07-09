@@ -8,15 +8,15 @@ Action Space
 Flatland is a railway simulation. Thus the actions of an agent are strongly limited to the railway network. This means that in many cases not all actions are valid.
 The possible actions of an agent are
 
-- 0 **Do Nothing**:  If the agent is moving it continues moving, if it is stopped it stays stopped
-- 1 **Deviate Left**: If the agent is at a switch with a transition to its left, the agent will chose th eleft path. Otherwise the action has no effect. If the agent is stopped, this action will start agent movement again if allowed by the transitions.
-- 2 **Go Forward**: This action will start the agent when stopped. This will move the agent forward and chose the go straight direction at switches.
-- 3 **Deviate Right**: Exactly the same as deviate left but for right turns.
-- 4 **Stop**: This action causes the agent to stop.
+- ``0`` **Do Nothing**:  If the agent is moving it continues moving, if it is stopped it stays stopped
+- ``1`` **Deviate Left**: If the agent is at a switch with a transition to its left, the agent will chose th eleft path. Otherwise the action has no effect. If the agent is stopped, this action will start agent movement again if allowed by the transitions.
+- ``2`` **Go Forward**: This action will start the agent when stopped. This will move the agent forward and chose the go straight direction at switches.
+- ``3`` **Deviate Right**: Exactly the same as deviate left but for right turns.
+- ``4`` **Stop**: This action causes the agent to stop.
 
 Observation Spaces
 ==================
-In the **Flatland** environment we have included three basic observations to get started. The figure below illustrates the observation range of the different basic observation: Global, Local Grid and Local Tree.
+In the **Flatland** environment we have included three basic observations to get started. The figure below illustrates the observation range of the different basic observation: ``Global``, ``Local Grid`` and ``Local Tree``.
 
 .. image:: https://i.imgur.com/oo8EIYv.png
     :height: 100
@@ -29,9 +29,9 @@ Gives a global observation of the entire rail environment.
 
 The observation is composed of the following elements:
     
-- transition map array with dimensions (env.height, env.width, 16), assuming 16 bits encoding of transitions.
-- Two 2D arrays (map_height, map_width, 2) containing respectively the position of the given agent target and the positions of the other agents targets.
-- A 3D array (map_height, map_width, 8) with the 4 first channels containing the one hot encoding of the direction of the given agent and the 4 second channels containing the positions of the other agents at their position coordinates.
+- transition map array with dimensions (``env.height``, ``env.width``, ``16``), assuming **16 bits encoding of transitions**.
+- Two 2D arrays (``map_height``, ``map_width``, ``2``) containing respectively the position of the given agent target and the positions of the other agents targets.
+- A 3D array (``map_height``, ``map_width``, ``8``) with the **4 first channels** containing the **one hot encoding** of the direction of the given agent and the 4 second channels containing the positions of the other agents at their position coordinates.
 
 Feel free to enhance this observation with any layer you think might help solve the problem.
 It would also be possible to construct a global observation for a super agent that controls all agents at once.
@@ -41,20 +41,20 @@ Local Grid Observation
 Gives a local observation of the rail environment around the agent.
 The observation is composed of the following elements:
 
-- transition map array of the local environment around the given agent, with dimensions (2*view_radius + 1, 2*view_radius + 1, 16), assuming 16 bits encoding of transitions.
-- Two 2D arrays (2*view_radius + 1, 2*view_radius + 1, 2) containing respectively, if they are in the agent's vision range, its target position, the positions of the other targets.
-- A 3D array (2*view_radius + 1, 2*view_radius + 1, 4) containing the one hot encoding of directions of the other agents at their position coordinates, if they are in the agent's vision range.
+- transition map array of the local environment around the given agent, with dimensions (``2*view_radius + 1``, ``2*view_radius + 1``, ``16``), assuming **16 bits encoding of transitions**.
+- Two 2D arrays (``2*view_radius + 1``, ``2*view_radius + 1``, ``2``) containing respectively, if they are in the agent's vision range, its target position, the positions of the other targets.
+- A 3D array (``2*view_radius + 1``, ``2*view_radius + 1``, ``4``) containing the one hot encoding of directions of the other agents at their position coordinates, if they are in the agent's vision range.
 - A 4 elements array with one hot encoding of the direction.
 
-Be aware that this observation **does not** contain any clues about target location if target is out of range. Thus navigation on maps where the radios of the observation does not guarantee a visible target at all times will become very difficult.
+Be aware that this observation **does not** contain any clues about target location if target is out of range. Thus navigation on maps where the radius of the observation does not guarantee a visible target at all times will become very difficult.
 We encourage you to come up with creative ways to overcome this problem. In the tree observation below we introduce the concept of distance maps.
 
 Tree Observation
 ----------------
-The tree observations is build by exploiting the graph structure of the railway network. The observation is generated by spanning a 4 branched tree from the current position of the agent. Each branch follows the allowed transitions (backward branch only allowed at dead-ends) untill a cell with multiple allowed transitions is reached. Here the information gathered along the branch is stored as a node in the tree.
+The tree observations is build by exploiting the graph structure of the railway network. The observation is generated by spanning a **4 branched tree** from the current position of the agent. Each branch follows the allowed transitions (backward branch only allowed at dead-ends) untill a cell with multiple allowed transitions is reached. Here the information gathered along the branch is stored as a node in the tree.
 Figure bellow illustrates how such a tree observation is build:
 
-1. From Agent location probe all 4 directions (L:Blue, F:Green,R:Purple,B:Red) starting with left and start branches when transition is allowed.
+1. From Agent location probe all 4 directions (``L:Blue``, ``F:Green``,``R:Purple``,``B:Red``) starting with left and start branches when transition is allowed.
 
     1. For each branch walk along the allowed transition till you reach a dead-end, switch or the target destination.
     2. Create a node an fill in node information as stated below.
@@ -85,12 +85,12 @@ Each node is filled with information gathered along the path to the node. Curren
 - 7: minimum remaining travel distance from node to the agent's target given the direction of the agent if this path is chosen
 - 8: agent in the same direction found on path to node
 
-    - n = number of agents present same direction (possible future use: number of other agents in the same direction in this branch)
-    - 0 = no agent present same direction
+    - ``n`` = number of agents present same direction (possible future use: number of other agents in the same direction in this branch)
+    - ``0`` = no agent present same direction
 - 9: agent in the opposite direction on path to node
 
-    - n = number of agents present other direction than myself
-    - 0 = no agent present other direction than myself
+    - ``n`` = number of agents present other direction than myself
+    - ``0`` = no agent present other direction than myself
 
 
 
