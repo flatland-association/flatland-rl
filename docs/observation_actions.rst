@@ -55,10 +55,11 @@ The tree observations is build by exploiting the graph structure of the railway 
 Figure bellow illustrates how such a tree observation is build:
 
 1. From Agent location probe all 4 directions (L:Blue, F:Green,R:Purple,B:Red) starting with left and start branches when transition is allowed.
+
     1. For each branch walk along the allowed transition till you reach a dead-end, switch or the target destination.
     2. Create a node an fill in node information as stated below.
     3. If max depth of tree is not reached and there are possible transistions start new branches and repeat above steps.
-3. Fill up all non existing branches with -infinity such that tree size is invariant to number of possible transitions at branching points.
+2. Fill up all non existing branches with -infinity such that tree size is invariant to number of possible transitions at branching points.
 
 Note that we always start with the left branch according to the agent orientation. Thus the tree observation is independent of the orientation of cells and only consideres relative orientation of transition object to the agent.
 
@@ -82,9 +83,11 @@ Each node is filled with information gathered along the path to the node. Curren
 - 6: This feature stores the distance (in number of cells) to the next node (e.g. switch or target or dead-end)
 - 7: minimum remaining travel distance from node to the agent's target given the direction of the agent if this path is chosen
 - 8: agent in the same direction found on path to node
+
     - n = number of agents present same direction (possible future use: number of other agents in the same direction in this branch)
     - 0 = no agent present same direction
 - 9: agent in the opposite direction on path to node
+
     - n = number of agents present other direction than myself
     - 0 = no agent present other direction than myself
 
