@@ -67,7 +67,7 @@ The colors in the figure bellow illustrate what branch the cell belongs two. If 
 The right side of the figure shows the resulting tree of the railway network on the left. Cross means no branch was build. If a node has no children it either was a terminal node (dead-end, max depth reached or no transition possible). Circle indicate nodes that are filled with the corresponding infromation as stated below in Node Information.
 
 
-.. image:: https://i.imgur.com/C4LbqPJ.png
+.. image:: https://i.imgur.com/sGBBhzJ.png
     :height: 100
     :width: 200
     
