@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -e # stop on error
 set -x # echo commands
 
@@ -12,27 +12,34 @@ set +x
 echo "************ TESTING PREREQUISITES PYTHON3 + GIT *************************"
 set -x
 
+git --version
+python --version
+conda --version
+echo $PATH
+
 
 set +x
 echo "************ SETUP VIRTUAL ENVIRONMENT FLATLAND *************************"
 set -x
+source deactivate
+(conda info --envs | fgrep flatland-rl) || conda create python=3.6 -y --name flatland-rl
+source activate flatland-rl
 
-export WORKON_HOME=${FLATLAND_BASEDIR}/getting_started/envs
-echo WORKON_HOME=$WORKON_HOME
-echo PWD=$PWD
-mkdir -p ${WORKON_HOME}
-# cannot work with virtualenvwrapper in script
-cd ${WORKON_HOME}
-python3 -m venv flatland
-source flatland/bin/activate
 
 set +x
 echo "************ INSTALL FLATLAND IN THE VIRTUALENV  *************************"
 set -x
-cd ${FLATLAND_BASEDIR}
-python setup.py install
+
+# TODO we should get rid of having to install these packages outside of setup.py with conda!
+conda install -y -c conda-forge cairosvg pycairo
+conda install -y  -c anaconda tk
+python -m pip install --upgrade pip
+
+python ${FLATLAND_BASEDIR}/setup.py install
+
 # ensure jupyter is installed in the virtualenv
-pip install -r ${FLATLAND_BASEDIR}/requirements_dev.txt -r requirements_continuous_integration.txt
+python -m pip install --upgrade -r ${FLATLAND_BASEDIR}/requirements_dev.txt -r requirements_continuous_integration.txt
+
 
 set +x
 echo "************ INSTALL JUPYTER EXTENSION *************************"
@@ -41,4 +48,9 @@ jupyter nbextension install --py --sys-prefix widgetsnbextension
 jupyter nbextension enable --py --sys-prefix widgetsnbextension
 jupyter nbextension install --py --sys-prefix jpy_canvas
 jupyter nbextension enable --py --sys-prefix jpy_canvas
-jupyter notebook
+
+
+set +x
+echo "************ RUN JUPYTER NOTEBOOKS *************************"
+set -x
+jupyter notebook &
