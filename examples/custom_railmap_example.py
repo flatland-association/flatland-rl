@@ -2,8 +2,8 @@ import random
 
 import numpy as np
 
-from flatland.core.transition_map import GridTransitionMap
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
+from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
 
@@ -17,7 +17,7 @@ def custom_rail_generator():
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         rail_array = grid_map.grid
         rail_array.fill(0)
-        new_tran = rail_trans.set_transition(1,1,1,1)
+        new_tran = rail_trans.set_transition(1, 1, 1, 1)
         print(new_tran)
         agents_positions = []
         agents_direction = []
