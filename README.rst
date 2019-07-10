@@ -16,7 +16,7 @@ Flatland
   :align: center
 
 Flatland is a opensource toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (or ridiculously large !) gridworlds.
-The base environment is a two-dimensional grid in which many agents can be placed, and each agent must solve one or more navigational tasks in the grid world. More details about the environment and the problem statement can be found in the official docs `here <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/>`_.
+The base environment is a two-dimensional grid in which many agents can be placed, and each agent must solve one or more navigational tasks in the grid world. More details about the environment and the problem statement can be found in the `official docs <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/>`_.
 
 This library was developed by `SBB <https://www.sbb.ch/en/>`_ , `AIcrowd <https://www.aicrowd.com/>`_ and numerous contributors and AIcrowd research fellows from the AIcrowd community. 
 

@@ -494,7 +494,7 @@ class EditorModel(object):
 
         if len(lrcStroke) >= 2:
             # If the first cell in a stroke is empty, add a deadend to cell 0
-            if self.env.rail.get_transitions(lrcStroke[0]) == 0:
+            if self.env.rail.get_full_transitions(*lrcStroke[0]) == 0:
                 self.mod_rail_2cells(lrcStroke, bAddRemove, iCellToMod=0)
 
         # Add transitions for groups of 3 cells
@@ -504,7 +504,7 @@ class EditorModel(object):
 
         # If final cell empty, insert deadend:
         if len(lrcStroke) == 2:
-            if self.env.rail.get_transitions(lrcStroke[1]) == 0:
+            if self.env.rail.get_full_transitions(*lrcStroke[1]) == 0:
                 self.mod_rail_2cells(lrcStroke, bAddRemove, iCellToMod=1)
 
         # now empty out the final two cells from the queue
@@ -752,7 +752,7 @@ class EditorModel(object):
             self.log(*args, **kwargs)
 
     def debug_cell(self, rcCell):
-        binTrans = self.env.rail.get_transitions(rcCell)
+        binTrans = self.env.rail.get_full_transitions(*rcCell)
         sbinTrans = format(binTrans, "#018b")[2:]
         self.debug("cell ",
                    rcCell,

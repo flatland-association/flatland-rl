@@ -7,6 +7,7 @@ from importlib_resources import path
 from numpy import array
 
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.transitions import Transitions
 
 
 class TransitionMap:
@@ -110,7 +111,7 @@ class GridTransitionMap(TransitionMap):
     GridTransitionMap implements utility functions.
     """
 
-    def __init__(self, width, height, transitions=Grid4Transitions([])):
+    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([])):
         """
         Builder for GridTransitionMap object.
 
@@ -132,7 +133,25 @@ class GridTransitionMap(TransitionMap):
 
         self.grid = np.zeros((height, width), dtype=self.transitions.get_type())
 
-    def get_transitions(self, cell_id):
+    def get_full_transitions(self, row, column):
+        """
+        Returns the full transitions for the cell at (row, column) in the format transition_map's transitions.
+
+        Parameters
+        ----------
+        row: int
+        column: int
+            (row,column) specifies the cell in this transition map.
+
+        Returns
+        -------
+        self.transitions.get_type()
+            The cell content int the format of this map's Transitions.
+
+        """
+        return self.grid[row][column]
+
+    def get_transitions(self, row, column, orientation):
         """
         Return a tuple of transitions available in a cell specified by
         `cell_id' (e.g., a tuple of size of the maximum number of transitions,
@@ -150,15 +169,10 @@ class GridTransitionMap(TransitionMap):
         Returns
         -------
         tuple
-            List of the validity of transitions in the cell.
+            List of the validity of transitions in the cell as given by the maps transitions.
 
         """
-        assert len(cell_id) in (2, 3), \
-            'GridTransitionMap.get_transitions() ERROR: cell_id tuple must have length 2 or 3.'
-        if len(cell_id) == 3:
-            return self.transitions.get_transitions(self.grid[cell_id[0]][cell_id[1]], cell_id[2])
-        elif len(cell_id) == 2:
-            return self.grid[cell_id[0]][cell_id[1]]
+        return self.transitions.get_transitions(self.grid[row][column], orientation)
 
     def set_transitions(self, cell_id, new_transitions):
         """
@@ -308,7 +322,7 @@ class GridTransitionMap(TransitionMap):
         grcPos = array(rcPos)
         grcMax = self.grid.shape
 
-        binTrans = self.get_transitions(rcPos)  # 16bit integer - all trans in/out
+        binTrans = self.get_full_transitions(*rcPos)  # 16bit integer - all trans in/out
         lnBinTrans = array([binTrans >> 8, binTrans & 0xff], dtype=np.uint8)  # 2 x uint8
         g2binTrans = np.unpackbits(lnBinTrans).reshape(4, 4)  # 4x4 x uint8 binary(0,1)
         gDirOut = g2binTrans.any(axis=0)  # outbound directions as boolean array (4)
@@ -328,7 +342,7 @@ class GridTransitionMap(TransitionMap):
 
             # Get the transitions out of gPos2, using iDirOut as the inbound direction
             # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
-            t4Trans2 = self.get_transitions((*gPos2, iDirOut))
+            t4Trans2 = self.get_transitions(*gPos2, iDirOut)
             if any(t4Trans2):
                 continue
             else:

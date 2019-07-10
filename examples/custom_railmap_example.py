@@ -17,11 +17,13 @@ def custom_rail_generator():
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         rail_array = grid_map.grid
         rail_array.fill(0)
-
+        new_tran = rail_trans.set_transition(1,1,1,1)
+        print(new_tran)
         agents_positions = []
         agents_direction = []
         agents_target = []
-
+        rail_array[0, 0] = new_tran
+        rail_array[0, 1] = new_tran
         return grid_map, agents_positions, agents_direction, agents_target
 
     return generator

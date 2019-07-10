@@ -1,4 +1,5 @@
 from enum import IntEnum
+from typing import Type
 
 import numpy as np
 
@@ -218,7 +219,7 @@ class Grid4Transitions(Transitions):
         cell_transition = value
         return cell_transition
 
-    def get_direction_enum(self) -> IntEnum:
+    def get_direction_enum(self) -> Type[Grid4TransitionsEnum]:
         return Grid4TransitionsEnum
 
     def has_deadend(self, cell_transition):

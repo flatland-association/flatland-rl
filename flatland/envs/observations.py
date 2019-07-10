@@ -16,8 +16,10 @@ class TreeObsForRailEnv(ObservationBuilder):
     TreeObsForRailEnv object.
 
     This object returns observation vectors for agents in the RailEnv environment.
-    The information is local to each agent and exploits the tree structure of the rail
+    The information is local to each agent and exploits the graph structure of the rail
     network to simplify the representation of the state of the environment for each agent.
+
+    For details about the features in the tree observation see the get() function.
     """
 
     observation_dim = 9
@@ -204,7 +206,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             [... from 'right] +
             [... from 'back']
 
-        Finally, each node information is composed of 8 floating point values:
+        Each node information is composed of 9 features:
 
         #1: if own target lies on the explored branch the current distance from the agent in number of cells is stored.
 
@@ -252,7 +254,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         if handle > len(self.env.agents):
             print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
         agent = self.env.agents[handle]  # TODO: handle being treated as index
-        possible_transitions = self.env.rail.get_transitions((*agent.position, agent.direction))
+        possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
         # Root node - current position
@@ -382,8 +384,8 @@ class TreeObsForRailEnv(ObservationBuilder):
                 last_is_target = True
                 break
 
-            cell_transitions = self.env.rail.get_transitions((*position, direction))
-            total_transitions = bin(self.env.rail.get_transitions(position)).count("1")
+            cell_transitions = self.env.rail.get_transitions(*position, direction)
+            total_transitions = bin(self.env.rail.get_full_transitions(*position)).count("1")
             num_transitions = np.count_nonzero(cell_transitions)
             exploring = False
             # Detect Switches that can only be used by other agents.
@@ -393,7 +395,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             if num_transitions == 1:
                 # Check if dead-end, or if we can go forward along direction
                 nbits = 0
-                tmp = self.env.rail.get_transitions(tuple(position))
+                tmp = self.env.rail.get_full_transitions(*position)
                 while tmp > 0:
                     nbits += (tmp & 1)
                     tmp = tmp >> 1
@@ -468,7 +470,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # Get the possible transitions
-        possible_transitions = self.env.rail.get_transitions((*position, direction))
+        possible_transitions = self.env.rail.get_transitions(*position, direction)
         for branch_direction in [(direction + 4 + i) % 4 for i in range(-1, 3)]:
             if last_is_dead_end and self.env.rail.get_transition((*position, direction),
                                                                  (branch_direction + 2) % 4):
@@ -571,7 +573,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
         self.rail_obs = np.zeros((self.env.height, self.env.width, 16))
         for i in range(self.rail_obs.shape[0]):
             for j in range(self.rail_obs.shape[1]):
-                bitlist = [int(digit) for digit in bin(self.env.rail.get_transitions((i, j)))[2:]]
+                bitlist = [int(digit) for digit in bin(self.env.rail.get_full_transitions(i, j))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i, j] = np.array(bitlist)
 
@@ -629,7 +631,7 @@ class GlobalObsForRailEnvDirectionDependent(ObservationBuilder):
         self.rail_obs = np.zeros((self.env.height, self.env.width, 16))
         for i in range(self.rail_obs.shape[0]):
             for j in range(self.rail_obs.shape[1]):
-                bitlist = [int(digit) for digit in bin(self.env.rail.get_transitions((i, j)))[2:]]
+                bitlist = [int(digit) for digit in bin(self.env.rail.get_full_transitions(i, j))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i, j] = np.array(bitlist)
 
@@ -676,10 +678,10 @@ class LocalObsForRailEnv(ObservationBuilder):
           with dimensions (2*view_radius + 1, 2*view_radius + 1, 16),
           assuming 16 bits encoding of transitions.
 
-        - Two 2D arrays containing respectively, if they are in the agent's vision range,
-          its target position, the positions of the other targets.
+        - Two 2D arrays (2*view_radius + 1, 2*view_radius + 1, 2) containing respectively,
+        if they are in the agent's vision range, its target position, the positions of the other targets.
 
-        - A 3D array (map_height, map_width, 4) containing the one hot encoding of directions
+        - A 3D array (2*view_radius + 1, 2*view_radius + 1, 4) containing the one hot encoding of directions
           of the other agents at their position coordinates, if they are in the agent's vision range.
 
         - A 4 elements array with one hot encoding of the direction.
@@ -700,7 +702,7 @@ class LocalObsForRailEnv(ObservationBuilder):
                                   self.env.width + 2 * self.view_radius, 16))
         for i in range(self.env.height):
             for j in range(self.env.width):
-                bitlist = [int(digit) for digit in bin(self.env.rail.get_transitions((i, j)))[2:]]
+                bitlist = [int(digit) for digit in bin(self.env.rail.get_full_transitions(i, j))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i + self.view_radius, j + self.view_radius] = np.array(bitlist)
 

@@ -75,7 +75,7 @@ def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):
                 return 1
             if node not in visited:
                 visited.add(node)
-                moves = rail.get_transitions((node[0][0], node[0][1], node[1]))
+                moves = rail.get_transitions(node[0][0], node[0][1], node[1])
                 for move_index in range(4):
                     if moves[move_index]:
                         stack.append((get_new_position(node[0], move_index),
@@ -84,7 +84,7 @@ def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):
                 # If cell is a dead-end, append previous node with reversed
                 # orientation!
                 nbits = 0
-                tmp = rail.get_transitions((node[0][0], node[0][1]))
+                tmp = rail.get_full_transitions(node[0][0], node[0][1])
                 while tmp > 0:
                     nbits += (tmp & 1)
                     tmp = tmp >> 1
@@ -96,7 +96,7 @@ def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):
     valid_positions = []
     for r in range(rail.height):
         for c in range(rail.width):
-            if rail.get_transitions((r, c)) > 0:
+            if rail.get_full_transitions(r, c) > 0:
                 valid_positions.append((r, c))
 
     re_generate = True
@@ -116,7 +116,7 @@ def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):
             valid_movements = []
             for direction in range(4):
                 position = agents_position[i]
-                moves = rail.get_transitions((position[0], position[1], direction))
+                moves = rail.get_transitions(position[0], position[1], direction)
                 for move_index in range(4):
                     if moves[move_index]:
                         valid_movements.append((direction, move_index))

@@ -1,8 +1,5 @@
 """
-Definition of the RailEnv environment and related level-generation functions.
-
-Generator functions are functions that take width, height and num_resets as arguments and return
-a GridTransitionMap object.
+Definition of the RailEnv environment.
 """
 # TODO:  _ this is a global method --> utils or remove later
 
@@ -46,20 +43,35 @@ class RailEnv(Environment):
     to avoid bottlenecks.
 
     The valid actions in the environment are:
-        0: do nothing
-        1: turn left and move to the next cell; if the agent was not moving, movement is started
-        2: move to the next cell in front of the agent; if the agent was not moving, movement is started
-        3: turn right and move to the next cell; if the agent was not moving, movement is started
-        4: stop moving
+
+     -   0: do nothing (continue moving or stay still)
+     -   1: turn left at switch and move to the next cell; if the agent was not moving, movement is started
+     -   2: move to the next cell in front of the agent; if the agent was not moving, movement is started
+     -   3: turn right at switch and move to the next cell; if the agent was not moving, movement is started
+     -   4: stop moving
 
     Moving forward in a dead-end cell makes the agent turn 180 degrees and step
     to the cell it came from.
 
+
     The actions of the agents are executed in order of their handle to prevent
     deadlocks and to allow them to learn relative priorities.
 
-    TODO: WRITE ABOUT THE REWARD FUNCTION, and possibly allow for alpha and
-    beta to be passed as parameters to __init__().
+    Reward Function:
+
+    It costs each agent a step_penalty for every time-step taken in the environment. Independent of the movement
+    of the agent. Currently all other penalties such as penalty for stopping, starting and invalid actions are set to 0.
+
+    alpha = 1
+    beta = 1
+    Reward function parameters:
+
+    - invalid_action_penalty = 0
+    - step_penalty = -alpha
+    - global_reward = beta
+    - stop_penalty = 0  # penalty for stopping a moving agent
+    - start_penalty = 0  # penalty for starting a stopped agent
+
     """
 
     def __init__(self,
@@ -326,7 +338,7 @@ class RailEnv(Environment):
                 new_position,
                 np.clip(new_position, [0, 0], [self.height - 1, self.width - 1]))
             and  # check the new position has some transitions (ie is not an empty cell)
-            self.rail.get_transitions(new_position) > 0)
+            self.rail.get_full_transitions(*new_position) > 0)
 
         # If transition validity hasn't been checked yet.
         if transition_valid is None:
@@ -342,7 +354,7 @@ class RailEnv(Environment):
 
     def check_action(self, agent, action):
         transition_valid = None
-        possible_transitions = self.rail.get_transitions((*agent.position, agent.direction))
+        possible_transitions = self.rail.get_transitions(*agent.position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
         new_direction = agent.direction
