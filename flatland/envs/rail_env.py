@@ -80,6 +80,7 @@ class RailEnv(Environment):
                  rail_generator=random_rail_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
+                 pkl_load=None
                  ):
         """
         Environment init.
@@ -110,18 +111,13 @@ class RailEnv(Environment):
         obs_builder_object: ObservationBuilder object
             ObservationBuilder-derived object that takes builds observation
             vectors for each agent.
+        pkl_load: you can load a pickle file.
         """
 
         self.rail_generator = rail_generator
         self.rail = None
         self.width = width
         self.height = height
-
-        self.obs_builder = obs_builder_object
-        self.obs_builder._set_env(self)
-
-        self.action_space = [1]
-        self.observation_space = self.obs_builder.observation_space  # updated on resets?
 
         self.rewards = [0] * number_of_agents
         self.done = False
@@ -135,6 +131,17 @@ class RailEnv(Environment):
         self.agents = [None] * number_of_agents  # live agents
         self.agents_static = [None] * number_of_agents  # static agent information
         self.num_resets = 0
+        if pkl_load:
+            self.loaded_data = pkl_load
+        else:
+            self.loaded_data = None
+
+        self.obs_builder = obs_builder_object
+        self.obs_builder._set_env(self)
+
+        self.action_space = [1]
+        self.observation_space = self.obs_builder.observation_space  # updated on resets?
+
         self.reset()
         self.num_resets = 0  # yes, set it to zero again!
 
@@ -174,6 +181,9 @@ class RailEnv(Environment):
 
         if replace_agents:
             self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:5])
+
+        if self.loaded_data:
+            self.load_pkl(self.loaded_data)
 
         self.restart_agents()
 
@@ -424,6 +434,9 @@ class RailEnv(Environment):
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
             self.set_full_state_msg(load_data)
+
+    def load_pkl(self, pkl_data):
+        self.set_full_state_msg(pkl_data)
 
     def load_resource(self, package, resource):
         from importlib_resources import read_binary
