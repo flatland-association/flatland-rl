@@ -1,10 +1,12 @@
+from typing import Tuple
+
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
 
 
-def make_simple_rail():
+def make_simple_rail() -> Tuple[GridTransitionMap, np.array]:
     # We instantiate a very simple rail network on a 7x10 grid:
     #        |
     #        |

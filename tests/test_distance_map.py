@@ -53,4 +53,4 @@ def test_walker():
     print(obs_builder.distance_map[(0, *[0, 1], 1)])
     assert obs_builder.distance_map[(0, *[0, 1], 1)] == 3
     print(obs_builder.distance_map[(0, *[0, 2], 3)])
-    assert obs_builder.distance_map[(0, *[0, 2], 1)] == 2  # does not work yet, Erik's proposal.
+    assert obs_builder.distance_map[(0, *[0, 2], 1)] == 2
