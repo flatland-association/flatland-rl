@@ -80,7 +80,7 @@ class RailEnv(Environment):
                  rail_generator=random_rail_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
-                 pkl_load=None
+                 file_name=None
                  ):
         """
         Environment init.
@@ -111,7 +111,7 @@ class RailEnv(Environment):
         obs_builder_object: ObservationBuilder object
             ObservationBuilder-derived object that takes builds observation
             vectors for each agent.
-        pkl_load: you can load a pickle file.
+        file_name: you can load a pickle file.
         """
 
         self.rail_generator = rail_generator
@@ -121,6 +121,8 @@ class RailEnv(Environment):
 
         self.rewards = [0] * number_of_agents
         self.done = False
+        self.obs_builder = obs_builder_object
+        self.obs_builder._set_env(self)
 
         self.dones = dict.fromkeys(list(range(number_of_agents)) + ["__all__"], False)
 
@@ -131,13 +133,10 @@ class RailEnv(Environment):
         self.agents = [None] * number_of_agents  # live agents
         self.agents_static = [None] * number_of_agents  # static agent information
         self.num_resets = 0
-        if pkl_load:
-            self.loaded_data = pkl_load
+        if file_name:
+            self.loaded_file = file_name
         else:
-            self.loaded_data = None
-
-        self.obs_builder = obs_builder_object
-        self.obs_builder._set_env(self)
+            self.loaded_file = None
 
         self.action_space = [1]
         self.observation_space = self.obs_builder.observation_space  # updated on resets?
@@ -182,8 +181,8 @@ class RailEnv(Environment):
         if replace_agents:
             self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:5])
 
-        if self.loaded_data:
-            self.load_pkl(self.loaded_data)
+        if self.loaded_file:
+            self.load(self.loaded_file)
 
         self.restart_agents()
 
