@@ -28,6 +28,7 @@ tests:
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
+        - export PATH=/tmp/miniconda3/bin:$PATH
         - pip install tox awscli
         - conda install -c conda-forge tox-conda
     script:
@@ -45,6 +46,7 @@ build_and_deploy_docs:
         - apt install -y graphviz libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
+        - export PATH=/tmp/miniconda3/bin:$PATH
         - pip install tox awscli
         - conda install -c conda-forge tox-conda
     script:
@@ -69,6 +71,7 @@ benchmarks_and_profiling:
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
+        - export PATH=/tmp/miniconda3/bin:$PATH
         - pip install tox awscli
         - conda install -c conda-forge tox-conda
     script:
@@ -82,6 +85,7 @@ test_conda_setup:
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
     script:
-        - export PATH=/tmp/miniconda3/bin:$PATH; bash getting_started/getting_started.sh
+        - export PATH=/tmp/miniconda3/bin:$PATH
+        - bash getting_started/getting_started.sh
 
 
