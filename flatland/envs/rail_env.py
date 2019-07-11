@@ -80,7 +80,6 @@ class RailEnv(Environment):
                  rail_generator=random_rail_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
-                 file_name=None
                  ):
         """
         Environment init.
@@ -133,10 +132,6 @@ class RailEnv(Environment):
         self.agents = [None] * number_of_agents  # live agents
         self.agents_static = [None] * number_of_agents  # static agent information
         self.num_resets = 0
-        if file_name:
-            self.loaded_file = file_name
-        else:
-            self.loaded_file = None
 
         self.action_space = [1]
         self.observation_space = self.obs_builder.observation_space  # updated on resets?
@@ -177,12 +172,10 @@ class RailEnv(Environment):
 
         if regen_rail or self.rail is None:
             self.rail = tRailAgents[0]
+            self.height, self.width = self.rail.grid.shape
 
         if replace_agents:
             self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:5])
-
-        if self.loaded_file:
-            self.load(self.loaded_file)
 
         self.restart_agents()
 
