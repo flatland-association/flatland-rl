@@ -77,7 +77,7 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 
     $ getting_started/getting_started.bat/.sh
 
-    from Anaconda prompt. Only prerequisites: git and Anaconda.
+    from Anaconda prompt. Only prerequisites: git and Miniconda-3 or Anaconda-3.
 
 
 4. Create a branch for local development::
