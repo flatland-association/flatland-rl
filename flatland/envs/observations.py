@@ -60,7 +60,6 @@ class TreeObsForRailEnv(ObservationBuilder):
     def _compute_distance_map(self):
         agents = self.env.agents
         nb_agents = len(agents)
-        print(nb_agents)
         self.distance_map = np.inf * np.ones(shape=(nb_agents,
                                                     self.env.height,
                                                     self.env.width,
