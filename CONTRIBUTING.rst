@@ -70,6 +70,8 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     $ conda install tox
     $ tox -v --recreate
 
+    This will create a virtual env you can then use.
+
     These steps are performed if you run
 
     $ getting_started/getting_started.bat/.sh
