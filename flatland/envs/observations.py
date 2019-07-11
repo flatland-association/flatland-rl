@@ -172,18 +172,21 @@ class TreeObsForRailEnv(ObservationBuilder):
         if handles is None:
             handles = []
         if self.predictor:
+            self.max_prediction_depth = 0
             self.predicted_pos = {}
             self.predicted_dir = {}
             self.predictions = self.predictor.get(custom_args={'distance_map': self.distance_map})
-            for t in range(len(self.predictions[0])):
-                pos_list = []
-                dir_list = []
-                for a in handles:
-                    pos_list.append(self.predictions[a][t][1:3])
-                    dir_list.append(self.predictions[a][t][3])
-                self.predicted_pos.update({t: coordinate_to_position(self.env.width, pos_list)})
-                self.predicted_dir.update({t: dir_list})
-            self.max_prediction_depth = len(self.predicted_pos)
+            if self.predictions:
+
+                for t in range(len(self.predictions[0])):
+                    pos_list = []
+                    dir_list = []
+                    for a in handles:
+                        pos_list.append(self.predictions[a][t][1:3])
+                        dir_list.append(self.predictions[a][t][3])
+                    self.predicted_pos.update({t: coordinate_to_position(self.env.width, pos_list)})
+                    self.predicted_dir.update({t: dir_list})
+                self.max_prediction_depth = len(self.predicted_pos)
         observations = {}
         for h in handles:
             observations[h] = self.get(h)
