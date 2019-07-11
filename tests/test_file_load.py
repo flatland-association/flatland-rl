@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from flatland.envs.generators import rail_from_GridTransitionMap_generator, rail_from_data
+from flatland.envs.generators import rail_from_GridTransitionMap_generator, rail_from_file
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -26,7 +26,7 @@ def test_load_pkl():
 
     env = RailEnv(width=1,
                   height=1,
-                  rail_generator=rail_from_data(file_name),
+                  rail_generator=rail_from_file(file_name),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )

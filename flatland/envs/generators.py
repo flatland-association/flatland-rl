@@ -197,7 +197,7 @@ def rail_from_manual_specifications_generator(rail_spec):
     return generator
 
 
-def rail_from_data(filename):
+def rail_from_file(filename):
     """
     Utility to load pickle file
 
