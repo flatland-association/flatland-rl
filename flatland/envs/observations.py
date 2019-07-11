@@ -60,6 +60,7 @@ class TreeObsForRailEnv(ObservationBuilder):
     def _compute_distance_map(self):
         agents = self.env.agents
         nb_agents = len(agents)
+        print(nb_agents)
         self.distance_map = np.inf * np.ones(shape=(nb_agents,
                                                     self.env.height,
                                                     self.env.width,
@@ -75,7 +76,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         orientation within it) to each agent's target cell.
         """
         # Returns max distance to target, from the farthest away node, while filling in distance_map
-
         self.distance_map[target_nr, position[0], position[1], :] = 0
 
         # Fill in the (up to) 4 neighboring nodes

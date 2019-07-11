@@ -1,9 +1,11 @@
+import msgpack
 import numpy as np
 
 from flatland.core.grid.grid4_utils import get_direction, mirror
 from flatland.core.grid.grid_utils import distance_on_rail
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.agent_utils import EnvAgentStatic
 from flatland.envs.grid4_generators_utils import connect_rail
 from flatland.envs.grid4_generators_utils import get_rnd_agents_pos_tgt_dir_on_rail
 
@@ -195,7 +197,7 @@ def rail_from_manual_specifications_generator(rail_spec):
     return generator
 
 
-def rail_from_data(input_data):
+def rail_from_data(filename):
     """
     Utility to load pickle file
 
@@ -210,19 +212,20 @@ def rail_from_data(input_data):
         the matrix of correct 16-bit bitmaps for each rail_spec_of_cell.
     """
 
-    def generator():
-        data = msgpack.unpackb(msg_data, use_list=False)
-        self.rail.grid = np.array(input_data[b"grid"])
-        rail = GridTransitionMap(width=width, height=height, transitions=rail_env_transitions)
+    def generator(width, height, num_agents, num_resets):
+        rail_env_transitions = RailEnvTransitions()
+        with open(filename, "rb") as file_in:
+            load_data = file_in.read()
+        data = msgpack.unpackb(load_data, use_list=False)
+        grid = np.array(data[b"grid"])
+        rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
+        rail.grid = grid
         # agents are always reset as not moving
-        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data[b"agents_static"]]
-        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4]) for d in data[b"agents"]]
+        agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data[b"agents_static"]]
         # setup with loaded data
-        self.height, self.width = self.rail.grid.shape
-        self.rail.height = self.height
-        self.rail.width = self.width
-        self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-
+        agents_position = [a.position for a in agents_static]
+        agents_direction = [a.direction for a in agents_static]
+        agents_target = [a.target for a in agents_static]
         return rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
     return generator
