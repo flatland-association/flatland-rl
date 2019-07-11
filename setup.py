@@ -14,25 +14,25 @@ with open('README.rst') as readme_file:
 
 def get_all_svg_files(directory='./svg/'):
     ret = []
-    for f in os.listdir(directory):
-        if os.path.isfile(os.path.join(directory, f)):
-            ret.append(directory + f)
+    for dirpath, subdirs, files in os.walk(directory):
+        for f in files:
+            ret.append(os.path.join(dirpath,f))
     return ret
 
 
 def get_all_images_files(directory='./images/'):
     ret = []
-    for f in os.listdir(directory):
-        if os.path.isfile(os.path.join(directory, f)):
-            ret.append(directory + f)
+    for dirpath, subdirs, files in os.walk(directory):
+        for f in files:
+            ret.append(os.path.join(dirpath,f))
     return ret
 
 
 def get_all_notebook_files(directory='./notebooks/'):
     ret = []
-    for f in os.listdir(directory):
-        if os.path.isfile(os.path.join(directory, f)):
-            ret.append(directory + f)
+    for dirpath, subdirs, files in os.walk(directory):
+        for f in files:
+            ret.append(os.path.join(dirpath,f))
     return ret
 
 

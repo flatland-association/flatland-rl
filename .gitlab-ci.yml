@@ -30,6 +30,7 @@ tests:
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
         - export PATH=/tmp/miniconda3/bin:$PATH
         - pip install tox awscli
+        - conda update -n conda -y
         - conda install -c conda-forge tox-conda
     script:
         - xvfb-run tox -v --recreate
@@ -50,6 +51,7 @@ build_and_deploy_docs:
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
         - export PATH=/tmp/miniconda3/bin:$PATH
         - pip install tox awscli
+        - conda update -n conda -y
         - conda install -c conda-forge tox-conda
     script:
         - echo "Bucket=${BUCKET_NAME}"
@@ -75,6 +77,7 @@ benchmarks_and_profiling:
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
         - export PATH=/tmp/miniconda3/bin:$PATH
         - pip install tox awscli
+        - conda update -n conda -y
         - conda install -c conda-forge tox-conda
     script:
         - xvfb-run tox -e benchmarks,profiling -v --recreate
@@ -86,6 +89,7 @@ test_conda_setup:
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
+        - conda update -n conda -y
     script:
         - export PATH=/tmp/miniconda3/bin:$PATH
         - bash getting_started/getting_started.sh
