@@ -8,8 +8,6 @@ echo "************ TESTING PREREQUISITES PYTHON3 + GIT + GIT *******************
 
 git --version || goto :error
 python --version || goto :error
-rem deactivate in case we're in virtualenv
-call conda deactivate || call deactivate
 
 
 @echo off

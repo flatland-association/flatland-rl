@@ -22,13 +22,15 @@ before_script:
 
 tests:
     stage: tests
-    script:
+    before_script:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
         - export PATH=/tmp/miniconda3/bin:$PATH; bash getting_started/getting_started.sh
-        - pip install tox
+        - pip install tox awscli
+        - conda install -c conda-forge tox-conda
+    script:
         - xvfb-run tox -v --recreate
 
 build_and_deploy_docs:
@@ -40,8 +42,12 @@ build_and_deploy_docs:
         - tests
     before_script:
         - apt update
-        - apt install -y graphviz libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
+        - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
+        - export PATH=/tmp/miniconda3/bin:$PATH; bash getting_started/getting_started.sh
         - pip install tox awscli
+        - conda install -c conda-forge tox-conda
     script:
         - echo "Bucket=${BUCKET_NAME}"
         - echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}"
@@ -59,10 +65,15 @@ benchmarks_and_profiling:
     only:
         variables:
             - $BENCHMARKS_AND_PROFILING
-    script:
+    before_script:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
-        - pip install tox
+        - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
+        - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
+        - export PATH=/tmp/miniconda3/bin:$PATH; bash getting_started/getting_started.sh
+        - pip install tox awscli
+        - conda install -c conda-forge tox-conda
+    script:
         - xvfb-run tox -e benchmarks,profiling -v --recreate
 
 
