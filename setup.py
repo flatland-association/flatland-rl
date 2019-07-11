@@ -28,6 +28,14 @@ def get_all_images_files(directory='./images/'):
     return ret
 
 
+def get_all_notebook_files(directory='./notebooks/'):
+    ret = []
+    for f in os.listdir(directory):
+        if os.path.isfile(os.path.join(directory, f)):
+            ret.append(directory + f)
+    return ret
+
+
 # Gather requirements from requirements_dev.txt
 install_reqs = []
 requirements_path = 'requirements_dev.txt'
@@ -63,7 +71,9 @@ setup(
     keywords='flatland',
     name='flatland-rl',
     packages=find_packages('.'),
-    data_files=[('svg', get_all_svg_files()), ('images', get_all_images_files())],
+    data_files=[('svg', get_all_svg_files()),
+                ('images', get_all_images_files()),
+                ('notebooks', get_all_notebook_files())],
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
