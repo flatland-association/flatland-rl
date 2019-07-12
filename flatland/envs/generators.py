@@ -43,6 +43,7 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
     """
 
     def generator(width, height, num_agents, num_resets=0):
+
         if num_agents > nr_start_goal:
             num_agents = nr_start_goal
             print("complex_rail_generator: num_agents > nr_start_goal, changing num_agents")
@@ -108,7 +109,7 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
                     break
 
             if not all_ok:
-                # we can might as well give up at this point
+                # we might as well give up at this point
                 break
 
             new_path = connect_rail(rail_trans, rail_array, start, goal)
@@ -231,7 +232,7 @@ def rail_from_file(filename):
     return generator
 
 
-def rail_from_GridTransitionMap_generator(rail_map):
+def rail_from_grid_transition_map(rail_map):
     """
     Utility to convert a rail given by a GridTransitionMap map with the correct
     16-bit transitions specifications.
