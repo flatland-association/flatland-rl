@@ -34,8 +34,6 @@ tests:
         - conda install -c conda-forge tox-conda
     script:
         - xvfb-run tox -v --recreate
-# TODO: run docs and coverage seperately since they require make and graphviz
-        - xvfb-run tox -e docs,coverage -v --recreate
 
 build_and_deploy_docs:
     image: "python:latest"
