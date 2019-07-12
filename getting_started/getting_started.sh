@@ -3,7 +3,7 @@ set -e # stop on error
 set -x # echo commands
 
 
-FLATLAND_BASEDIR=$(dirname "$0")/..
+FLATLAND_BASEDIR=$(dirname "$BASH_SOURCE")/..
 cd ${FLATLAND_BASEDIR}
 
 conda install -y -c conda-forge tox-conda
