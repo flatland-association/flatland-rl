@@ -240,10 +240,10 @@ class Controller(object):
         self.model.set_debug(event["new"])
 
     def set_debug_move(self, event):
-        self.model.setDebug_move(event["new"])
+        self.model.set_debug_move(event["new"])
 
     def set_draw_mode(self, event):
-        self.drawMode = event["new"]
+        self.set_draw_mode = event["new"]
 
     def set_filename(self, event):
         self.model.set_filename(event["new"])
@@ -296,8 +296,8 @@ class Controller(object):
         # Convert the xy position to a cell rc
         # Enqueue transitions across cells in another queue
         if len(q_events) > 0:
-            tNow = time.time()
-            if tNow - q_events[0][0] > 0.1:  # wait before trying to draw
+            t_now = time.time()
+            if t_now - q_events[0][0] > 0.1:  # wait before trying to draw
 
                 while len(q_events) > 0:
                     t, x, y = q_events.popleft()  # get events from our queue
@@ -329,10 +329,10 @@ class Controller(object):
     def rotate_agent(self, event):
         self.log("Rotate Agent:", self.model.selected_agent)
         if self.model.selected_agent is not None:
-            for iAgent, agent in enumerate(self.model.env.agents_static):
+            for agent_idx, agent in enumerate(self.model.env.agents_static):
                 if agent is None:
                     continue
-                if iAgent == self.model.selected_agent:
+                if agent_idx == self.model.selected_agent:
                     agent.direction = (agent.direction + 1) % 4
                     agent.old_direction = agent.direction
         self.model.redraw()
@@ -395,13 +395,13 @@ class EditorModel(object):
         self.debug_bool = False
         self.debug_move_bool = False
         self.wid_output = None
-        self.drawMode = "Draw"
+        self.draw_mode = "Draw"
         self.env_filename = "temp.pkl"
         self.set_env(env)
         self.selected_agent = None
         self.init_agents_static = None
         self.thread = None
-        self.saveImageCnt = 0
+        self.save_image_count = 0
 
     def set_env(self, env):
         """
@@ -418,7 +418,7 @@ class EditorModel(object):
         self.log("Set DebugMove:", self.debug_move_bool)
 
     def set_draw_mode(self, draw_mode):
-        self.drawMode = draw_mode
+        self.draw_mode = draw_mode
 
     def interpolate_path(self, rcLast, rcCell):
         if np.array_equal(rcLast, rcCell):
@@ -651,8 +651,8 @@ class EditorModel(object):
         self.env.agents = temp_store
 
     def save_image(self):
-        self.view.oRT.gl.save_image('frame_{:04d}.bmp'.format(self.saveImageCnt))
-        self.saveImageCnt += 1
+        self.view.oRT.gl.save_image('frame_{:04d}.bmp'.format(self.save_image_count))
+        self.save_image_count += 1
         self.view.redraw()
 
     def regenerate(self, method=None, nAgents=0, env=None):
