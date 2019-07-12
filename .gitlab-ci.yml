@@ -90,6 +90,8 @@ test_conda_setup:
         - export PATH=/tmp/miniconda3/bin:$PATH
         - conda update -n root conda -y
     script:
+        - export DISPLAY=${DISPLAY}
+        - export XAUTHORITY=${XAUTHORITY}
         - bash getting_started/getting_started.sh
 
 
