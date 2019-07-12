@@ -26,8 +26,8 @@ def tkmain(n_trials=2, n_steps=50, sGL="PIL"):
 
         for step in range(n_steps):
             oPlayer.step()
-            env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step,
-                                   action_dict=oPlayer.action_dict)
+            env_renderer.render_env(show=True, frames=True, episode=trials, step=step,
+                                    action_dict=oPlayer.action_dict)
 
     env_renderer.close_window()
 

@@ -115,7 +115,7 @@ def test_reward_function_conflict(rendering=False):
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
-        renderer.renderEnv(show=True, show_observations=True)
+        renderer.render_env(show=True, show_observations=True)
 
     iteration = 0
     expected_positions = {
@@ -158,7 +158,7 @@ def test_reward_function_conflict(rendering=False):
                                                                                                   agent.position,
                                                                                                   expected_position)
         if rendering:
-            renderer.renderEnv(show=True, show_observations=True)
+            renderer.render_env(show=True, show_observations=True)
 
         iteration += 1
 
@@ -193,7 +193,7 @@ def test_reward_function_waiting(rendering=False):
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
-        renderer.renderEnv(show=True, show_observations=True)
+        renderer.render_env(show=True, show_observations=True)
 
     iteration = 0
     expectations = {
@@ -270,7 +270,7 @@ def test_reward_function_waiting(rendering=False):
         rewards = _step_along_shortest_path(env, obs_builder, rail)
 
         if rendering:
-            renderer.renderEnv(show=True, show_observations=True)
+            renderer.render_env(show=True, show_observations=True)
 
         print(env.dones["__all__"])
         for agent in env.agents:

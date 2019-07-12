@@ -37,7 +37,7 @@ def test_dummy_predictor(rendering=False):
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
-        renderer.renderEnv(show=True, show_observations=False)
+        renderer.render_env(show=True, show_observations=False)
         input("Continue?")
 
     # test assertions
@@ -130,7 +130,7 @@ def test_shortest_path_predictor(rendering=False):
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
-        renderer.renderEnv(show=True, show_observations=False)
+        renderer.render_env(show=True, show_observations=False)
         input("Continue?")
 
     # compute the observations and predictions
@@ -254,7 +254,7 @@ def test_shortest_path_predictor_conflicts(rendering=False):
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
-        renderer.renderEnv(show=True, show_observations=False)
+        renderer.render_env(show=True, show_observations=False)
         input("Continue?")
 
     # get the trees to test

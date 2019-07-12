@@ -33,19 +33,19 @@ class GraphicsLayer(object):
     def clf(self):
         pass
 
-    def beginFrame(self):
+    def begin_frame(self):
         pass
 
     def endFrame(self):
         pass
 
-    def getImage(self):
+    def get_image(self):
         pass
 
-    def saveImage(self, filename):
+    def save_image(self, filename):
         pass
 
-    def adaptColor(self, color, lighten=False):
+    def adapt_color(self, color, lighten=False):
         if type(color) is str:
             if color == "red" or color == "r":
                 color = (255, 0, 0)
@@ -68,7 +68,7 @@ class GraphicsLayer(object):
     def get_cmap(self, *args, **kwargs):
         return plt.get_cmap(*args, **kwargs)
 
-    def setRailAt(self, row, col, binTrans, iTarget=None, isSelected=False, rail_grid=None):
+    def set_rail_at(self, row, col, binTrans, iTarget=None, isSelected=False, rail_grid=None):
         """ Set the rail at cell (row, col) to have transitions binTrans.
             The target argument can contain the index of the agent to indicate
             that agent's target is at that cell, so that a station can be
@@ -76,10 +76,10 @@ class GraphicsLayer(object):
         """
         pass
 
-    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut, isSelected=False):
+    def set_agent_at(self, iAgent, row, col, iDirIn, iDirOut, isSelected=False):
         pass
 
-    def setCellOccupied(self, iAgent, row, col):
+    def set_cell_occupied(self, iAgent, row, col):
         pass
 
     def resize(self, env):

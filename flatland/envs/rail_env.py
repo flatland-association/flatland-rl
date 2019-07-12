@@ -128,6 +128,7 @@ class RailEnv(Environment):
         self.obs_dict = {}
         self.rewards_dict = {}
         self.dev_obs_dict = {}
+        self.dev_pred_dict = {}
 
         self.agents = [None] * number_of_agents  # live agents
         self.agents_static = [None] * number_of_agents  # static agent information
