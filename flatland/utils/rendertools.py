@@ -389,11 +389,11 @@ class RenderTool(object):
                    agents=True,  # whether to include agents
                    show_observations=True,  # whether to include observations
                    show_predictions=True,  # whether to include predictions
-                   sRailColor="gray",  # color to use in drawing rails (not used with SVG)
+                   rail_color="gray",  # color to use in drawing rails (not used with SVG)
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
-                   iSelectedAgent=None,  # indicate which agent is "selected" in the editor
+                   selected_agent=None,  # indicate which agent is "selected" in the editor
                    action_dict=None):  # defunct - was used to indicate agent intention to turn
         """ Draw the environment using the GraphicsLayer this RenderTool was created with.
             (Use show=False from a Jupyter notebook with %matplotlib inline)
@@ -403,9 +403,9 @@ class RenderTool(object):
             self.render_env_2(show=show, curves=curves, spacing=spacing,
                               arrows=arrows, agents=agents, show_observations=show_observations,
                               show_predictions=show_predictions,
-                              rail_color=sRailColor,
+                              rail_color=rail_color,
                               frames=frames, episode=episode, step=step,
-                              selected_agent=iSelectedAgent, action_dict=action_dict)
+                              selected_agent=selected_agent, action_dict=action_dict)
             return
 
         if type(self.gl) is PILGL:
@@ -417,7 +417,7 @@ class RenderTool(object):
 
         # Draw each agent + its orientation + its target
         if agents:
-            self.plot_agents(targets=True, selected_agent=iSelectedAgent)
+            self.plot_agents(targets=True, selected_agent=selected_agent)
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)
         if show_predictions:

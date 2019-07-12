@@ -48,13 +48,13 @@ class View(object):
         self.sGL = sGL
 
     def display(self):
-        self.output.clear_output()
+        self.output_generator.clear_output()
         return self.wMain
 
     def init_canvas(self):
         # update the rendertool with the env
         self.new_env()
-        self.oRT.render_env(spacing=False, arrows=False, sRailColor="gray", show=False)
+        self.oRT.render_env(spacing=False, arrows=False, rail_color="gray", show=False)
         img = self.oRT.get_image()
         self.wImage = jpy_canvas.Canvas(img)
         self.yxSize = self.wImage.data.shape[:2]
@@ -75,7 +75,7 @@ class View(object):
         self.debug_move.observe(self.controller.set_debug_move, names="value")
 
         # This is like a cell widget where loggin goes
-        self.output = Output()
+        self.output_generator = Output()
 
         # Filename textbox
         self.filename = Text(description="Filename")
@@ -145,9 +145,10 @@ class View(object):
         self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL)
 
     def redraw(self):
-        with self.output:
+        print("redrawing outside")
+        print(self.output_generator)
+        with self.output_generator:
             self.oRT.set_new_rail()
-
             self.model.env.agents = self.model.env.agents_static
             for a in self.model.env.agents:
                 if hasattr(a, 'old_position') is False:
@@ -155,7 +156,7 @@ class View(object):
                 if hasattr(a, 'old_direction') is False:
                     a.old_direction = a.direction
 
-            self.oRT.render_env(spacing=False, arrows=False, sRailColor="gray", agents=True,
+            self.oRT.render_env(rail_color="gray", agents=True,
                                 show=False, selected_agent=self.model.selected_agent,
                                 show_observations=False)
             img = self.oRT.get_image()
@@ -186,8 +187,8 @@ class View(object):
         return rcCell
 
     def log(self, *args, **kwargs):
-        if self.output:
-            with self.output:
+        if self.output_generator:
+            with self.output_generator:
                 print(*args, **kwargs)
         else:
             print(*args, **kwargs)
@@ -521,6 +522,7 @@ class EditorModel(object):
         eg rcCells [(3,4), (2,4), (2,5)] would result in the transitions
         N->E and W->S in cell (2,4).
         """
+
         rc3Cells = array(lrcStroke[:3])  # the 3 cells
         rcMiddle = rc3Cells[1]  # the middle cell which we will update
         bDeadend = np.all(lrcStroke[0] == lrcStroke[2])  # deadend means cell 0 == cell 2
