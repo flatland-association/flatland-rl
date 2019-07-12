@@ -90,6 +90,6 @@ test_conda_setup:
         - export PATH=/tmp/miniconda3/bin:$PATH
         - conda update -n root conda -y
     script:
-        - source getting_started/getting_started.sh
+        - xvfb-run getting_started/getting_started.sh
 
 
