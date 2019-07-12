@@ -204,7 +204,7 @@ class Controller(object):
     def __init__(self, model, view):
         self.editor = self.model = model
         self.view = view
-        self.qEvents = deque()
+        self.q_events = deque()
         self.drawMode = "Draw"
 
     def set_model(self, model):
@@ -236,14 +236,14 @@ class Controller(object):
         if self.model.selected_agent is not None:
             self.lrcStroke = []
 
-    def set_debug(self, dEvent):
-        self.model.set_debug(dEvent["new"])
+    def set_debug(self, event):
+        self.model.set_debug(event["new"])
 
-    def set_debug_move(self, dEvent):
-        self.model.setDebug_move(dEvent["new"])
+    def set_debug_move(self, event):
+        self.model.setDebug_move(event["new"])
 
-    def set_draw_mode(self, dEvent):
-        self.drawMode = dEvent["new"]
+    def set_draw_mode(self, event):
+        self.drawMode = event["new"]
 
     def set_filename(self, event):
         self.model.set_filename(event["new"])
@@ -254,53 +254,53 @@ class Controller(object):
 
         x = event['canvasX']
         y = event['canvasY']
-        qEvents = self.qEvents
+        q_events = self.q_events
 
-        if self.model.bDebug and (event["buttons"] > 0 or self.model.bDebug_move):
-            self.debug("debug:", len(qEvents), event)
+        if self.model.debug_bool and (event["buttons"] > 0 or self.model.debug_move_bool):
+            self.debug("debug:", len(q_events), event)
 
         # If the mouse is held down, enqueue an event in our own queue
         # The intention was to avoid too many redraws.
         # Reset the lrcStroke list, if ALT, CTRL or SHIFT pressed
         if event["buttons"] > 0:
-            qEvents.append((time.time(), x, y))
+            q_events.append((time.time(), x, y))
             bShift = event["shiftKey"]
             bCtrl = event["ctrlKey"]
             bAlt = event["altKey"]
             if bShift:
                 self.lrcStroke = []
-                while len(qEvents) > 0:
-                    t, x, y = qEvents.popleft()
+                while len(q_events) > 0:
+                    t, x, y = q_events.popleft()
                 return
             if bCtrl:
                 self.lrcStroke = []
-                while len(qEvents) > 0:
-                    t, x, y = qEvents.popleft()
+                while len(q_events) > 0:
+                    t, x, y = q_events.popleft()
                 return
             if bAlt:
                 self.lrcStroke = []
-                while len(qEvents) > 0:
-                    t, x, y = qEvents.popleft()
+                while len(q_events) > 0:
+                    t, x, y = q_events.popleft()
                 return
         else:
             self.lrcStroke = []
 
         if self.model.selected_agent is not None:
             self.lrcStroke = []
-            while len(qEvents) > 0:
-                t, x, y = qEvents.popleft()
+            while len(q_events) > 0:
+                t, x, y = q_events.popleft()
             return
 
         # Process the events in our queue:
         # Draw a black square to indicate a trail
         # Convert the xy position to a cell rc
         # Enqueue transitions across cells in another queue
-        if len(qEvents) > 0:
+        if len(q_events) > 0:
             tNow = time.time()
-            if tNow - qEvents[0][0] > 0.1:  # wait before trying to draw
+            if tNow - q_events[0][0] > 0.1:  # wait before trying to draw
 
-                while len(qEvents) > 0:
-                    t, x, y = qEvents.popleft()  # get events from our queue
+                while len(q_events) > 0:
+                    t, x, y = q_events.popleft()  # get events from our queue
                     self.view.drag_path_element(x, y)
 
                     # Translate and scale from x,y to integer row,col (note order change)
@@ -409,16 +409,16 @@ class EditorModel(object):
         """
         self.env = env
 
-    def set_debug(self, bDebug):
-        self.debug_bool = bDebug
+    def set_debug(self, debug):
+        self.debug_bool = debug
         self.log("Set Debug:", self.debug_bool)
 
-    def set_debug_move(self, bDebug):
-        self.debug_move_bool = bDebug
+    def set_debug_move(self, debug):
+        self.debug_move_bool = debug
         self.log("Set DebugMove:", self.debug_move_bool)
 
-    def set_draw_mode(self, sDrawMode):
-        self.drawMode = sDrawMode
+    def set_draw_mode(self, draw_mode):
+        self.drawMode = draw_mode
 
     def interpolate_path(self, rcLast, rcCell):
         if np.array_equal(rcLast, rcCell):
@@ -605,9 +605,9 @@ class EditorModel(object):
 
         self.redraw()
 
-    def clear_cell(self, rcCell):
-        self.debug_cell(rcCell)
-        self.env.rail.grid[rcCell[0], rcCell[1]] = 0
+    def clear_cell(self, cell_row_col):
+        self.debug_cell(cell_row_col)
+        self.env.rail.grid[cell_row_col[0], cell_row_col[1]] = 0
         self.redraw()
 
     def reset(self, replace_agents=False, nAgents=0):
@@ -687,13 +687,13 @@ class EditorModel(object):
     def set_regen_height(self, size):
         self.regen_size_height = size
 
-    def find_agent_at(self, rcCell):
-        for iAgent, agent in enumerate(self.env.agents_static):
-            if tuple(agent.position) == tuple(rcCell):
-                return iAgent
+    def find_agent_at(self, cell_row_col):
+        for agent_idx, agent in enumerate(self.env.agents_static):
+            if tuple(agent.position) == tuple(cell_row_col):
+                return agent_idx
         return None
 
-    def click_agent(self, rcCell):
+    def click_agent(self, cell_row_col):
         """ The user has clicked on a cell -
             - If there is an agent, select it
                 - If that agent was already selected, then deselect it
@@ -702,20 +702,20 @@ class EditorModel(object):
         """
 
         # Has the user clicked on an existing agent?
-        agent_idx = self.find_agent_at(rcCell)
+        agent_idx = self.find_agent_at(cell_row_col)
 
         if agent_idx is None:
             # No
             if self.selected_agent is None:
                 # Create a new agent and select it.
-                agent_static = EnvAgentStatic(position=rcCell, direction=0, target=rcCell, moving=False)
+                agent_static = EnvAgentStatic(position=cell_row_col, direction=0, target=cell_row_col, moving=False)
                 self.selected_agent = self.env.add_agent_static(agent_static)
                 self.view.oRT.update_background()
             else:
                 # Move the selected agent to this cell
                 agent_static = self.env.agents_static[self.selected_agent]
-                agent_static.position = rcCell
-                agent_static.old_position = rcCell
+                agent_static.position = cell_row_col
+                agent_static.old_position = cell_row_col
                 self.env.agents = []
         else:
             # Yes
