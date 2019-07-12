@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from flatland.envs.generators import rail_from_GridTransitionMap_generator, rail_from_file, complex_rail_generator, \
+from flatland.envs.generators import rail_from_grid_transition_map, rail_from_file, complex_rail_generator, \
     random_rail_generator, empty_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -30,8 +30,6 @@ def test_empty_rail_generator():
     # Check that no agents where placed
     assert env.get_num_agents() == 0
 
-    return
-
 
 def test_random_rail_generator():
     np.random.seed(0)
@@ -48,8 +46,6 @@ def test_random_rail_generator():
     assert env.rail.grid.shape == (y_dim, x_dim)
     assert env.get_num_agents() == n_agents
 
-    return
-
 
 def test_complex_rail_generator():
     n_agents = 10
@@ -65,6 +61,7 @@ def test_complex_rail_generator():
                   rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist)
                   )
     assert env.get_num_agents() == 2
+    assert env.rail.grid.shape == (y_dim, x_dim)
 
     min_dist = 2 * x_dim
 
@@ -75,6 +72,7 @@ def test_complex_rail_generator():
                   rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist)
                   )
     assert env.get_num_agents() == 0
+    assert env.rail.grid.shape == (y_dim, x_dim)
 
     # Check that everything stays the same when correct parameters are given
     min_dist = 2
@@ -87,15 +85,16 @@ def test_complex_rail_generator():
                   rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist)
                   )
     assert env.get_num_agents() == n_agents
+    assert env.rail.grid.shape == (y_dim, x_dim)
 
-    return
 
-
-def test_rail_from_GridTransitionMap_generator():
+def test_rail_from_grid_transition_map():
     rail, rail_map = make_simple_rail()
+    n_agents = 3
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_GridTransitionMap_generator(rail),
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  number_of_agents=n_agents
                   )
     nr_rail_elements = np.count_nonzero(env.rail.grid)
 
@@ -105,7 +104,8 @@ def test_rail_from_GridTransitionMap_generator():
     # Check that agents are placed on a rail
     for a in env.agents:
         assert env.rail.grid[a.position] != 0
-    return
+
+    assert env.get_num_agents() == n_agents
 
 
 def tests_rail_from_file():
@@ -113,7 +113,7 @@ def tests_rail_from_file():
     rail, rail_map = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_GridTransitionMap_generator(rail),
+                  rail_generator=rail_from_grid_transition_map(rail),
                   number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
@@ -134,4 +134,3 @@ def tests_rail_from_file():
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
 
-    return

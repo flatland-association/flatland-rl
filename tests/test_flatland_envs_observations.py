@@ -5,7 +5,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.generators import rail_from_GridTransitionMap_generator
+from flatland.envs.generators import rail_from_grid_transition_map
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
@@ -20,7 +20,7 @@ def test_global_obs():
 
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_GridTransitionMap_generator(rail),
+                  rail_generator=rail_from_grid_transition_map(rail),
                   number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
 
@@ -89,7 +89,7 @@ def test_reward_function_conflict(rendering=False):
     rail, rail_map = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_GridTransitionMap_generator(rail),
+                  rail_generator=rail_from_grid_transition_map(rail),
                   number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
@@ -167,7 +167,7 @@ def test_reward_function_waiting(rendering=False):
     rail, rail_map = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_GridTransitionMap_generator(rail),
+                  rail_generator=rail_from_grid_transition_map(rail),
                   number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )

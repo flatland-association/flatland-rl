@@ -232,7 +232,7 @@ def rail_from_file(filename):
     return generator
 
 
-def rail_from_GridTransitionMap_generator(rail_map):
+def rail_from_grid_transition_map(rail_map):
     """
     Utility to convert a rail given by a GridTransitionMap map with the correct
     16-bit transitions specifications.

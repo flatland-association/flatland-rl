@@ -8,7 +8,7 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.agent_utils import EnvAgentStatic
 from flatland.envs.generators import complex_rail_generator
-from flatland.envs.generators import rail_from_GridTransitionMap_generator
+from flatland.envs.generators import rail_from_grid_transition_map
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 
@@ -85,7 +85,7 @@ def test_rail_environment_single_agent():
     rail.grid = rail_map
     rail_env = RailEnv(width=3,
                        height=3,
-                       rail_generator=rail_from_GridTransitionMap_generator(rail),
+                       rail_generator=rail_from_grid_transition_map(rail),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
@@ -164,7 +164,7 @@ def test_dead_end():
     rail.grid = rail_map
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
-                       rail_generator=rail_from_GridTransitionMap_generator(rail),
+                       rail_generator=rail_from_grid_transition_map(rail),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
@@ -208,7 +208,7 @@ def test_dead_end():
     rail.grid = rail_map
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
-                       rail_generator=rail_from_GridTransitionMap_generator(rail),
+                       rail_generator=rail_from_grid_transition_map(rail),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 

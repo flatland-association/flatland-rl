@@ -93,7 +93,7 @@ class RailEnv(Environment):
             starting positions, targets, and initial orientations for agent handle.
             Implemented functions are:
                 random_rail_generator : generate a random rail of given size
-                rail_from_GridTransitionMap_generator(rail_map) : generate a rail from
+                rail_from_grid_transition_map(rail_map) : generate a rail from
                                         a GridTransitionMap object
                 rail_from_manual_sp ecifications_generator(rail_spec) : generate a rail from
                                         a rail specifications array
