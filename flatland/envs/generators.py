@@ -227,8 +227,11 @@ def rail_from_file(filename):
         agents_position = [a.position for a in agents_static]
         agents_direction = [a.direction for a in agents_static]
         agents_target = [a.target for a in agents_static]
-        return rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
-
+        if len(data) > 3:
+            distance_maps = data[b"distance_maps"]
+            return rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position), distance_maps
+        else:
+            return rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
     return generator
 
 

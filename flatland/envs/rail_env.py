@@ -6,6 +6,7 @@ Definition of the RailEnv environment.
 from enum import IntEnum
 
 import msgpack
+import msgpack_numpy as m
 import numpy as np
 
 from flatland.core.env import Environment
@@ -13,6 +14,8 @@ from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
+
+m.patch()
 
 
 class RailEnvActions(IntEnum):
@@ -169,6 +172,10 @@ class RailEnv(Environment):
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
         tRailAgents = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
+
+        # Check if generator provided a distance map TODO: Make this check safer!
+        if len(tRailAgents) > 5:
+            self.obs_builder.distance_map = tRailAgents[-1]
 
         if regen_rail or self.rail is None:
             self.rail = tRailAgents[0]
@@ -424,6 +431,8 @@ class RailEnv(Environment):
         # agents are always reset as not moving
         self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data[b"agents_static"]]
         self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4]) for d in data[b"agents"]]
+        if hasattr(self.obs_builder, 'distance_map'):
+            self.obs_builder.distance_map = data[b"distance_maps"]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -438,22 +447,39 @@ class RailEnv(Environment):
         msgpack.packb(grid_data)
         msgpack.packb(agent_data)
         msgpack.packb(agent_static_data)
+        if hasattr(self.obs_builder, 'distance_map'):
+            distance_map_data = self.obs_builder.distance_map
+            msgpack.packb(distance_map_data)
+            msg_data = {
+                "grid": grid_data,
+                "agents_static": agent_static_data,
+                "agents": agent_data,
+                "distance_maps": distance_map_data}
+        else:
+            msg_data = {
+                "grid": grid_data,
+                "agents_static": agent_static_data,
+                "agents": agent_data}
 
-        msg_data = {
-            "grid": grid_data,
-            "agents_static": agent_static_data,
-            "agents": agent_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
-
     def save(self, filename):
-        with open(filename, "wb") as file_out:
-            file_out.write(self.get_full_state_msg())
+        if hasattr(self.obs_builder, 'distance_map'):
+            with open(filename, "wb") as file_out:
+                file_out.write(self.get_full_state_dist_msg())
+        else:
+            with open(filename, "wb") as file_out:
+                file_out.write(self.get_full_state_msg())
 
     def load(self, filename):
-        with open(filename, "rb") as file_in:
-            load_data = file_in.read()
-            self.set_full_state_msg(load_data)
+        if hasattr(self.obs_builder, 'distance_map'):
+            with open(filename, "rb") as file_in:
+                load_data = file_in.read()
+                self.set_full_state_dist_msg(load_data)
+        else:
+            with open(filename, "rb") as file_in:
+                load_data = file_in.read()
+                self.set_full_state_msg(load_data)
 
     def load_pkl(self, pkl_data):
         self.set_full_state_msg(pkl_data)

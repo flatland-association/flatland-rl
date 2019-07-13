@@ -41,21 +41,27 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.agents_previous_reset = None
         self.tree_explored_actions = [1, 2, 3, 0]
         self.tree_explorted_actions_char = ['L', 'F', 'R', 'B']
+        self.distance_map = None
 
     def reset(self):
         agents = self.env.agents
         nb_agents = len(agents)
-
         compute_distance_map = True
         if self.agents_previous_reset is not None and nb_agents == len(self.agents_previous_reset):
             compute_distance_map = False
             for i in range(nb_agents):
                 if agents[i].target != self.agents_previous_reset[i].target:
                     compute_distance_map = True
-        self.agents_previous_reset = agents
+
+        # Don't compute the distance map if it was loaded
+        if self.agents_previous_reset is None and self.distance_map is not None:
+            self.location_has_target = {tuple(agent.target): 1 for agent in agents}
+            compute_distance_map = False
 
         if compute_distance_map:
             self._compute_distance_map()
+
+        self.agents_previous_reset = agents
 
     def _compute_distance_map(self):
         agents = self.env.agents
