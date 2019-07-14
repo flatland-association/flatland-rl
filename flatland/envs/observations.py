@@ -22,8 +22,6 @@ class TreeObsForRailEnv(ObservationBuilder):
     For details about the features in the tree observation see the get() function.
     """
 
-
-
     def __init__(self, max_depth, predictor=None):
         super().__init__()
         self.max_depth = max_depth
