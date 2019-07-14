@@ -22,7 +22,7 @@ class TreeObsForRailEnv(ObservationBuilder):
     For details about the features in the tree observation see the get() function.
     """
 
-    observation_dim = 9
+
 
     def __init__(self, max_depth, predictor=None):
         super().__init__()
@@ -34,6 +34,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         for i in range(self.max_depth + 1):
             size += pow4
             pow4 *= 4
+        self.observation_dim = 9
         self.observation_space = [size * self.observation_dim]
         self.location_has_agent = {}
         self.location_has_agent_direction = {}
