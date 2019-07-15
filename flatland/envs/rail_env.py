@@ -80,7 +80,7 @@ class RailEnv(Environment):
                  rail_generator=random_rail_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
-                 max_episode_steps = None
+                 max_episode_steps=None
                  ):
         """
         Environment init.
