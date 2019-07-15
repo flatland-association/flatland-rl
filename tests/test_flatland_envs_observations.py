@@ -10,7 +10,7 @@ from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.utils.rendertools import RenderTool
-from tests.simple_rail import make_simple_rail
+from flatland.utils.simple_rail import make_simple_rail
 
 """Tests for `flatland` package."""
 

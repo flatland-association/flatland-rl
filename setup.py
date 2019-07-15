@@ -14,17 +14,25 @@ with open('README.rst') as readme_file:
 
 def get_all_svg_files(directory='./svg/'):
     ret = []
-    for f in os.listdir(directory):
-        if os.path.isfile(os.path.join(directory, f)):
-            ret.append(directory + f)
+    for dirpath, subdirs, files in os.walk(directory):
+        for f in files:
+            ret.append(os.path.join(dirpath,f))
     return ret
 
 
 def get_all_images_files(directory='./images/'):
     ret = []
-    for f in os.listdir(directory):
-        if os.path.isfile(os.path.join(directory, f)):
-            ret.append(directory + f)
+    for dirpath, subdirs, files in os.walk(directory):
+        for f in files:
+            ret.append(os.path.join(dirpath,f))
+    return ret
+
+
+def get_all_notebook_files(directory='./notebooks/'):
+    ret = []
+    for dirpath, subdirs, files in os.walk(directory):
+        for f in files:
+            ret.append(os.path.join(dirpath,f))
     return ret
 
 
@@ -63,7 +71,9 @@ setup(
     keywords='flatland',
     name='flatland-rl',
     packages=find_packages('.'),
-    data_files=[('svg', get_all_svg_files()), ('images', get_all_images_files())],
+    data_files=[('svg', get_all_svg_files()),
+                ('images', get_all_images_files()),
+                ('notebooks', get_all_notebook_files())],
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,

@@ -64,20 +64,19 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 
     $ git clone git@gitlab.aicrowd.com:flatland/flatland.git
 
-3. Install the software dependencies via Anaconda. (This assumes you have Anaconda installed by following the instructions `here <https://www.anaconda.com/distribution>`_)
+3. Install the software dependencies via Anaconda-3 or Miniconda-3. (This assumes you have Anaconda installed by following the instructions `here <https://www.anaconda.com/distribution>`_)
 
-    $ conda create python=3.6 --name flatland-rl
-    $ conda activate flatland-rl
-    $ conda install -c conda-forge cairosvg pycairo
-    $ conda install -c anaconda tk
-    $ cd flatland
-    $ pip install -e .
+    $ conda install -c conda-forge tox-conda
+    $ conda install tox
+    $ tox -v --recreate
+
+    This will create a virtual env you can then use.
 
     These steps are performed if you run
 
     $ getting_started/getting_started.bat/.sh
 
-    from Anaconda prompt. Only prerequisites: git and Anaconda.
+    from Anaconda prompt.
 
 
 4. Create a branch for local development::
