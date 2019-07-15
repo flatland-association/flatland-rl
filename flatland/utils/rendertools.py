@@ -388,7 +388,7 @@ class RenderTool(object):
                    arrows=False,  # defunct - draw arrows on rail lines
                    agents=True,  # whether to include agents
                    show_observations=True,  # whether to include observations
-                   show_predictions=True,  # whether to include predictions
+                   show_predictions=False,  # whether to include predictions
                    rail_color="gray",  # color to use in drawing rails (not used with SVG)
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
