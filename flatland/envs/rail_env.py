@@ -83,6 +83,7 @@ class RailEnv(Environment):
                  rail_generator=random_rail_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
+                 max_episode_steps=None
                  ):
         """
         Environment init.
@@ -113,6 +114,8 @@ class RailEnv(Environment):
         obs_builder_object: ObservationBuilder object
             ObservationBuilder-derived object that takes builds observation
             vectors for each agent.
+        max_episode_steps : int or None
+
         file_name: you can load a pickle file.
         """
 
@@ -125,6 +128,9 @@ class RailEnv(Environment):
         self.done = False
         self.obs_builder = obs_builder_object
         self.obs_builder._set_env(self)
+
+        self._max_episode_steps = max_episode_steps
+        self._elapsed_steps = 0
 
         self.dones = dict.fromkeys(list(range(number_of_agents)) + ["__all__"], False)
 
@@ -191,6 +197,7 @@ class RailEnv(Environment):
             agent.speed_data['position_fraction'] = 0.0
 
         self.num_resets += 1
+        self._elapsed_steps = 0
 
         # TODO perhaps dones should be part of each agent.
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
@@ -203,6 +210,8 @@ class RailEnv(Environment):
         return self._get_observations()
 
     def step(self, action_dict_):
+        self._elapsed_steps += 1
+
         action_dict = action_dict_.copy()
 
         alpha = 1.0
@@ -329,6 +338,11 @@ class RailEnv(Environment):
         if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
             self.dones["__all__"] = True
             self.rewards_dict = {i: 0 * r + global_reward for i, r in self.rewards_dict.items()}
+
+        if (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps):
+            self.dones["__all__"] = True
+            for k in self.dones.keys():
+                self.dones[k] = True
 
         return self._get_observations(), self.rewards_dict, self.dones, {}
 
