@@ -420,7 +420,7 @@ class RenderTool(object):
             self.plot_agents(targets=True, selected_agent=selected_agent)
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)
-        if show_predictions:
+        if show_predictions and len(env.dev_pred_dict) > 0:
             self.render_prediction(range(env.get_num_agents()), env.dev_pred_dict)
         # Draw some textual information like fps
         text_y = [-0.3, -0.6, -0.9]
@@ -554,7 +554,7 @@ class RenderTool(object):
 
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)
-        if show_predictions:
+        if show_predictions and len(env.dev_pred_dict) > 0:
             self.render_prediction(range(env.get_num_agents()), env.dev_pred_dict)
         if show:
             self.gl.show()
