@@ -22,8 +22,8 @@ for i in range(env.get_num_agents()):
     env.obs_builder.util_print_obs_subtree(tree=obs[i])
 
 env_renderer = RenderTool(env)
-env_renderer.renderEnv(show=True, frames=True)
-env_renderer.renderEnv(show=True, frames=True)
+env_renderer.render_env(show=True, frames=True)
+env_renderer.render_env(show=True, frames=True)
 
 print("Manual control: s=perform step, q=quit, [agent id] [1-2-3 action] \
        (turnleft+move, move to front, turnright+move)")
@@ -50,4 +50,4 @@ for step in range(100):
             i = i + 1
         i += 1
 
-    env_renderer.renderEnv(show=True, frames=True)
+    env_renderer.render_env(show=True, frames=True)

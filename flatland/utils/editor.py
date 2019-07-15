@@ -48,14 +48,14 @@ class View(object):
         self.sGL = sGL
 
     def display(self):
-        self.wOutput.clear_output()
+        self.output_generator.clear_output()
         return self.wMain
 
     def init_canvas(self):
         # update the rendertool with the env
         self.new_env()
-        self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", show=False)
-        img = self.oRT.getImage()
+        self.oRT.render_env(spacing=False, arrows=False, rail_color="gray", show=False)
+        img = self.oRT.get_image()
         self.wImage = jpy_canvas.Canvas(img)
         self.yxSize = self.wImage.data.shape[:2]
         self.writableData = np.copy(self.wImage.data)  # writable copy of image - wid_img.data is somehow readonly
@@ -67,51 +67,51 @@ class View(object):
 
     def init_widgets(self):
         # Debug checkbox - enable logging in the Output widget
-        self.wDebug = ipywidgets.Checkbox(description="Debug")
-        self.wDebug.observe(self.controller.setDebug, names="value")
+        self.debug = ipywidgets.Checkbox(description="Debug")
+        self.debug.observe(self.controller.set_debug, names="value")
 
         # Separate checkbox for mouse move events - they are very verbose
-        self.wDebug_move = Checkbox(description="Debug mouse move")
-        self.wDebug_move.observe(self.controller.setDebugMove, names="value")
+        self.debug_move = Checkbox(description="Debug mouse move")
+        self.debug_move.observe(self.controller.set_debug_move, names="value")
 
         # This is like a cell widget where loggin goes
-        self.wOutput = Output()
+        self.output_generator = Output()
 
         # Filename textbox
-        self.wFilename = Text(description="Filename")
-        self.wFilename.value = self.model.env_filename
-        self.wFilename.observe(self.controller.setFilename, names="value")
+        self.filename = Text(description="Filename")
+        self.filename.value = self.model.env_filename
+        self.filename.observe(self.controller.set_filename, names="value")
 
         # Size of environment when regenerating
 
-        self.wRegenSizeWidth = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size (Width)",
-                                         tip="Click Regenerate after changing this")
-        self.wRegenSizeWidth.observe(self.controller.setRegenSizeWidth, names="value")
+        self.regen_width = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size (Width)",
+                                     tip="Click Regenerate after changing this")
+        self.regen_width.observe(self.controller.set_regen_width, names="value")
 
-        self.wRegenSizeHeight = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size (Height)",
-                                          tip="Click Regenerate after changing this")
-        self.wRegenSizeHeight.observe(self.controller.setRegenSizeHeight, names="value")
+        self.regen_height = IntSlider(value=10, min=5, max=100, step=5, description="Regen Size (Height)",
+                                      tip="Click Regenerate after changing this")
+        self.regen_height.observe(self.controller.set_regen_height, names="value")
 
         # Number of Agents when regenerating
-        self.wRegenNAgents = IntSlider(value=1, min=0, max=5, step=1, description="# Agents",
-                                       tip="Click regenerate or reset after changing this")
-        self.wRegenMethod = RadioButtons(description="Regen\nMethod", options=["Empty", "Random Cell"])
+        self.regen_n_agents = IntSlider(value=1, min=0, max=5, step=1, description="# Agents",
+                                        tip="Click regenerate or reset after changing this")
+        self.regen_method = RadioButtons(description="Regen\nMethod", options=["Empty", "Random Cell"])
 
-        self.wReplaceAgents = Checkbox(value=True, description="Replace Agents")
+        self.replace_agents = Checkbox(value=True, description="Replace Agents")
 
         self.wTab = Tab()
         tab_contents = ["Regen", "Observation"]
         for i, title in enumerate(tab_contents):
             self.wTab.set_title(i, title)
         self.wTab.children = [
-            VBox([self.wRegenSizeWidth, self.wRegenSizeHeight, self.wRegenNAgents, self.wRegenMethod])
+            VBox([self.regen_width, self.regen_height, self.regen_n_agents, self.regen_method])
         ]
 
         # abbreviated description of buttons and the methods they call
         ldButtons = [
             dict(name="Refresh", method=self.controller.refresh, tip="Redraw only"),
             dict(name="Rotate Agent", method=self.controller.rotate_agent, tip="Rotate selected agent"),
-            dict(name="Restart Agents", method=self.controller.restartAgents,
+            dict(name="Restart Agents", method=self.controller.restart_agents,
                  tip="Move agents back to start positions"),
             dict(name="Random", method=self.controller.reset,
                  tip="Generate a randomized scene, including regen rail + agents"),
@@ -119,7 +119,7 @@ class View(object):
                  tip="Regenerate the rails using the method selected below"),
             dict(name="Load", method=self.controller.load),
             dict(name="Save", method=self.controller.save),
-            dict(name="Save as image", method=self.controller.saveImage)
+            dict(name="Save as image", method=self.controller.save_image)
         ]
 
         self.lwButtons = []
@@ -130,13 +130,13 @@ class View(object):
             self.lwButtons.append(wButton)
 
         self.wVbox_controls = VBox([
-            self.wFilename,
+            self.filename,
             *self.lwButtons,
             self.wTab])
 
         self.wMain = HBox([self.wImage, self.wVbox_controls])
 
-    def drawStroke(self):
+    def draw_stroke(self):
         pass
 
     def new_env(self):
@@ -145,9 +145,8 @@ class View(object):
         self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL)
 
     def redraw(self):
-        with self.wOutput:
+        with self.output_generator:
             self.oRT.set_new_rail()
-
             self.model.env.agents = self.model.env.agents_static
             for a in self.model.env.agents:
                 if hasattr(a, 'old_position') is False:
@@ -155,10 +154,10 @@ class View(object):
                 if hasattr(a, 'old_direction') is False:
                     a.old_direction = a.direction
 
-            self.oRT.renderEnv(spacing=False, arrows=False, sRailColor="gray", agents=True,
-                               show=False, iSelectedAgent=self.model.iSelectedAgent,
-                               show_observations=False)
-            img = self.oRT.getImage()
+            self.oRT.render_env(rail_color="gray", agents=True,
+                                show=False, selected_agent=self.model.selected_agent,
+                                show_observations=False)
+            img = self.oRT.get_image()
 
             self.wImage.data = img
             self.writableData = np.copy(self.wImage.data)
@@ -167,7 +166,7 @@ class View(object):
             self.yxSize = self.wImage.data.shape[:2]
             return img
 
-    def redisplayImage(self):
+    def redisplay_image(self):
         if self.writableData is not None:
             # This updates the image in the browser to be the new edited version
             self.wImage.data = self.writableData
@@ -186,8 +185,8 @@ class View(object):
         return rcCell
 
     def log(self, *args, **kwargs):
-        if self.wOutput:
-            with self.wOutput:
+        if self.output_generator:
+            with self.output_generator:
                 print(*args, **kwargs)
         else:
             print(*args, **kwargs)
@@ -204,10 +203,10 @@ class Controller(object):
     def __init__(self, model, view):
         self.editor = self.model = model
         self.view = view
-        self.qEvents = deque()
+        self.q_events = deque()
         self.drawMode = "Draw"
 
-    def setModel(self, model):
+    def set_model(self, model):
         self.model = model
 
     def on_click(self, wid, event):
@@ -227,26 +226,26 @@ class Controller(object):
             self.model.add_target(rcCell)
             self.lrcStroke = []
         elif bAlt and not bShift and not bCtrl:
-            self.model.clearCell(rcCell)
+            self.model.clear_cell(rcCell)
             self.lrcStroke = []
 
         self.debug("click in cell", rcCell)
         self.model.debug_cell(rcCell)
 
-        if self.model.iSelectedAgent is not None:
+        if self.model.selected_agent is not None:
             self.lrcStroke = []
 
-    def setDebug(self, dEvent):
-        self.model.setDebug(dEvent["new"])
+    def set_debug(self, event):
+        self.model.set_debug(event["new"])
 
-    def setDebugMove(self, dEvent):
-        self.model.setDebug_move(dEvent["new"])
+    def set_debug_move(self, event):
+        self.model.set_debug_move(event["new"])
 
-    def setDrawMode(self, dEvent):
-        self.drawMode = dEvent["new"]
+    def set_draw_mode(self, event):
+        self.set_draw_mode = event["new"]
 
-    def setFilename(self, event):
-        self.model.setFilename(event["new"])
+    def set_filename(self, event):
+        self.model.set_filename(event["new"])
 
     def on_mouse_move(self, wid, event):
         """Mouse motion event handler for drawing.
@@ -254,60 +253,60 @@ class Controller(object):
 
         x = event['canvasX']
         y = event['canvasY']
-        qEvents = self.qEvents
+        q_events = self.q_events
 
-        if self.model.bDebug and (event["buttons"] > 0 or self.model.bDebug_move):
-            self.debug("debug:", len(qEvents), event)
+        if self.model.debug_bool and (event["buttons"] > 0 or self.model.debug_move_bool):
+            self.debug("debug:", len(q_events), event)
 
         # If the mouse is held down, enqueue an event in our own queue
         # The intention was to avoid too many redraws.
         # Reset the lrcStroke list, if ALT, CTRL or SHIFT pressed
         if event["buttons"] > 0:
-            qEvents.append((time.time(), x, y))
+            q_events.append((time.time(), x, y))
             bShift = event["shiftKey"]
             bCtrl = event["ctrlKey"]
             bAlt = event["altKey"]
             if bShift:
                 self.lrcStroke = []
-                while len(qEvents) > 0:
-                    t, x, y = qEvents.popleft()
+                while len(q_events) > 0:
+                    t, x, y = q_events.popleft()
                 return
             if bCtrl:
                 self.lrcStroke = []
-                while len(qEvents) > 0:
-                    t, x, y = qEvents.popleft()
+                while len(q_events) > 0:
+                    t, x, y = q_events.popleft()
                 return
             if bAlt:
                 self.lrcStroke = []
-                while len(qEvents) > 0:
-                    t, x, y = qEvents.popleft()
+                while len(q_events) > 0:
+                    t, x, y = q_events.popleft()
                 return
         else:
             self.lrcStroke = []
 
-        if self.model.iSelectedAgent is not None:
+        if self.model.selected_agent is not None:
             self.lrcStroke = []
-            while len(qEvents) > 0:
-                t, x, y = qEvents.popleft()
+            while len(q_events) > 0:
+                t, x, y = q_events.popleft()
             return
 
         # Process the events in our queue:
         # Draw a black square to indicate a trail
         # Convert the xy position to a cell rc
         # Enqueue transitions across cells in another queue
-        if len(qEvents) > 0:
-            tNow = time.time()
-            if tNow - qEvents[0][0] > 0.1:  # wait before trying to draw
+        if len(q_events) > 0:
+            t_now = time.time()
+            if t_now - q_events[0][0] > 0.1:  # wait before trying to draw
 
-                while len(qEvents) > 0:
-                    t, x, y = qEvents.popleft()  # get events from our queue
+                while len(q_events) > 0:
+                    t, x, y = q_events.popleft()  # get events from our queue
                     self.view.drag_path_element(x, y)
 
                     # Translate and scale from x,y to integer row,col (note order change)
                     rcCell = self.view.xy_to_rc(x, y)
                     self.editor.drag_path_element(rcCell)
 
-                self.view.redisplayImage()
+                self.view.redisplay_image()
 
         else:
             self.model.mod_path(not event["shiftKey"])
@@ -320,25 +319,25 @@ class Controller(object):
         self.model.clear()
 
     def reset(self, event):
-        self.log("Reset - nAgents:", self.view.wRegenNAgents.value)
+        self.log("Reset - nAgents:", self.view.regen_n_agents.value)
         self.log("Reset - size:", self.model.regen_size_width)
         self.log("Reset - size:", self.model.regen_size_height)
-        self.model.reset(replace_agents=self.view.wReplaceAgents.value,
-                         nAgents=self.view.wRegenNAgents.value)
+        self.model.reset(replace_agents=self.view.replace_agents.value,
+                         nAgents=self.view.regen_n_agents.value)
 
     def rotate_agent(self, event):
-        self.log("Rotate Agent:", self.model.iSelectedAgent)
-        if self.model.iSelectedAgent is not None:
-            for iAgent, agent in enumerate(self.model.env.agents_static):
+        self.log("Rotate Agent:", self.model.selected_agent)
+        if self.model.selected_agent is not None:
+            for agent_idx, agent in enumerate(self.model.env.agents_static):
                 if agent is None:
                     continue
-                if iAgent == self.model.iSelectedAgent:
+                if agent_idx == self.model.selected_agent:
                     agent.direction = (agent.direction + 1) % 4
                     agent.old_direction = agent.direction
         self.model.redraw()
 
-    def restartAgents(self, event):
-        self.log("Restart Agents - nAgents:", self.view.wRegenNAgents.value)
+    def restart_agents(self, event):
+        self.log("Restart Agents - nAgents:", self.view.regen_n_agents.value)
         if self.model.init_agents_static is not None:
             self.model.env.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in
                                             self.model.init_agents_static]
@@ -349,15 +348,15 @@ class Controller(object):
         self.refresh(event)
 
     def regenerate(self, event):
-        method = self.view.wRegenMethod.value
-        nAgents = self.view.wRegenNAgents.value
-        self.model.regenerate(method, nAgents)
+        method = self.view.regen_method.value
+        n_agents = self.view.regen_n_agents.value
+        self.model.regenerate(method, n_agents)
 
-    def setRegenSizeWidth(self, event):
-        self.model.setRegenSizeWidth(event["new"])
+    def set_regen_width(self, event):
+        self.model.set_regen_width(event["new"])
 
-    def setRegenSizeHeight(self, event):
-        self.model.setRegenSizeHeight(event["new"])
+    def set_regen_height(self, event):
+        self.model.set_regen_height(event["new"])
 
     def load(self, event):
         self.model.load()
@@ -365,8 +364,8 @@ class Controller(object):
     def save(self, event):
         self.model.save()
 
-    def saveImage(self, event):
-        self.model.saveImage()
+    def save_image(self, event):
+        self.model.save_image()
 
     def step(self, event):
         self.model.step()
@@ -392,16 +391,16 @@ class EditorModel(object):
         self.iTransLast = -1
         self.gRCTrans = array([[-1, 0], [0, 1], [1, 0], [0, -1]])  # NESW in RC
 
-        self.bDebug = False
-        self.bDebug_move = False
+        self.debug_bool = False
+        self.debug_move_bool = False
         self.wid_output = None
-        self.drawMode = "Draw"
+        self.draw_mode = "Draw"
         self.env_filename = "temp.pkl"
         self.set_env(env)
-        self.iSelectedAgent = None
+        self.selected_agent = None
         self.init_agents_static = None
         self.thread = None
-        self.saveImageCnt = 0
+        self.save_image_count = 0
 
     def set_env(self, env):
         """
@@ -409,16 +408,16 @@ class EditorModel(object):
         """
         self.env = env
 
-    def setDebug(self, bDebug):
-        self.bDebug = bDebug
-        self.log("Set Debug:", self.bDebug)
+    def set_debug(self, debug):
+        self.debug_bool = debug
+        self.log("Set Debug:", self.debug_bool)
 
-    def setDebugMove(self, bDebug):
-        self.bDebug_move = bDebug
-        self.log("Set DebugMove:", self.bDebug_move)
+    def set_debug_move(self, debug):
+        self.debug_move_bool = debug
+        self.log("Set DebugMove:", self.debug_move_bool)
 
-    def setDrawMode(self, sDrawMode):
-        self.drawMode = sDrawMode
+    def set_draw_mode(self, draw_mode):
+        self.draw_mode = draw_mode
 
     def interpolate_path(self, rcLast, rcCell):
         if np.array_equal(rcLast, rcCell):
@@ -521,6 +520,7 @@ class EditorModel(object):
         eg rcCells [(3,4), (2,4), (2,5)] would result in the transitions
         N->E and W->S in cell (2,4).
         """
+
         rc3Cells = array(lrcStroke[:3])  # the 3 cells
         rcMiddle = rc3Cells[1]  # the middle cell which we will update
         bDeadend = np.all(lrcStroke[0] == lrcStroke[2])  # deadend means cell 0 == cell 2
@@ -605,20 +605,20 @@ class EditorModel(object):
 
         self.redraw()
 
-    def clearCell(self, rcCell):
-        self.debug_cell(rcCell)
-        self.env.rail.grid[rcCell[0], rcCell[1]] = 0
+    def clear_cell(self, cell_row_col):
+        self.debug_cell(cell_row_col)
+        self.env.rail.grid[cell_row_col[0], cell_row_col[1]] = 0
         self.redraw()
 
     def reset(self, replace_agents=False, nAgents=0):
         self.regenerate("complex", nAgents=nAgents)
         self.redraw()
 
-    def restartAgents(self):
+    def restart_agents(self):
         self.env.agents = EnvAgent.list_from_static(self.env.agents_static)
         self.redraw()
 
-    def setFilename(self, filename):
+    def set_filename(self, filename):
         self.env_filename = filename
 
     def load(self):
@@ -650,9 +650,9 @@ class EditorModel(object):
         # reset agents current (current position)
         self.env.agents = temp_store
 
-    def saveImage(self):
-        self.view.oRT.gl.saveImage('frame_{:04d}.bmp'.format(self.saveImageCnt))
-        self.saveImageCnt += 1
+    def save_image(self):
+        self.view.oRT.gl.save_image('frame_{:04d}.bmp'.format(self.save_image_count))
+        self.save_image_count += 1
         self.view.redraw()
 
     def regenerate(self, method=None, nAgents=0, env=None):
@@ -681,19 +681,19 @@ class EditorModel(object):
         self.view.new_env()
         self.redraw()
 
-    def setRegenSizeWidth(self, size):
+    def set_regen_width(self, size):
         self.regen_size_width = size
 
-    def setRegenSizeHeight(self, size):
+    def set_regen_height(self, size):
         self.regen_size_height = size
 
-    def find_agent_at(self, rcCell):
-        for iAgent, agent in enumerate(self.env.agents_static):
-            if tuple(agent.position) == tuple(rcCell):
-                return iAgent
+    def find_agent_at(self, cell_row_col):
+        for agent_idx, agent in enumerate(self.env.agents_static):
+            if tuple(agent.position) == tuple(cell_row_col):
+                return agent_idx
         return None
 
-    def click_agent(self, rcCell):
+    def click_agent(self, cell_row_col):
         """ The user has clicked on a cell -
             - If there is an agent, select it
                 - If that agent was already selected, then deselect it
@@ -702,37 +702,37 @@ class EditorModel(object):
         """
 
         # Has the user clicked on an existing agent?
-        iAgent = self.find_agent_at(rcCell)
+        agent_idx = self.find_agent_at(cell_row_col)
 
-        if iAgent is None:
+        if agent_idx is None:
             # No
-            if self.iSelectedAgent is None:
+            if self.selected_agent is None:
                 # Create a new agent and select it.
-                agent_static = EnvAgentStatic(position=rcCell, direction=0, target=rcCell, moving=False)
-                self.iSelectedAgent = self.env.add_agent_static(agent_static)
+                agent_static = EnvAgentStatic(position=cell_row_col, direction=0, target=cell_row_col, moving=False)
+                self.selected_agent = self.env.add_agent_static(agent_static)
                 self.view.oRT.update_background()
             else:
                 # Move the selected agent to this cell
-                agent_static = self.env.agents_static[self.iSelectedAgent]
-                agent_static.position = rcCell
-                agent_static.old_position = rcCell
+                agent_static = self.env.agents_static[self.selected_agent]
+                agent_static.position = cell_row_col
+                agent_static.old_position = cell_row_col
                 self.env.agents = []
         else:
             # Yes
             # Have they clicked on the agent already selected?
-            if self.iSelectedAgent is not None and iAgent == self.iSelectedAgent:
+            if self.selected_agent is not None and agent_idx == self.selected_agent:
                 # Yes - deselect the agent
-                self.iSelectedAgent = None
+                self.selected_agent = None
             else:
                 # No - select the agent
-                self.iSelectedAgent = iAgent
+                self.selected_agent = agent_idx
 
         self.init_agents_static = None
         self.redraw()
 
     def add_target(self, rcCell):
-        if self.iSelectedAgent is not None:
-            self.env.agents_static[self.iSelectedAgent].target = rcCell
+        if self.selected_agent is not None:
+            self.env.agents_static[self.selected_agent].target = rcCell
             self.init_agents_static = None
             self.view.oRT.update_background()
             self.redraw()
@@ -748,7 +748,7 @@ class EditorModel(object):
             self.view.log(*args, **kwargs)
 
     def debug(self, *args, **kwargs):
-        if self.bDebug:
+        if self.debug_bool:
             self.log(*args, **kwargs)
 
     def debug_cell(self, rcCell):

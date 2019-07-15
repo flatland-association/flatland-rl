@@ -25,7 +25,7 @@ class TreeObsForRailEnv(ObservationBuilder):
     def __init__(self, max_depth, predictor=None):
         super().__init__()
         self.max_depth = max_depth
-
+        self.observation_dim = 9
         # Compute the size of the returned observation vector
         size = 0
         pow4 = 1

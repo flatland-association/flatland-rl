@@ -40,7 +40,7 @@ class PILGL(GraphicsLayer):
     def __init__(self, width, height, jupyter=False):
         self.yxBase = (0, 0)
         self.linewidth = 4
-        self.nAgentColors = 1  # overridden in loadAgent
+        self.n_agent_colors = 1  # overridden in loadAgent
 
         self.width = width
         self.height = height
@@ -84,8 +84,8 @@ class PILGL(GraphicsLayer):
         sColors = "d50000#c51162#aa00ff#6200ea#304ffe#2962ff#0091ea#00b8d4#00bfa5#00c853" + \
                   "#64dd17#aeea00#ffd600#ffab00#ff6d00#ff3d00#5d4037#455a64"
 
-        self.ltAgentColors = [self.rgb_s2i(sColor) for sColor in sColors.split("#")]
-        self.nAgentColors = len(self.ltAgentColors)
+        self.agent_colors = [self.rgb_s2i(sColor) for sColor in sColors.split("#")]
+        self.n_agent_colors = len(self.agent_colors)
 
         self.window_open = False
         self.firstFrame = True
@@ -126,11 +126,11 @@ class PILGL(GraphicsLayer):
         """ convert a hex RGB string like 0091ea to 3-tuple of ints """
         return tuple(int(sRGB[iRGB * 2:iRGB * 2 + 2], 16) for iRGB in [0, 1, 2])
 
-    def getAgentColor(self, iAgent):
-        return self.ltAgentColors[iAgent % self.nAgentColors]
+    def get_agent_color(self, iAgent):
+        return self.agent_colors[iAgent % self.n_agent_colors]
 
     def plot(self, gX, gY, color=None, linewidth=3, layer=0, opacity=255, **kwargs):
-        color = self.adaptColor(color)
+        color = self.adapt_color(color)
         if len(color) == 3:
             color += (opacity,)
         elif len(color) == 4:
@@ -140,13 +140,13 @@ class PILGL(GraphicsLayer):
         self.draws[layer].line(gPoints, fill=color, width=self.linewidth)
 
     def scatter(self, gX, gY, color=None, marker="o", s=50, layer=0, opacity=255, *args, **kwargs):
-        color = self.adaptColor(color)
+        color = self.adapt_color(color)
         r = np.sqrt(s)
         gPoints = np.stack([np.atleast_1d(gX), -np.atleast_1d(gY)]).T * self.nPixCell
         for x, y in gPoints:
             self.draws[layer].rectangle([(x - r, y - r), (x + r, y + r)], fill=color, outline=color)
 
-    def drawImageXY(self, pil_img, xyPixLeftTop, layer=0):
+    def draw_image_xy(self, pil_img, xyPixLeftTop, layer=0):
         if (pil_img.mode == "RGBA"):
             pil_mask = pil_img
         else:
@@ -154,9 +154,9 @@ class PILGL(GraphicsLayer):
 
         self.layers[layer].paste(pil_img, xyPixLeftTop, pil_mask)
 
-    def drawImageRC(self, pil_img, rcTopLeft, layer=0):
+    def draw_image_row_col(self, pil_img, rcTopLeft, layer=0):
         xyPixLeftTop = tuple((array(rcTopLeft) * self.nPixCell)[[1, 0]])
-        self.drawImageXY(pil_img, xyPixLeftTop, layer=layer)
+        self.draw_image_xy(pil_img, xyPixLeftTop, layer=layer)
 
     def open_window(self):
         assert self.window_open is False, "Window is already open!"
@@ -178,7 +178,7 @@ class PILGL(GraphicsLayer):
     def prettify2(self, width, height, cell_size):
         pass
 
-    def beginFrame(self):
+    def begin_frame(self):
         # Create a new agent layer
         self.create_layer(iLayer=1, clear=True)
 
@@ -211,17 +211,18 @@ class PILGL(GraphicsLayer):
             img = Image.alpha_composite(img, img2)
         return img
 
-    def getImage(self):
+    def get_image(self):
         """ return a blended / alpha composited image composed of all the layers,
             with layer 0 at the "back".
         """
         img = self.alpha_composite_layers()
         return array(img)
 
-    def saveImage(self, filename):
+    def save_image(self, filename):
         """
         Renders the current scene into a image file
-        :param filename: filename where to store the rendering output (supported image format *.bmp , .. , *.png)
+        :param filename: filename where to store the rendering output_generator
+        (supported image format *.bmp , .. , *.png)
         """
         img = self.alpha_composite_layers()
         img.save(filename)
@@ -268,15 +269,15 @@ class PILSVG(PILGL):
         self.lwAgents = []
         self.agents_prev = []
 
-        self.loadBuildingSVGs()
-        self.loadScenerySVGs()
-        self.loadRailSVGs()
-        self.loadAgentSVGs()
+        self.load_buildings()
+        self.load_scenery()
+        self.load_rail()
+        self.load_agent()
 
     def is_raster(self):
         return False
 
-    def processEvents(self):
+    def process_events(self):
         time.sleep(0.001)
 
     def clear_rails(self):
@@ -289,7 +290,7 @@ class PILSVG(PILGL):
         self.lwAgents = []
         self.agents_prev = []
 
-    def pilFromSvgFile(self, package, resource):
+    def pil_from_svg_file(self, package, resource):
         bytestring = resource_bytes(package, resource)
         bytesPNG = svg2png(bytestring=bytestring, output_height=self.nPixCell, output_width=self.nPixCell)
         with io.BytesIO(bytesPNG) as fIn:
@@ -298,13 +299,13 @@ class PILSVG(PILGL):
 
         return pil_img
 
-    def pilFromSvgBytes(self, bytesSVG):
+    def pil_from_svg_bytes(self, bytesSVG):
         bytesPNG = svg2png(bytesSVG, output_height=self.nPixCell, output_width=self.nPixCell)
         with io.BytesIO(bytesPNG) as fIn:
             pil_img = Image.open(fIn)
             return pil_img
 
-    def loadBuildingSVGs(self):
+    def load_buildings(self):
         dBuildingFiles = [
             "Buildings/Bank.svg",
             "Buildings/Bar.svg",
@@ -327,16 +328,16 @@ class PILSVG(PILGL):
             "Buildings/Fabrik_I.svg",
         ]
 
-        imgBg = self.pilFromSvgFile('svg', "Background_city.svg")
+        imgBg = self.pil_from_svg_file('svg', "Background_city.svg")
 
         self.dBuildings = []
         for sFile in dBuildingFiles:
-            img = self.pilFromSvgFile('svg', sFile)
+            img = self.pil_from_svg_file('svg', sFile)
             img = Image.alpha_composite(imgBg, img)
             self.dBuildings.append(img)
 
-    def loadScenerySVGs(self):
-        dSceneryFiles = [
+    def load_scenery(self):
+        scenery_files = [
             "Scenery/Laubbaume_A.svg",
             "Scenery/Laubbaume_B.svg",
             "Scenery/Laubbaume_C.svg",
@@ -345,41 +346,41 @@ class PILSVG(PILGL):
             "Scenery/Bergwelt_B.svg"
         ]
 
-        dSceneryFilesDim2 = [
+        scenery_files_d2 = [
             "Scenery/Bergwelt_C_Teil_1_links.svg",
             "Scenery/Bergwelt_C_Teil_2_rechts.svg"
         ]
 
-        dSceneryFilesDim3 = [
+        scenery_files_d3 = [
             "Scenery/Bergwelt_A_Teil_3_rechts.svg",
             "Scenery/Bergwelt_A_Teil_2_mitte.svg",
             "Scenery/Bergwelt_A_Teil_1_links.svg"
         ]
 
-        imgBg = self.pilFromSvgFile('svg', "Background_Light_green.svg")
+        img_back_ground = self.pil_from_svg_file('svg', "Background_Light_green.svg")
 
-        self.dScenery = []
-        for sFile in dSceneryFiles:
-            img = self.pilFromSvgFile('svg', sFile)
-            img = Image.alpha_composite(imgBg, img)
-            self.dScenery.append(img)
+        self.scenery = []
+        for file in scenery_files:
+            img = self.pil_from_svg_file('svg', file)
+            img = Image.alpha_composite(img_back_ground, img)
+            self.scenery.append(img)
 
-        self.dSceneryDim2 = []
-        for sFile in dSceneryFilesDim2:
-            img = self.pilFromSvgFile('svg', sFile)
-            img = Image.alpha_composite(imgBg, img)
-            self.dSceneryDim2.append(img)
+        self.scenery_d2 = []
+        for file in scenery_files_d2:
+            img = self.pil_from_svg_file('svg', file)
+            img = Image.alpha_composite(img_back_ground, img)
+            self.scenery_d2.append(img)
 
-        self.dSceneryDim3 = []
-        for sFile in dSceneryFilesDim3:
-            img = self.pilFromSvgFile('svg', sFile)
-            img = Image.alpha_composite(imgBg, img)
-            self.dSceneryDim3.append(img)
+        self.scenery_d3 = []
+        for file in scenery_files_d3:
+            img = self.pil_from_svg_file('svg', file)
+            img = Image.alpha_composite(img_back_ground, img)
+            self.scenery_d3.append(img)
 
-    def loadRailSVGs(self):
+    def load_rail(self):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
         """
-        dRailFiles = {
+        rail_files = {
             "": "Background_Light_green.svg",
             "WE": "Gleis_Deadend.svg",
             "WW EE NN SS": "Gleis_Diamond_Crossing.svg",
@@ -404,7 +405,7 @@ class PILSVG(PILGL):
             "NE EN SW WS": "Gleis_Kurve_oben_links_unten_rechts.svg"
         }
 
-        dTargetFiles = {
+        target_files = {
             "EW": "Bahnhof_#d50000_Deadend_links.svg",
             "NS": "Bahnhof_#d50000_Deadend_oben.svg",
             "WE": "Bahnhof_#d50000_Deadend_rechts.svg",
@@ -413,114 +414,113 @@ class PILSVG(PILGL):
             "NN SS": "Bahnhof_#d50000_Gleis_vertikal.svg"}
 
         # Dict of rail cell images indexed by binary transitions
-        dPilRailFiles = self.loadSVGs(dRailFiles, rotate=True, backgroundImage="Background_rail.svg",
-                                      whitefilter="Background_white_filter.svg")
+        pil_rail_files = self.load_svgs(rail_files, rotate=True, background_image="Background_rail.svg",
+                                        whitefilter="Background_white_filter.svg")
 
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
-        dPilTargetFiles = self.loadSVGs(dTargetFiles, rotate=False, agent_colors=self.ltAgentColors,
-                                        backgroundImage="Background_rail.svg",
-                                        whitefilter="Background_white_filter.svg")
+        pil_target_files = self.load_svgs(target_files, rotate=False, agent_colors=self.agent_colors,
+                                          background_image="Background_rail.svg",
+                                          whitefilter="Background_white_filter.svg")
 
         # Load station and recolorize them
-        station = self.pilFromSvgFile("svg", "Bahnhof_#d50000_target.svg")
-        self.ltStationColors = self.recolorImage(station, [0, 0, 0], self.ltAgentColors, False)
+        station = self.pil_from_svg_file("svg", "Bahnhof_#d50000_target.svg")
+        self.station_colors = self.recolor_image(station, [0, 0, 0], self.agent_colors, False)
 
-        cellOccupied = self.pilFromSvgFile("svg", "Cell_occupied.svg")
-        self.ltCellOccupied = self.recolorImage(cellOccupied, [0, 0, 0], self.ltAgentColors, False)
+        cell_occupied = self.pil_from_svg_file("svg", "Cell_occupied.svg")
+        self.cell_occupied = self.recolor_image(cell_occupied, [0, 0, 0], self.agent_colors, False)
 
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
-        self.dPilRail = {**dPilRailFiles, **dPilTargetFiles}
+        self.pil_rail = {**pil_rail_files, **pil_target_files}
 
-    def loadSVGs(self, dDirFile, rotate=False, agent_colors=False, backgroundImage=None, whitefilter=None):
-        dPil = {}
+    def load_svgs(self, file_directory, rotate=False, agent_colors=False, background_image=None, whitefilter=None):
+        pil = {}
 
         transitions = RailEnvTransitions()
 
-        lDirs = list("NESW")
+        directions = list("NESW")
 
-        for sTrans, sFile in dDirFile.items():
+        for transition, file in file_directory.items():
 
             # Translate the ascii transition description in the format  "NE WS" to the 
             # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
-            lTrans16 = ["0"] * 16
-            for sTran in sTrans.split(" "):
+            transition_16_bit = ["0"] * 16
+            for sTran in transition.split(" "):
                 if len(sTran) == 2:
-                    iDirIn = lDirs.index(sTran[0])
-                    iDirOut = lDirs.index(sTran[1])
-                    iTrans = 4 * iDirIn + iDirOut
-                    lTrans16[iTrans] = "1"
-            sTrans16 = "".join(lTrans16)
-            binTrans = int(sTrans16, 2)
+                    in_direction = directions.index(sTran[0])
+                    out_direction = directions.index(sTran[1])
+                    transition_idx = 4 * in_direction + out_direction
+                    transition_16_bit[transition_idx] = "1"
+            transition_16_bit_string = "".join(transition_16_bit)
+            binary_trans = int(transition_16_bit_string, 2)
 
-            pilRail = self.pilFromSvgFile('svg', sFile)
+            pil_rail = self.pil_from_svg_file('svg', file)
 
-            if backgroundImage is not None:
-                imgBg = self.pilFromSvgFile('svg', backgroundImage)
-                pilRail = Image.alpha_composite(imgBg, pilRail)
+            if background_image is not None:
+                img_bg = self.pil_from_svg_file('svg', background_image)
+                pil_rail = Image.alpha_composite(img_bg, pil_rail)
 
             if whitefilter is not None:
-                imgBg = self.pilFromSvgFile('svg', whitefilter)
-                pilRail = Image.alpha_composite(pilRail, imgBg)
+                img_bg = self.pil_from_svg_file('svg', whitefilter)
+                pil_rail = Image.alpha_composite(pil_rail, img_bg)
 
             if rotate:
                 # For rotations, we also store the base image
-                dPil[binTrans] = pilRail
+                pil[binary_trans] = pil_rail
                 # Rotate both the transition binary and the image and save in the dict
                 for nRot in [90, 180, 270]:
-                    binTrans2 = transitions.rotate_transition(binTrans, nRot)
+                    binary_trans_2 = transitions.rotate_transition(binary_trans, nRot)
 
                     # PIL rotates anticlockwise for positive theta
-                    pilRail2 = pilRail.rotate(-nRot)
-                    dPil[binTrans2] = pilRail2
+                    pil_rail_2 = pil_rail.rotate(-nRot)
+                    pil[binary_trans_2] = pil_rail_2
 
             if agent_colors:
                 # For recoloring, we don't store the base image.
-                a3BaseColor = self.rgb_s2i("d50000")
-                lPils = self.recolorImage(pilRail, a3BaseColor, self.ltAgentColors)
-                for iColor, pilRail2 in enumerate(lPils):
-                    dPil[(binTrans, iColor)] = lPils[iColor]
+                base_color = self.rgb_s2i("d50000")
+                pils = self.recolor_image(pil_rail, base_color, self.agent_colors)
+                for color_idx, pil_rail_2 in enumerate(pils):
+                    pil[(binary_trans, color_idx)] = pils[color_idx]
 
-        return dPil
+        return pil
 
-    def setRailAt(self, row, col, binTrans, iTarget=None, isSelected=False, rail_grid=None):
-        if binTrans in self.dPilRail:
-            pilTrack = self.dPilRail[binTrans]
-            if iTarget is not None:
-                pilTrack = Image.alpha_composite(pilTrack, self.ltStationColors[iTarget % len(self.ltStationColors)])
+    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None):
+        if binary_trans in self.pil_rail:
+            pil_track = self.pil_rail[binary_trans]
+            if target is not None:
+                pil_track = Image.alpha_composite(pil_track, self.station_colors[target % len(self.station_colors)])
 
-            if binTrans == 0:
+            if binary_trans == 0:
                 if self.background_grid[col][row] <= 4:
                     a = int(self.background_grid[col][row])
                     a = a % len(self.dBuildings)
                     if (col + row + col * row) % 13 > 11:
-                        pilTrack = self.dScenery[a % len(self.dScenery)]
+                        pil_track = self.scenery[a % len(self.scenery)]
                     else:
                         if (col + row + col * row) % 3 == 0:
                             a = (a + (col + row + col * row)) % len(self.dBuildings)
-                        pilTrack = self.dBuildings[a]
+                        pil_track = self.dBuildings[a]
                 elif (self.background_grid[col][row] > 4) or ((col ** 3 + row ** 2 + col * row) % 10 == 0):
                     a = int(self.background_grid[col][row]) - 4
                     a2 = (a + (col + row + col * row + col ** 3 + row ** 4))
                     if a2 % 17 > 11:
                         a = a2
-                    pilTrack = self.dScenery[a % len(self.dScenery)]
+                    pil_track = self.scenery[a % len(self.scenery)]
 
-            self.drawImageRC(pilTrack, (row, col))
+            self.draw_image_row_col(pil_track, (row, col))
         else:
-            print("Illegal rail:", row, col, format(binTrans, "#018b")[2:], binTrans)
+            print("Illegal rail:", row, col, format(binary_trans, "#018b")[2:], binary_trans)
 
-        if iTarget is not None:
-            if isSelected:
-                svgBG = self.pilFromSvgFile("svg", "Selected_Target.svg")
+        if target is not None:
+            if is_selected:
+                svgBG = self.pil_from_svg_file("svg", "Selected_Target.svg")
                 self.clear_layer(3, 0)
-                self.drawImageRC(svgBG, (row, col), layer=3)
+                self.draw_image_row_col(svgBG, (row, col), layer=3)
 
-    def recolorImage(self, pil, a3BaseColor, ltColors, invert=False):
+    def recolor_image(self, pil, a3BaseColor, ltColors, invert=False):
         rgbaImg = array(pil)
-        lPils = []
-
+        pils = []
         for iColor, tnColor in enumerate(ltColors):
             # find the pixels which match the base paint color
             if invert:
@@ -532,67 +532,67 @@ class PILSVG(PILGL):
             # Repaint the base color with the new color
             rgbaImg2[xy_color_mask, 0:3] = tnColor
             pil2 = Image.fromarray(rgbaImg2)
-            lPils.append(pil2)
-        return lPils
+            pils.append(pil2)
+        return pils
 
-    def loadAgentSVGs(self):
+    def load_agent(self):
 
         # Seed initial train/zug files indexed by tuple(iDirIn, iDirOut):
-        dDirsFile = {
+        file_directory = {
             (0, 0): "Zug_Gleis_#0091ea.svg",
             (1, 2): "Zug_1_Weiche_#0091ea.svg",
             (0, 3): "Zug_2_Weiche_#0091ea.svg"
         }
 
         # "paint" color of the train images we load - this is the color we will change.
-        # a3BaseColor = self.rgb_s2i("0091ea") \#  noqa: E800
+        # base_color = self.rgb_s2i("0091ea") \#  noqa: E800
         # temporary workaround for trains / agents renamed with different colour:
-        a3BaseColor = self.rgb_s2i("d50000")
+        base_color = self.rgb_s2i("d50000")
 
-        self.dPilZug = {}
+        self.pil_zug = {}
 
-        for tDirs, sPathSvg in dDirsFile.items():
-            iDirIn, iDirOut = tDirs
+        for directions, path_svg in file_directory.items():
+            in_direction, out_direction = directions
 
-            pilZug = self.pilFromSvgFile("svg", sPathSvg)
+            pil_zug = self.pil_from_svg_file("svg", path_svg)
 
             # Rotate both the directions and the image and save in the dict
-            for iDirRot in range(4):
-                nDegRot = iDirRot * 90
-                iDirIn2 = (iDirIn + iDirRot) % 4
-                iDirOut2 = (iDirOut + iDirRot) % 4
+            for rot_direction in range(4):
+                rotation_degree = rot_direction * 90
+                in_direction_2 = (in_direction + rot_direction) % 4
+                out_direction_2 = (out_direction + rot_direction) % 4
 
                 # PIL rotates anticlockwise for positive theta
-                pilZug2 = pilZug.rotate(-nDegRot)
+                pil_zug_2 = pil_zug.rotate(-rotation_degree)
 
                 # Save colored versions of each rotation / variant
-                lPils = self.recolorImage(pilZug2, a3BaseColor, self.ltAgentColors)
-                for iColor, pilZug3 in enumerate(lPils):
-                    self.dPilZug[(iDirIn2, iDirOut2, iColor)] = lPils[iColor]
+                pils = self.recolor_image(pil_zug_2, base_color, self.agent_colors)
+                for color_idx, pil_zug_3 in enumerate(pils):
+                    self.pil_zug[(in_direction_2, out_direction_2, color_idx)] = pils[color_idx]
 
-    def setAgentAt(self, iAgent, row, col, iDirIn, iDirOut, isSelected):
-        delta_dir = (iDirOut - iDirIn) % 4
-        iColor = iAgent % self.nAgentColors
-        # when flipping direction at a dead end, use the "iDirOut" direction.
+    def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected):
+        delta_dir = (out_direction - in_direction) % 4
+        color_idx = agent_idx % self.n_agent_colors
+        # when flipping direction at a dead end, use the "out_direction" direction.
         if delta_dir == 2:
-            iDirIn = iDirOut
-        pilZug = self.dPilZug[(iDirIn % 4, iDirOut % 4, iColor)]
-        self.drawImageRC(pilZug, (row, col), layer=1)
+            in_direction = out_direction
+        pil_zug = self.pil_zug[(in_direction % 4, out_direction % 4, color_idx)]
+        self.draw_image_row_col(pil_zug, (row, col), layer=1)
 
-        if isSelected:
-            svgBG = self.pilFromSvgFile("svg", "Selected_Agent.svg")
+        if is_selected:
+            bg_svg = self.pil_from_svg_file("svg", "Selected_Agent.svg")
             self.clear_layer(2, 0)
-            self.drawImageRC(svgBG, (row, col), layer=2)
+            self.draw_image_row_col(bg_svg, (row, col), layer=2)
 
-    def setCellOccupied(self, iAgent, row, col):
-        occIm = self.ltCellOccupied[iAgent % len(self.ltCellOccupied)]
-        self.drawImageRC(occIm, (row, col), 1)
+    def set_cell_occupied(self, agent_idx, row, col):
+        occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]
+        self.draw_image_row_col(occupied_im, (row, col), 1)
 
 
 def main2():
     gl = PILSVG(10, 10)
     for i in range(10):
-        gl.beginFrame()
+        gl.begin_frame()
         gl.plot([3 + i, 4], [-4 - i, -5], color="r")
         gl.endFrame()
         time.sleep(1)
@@ -602,7 +602,7 @@ def main():
     gl = PILSVG(width=10, height=10)
 
     for i in range(1000):
-        gl.processEvents()
+        gl.process_events()
         time.sleep(0.1)
     time.sleep(1)
 

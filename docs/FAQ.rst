@@ -43,5 +43,5 @@ Frequently Asked Questions (FAQs)
     Renders the scene into a image (screenshot)
     .. code-block:: python
 
-    renderer.gl.saveImage("filename.bmp")
+    renderer.gl.save_image("filename.bmp")
 

@@ -99,7 +99,7 @@ Basic usage of the RailEnv environment used by the Flatland Challenge
         _action = my_controller()
         obs, all_rewards, done, _ = env.step(_action)
         print("Rewards: {}, [done={}]".format( all_rewards, done))
-        env_renderer.renderEnv(show=True, frames=False, show_observations=False)
+        env_renderer.render_env(show=True, frames=False, show_observations=False)
         time.sleep(0.3)
 
 and **ideally** you should see something along the lines of 

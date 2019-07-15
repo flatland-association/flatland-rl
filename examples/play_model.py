@@ -117,7 +117,7 @@ def main(render=True, delay=0.0, n_trials=3, n_steps=50):
         for step in range(n_steps):
             oPlayer.step()
             if render:
-                env_renderer.renderEnv(show=True, frames=True, iEpisode=trials, iStep=step)
+                env_renderer.render_env(show=True, frames=True, episode=trials, step=step)
                 if delay > 0:
                     time.sleep(delay)
 

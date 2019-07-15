@@ -33,7 +33,7 @@ env = RailEnv(width=10,
 env.reset()
 
 env_renderer = RenderTool(env, gl="PIL")
-env_renderer.renderEnv(show=True)
-env_renderer.renderEnv(show=True)
+env_renderer.render_env(show=True)
+env_renderer.render_env(show=True)
 
 input("Press Enter to continue...")

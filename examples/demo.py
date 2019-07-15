@@ -102,7 +102,7 @@ class Demo:
                 action_dict.update({iAgent: action})
 
             # render
-            self.renderer.renderEnv(show=True, show_observations=False)
+            self.renderer.render_env(show=True, show_observations=False)
 
             # environment step (apply the actions to all agents)
             next_obs, all_rewards, done, _ = self.env.step(action_dict)
@@ -111,7 +111,7 @@ class Demo:
                 break
 
             if self.record_frames is not None:
-                self.renderer.gl.saveImage(self.record_frames.format(step))
+                self.renderer.gl.save_image(self.record_frames.format(step))
 
         self.renderer.close_window()
 

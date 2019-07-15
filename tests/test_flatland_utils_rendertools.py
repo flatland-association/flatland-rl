@@ -6,7 +6,6 @@ Tests for `flatland` package.
 
 import sys
 
-import matplotlib.pyplot as plt
 import numpy as np
 from importlib_resources import path
 
@@ -21,7 +20,7 @@ def checkFrozenImage(oRT, sFileImage, resave=False):
     sDirRoot = "."
     sDirImages = sDirRoot + "/images/"
 
-    img_test = oRT.getImage()
+    img_test = oRT.get_image()
 
     if resave:
         np.savez_compressed(sDirImages + sFileImage, img=img_test)
@@ -45,34 +44,13 @@ def test_render_env(save_new_images=False):
                    )
     oEnv.rail.load_transition_map('env_data.tests', "test1.npy")
     oRT = rt.RenderTool(oEnv, gl="PILSVG")
-    oRT.renderEnv(show=False)
+    oRT.render_env(show=False)
 
     checkFrozenImage(oRT, "basic-env.npz", resave=save_new_images)
 
     oRT = rt.RenderTool(oEnv, gl="PIL")
-    oRT.renderEnv()
+    oRT.render_env()
     checkFrozenImage(oRT, "basic-env-PIL.npz", resave=save_new_images)
-
-    # disable the tree / observation tests until env-agent save/load is available
-    if False:
-        lVisits = oRT.getTreeFromRail(
-            oEnv.agents_position[0],
-            oEnv.agents_direction[0],
-            nDepth=17, bPlot=True)
-
-        checkFrozenImage("env-tree-spatial.png")
-
-        plt.figure(figsize=(8, 8))
-        xyTarg = oRT.env.agents_target[0]
-        visitDest = oRT.plotTree(lVisits, xyTarg)
-
-        checkFrozenImage("env-tree-graph.png")
-
-        plt.figure(figsize=(10, 10))
-        oRT.renderEnv()
-        oRT.plotPath(visitDest)
-
-        checkFrozenImage("env-path.png")
 
 
 def main():

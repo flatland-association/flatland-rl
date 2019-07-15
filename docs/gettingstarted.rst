@@ -79,7 +79,7 @@ Environments can be rendered using the utils.rendertools utilities, for example:
 .. code-block:: python
 
     env_renderer = RenderTool(env)
-    env_renderer.renderEnv(show=True)
+    env_renderer.render_env(show=True)
 
 
 Finally, the environment can be run by supplying the environment step function 
