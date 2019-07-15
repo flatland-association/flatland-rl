@@ -145,8 +145,6 @@ class View(object):
         self.oRT = rt.RenderTool(self.editor.env, gl=self.sGL)
 
     def redraw(self):
-        print("redrawing outside")
-        print(self.output_generator)
         with self.output_generator:
             self.oRT.set_new_rail()
             self.model.env.agents = self.model.env.agents_static
