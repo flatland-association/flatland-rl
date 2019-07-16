@@ -52,7 +52,6 @@ class TreeObsForRailEnv(ObservationBuilder):
             for i in range(nb_agents):
                 if agents[i].target != self.agents_previous_reset[i].target:
                     compute_distance_map = True
-
         # Don't compute the distance map if it was loaded
         if self.agents_previous_reset is None and self.distance_map is not None:
             self.location_has_target = {tuple(agent.target): 1 for agent in agents}
@@ -65,7 +64,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     def _compute_distance_map(self):
         agents = self.env.agents
-
+        print("Computing distance map")
         # For testing only --> To assert if a distance map need to be recomputed.
         self.distance_map_computed = True
         nb_agents = len(agents)
