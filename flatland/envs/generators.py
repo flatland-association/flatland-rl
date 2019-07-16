@@ -145,7 +145,7 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
         agents_target = [sg[1] for sg in start_goal[:num_agents]]
         agents_direction = start_dir[:num_agents]
 
-        return grid_map, agents_position, agents_direction, agents_target, [1.0]*len(agents_position)
+        return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
     return generator
 
@@ -193,7 +193,7 @@ def rail_from_manual_specifications_generator(rail_spec):
             rail,
             num_agents)
 
-        return rail, agents_position, agents_direction, agents_target, [1.0]*len(agents_position)
+        return rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
     return generator
 
@@ -218,6 +218,7 @@ def rail_from_file(filename):
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
         data = msgpack.unpackb(load_data, use_list=False)
+
         grid = np.array(data[b"grid"])
         rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
         rail.grid = grid
@@ -227,11 +228,16 @@ def rail_from_file(filename):
         agents_position = [a.position for a in agents_static]
         agents_direction = [a.direction for a in agents_static]
         agents_target = [a.target for a in agents_static]
-        if len(data) > 3:
+        if b"distance_maps" in data.keys():
             distance_maps = data[b"distance_maps"]
-            return rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position), distance_maps
+            if len(distance_maps) > 0:
+                return rail, agents_position, agents_direction, agents_target, [1.0] * len(
+                    agents_position), distance_maps
+            else:
+                return rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
         else:
             return rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
+
     return generator
 
 
@@ -256,7 +262,7 @@ def rail_from_grid_transition_map(rail_map):
             rail_map,
             num_agents)
 
-        return rail_map, agents_position, agents_direction, agents_target, [1.0]*len(agents_position)
+        return rail_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
     return generator
 
@@ -529,6 +535,6 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
             return_rail,
             num_agents)
 
-        return return_rail, agents_position, agents_direction, agents_target, [1.0]*len(agents_position)
+        return return_rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
     return generator

@@ -480,8 +480,12 @@ class RailEnv(Environment):
 
     def save(self, filename):
         if hasattr(self.obs_builder, 'distance_map'):
-            with open(filename, "wb") as file_out:
-                file_out.write(self.get_full_state_dist_msg())
+            if len(self.obs_builder.distance_map) > 0:
+                with open(filename, "wb") as file_out:
+                    file_out.write(self.get_full_state_dist_msg())
+            else:
+                with open(filename, "wb") as file_out:
+                    file_out.write(self.get_full_state_msg())
         else:
             with open(filename, "wb") as file_out:
                 file_out.write(self.get_full_state_msg())
