@@ -408,7 +408,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 nbits = total_transitions
                 if nbits == 1:
                     # Dead-end!
-                    last_is_dead_end = False
+                    last_is_dead_end = True
 
                 if not last_is_dead_end:
                     # Keep walking through the tree along `direction'
