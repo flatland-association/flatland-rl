@@ -218,6 +218,7 @@ def rail_from_file(filename):
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
         data = msgpack.unpackb(load_data, use_list=False)
+
         grid = np.array(data[b"grid"])
         rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
         rail.grid = grid
@@ -227,7 +228,7 @@ def rail_from_file(filename):
         agents_position = [a.position for a in agents_static]
         agents_direction = [a.direction for a in agents_static]
         agents_target = [a.target for a in agents_static]
-        if len(data) > 3:
+        if b"distance_maps" in data.keys():
             distance_maps = data[b"distance_maps"]
             return rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position), distance_maps
         else:

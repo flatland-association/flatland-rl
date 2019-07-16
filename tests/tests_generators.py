@@ -138,6 +138,9 @@ def tests_rail_from_file():
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
+
+    # Check that distance map was not recomputed
+    assert env.obs_builder.distance_map_computed is False
     assert np.shape(env.obs_builder.distance_map) == dist_map_shape
     assert env.obs_builder.distance_map is not None
 
@@ -207,5 +210,6 @@ def tests_rail_from_file():
     assert agents_initial_2 == agents_loaded_4
 
     # Check that distance map was generated with correct shape
+    assert env4.obs_builder.distance_map_computed is True
     assert env4.obs_builder.distance_map is not None
     assert np.shape(env4.obs_builder.distance_map) == dist_map_shape

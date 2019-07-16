@@ -41,6 +41,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.tree_explored_actions = [1, 2, 3, 0]
         self.tree_explorted_actions_char = ['L', 'F', 'R', 'B']
         self.distance_map = None
+        self.distance_map_computed = False
 
     def reset(self):
         agents = self.env.agents
@@ -64,6 +65,9 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     def _compute_distance_map(self):
         agents = self.env.agents
+
+        # For testing only --> To assert if a distance map need to be recomputed.
+        self.distance_map_computed = True
         nb_agents = len(agents)
         self.distance_map = np.inf * np.ones(shape=(nb_agents,
                                                     self.env.height,
