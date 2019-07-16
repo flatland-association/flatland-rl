@@ -231,7 +231,6 @@ def rail_from_file(filename):
         if b"distance_maps" in data.keys():
             distance_maps = data[b"distance_maps"]
             if len(distance_maps) > 0:
-                print("Loading distance map")
                 return rail, agents_position, agents_direction, agents_target, [1.0] * len(
                     agents_position), distance_maps
             else:
