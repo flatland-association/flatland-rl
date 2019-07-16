@@ -396,18 +396,16 @@ class TreeObsForRailEnv(ObservationBuilder):
             cell_transitions = self.env.rail.get_transitions(*position, direction)
             total_transitions = bin(self.env.rail.get_full_transitions(*position)).count("1")
             num_transitions = np.count_nonzero(cell_transitions)
+
             exploring = False
+
             # Detect Switches that can only be used by other agents.
-            if total_transitions > 2 > num_transitions:
+            if total_transitions > 2 > num_transitions and tot_dist < unusable_switch:
                 unusable_switch = tot_dist
 
             if num_transitions == 1:
                 # Check if dead-end, or if we can go forward along direction
-                nbits = 0
-                tmp = self.env.rail.get_full_transitions(*position)
-                while tmp > 0:
-                    nbits += (tmp & 1)
-                    tmp = tmp >> 1
+                nbits = total_transitions
                 if nbits == 1:
                     # Dead-end!
                     last_is_dead_end = True
@@ -433,8 +431,6 @@ class TreeObsForRailEnv(ObservationBuilder):
                 break
 
         # `position' is either a terminal node or a switch
-
-        observation = []
 
         # #############################
         # #############################
@@ -463,6 +459,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                            other_agent_same_direction,
                            other_agent_opposite_direction
                            ]
+
         else:
             observation = [own_target_encountered,
                            other_target_encountered,
