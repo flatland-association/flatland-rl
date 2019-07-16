@@ -397,8 +397,9 @@ class TreeObsForRailEnv(ObservationBuilder):
             total_transitions = bin(self.env.rail.get_full_transitions(*position)).count("1")
             num_transitions = np.count_nonzero(cell_transitions)
             exploring = False
+
             # Detect Switches that can only be used by other agents.
-            if total_transitions > 2 > num_transitions:
+            if total_transitions > 2 > num_transitions and tot_dist < unusable_switch:
                 unusable_switch = tot_dist
 
             if num_transitions == 1:

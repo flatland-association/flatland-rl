@@ -446,7 +446,7 @@ class RailEnv(Environment):
         # agents are always reset as not moving
         self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data[b"agents_static"]]
         self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4]) for d in data[b"agents"]]
-        if hasattr(self.obs_builder, 'distance_map'):
+        if hasattr(self.obs_builder, 'distance_map') and b"distance_maps" in data.keys():
             self.obs_builder.distance_map = data[b"distance_maps"]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
