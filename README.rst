@@ -129,14 +129,14 @@ Partners
 Authors
 ============
 
-* Sharada Mohanty <mohanty@aicrowd.com>
-* Giacomo Spigler <giacomo.spigler@gmail.com>
-* Mattias Ljungström
-* Jeremy Watson
-* Erik Nygren <erik.nygren@sbb.ch>
-* Adrian Egli <adrian.egli@sbb.ch>
 * Christian Eichenberger <christian.markus.eichenberger@sbb.ch>
+* Adrian Egli <adrian.egli@sbb.ch>
+* Mattias Ljungström
+* Sharada Mohanty <mohanty@aicrowd.com>
 * Guillaume Mollard <guillaume.mollard2@gmail.com>
+* Erik Nygren <erik.nygren@sbb.ch>
+* Giacomo Spigler <giacomo.spigler@gmail.com>
+* Jeremy Watson
 
 
 Acknowledgements
