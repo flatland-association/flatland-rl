@@ -11,6 +11,7 @@ Flatland
      :target: https://gitlab.aicrowd.com/flatland/flatland/pipelines
      :alt: Test Coverage
 
+
 .. image:: https://i.imgur.com/0rnbSLY.gif
   :width: 400
   :align: center
@@ -117,7 +118,7 @@ Please follow the `Contribution Guidelines <http://flatland-rl-docs.s3-website.e
 
 Partners 
 ============
-.. image:: https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Sbb-logo.svg/1418px-Sbb-logo.svg.png
+.. image:: https://i.imgur.com/OSCXtde.png
    :target: https://sbb.ch
 .. image:: https://avatars1.githubusercontent.com/u/44522764?s=200&v=4
    :target: https://www.aicrowd.com
