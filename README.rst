@@ -7,13 +7,15 @@ Flatland
 .. image:: https://gitlab.aicrowd.com/flatland/flatland/badges/master/pipeline.svg
      :target: https://gitlab.aicrowd.com/flatland/flatland/pipelines
      :alt: Test Running
+     
 .. image:: https://gitlab.aicrowd.com/flatland/flatland/badges/master/coverage.svg
      :target: https://gitlab.aicrowd.com/flatland/flatland/pipelines
      :alt: Test Coverage
 
+'   
 
 .. image:: https://i.imgur.com/0rnbSLY.gif
-  :width: 400
+  :width: 800
   :align: center
 
 Flatland is a opensource toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (or ridiculously large !) gridworlds.
@@ -43,7 +45,7 @@ Quick Start
 
 * Install `Anaconda <https://www.anaconda.com/distribution/>`_ by following the instructions `here <https://www.anaconda.com/distribution/>`_
 * Install the dependencies and the library
-
+ 
 .. code-block:: console
 
     $ conda create python=3.6 --name flatland-rl
@@ -105,7 +107,7 @@ Basic usage of the RailEnv environment used by the Flatland Challenge
 
 and **ideally** you should see something along the lines of 
 
-.. image:: https://i.imgur.com/xgWGRse.gif
+.. image:: https://i.imgur.com/VrTQVeM.gif
   :align: center
   :width: 600px
 
