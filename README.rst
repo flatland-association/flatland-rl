@@ -11,7 +11,7 @@ Flatland
      :target: https://gitlab.aicrowd.com/flatland/flatland/pipelines
      :alt: Test Coverage
 
-.. image:: https://i.imgur.com/rKGEmsk.gif
+.. image:: https://i.imgur.com/0rnbSLY.gif
   :width: 400
   :align: center
 
