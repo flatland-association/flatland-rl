@@ -23,7 +23,6 @@ for i in range(env.get_num_agents()):
 
 env_renderer = RenderTool(env)
 env_renderer.render_env(show=True, frames=True)
-env_renderer.render_env(show=True, frames=True)
 
 print("Manual control: s=perform step, q=quit, [agent id] [1-2-3 action] \
        (turnleft+move, move to front, turnright+move)")
