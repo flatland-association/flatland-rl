@@ -57,6 +57,17 @@ class RenderTool(object):
         self.new_rail = True
         self.update_background()
 
+    def reset(self):
+        """
+        Resets the environment
+        :return:
+        """
+        self.set_new_rail()
+        self.frame_nr = 0
+        self.start_time = time.time()
+        self.times_list = deque()
+        return
+
     def update_background(self):
         # create background map
         targets = {}
