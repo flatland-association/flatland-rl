@@ -1,5 +1,4 @@
 from flatland.envs.generators import rail_from_manual_specifications_generator
-from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
 
@@ -13,12 +12,11 @@ specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0)],
 env = RailEnv(width=6,
               height=4,
               rail_generator=rail_from_manual_specifications_generator(specs),
-              number_of_agents=1,
-              obs_builder_object=TreeObsForRailEnv(max_depth=2))
+              number_of_agents=1)
 
 env.reset()
 
 env_renderer = RenderTool(env)
-env_renderer.render_env(show=True)
+env_renderer.render_env(show=True, show_predictions=False, show_observations=False)
 
 input("Press Enter to continue...")
