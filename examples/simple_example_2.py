@@ -3,7 +3,6 @@ import random
 import numpy as np
 
 from flatland.envs.generators import random_rail_generator
-from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
 
@@ -27,8 +26,7 @@ transition_probability = [1.0,  # empty cell - Case 0
 env = RailEnv(width=10,
               height=10,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
-              number_of_agents=3,
-              obs_builder_object=TreeObsForRailEnv(max_depth=2))
+              number_of_agents=3)
 
 env.reset()
 
