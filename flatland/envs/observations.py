@@ -358,8 +358,9 @@ class TreeObsForRailEnv(ObservationBuilder):
                     if int_position in np.delete(self.predicted_pos[tot_dist], handle, 0):
                         conflicting_agent = np.where(self.predicted_pos[tot_dist] == int_position)
                         for ca in conflicting_agent[0]:
-
                             if direction != self.predicted_dir[tot_dist][ca] and tot_dist < potential_conflict:
+                                potential_conflict = tot_dist
+                            if self.env.dones[ca] and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
                     # Look for opposing paths at distance num_step-1
                     elif int_position in np.delete(self.predicted_pos[pre_step], handle, 0):
@@ -367,11 +368,15 @@ class TreeObsForRailEnv(ObservationBuilder):
                         for ca in conflicting_agent[0]:
                             if direction != self.predicted_dir[pre_step][ca] and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
+                            if self.env.dones[ca] and tot_dist < potential_conflict:
+                                potential_conflict = tot_dist
                     # Look for opposing paths at distance num_step+1
                     elif int_position in np.delete(self.predicted_pos[post_step], handle, 0):
                         conflicting_agent = np.where(self.predicted_pos[post_step] == int_position)
                         for ca in conflicting_agent[0]:
                             if direction != self.predicted_dir[post_step][ca] and tot_dist < potential_conflict:
+                                potential_conflict = tot_dist
+                            if self.env.dones[ca] and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
 
             if position in self.location_has_target and position != agent.target:

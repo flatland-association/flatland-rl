@@ -334,6 +334,7 @@ class RailEnv(Environment):
 
             if np.equal(agent.position, agent.target).all():
                 self.dones[i_agent] = True
+                agent.moving = False
             else:
                 self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
 
