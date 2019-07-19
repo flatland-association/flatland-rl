@@ -320,15 +320,17 @@ class RailEnv(Environment):
 
                 # Perform stored action to transition to the next cell
 
-                # Now 'transition_action_on_cellexit' will be guaranteed to be valid; it was checked on entering
-                # the cell
                 cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
                     self._check_action_on_agent(agent.speed_data['transition_action_on_cellexit'], agent)
 
+                # Check that everything is still fee and that the agent can move
                 if all([new_cell_valid, transition_valid, cell_free]):
                     agent.position = new_position
                     agent.direction = new_direction
                     agent.speed_data['position_fraction'] = 0.0
+                else:
+                    # If the agent cannot move due to any reason, we set its state to not moving.
+                    agent.moving = False
 
             if np.equal(agent.position, agent.target).all():
                 self.dones[i_agent] = True
