@@ -11,7 +11,6 @@ m.patch()
 import hashlib
 import random
 from flatland.evaluators import messages
-from flatland.evaluators.utils import get_all_env_pickle_files
 
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.generators import rail_from_file
@@ -110,7 +109,7 @@ class FlatlandRemoteClient(object):
         if self.verbose: print("Response : ", _response)
         _response = msgpack.unpackb(_response, object_hook=m.decode, encoding="utf8")
         if _response['type'] == messages.FLATLAND_RL.ERROR:
-            raise Exception(str(_response))
+            raise Exception(str(_response["payload"]))
         else:
             return _response
 
@@ -195,12 +194,27 @@ if __name__ == "__main__":
             _action[_idx] = np.random.randint(0, 5)
         return _action
 
-    obs = True
     episode = 0
+    obs = True
     while obs:
         obs = env_client.env_create()
+        if not obs:
+            break
         print("Episode : {}".format(episode))
-        print(obs)
-        print(env_client.env.width)
-        print(env_client.env.height)
         episode += 1
+
+        print(env_client.env.dones['__all__'])
+
+        while True:
+            action = my_controller(obs, env_client.env)
+            observation, all_rewards, done, info = env_client.env_step(action)
+            if done['__all__']:
+                print("Current Episode : ", episode)
+                print("Episode Done")
+                print("Reward : ", sum(list(all_rewards.values())))
+                break
+
+    print("Evaluation Complete...")       
+    print(env_client.submit())
+
+
