@@ -138,6 +138,12 @@ class FlatlandRemoteClient(object):
         _response = self._blocking_request(_request)
         observation = _response['payload']['observation']
 
+        if not observation:
+            # If the observation is False,
+            # then the evaluations are complete
+            # hence return false
+            return observation
+
         test_env_file_path = _response['payload']['env_file_path']
         self.env = RailEnv(
             width=1,
