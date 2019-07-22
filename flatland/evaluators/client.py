@@ -27,10 +27,13 @@ class FlatlandRemoteClient(object):
     """
         Redis client to interface with flatland-rl remote-evaluation-service
         The Docker container hosts a redis-server inside the container.
-        This client connects to the same redis-server, and communicates with the service.
-        The service eventually will reside outside the docker container, and will communicate
+        This client connects to the same redis-server, 
+        and communicates with the service.
+        The service eventually will reside outside the docker container, 
+        and will communicate
         with the client only via the redis-server of the docker container.
-        On the instantiation of the docker container, one service will be instantiated parallely.
+        On the instantiation of the docker container, one service will be 
+        instantiated parallely.
         The service will accepts commands at "`service_id`::commands"
         where `service_id` is either provided as an `env` variable or is
         instantiated to "flatland_rl_redis_service_id"
@@ -107,7 +110,10 @@ class FlatlandRemoteClient(object):
         # Wait with a blocking pop for the response
         _response = _redis.blpop(_request['response_channel'])[1]
         if self.verbose: print("Response : ", _response)
-        _response = msgpack.unpackb(_response, object_hook=m.decode, encoding="utf8")
+        _response = msgpack.unpackb(
+                        _response, 
+                        object_hook=m.decode, 
+                        encoding="utf8")
         if _response['type'] == messages.FLATLAND_RL.ERROR:
             raise Exception(str(_response["payload"]))
         else:

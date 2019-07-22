@@ -1,46 +1,37 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import redis
-
 from flatland.envs.generators import rail_from_file
 from flatland.envs.rail_env import RailEnv
-
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-
-
 from flatland.evaluators import messages
-
-import json
 import numpy as np
 import msgpack
 import msgpack_numpy as m
-m.patch()
-import flatland
 import os
 import timeout_decorator
 import time
-
 import traceback
+m.patch()
 
 ########################################################
 # CONSTANTS
 ########################################################
-PER_STEP_TIMEOUT = 5*60 # 5 minutes
+PER_STEP_TIMEOUT = 5*60  # 5 minutes
 
 
 class FlatlandRemoteEvaluationService:
-    def __init__(   self,
-                    test_env_folder="/tmp",
-                    flatland_rl_service_id = 'FLATLAND_RL_SERVICE_ID',
-                    remote_host = '127.0.0.1',
-                    remote_port = 6379,
-                    remote_db = 0,
-                    remote_password = None,
-                    visualize = False,
-                    report = None,
-                    verbose = False):
-
+    def __init__(self,
+                test_env_folder="/tmp",
+                flatland_rl_service_id='FLATLAND_RL_SERVICE_ID',
+                remote_host='127.0.0.1',
+                remote_port=6379,
+                remote_db=0,
+                remote_password=None,
+                visualize=False,
+                report=None,
+                verbose=False):
 
         # Test Env folder Paths
         self.test_env_folder = test_env_folder
@@ -78,8 +69,6 @@ class FlatlandRemoteEvaluationService:
         self.current_step = 0
         self.visualize = visualize
 
-
-
     def get_env_filepaths(self):
         env_paths = []
         folder_path = self.test_env_folder
@@ -96,8 +85,7 @@ class FlatlandRemoteEvaluationService:
             print("Attempting to connect to redis server at {}:{}/{}".format(
                     self.remote_host, 
                     self.remote_port, 
-                    self.remote_db)
-                )
+                    self.remote_db))
 
         self.redis_pool = redis.ConnectionPool(
                             host=self.remote_host, 
@@ -110,7 +98,7 @@ class FlatlandRemoteEvaluationService:
         redis_conn = redis.Redis(connection_pool=self.redis_pool)
         try:
             redis_conn.ping()
-        except:
+        except Exception as e:
             raise Exception(
                     "Unable to connect to redis server at {}:{} ."
                     "Are you sure there is a redis-server running at the "
@@ -127,7 +115,7 @@ class FlatlandRemoteEvaluationService:
         _response['payload'] = payload
         return _response
 
-    @timeout_decorator.timeout(PER_STEP_TIMEOUT)# timeout for each command
+    @timeout_decorator.timeout(PER_STEP_TIMEOUT)  # timeout for each command
     def _get_next_command(self, _redis):
         command = _redis.brpop(self.command_channel)[1]
         return command
@@ -144,7 +132,6 @@ class FlatlandRemoteEvaluationService:
                             self.current_step,
                             self.simulation_count
                             ))
-        command_response_channel = "default_response_channel"
         command = msgpack.unpackb(
                     command, 
                     object_hook=m.decode, 
@@ -162,7 +149,8 @@ class FlatlandRemoteEvaluationService:
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.PONG
         _command_response['payload'] = {}
-        if self.verbose: print("Responding with : ", _command_response)
+        if self.verbose:
+            print("Responding with : ", _command_response)
         _redis.rpush(
             command_response_channel, 
             msgpack.packb(
@@ -174,7 +162,6 @@ class FlatlandRemoteEvaluationService:
     def handle_env_create(self, command):
         _redis = self.get_redis_connection()
         command_response_channel = command['response_channel']
-        _payload = command['payload']
 
         if self.simulation_count < len(self.env_file_paths):
             """
@@ -198,8 +185,6 @@ class FlatlandRemoteEvaluationService:
                 int(1.5 * (self.env.width + self.env.height))
 
             self.env_available = True
-
-
             self.simulation_count += 1
 
             if self.begin_simulation:
@@ -221,7 +206,8 @@ class FlatlandRemoteEvaluationService:
             _command_response['payload'] = {}
             _command_response['payload']['observation'] = _observation
             _command_response['payload']['env_file_path'] = test_env_file_path
-            if self.verbose: print("Responding with : ", _command_response)
+            if self.verbose:
+                print("Responding with : ", _command_response)
             _redis.rpush(
                 command_response_channel, 
                 msgpack.packb(
@@ -238,7 +224,8 @@ class FlatlandRemoteEvaluationService:
             _command_response['payload'] = {}
             _command_response['payload']['observation'] = False
             _command_response['payload']['env_file_path'] = False            
-            if self.verbose: print("Responding with : ", _command_response)
+            if self.verbose:
+                print("Responding with : ", _command_response)
             _redis.rpush(
                 command_response_channel, 
                 msgpack.packb(
@@ -343,7 +330,6 @@ class FlatlandRemoteEvaluationService:
                 use_bin_type=True)
             )
 
-
     def run(self):
         print("Listening for commands at : ", self.command_channel)
         while True:
@@ -352,11 +338,10 @@ class FlatlandRemoteEvaluationService:
             if self.verbose:
                 print("Self.Reward : ", self.reward)
                 print("Current Simulation : ", self.simulation_count)
-                if self.env_file_paths \
-                    and self.simulation_count < len(self.env_file_paths):
-                    print("Current Env Path : ", \
-                        self.env_file_paths[self.simulation_count]
-                    )
+                if self.env_file_paths and \
+                        self.simulation_count < len(self.env_file_paths):
+                    print("Current Env Path : ",
+                        self.env_file_paths[self.simulation_count])
 
             try:                
                 if command['type'] == messages.FLATLAND_RL.PING:
@@ -391,9 +376,10 @@ class FlatlandRemoteEvaluationService:
                     _error = self._error_template(
                                     "UNKNOWN_REQUEST:{}".format(
                                         str(command)))
-                    if self.verbose:print("Responding with : ", _error)
+                    if self.verbose:
+                        print("Responding with : ", _error)
                     self.report_error(
-                        self._error_template(str(e)),
+                        _error,
                         command['response_channel'])
                     return _error
             except Exception as e:
@@ -404,14 +390,18 @@ class FlatlandRemoteEvaluationService:
                     command['response_channel'])
                 return self._error_template(str(e))
 
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Submit the result to AIcrowd')
-    parser.add_argument('--service_id', dest='service_id', default='FLATLAND_RL_SERVICE_ID', required=False)
+    parser.add_argument('--service_id', 
+                        dest='service_id', 
+                        default='FLATLAND_RL_SERVICE_ID', 
+                        required=False)
     parser.add_argument('--test_folder',
                         dest='test_folder',
-                        default="/Users/spmohanty/work/SBB/submission-scoring/Envs-Small",
-                        help="Folder containing the pickle files for the test envs",
+                        default="../../../submission-scoring/Envs-Small",
+                        help="Folder containing the files for the test envs",
                         required=False)
     args = parser.parse_args()
     
@@ -430,5 +420,5 @@ if __name__ == "__main__":
         error = result['payload']
         raise Exception("Evaluation Failed : {}".format(str(error)))
     else:
-        #Evaluation failed
+        # Evaluation failed
         print("Evaluation Failed : ", result['payload'])
