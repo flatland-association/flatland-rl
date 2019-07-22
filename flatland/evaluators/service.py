@@ -203,18 +203,13 @@ class FlatlandRemoteEvaluationService:
         
         return command
 
-    def handle_ping(self, command):
-        """
-        Handles PING command from the client.
-        """
+    def send_response(self, _command_response, command, suppress_logs=False):
         _redis = self.get_redis_connection()
         command_response_channel = command['response_channel']
 
-        _command_response = {}
-        _command_response['type'] = messages.FLATLAND_RL.PONG
-        _command_response['payload'] = {}
-        if self.verbose:
+        if self.verbose and not suppress_logs:
             print("Responding with : ", _command_response)
+        
         _redis.rpush(
             command_response_channel, 
             msgpack.packb(
@@ -222,6 +217,16 @@ class FlatlandRemoteEvaluationService:
                 default=m.encode, 
                 use_bin_type=True)
         )
+        
+    def handle_ping(self, command):
+        """
+        Handles PING command from the client.
+        """
+        _command_response = {}
+        _command_response['type'] = messages.FLATLAND_RL.PONG
+        _command_response['payload'] = {}
+
+        self.send_response(_command_response, command)
 
     def handle_env_create(self, command):
         """
@@ -230,9 +235,6 @@ class FlatlandRemoteEvaluationService:
             Add a high level summary of everything thats 
             hapenning here.
         """
-        _redis = self.get_redis_connection()
-        command_response_channel = command['response_channel']
-
         if self.simulation_count < len(self.env_file_paths):
             """
             There are still test envs left that are yet to be evaluated 
@@ -276,15 +278,6 @@ class FlatlandRemoteEvaluationService:
             _command_response['payload'] = {}
             _command_response['payload']['observation'] = _observation
             _command_response['payload']['env_file_path'] = test_env_file_path
-            if self.verbose:
-                print("Responding with : ", _command_response)
-            _redis.rpush(
-                command_response_channel, 
-                msgpack.packb(
-                    _command_response, 
-                    default=m.encode, 
-                    use_bin_type=True)
-                )
         else:
             """
             All test env evaluations are complete
@@ -294,15 +287,8 @@ class FlatlandRemoteEvaluationService:
             _command_response['payload'] = {}
             _command_response['payload']['observation'] = False
             _command_response['payload']['env_file_path'] = False            
-            if self.verbose:
-                print("Responding with : ", _command_response)
-            _redis.rpush(
-                command_response_channel, 
-                msgpack.packb(
-                    _command_response, 
-                    default=m.encode, 
-                    use_bin_type=True)
-                )
+
+        self.send_response(_command_response, command)
 
     def handle_env_step(self, command):
         """
@@ -311,8 +297,6 @@ class FlatlandRemoteEvaluationService:
             Add a high level summary of everything thats 
             hapenning here.
         """
-        _redis = self.get_redis_connection()
-        command_response_channel = command['response_channel']
         _payload = command['payload']
 
         if not self.env:
@@ -348,16 +332,7 @@ class FlatlandRemoteEvaluationService:
         _command_response['payload']['reward'] = all_rewards
         _command_response['payload']['done'] = done
         _command_response['payload']['info'] = info
-        if self.verbose: 
-            # print("Responding with : ", _command_response)
-            print("Current Step : ", self.simulation_steps[-1])
-        _redis.rpush(
-            command_response_channel, 
-            msgpack.packb(
-                _command_response, 
-                default=m.encode, 
-                use_bin_type=True)
-            )
+        self.send_response(_command_response, command)
 
     def handle_env_submit(self, command):
         """
@@ -366,8 +341,6 @@ class FlatlandRemoteEvaluationService:
             Add a high level summary of everything thats 
             hapenning here.
         """
-        _redis = self.get_redis_connection()
-        command_response_channel = command['response_channel']
         _payload = command['payload']
 
         # Register simulation time of the last episode
@@ -380,37 +353,28 @@ class FlatlandRemoteEvaluationService:
                 """
             )
 
-        _response = {}
-        _response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
+        _command_response = {}
+        _command_response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
         _payload = {}
         _payload['mean_reward'] = np.mean(self.simulation_rewards)
         _payload['mean_percentage_complete'] = \
             np.mean(self.simulation_percentage_complete)
         
-        _response['payload'] = _payload
-        if self.verbose:
-            print("Responding with : ", _response)
-            print("Registering Env Submit call")
-        _redis.rpush(
-            command_response_channel, 
-            msgpack.packb(
-                _response, 
-                default=m.encode, 
-                use_bin_type=True)
-            )
+        _command_response['payload'] = _payload
+        self.send_response(_command_response, command)
     
     def report_error(self, error_message, command_response_channel):
         """
         A helper function used to report error back to the client
         """
         _redis = self.get_redis_connection()
-        _response = {}
-        _response['type'] = messages.FLATLAND_RL.ERROR
-        _response['payload'] = error_message
+        _command_response = {}
+        _command_response['type'] = messages.FLATLAND_RL.ERROR
+        _command_response['payload'] = error_message
         _redis.rpush(
             command_response_channel, 
             msgpack.packb(
-                _response, 
+                _command_response, 
                 default=m.encode, 
                 use_bin_type=True)
             )
