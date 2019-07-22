@@ -133,10 +133,10 @@ class FlatlandRemoteClient(object):
         else:
             return True
 
-    def env_create(self):
+    def env_create(self, params={}):
         _request = {}
         _request['type'] = messages.FLATLAND_RL.ENV_CREATE
-        _request['payload'] = {}
+        _request['payload'] = params
         _response = self._blocking_request(_request)
         observation = _response['payload']['observation']
 
@@ -197,7 +197,7 @@ class FlatlandRemoteClient(object):
 
 if __name__ == "__main__":
     env_client = FlatlandRemoteClient()
-    
+
     def my_controller(obs, _env):
         _action = {}
         for _idx, _ in enumerate(_env.agents):

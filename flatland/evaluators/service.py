@@ -235,6 +235,8 @@ class FlatlandRemoteEvaluationService:
             Add a high level summary of everything thats 
             hapenning here.
         """
+        env_params = command["payload"]  # noqa F841
+        
         if self.simulation_count < len(self.env_file_paths):
             """
             There are still test envs left that are yet to be evaluated 
@@ -242,6 +244,11 @@ class FlatlandRemoteEvaluationService:
 
             test_env_file_path = self.env_file_paths[self.simulation_count]
             del self.env
+            # TODO : Use env_params dictionary to instantiate
+            # the RailEnv
+            # Maybe use a gin-like interface ?
+            # Needs discussion with Erik + Giacomo
+            # -Mohanty
             self.env = RailEnv(
                 width=1,
                 height=1,
