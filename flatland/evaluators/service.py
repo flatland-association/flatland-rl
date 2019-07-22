@@ -252,8 +252,13 @@ class FlatlandRemoteEvaluationService:
         command_response_channel = command['response_channel']
         _payload = command['payload']
 
+        if not self.env:
+            raise Exception(
+                "env_client.step called before env_client.env_create() call")
         if self.env.dones['__all__']:
-            raise Exception("Client attempted to perform an action on an Env which has done['__all__']==True")
+            raise Exception(
+                "Client attempted to perform an action on an Env which \
+                has done['__all__']==True")
 
         action = _payload['action']
         _observation, all_rewards, done, info = self.env.step(action)
@@ -301,7 +306,8 @@ class FlatlandRemoteEvaluationService:
 
         if len(self.simulation_rewards) != len(self.env_file_paths):
             raise Exception(
-                """env.submit called before the agent had the chance to operate on all the test environments.
+                """env.submit called before the agent had the chance 
+                to operate on all the test environments.
                 """
             )
 
