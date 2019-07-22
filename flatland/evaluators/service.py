@@ -70,7 +70,7 @@ class FlatlandRemoteEvaluationService:
         self.env_available = False
         self.reward = 0
         self.simulation_count = 0
-        self.simualation_rewards = []
+        self.simulation_rewards = []
         self.simulation_percentage_complete = []
         self.simulation_steps = []
         self.simulation_times = []
@@ -208,7 +208,7 @@ class FlatlandRemoteEvaluationService:
                 self.simulation_times.append(time.time()-self.begin_simulation)
             self.begin_simulation = time.time()
 
-            self.simualation_rewards.append(0)
+            self.simulation_rewards.append(0)
             self.simulation_percentage_complete.append(0)
             self.simulation_steps.append(0)
 
@@ -259,7 +259,7 @@ class FlatlandRemoteEvaluationService:
         _observation, all_rewards, done, info = self.env.step(action)
 
         cumulative_reward = np.sum(list(all_rewards.values()))
-        self.simualation_rewards[-1] += cumulative_reward
+        self.simulation_rewards[-1] += cumulative_reward
         self.simulation_steps[-1] += 1
 
         if done["__all__"]:
@@ -299,10 +299,16 @@ class FlatlandRemoteEvaluationService:
         # Register simulation time of the last episode
         self.simulation_times.append(time.time()-self.begin_simulation)
 
+        if len(self.simulation_rewards) != len(self.env_file_paths):
+            raise Exception(
+                """env.submit called before the agent had the chance to operate on all the test environments.
+                """
+            )
+
         _response = {}
         _response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
         _payload = {}
-        _payload['mean_reward'] = np.mean(self.simualation_rewards)
+        _payload['mean_reward'] = np.mean(self.simulation_rewards)
         _payload['mean_percentage_complete'] = \
             np.mean(self.simulation_percentage_complete)
         
