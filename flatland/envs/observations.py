@@ -404,7 +404,8 @@ class TreeObsForRailEnv(ObservationBuilder):
 
             # Check if crossing is found --> Not an unusable switch
             if int(transition_bit, 2) == int('1000010000100001', 2):
-                total_transitions = 1
+                # Treat the crossing as a straight rail cell
+                total_transitions = 2
             num_transitions = np.count_nonzero(cell_transitions)
 
             exploring = False
