@@ -187,23 +187,23 @@ class FlatlandRemoteClient(object):
         _payload = _response['payload']
         
         # remote_observation = _payload['observation']
-        reward = _payload['reward']
-        done = _payload['done']
-        info = _payload['info']
+        remote_reward = _payload['reward']
+        remote_done = _payload['done']
+        remote_info = _payload['info']
 
         # Replicate the action in the local env
         local_observation, local_rewards, local_done, local_info = \
             self.env.step(action)
         
-        assert are_dicts_equal(reward, local_rewards)
-        assert are_dicts_equal(done, local_done)
+        assert are_dicts_equal(remote_reward, local_rewards)
+        assert are_dicts_equal(remote_done, local_done)
         
         # Return local_observation instead of remote_observation
         # as the remote_observation is build using a dummy observation
         # builder
         # We return the remote rewards and done as they are the 
         # once used by the evaluator
-        return [local_observation, reward, done, info]
+        return [local_observation, remote_reward, remote_done, remote_info]
 
     def submit(self):
         _request = {}
