@@ -3,8 +3,7 @@ from __future__ import print_function
 import redis
 from flatland.envs.generators import rail_from_file
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
+from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.evaluators import messages
 import numpy as np
 import msgpack
@@ -235,7 +234,6 @@ class FlatlandRemoteEvaluationService:
             Add a high level summary of everything thats 
             hapenning here.
         """
-        env_params = command["payload"]  # noqa F841
         
         if self.simulation_count < len(self.env_file_paths):
             """
@@ -244,19 +242,11 @@ class FlatlandRemoteEvaluationService:
 
             test_env_file_path = self.env_file_paths[self.simulation_count]
             del self.env
-            # TODO : Use env_params dictionary to instantiate
-            # the RailEnv
-            # Maybe use a gin-like interface ?
-            # Needs discussion with Erik + Giacomo
-            # -Mohanty
             self.env = RailEnv(
                 width=1,
                 height=1,
                 rail_generator=rail_from_file(test_env_file_path),
-                obs_builder_object=TreeObsForRailEnv(
-                                    max_depth=3, 
-                                    predictor=ShortestPathPredictorForRailEnv()
-                                    )
+                obs_builder_object=DummyObservationBuilder()
             )
             
             # Set max episode steps allowed

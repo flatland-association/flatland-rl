@@ -73,3 +73,24 @@ class ObservationBuilder:
         direction = np.zeros(4)
         direction[agent.direction] = 1
         return direction
+
+class DummyObservationBuilder(ObservationBuilder):
+    """
+    DummyObservationBuilder class which returns dummy observations
+    This is used in the evaluation service
+    """
+
+    def __init__(self):
+        self.observation_space = ()
+
+    def _set_env(self, env):
+        self.env = env
+
+    def reset(self):
+        pass
+
+    def get_many(self, handles=[]):
+        return True
+
+    def get(self, handle=0):
+        return True
