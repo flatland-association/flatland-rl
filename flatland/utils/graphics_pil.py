@@ -490,13 +490,17 @@ class PILSVG(PILGL):
         if binary_trans in self.pil_rail:
             pil_track = self.pil_rail[binary_trans]
             if agent_rail_color is not None:
-                colored_rail = self.recolor_image(self.pil_rail_org[binary_trans], [61, 61, 61], [agent_rail_color], False)[0]
+                colored_rail = self.recolor_image(self.pil_rail_org[binary_trans],
+                                                  [61, 61, 61], [agent_rail_color],
+                                                  False)[0]
                 rcTopLeft1 = (row, col)
                 rcTopLeft2 = (row + 1, col + 1)
                 rcTopLeft1 = tuple((array(rcTopLeft1) * self.nPixCell)[[1, 0]])
                 rcTopLeft2 = tuple((array(rcTopLeft2) * self.nPixCell)[[1, 0]])
-                pil_track = Image.blend(self.layers[0].crop((rcTopLeft1[0], rcTopLeft1[1], rcTopLeft2[0], rcTopLeft2[1])), colored_rail,
-                                        blend_factor)
+                pil_track = Image.blend(
+                    self.layers[0].crop((rcTopLeft1[0], rcTopLeft1[1], rcTopLeft2[0], rcTopLeft2[1])),
+                    colored_rail,
+                    blend_factor)
 
             if target is not None:
                 pil_track = Image.alpha_composite(pil_track, self.station_colors[target % len(self.station_colors)])
