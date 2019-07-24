@@ -54,7 +54,7 @@ class View(object):
     def init_canvas(self):
         # update the rendertool with the env
         self.new_env()
-        self.oRT.render_env(spacing=False, arrows=False, rail_color="gray", show=False)
+        self.oRT.render_env(show=False)
         img = self.oRT.get_image()
         self.wImage = jpy_canvas.Canvas(img)
         self.yxSize = self.wImage.data.shape[:2]
@@ -154,8 +154,9 @@ class View(object):
                 if hasattr(a, 'old_direction') is False:
                     a.old_direction = a.direction
 
-            self.oRT.render_env(rail_color="gray", agents=True,
-                                show=False, selected_agent=self.model.selected_agent,
+            self.oRT.render_env(agents=True,
+                                show=False,
+                                selected_agent=self.model.selected_agent,
                                 show_observations=False)
             img = self.oRT.get_image()
 

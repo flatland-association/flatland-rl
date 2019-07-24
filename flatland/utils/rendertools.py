@@ -293,7 +293,7 @@ class RenderTool(object):
             for visited_cell in prediction_dict[agent]:
                 cell_coord = array(visited_cell[:2])
                 cell_coord_trans = np.matmul(cell_coord, rt.row_col_to_xy) + rt.x_y_half
-                self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
+                self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)  # TODO : Track highlighting (Adrian)
 
     def render_rail(self, spacing=False, rail_color="gray", curves=True, arrows=False):
 
@@ -393,31 +393,54 @@ class RenderTool(object):
 
     def render_env(self,
                    show=False,  # whether to call matplotlib show() or equivalent after completion
-                   # use false when calling from Jupyter.  (and matplotlib no longer supported!)
-                   curves=True,  # draw turns as curves instead of straight diagonal lines
-                   spacing=False,  # defunct - size of spacing between rails
-                   arrows=False,  # defunct - draw arrows on rail lines
                    agents=True,  # whether to include agents
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
-                   rail_color="gray",  # color to use in drawing rails (not used with SVG)
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
-                   selected_agent=None,  # indicate which agent is "selected" in the editor
-                   action_dict=None):  # defunct - was used to indicate agent intention to turn
+                   selected_agent=None):  # indicate which agent is "selected" in the editor
         """ Draw the environment using the GraphicsLayer this RenderTool was created with.
             (Use show=False from a Jupyter notebook with %matplotlib inline)
         """
-
         if not self.gl.is_raster():
-            self.render_env_2(show=show, curves=curves, spacing=spacing,
-                              arrows=arrows, agents=agents, show_observations=show_observations,
-                              show_predictions=show_predictions,
-                              rail_color=rail_color,
-                              frames=frames, episode=episode, step=step,
-                              selected_agent=selected_agent, action_dict=action_dict)
-            return
+            self.render_env_svg(show=show,
+                                show_observations=show_observations,
+                                show_predictions=show_predictions,
+                                selected_agent=selected_agent
+                                )
+        else:
+            self.render_env_pil(show=show,
+                                agents=agents,
+                                show_observations=show_observations,
+                                show_predictions=show_predictions,
+                                frames=frames,
+                                episode=episode,
+                                step=step,
+                                selected_agent=selected_agent
+                                )
+
+    def _draw_square(self, center, size, color, opacity=255, layer=0):
+        x0 = center[0] - size / 2
+        x1 = center[0] + size / 2
+        y0 = center[1] - size / 2
+        y1 = center[1] + size / 2
+        self.gl.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color, layer=layer, opacity=opacity)
+
+    def get_image(self):
+        return self.gl.get_image()
+
+    def render_env_pil(self,
+                       show=False,  # whether to call matplotlib show() or equivalent after completion
+                       # use false when calling from Jupyter.  (and matplotlib no longer supported!)
+                       agents=True,  # whether to include agents
+                       show_observations=True,  # whether to include observations
+                       show_predictions=False,  # whether to include predictions
+                       frames=False,  # frame counter to show (intended since invocation)
+                       episode=None,  # int episode number to show
+                       step=None,  # int step number to show in image
+                       selected_agent=None  # indicate which agent is "selected" in the editor
+                       ):
 
         if type(self.gl) is PILGL:
             self.gl.begin_frame()
@@ -466,28 +489,11 @@ class RenderTool(object):
 
         return
 
-    def _draw_square(self, center, size, color, opacity=255, layer=0):
-        x0 = center[0] - size / 2
-        x1 = center[0] + size / 2
-        y0 = center[1] - size / 2
-        y1 = center[1] + size / 2
-        self.gl.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color, layer=layer, opacity=opacity)
-
-    def get_image(self):
-        return self.gl.get_image()
-
-    def render_env_2(
-        self, show=False, curves=True, spacing=False, arrows=False, agents=True,
-        show_observations=True, show_predictions=False, rail_color="gray",
-        frames=False, episode=None, step=None, selected_agent=None,
-        action_dict=dict()
+    def render_env_svg(
+        self, show=False, show_observations=True, show_predictions=False, selected_agent=None
     ):
         """
-        Draw the environment using matplotlib.
-        Draw into the figure if provided.
-
-        Call pyplot.show() if show==True.
-        (Use show=False from a Jupyter notebook with %matplotlib inline)
+        Renders the environment with SVG support (nice image)
         """
 
         env = self.env
