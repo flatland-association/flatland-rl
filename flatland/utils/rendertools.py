@@ -199,72 +199,73 @@ class RenderTool(object):
         """
 
         if not curves and not dead_end:
+            # just a straigt line, no curve nor dead_end included in this basic rail element
             self.gl.plot(
                 [line[0][0], line[1][0]],  # x
                 [line[0][1], line[1][1]],  # y
                 color=color
             )
-            return
+        else:
+            # it was not a simple line to draw: the rail has a curve or dead_end included.
+            rt = self.__class__
+            straight = rotation in [0, 2]
+            dx, dy = np.squeeze(np.diff(line, axis=0)) * spacing / 2
 
-        rt = self.__class__
-        straight = rotation in [0, 2]
-        dx, dy = np.squeeze(np.diff(line, axis=0)) * spacing / 2
+            if straight:
 
-        if straight:
+                if color == "auto":
+                    if dx > 0 or dy > 0:
+                        color = "C1"  # N or E
+                    else:
+                        color = "C2"  # S or W
 
-            if color == "auto":
-                if dx > 0 or dy > 0:
-                    color = "C1"  # N or E
+                if dead_end:
+                    line_xy = array([
+                        line[1] + [dy, dx],
+                        center,
+                        line[1] - [dy, dx],
+                    ])
+                    self.gl.plot(*line_xy.T, color=color)
                 else:
-                    color = "C2"  # S or W
+                    line_xy = line + [-dy, dx]
+                    self.gl.plot(*line_xy.T, color=color)
 
-            if dead_end:
-                line_xy = array([
-                    line[1] + [dy, dx],
-                    center,
-                    line[1] - [dy, dx],
-                ])
-                self.gl.plot(*line_xy.T, color=color)
+                    if arrow:
+                        middle_xy = np.sum(line_xy * [[1 / 4], [3 / 4]], axis=0)
+
+                        arrow_xy = array([
+                            middle_xy + [-dx - dy, +dx - dy],
+                            middle_xy,
+                            middle_xy + [-dx + dy, -dx - dy]])
+                        self.gl.plot(*arrow_xy.T, color=color)
+
             else:
-                line_xy = line + [-dy, dx]
-                self.gl.plot(*line_xy.T, color=color)
+
+                middle_xy = np.mean(line, axis=0)
+                dxy = middle_xy - center
+                corner = middle_xy + dxy
+                if rotation == 1:
+                    arc_factor = 1 - spacing
+                    color_auto = "C1"
+                else:
+                    arc_factor = 1 + spacing
+                    color_auto = "C2"
+                dxy2 = (center - corner) * arc_factor  # for scaling the arc
+
+                if color == "auto":
+                    color = color_auto
+
+                self.gl.plot(*(rt.arc * dxy2 + corner).T, color=color)
 
                 if arrow:
-                    middle_xy = np.sum(line_xy * [[1 / 4], [3 / 4]], axis=0)
-
+                    dx, dy = np.squeeze(np.diff(line, axis=0)) / 20
+                    iArc = int(len(rt.arc) / 2)
+                    middle_xy = corner + rt.arc[iArc] * dxy2
                     arrow_xy = array([
                         middle_xy + [-dx - dy, +dx - dy],
                         middle_xy,
                         middle_xy + [-dx + dy, -dx - dy]])
                     self.gl.plot(*arrow_xy.T, color=color)
-
-        else:
-
-            middle_xy = np.mean(line, axis=0)
-            dxy = middle_xy - center
-            corner = middle_xy + dxy
-            if rotation == 1:
-                arc_factor = 1 - spacing
-                color_auto = "C1"
-            else:
-                arc_factor = 1 + spacing
-                color_auto = "C2"
-            dxy2 = (center - corner) * arc_factor  # for scaling the arc
-
-            if color == "auto":
-                color = color_auto
-
-            self.gl.plot(*(rt.arc * dxy2 + corner).T, color=color)
-
-            if arrow:
-                dx, dy = np.squeeze(np.diff(line, axis=0)) / 20
-                iArc = int(len(rt.arc) / 2)
-                middle_xy = corner + rt.arc[iArc] * dxy2
-                arrow_xy = array([
-                    middle_xy + [-dx - dy, +dx - dy],
-                    middle_xy,
-                    middle_xy + [-dx + dy, -dx - dy]])
-                self.gl.plot(*arrow_xy.T, color=color)
 
     def render_observation(self, agent_handles, observation_dict):
         """
