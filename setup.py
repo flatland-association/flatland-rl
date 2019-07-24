@@ -62,7 +62,7 @@ setup(
     description="Multi Agent Reinforcement Learning on Trains",
     entry_points={
         'console_scripts': [
-            'flatland=flatland.cli:main',
+            'flatland-demo=flatland.cli:demo',
         ],
     },
     install_requires=requirements,
