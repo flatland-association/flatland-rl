@@ -112,11 +112,11 @@ class FlatlandRemoteEvaluationService:
         self.record_frame_step = 0
 
         if self.visualize:
-            try:
+            if os.path.exists(self.vizualization_folder_name):
+                print("[WARNING] Deleting already existing visualizations folder at : {}".format(
+                    self.vizualization_folder_name
+                ))
                 shutil.rmtree(self.vizualization_folder_name)
-            except Exception as e:
-                print(e)
-            
             os.mkdir(self.vizualization_folder_name)
 
     def get_env_filepaths(self):
