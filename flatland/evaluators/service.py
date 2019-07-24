@@ -146,7 +146,6 @@ class FlatlandRemoteEvaluationService:
                         os.path.join(root, file)
                         )
         env_paths = sorted(env_paths)
-        print(self.video_generation_envs)
         for _idx, env_path in enumerate(env_paths):
             """
             Here we collect the indices of the environments for which
@@ -157,7 +156,6 @@ class FlatlandRemoteEvaluationService:
             env_step 
             """
             for vg_env in self.video_generation_envs:
-                print(vg_env, env_path)
                 if vg_env in env_path:
                     self.video_generation_indices.append(_idx+1)
         return sorted(env_paths)        
@@ -431,7 +429,7 @@ class FlatlandRemoteEvaluationService:
         mean_reward = np.mean(self.simulation_rewards)
         mean_percentage_complete = np.mean(self.simulation_percentage_complete)
 
-        if self.visualize:
+        if self.visualize and len(os.listdir(self.vizualization_folder_name)) > 0:
             # Generate the video
             #
             # Note, if you had depdency issues due to ffmpeg, you can 
