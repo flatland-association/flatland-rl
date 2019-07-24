@@ -403,7 +403,7 @@ class RenderTool(object):
         """ Draw the environment using the GraphicsLayer this RenderTool was created with.
             (Use show=False from a Jupyter notebook with %matplotlib inline)
         """
-        if not self.gl.is_raster():
+        if type(self.gl) is PILSVG:
             self.render_env_svg(show=show,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,

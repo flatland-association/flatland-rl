@@ -9,9 +9,6 @@ class GraphicsLayer(object):
     def open_window(self):
         pass
 
-    def is_raster(self):
-        return True
-
     def plot(self, *args, **kwargs):
         pass
 

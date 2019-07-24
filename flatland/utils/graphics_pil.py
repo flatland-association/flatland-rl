@@ -274,9 +274,6 @@ class PILSVG(PILGL):
         self.load_rail()
         self.load_agent()
 
-    def is_raster(self):
-        return False
-
     def process_events(self):
         time.sleep(0.001)
 
