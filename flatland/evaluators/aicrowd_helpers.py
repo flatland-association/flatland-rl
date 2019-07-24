@@ -55,7 +55,7 @@ def make_subprocess_call(command, shell=False):
     return result.returncode, stdout, stderr
 
 
-def generate_movie_from_screenshot(frames_folder):
+def generate_movie_from_frames(frames_folder):
     """
         Expects the frames in the  frames_folder folder 
         and then use ffmpeg to generate the video
@@ -66,9 +66,9 @@ def generate_movie_from_screenshot(frames_folder):
     frames_path = os.path.join(frames_folder, "flatland_frame_%04d.png")
     thumb_output_path = os.path.join(frames_folder, "out_thumb.mp4")
     return_code, output, output_err = make_subprocess_call(
-        "/usr/bin/ffmpeg -r 25 -start_number 0 -i " + 
+        "ffmpeg -r 7 -start_number 0 -i " + 
         frames_path + 
-        " -c:v libx264 -vf fps=25 -pix_fmt yuv420p -s 320x240 " + 
+        " -c:v libx264 -vf fps=7 -pix_fmt yuv420p -s 320x320 " + 
         thumb_output_path
     )
     if return_code != 0:
@@ -79,9 +79,9 @@ def generate_movie_from_screenshot(frames_folder):
     frames_path = os.path.join(frames_folder, "flatland_frame_%04d.png")
     output_path = os.path.join(frames_folder, "out.mp4")
     return_code, output, output_err = make_subprocess_call(
-        "/usr/bin/ffmpeg -r 25 -start_number 0 -i " + 
+        "ffmpeg -r 7 -start_number 0 -i " + 
         frames_path + 
-        " -c:v libx264 -vf fps=25 -pix_fmt yuv420p -s 320x240 " + 
+        " -c:v libx264 -vf fps=7 -pix_fmt yuv420p -s 600x600 " + 
         output_path
     )
     if return_code != 0:

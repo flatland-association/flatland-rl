@@ -375,14 +375,29 @@ class FlatlandRemoteEvaluationService:
                 to operate on all the test environments.
                 """
             )
+        
+        mean_reward = np.mean(self.simulation_rewards)
+        mean_percentage_complete = np.mean(self.simulation_percentage_complete)
+
+        # Generate the video
+        #
+        # Note, if you had depdency issues due to ffmpeg, you can 
+        # install it by : 
+        #
+        # conda install -c conda-forge x264 ffmpeg
+        
+        print("Generating Video from thumbnails...")
+        video_output_path, video_thumb_output_path = \
+            aicrowd_helpers.generate_movie_from_frames(
+                self.vizualization_folder_name
+            )
+        print("Videos : ", video_output_path, video_thumb_output_path)
 
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
         _payload = {}
-        _payload['mean_reward'] = np.mean(self.simulation_rewards)
-        _payload['mean_percentage_complete'] = \
-            np.mean(self.simulation_percentage_complete)
-        
+        _payload['mean_reward'] = mean_reward
+        _payload['mean_percentage_complete'] = mean_percentage_complete
         _command_response['payload'] = _payload
         self.send_response(_command_response, command)
     
