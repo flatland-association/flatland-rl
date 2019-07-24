@@ -15,12 +15,13 @@ import shutil
 import timeout_decorator
 import time
 import traceback
+import crowdai_api
 m.patch()
 
 ########################################################
 # CONSTANTS
 ########################################################
-PER_STEP_TIMEOUT = 5*60  # 5 minutes
+PER_STEP_TIMEOUT = 10*60  # 5 minutes
 
 
 class FlatlandRemoteEvaluationService:
@@ -77,6 +78,19 @@ class FlatlandRemoteEvaluationService:
         self.remote_db = remote_db
         self.remote_password = remote_password
         self.instantiate_redis_connection_pool()
+
+        # AIcrowd evaluation specific vars
+        self.oracle_events = crowdai_api.events.CrowdAIEvents(with_oracle=True)
+        self.evaluation_state = {
+            "state": "PENDING",
+            "progress": 0.0,
+            "simulation_count": 0,
+            "total_simulation_count": len(self.env_file_paths),
+            "score": {
+                "score": 0.0,
+                "score_secondary": 0.0
+            }
+        }
         
         # RailEnv specific variables
         self.env = False
@@ -302,6 +316,20 @@ class FlatlandRemoteEvaluationService:
             _command_response['payload']['env_file_path'] = False            
 
         self.send_response(_command_response, command)
+        #####################################################################
+        # Update evaluation state
+        #####################################################################
+        progress = np.clip(
+                    self.simulation_count * 1.0 / len(self.env_file_paths),
+                    0, 1)
+        mean_reward = np.mean(self.simulation_rewards)
+        mean_percentage_complete = np.mean(self.simulation_percentage_complete)
+        self.evaluation_state["state"] = "IN_PROGRESS"
+        self.evaluation_state["progress"] = progress
+        self.evaluation_state["simulation_count"] = self.simulation_count
+        self.evaluation_state["score"]["score"] = mean_percentage_complete
+        self.evaluation_state["score"]["score_secondary"] = mean_reward
+        self.handle_aicrowd_info_event(self.evaluation_state)
 
     def handle_env_step(self, command):
         """
@@ -379,19 +407,33 @@ class FlatlandRemoteEvaluationService:
         mean_reward = np.mean(self.simulation_rewards)
         mean_percentage_complete = np.mean(self.simulation_percentage_complete)
 
-        # Generate the video
-        #
-        # Note, if you had depdency issues due to ffmpeg, you can 
-        # install it by : 
-        #
-        # conda install -c conda-forge x264 ffmpeg
-        
-        print("Generating Video from thumbnails...")
-        video_output_path, video_thumb_output_path = \
-            aicrowd_helpers.generate_movie_from_frames(
-                self.vizualization_folder_name
-            )
-        print("Videos : ", video_output_path, video_thumb_output_path)
+        if self.visualize:
+            # Generate the video
+            #
+            # Note, if you had depdency issues due to ffmpeg, you can 
+            # install it by : 
+            #
+            # conda install -c conda-forge x264 ffmpeg
+            
+            print("Generating Video from thumbnails...")
+            video_output_path, video_thumb_output_path = \
+                aicrowd_helpers.generate_movie_from_frames(
+                    self.vizualization_folder_name
+                )
+            print("Videos : ", video_output_path, video_thumb_output_path)
+            # Upload to S3 if configuration is available
+            if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured() and self.visualize:
+                video_s3_key = aicrowd_helpers.upload_to_s3(
+                    video_output_path
+                )
+                video_thumb_s3_key = aicrowd_helpers.upload_to_s3(
+                    video_thumb_output_path
+                )
+                self.evaluation_state["score"]["media_content_type"] = "video/mp4"
+                self.evaluation_state["score"]["media_large"] = video_s3_key
+                self.evaluation_state["score"]["media_thumbnail"] = video_thumb_s3_key
+            else:
+                print("[WARNING] Ignoring uploading of video to S3")
 
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
@@ -400,7 +442,17 @@ class FlatlandRemoteEvaluationService:
         _payload['mean_percentage_complete'] = mean_percentage_complete
         _command_response['payload'] = _payload
         self.send_response(_command_response, command)
-    
+
+        #####################################################################
+        # Update evaluation state
+        #####################################################################
+        self.evaluation_state["state"] = "FINISHED"
+        self.evaluation_state["progress"] = 1.0
+        self.evaluation_state["simulation_count"] = self.simulation_count
+        self.evaluation_state["score"]["score"] = mean_percentage_complete
+        self.evaluation_state["score"]["score_secondary"] = mean_reward
+        self.handle_aicrowd_success_event(self.evaluation_state)
+
     def report_error(self, error_message, command_response_channel):
         """
         A helper function used to report error back to the client
@@ -416,6 +468,27 @@ class FlatlandRemoteEvaluationService:
                 default=m.encode, 
                 use_bin_type=True)
             )
+        self.evaluation_state["state"] = "ERROR"
+        self.evaluation_state["error"] = error_message
+        self.handle_aicrowd_error_event(self.evaluation_state)
+    
+    def handle_aicrowd_info_event(self, payload):
+        self.oracle_events.register_event(
+            event_type=self.oracle_events.CROWDAI_EVENT_INFO,
+            payload=payload
+        )
+
+    def handle_aicrowd_success_event(self, payload):
+        self.oracle_events.register_event(
+            event_type=self.oracle_events.CROWDAI_EVENT_SUCCESS,
+            payload=payload
+        )
+
+    def handle_aicrowd_error_event(self, payload):
+        self.oracle_events.register_event(
+            event_type=self.oracle_events.CROWDAI_EVENT_ERROR,
+            payload=payload
+        )
 
     def run(self):
         """

@@ -7,13 +7,19 @@ import subprocess
 # Expected Env Variables
 ###############################################################
 # Default Values to be provided :
+# AICROWD_IS_GRADING : true
+# CROWDAI_IS_GRADING : true
 # S3_BUCKET : aicrowd-production
 # S3_UPLOAD_PATH_TEMPLATE : misc/flatland-rl-Media/{}.mp4
+# AWS_ACCESS_KEY_ID
+# AWS_SECRET_ACCESS_KEY
+# http_proxy
+# https_proxy
 ###############################################################
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", False)
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", False)
-S3_BUCKET = os.getenv("S3_BUCKET", False)
-S3_UPLOAD_PATH_TEMPLATE = os.getenv("S3_UPLOAD_PATH_TEMPLATE", False)
+S3_BUCKET = os.getenv("S3_BUCKET", "aicrowd-production")
+S3_UPLOAD_PATH_TEMPLATE = os.getenv("S3_UPLOAD_PATH_TEMPLATE", "misc/flatland-rl-Media/{}.mp4")
 
 
 def get_boto_client():
@@ -24,6 +30,18 @@ def get_boto_client():
             aws_access_key_id=AWS_ACCESS_KEY_ID,
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY
     )
+
+
+def is_aws_configured():
+    if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
+        return False
+    else:
+        return True
+
+
+def is_grading():
+    return os.getenv("CROWDAI_IS_GRADING", False) or \
+        os.getenv("AICROWD_IS_GRADING", False)
 
 
 def upload_to_s3(localpath):
@@ -88,11 +106,4 @@ def generate_movie_from_frames(frames_folder):
         raise Exception(output_err)
 
     return output_path, thumb_output_path
-
-
-def is_grading():
-    return os.getenv("CROWDAI_IS_GRADING", False) or \
-        os.getenv("AICROWD_IS_GRADING", False)
-
-    
 
