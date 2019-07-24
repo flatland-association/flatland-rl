@@ -293,7 +293,8 @@ class RenderTool(object):
             for visited_cell in prediction_dict[agent]:
                 cell_coord = array(visited_cell[:2])
                 cell_coord_trans = np.matmul(cell_coord, rt.row_col_to_xy) + rt.x_y_half
-                self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)  # TODO : Track highlighting (Adrian)
+                self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
+                # TODO : Track highlighting (Adrian)
 
     def render_rail(self, spacing=False, rail_color="gray", curves=True, arrows=False):
 
