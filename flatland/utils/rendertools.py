@@ -180,19 +180,15 @@ class RenderTool(object):
             for x, y in transition_xy:
                 self.gl.text(x, y, depth)
 
-    def draw_transition(self, origin, destination, color="gray"):
-        self.gl.plot(
-            [origin[0], destination[0]],  # x
-            [origin[1], destination[1]],  # y
-            color=color
-        )
-
-    def draw_transition_2(self,
-                          line, center,
-                          rotation, dead_end=False,
-                          color="gray",
-                          arrow=True,
-                          spacing=0.1):
+    def draw_transition(self,
+                        line,
+                        center,
+                        rotation,
+                        dead_end=False,
+                        curves=False,
+                        color="gray",
+                        arrow=True,
+                        spacing=0.1):
         """
         gLine is a numpy 2d array of points,
         in the plotting space / coords.
@@ -201,6 +197,15 @@ class RenderTool(object):
         from x=0, y=0.5
         to   x=1, y=0.2
         """
+
+        if not curves and not dead_end:
+            self.gl.plot(
+                [line[0][0], line[1][0]],  # x
+                [line[0][1], line[1][1]],  # y
+                color=color
+            )
+            return
+
         rt = self.__class__
         straight = rotation in [0, 2]
         dx, dy = np.squeeze(np.diff(line, axis=0)) * spacing / 2
@@ -362,35 +367,11 @@ class RenderTool(object):
                     for to_ori in range(4):
                         to_xy = coords[to_ori]
                         rotation = (to_ori - from_ori) % 4
-
                         if (moves[to_ori]):  # if we have this transition
-
-                            if is_dead_end:
-                                self.draw_transition_2(
-                                    array([from_xy, to_xy]), center_xy,
-                                    rotation, dead_end=True, spacing=spacing,
-                                    color=rail_color)
-
-                            else:
-
-                                if curves:
-                                    self.draw_transition_2(
-                                        array([from_xy, to_xy]), center_xy,
-                                        rotation, spacing=spacing, arrow=arrows,
-                                        color=rail_color)
-                                else:
-                                    self.draw_transition(self, from_xy, to_xy, color=rail_color)
-
-                            if False:
-                                print(
-                                    "r,c,ori: ", row, col, orientation,
-                                    "cell:", "{0:b}".format(cell),
-                                    "moves:", moves,
-                                    "from:", from_ori, from_xy,
-                                    "to: ", to_ori, to_xy,
-                                    "cen:", *center_xy,
-                                    "rot:", rotation,
-                                )
+                            self.draw_transition(
+                                array([from_xy, to_xy]), center_xy,
+                                rotation, dead_end=is_dead_end, curves=curves and not is_dead_end, spacing=spacing,
+                                color=rail_color)
 
     def render_env(self,
                    show=False,  # whether to call matplotlib show() or equivalent after completion
