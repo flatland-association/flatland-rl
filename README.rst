@@ -54,12 +54,6 @@ Quick Start
     $ conda install -c anaconda tk  
     $ pip install flatland-rl
 
-* Test that the installation works
-
-.. code-block:: console
-
-    $ flatland-demo
-
 
 Basic Usage
 ============
