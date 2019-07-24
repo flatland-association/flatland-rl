@@ -111,3 +111,5 @@ ENV/
 
 images/test/
 test_save.dat
+
+.visualizations

@@ -5,10 +5,13 @@ from flatland.envs.generators import rail_from_file
 from flatland.envs.rail_env import RailEnv
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.evaluators import messages
+from flatland.evaluators import aicrowd_helpers
+from flatland.utils.rendertools import RenderTool
 import numpy as np
 import msgpack
 import msgpack_numpy as m
 import os
+import shutil
 import timeout_decorator
 import time
 import traceback
@@ -77,7 +80,7 @@ class FlatlandRemoteEvaluationService:
         
         # RailEnv specific variables
         self.env = False
-        self.env_available = False
+        self.env_renderer = False
         self.reward = 0
         self.simulation_count = 0
         self.simulation_rewards = []
@@ -87,6 +90,16 @@ class FlatlandRemoteEvaluationService:
         self.begin_simulation = False
         self.current_step = 0
         self.visualize = visualize
+        self.vizualization_folder_name = "./.visualizations"
+        self.record_frame_step = 0
+
+        if self.visualize:
+            try:
+                shutil.rmtree(self.vizualization_folder_name)
+            except Exception as e:
+                print(e)
+            
+            os.mkdir(self.vizualization_folder_name)
 
     def get_env_filepaths(self):
         """
@@ -248,12 +261,15 @@ class FlatlandRemoteEvaluationService:
                 rail_generator=rail_from_file(test_env_file_path),
                 obs_builder_object=DummyObservationBuilder()
             )
+            if self.visualize:
+                if self.env_renderer:
+                    del self.env_renderer                
+                self.env_renderer = RenderTool(self.env, gl="PILSVG", )
             
             # Set max episode steps allowed
             self.env._max_episode_steps = \
                 int(1.5 * (self.env.width + self.env.height))
 
-            self.env_available = True
             self.simulation_count += 1
 
             if self.begin_simulation:
@@ -320,6 +336,16 @@ class FlatlandRemoteEvaluationService:
                     complete += 1
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
+        
+        # Record Frame
+        if self.visualize:
+            self.env_renderer.render_env(show=True, show_observations=False, show_predictions=False)            
+            self.env_renderer.gl.save_image(
+                    os.path.join(
+                        self.vizualization_folder_name,
+                        "flatland_frame_{:04d}.png".format(self.record_frame_step)
+                    ))
+            self.record_frame_step += 1
 
         # Build and send response
         _command_response = {}
@@ -460,7 +486,8 @@ if __name__ == "__main__":
     grader = FlatlandRemoteEvaluationService(
                 test_env_folder=test_folder,
                 flatland_rl_service_id=args.service_id,
-                verbose=True
+                verbose=True,
+                visualize=True
                 )
     result = grader.run()
     if result['type'] == messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE:
