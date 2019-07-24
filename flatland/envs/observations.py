@@ -698,71 +698,115 @@ class LocalObsForRailEnv(ObservationBuilder):
     The observation is composed of the following elements:
 
         - transition map array of the local environment around the given agent,
-          with dimensions (2*view_radius + 1, 2*view_radius + 1, 16),
+          with dimensions (view_height,2*view_width+1, 16),
           assuming 16 bits encoding of transitions.
 
-        - Two 2D arrays (2*view_radius + 1, 2*view_radius + 1, 2) containing respectively,
+        - Two 3D arrays (view_height,2*view_width+1, 2) containing respectively,
         if they are in the agent's vision range, its target position, the positions of the other targets.
 
-        - A 3D array (2*view_radius + 1, 2*view_radius + 1, 4) containing the one hot encoding of directions
+        - A 3D array (view_height,2*view_width+1, 4) containing the one hot encoding of directions
           of the other agents at their position coordinates, if they are in the agent's vision range.
 
         - A 4 elements array with one hot encoding of the direction.
     """
 
-    def __init__(self, view_radius):
+    def __init__(self, view_width, view_height, center):
         """
         :param view_radius:
         """
         super(LocalObsForRailEnv, self).__init__()
-        self.view_radius = view_radius
+        self.view_width = view_width
+        self.view_height = view_height
+        self.center = center
+        self.max_padding = max(self.view_width, self.view_height - self.center)
 
     def reset(self):
         # We build the transition map with a view_radius empty cells expansion on each side.
         # This helps to collect the local transition map view when the agent is close to a border.
-
-        self.rail_obs = np.zeros((self.env.height + 2 * self.view_radius,
-                                  self.env.width + 2 * self.view_radius, 16))
+        self.max_padding = max(self.view_width, self.view_height)
+        self.rail_obs = np.zeros((self.env.height + 2 * self.max_padding,
+                                  self.env.width + 2 * self.max_padding, 16))
         for i in range(self.env.height):
             for j in range(self.env.width):
                 bitlist = [int(digit) for digit in bin(self.env.rail.get_full_transitions(i, j))[2:]]
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
-                self.rail_obs[i + self.view_radius, j + self.view_radius] = np.array(bitlist)
+                self.rail_obs[i + self.view_height, j + self.view_width] = np.array(bitlist)
 
     def get(self, handle):
         agents = self.env.agents
         agent = agents[handle]
+        agent_rel_pos = [0, 0]
 
-        local_rail_obs = self.rail_obs[agent.position[0]: agent.position[0] + 2 * self.view_radius + 1,
-                         agent.position[1]:agent.position[1] + 2 * self.view_radius + 1]
+        # Correct agents position for padding
+        agent_rel_pos[0] = agent.position[0] + self.max_padding
+        agent_rel_pos[1] = agent.position[1] + self.max_padding
 
-        obs_map_state = np.zeros((2 * self.view_radius + 1, 2 * self.view_radius + 1, 2))
+        # Collect the rail information in the local field of view
+        local_rail_obs = self.field_of_view(agent_rel_pos, agent.direction, state=self.rail_obs)
 
-        obs_other_agents_state = np.zeros((2 * self.view_radius + 1, 2 * self.view_radius + 1, 4))
+        # Locate observed agents and their coresponding targets
+        obs_map_state = np.zeros((self.view_height + 1, 2 * self.view_width + 1, 2))
+        obs_other_agents_state = np.zeros((self.view_height + 1, 2 * self.view_width + 1, 4))
 
-        def relative_pos(pos):
-            return [agent.position[0] - pos[0], agent.position[1] - pos[1]]
+        # Collect visible cells as set to be plotted
+        visited = self.field_of_view(agent.position, agent.direction)
 
-        def is_in(rel_pos):
-            return (abs(rel_pos[0]) <= self.view_radius) and (abs(rel_pos[1]) <= self.view_radius)
-
-        target_rel_pos = relative_pos(agent.target)
-        if is_in(target_rel_pos):
-            obs_map_state[self.view_radius + np.array(target_rel_pos)][0] += 1
-
-        for i in range(len(agents)):
-            if i != handle:  # TODO: handle used as index...?
-                agent2 = agents[i]
-
-                agent_2_rel_pos = relative_pos(agent2.position)
-                if is_in(agent_2_rel_pos):
-                    obs_other_agents_state[self.view_radius + agent_2_rel_pos[0],
-                                           self.view_radius + agent_2_rel_pos[1]][agent2.direction] += 1
-
-                target_rel_pos_2 = relative_pos(agent2.position)
-                if is_in(target_rel_pos_2):
-                    obs_map_state[self.view_radius + np.array(target_rel_pos_2)][1] += 1
+        # Add the visible cells to the observed cells
+        self.env.dev_obs_dict[handle] = visited
 
         direction = self._get_one_hot_for_agent_direction(agent)
 
         return local_rail_obs, obs_map_state, obs_other_agents_state, direction
+
+    def get_many(self, handles=None):
+        """
+        Called whenever an observation has to be computed for the `env' environment, for each agent with handle
+        in the `handles' list.
+        """
+
+        observations = {}
+        for h in handles:
+            observations[h] = self.get(h)
+        return observations
+
+    def field_of_view(self, position, direction, state=None):
+        # Compute the local field of view for an agent in the environment
+        data_collection = False
+        if state is not None:
+            temp_visible_data = np.zeros(shape=(self.view_height, 2 * self.view_width + 1, 16))
+            data_collection = True
+        if direction == 0:
+            origin = (position[0] + self.center, position[1] - self.view_width)
+        elif direction == 1:
+            origin = (position[0] - self.view_width, position[1] - self.center)
+        elif direction == 2:
+            origin = (position[0] - self.center, position[1] + self.view_width)
+        else:
+            origin = (position[0] + self.view_width, position[1] + self.center)
+        visible = set()
+        for h in range(self.view_height):
+            for w in range(2 * self.view_width + 1):
+                if direction == 0:
+                    if 0 <= origin[0] - h < self.env.height and 0 <= origin[1] + w < self.env.width:
+                        visible.add((origin[0] - h, origin[1] + w))
+                    if data_collection:
+                        temp_visible_data[h, w, :] = state[origin[0] - h, origin[1] + w, :]
+                elif direction == 1:
+                    if 0 <= origin[0] + w < self.env.height and 0 <= origin[1] + h < self.env.width:
+                        visible.add((origin[0] + w, origin[1] + h))
+                    if data_collection:
+                        temp_visible_data[h, w, :] = state[origin[0] + w, origin[1] + h, :]
+                elif direction == 2:
+                    if 0 <= origin[0] - h < self.env.height and 0 <= origin[1] + w < self.env.width:
+                        visible.add((origin[0] + h, origin[1] - w))
+                    if data_collection:
+                        temp_visible_data[h, w, :] = state[origin[0] + h, origin[1] - w, :]
+                else:
+                    if 0 <= origin[0] - h < self.env.height and 0 <= origin[1] + w < self.env.width:
+                        visible.add((origin[0] - w, origin[1] - h))
+                    if data_collection:
+                        temp_visible_data[h, w, :] = state[origin[0] - w, origin[1] - h, :]
+        if data_collection:
+            return temp_visible_data
+        else:
+            return visible

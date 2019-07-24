@@ -1,9 +1,10 @@
 import numpy as np
 
 from flatland.envs.generators import complex_rail_generator
-from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv, LocalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.utils.rendertools import RenderTool
 
 np.random.seed(1)
 
@@ -12,12 +13,14 @@ np.random.seed(1)
 #
 
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
+LocalGridObs = LocalObsForRailEnv(view_height=10, view_width=2, center=2)
 env = RailEnv(width=20,
               height=20,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
-              obs_builder_object=TreeObservation,
+              obs_builder_object=LocalGridObs,
               number_of_agents=2)
 
+env_renderer = RenderTool(env, gl="PILSVG", )
 
 # Import your own Agent or use RLlib to train agents on Flatland
 # As an example we use a random agent here
@@ -66,6 +69,7 @@ for trials in range(1, n_trials + 1):
 
     # Reset environment and get initial observations for all agents
     obs = env.reset()
+    env_renderer.reset()
     # Here you can also further enhance the provided observation by means of normalization
     # See training navigation example in the baseline repository
 
@@ -80,6 +84,8 @@ for trials in range(1, n_trials + 1):
         # Environment step which returns the observations for all agents, their corresponding
         # reward and whether their are done
         next_obs, all_rewards, done, _ = env.step(action_dict)
+        env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
+
         # Update replay buffer and train agent
         for a in range(env.get_num_agents()):
             agent.step((obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a]))
