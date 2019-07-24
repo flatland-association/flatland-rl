@@ -411,11 +411,13 @@ class PILSVG(PILGL):
             "NN SS": "Bahnhof_#d50000_Gleis_vertikal.svg"}
 
         # Dict of rail cell images indexed by binary transitions
+        pil_rail_files_org = self.load_svgs(rail_files, rotate=True)
         pil_rail_files = self.load_svgs(rail_files, rotate=True, background_image="Background_rail.svg",
                                         whitefilter="Background_white_filter.svg")
 
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
+        pil_target_files_org = self.load_svgs(target_files, rotate=False, agent_colors=self.agent_colors)
         pil_target_files = self.load_svgs(target_files, rotate=False, agent_colors=self.agent_colors,
                                           background_image="Background_rail.svg",
                                           whitefilter="Background_white_filter.svg")
@@ -430,6 +432,7 @@ class PILSVG(PILGL):
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
         self.pil_rail = {**pil_rail_files, **pil_target_files}
+        self.pil_rail_org = {**pil_rail_files_org, **pil_target_files_org}
 
     def load_svgs(self, file_directory, rotate=False, agent_colors=False, background_image=None, whitefilter=None):
         pil = {}
@@ -482,9 +485,19 @@ class PILSVG(PILGL):
 
         return pil
 
-    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None):
+    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None,
+                    agent_rail_color=None, blend_factor=0.5):
         if binary_trans in self.pil_rail:
             pil_track = self.pil_rail[binary_trans]
+            if agent_rail_color is not None:
+                colored_rail = self.recolor_image(self.pil_rail_org[binary_trans], [61, 61, 61], [agent_rail_color], False)[0]
+                rcTopLeft1 = (row, col)
+                rcTopLeft2 = (row + 1, col + 1)
+                rcTopLeft1 = tuple((array(rcTopLeft1) * self.nPixCell)[[1, 0]])
+                rcTopLeft2 = tuple((array(rcTopLeft2) * self.nPixCell)[[1, 0]])
+                pil_track = Image.blend(self.layers[0].crop((rcTopLeft1[0], rcTopLeft1[1], rcTopLeft2[0], rcTopLeft2[1])), colored_rail,
+                                        blend_factor)
+
             if target is not None:
                 pil_track = Image.alpha_composite(pil_track, self.station_colors[target % len(self.station_colors)])
 

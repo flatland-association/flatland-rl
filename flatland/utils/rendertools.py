@@ -276,7 +276,6 @@ class RenderTool(object):
 
         """
         rt = self.__class__
-
         for agent in agent_handles:
             color = self.gl.get_agent_color(agent)
             for visited_cell in observation_dict[agent]:
@@ -293,14 +292,20 @@ class RenderTool(object):
 
         """
         rt = self.__class__
-
         for agent in agent_handles:
             color = self.gl.get_agent_color(agent)
             for visited_cell in prediction_dict[agent]:
                 cell_coord = array(visited_cell[:2])
                 cell_coord_trans = np.matmul(cell_coord, rt.row_col_to_xy) + rt.x_y_half
-                self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
-                # TODO : Track highlighting (Adrian)
+                if type(self.gl) is PILSVG:
+                    # TODO : Track highlighting (Adrian)
+                    r = cell_coord[0]
+                    c = cell_coord[1]
+                    transitions = self.env.rail.grid[r, c]
+                    self.gl.set_rail_at(r, c, transitions, target=None, is_selected=False, rail_grid=self.env.rail.grid,
+                                        agent_rail_color=color)
+                else:
+                    self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
 
     def render_rail(self, spacing=False, rail_color="gray", curves=True, arrows=False):
 
