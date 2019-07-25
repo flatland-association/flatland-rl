@@ -175,6 +175,13 @@ class FlatlandRemoteClient(object):
             self.test_envs_root,
             test_env_file_path
         )
+        if not os.path.exists(test_env_file_path):
+            raise Exception(
+                "\nWe cannot seem to find the env file paths at the required location.\n"
+                "Did you remember to set the AICROWD_TESTS_FOLDER environment variable "
+                "to point to the location of the Tests folder ? \n"
+                "We are currently looking at `{}` for the tests".format(self.test_envs_root)
+                )
         print("Current env path : ", test_env_file_path)
         self.env = RailEnv(
             width=1,

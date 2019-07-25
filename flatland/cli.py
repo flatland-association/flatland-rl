@@ -8,6 +8,8 @@ import time
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
+from flatland.evaluators.service import FlatlandRemoteEvaluationService
+import redis
 
 
 @click.command()
@@ -47,6 +49,36 @@ def demo(args=None):
             )
             time.sleep(0.3)
     return 0
+
+
+@click.command()
+@click.option('--tests', 
+              type=click.Path(exists=True),
+              help="Path to folder containing Flatland tests",
+              required=True
+              )
+@click.option('--service_id', 
+              default="FLATLAND_RL_SERVICE_ID",
+              help="Evaluation Service ID. This has to match the service id on the client.",
+              required=False
+              )
+def evaluator(tests, service_id):
+    try:
+        redis_connection = redis.Redis()
+        redis_connection.ping()
+    except redis.exceptions.ConnectionError as e:
+        raise Exception(
+            "\nRedis server does not seem to be running on your localhost.\n"
+            "Please ensure that you have a redis server running on your localhost"
+            )
+    
+    grader = FlatlandRemoteEvaluationService(
+                test_env_folder=tests,
+                flatland_rl_service_id=service_id,
+                visualize=False,
+                verbose=False
+                )
+    grader.run()
 
 
 if __name__ == "__main__":

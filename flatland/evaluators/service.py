@@ -62,7 +62,6 @@ class FlatlandRemoteEvaluationService:
         self.test_env_folder = test_env_folder
         self.video_generation_envs = video_generation_envs
         self.env_file_paths = self.get_env_filepaths()
-        print(self.env_file_paths)
 
         # Logging and Reporting related vars
         self.verbose = verbose
@@ -277,12 +276,11 @@ class FlatlandRemoteEvaluationService:
             """
 
             test_env_file_path = self.env_file_paths[self.simulation_count]
-            print("__ Env Path : ", test_env_file_path)
+            print("Evaluating : {}".format(test_env_file_path))
             test_env_file_path = os.path.join(
                 self.test_env_folder,
                 test_env_file_path
             )
-            print("__ Processed Env Path : ", test_env_file_path)
             del self.env
             self.env = RailEnv(
                 width=1,
@@ -475,6 +473,13 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["score"]["score"] = mean_percentage_complete
         self.evaluation_state["score"]["score_secondary"] = mean_reward
         self.handle_aicrowd_success_event(self.evaluation_state)
+        print("#"*100)
+        print("EVALUATION COMPLETE !!")
+        print("#"*100)
+        print("# Mean Reward : {}".format(mean_reward))
+        print("# Mean Percentage Complete : {}".format(mean_percentage_complete))
+        print("#"*100)
+        print("#"*100)
 
     def report_error(self, error_message, command_response_channel):
         """
@@ -518,7 +523,7 @@ class FlatlandRemoteEvaluationService:
         Main runner function which waits for commands from the client
         and acts accordingly.
         """
-        print("Listening for commands at : ", self.command_channel)
+        print("Listening at : ", self.command_channel)
         while True:
             command = self.get_next_command()
 
@@ -604,7 +609,6 @@ if __name__ == "__main__":
     result = grader.run()
     if result['type'] == messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE:
         cumulative_results = result['payload']
-        print("Results : ", cumulative_results)
     elif result['type'] == messages.FLATLAND_RL.ERROR:
         error = result['payload']
         raise Exception("Evaluation Failed : {}".format(str(error)))

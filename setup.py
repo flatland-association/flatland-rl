@@ -16,7 +16,7 @@ def get_all_svg_files(directory='./svg/'):
     ret = []
     for dirpath, subdirs, files in os.walk(directory):
         for f in files:
-            ret.append(os.path.join(dirpath,f))
+            ret.append(os.path.join(dirpath, f))
     return ret
 
 
@@ -24,7 +24,7 @@ def get_all_images_files(directory='./images/'):
     ret = []
     for dirpath, subdirs, files in os.walk(directory):
         for f in files:
-            ret.append(os.path.join(dirpath,f))
+            ret.append(os.path.join(dirpath, f))
     return ret
 
 
@@ -32,7 +32,7 @@ def get_all_notebook_files(directory='./notebooks/'):
     ret = []
     for dirpath, subdirs, files in os.walk(directory):
         for f in files:
-            ret.append(os.path.join(dirpath,f))
+            ret.append(os.path.join(dirpath, f))
     return ret
 
 
@@ -63,6 +63,7 @@ setup(
     entry_points={
         'console_scripts': [
             'flatland-demo=flatland.cli:demo',
+            'flatland-evaluator=flatland.cli:evaluator'
         ],
     },
     install_requires=requirements,
