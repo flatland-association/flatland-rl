@@ -14,11 +14,11 @@ np.random.seed(1)
 
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 LocalGridObs = LocalObsForRailEnv(view_height=10, view_width=2, center=2)
-env = RailEnv(width=20,
-              height=20,
+env = RailEnv(width=50,
+              height=50,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
               obs_builder_object=LocalGridObs,
-              number_of_agents=2)
+              number_of_agents=5)
 
 env_renderer = RenderTool(env, gl="PILSVG", )
 
