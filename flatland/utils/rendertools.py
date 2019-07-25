@@ -292,9 +292,6 @@ class RenderTool(object):
 
         """
         rt = self.__class__
-        if type(self.gl) is PILSVG:
-            self.gl.clear_set_predicion_path_layer()
-
         for agent in agent_handles:
             color = self.gl.get_agent_color(agent)
             for visited_cell in prediction_dict[agent]:

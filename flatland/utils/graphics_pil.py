@@ -38,10 +38,11 @@ class PILGL(GraphicsLayer):
     window = tk.Tk()
 
     RAIL_LAYER = 0
-    AGENT_LAYER = 1
-    PREDICTION_PATH_LAYER = 2
-    SELECTED_AGENT_LAYER = 3
-    SELECTED_TARGET_LAYER = 4
+    PREDICTION_PATH_LAYER = 1
+    TARGET_LAYER = 2
+    AGENT_LAYER = 3
+    SELECTED_AGENT_LAYER = 4
+    SELECTED_TARGET_LAYER = 5
 
     def __init__(self, width, height, jupyter=False):
         self.yxBase = (0, 0)
@@ -187,6 +188,7 @@ class PILGL(GraphicsLayer):
     def begin_frame(self):
         # Create a new agent layer
         self.create_layer(iLayer=PILGL.AGENT_LAYER, clear=True)
+        self.create_layer(iLayer=PILGL.PREDICTION_PATH_LAYER, clear=True)
 
     def show(self, block=False):
         img = self.alpha_composite_layers()
@@ -263,6 +265,7 @@ class PILGL(GraphicsLayer):
     def create_layers(self, clear=True):
         self.create_layer(PILGL.RAIL_LAYER, clear=clear)  # rail / background (scene)
         self.create_layer(PILGL.AGENT_LAYER, clear=clear)  # agents
+        self.create_layer(PILGL.TARGET_LAYER, clear=clear)  # agents
         self.create_layer(PILGL.PREDICTION_PATH_LAYER, clear=clear)  # drawing layer for agent's prediction path
         self.create_layer(PILGL.SELECTED_AGENT_LAYER, clear=clear)  # drawing layer for selected agent
         self.create_layer(PILGL.SELECTED_TARGET_LAYER, clear=clear)  # drawing layer for selected agent's target
@@ -492,9 +495,6 @@ class PILSVG(PILGL):
 
         return pil
 
-    def clear_set_predicion_path_layer(self):
-        self.clear_layer(PILGL.PREDICTION_PATH_LAYER, 0)
-
     def set_predicion_path_at(self, row, col, binary_trans, agent_rail_color):
         colored_rail = self.recolor_image(self.pil_rail_org[binary_trans],
                                           [61, 61, 61], [agent_rail_color],
@@ -505,7 +505,9 @@ class PILSVG(PILGL):
         if binary_trans in self.pil_rail:
             pil_track = self.pil_rail[binary_trans]
             if target is not None:
-                pil_track = Image.alpha_composite(pil_track, self.station_colors[target % len(self.station_colors)])
+                target_img = self.station_colors[target % len(self.station_colors)]
+                target_img = Image.alpha_composite(pil_track, target_img)
+                self.draw_image_row_col(target_img, (row, col), layer=PILGL.TARGET_LAYER)
 
             if binary_trans == 0:
                 if self.background_grid[col][row] <= 4:
