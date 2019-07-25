@@ -180,19 +180,15 @@ class RenderTool(object):
             for x, y in transition_xy:
                 self.gl.text(x, y, depth)
 
-    def draw_transition(self, origin, destination, color="gray"):
-        self.gl.plot(
-            [origin[0], destination[0]],  # x
-            [origin[1], destination[1]],  # y
-            color=color
-        )
-
-    def draw_transition_2(self,
-                          line, center,
-                          rotation, dead_end=False,
-                          color="gray",
-                          arrow=True,
-                          spacing=0.1):
+    def draw_transition(self,
+                        line,
+                        center,
+                        rotation,
+                        dead_end=False,
+                        curves=False,
+                        color="gray",
+                        arrow=True,
+                        spacing=0.1):
         """
         gLine is a numpy 2d array of points,
         in the plotting space / coords.
@@ -201,65 +197,75 @@ class RenderTool(object):
         from x=0, y=0.5
         to   x=1, y=0.2
         """
-        rt = self.__class__
-        straight = rotation in [0, 2]
-        dx, dy = np.squeeze(np.diff(line, axis=0)) * spacing / 2
 
-        if straight:
+        if not curves and not dead_end:
+            # just a straigt line, no curve nor dead_end included in this basic rail element
+            self.gl.plot(
+                [line[0][0], line[1][0]],  # x
+                [line[0][1], line[1][1]],  # y
+                color=color
+            )
+        else:
+            # it was not a simple line to draw: the rail has a curve or dead_end included.
+            rt = self.__class__
+            straight = rotation in [0, 2]
+            dx, dy = np.squeeze(np.diff(line, axis=0)) * spacing / 2
 
-            if color == "auto":
-                if dx > 0 or dy > 0:
-                    color = "C1"  # N or E
+            if straight:
+
+                if color == "auto":
+                    if dx > 0 or dy > 0:
+                        color = "C1"  # N or E
+                    else:
+                        color = "C2"  # S or W
+
+                if dead_end:
+                    line_xy = array([
+                        line[1] + [dy, dx],
+                        center,
+                        line[1] - [dy, dx],
+                    ])
+                    self.gl.plot(*line_xy.T, color=color)
                 else:
-                    color = "C2"  # S or W
+                    line_xy = line + [-dy, dx]
+                    self.gl.plot(*line_xy.T, color=color)
 
-            if dead_end:
-                line_xy = array([
-                    line[1] + [dy, dx],
-                    center,
-                    line[1] - [dy, dx],
-                ])
-                self.gl.plot(*line_xy.T, color=color)
+                    if arrow:
+                        middle_xy = np.sum(line_xy * [[1 / 4], [3 / 4]], axis=0)
+
+                        arrow_xy = array([
+                            middle_xy + [-dx - dy, +dx - dy],
+                            middle_xy,
+                            middle_xy + [-dx + dy, -dx - dy]])
+                        self.gl.plot(*arrow_xy.T, color=color)
+
             else:
-                line_xy = line + [-dy, dx]
-                self.gl.plot(*line_xy.T, color=color)
+
+                middle_xy = np.mean(line, axis=0)
+                dxy = middle_xy - center
+                corner = middle_xy + dxy
+                if rotation == 1:
+                    arc_factor = 1 - spacing
+                    color_auto = "C1"
+                else:
+                    arc_factor = 1 + spacing
+                    color_auto = "C2"
+                dxy2 = (center - corner) * arc_factor  # for scaling the arc
+
+                if color == "auto":
+                    color = color_auto
+
+                self.gl.plot(*(rt.arc * dxy2 + corner).T, color=color)
 
                 if arrow:
-                    middle_xy = np.sum(line_xy * [[1 / 4], [3 / 4]], axis=0)
-
+                    dx, dy = np.squeeze(np.diff(line, axis=0)) / 20
+                    iArc = int(len(rt.arc) / 2)
+                    middle_xy = corner + rt.arc[iArc] * dxy2
                     arrow_xy = array([
                         middle_xy + [-dx - dy, +dx - dy],
                         middle_xy,
                         middle_xy + [-dx + dy, -dx - dy]])
                     self.gl.plot(*arrow_xy.T, color=color)
-
-        else:
-
-            middle_xy = np.mean(line, axis=0)
-            dxy = middle_xy - center
-            corner = middle_xy + dxy
-            if rotation == 1:
-                arc_factor = 1 - spacing
-                color_auto = "C1"
-            else:
-                arc_factor = 1 + spacing
-                color_auto = "C2"
-            dxy2 = (center - corner) * arc_factor  # for scaling the arc
-
-            if color == "auto":
-                color = color_auto
-
-            self.gl.plot(*(rt.arc * dxy2 + corner).T, color=color)
-
-            if arrow:
-                dx, dy = np.squeeze(np.diff(line, axis=0)) / 20
-                iArc = int(len(rt.arc) / 2)
-                middle_xy = corner + rt.arc[iArc] * dxy2
-                arrow_xy = array([
-                    middle_xy + [-dx - dy, +dx - dy],
-                    middle_xy,
-                    middle_xy + [-dx + dy, -dx - dy]])
-                self.gl.plot(*arrow_xy.T, color=color)
 
     def render_observation(self, agent_handles, observation_dict):
         """
@@ -270,7 +276,6 @@ class RenderTool(object):
 
         """
         rt = self.__class__
-
         for agent in agent_handles:
             color = self.gl.get_agent_color(agent)
             for visited_cell in observation_dict[agent]:
@@ -287,13 +292,19 @@ class RenderTool(object):
 
         """
         rt = self.__class__
-
         for agent in agent_handles:
             color = self.gl.get_agent_color(agent)
             for visited_cell in prediction_dict[agent]:
                 cell_coord = array(visited_cell[:2])
-                cell_coord_trans = np.matmul(cell_coord, rt.row_col_to_xy) + rt.x_y_half
-                self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
+                if type(self.gl) is PILSVG:
+                    # TODO : Track highlighting (Adrian)
+                    r = cell_coord[0]
+                    c = cell_coord[1]
+                    transitions = self.env.rail.grid[r, c]
+                    self.gl.set_predicion_path_at(r, c, transitions, agent_rail_color=color)
+                else:
+                    cell_coord_trans = np.matmul(cell_coord, rt.row_col_to_xy) + rt.x_y_half
+                    self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
 
     def render_rail(self, spacing=False, rail_color="gray", curves=True, arrows=False):
 
@@ -361,63 +372,62 @@ class RenderTool(object):
                     for to_ori in range(4):
                         to_xy = coords[to_ori]
                         rotation = (to_ori - from_ori) % 4
-
                         if (moves[to_ori]):  # if we have this transition
-
-                            if is_dead_end:
-                                self.draw_transition_2(
-                                    array([from_xy, to_xy]), center_xy,
-                                    rotation, dead_end=True, spacing=spacing,
-                                    color=rail_color)
-
-                            else:
-
-                                if curves:
-                                    self.draw_transition_2(
-                                        array([from_xy, to_xy]), center_xy,
-                                        rotation, spacing=spacing, arrow=arrows,
-                                        color=rail_color)
-                                else:
-                                    self.draw_transition(self, from_xy, to_xy, color=rail_color)
-
-                            if False:
-                                print(
-                                    "r,c,ori: ", row, col, orientation,
-                                    "cell:", "{0:b}".format(cell),
-                                    "moves:", moves,
-                                    "from:", from_ori, from_xy,
-                                    "to: ", to_ori, to_xy,
-                                    "cen:", *center_xy,
-                                    "rot:", rotation,
-                                )
+                            self.draw_transition(
+                                array([from_xy, to_xy]), center_xy,
+                                rotation, dead_end=is_dead_end, curves=curves and not is_dead_end, spacing=spacing,
+                                color=rail_color)
 
     def render_env(self,
                    show=False,  # whether to call matplotlib show() or equivalent after completion
-                   # use false when calling from Jupyter.  (and matplotlib no longer supported!)
-                   curves=True,  # draw turns as curves instead of straight diagonal lines
-                   spacing=False,  # defunct - size of spacing between rails
-                   arrows=False,  # defunct - draw arrows on rail lines
                    agents=True,  # whether to include agents
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
-                   rail_color="gray",  # color to use in drawing rails (not used with SVG)
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
-                   selected_agent=None,  # indicate which agent is "selected" in the editor
-                   action_dict=None):  # defunct - was used to indicate agent intention to turn
+                   selected_agent=None):  # indicate which agent is "selected" in the editor
         """ Draw the environment using the GraphicsLayer this RenderTool was created with.
             (Use show=False from a Jupyter notebook with %matplotlib inline)
         """
+        if type(self.gl) is PILSVG:
+            self.render_env_svg(show=show,
+                                show_observations=show_observations,
+                                show_predictions=show_predictions,
+                                selected_agent=selected_agent
+                                )
+        else:
+            self.render_env_pil(show=show,
+                                agents=agents,
+                                show_observations=show_observations,
+                                show_predictions=show_predictions,
+                                frames=frames,
+                                episode=episode,
+                                step=step,
+                                selected_agent=selected_agent
+                                )
 
-        if not self.gl.is_raster():
-            self.render_env_2(show=show, curves=curves, spacing=spacing,
-                              arrows=arrows, agents=agents, show_observations=show_observations,
-                              show_predictions=show_predictions,
-                              rail_color=rail_color,
-                              frames=frames, episode=episode, step=step,
-                              selected_agent=selected_agent, action_dict=action_dict)
-            return
+    def _draw_square(self, center, size, color, opacity=255, layer=0):
+        x0 = center[0] - size / 2
+        x1 = center[0] + size / 2
+        y0 = center[1] - size / 2
+        y1 = center[1] + size / 2
+        self.gl.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color, layer=layer, opacity=opacity)
+
+    def get_image(self):
+        return self.gl.get_image()
+
+    def render_env_pil(self,
+                       show=False,  # whether to call matplotlib show() or equivalent after completion
+                       # use false when calling from Jupyter.  (and matplotlib no longer supported!)
+                       agents=True,  # whether to include agents
+                       show_observations=True,  # whether to include observations
+                       show_predictions=False,  # whether to include predictions
+                       frames=False,  # frame counter to show (intended since invocation)
+                       episode=None,  # int episode number to show
+                       step=None,  # int step number to show in image
+                       selected_agent=None  # indicate which agent is "selected" in the editor
+                       ):
 
         if type(self.gl) is PILGL:
             self.gl.begin_frame()
@@ -466,28 +476,11 @@ class RenderTool(object):
 
         return
 
-    def _draw_square(self, center, size, color, opacity=255, layer=0):
-        x0 = center[0] - size / 2
-        x1 = center[0] + size / 2
-        y0 = center[1] - size / 2
-        y1 = center[1] + size / 2
-        self.gl.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color=color, layer=layer, opacity=opacity)
-
-    def get_image(self):
-        return self.gl.get_image()
-
-    def render_env_2(
-        self, show=False, curves=True, spacing=False, arrows=False, agents=True,
-        show_observations=True, show_predictions=False, rail_color="gray",
-        frames=False, episode=None, step=None, selected_agent=None,
-        action_dict=dict()
+    def render_env_svg(
+        self, show=False, show_observations=True, show_predictions=False, selected_agent=None
     ):
         """
-        Draw the environment using matplotlib.
-        Draw into the figure if provided.
-
-        Call pyplot.show() if show==True.
-        (Use show=False from a Jupyter notebook with %matplotlib inline)
+        Renders the environment with SVG support (nice image)
         """
 
         env = self.env

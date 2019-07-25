@@ -37,6 +37,13 @@ class PILGL(GraphicsLayer):
     # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
     window = tk.Tk()
 
+    RAIL_LAYER = 0
+    PREDICTION_PATH_LAYER = 1
+    TARGET_LAYER = 2
+    AGENT_LAYER = 3
+    SELECTED_AGENT_LAYER = 4
+    SELECTED_TARGET_LAYER = 5
+
     def __init__(self, width, height, jupyter=False):
         self.yxBase = (0, 0)
         self.linewidth = 4
@@ -129,7 +136,7 @@ class PILGL(GraphicsLayer):
     def get_agent_color(self, iAgent):
         return self.agent_colors[iAgent % self.n_agent_colors]
 
-    def plot(self, gX, gY, color=None, linewidth=3, layer=0, opacity=255, **kwargs):
+    def plot(self, gX, gY, color=None, linewidth=3, layer=RAIL_LAYER, opacity=255, **kwargs):
         color = self.adapt_color(color)
         if len(color) == 3:
             color += (opacity,)
@@ -139,14 +146,14 @@ class PILGL(GraphicsLayer):
         gPoints = list(gPoints.ravel())
         self.draws[layer].line(gPoints, fill=color, width=self.linewidth)
 
-    def scatter(self, gX, gY, color=None, marker="o", s=50, layer=0, opacity=255, *args, **kwargs):
+    def scatter(self, gX, gY, color=None, marker="o", s=50, layer=RAIL_LAYER, opacity=255, *args, **kwargs):
         color = self.adapt_color(color)
         r = np.sqrt(s)
         gPoints = np.stack([np.atleast_1d(gX), -np.atleast_1d(gY)]).T * self.nPixCell
         for x, y in gPoints:
             self.draws[layer].rectangle([(x - r, y - r), (x + r, y + r)], fill=color, outline=color)
 
-    def draw_image_xy(self, pil_img, xyPixLeftTop, layer=0):
+    def draw_image_xy(self, pil_img, xyPixLeftTop, layer=RAIL_LAYER, ):
         if (pil_img.mode == "RGBA"):
             pil_mask = pil_img
         else:
@@ -154,7 +161,7 @@ class PILGL(GraphicsLayer):
 
         self.layers[layer].paste(pil_img, xyPixLeftTop, pil_mask)
 
-    def draw_image_row_col(self, pil_img, rcTopLeft, layer=0):
+    def draw_image_row_col(self, pil_img, rcTopLeft, layer=RAIL_LAYER, ):
         xyPixLeftTop = tuple((array(rcTopLeft) * self.nPixCell)[[1, 0]])
         self.draw_image_xy(pil_img, xyPixLeftTop, layer=layer)
 
@@ -180,7 +187,8 @@ class PILGL(GraphicsLayer):
 
     def begin_frame(self):
         # Create a new agent layer
-        self.create_layer(iLayer=1, clear=True)
+        self.create_layer(iLayer=PILGL.AGENT_LAYER, clear=True)
+        self.create_layer(iLayer=PILGL.PREDICTION_PATH_LAYER, clear=True)
 
     def show(self, block=False):
         img = self.alpha_composite_layers()
@@ -255,10 +263,12 @@ class PILGL(GraphicsLayer):
                 self.clear_layer(iLayer)
 
     def create_layers(self, clear=True):
-        self.create_layer(0, clear=clear)  # rail / background (scene)
-        self.create_layer(1, clear=clear)  # agents
-        self.create_layer(2, clear=clear)  # drawing layer for selected agent
-        self.create_layer(3, clear=clear)  # drawing layer for selected agent's target
+        self.create_layer(PILGL.RAIL_LAYER, clear=clear)  # rail / background (scene)
+        self.create_layer(PILGL.AGENT_LAYER, clear=clear)  # agents
+        self.create_layer(PILGL.TARGET_LAYER, clear=clear)  # agents
+        self.create_layer(PILGL.PREDICTION_PATH_LAYER, clear=clear)  # drawing layer for agent's prediction path
+        self.create_layer(PILGL.SELECTED_AGENT_LAYER, clear=clear)  # drawing layer for selected agent
+        self.create_layer(PILGL.SELECTED_TARGET_LAYER, clear=clear)  # drawing layer for selected agent's target
 
 
 class PILSVG(PILGL):
@@ -273,9 +283,6 @@ class PILSVG(PILGL):
         self.load_scenery()
         self.load_rail()
         self.load_agent()
-
-    def is_raster(self):
-        return False
 
     def process_events(self):
         time.sleep(0.001)
@@ -414,11 +421,13 @@ class PILSVG(PILGL):
             "NN SS": "Bahnhof_#d50000_Gleis_vertikal.svg"}
 
         # Dict of rail cell images indexed by binary transitions
+        pil_rail_files_org = self.load_svgs(rail_files, rotate=True)
         pil_rail_files = self.load_svgs(rail_files, rotate=True, background_image="Background_rail.svg",
                                         whitefilter="Background_white_filter.svg")
 
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
+        pil_target_files_org = self.load_svgs(target_files, rotate=False, agent_colors=self.agent_colors)
         pil_target_files = self.load_svgs(target_files, rotate=False, agent_colors=self.agent_colors,
                                           background_image="Background_rail.svg",
                                           whitefilter="Background_white_filter.svg")
@@ -433,6 +442,7 @@ class PILSVG(PILGL):
         # Merge them with the regular rails.
         # https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression
         self.pil_rail = {**pil_rail_files, **pil_target_files}
+        self.pil_rail_org = {**pil_rail_files_org, **pil_target_files_org}
 
     def load_svgs(self, file_directory, rotate=False, agent_colors=False, background_image=None, whitefilter=None):
         pil = {}
@@ -485,11 +495,19 @@ class PILSVG(PILGL):
 
         return pil
 
+    def set_predicion_path_at(self, row, col, binary_trans, agent_rail_color):
+        colored_rail = self.recolor_image(self.pil_rail_org[binary_trans],
+                                          [61, 61, 61], [agent_rail_color],
+                                          False)[0]
+        self.draw_image_row_col(colored_rail, (row, col), layer=PILGL.PREDICTION_PATH_LAYER)
+
     def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None):
         if binary_trans in self.pil_rail:
             pil_track = self.pil_rail[binary_trans]
             if target is not None:
-                pil_track = Image.alpha_composite(pil_track, self.station_colors[target % len(self.station_colors)])
+                target_img = self.station_colors[target % len(self.station_colors)]
+                target_img = Image.alpha_composite(pil_track, target_img)
+                self.draw_image_row_col(target_img, (row, col), layer=PILGL.TARGET_LAYER)
 
             if binary_trans == 0:
                 if self.background_grid[col][row] <= 4:
@@ -508,15 +526,15 @@ class PILSVG(PILGL):
                         a = a2
                     pil_track = self.scenery[a % len(self.scenery)]
 
-            self.draw_image_row_col(pil_track, (row, col))
+            self.draw_image_row_col(pil_track, (row, col), layer=PILGL.RAIL_LAYER)
         else:
             print("Illegal rail:", row, col, format(binary_trans, "#018b")[2:], binary_trans)
 
         if target is not None:
             if is_selected:
                 svgBG = self.pil_from_svg_file("svg", "Selected_Target.svg")
-                self.clear_layer(3, 0)
-                self.draw_image_row_col(svgBG, (row, col), layer=3)
+                self.clear_layer(PILGL.SELECTED_TARGET_LAYER, 0)
+                self.draw_image_row_col(svgBG, (row, col), layer=PILGL.SELECTED_TARGET_LAYER)
 
     def recolor_image(self, pil, a3BaseColor, ltColors, invert=False):
         rgbaImg = array(pil)
@@ -577,12 +595,12 @@ class PILSVG(PILGL):
         if delta_dir == 2:
             in_direction = out_direction
         pil_zug = self.pil_zug[(in_direction % 4, out_direction % 4, color_idx)]
-        self.draw_image_row_col(pil_zug, (row, col), layer=1)
+        self.draw_image_row_col(pil_zug, (row, col), layer=PILGL.AGENT_LAYER)
 
         if is_selected:
             bg_svg = self.pil_from_svg_file("svg", "Selected_Agent.svg")
-            self.clear_layer(2, 0)
-            self.draw_image_row_col(bg_svg, (row, col), layer=2)
+            self.clear_layer(PILGL.SELECTED_AGENT_LAYER, 0)
+            self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
 
     def set_cell_occupied(self, agent_idx, row, col):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]
