@@ -8,6 +8,7 @@ Subpackages
 
     flatland.core
     flatland.envs
+    flatland.evaluators
     flatland.utils
 
 Submodules

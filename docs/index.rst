@@ -9,6 +9,7 @@ Welcome to flatland's documentation!
    installation
    about_flatland
    gettingstarted
+   localevaluation
    modules
    FAQ
    contributing
