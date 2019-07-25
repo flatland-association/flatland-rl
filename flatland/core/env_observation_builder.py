@@ -74,6 +74,7 @@ class ObservationBuilder:
         direction[agent.direction] = 1
         return direction
 
+
 class DummyObservationBuilder(ObservationBuilder):
     """
     DummyObservationBuilder class which returns dummy observations
