@@ -11,6 +11,7 @@ import numpy as np
 import msgpack
 import msgpack_numpy as m
 import os
+import glob
 import shutil
 import timeout_decorator
 import time
@@ -136,16 +137,20 @@ class FlatlandRemoteEvaluationService:
             ├── .......
             ├── .......
             └── Level_99.pkl 
-        """
-        env_paths = []
-        folder_path = self.test_env_folder
-        for root, dirs, files in os.walk(folder_path):
-            for file in files:
-                if file.endswith(".pkl"):
-                    env_paths.append(
-                        os.path.join(root, file)
-                        )
-        env_paths = sorted(env_paths)
+        """            
+        env_paths = sorted(glob.glob(
+            os.path.join(
+                self.test_env_folder,
+                "*/*.pkl"
+            )
+        ))
+        # Remove the root folder name from the individual 
+        # lists, so that we only have the path relative 
+        # to the test root folder
+        env_paths = sorted([os.path.relpath(
+            x, self.test_env_folder
+        ) for x in env_paths])
+
         for _idx, env_path in enumerate(env_paths):
             """
             Here we collect the indices of the environments for which
@@ -158,7 +163,7 @@ class FlatlandRemoteEvaluationService:
             for vg_env in self.video_generation_envs:
                 if vg_env in env_path:
                     self.video_generation_indices.append(_idx+1)
-        return sorted(env_paths)        
+        return env_paths
 
     def instantiate_redis_connection_pool(self):
         """
