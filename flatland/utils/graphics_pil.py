@@ -314,25 +314,25 @@ class PILSVG(PILGL):
 
     def load_buildings(self):
         dBuildingFiles = [
-            "Buildings/Bank.svg",
-            "Buildings/Bar.svg",
-            "Buildings/Wohnhaus.svg",
-            "Buildings/Hochhaus.svg",
-            "Buildings/Hotel.svg",
-            "Buildings/Office.svg",
-            "Buildings/Polizei.svg",
-            "Buildings/Post.svg",
-            "Buildings/Supermarkt.svg",
-            "Buildings/Tankstelle.svg",
-            "Buildings/Fabrik_A.svg",
-            "Buildings/Fabrik_B.svg",
-            "Buildings/Fabrik_C.svg",
-            "Buildings/Fabrik_D.svg",
-            "Buildings/Fabrik_E.svg",
-            "Buildings/Fabrik_F.svg",
-            "Buildings/Fabrik_G.svg",
-            "Buildings/Fabrik_H.svg",
-            "Buildings/Fabrik_I.svg",
+            "Buildings-Bank.svg",
+            "Buildings-Bar.svg",
+            "Buildings-Wohnhaus.svg",
+            "Buildings-Hochhaus.svg",
+            "Buildings-Hotel.svg",
+            "Buildings-Office.svg",
+            "Buildings-Polizei.svg",
+            "Buildings-Post.svg",
+            "Buildings-Supermarkt.svg",
+            "Buildings-Tankstelle.svg",
+            "Buildings-Fabrik_A.svg",
+            "Buildings-Fabrik_B.svg",
+            "Buildings-Fabrik_C.svg",
+            "Buildings-Fabrik_D.svg",
+            "Buildings-Fabrik_E.svg",
+            "Buildings-Fabrik_F.svg",
+            "Buildings-Fabrik_G.svg",
+            "Buildings-Fabrik_H.svg",
+            "Buildings-Fabrik_I.svg"
         ]
 
         imgBg = self.pil_from_svg_file('svg', "Background_city.svg")
@@ -345,23 +345,23 @@ class PILSVG(PILGL):
 
     def load_scenery(self):
         scenery_files = [
-            "Scenery/Laubbaume_A.svg",
-            "Scenery/Laubbaume_B.svg",
-            "Scenery/Laubbaume_C.svg",
-            "Scenery/Nadelbaume_A.svg",
-            "Scenery/Nadelbaume_B.svg",
-            "Scenery/Bergwelt_B.svg"
+            "Scenery-Laubbaume_A.svg",
+            "Scenery-Laubbaume_B.svg",
+            "Scenery-Laubbaume_C.svg",
+            "Scenery-Nadelbaume_A.svg",
+            "Scenery-Nadelbaume_B.svg",
+            "Scenery-Bergwelt_B.svg"
         ]
 
         scenery_files_d2 = [
-            "Scenery/Bergwelt_C_Teil_1_links.svg",
-            "Scenery/Bergwelt_C_Teil_2_rechts.svg"
+            "Scenery-Bergwelt_C_Teil_1_links.svg",
+            "Scenery-Bergwelt_C_Teil_2_rechts.svg"
         ]
 
         scenery_files_d3 = [
-            "Scenery/Bergwelt_A_Teil_3_rechts.svg",
-            "Scenery/Bergwelt_A_Teil_2_mitte.svg",
-            "Scenery/Bergwelt_A_Teil_1_links.svg"
+            "Scenery-Bergwelt_A_Teil_3_rechts.svg",
+            "Scenery-Bergwelt_A_Teil_2_mitte.svg",
+            "Scenery-Bergwelt_A_Teil_1_links.svg"
         ]
 
         img_back_ground = self.pil_from_svg_file('svg', "Background_Light_green.svg")
