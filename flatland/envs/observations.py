@@ -708,12 +708,14 @@ class LocalObsForRailEnv(ObservationBuilder):
           of the other agents at their position coordinates, if they are in the agent's vision range.
 
         - A 4 elements array with one hot encoding of the direction.
+
+    Use the parameters view_width and view_height to define the rectangular view of the agent.
+    The center parameters moves the agent along the height axis of this rectangle. If it is 0 the agent only has
+    observation in front of it.
     """
 
     def __init__(self, view_width, view_height, center):
-        """
-        :param view_radius:
-        """
+
         super(LocalObsForRailEnv, self).__init__()
         self.view_width = view_width
         self.view_height = view_height
