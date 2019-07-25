@@ -43,13 +43,6 @@ class PILGL(GraphicsLayer):
     SELECTED_AGENT_LAYER = 3
     SELECTED_TARGET_LAYER = 4
 
-    def create_layers(self, clear=True):
-        self.create_layer(PILGL.RAIL_LAYER, clear=clear)  # rail / background (scene)
-        self.create_layer(PILGL.AGENT_LAYER, clear=clear)  # agents
-        self.create_layer(PILGL.PREDICTION_PATH_LAYER, clear=clear)  # drawing layer for agent's prediction path
-        self.create_layer(PILGL.SELECTED_AGENT_LAYER, clear=clear)  # drawing layer for selected agent
-        self.create_layer(PILGL.SELECTED_TARGET_LAYER, clear=clear)  # drawing layer for selected agent's target
-
     def __init__(self, width, height, jupyter=False):
         self.yxBase = (0, 0)
         self.linewidth = 4
@@ -267,6 +260,12 @@ class PILGL(GraphicsLayer):
             if clear:
                 self.clear_layer(iLayer)
 
+    def create_layers(self, clear=True):
+        self.create_layer(PILGL.RAIL_LAYER, clear=clear)  # rail / background (scene)
+        self.create_layer(PILGL.AGENT_LAYER, clear=clear)  # agents
+        self.create_layer(PILGL.PREDICTION_PATH_LAYER, clear=clear)  # drawing layer for agent's prediction path
+        self.create_layer(PILGL.SELECTED_AGENT_LAYER, clear=clear)  # drawing layer for selected agent
+        self.create_layer(PILGL.SELECTED_TARGET_LAYER, clear=clear)  # drawing layer for selected agent's target
 
 
 class PILSVG(PILGL):
@@ -493,16 +492,13 @@ class PILSVG(PILGL):
 
         return pil
 
-
     def clear_set_predicion_path_layer(self):
-        self.clear_layer(PILGL.PREDICTION_PATH_LAYER,0)
+        self.clear_layer(PILGL.PREDICTION_PATH_LAYER, 0)
 
     def set_predicion_path_at(self, row, col, binary_trans, agent_rail_color):
         colored_rail = self.recolor_image(self.pil_rail_org[binary_trans],
                                           [61, 61, 61], [agent_rail_color],
                                           False)[0]
-        # pil_track = Image.blend(pil_track,colored_rail,blend_factor)
-        # pil_track = colored_rail#Image.alpha_composite(pil_track, colored_rail)
         self.draw_image_row_col(colored_rail, (row, col), layer=PILGL.PREDICTION_PATH_LAYER)
 
     def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None):
