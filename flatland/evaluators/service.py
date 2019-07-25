@@ -11,6 +11,7 @@ import numpy as np
 import msgpack
 import msgpack_numpy as m
 import os
+import glob
 import shutil
 import timeout_decorator
 import time
@@ -60,9 +61,7 @@ class FlatlandRemoteEvaluationService:
         # Test Env folder Paths
         self.test_env_folder = test_env_folder
         self.video_generation_envs = video_generation_envs
-        self.video_generation_indices = []
         self.env_file_paths = self.get_env_filepaths()
-        print(self.video_generation_indices)
 
         # Logging and Reporting related vars
         self.verbose = verbose
@@ -100,7 +99,7 @@ class FlatlandRemoteEvaluationService:
         self.env = False
         self.env_renderer = False
         self.reward = 0
-        self.simulation_count = 0
+        self.simulation_count = -1
         self.simulation_rewards = []
         self.simulation_percentage_complete = []
         self.simulation_steps = []
@@ -136,29 +135,21 @@ class FlatlandRemoteEvaluationService:
             ├── .......
             ├── .......
             └── Level_99.pkl 
-        """
-        env_paths = []
-        folder_path = self.test_env_folder
-        for root, dirs, files in os.walk(folder_path):
-            for file in files:
-                if file.endswith(".pkl"):
-                    env_paths.append(
-                        os.path.join(root, file)
-                        )
-        env_paths = sorted(env_paths)
-        for _idx, env_path in enumerate(env_paths):
-            """
-            Here we collect the indices of the environments for which
-            we need to generate the videos
-            
-            We increment the simulation count on env_create
-            so the 1st simulation has an index of 1, when comparing in 
-            env_step 
-            """
-            for vg_env in self.video_generation_envs:
-                if vg_env in env_path:
-                    self.video_generation_indices.append(_idx+1)
-        return sorted(env_paths)        
+        """            
+        env_paths = sorted(glob.glob(
+            os.path.join(
+                self.test_env_folder,
+                "*/*.pkl"
+            )
+        ))
+        # Remove the root folder name from the individual 
+        # lists, so that we only have the path relative 
+        # to the test root folder
+        env_paths = sorted([os.path.relpath(
+            x, self.test_env_folder
+        ) for x in env_paths])
+
+        return env_paths
 
     def instantiate_redis_connection_pool(self):
         """
@@ -278,13 +269,18 @@ class FlatlandRemoteEvaluationService:
             Add a high level summary of everything thats 
             hapenning here.
         """
-        
+        self.simulation_count += 1
         if self.simulation_count < len(self.env_file_paths):
             """
             There are still test envs left that are yet to be evaluated 
             """
 
             test_env_file_path = self.env_file_paths[self.simulation_count]
+            print("Evaluating : {}".format(test_env_file_path))
+            test_env_file_path = os.path.join(
+                self.test_env_folder,
+                test_env_file_path
+            )
             del self.env
             self.env = RailEnv(
                 width=1,
@@ -294,14 +290,12 @@ class FlatlandRemoteEvaluationService:
             )
             if self.visualize:
                 if self.env_renderer:
-                    del self.env_renderer                
+                    del self.env_renderer     
                 self.env_renderer = RenderTool(self.env, gl="PILSVG", )
             
             # Set max episode steps allowed
             self.env._max_episode_steps = \
                 int(1.5 * (self.env.width + self.env.height))
-
-            self.simulation_count += 1
 
             if self.begin_simulation:
                 # If begin simulation has already been initialized 
@@ -321,7 +315,7 @@ class FlatlandRemoteEvaluationService:
             _command_response['type'] = messages.FLATLAND_RL.ENV_CREATE_RESPONSE
             _command_response['payload'] = {}
             _command_response['payload']['observation'] = _observation
-            _command_response['payload']['env_file_path'] = test_env_file_path
+            _command_response['payload']['env_file_path'] = self.env_file_paths[self.simulation_count]
         else:
             """
             All test env evaluations are complete
@@ -384,12 +378,17 @@ class FlatlandRemoteEvaluationService:
         
         # Record Frame
         if self.visualize:
-            self.env_renderer.render_env(show=False, show_observations=False, show_predictions=False)
+            self.env_renderer.render_env(
+                                show=False, 
+                                show_observations=False, 
+                                show_predictions=False
+                                )
             """
             Only save the frames for environments which are separately provided 
             in video_generation_indices param
             """
-            if self.simulation_count in self.video_generation_indices:        
+            current_env_path = self.env_file_paths[self.simulation_count]
+            if current_env_path in self.video_generation_envs:
                 self.env_renderer.gl.save_image(
                         os.path.join(
                             self.vizualization_folder_name,
@@ -474,6 +473,13 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["score"]["score"] = mean_percentage_complete
         self.evaluation_state["score"]["score_secondary"] = mean_reward
         self.handle_aicrowd_success_event(self.evaluation_state)
+        print("#"*100)
+        print("EVALUATION COMPLETE !!")
+        print("#"*100)
+        print("# Mean Reward : {}".format(mean_reward))
+        print("# Mean Percentage Complete : {}".format(mean_percentage_complete))
+        print("#"*100)
+        print("#"*100)
 
     def report_error(self, error_message, command_response_channel):
         """
@@ -517,7 +523,7 @@ class FlatlandRemoteEvaluationService:
         Main runner function which waits for commands from the client
         and acts accordingly.
         """
-        print("Listening for commands at : ", self.command_channel)
+        print("Listening at : ", self.command_channel)
         while True:
             command = self.get_next_command()
 
@@ -603,7 +609,6 @@ if __name__ == "__main__":
     result = grader.run()
     if result['type'] == messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE:
         cumulative_results = result['payload']
-        print("Results : ", cumulative_results)
     elif result['type'] == messages.FLATLAND_RL.ERROR:
         error = result['payload']
         raise Exception("Evaluation Failed : {}".format(str(error)))

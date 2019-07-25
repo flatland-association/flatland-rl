@@ -46,6 +46,7 @@ class FlatlandRemoteClient(object):
                 remote_port=6379,
                 remote_db=0,
                 remote_password=None,
+                test_envs_root=None,
                 verbose=False):
 
         self.remote_host = remote_host
@@ -58,14 +59,22 @@ class FlatlandRemoteClient(object):
                                 db=remote_db,
                                 password=remote_password)
         self.namespace = "flatland-rl"
-        try:
-            self.service_id = os.environ['FLATLAND_RL_SERVICE_ID']
-        except KeyError:
-            self.service_id = "FLATLAND_RL_SERVICE_ID"
+        self.service_id = os.getenv(
+                            'FLATLAND_RL_SERVICE_ID',
+                            'FLATLAND_RL_SERVICE_ID'
+                            )
         self.command_channel = "{}::{}::commands".format(
                                     self.namespace,
                                     self.service_id
                                 )
+        if test_envs_root:
+            self.test_envs_root = test_envs_root
+        else:
+            self.test_envs_root = os.getenv(
+                                'AICROWD_TESTS_FOLDER',
+                                '/tmp/flatland_envs'
+                                )
+
         self.verbose = verbose
 
         self.env = None
@@ -161,6 +170,19 @@ class FlatlandRemoteClient(object):
             return observation
 
         test_env_file_path = _response['payload']['env_file_path']
+        print("Received Env : ", test_env_file_path)
+        test_env_file_path = os.path.join(
+            self.test_envs_root,
+            test_env_file_path
+        )
+        if not os.path.exists(test_env_file_path):
+            raise Exception(
+                "\nWe cannot seem to find the env file paths at the required location.\n"
+                "Did you remember to set the AICROWD_TESTS_FOLDER environment variable "
+                "to point to the location of the Tests folder ? \n"
+                "We are currently looking at `{}` for the tests".format(self.test_envs_root)
+                )
+        print("Current env path : ", test_env_file_path)
         self.env = RailEnv(
             width=1,
             height=1,
@@ -192,11 +214,15 @@ class FlatlandRemoteClient(object):
         remote_info = _payload['info']
 
         # Replicate the action in the local env
-        local_observation, local_rewards, local_done, local_info = \
+        local_observation, local_reward, local_done, local_info = \
             self.env.step(action)
         
-        assert are_dicts_equal(remote_reward, local_rewards)
-        assert are_dicts_equal(remote_done, local_done)
+        print(local_reward)
+        if not are_dicts_equal(remote_reward, local_reward):
+            raise Exception("local and remote `reward` are diverging")
+            print(remote_reward, local_reward)
+        if not are_dicts_equal(remote_done, local_done):
+            raise Exception("local and remote `done` are diverging")
         
         # Return local_observation instead of remote_observation
         # as the remote_observation is build using a dummy observation
