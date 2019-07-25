@@ -31,6 +31,13 @@ from screeninfo import get_monitors  # noqa: E402
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
 
+def join_filenames(root_folder, filenames):
+    filenames = [
+        os.path.join(root_folder, filename)
+        for filename in filenames
+    ]
+    return filenames
+
 
 class PILGL(GraphicsLayer):
     # tk.Tk() must be a singleton!
@@ -314,26 +321,27 @@ class PILSVG(PILGL):
 
     def load_buildings(self):
         dBuildingFiles = [
-            "Buildings/Bank.svg",
-            "Buildings/Bar.svg",
-            "Buildings/Wohnhaus.svg",
-            "Buildings/Hochhaus.svg",
-            "Buildings/Hotel.svg",
-            "Buildings/Office.svg",
-            "Buildings/Polizei.svg",
-            "Buildings/Post.svg",
-            "Buildings/Supermarkt.svg",
-            "Buildings/Tankstelle.svg",
-            "Buildings/Fabrik_A.svg",
-            "Buildings/Fabrik_B.svg",
-            "Buildings/Fabrik_C.svg",
-            "Buildings/Fabrik_D.svg",
-            "Buildings/Fabrik_E.svg",
-            "Buildings/Fabrik_F.svg",
-            "Buildings/Fabrik_G.svg",
-            "Buildings/Fabrik_H.svg",
-            "Buildings/Fabrik_I.svg",
+            "Bank.svg",
+            "Bar.svg",
+            "Wohnhaus.svg",
+            "Hochhaus.svg",
+            "Hotel.svg",
+            "Office.svg",
+            "Polizei.svg",
+            "Post.svg",
+            "Supermarkt.svg",
+            "Tankstelle.svg",
+            "Fabrik_A.svg",
+            "Fabrik_B.svg",
+            "Fabrik_C.svg",
+            "Fabrik_D.svg",
+            "Fabrik_E.svg",
+            "Fabrik_F.svg",
+            "Fabrik_G.svg",
+            "Fabrik_H.svg",
+            "Fabrik_I.svg",
         ]
+        dBuildingFiles = join_filenames("Buildings", dBuildingFiles)
 
         imgBg = self.pil_from_svg_file('svg', "Background_city.svg")
 
@@ -345,24 +353,27 @@ class PILSVG(PILGL):
 
     def load_scenery(self):
         scenery_files = [
-            "Scenery/Laubbaume_A.svg",
-            "Scenery/Laubbaume_B.svg",
-            "Scenery/Laubbaume_C.svg",
-            "Scenery/Nadelbaume_A.svg",
-            "Scenery/Nadelbaume_B.svg",
-            "Scenery/Bergwelt_B.svg"
+            "Laubbaume_A.svg",
+            "Laubbaume_B.svg",
+            "Laubbaume_C.svg",
+            "Nadelbaume_A.svg",
+            "Nadelbaume_B.svg",
+            "Bergwelt_B.svg"
         ]
+        scenery_files = join_filenames("Scenery", scenery_files)
 
         scenery_files_d2 = [
-            "Scenery/Bergwelt_C_Teil_1_links.svg",
-            "Scenery/Bergwelt_C_Teil_2_rechts.svg"
+            "Bergwelt_C_Teil_1_links.svg",
+            "Bergwelt_C_Teil_2_rechts.svg"
         ]
+        scenery_files_d2 = join_filenames("Scenery", scenery_files_d2)
 
         scenery_files_d3 = [
-            "Scenery/Bergwelt_A_Teil_3_rechts.svg",
-            "Scenery/Bergwelt_A_Teil_2_mitte.svg",
-            "Scenery/Bergwelt_A_Teil_1_links.svg"
+            "Bergwelt_A_Teil_3_rechts.svg",
+            "Bergwelt_A_Teil_2_mitte.svg",
+            "Bergwelt_A_Teil_1_links.svg"
         ]
+        scenery_files_d3 = join_filenames("Scenery", scenery_files_d3)
 
         img_back_ground = self.pil_from_svg_file('svg', "Background_Light_green.svg")
 
