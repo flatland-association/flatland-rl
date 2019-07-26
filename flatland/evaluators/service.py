@@ -13,10 +13,22 @@ import msgpack_numpy as m
 import os
 import glob
 import shutil
-import timeout_decorator
 import time
 import traceback
 import crowdai_api
+import timeout_decorator
+
+
+use_signals_in_timeout = True
+if os.name == 'nt':
+    """
+    Windows doesnt support signals, hence
+    timeout_decorators usually fall apart.
+    Hence forcing them to not using signals 
+    whenever using the timeout decorator.
+    """
+    use_signals_in_timeout = False
+
 m.patch()
 
 ########################################################
@@ -198,7 +210,9 @@ class FlatlandRemoteEvaluationService:
         _response['payload'] = payload
         return _response
 
-    @timeout_decorator.timeout(PER_STEP_TIMEOUT)  # timeout for each command
+    @timeout_decorator.timeout(
+                        PER_STEP_TIMEOUT,
+                        use_signals=use_signals_in_timeout)  # timeout for each command
     def _get_next_command(self, _redis):
         """
         A low level wrapper for obtaining the next command from a 
