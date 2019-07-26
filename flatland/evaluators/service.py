@@ -105,8 +105,8 @@ class FlatlandRemoteEvaluationService:
                 "score": 0.0,
                 "score_secondary": 0.0
             },
-            "meta" : {
-                "normalized_reward" : 0.0
+            "meta": {
+                "normalized_reward": 0.0
             }
         }
         
