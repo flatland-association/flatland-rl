@@ -104,6 +104,9 @@ class FlatlandRemoteEvaluationService:
             "score": {
                 "score": 0.0,
                 "score_secondary": 0.0
+            },
+            "meta": {
+                "normalized_reward": 0.0
             }
         }
         
@@ -113,6 +116,7 @@ class FlatlandRemoteEvaluationService:
         self.reward = 0
         self.simulation_count = -1
         self.simulation_rewards = []
+        self.simulation_rewards_normalized = []
         self.simulation_percentage_complete = []
         self.simulation_steps = []
         self.simulation_times = []
@@ -318,6 +322,7 @@ class FlatlandRemoteEvaluationService:
             self.begin_simulation = time.time()
 
             self.simulation_rewards.append(0)
+            self.simulation_rewards_normalized.append(0)
             self.simulation_percentage_complete.append(0)
             self.simulation_steps.append(0)
 
@@ -348,12 +353,14 @@ class FlatlandRemoteEvaluationService:
                     self.simulation_count * 1.0 / len(self.env_file_paths),
                     0, 1)
         mean_reward = np.mean(self.simulation_rewards)
+        mean_normalized_reward = np.mean(self.simulation_rewards_normalized)
         mean_percentage_complete = np.mean(self.simulation_percentage_complete)
         self.evaluation_state["state"] = "IN_PROGRESS"
         self.evaluation_state["progress"] = progress
         self.evaluation_state["simulation_count"] = self.simulation_count
         self.evaluation_state["score"]["score"] = mean_percentage_complete
         self.evaluation_state["score"]["score_secondary"] = mean_reward
+        self.evaluation_state["meta"]["normalized_reward"] = mean_normalized_reward
         self.handle_aicrowd_info_event(self.evaluation_state)
 
     def handle_env_step(self, command):
@@ -379,6 +386,17 @@ class FlatlandRemoteEvaluationService:
         cumulative_reward = np.sum(list(all_rewards.values()))
         self.simulation_rewards[-1] += cumulative_reward
         self.simulation_steps[-1] += 1
+        """
+        The normalized rewards normalize the reward for an 
+        episode by dividing the whole reward by max-time-steps 
+        allowed in that episode, and the number of agents present in 
+        that episode
+        """
+        self.simulation_rewards_normalized[-1] += \
+            cumulative_reward / (
+                        self.env._max_episode_steps + 
+                        self.env.get_num_agents()
+                    )
 
         if done["__all__"]:
             # Compute percentage complete
@@ -440,6 +458,7 @@ class FlatlandRemoteEvaluationService:
             )
         
         mean_reward = np.mean(self.simulation_rewards)
+        mean_normalized_reward = np.mean(self.simulation_rewards_normalized)
         mean_percentage_complete = np.mean(self.simulation_percentage_complete)
 
         if self.visualize and len(os.listdir(self.vizualization_folder_name)) > 0:
@@ -474,6 +493,7 @@ class FlatlandRemoteEvaluationService:
         _command_response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
         _payload = {}
         _payload['mean_reward'] = mean_reward
+        _payload['mean_normalized_reward'] = mean_normalized_reward
         _payload['mean_percentage_complete'] = mean_percentage_complete
         _command_response['payload'] = _payload
         self.send_response(_command_response, command)
@@ -486,11 +506,13 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["simulation_count"] = self.simulation_count
         self.evaluation_state["score"]["score"] = mean_percentage_complete
         self.evaluation_state["score"]["score_secondary"] = mean_reward
+        self.evaluation_state["meta"]["normalized_reward"] = mean_normalized_reward
         self.handle_aicrowd_success_event(self.evaluation_state)
         print("#"*100)
         print("EVALUATION COMPLETE !!")
         print("#"*100)
         print("# Mean Reward : {}".format(mean_reward))
+        print("# Mean Normalized Reward : {}".format(mean_normalized_reward))
         print("# Mean Percentage Complete : {}".format(mean_percentage_complete))
         print("#"*100)
         print("#"*100)
