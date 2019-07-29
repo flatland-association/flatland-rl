@@ -1,4 +1,5 @@
 import time
+import warnings
 from collections import deque
 from enum import IntEnum
 
@@ -276,12 +277,17 @@ class RenderTool(object):
 
         """
         rt = self.__class__
-        for agent in agent_handles:
-            color = self.gl.get_agent_color(agent)
-            for visited_cell in observation_dict[agent]:
-                cell_coord = array(visited_cell[:2])
-                cell_coord_trans = np.matmul(cell_coord, rt.row_col_to_xy) + rt.x_y_half
-                self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
+
+        # Check if the observation builder provides an observation
+        if len(observation_dict) < 1:
+            warnings.warn("Observation Builder did not provide an observation_dict of all observed cells.")
+        else:
+            for agent in agent_handles:
+                color = self.gl.get_agent_color(agent)
+                for visited_cell in observation_dict[agent]:
+                    cell_coord = array(visited_cell[:2])
+                    cell_coord_trans = np.matmul(cell_coord, rt.row_col_to_xy) + rt.x_y_half
+                    self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
 
     def render_prediction(self, agent_handles, prediction_dict):
         """
@@ -292,19 +298,22 @@ class RenderTool(object):
 
         """
         rt = self.__class__
-        for agent in agent_handles:
-            color = self.gl.get_agent_color(agent)
-            for visited_cell in prediction_dict[agent]:
-                cell_coord = array(visited_cell[:2])
-                if type(self.gl) is PILSVG:
-                    # TODO : Track highlighting (Adrian)
-                    r = cell_coord[0]
-                    c = cell_coord[1]
-                    transitions = self.env.rail.grid[r, c]
-                    self.gl.set_predicion_path_at(r, c, transitions, agent_rail_color=color)
-                else:
-                    cell_coord_trans = np.matmul(cell_coord, rt.row_col_to_xy) + rt.x_y_half
-                    self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
+        if len(prediction_dict) < 1:
+            warnings.warn("Predictor did not provide any predicted cells to render.")
+        else:
+            for agent in agent_handles:
+                color = self.gl.get_agent_color(agent)
+                for visited_cell in prediction_dict[agent]:
+                    cell_coord = array(visited_cell[:2])
+                    if type(self.gl) is PILSVG:
+                        # TODO : Track highlighting (Adrian)
+                        r = cell_coord[0]
+                        c = cell_coord[1]
+                        transitions = self.env.rail.grid[r, c]
+                        self.gl.set_predicion_path_at(r, c, transitions, agent_rail_color=color)
+                    else:
+                        cell_coord_trans = np.matmul(cell_coord, rt.row_col_to_xy) + rt.x_y_half
+                        self._draw_square(cell_coord_trans, 1 / (agent + 1.1), color, layer=1, opacity=100)
 
     def render_rail(self, spacing=False, rail_color="gray", curves=True, arrows=False):
 
@@ -558,7 +567,7 @@ class RenderTool(object):
 
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)
-        if show_predictions and len(env.dev_pred_dict) > 0:
+        if show_predictions:
             self.render_prediction(range(env.get_num_agents()), env.dev_pred_dict)
         if show:
             self.gl.show()

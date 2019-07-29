@@ -17,7 +17,7 @@ LocalGridObs = LocalObsForRailEnv(view_height=10, view_width=2, center=2)
 env = RailEnv(width=50,
               height=50,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
-              obs_builder_object=LocalGridObs,
+              obs_builder_object=TreeObservation,
               number_of_agents=5)
 
 env_renderer = RenderTool(env, gl="PILSVG", )
@@ -84,7 +84,7 @@ for trials in range(1, n_trials + 1):
         # Environment step which returns the observations for all agents, their corresponding
         # reward and whether their are done
         next_obs, all_rewards, done, _ = env.step(action_dict)
-        env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
+        env_renderer.render_env(show=True, show_observations=False, show_predictions=True)
 
         # Update replay buffer and train agent
         for a in range(env.get_num_agents()):

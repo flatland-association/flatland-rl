@@ -163,7 +163,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                 # prediction is ready
                 prediction[index] = [index, *new_position, new_direction, 0]
                 visited.add((new_position[0], new_position[1], new_direction))
-            self.env.dev_pred_dict[agent.handle] = visited
+            # self.env.dev_pred_dict[agent.handle] = visited
             prediction_dict[agent.handle] = prediction
 
             # cleanup: reset initial position
