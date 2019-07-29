@@ -483,9 +483,14 @@ class FlatlandRemoteEvaluationService:
                 video_thumb_s3_key = aicrowd_helpers.upload_to_s3(
                     video_thumb_output_path
                 )
+                static_thumbnail_s3_key = aicrowd_helpers.upload_random_frame_to_s3(
+                    self.vizualization_folder_name
+                )
                 self.evaluation_state["score"]["media_content_type"] = "video/mp4"
                 self.evaluation_state["score"]["media_large"] = video_s3_key
                 self.evaluation_state["score"]["media_thumbnail"] = video_thumb_s3_key
+
+                self.evaluation_state["meta"]["static_media_frame"] = static_thumbnail_s3_key
             else:
                 print("[WARNING] Ignoring uploading of video to S3")
 
