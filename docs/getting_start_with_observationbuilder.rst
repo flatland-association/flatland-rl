@@ -152,5 +152,5 @@ navigation to target, and shows the path taken as an animation.
         env_renderer.render_env(show=True, frames=True, show_observations=False)
         time.sleep(0.1)
 
-
+The code examples above appear in the example file `custom_observation_example.py<https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/examples/custom_observation_example.py>`_. You can run it using :code:`python examples/custom_observation_example.py` from the root folder of the flatland repo.  The two examples are run one after the other.
 
