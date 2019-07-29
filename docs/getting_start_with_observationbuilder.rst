@@ -58,11 +58,13 @@ Example 2 : Single-agent navigation
 
 Observation builder objects can of course derive from existing concrete subclasses of ObservationBuilder.
 For example, it may be useful to extend the TreeObsForRailEnv_ observation builder.
-A feature of this class is that on :code:`reset()`, it pre-computes the length of the shortest paths from all
+A feature of this class is that on :code:`reset()`, it pre-computes the lengths of the shortest paths from all
 cells and orientations to the target of each agent, i.e. a distance map for each agent.
+
 In this example we exploit these distance maps by implementing an observation builder that shows the current shortest path for each agent as a one-hot observation vector of length 3, whose components represent the possible directions an agent can take (LEFT, FORWARD, RIGHT). All values of the observation vector are set to :code:`0` except for the shortest direction where it is set to :code:`1`.
-Using this observation with highly engineered features indicating the agent's shortest path, an agent can then learn to take the corresponding action at each time-step, or we could even hardcode the optimal policy. 
-Please note, however, that this simple strategy fails when multiple agents are present, as each agent would only attempt its greedy solution, which is not usually Pareto-optimal in this context.
+
+Using this observation with highly engineered features indicating the agent's shortest path, an agent can then learn to take the corresponding action at each time-step; or we could even hardcode the optimal policy. 
+Note that this simple strategy fails when multiple agents are present, as each agent would only attempt its greedy solution, which is not usually `Pareto-optimal <https://en.wikipedia.org/wiki/Pareto_efficiency>`_ in this context.
 
 .. _TreeObsForRailEnv: https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/observations.py#L14
 
