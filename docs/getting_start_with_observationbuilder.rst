@@ -17,7 +17,7 @@ In this first example we implement all the functions necessary for the observati
 Custom observation builder objects need to derive from the `flatland.core.env_observation_builder.ObservationBuilder`_
 base class and must implement two methods, :code:`reset(self)` and :code:`get(self, handle)`.
 
-.. _`flatland.core.env_observation_builder.ObservationBuilder` : https://gitlab.aicrowd.com/flatland/flatland/blob/obsbuildertut/flatland/core/env_observation_builder.py#L13
+.. _`flatland.core.env_observation_builder.ObservationBuilder` : https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/core/env_observation_builder.py#L13
 
 Below is a simple example that returns observation vectors of size :code:`observation_space = 5` featuring only the ID (handle) of the agent whose
 observation vector is being computed:
