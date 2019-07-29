@@ -2,6 +2,8 @@ import os
 import boto3
 import uuid
 import subprocess
+import glob
+import random
 
 ###############################################################
 # Expected Env Variables
@@ -42,6 +44,25 @@ def is_aws_configured():
 def is_grading():
     return os.getenv("CROWDAI_IS_GRADING", False) or \
         os.getenv("AICROWD_IS_GRADING", False)
+
+
+def upload_random_frame_to_s3(frames_folder):
+    all_frames = glob.glob(os.path.join(frames_folder, "*.png"))
+    random_frame = random.choice(all_frames)
+    s3 = get_boto_client()
+    if not S3_UPLOAD_PATH_TEMPLATE:
+        raise Exception("S3_UPLOAD_PATH_TEMPLATE not provided...")
+    if not S3_BUCKET:
+        raise Exception("S3_BUCKET not provided...")
+    
+    image_target_key = S3_UPLOAD_PATH_TEMPLATE.replace(".mp4", ".png").format(str(uuid.uuid4()))
+    s3.put_object(
+        ACL="public-read",
+        Bucket=S3_BUCKET,
+        Key=image_target_key,
+        Body=open(random_frame, 'rb')
+    )
+    return image_target_key
 
 
 def upload_to_s3(localpath):
