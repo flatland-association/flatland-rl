@@ -1,6 +1,5 @@
 import io
 import os
-import platform
 import time
 import tkinter as tk
 
@@ -27,8 +26,6 @@ def enable_windows_cairo_support():
 
 enable_windows_cairo_support()
 from cairosvg import svg2png  # noqa: E402
-from screeninfo import get_monitors  # noqa: E402
-
 from flatland.core.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
 
 
@@ -55,19 +52,13 @@ class PILGL(GraphicsLayer):
         self.background_grid = np.zeros(shape=(self.width, self.height))
 
         if jupyter is False:
+            # NOTE: Currently removed the dependency on 
+            #       screeninfo. We have to find an alternate 
+            #       way to compute the screen width and height
+            #       In the meantime, we are harcoding the 800x600 
+            #       assumption
             self.screen_width = 800
             self.screen_height = 600
-
-            if platform.system() == "Windows" or platform.system() == "Linux":
-                self.screen_width = 9999
-                self.screen_height = 9999
-                for m in get_monitors():
-                    self.screen_height = min(self.screen_height, m.height)
-                    self.screen_width = min(self.screen_width, m.width)
-                # Note: screeninfo doesnot have proper support for 
-                # OSX yet, hence the default values of 800,600
-                # will be used for the same.
-
             w = (self.screen_width - self.width - 10) / (self.width + 1 + self.linewidth)
             h = (self.screen_height - self.height - 10) / (self.height + 1 + self.linewidth)
             self.nPixCell = int(max(1, np.ceil(min(w, h))))
