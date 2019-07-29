@@ -5,7 +5,8 @@ Getting Started with custom observations
 Overview
 --------------
 
-One of the main objectives of the Flatland-Challenge_ is to find a suitable observation (relevant features for the problem at hand) to solve the task. Therefore **Flatland** was build with as much flexibility as possible when it comes to building your custom observations. Observations in Flatland environments are fully customizable. Whenever an environment needs to compute new observations for each agent, it queries an object derived from the :code:`ObservationBuilder` base class, which takes the current state of the environment and returns the desired observation.
+One of the main objectives of the Flatland-Challenge_ is to find a suitable observation (relevant features for the problem at hand) to solve the task. Therefore **Flatland** was built with as much flexibility as possible when it comes to building your custom observations: observations in Flatland environments are fully customizable.
+Whenever an environment needs to compute new observations for each agent, it queries an object derived from the :code:`ObservationBuilder` base class, which takes the current state of the environment and returns the desired observation.
 
 
 .. _Flatland-Challenge: https://www.aicrowd.com/challenges/flatland-challenge
@@ -18,7 +19,7 @@ base class and must implement two methods, :code:`reset(self)` and :code:`get(se
 
 .. _`flatland.core.env_observation_builder.ObservationBuilder` : https://gitlab.aicrowd.com/flatland/flatland/blob/obsbuildertut/flatland/core/env_observation_builder.py#L13
 
-Following is a simple example that returns observation vectors of size :code:`observation_space = 5` featuring only the ID (handle) of the agent whose
+Below is a simple example that returns observation vectors of size :code:`observation_space = 5` featuring only the ID (handle) of the agent whose
 observation vector is being computed:
 
 .. code-block:: python
@@ -38,7 +39,7 @@ observation vector is being computed:
             observation = handle * np.ones((self.observation_space[0],))
             return observation
 
-We can pass our custom observation builder :code:`SimpleObs` to the :code:`RailEnv` creator as follows:
+We can pass an instance of our custom observation builder :code:`SimpleObs` to the :code:`RailEnv` creator as follows:
 
 .. code-block:: python
 
@@ -48,19 +49,20 @@ We can pass our custom observation builder :code:`SimpleObs` to the :code:`RailE
                   number_of_agents=3,
                   obs_builder_object=SimpleObs())
 
-Anytime :code:`env.reset()` or :code:`env.step()` is called the observation builder will return the custom observation of all agents initialized in the env.
-In the next example we want to highlight how you can derive from already implemented observation builders and how to access internal variables of **Flatland**.
+Anytime :code:`env.reset()` or :code:`env.step()` is called, the observation builder will return the custom observation of all agents initialized in the env.
+In the next example we highlight how to derive from existing observation builders and how to access internal variables of **Flatland**.
 
 
 Example 2 : Single-agent navigation
 --------------
 
-Observation builder objects can also derive existing implementations of classes derived from the ObservationBuilder
-base class. For example, it may be useful to derive observations from the TreeObsForRailEnv_ implemented observation
-builder. An advantage of this class is that on :code:`reset()`, it pre-computes the length of the shortest paths from all
-cells and orientations to the target of each agent, e.g. a distance map for each agent.
-In this example we want to exploit these distance maps by implementing and observation builder that shows the current shortest path for each agent as a binary observation vector of length 3, whose components represent the possible directions an agent can take (LEFT, FORWARD, RIGHT). All values of the observation vector are set to :code:`0` except for the shortest direction where it is set to :code:`1`.
-Using this observation with highly engineer features indicating the agents shortest path an agent can then learn to take the corresponding action at each time-step, or we could even hardcode the optimal policy. Please do note, however, that this simple strategy fails when multiple agents are present, as each agent would only attempt its greedier solution, which is not usually Pareto-optimal in this context.
+Observation builder objects can of course derive from existing concrete subclasses of ObservationBuilder.
+For example, it may be useful to extend the TreeObsForRailEnv_ observation builder.
+A feature of this class is that on :code:`reset()`, it pre-computes the length of the shortest paths from all
+cells and orientations to the target of each agent, i.e. a distance map for each agent.
+In this example we exploit these distance maps by implementing an observation builder that shows the current shortest path for each agent as a one-hot observation vector of length 3, whose components represent the possible directions an agent can take (LEFT, FORWARD, RIGHT). All values of the observation vector are set to :code:`0` except for the shortest direction where it is set to :code:`1`.
+Using this observation with highly engineered features indicating the agent's shortest path, an agent can then learn to take the corresponding action at each time-step, or we could even hardcode the optimal policy. 
+Please note, however, that this simple strategy fails when multiple agents are present, as each agent would only attempt its greedy solution, which is not usually Pareto-optimal in this context.
 
 .. _TreeObsForRailEnv: https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/observations.py#L14
 
@@ -80,7 +82,7 @@ Using this observation with highly engineer features indicating the agents short
         """
         def __init__(self):
             super().__init__(max_depth=0)
-            # We set max_depth=0 in because we only need to look at the current position of the agent to deside what direction is shortest.
+            # We set max_depth=0 in because we only need to look at the current position of the agent to decide what direction is shortest.
             self.observation_space = [3]
 
         def reset(self):
@@ -88,7 +90,8 @@ Using this observation with highly engineer features indicating the agents short
             super().reset()
 
         def get(self, handle):
-            # Here we acces agent information of the instantiated environment. Any information of the environment can be accessed but not changed!
+            # Here we access agent information from the environment.
+            # Information from the environment can be accessed but not changed!
             agent = self.env.agents[handle]
 
             possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
@@ -124,7 +127,7 @@ Using this observation with highly engineer features indicating the agents short
         print(obs[i])
 
 Finally, the following is an example of hard-coded navigation for single agents that achieves optimal single-agent
-navigation to target, and show the taken path as an animation.
+navigation to target, and shows the path taken as an animation.
 
 .. code-block:: python
 

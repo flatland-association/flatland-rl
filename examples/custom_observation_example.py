@@ -1,5 +1,5 @@
 import random
-
+import time
 import numpy as np
 
 from flatland.envs.observations import TreeObsForRailEnv
@@ -94,8 +94,19 @@ obs, all_rewards, done, _ = env.step({0: 0, 1: 1})
 for i in range(env.get_num_agents()):
     print(obs[i])
 
-env_renderer = RenderTool(env)
-env_renderer.render_env(show=True, frames=True, show_observations=False)
-env_renderer.render_env(show=True, frames=True, show_observations=False)
+env = RailEnv(width=50,
+            height=50,
+            rail_generator=random_rail_generator(),
+            number_of_agents=1,
+            obs_builder_object=SingleAgentNavigationObs())
+obs, all_rewards, done, _ = env.step({0: 0})
+env_renderer = RenderTool(env, gl="PILSVG")
+env_renderer.render_env(show=True, frames=True, show_observations=True)
+for step in range(100):
+    action = np.argmax(obs[0])+1
+    obs, all_rewards, done, _ = env.step({0:action})
+    print("Rewards: ", all_rewards, "  [done=", done, "]")
+    env_renderer.render_env(show=True, frames=True, show_observations=True)
+    time.sleep(0.1)
 
-x = input()
+
