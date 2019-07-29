@@ -280,7 +280,9 @@ class RenderTool(object):
 
         # Check if the observation builder provides an observation
         if len(observation_dict) < 1:
-            warnings.warn("Observation Builder did not provide an observation_dict of all observed cells.")
+            warnings.warn(
+                "Predictor did not provide any predicted cells to render. \
+                Observaiton builder needs to populate: env.dev_obs_dict")
         else:
             for agent in agent_handles:
                 color = self.gl.get_agent_color(agent)
@@ -299,7 +301,13 @@ class RenderTool(object):
         """
         rt = self.__class__
         if len(prediction_dict) < 1:
-            warnings.warn("Predictor did not provide any predicted cells to render.")
+            warnings.warn(
+                "Predictor did not provide any predicted cells to render. \
+                Predictors builder needs to populate: env.dev_pred_dict")
+
+
+
+
         else:
             for agent in agent_handles:
                 color = self.gl.get_agent_color(agent)
