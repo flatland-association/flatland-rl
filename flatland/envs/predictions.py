@@ -87,6 +87,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
     """
 
     def __init__(self, max_depth=20):
+        # Initialize with depth 20
         self.max_depth = max_depth
 
     def get(self, custom_args=None, handle=None):
