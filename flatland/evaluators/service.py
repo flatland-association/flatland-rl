@@ -17,6 +17,7 @@ import time
 import traceback
 import crowdai_api
 import timeout_decorator
+import random
 
 
 use_signals_in_timeout = True
@@ -74,6 +75,10 @@ class FlatlandRemoteEvaluationService:
         self.test_env_folder = test_env_folder
         self.video_generation_envs = video_generation_envs
         self.env_file_paths = self.get_env_filepaths()
+        random.shuffle(self.env_file_paths)
+        print(self.env_file_paths)
+        # Shuffle all the env_file_paths for more exciting videos
+        # and for more uniform time progression
 
         # Logging and Reporting related vars
         self.verbose = verbose
@@ -352,9 +357,9 @@ class FlatlandRemoteEvaluationService:
         progress = np.clip(
                     self.simulation_count * 1.0 / len(self.env_file_paths),
                     0, 1)
-        mean_reward = np.mean(self.simulation_rewards)
-        mean_normalized_reward = np.mean(self.simulation_rewards_normalized)
-        mean_percentage_complete = np.mean(self.simulation_percentage_complete)
+        mean_reward = round(np.mean(self.simulation_rewards), 2)
+        mean_normalized_reward = round(np.mean(self.simulation_rewards_normalized), 2)
+        mean_percentage_complete = round(np.mean(self.simulation_percentage_complete), 3)
         self.evaluation_state["state"] = "IN_PROGRESS"
         self.evaluation_state["progress"] = progress
         self.evaluation_state["simulation_count"] = self.simulation_count
@@ -457,9 +462,9 @@ class FlatlandRemoteEvaluationService:
                 """
             )
         
-        mean_reward = np.mean(self.simulation_rewards)
-        mean_normalized_reward = np.mean(self.simulation_rewards_normalized)
-        mean_percentage_complete = np.mean(self.simulation_percentage_complete)
+        mean_reward = round(np.mean(self.simulation_rewards), 2)
+        mean_normalized_reward = round(np.mean(self.simulation_rewards_normalized), 2)
+        mean_percentage_complete = round(np.mean(self.simulation_percentage_complete), 3)
 
         if self.visualize and len(os.listdir(self.vizualization_folder_name)) > 0:
             # Generate the video
