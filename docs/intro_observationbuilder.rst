@@ -169,6 +169,8 @@ The observation is incomplete as it only contains information about potential co
 In addition to using your custom predictor you can also make your custom observation ready for rendering. (This can be done in a similar way for your predictor).
 All you need to do in order to render your custom observation is to populate  :code:`self.env.dev_obs_dict[handle]` for every agent (all handles). (For the predictor use  :code:`self.env.dev_pred_dict[handle]`).
 
+In contrast to the previous examples we also implement the :code:`def get_many(self, handles=None)` function for this custom observation builder. The reasoning here is that we want to call the predictor only once per :code:`env.step()`. The base implementation of :code:`def get_many(self, handles=None)` will call the :code:`get(handle)` function for all handles, which mean that it normally does not need to be reimplemented, except for cases as the one below.
+
 .. _ShortestPathPredictorForRailEnv: https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/predictions.py#L81
 .. _example: https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/custom_observation_example.py#L110
 
