@@ -352,9 +352,9 @@ class FlatlandRemoteEvaluationService:
         progress = np.clip(
                     self.simulation_count * 1.0 / len(self.env_file_paths),
                     0, 1)
-        mean_reward = np.mean(self.simulation_rewards)
-        mean_normalized_reward = np.mean(self.simulation_rewards_normalized)
-        mean_percentage_complete = np.mean(self.simulation_percentage_complete)
+        mean_reward = round(np.mean(self.simulation_rewards), 2)
+        mean_normalized_reward = round(np.mean(self.simulation_rewards_normalized), 2)
+        mean_percentage_complete = round(np.mean(self.simulation_percentage_complete), 3)
         self.evaluation_state["state"] = "IN_PROGRESS"
         self.evaluation_state["progress"] = progress
         self.evaluation_state["simulation_count"] = self.simulation_count
@@ -457,9 +457,9 @@ class FlatlandRemoteEvaluationService:
                 """
             )
         
-        mean_reward = np.mean(self.simulation_rewards)
-        mean_normalized_reward = np.mean(self.simulation_rewards_normalized)
-        mean_percentage_complete = np.mean(self.simulation_percentage_complete)
+        mean_reward = round(np.mean(self.simulation_rewards), 2)
+        mean_normalized_reward = round(np.mean(self.simulation_rewards_normalized), 2)
+        mean_percentage_complete = round(np.mean(self.simulation_percentage_complete), 3)
 
         if self.visualize and len(os.listdir(self.vizualization_folder_name)) > 0:
             # Generate the video
