@@ -9,7 +9,7 @@ Welcome to flatland's documentation!
    installation
    about_flatland
    gettingstarted
-   getting_start_with_observationbuilder
+   intro_observationbuilder
    localevaluation
    modules
    FAQ
