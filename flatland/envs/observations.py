@@ -308,6 +308,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         We walk along the branch and collect the information documented in the get() function.
         If there is a branching point a new node is created and each possible branch is explored.
         """
+
         # [Recursive branch opened]
         if depth >= self.max_depth + 1:
             return [], []

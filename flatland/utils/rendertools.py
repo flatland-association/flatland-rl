@@ -304,10 +304,6 @@ class RenderTool(object):
             warnings.warn(
                 "Predictor did not provide any predicted cells to render. \
                 Predictors builder needs to populate: env.dev_pred_dict")
-
-
-
-
         else:
             for agent in agent_handles:
                 color = self.gl.get_agent_color(agent)
