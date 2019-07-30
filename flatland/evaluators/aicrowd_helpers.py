@@ -1,5 +1,4 @@
 import os
-import boto3
 import uuid
 import subprocess
 import glob
@@ -27,6 +26,14 @@ S3_UPLOAD_PATH_TEMPLATE = os.getenv("S3_UPLOAD_PATH_TEMPLATE", "misc/flatland-rl
 def get_boto_client():
     if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
         raise Exception("AWS Credentials not provided..")
+    try:
+        import boto3
+    except ImportError as e:
+        raise Exception(
+                        "boto3 is not installed. Please manually install by : ",
+                        " pip install -U boto3"
+                        )
+
     return boto3.client(
             's3',
             aws_access_key_id=AWS_ACCESS_KEY_ID,
