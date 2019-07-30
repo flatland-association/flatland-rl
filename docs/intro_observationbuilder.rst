@@ -167,7 +167,7 @@ Any custom predictor can be passed to the observation builder and then be used t
 The observation is incomplete as it only contains information about potential conflicts and has no feature about the agent objectives.
 
 In addition to using your custom predictor you can also make your custom observation ready for rendering. (This can be done in a similar way for your predictor).
-All you need to do in order to render your custom observation is to populate `self.env.dev_obs_dict[handle]` for every agent (all handles). (For the predictor use `self.env.dev_pred_dict[handle]`).
+All you need to do in order to render your custom observation is to populate  :code:`self.env.dev_obs_dict[handle]` for every agent (all handles). (For the predictor use  :code:`self.env.dev_pred_dict[handle]`).
 
 .. _ShortestPathPredictorForRailEnv: https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/predictions.py#L81
 .. _example: https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/custom_observation_example.py#L110
