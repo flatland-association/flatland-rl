@@ -173,90 +173,90 @@ All you need to do in order to render your custom observation is to populate  :c
 .. _example: https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/custom_observation_example.py#L110
 
 .. code-block:: python
+    
+    class ObservePredictions(TreeObsForRailEnv):
+        """
+        We use the provided ShortestPathPredictor to illustrate the usage of predictors in your custom observation.
+    
+        We derive our observation builder from TreeObsForRailEnv, to exploit the existing implementation to compute
+        the minimum distances from each grid node to each agent's target.
+    
+        This is necessary so that we can pass the distance map to the ShortestPathPredictor
+    
+        Here we also want to highlight how you can visualize your observation
+        """
+    
+        def __init__(self, predictor):
+            super().__init__(max_depth=0)
+            self.observation_space = [10]
+            self.predictor = predictor
+    
+        def reset(self):
+            # Recompute the distance map, if the environment has changed.
+            super().reset()
+    
+        def get_many(self, handles=None):
+            '''
+            Because we do not want to call the predictor seperately for every agent we implement the get_many function
+            Here we can call the predictor just ones for all the agents and use the predictions to generate our observations
+            :param handles:
+            :return:
+            '''
+    
+            self.predictions = self.predictor.get(custom_args={'distance_map': self.distance_map})
+    
+            self.predicted_pos = {}
+            for t in range(len(self.predictions[0])):
+                pos_list = []
+                for a in handles:
+                    pos_list.append(self.predictions[a][t][1:3])
+                # We transform (x,y) coodrinates to a single integer number for simpler comparison
+                self.predicted_pos.update({t: coordinate_to_position(self.env.width, pos_list)})
+            observations = {}
+    
+            # Collect all the different observation for all the agents
+            for h in handles:
+                observations[h] = self.get(h)
+            return observations
+    
+        def get(self, handle):
+            '''
+            Lets write a simple observation which just indicates whether or not the own predicted path
+            overlaps with other predicted paths at any time. This is useless for the task of navigation but might
+            help when looking for conflicts. A more complex implementation can be found in the TreeObsForRailEnv class
+    
+            Each agent recieves an observation of length 10, where each element represents a prediction step and its value
+            is:
+             - 0 if no overlap is happening
+             - 1 where n i the number of other paths crossing the predicted cell
+    
+            :param handle: handeled as an index of an agent
+            :return: Observation of handle
+            '''
+    
+            observation = np.zeros(10)
+    
+            # We are going to track what cells where considered while building the obervation and make them accesible
+            # For rendering
+    
+            visited = set()
+            for _idx in range(10):
+                # Check if any of the other prediction overlap with agents own predictions
+                x_coord = self.predictions[handle][_idx][1]
+                y_coord = self.predictions[handle][_idx][2]
+    
+                # We add every observed cell to the observation rendering
+                visited.add((x_coord, y_coord))
+                if self.predicted_pos[_idx][handle] in np.delete(self.predicted_pos[_idx], handle, 0):
+                    # We detect if another agent is predicting to pass through the same cell at the same predicted time
+                    observation[handle] = 1
+    
+            # This variable will be access by the renderer to visualize the observation
+            self.env.dev_obs_dict[handle] = visited
+    
+            return observation
 
-class ObservePredictions(TreeObsForRailEnv):
-    """
-    We use the provided ShortestPathPredictor to illustrate the usage of predictors in your custom observation.
-
-    We derive our observation builder from TreeObsForRailEnv, to exploit the existing implementation to compute
-    the minimum distances from each grid node to each agent's target.
-
-    This is necessary so that we can pass the distance map to the ShortestPathPredictor
-
-    Here we also want to highlight how you can visualize your observation
-    """
-
-    def __init__(self, predictor):
-        super().__init__(max_depth=0)
-        self.observation_space = [10]
-        self.predictor = predictor
-
-    def reset(self):
-        # Recompute the distance map, if the environment has changed.
-        super().reset()
-
-    def get_many(self, handles=None):
-        '''
-        Because we do not want to call the predictor seperately for every agent we implement the get_many function
-        Here we can call the predictor just ones for all the agents and use the predictions to generate our observations
-        :param handles:
-        :return:
-        '''
-
-        self.predictions = self.predictor.get(custom_args={'distance_map': self.distance_map})
-
-        self.predicted_pos = {}
-        for t in range(len(self.predictions[0])):
-            pos_list = []
-            for a in handles:
-                pos_list.append(self.predictions[a][t][1:3])
-            # We transform (x,y) coodrinates to a single integer number for simpler comparison
-            self.predicted_pos.update({t: coordinate_to_position(self.env.width, pos_list)})
-        observations = {}
-
-        # Collect all the different observation for all the agents
-        for h in handles:
-            observations[h] = self.get(h)
-        return observations
-
-    def get(self, handle):
-        '''
-        Lets write a simple observation which just indicates whether or not the own predicted path
-        overlaps with other predicted paths at any time. This is useless for the task of navigation but might
-        help when looking for conflicts. A more complex implementation can be found in the TreeObsForRailEnv class
-
-        Each agent recieves an observation of length 10, where each element represents a prediction step and its value
-        is:
-         - 0 if no overlap is happening
-         - 1 where n i the number of other paths crossing the predicted cell
-
-        :param handle: handeled as an index of an agent
-        :return: Observation of handle
-        '''
-
-        observation = np.zeros(10)
-
-        # We are going to track what cells where considered while building the obervation and make them accesible
-        # For rendering
-
-        visited = set()
-        for _idx in range(10):
-            # Check if any of the other prediction overlap with agents own predictions
-            x_coord = self.predictions[handle][_idx][1]
-            y_coord = self.predictions[handle][_idx][2]
-
-            # We add every observed cell to the observation rendering
-            visited.add((x_coord, y_coord))
-            if self.predicted_pos[_idx][handle] in np.delete(self.predicted_pos[_idx], handle, 0):
-                # We detect if another agent is predicting to pass through the same cell at the same predicted time
-                observation[handle] = 1
-
-        # This variable will be access by the renderer to visualize the observation
-        self.env.dev_obs_dict[handle] = visited
-
-        return observation
-
-
+We can then use this new observation builder and the renderer to visualize the observation of each agent.
 
 
 .. code-block:: python
