@@ -156,8 +156,21 @@ navigation to target, and shows the path taken as an animation.
 
 The code examples above appear in the example file `custom_observation_example.py <https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/custom_observation_example.py>`_. You can run it using :code:`python examples/custom_observation_example.py` from the root folder of the flatland repo.  The two examples are run one after the other.
 
-Example 3 & 4 : Using custom predictors and rendering observation
+Example 3 : Using custom predictors and rendering observation
 --------------
+
+Because the re-scheduling task of the Flatland-Challenge_ requires some short time planning we allow the possibility to use custom predictors that help predict upcoming conflicts and help agent solve them in a timely manner.
+In the **Flatland Environment** we included an initial predictor ShortestPathPredictorForRailEnv_ to give you an idea what you can do with these predictors.
+
+Any custom predictor can be passed to the observation builder and then be used to build the observation. In this example_ we illustrate how an observation builder can be used to detect conflicts using a predictor.
+
+The observation is incomplete as it only contains information about potential conflicts and has no feature about the agent objectives.
+
+In addition to using your custom predictor you can also make your custom observation ready for rendering. (This can be done in a similar way for your predictor).
+All you need to do in order to render your custom observation is to populate `self.env.dev_obs_dict[handle]` for every agent (all handles). (For the predictor use `self.env.dev_pred_dict[handle]`).
+
+.. _ShortestPathPredictorForRailEnv: https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/predictions.py#L81
+.. _example: https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/custom_observation_example.py#L110
 
 .. code-block:: python
 
@@ -244,31 +257,35 @@ class ObservePredictions(TreeObsForRailEnv):
         return observation
 
 
-# Initiate the Predictor
-CustomPredictor = ShortestPathPredictorForRailEnv(10)
 
-# Pass the Predictor to the observation builder
-CustomObsBuilder = ObservePredictions(CustomPredictor)
 
-# Initiate Environment
-env = RailEnv(width=10,
-              height=10,
-              rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
-              number_of_agents=3,
-              obs_builder_object=CustomObsBuilder)
+.. code-block:: python
 
-obs = env.reset()
-env_renderer = RenderTool(env, gl="PILSVG")
-
-# We render the initial step and show the obsered cells as colored boxes
-env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
-
-action_dict = {}
-for step in range(100):
-    for a in range(env.get_num_agents()):
-        action = np.random.randint(0, 5)
-        action_dict[a] = action
-    obs, all_rewards, done, _ = env.step(action_dict)
-    print("Rewards: ", all_rewards, "  [done=", done, "]")
+    # Initiate the Predictor
+    CustomPredictor = ShortestPathPredictorForRailEnv(10)
+    
+    # Pass the Predictor to the observation builder
+    CustomObsBuilder = ObservePredictions(CustomPredictor)
+    
+    # Initiate Environment
+    env = RailEnv(width=10,
+                  height=10,
+                  rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
+                  number_of_agents=3,
+                  obs_builder_object=CustomObsBuilder)
+    
+    obs = env.reset()
+    env_renderer = RenderTool(env, gl="PILSVG")
+    
+    # We render the initial step and show the obsered cells as colored boxes
     env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
-    time.sleep(0.5)
+    
+    action_dict = {}
+    for step in range(100):
+        for a in range(env.get_num_agents()):
+            action = np.random.randint(0, 5)
+            action_dict[a] = action
+        obs, all_rewards, done, _ = env.step(action_dict)
+        print("Rewards: ", all_rewards, "  [done=", done, "]")
+        env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
+        time.sleep(0.5)
