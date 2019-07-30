@@ -86,7 +86,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
     The prediction acts as if no other agent is in the environment and always takes the forward action.
     """
 
-    def __init__(self, max_depth):
+    def __init__(self, max_depth=20):
         self.max_depth = max_depth
 
     def get(self, custom_args=None, handle=None):
