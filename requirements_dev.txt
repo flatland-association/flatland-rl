@@ -1,6 +1,5 @@
 # contains all requirements to run the tests by running ```tox -e py36,py37```
 tox>=3.5.2
-twine>=1.12.1
 pytest>=3.8.2
 pytest-runner>=4.2
 Click>=7.0
