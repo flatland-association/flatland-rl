@@ -1,6 +1,5 @@
 # contains all requirements to run the tests by running ```tox -e py36,py37```
 tox>=3.5.2
-twine>=1.12.1
 pytest>=3.8.2
 pytest-runner>=4.2
 Click>=7.0
@@ -14,7 +13,6 @@ CairoSVG>=2.3.1
 msgpack>=0.6.1
 msgpack-numpy>=0.4.4.0
 svgutils>=0.3.1
-screeninfo>=0.3.1
 pyarrow>=0.13.0
 importlib-metadata>=0.17
 importlib-resources>=1.0.1
