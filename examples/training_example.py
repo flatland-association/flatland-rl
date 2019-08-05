@@ -84,7 +84,7 @@ for trials in range(1, n_trials + 1):
         # Environment step which returns the observations for all agents, their corresponding
         # reward and whether their are done
         next_obs, all_rewards, done, _ = env.step(action_dict)
-        env_renderer.render_env(show=True, show_observations=True, show_predictions=True)
+        env_renderer.render_env(show=True, show_observations=False, show_predictions=True)
 
         # Update replay buffer and train agent
         for a in range(env.get_num_agents()):
