@@ -196,6 +196,8 @@ class RailEnv(Environment):
         for i_agent in range(self.get_num_agents()):
             agent = self.agents[i_agent]
             agent.speed_data['position_fraction'] = 0.0
+            agent.broken_data['broken'] = 0
+            agent.broken_data['number_of_halts'] = 0
 
         self.num_resets += 1
         self._elapsed_steps = 0
