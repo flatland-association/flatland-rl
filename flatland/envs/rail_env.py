@@ -75,6 +75,20 @@ class RailEnv(Environment):
     - stop_penalty = 0  # penalty for stopping a moving agent
     - start_penalty = 0  # penalty for starting a stopped agent
 
+    Stochastic breaking of trains:
+    Trains in RailEnv can break down if they are halted too often (either by their own choice or because an invalid
+    action or cell is selected.
+
+    Every time an agent stops, an agent has a certain probability of breaking. The probability is the product of 2
+    distributions: the first distribution selects the average number of trains that will break during an episode
+    (e.g., max(1, 10% of the trains) ). The second distribution is a Poisson distribution with mean set to the average
+    number of stops at which a train breaks.
+    If a random number in [0,1] is lower than the product of the 2 distributions, the train breaks.
+    A broken train samples a random number of steps it will stay broken for, during which all its actions are ignored. 
+
+    TODO: currently, the parameters that control the stochasticity of the environment are hard-coded in init().
+    For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
+
     """
 
     def __init__(self,
@@ -151,6 +165,15 @@ class RailEnv(Environment):
 
         self.valid_positions = None
 
+        # Stochastic train breaking parameters
+        self.min_average_broken_trains = 1
+        self.average_proportion_of_broken_trains = 0.1 # ~10% of the trains can be expected to break down in an episode
+        self.mean_number_halts_to_break = 3
+
+        # Uniform distribution
+        self.min_number_of_steps_broken = 4
+        self.max_number_of_steps_broken = 8
+
     # no more agent_handles
     def get_agent_handles(self):
         return range(self.get_num_agents())
@@ -212,6 +235,26 @@ class RailEnv(Environment):
         # Return the new observation vectors for each agent
         return self._get_observations()
 
+    def _agent_stopped(self, i_agent):
+        self.agents[i_agent].broken_data['number_of_halts'] += 1
+
+        def poisson_pdf(x, mean):
+            return np.power(mean, x) * np.exp(-mean) / np.prod(range(2, x))
+
+        p1_prob_train_i_breaks = max(self.min_average_broken_trains / len(self.agents),
+                                     self.average_proportion_of_broken_trains)
+        p2_prob_train_breaks_at_halt_j = poisson_pdf(self.agents[i_agent].broken_data['number_of_halts'],
+                                                     self.mean_number_halts_to_break)
+
+        s1 = np.random.random()
+        s2 = np.random.random()
+
+        if s1 * s2 <= p1_prob_train_i_breaks * p2_prob_train_breaks_at_halt_j:
+            # +1 because the counter is decreased at the beginning of step()
+            num_broken_steps = np.random.randint(self.min_number_of_steps_broken, self.max_number_of_steps_broken+1) + 1
+            self.agents[i_agent].broken_data['broken'] = num_broken_steps
+            self.agents[i_agent].broken_data['number_of_halts'] = 0
+
     def step(self, action_dict_):
         self._elapsed_steps += 1
 
@@ -240,10 +283,19 @@ class RailEnv(Environment):
             agent = self.agents[i_agent]
             agent.old_direction = agent.direction
             agent.old_position = agent.position
+
+            if agent.broken_data['broken'] > 0:
+                agent.broken_data['broken'] -= 1
+
             if self.dones[i_agent]:  # this agent has already completed...
                 continue
 
-            if i_agent not in action_dict:  # no action has been supplied for this agent
+            # No action has been supplied for this agent
+            if i_agent not in action_dict:
+                action_dict[i_agent] = RailEnvActions.DO_NOTHING
+
+            # The train is broken
+            if agent.broken_data['broken'] > 0:
                 action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
             if action_dict[i_agent] < 0 or action_dict[i_agent] > len(RailEnvActions):
@@ -262,6 +314,7 @@ class RailEnv(Environment):
                 # Only allow halting an agent on entering new cells.
                 agent.moving = False
                 self.rewards_dict[i_agent] += stop_penalty
+                self._agent_stopped(i_agent)
 
             if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
@@ -305,6 +358,8 @@ class RailEnv(Environment):
                                 self.rewards_dict[i_agent] += invalid_action_penalty
                                 self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                                 self.rewards_dict[i_agent] += stop_penalty
+                                if agent.moving:
+                                    self._agent_stopped(i_agent)
                                 agent.moving = False
                                 continue
                         else:
@@ -312,6 +367,8 @@ class RailEnv(Environment):
                             self.rewards_dict[i_agent] += invalid_action_penalty
                             self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                             self.rewards_dict[i_agent] += stop_penalty
+                            if agent.moving:
+                                self._agent_stopped(i_agent)
                             agent.moving = False
                             continue
 
@@ -331,12 +388,15 @@ class RailEnv(Environment):
                     agent.direction = new_direction
                     agent.speed_data['position_fraction'] = 0.0
                 else:
-                    # If the agent cannot move due to any reason, we set its state to not moving.
+                    # If the agent cannot move due to any reason, we set its state to not moving
+                    if agent.moving:
+                        self._agent_stopped(i_agent)
                     agent.moving = False
 
             if np.equal(agent.position, agent.target).all():
                 self.dones[i_agent] = True
                 agent.moving = False
+                # Do not call self._agent_stopped, as the agent has terminated its task
             else:
                 self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
 
