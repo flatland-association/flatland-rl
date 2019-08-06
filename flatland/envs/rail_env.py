@@ -167,7 +167,7 @@ class RailEnv(Environment):
 
         # Stochastic train breaking parameters
         self.min_average_broken_trains = 1
-        self.average_proportion_of_broken_trains = 0.1 # ~10% of the trains can be expected to break down in an episode
+        self.average_proportion_of_broken_trains = 0.1  # ~10% of the trains can be expected to break down in an episode
         self.mean_number_halts_to_break = 3
 
         # Uniform distribution

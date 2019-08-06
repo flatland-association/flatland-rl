@@ -38,13 +38,19 @@ class EnvAgentStatic(object):
                                 'speed': speeds[i] if speeds is not None else 1.0,
                                 'transition_action_on_cellexit': 0})
 
-        # TODO: on initialization, all agents are re-set as non-broken. Perhaps it may be desirable to set some as broken?
+        # TODO: on initialization, all agents are re-set as non-broken. Perhaps it may be desirable to set
+        # some as broken?
         broken_datas = []
         for i in range(len(positions)):
             broken_datas.append({'broken': 0,
                                 'number_of_halts': 0})
 
-        return list(starmap(EnvAgentStatic, zip(positions, directions, targets, [False] * len(positions), speed_datas, broken_datas)))
+        return list(starmap(EnvAgentStatic, zip(positions,
+                                                directions,
+                                                targets,
+                                                [False] * len(positions),
+                                                speed_datas,
+                                                broken_datas)))
 
     def to_list(self):
 
