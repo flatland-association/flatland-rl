@@ -94,16 +94,16 @@ def test_malfunction_process():
         obs, all_rewards, done, _ = env.step(actions)
 
         if agent_malfunctioning:
+            # Check that agent is not moving while malfunctioning
             assert agent_old_position == env.agents[0].position
 
         agent_old_position = env.agents[0].position
         total_down_time += env.agents[0].malfunction_data['malfunction']
 
-
-    # Check that the agents breaks twice
+    # Check that the appropriate number of malfunctions is achieved
     assert env.agents[0].malfunction_data['nr_malfunctions'] == 5
 
-    # Check that 11 stops where performed
+    # Check that 20 stops where performed
     assert agent_halts == 20
 
     # Check that malfunctioning data was standing around
