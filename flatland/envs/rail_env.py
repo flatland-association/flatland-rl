@@ -75,16 +75,13 @@ class RailEnv(Environment):
     - stop_penalty = 0  # penalty for stopping a moving agent
     - start_penalty = 0  # penalty for starting a stopped agent
 
-    Stochastic breaking of trains:
-    Trains in RailEnv can break down if they are halted too often (either by their own choice or because an invalid
+    Stochastic malfunctioning of trains:
+    Trains in RailEnv can malfunction if they are halted too often (either by their own choice or because an invalid
     action or cell is selected.
 
-    Every time an agent stops, an agent has a certain probability of breaking. The probability is the product of 2
-    distributions: the first distribution selects the average number of trains that will break during an episode
-    (e.g., max(1, 10% of the trains) ). The second distribution is a Poisson distribution with mean set to the average
-    number of stops at which a train breaks.
-    If a random number in [0,1] is lower than the product of the 2 distributions, the train breaks.
-    A broken train samples a random number of steps it will stay broken for, during which all its actions are ignored. 
+    Every time an agent stops, an agent has a certain probability of malfunctioning. Malfunctions of trains follow a
+    poisson process with a certain rate. Not all trains will be affected by malfunctions during episodes to keep
+    complexity managable.
 
     TODO: currently, the parameters that control the stochasticity of the environment are hard-coded in init().
     For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
@@ -160,19 +157,19 @@ class RailEnv(Environment):
         self.action_space = [1]
         self.observation_space = self.obs_builder.observation_space  # updated on resets?
 
+        # Stochastic train malfunctioning parameters
+        self.proportion_malfunctioning_trains = 0.1  # percentage of malfunctioning trains
+        self.mean_malfunction_rate = 5  # Average malfunction in number of stops
+
+        # Uniform distribution parameters for malfunction duration
+        self.min_number_of_steps_broken = 4
+        self.max_number_of_steps_broken = 10
+
+        # Rest environment
         self.reset()
         self.num_resets = 0  # yes, set it to zero again!
 
         self.valid_positions = None
-
-        # Stochastic train breaking parameters
-        self.min_average_broken_trains = 1
-        self.average_proportion_of_broken_trains = 0.1  # ~10% of the trains can be expected to break down in an episode
-        self.mean_number_halts_to_break = 3
-
-        # Uniform distribution
-        self.min_number_of_steps_broken = 4
-        self.max_number_of_steps_broken = 8
 
     # no more agent_handles
     def get_agent_handles(self):
@@ -218,9 +215,12 @@ class RailEnv(Environment):
 
         for i_agent in range(self.get_num_agents()):
             agent = self.agents[i_agent]
+
+            # A proportion of agent in the environment will receive a positive malfunction rate
+            if np.random.random() >= self.proportion_malfunctioning_trains:
+                agent.malfunction_data['malfunction_rate'] = self.mean_malfunction_rate
             agent.speed_data['position_fraction'] = 0.0
-            agent.broken_data['broken'] = 0
-            agent.broken_data['number_of_halts'] = 0
+            agent.malfunction_data['malfunction'] = 0
 
         self.num_resets += 1
         self._elapsed_steps = 0
@@ -236,24 +236,26 @@ class RailEnv(Environment):
         return self._get_observations()
 
     def _agent_stopped(self, i_agent):
-        self.agents[i_agent].broken_data['number_of_halts'] += 1
+        # Make sure agent is stopped
+        self.agents[i_agent].moving = False
 
-        def poisson_pdf(x, mean):
-            return np.power(mean, x) * np.exp(-mean) / np.prod(range(2, x))
+        # Only agents that have a positive rate for malfunctions are considered
+        if self.agents[i_agent].malfunction_data['malfunction_rate'] > 0:
 
-        p1_prob_train_i_breaks = max(self.min_average_broken_trains / len(self.agents),
-                                     self.average_proportion_of_broken_trains)
-        p2_prob_train_breaks_at_halt_j = poisson_pdf(self.agents[i_agent].broken_data['number_of_halts'],
-                                                     self.mean_number_halts_to_break)
+            # Decrease counter for next event
+            self.agents[i_agent].malfunction_data['next_malfunction'] -= 1
 
-        s1 = np.random.random()
-        s2 = np.random.random()
+            # If counter has come to zero, set next malfunction time and duration of current malfunction
 
-        if s1 * s2 <= p1_prob_train_i_breaks * p2_prob_train_breaks_at_halt_j:
-            # +1 because the counter is decreased at the beginning of step()
-            num_broken_steps = np.random.randint(self.min_number_of_steps_broken, self.max_number_of_steps_broken+1) + 1
-            self.agents[i_agent].broken_data['broken'] = num_broken_steps
-            self.agents[i_agent].broken_data['number_of_halts'] = 0
+            if self.agents[i_agent].malfunction_data['next_malfunction'] <= 0:
+                # Next malfunction in number of stops
+                self.agents[i_agent].malfunction_data['next_malfunction'] = int(np.random.exponential(
+                    scale=self.agents[i_agent].malfunction_data['malfunction_rate']))
+
+                # Duration of current malfunction
+                num_broken_steps = np.random.randint(self.min_number_of_steps_broken,
+                                                     self.max_number_of_steps_broken + 1) + 1
+                self.agents[i_agent].malfunction_data['malfunction'] = num_broken_steps
 
     def step(self, action_dict_):
         self._elapsed_steps += 1
@@ -284,8 +286,8 @@ class RailEnv(Environment):
             agent.old_direction = agent.direction
             agent.old_position = agent.position
 
-            if agent.broken_data['broken'] > 0:
-                agent.broken_data['broken'] -= 1
+            if agent.malfunction_data['malfunction'] > 0:
+                agent.malfunction_data['malfunction'] -= 1
 
             if self.dones[i_agent]:  # this agent has already completed...
                 continue
@@ -295,7 +297,7 @@ class RailEnv(Environment):
                 action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
             # The train is broken
-            if agent.broken_data['broken'] > 0:
+            if agent.malfunction_data['malfunction'] > 0:
                 action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
             if action_dict[i_agent] < 0 or action_dict[i_agent] > len(RailEnvActions):

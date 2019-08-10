@@ -25,8 +25,8 @@ class EnvAgentStatic(object):
 
     # if broken>0, the agent's actions are ignored for 'broken' steps
     # number of time the agent had to stop, since the last time it broke down
-    broken_data = attrib(
-        default=Factory(lambda: dict({'broken': 0, 'number_of_halts': 0})))
+    malfunction_data = attrib(
+        default=Factory(lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0})))
 
     @classmethod
     def from_lists(cls, positions, directions, targets, speeds=None):
@@ -42,8 +42,9 @@ class EnvAgentStatic(object):
         # some as broken?
         broken_datas = []
         for i in range(len(positions)):
-            broken_datas.append({'broken': 0,
-                                'number_of_halts': 0})
+            broken_datas.append({'malfunction': 0,
+                                 'malfunction_rate': 0,
+                                 'next_malfunction': 0})
 
         return list(starmap(EnvAgentStatic, zip(positions,
                                                 directions,
@@ -64,7 +65,7 @@ class EnvAgentStatic(object):
         if type(lTarget) is np.ndarray:
             lTarget = lTarget.tolist()
 
-        return [lPos, int(self.direction), lTarget, int(self.moving), self.speed_data, self.broken_data]
+        return [lPos, int(self.direction), lTarget, int(self.moving), self.speed_data, self.malfunction_data]
 
 
 @attrs
@@ -82,7 +83,7 @@ class EnvAgent(EnvAgentStatic):
     def to_list(self):
         return [
             self.position, self.direction, self.target, self.handle,
-            self.old_direction, self.old_position, self.moving, self.speed_data, self.broken_data]
+            self.old_direction, self.old_position, self.moving, self.speed_data, self.malfunction_data]
 
     @classmethod
     def from_static(cls, oStatic):

@@ -3,11 +3,8 @@ import time
 
 import numpy as np
 
-from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.grid.grid_utils import coordinate_to_position
-from flatland.envs.generators import random_rail_generator, complex_rail_generator
+from flatland.envs.generators import complex_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
 
@@ -77,7 +74,8 @@ for step in range(100):
         actions[0] = 4 # Halt
 
     obs, all_rewards, done, _ = env.step(actions)
-    print("Agent 0 broken-ness: ", env.agents[0].broken_data['broken'])
+    if env.agents[0].broken_data['broken'] > 0:
+        print("Agent 0 broken-ness: ", env.agents[0].broken_data['broken'])
 
     env_renderer.render_env(show=True, frames=True, show_observations=False)
     time.sleep(0.5)
