@@ -238,6 +238,8 @@ class RailEnv(Environment):
             agent.speed_data['position_fraction'] = 0.0
             agent.malfunction_data['malfunction'] = 0
 
+            self._agent_stopped(i_agent)
+
         self.num_resets += 1
         self._elapsed_steps = 0
 
