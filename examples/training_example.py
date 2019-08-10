@@ -75,13 +75,11 @@ for trials in range(1, n_trials + 1):
 
     score = 0
     # Run episode
-    mean_malfunction_interval = []
     for step in range(100):
         # Chose an action for each agent in the environment
         for a in range(env.get_num_agents()):
             action = agent.act(obs[a])
             action_dict.update({a: action})
-
         # Environment step which returns the observations for all agents, their corresponding
         # reward and whether their are done
         next_obs, all_rewards, done, _ = env.step(action_dict)
@@ -95,5 +93,4 @@ for trials in range(1, n_trials + 1):
         obs = next_obs.copy()
         if done['__all__']:
             break
-    print(np.mean(mean_malfunction_interval))
     print('Episode Nr. {}\t Score = {}'.format(trials, score))

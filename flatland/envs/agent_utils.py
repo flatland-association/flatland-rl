@@ -26,7 +26,8 @@ class EnvAgentStatic(object):
     # if broken>0, the agent's actions are ignored for 'broken' steps
     # number of time the agent had to stop, since the last time it broke down
     malfunction_data = attrib(
-        default=Factory(lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0})))
+        default=Factory(
+            lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0})))
 
     @classmethod
     def from_lists(cls, positions, directions, targets, speeds=None):
@@ -40,18 +41,19 @@ class EnvAgentStatic(object):
 
         # TODO: on initialization, all agents are re-set as non-broken. Perhaps it may be desirable to set
         # some as broken?
-        broken_datas = []
+        malfunction_datas = []
         for i in range(len(positions)):
-            broken_datas.append({'malfunction': 0,
+            malfunction_datas.append({'malfunction': 0,
                                  'malfunction_rate': 0,
-                                 'next_malfunction': 0})
+                                      'next_malfunction': 0,
+                                      'nr_malfunctions': 0})
 
         return list(starmap(EnvAgentStatic, zip(positions,
                                                 directions,
                                                 targets,
                                                 [False] * len(positions),
                                                 speed_datas,
-                                                broken_datas)))
+                                                malfunction_datas)))
 
     def to_list(self):
 

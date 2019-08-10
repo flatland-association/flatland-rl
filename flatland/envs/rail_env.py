@@ -94,7 +94,8 @@ class RailEnv(Environment):
                  rail_generator=random_rail_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
-                 max_episode_steps=None
+                 max_episode_steps=None,
+                 stochastic_data=None
                  ):
         """
         Environment init.
@@ -158,12 +159,26 @@ class RailEnv(Environment):
         self.observation_space = self.obs_builder.observation_space  # updated on resets?
 
         # Stochastic train malfunctioning parameters
-        self.proportion_malfunctioning_trains = 0.1  # percentage of malfunctioning trains
-        self.mean_malfunction_rate = 5  # Average malfunction in number of stops
+        if stochastic_data is not None:
+            prop_malfunction = stochastic_data['prop_malfunction']
+            mean_malfunction_rate = stochastic_data['malfunction_rate']
+            malfunction_min_duration = stochastic_data['min_duration']
+            malfunction_max_duration = stochastic_data['max_duration']
+        else:
+            prop_malfunction = 0.
+            mean_malfunction_rate = 0.
+            malfunction_min_duration = 0.
+            malfunction_max_duration = 0.
+
+        # percentage of malfunctioning trains
+        self.proportion_malfunctioning_trains = prop_malfunction
+
+        # Mean malfunction in number of stops
+        self.mean_malfunction_rate = mean_malfunction_rate
 
         # Uniform distribution parameters for malfunction duration
-        self.min_number_of_steps_broken = 4
-        self.max_number_of_steps_broken = 10
+        self.min_number_of_steps_broken = malfunction_min_duration
+        self.max_number_of_steps_broken = malfunction_max_duration
 
         # Rest environment
         self.reset()
@@ -217,8 +232,9 @@ class RailEnv(Environment):
             agent = self.agents[i_agent]
 
             # A proportion of agent in the environment will receive a positive malfunction rate
-            if np.random.random() >= self.proportion_malfunctioning_trains:
+            if np.random.random() < self.proportion_malfunctioning_trains:
                 agent.malfunction_data['malfunction_rate'] = self.mean_malfunction_rate
+
             agent.speed_data['position_fraction'] = 0.0
             agent.malfunction_data['malfunction'] = 0
 
@@ -236,21 +252,23 @@ class RailEnv(Environment):
         return self._get_observations()
 
     def _agent_stopped(self, i_agent):
-        # Make sure agent is stopped
-        self.agents[i_agent].moving = False
+        # Decrease counter for next event
+        self.agents[i_agent].malfunction_data['next_malfunction'] -= 1
 
         # Only agents that have a positive rate for malfunctions are considered
-        if self.agents[i_agent].malfunction_data['malfunction_rate'] > 0:
+        if self.agents[i_agent].malfunction_data['malfunction_rate'] > 0 >= self.agents[i_agent].malfunction_data[
+            'malfunction']:
 
-            # Decrease counter for next event
-            self.agents[i_agent].malfunction_data['next_malfunction'] -= 1
-
-            # If counter has come to zero, set next malfunction time and duration of current malfunction
-
+            # If counter has come to zero --> Agent has malfunction
+            # set next malfunction time and duration of current malfunction
             if self.agents[i_agent].malfunction_data['next_malfunction'] <= 0:
+                # Increase number of malfunctions
+                self.agents[i_agent].malfunction_data['nr_malfunctions'] += 1
+
                 # Next malfunction in number of stops
-                self.agents[i_agent].malfunction_data['next_malfunction'] = int(np.random.exponential(
-                    scale=self.agents[i_agent].malfunction_data['malfunction_rate']))
+                next_breakdown = int(
+                    np.random.exponential(scale=self.agents[i_agent].malfunction_data['malfunction_rate']))
+                self.agents[i_agent].malfunction_data['next_malfunction'] = next_breakdown
 
                 # Duration of current malfunction
                 num_broken_steps = np.random.randint(self.min_number_of_steps_broken,
@@ -286,9 +304,6 @@ class RailEnv(Environment):
             agent.old_direction = agent.direction
             agent.old_position = agent.position
 
-            if agent.malfunction_data['malfunction'] > 0:
-                agent.malfunction_data['malfunction'] -= 1
-
             if self.dones[i_agent]:  # this agent has already completed...
                 continue
 
@@ -298,7 +313,15 @@ class RailEnv(Environment):
 
             # The train is broken
             if agent.malfunction_data['malfunction'] > 0:
+                agent.malfunction_data['malfunction'] -= 1
+
+                # Broken agents are stopped
+                self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
+                self.agents[i_agent].moving = False
                 action_dict[i_agent] = RailEnvActions.DO_NOTHING
+
+                # Nothing left to do with broken agent
+                continue
 
             if action_dict[i_agent] < 0 or action_dict[i_agent] > len(RailEnvActions):
                 print('ERROR: illegal action=', action_dict[i_agent],
