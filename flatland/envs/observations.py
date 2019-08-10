@@ -376,7 +376,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                 self._reverse_dir(
                                     self.predicted_dir[predicted_time][ca])] == 1 and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
-                            if self.env.dones[ca] and predicted_time < potential_conflict:
+                            if self.env.dones[ca] and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
 
                     # Look for conflicting paths at distance num_step-1
