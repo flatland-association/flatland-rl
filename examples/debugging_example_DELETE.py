@@ -74,8 +74,8 @@ for step in range(100):
         actions[0] = 4 # Halt
 
     obs, all_rewards, done, _ = env.step(actions)
-    if env.agents[0].broken_data['broken'] > 0:
-        print("Agent 0 broken-ness: ", env.agents[0].broken_data['broken'])
+    if env.agents[0].malfunction_data['malfunction'] > 0:
+        print("Agent 0 broken-ness: ", env.agents[0].malfunction_data['malfunction'])
 
     env_renderer.render_env(show=True, frames=True, show_observations=False)
     time.sleep(0.5)
