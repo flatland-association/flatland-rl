@@ -324,6 +324,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         visited = set()
         agent = self.env.agents[handle]
+        time_per_cell = np.reciprocal(agent.speed_data["speed"])
         own_target_encountered = np.inf
         other_agent_encountered = np.inf
         other_target_encountered = np.inf
@@ -359,18 +360,21 @@ class TreeObsForRailEnv(ObservationBuilder):
                 crossing_found = True
 
             # Register possible future conflict
-            if self.predictor and num_steps < self.max_prediction_depth:
+            predicted_time = int(tot_dist * time_per_cell)
+            if self.predictor and predicted_time < self.max_prediction_depth:
                 int_position = coordinate_to_position(self.env.width, [position])
                 if tot_dist < self.max_prediction_depth:
-                    pre_step = max(0, tot_dist - 1)
-                    post_step = min(self.max_prediction_depth - 1, tot_dist + 1)
+
+                    pre_step = max(0, predicted_time - 1)
+                    post_step = min(self.max_prediction_depth - 1, predicted_time + 1)
 
                     # Look for conflicting paths at distance tot_dist
-                    if int_position in np.delete(self.predicted_pos[tot_dist], handle, 0):
-                        conflicting_agent = np.where(self.predicted_pos[tot_dist] == int_position)
+                    if int_position in np.delete(self.predicted_pos[predicted_time], handle, 0):
+                        conflicting_agent = np.where(self.predicted_pos[predicted_time] == int_position)
                         for ca in conflicting_agent[0]:
-                            if direction != self.predicted_dir[tot_dist][ca] and cell_transitions[self._reverse_dir(
-                                self.predicted_dir[tot_dist][ca])] == 1 and tot_dist < potential_conflict:
+                            if direction != self.predicted_dir[predicted_time][ca] and cell_transitions[
+                                self._reverse_dir(
+                                    self.predicted_dir[predicted_time][ca])] == 1 and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
                             if self.env.dones[ca] and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
