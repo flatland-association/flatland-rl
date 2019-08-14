@@ -10,9 +10,9 @@ def test_sparse_rail_generator():
 
     env = RailEnv(width=20,
                   height=20,
-                  rail_generator=sparse_rail_generator(nr_nodes=5, min_node_dist=8,
-                                                       node_radius=3),
-                  number_of_agents=10,
+                  rail_generator=sparse_rail_generator(nr_nodes=3, min_node_dist=8,
+                                                       node_radius=4),
+                  number_of_agents=15,
                   obs_builder_object=GlobalObsForRailEnv())
     # reset to initialize agents_static
     env_renderer = RenderTool(env, gl="PILSVG", )
