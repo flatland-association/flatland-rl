@@ -680,7 +680,6 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
                     d = np.arange(x[2 * x_loop]+1,x[2 * x_loop+1]-1,2)
                     data.extend(d)
 
-                    print(start,goal)
                     new_path = connect_rail(rail_trans, rail_array, start, goal)
                     if len(new_path) >0:
                         c = (off_set+nbr_track_loop, x[2 * x_loop] + 1)
