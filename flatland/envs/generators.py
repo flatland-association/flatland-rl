@@ -1,3 +1,4 @@
+import warnings
 from enum import IntEnum
 
 import msgpack
@@ -8,7 +9,7 @@ from flatland.core.grid.grid_utils import distance_on_rail
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic
-from flatland.envs.grid4_generators_utils import connect_rail
+from flatland.envs.grid4_generators_utils import connect_rail, connect_from_nodes, connect_nodes, connect_to_nodes
 from flatland.envs.grid4_generators_utils import get_rnd_agents_pos_tgt_dir_on_rail
 
 
@@ -692,7 +693,7 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
     return generator
 
 
-def sparse_rail_generator(nr_train_stations=1, nr_nodes=100, mean_node_neighbours=2, min_node_dist=20, node_radius=2,
+def sparse_rail_generator(nr_train_stations=1, nr_nodes=100, max_neigbours=2, min_node_dist=20, node_radius=2,
                           seed=0):
     '''
 
@@ -708,7 +709,7 @@ def sparse_rail_generator(nr_train_stations=1, nr_nodes=100, mean_node_neighbour
 
         if num_agents > nr_train_stations:
             num_agents = nr_train_stations
-            print("complex_rail_generator: num_agents > nr_start_goal, changing num_agents")
+            warnings.warn("complex_rail_generator: num_agents > nr_start_goal, changing num_agents")
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         rail_array = grid_map.grid
@@ -719,21 +720,52 @@ def sparse_rail_generator(nr_train_stations=1, nr_nodes=100, mean_node_neighbour
         node_positions = []
         for node_idx in range(nr_nodes):
             to_close = True
+            tries = 0
             while to_close:
-                x_tmp = np.random.randint(width)
-                y_tmp = np.random.randint(height)
+                x_tmp = np.random.randint(height)
+                y_tmp = np.random.randint(width)
                 to_close = False
                 for node_pos in node_positions:
                     if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
                         to_close = True
                 if not to_close:
                     node_positions.append((x_tmp, y_tmp))
+                tries += 1
+                if tries > 100:
+                    warnings.warn("Could not set nodes, please change initial parameters!!!!")
+                    break
+
+        # Chose node connection
+        available_nodes = np.arange(nr_nodes)
+        current_node = 0
+        node_stack = [current_node]
+
+        while len(node_stack) > 0:
+            current_node = node_stack[0]
+            delete_idx = np.where(available_nodes == current_node)
+            available_nodes = np.delete(available_nodes, delete_idx, 0)
+
+            # Get random number of neighbors
+            num_neighb = 2  # np.random.randint(1, max_neigbours)
+            if len(available_nodes) >= num_neighb:
+                connected_neighb_idx = np.random.choice(available_nodes, num_neighb, replace=False)
+            else:
+                connected_neighb_idx = available_nodes
+
+            for neighb in connected_neighb_idx:
+                if neighb not in node_stack:
+                    node_stack.append(neighb)
+                new_path = connect_nodes(rail_trans, rail_array, node_positions[current_node], node_positions[neighb])
+            node_stack.pop(0)
+
+
 
         # Generate start and target node directory for all agents
         agent_start_targets_nodes = []
         for agent_idx in range(num_agents):
             start_target_tuple = np.random.choice(nr_nodes, 2, replace=False)
             agent_start_targets_nodes.append(start_target_tuple)
+
         # Generate actual start and target locations from around nodes
         agents_position = []
         agents_target = []
@@ -741,42 +773,39 @@ def sparse_rail_generator(nr_train_stations=1, nr_nodes=100, mean_node_neighbour
         agent_idx = 0
         for start_target in agent_start_targets_nodes:
             start_x = np.clip(node_positions[start_target[0]][0] + np.random.randint(-node_radius, node_radius), 0,
-                              width - 1)
-            start_y = np.clip(node_positions[start_target[0]][1] + np.random.randint(-node_radius, node_radius), 0,
                               height - 1)
+            start_y = np.clip(node_positions[start_target[0]][1] + np.random.randint(-node_radius, node_radius), 0,
+                              width - 1)
             target_x = np.clip(node_positions[start_target[1]][0] + np.random.randint(-node_radius, node_radius), 0,
-                               width - 1)
-            target_y = np.clip(node_positions[start_target[1]][1] + np.random.randint(-node_radius, node_radius), 0,
                                height - 1)
+            target_y = np.clip(node_positions[start_target[1]][1] + np.random.randint(-node_radius, node_radius), 0,
+                               width - 1)
             if agent_idx == 0:
-                agents_position.append((start_y, start_x))
-                agents_target.append((target_y, target_x))
+                agents_position.append((start_x, start_y))
+                agents_target.append((target_x, target_y))
             else:
-                while ((start_x, start_y) in agents_position or (target_x, target_y) in agents_target):
+                # Make sure we don't put to starts or targets on same cell
+                while (start_x, start_y) in agents_position or (target_x, target_y) in agents_target:
                     start_x = np.clip(node_positions[start_target[0]][0] + np.random.randint(-node_radius, node_radius),
                                       0,
-                                      width - 1)
+                                      height - 1)
                     start_y = np.clip(node_positions[start_target[0]][1] + np.random.randint(-node_radius, node_radius),
                                       0,
-                                      height - 1)
+                                      width - 1)
                     target_x = np.clip(
                         node_positions[start_target[1]][0] + np.random.randint(-node_radius, node_radius), 0,
-                        width - 1)
+                        height - 1)
                     target_y = np.clip(
                         node_positions[start_target[1]][1] + np.random.randint(-node_radius, node_radius), 0,
-                        height - 1)
-                agents_position.append((start_y, start_x))
-                agents_target.append((target_y, target_x))
-
+                        width - 1)
+                agents_position.append((start_x, start_y))
+                agents_target.append((target_x, target_y))
+            new_path = connect_to_nodes(rail_trans, rail_array, agents_position[agent_idx],
+                                        node_positions[start_target[0]])
+            new_path = connect_from_nodes(rail_trans, rail_array, node_positions[start_target[1]],
+                                          agents_target[agent_idx])
             agents_direction.append(0)
             agent_idx += 1
-
-        print(agents_position)
-        print(agents_target)
-        print(node_positions)
-        for n in node_positions:
-            for m in node_positions:
-                print(distance_on_rail(n, m))
         return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
     return generator
