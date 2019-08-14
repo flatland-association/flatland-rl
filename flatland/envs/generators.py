@@ -556,11 +556,18 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
     numpy.ndarray of type numpy.uint16
         The matrix with the correct 16-bit bitmaps for each cell.
     """
+    def min_max_cut(min_v,max_v,v):
+        return max(min_v,min(max_v,v))
 
-    def add_rail(grid_map, pt_from, pt_via, pt_to, bAddRemove=True):
+    def add_rail(width,height,grid_map, pt_from, pt_via, pt_to, bAddRemove=True):
         gRCTrans = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])  # NESW in RC
 
-        lrcStroke = [[pt_from[0], pt_from[1]], [pt_via[0], pt_via[1]], [pt_to[0], pt_to[1]]]
+        lrcStroke = [[min_max_cut(0,height-1,pt_from[0]),
+                      min_max_cut(0,width-1,pt_from[1])],
+                     [min_max_cut(0,height-1,pt_via[0]),
+                      min_max_cut(0,width-1,pt_via[1])],
+                     [min_max_cut(0,height-1,pt_to[0]),
+                      min_max_cut(0,width-1,pt_to[1])]]
 
         rc3Cells = np.array(lrcStroke[:3])  # the 3 cells
         rcMiddle = rc3Cells[1]  # the middle cell which we will update
@@ -598,27 +605,27 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
             grid_map.set_transition((*rcMiddle, mirror(liTrans[1])),
                                     mirror(liTrans[0]), bAddRemove, remove_deadends=not bDeadend)
 
-    def make_switch_w_e(grid_map, center):
+    def make_switch_w_e(width,height,grid_map, center):
         # e -> w
         start = (center[0]+1, center[1]-1)
         via = (center[0], center[1] - 1)
         goal = (center[0], center[1])
-        add_rail(grid_map, start, via, goal)
+        add_rail(width,height,grid_map, start, via, goal)
         start = (center[0], center[1]-1)
         via = (center[0]+1, center[1]-1)
         goal = (center[0]+1, center[1]-2)
-        add_rail(grid_map, start, via, goal)
+        add_rail(width,height,grid_map, start, via, goal)
 
-    def make_switch_e_w(grid_map, center):
+    def make_switch_e_w(width,height,grid_map, center):
         # e -> w
         start = (center[0] + 1, center[1])
         via = (center[0] + 1, center[1] - 1)
         goal = (center[0], center[1] - 1)
-        add_rail(grid_map, start, via, goal)
+        add_rail(width,height,grid_map, start, via, goal)
         start = (center[0] + 1, center[1] - 1)
         via = (center[0], center[1] - 1)
         goal = (center[0], center[1] - 2)
-        add_rail(grid_map, start, via, goal)
+        add_rail(width,height,grid_map, start, via, goal)
 
     class Grid4TransitionsEnum(IntEnum):
         NORTH = 0
@@ -650,7 +657,7 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
         x_offsets = np.arange(0,height,max_n_track_seg).astype(int)
         for off_set in x_offsets:
             # second track
-            data = np.arange(int((width - max_n_track_seg) / max_n_track_seg)) * max_n_track_seg + 2
+            data = np.arange(int((width -4- max_n_track_seg) / max_n_track_seg)) * max_n_track_seg + 4
             n_track_seg = np.random.choice(max_n_track_seg) + 1
 
             # track one (full track : left right)
@@ -668,16 +675,18 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
                 x = np.sort(np.random.choice(data, 2 * n_track_seg, False)).astype(int)
                 data = []
                 for x_loop in range(int(len(x) / 2)):
-                    start = (off_set+nbr_track_loop+1, x[2 * x_loop])
-                    goal = (off_set+nbr_track_loop+1, x[2 * x_loop + 1])
+                    start = (max(0,min(off_set+nbr_track_loop+1,height-1)), max(0,min(x[2 * x_loop],width-1)))
+                    goal = (max(0,min(off_set+nbr_track_loop+1,height-1)), max(0,min(x[2 * x_loop + 1],width-1)))
                     d = np.arange(x[2 * x_loop]+1,x[2 * x_loop+1]-1,2)
                     data.extend(d)
+
+                    print(start,goal)
                     new_path = connect_rail(rail_trans, rail_array, start, goal)
                     if len(new_path) >0:
                         c = (off_set+nbr_track_loop, x[2 * x_loop] + 1)
-                        make_switch_e_w(grid_map, c)
+                        make_switch_e_w(width,height,grid_map, c)
                         c = (off_set+nbr_track_loop, x[2 * x_loop + 1]+1)
-                        make_switch_w_e(grid_map, c)
+                        make_switch_w_e(width,height,grid_map, c)
 
         return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
