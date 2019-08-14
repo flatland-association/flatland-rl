@@ -238,7 +238,7 @@ class RailEnv(Environment):
             agent.speed_data['position_fraction'] = 0.0
             agent.malfunction_data['malfunction'] = 0
 
-            self._agent_stopped(i_agent)
+            self._agent_malfunction(agent)
 
         self.num_resets += 1
         self._elapsed_steps = 0
@@ -253,29 +253,29 @@ class RailEnv(Environment):
         # Return the new observation vectors for each agent
         return self._get_observations()
 
-    def _agent_stopped(self, i_agent):
+    def _agent_malfunction(self, agent):
         # Decrease counter for next event
-        self.agents[i_agent].malfunction_data['next_malfunction'] -= 1
+        agent.malfunction_data['next_malfunction'] -= 1
 
-        # Only agents that have a positive rate for malfunctions are considered
-        if self.agents[i_agent].malfunction_data['malfunction_rate'] > 0 >= self.agents[i_agent].malfunction_data[
+        # Only agents that have a positive rate for malfunctions and are not currently broken are considered
+        if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data[
             'malfunction']:
 
             # If counter has come to zero --> Agent has malfunction
             # set next malfunction time and duration of current malfunction
-            if self.agents[i_agent].malfunction_data['next_malfunction'] <= 0:
+            if agent.malfunction_data['next_malfunction'] <= 0:
                 # Increase number of malfunctions
-                self.agents[i_agent].malfunction_data['nr_malfunctions'] += 1
+                agent.malfunction_data['nr_malfunctions'] += 1
 
                 # Next malfunction in number of stops
                 next_breakdown = int(
-                    np.random.exponential(scale=self.agents[i_agent].malfunction_data['malfunction_rate']))
-                self.agents[i_agent].malfunction_data['next_malfunction'] = next_breakdown
+                    np.random.exponential(scale=agent.malfunction_data['malfunction_rate']))
+                agent.malfunction_data['next_malfunction'] = next_breakdown
 
                 # Duration of current malfunction
                 num_broken_steps = np.random.randint(self.min_number_of_steps_broken,
                                                      self.max_number_of_steps_broken + 1) + 1
-                self.agents[i_agent].malfunction_data['malfunction'] = num_broken_steps
+                agent.malfunction_data['malfunction'] = num_broken_steps
 
     def step(self, action_dict_):
         self._elapsed_steps += 1
@@ -305,6 +305,9 @@ class RailEnv(Environment):
             agent = self.agents[i_agent]
             agent.old_direction = agent.direction
             agent.old_position = agent.position
+
+            # Check if agent breaks at this step
+            self._agent_malfunction(agent)
 
             if self.dones[i_agent]:  # this agent has already completed...
                 continue
@@ -341,7 +344,6 @@ class RailEnv(Environment):
                 # Only allow halting an agent on entering new cells.
                 agent.moving = False
                 self.rewards_dict[i_agent] += stop_penalty
-                self._agent_stopped(i_agent)
 
             if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
@@ -385,8 +387,6 @@ class RailEnv(Environment):
                                 self.rewards_dict[i_agent] += invalid_action_penalty
                                 self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                                 self.rewards_dict[i_agent] += stop_penalty
-                                if agent.moving:
-                                    self._agent_stopped(i_agent)
                                 agent.moving = False
                                 continue
                         else:
@@ -394,8 +394,6 @@ class RailEnv(Environment):
                             self.rewards_dict[i_agent] += invalid_action_penalty
                             self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                             self.rewards_dict[i_agent] += stop_penalty
-                            if agent.moving:
-                                self._agent_stopped(i_agent)
                             agent.moving = False
                             continue
 
@@ -416,14 +414,11 @@ class RailEnv(Environment):
                     agent.speed_data['position_fraction'] = 0.0
                 else:
                     # If the agent cannot move due to any reason, we set its state to not moving
-                    if agent.moving:
-                        self._agent_stopped(i_agent)
                     agent.moving = False
 
             if np.equal(agent.position, agent.target).all():
                 self.dones[i_agent] = True
                 agent.moving = False
-                # Do not call self._agent_stopped, as the agent has terminated its task
             else:
                 self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
 

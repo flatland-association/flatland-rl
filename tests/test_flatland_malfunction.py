@@ -53,13 +53,13 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
 def test_malfunction_process():
     # Set fixed malfunction duration for this test
     stochastic_data = {'prop_malfunction': 1.,
-                       'malfunction_rate': 5,
+                       'malfunction_rate': 1000,
                        'min_duration': 3,
                        'max_duration': 3}
     np.random.seed(5)
 
-    env = RailEnv(width=14,
-                  height=14,
+    env = RailEnv(width=20,
+                  height=20,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=5, max_dist=99999,
                                                         seed=0),
                   number_of_agents=2,
@@ -82,16 +82,16 @@ def test_malfunction_process():
 
         if step % 5 == 0:
             # Stop the agent and set it to be malfunctioning
-            actions[0] = 4
+            env.agents[0].malfunction_data['malfunction'] = -1
             env.agents[0].malfunction_data['next_malfunction'] = 0
             agent_halts += 1
+
+        obs, all_rewards, done, _ = env.step(actions)
 
         if env.agents[0].malfunction_data['malfunction'] > 0:
             agent_malfunctioning = True
         else:
             agent_malfunctioning = False
-
-        obs, all_rewards, done, _ = env.step(actions)
 
         if agent_malfunctioning:
             # Check that agent is not moving while malfunctioning
@@ -101,7 +101,7 @@ def test_malfunction_process():
         total_down_time += env.agents[0].malfunction_data['malfunction']
 
     # Check that the appropriate number of malfunctions is achieved
-    assert env.agents[0].malfunction_data['nr_malfunctions'] == 5
+    assert env.agents[0].malfunction_data['nr_malfunctions'] == 21
 
     # Check that 20 stops where performed
     assert agent_halts == 20
