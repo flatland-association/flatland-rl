@@ -753,7 +753,7 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
 
                     add_pos = (int((start[0] + goal[0]) / 2), int((start[1] + goal[1]) / 2))
                     agents_positions.append(add_pos)
-                    agents_directions.append(3)
+                    agents_directions.append([1,3][nbr_track_loop % 2])
                     add_pos = (int((start[0] + goal[0]) / 2), int((2*start[1] + goal[1]) / 3))
                     agents_targets.append(add_pos)
 
