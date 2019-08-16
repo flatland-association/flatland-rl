@@ -556,6 +556,21 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
     -------
     numpy.ndarray of type numpy.uint16
         The matrix with the correct 16-bit bitmaps for each cell.
+
+
+
+    transition_list = [int('0000000000000000', 2),  # empty cell - Case 0
+                       int('1000000000100000', 2),  # Case 1 - straight
+                       int('1001001000100000', 2),  # Case 2 - simple switch
+                       int('1000010000100001', 2),  # Case 3 - diamond drossing
+                       int('1001011000100001', 2),  # Case 4 - single slip
+                       int('1100110000110011', 2),  # Case 5 - double slip
+                       int('0101001000000010', 2),  # Case 6 - symmetrical
+                       int('0010000000000000', 2),  # Case 7 - dead end
+                       int('0100000000000010', 2),  # Case 1b (8)  - simple turn right
+                       int('0001001000000000', 2),  # Case 1c (9)  - simple turn left
+                       int('1100000000100010', 2)]  # Case 2b (10) - simple switch mirrored
+
     """
     def min_max_cut(min_v,max_v,v):
         return max(min_v,min(max_v,v))
@@ -592,6 +607,7 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
 
         # check that we have two transitions
         if len(liTrans) == 2:
+            # Set the transition
             # Set the transition
             # If this transition spans 3 cells, it is not a deadend, so remove any deadends.
             # The user will need to resolve any conflicts.
@@ -654,21 +670,69 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
         np.random.seed(seed + num_resets)
 
 
+
         max_n_track_seg=4
         x_offsets = np.arange(0,height,max_n_track_seg).astype(int)
-        for off_set in x_offsets:
+
+        agents_position = []
+        agents_target = []
+        agents_direction = []
+
+        for off_set_loop in range(len(x_offsets)):
+            off_set = x_offsets[off_set_loop]
             # second track
             data = np.arange(int((width -4- max_n_track_seg) / max_n_track_seg)) * max_n_track_seg + 4
             n_track_seg = np.random.choice(max_n_track_seg) + 1
 
-            # track one (full track : left right)
-            start = (off_set, 0)
-            goal = (off_set, width - 1)
-            new_path = connect_rail(rail_trans, rail_array, start, goal)
+            start_track = (off_set, 0)
+            goal_track = (off_set, width - 1)
+            new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
 
-            agents_position = [new_path[0]]
-            agents_target = [new_path[1]]  # len(new_path) - 1]]
-            agents_direction = [3]
+            # track one (full track : left right)
+            if off_set_loop > 0:
+                if off_set_loop % 2 == 1:
+                    start_track = (x_offsets[off_set_loop-1]+1, width - 1)
+                    goal_track = (x_offsets[off_set_loop]-1, width - 1)
+                    new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+
+                    add_rail(width,height,grid_map,
+                             (x_offsets[off_set_loop-1], width - 2),
+                             (x_offsets[off_set_loop-1], width - 1),
+                             (x_offsets[off_set_loop-1]+1, width - 1))
+                    add_rail(width,height,grid_map,
+                             (x_offsets[off_set_loop], width - 2),
+                             (x_offsets[off_set_loop], width - 1),
+                             (x_offsets[off_set_loop]-1, width - 1))
+                    add_rail(width,height,grid_map,
+                             (x_offsets[off_set_loop-1], width - 1),
+                             (x_offsets[off_set_loop-1]+1, width - 1),
+                             (x_offsets[off_set_loop-1]+2, width - 1))
+                    add_rail(width,height,grid_map,
+                             (x_offsets[off_set_loop], width - 1),
+                             (x_offsets[off_set_loop]-1, width - 1),
+                             (x_offsets[off_set_loop]-2, width - 1))
+
+                else:
+                    start_track = (x_offsets[off_set_loop-1]+1,0)
+                    goal_track = (x_offsets[off_set_loop]-1, 0)
+                    new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+
+                    add_rail(width,height,grid_map,
+                             (x_offsets[off_set_loop-1], 1),
+                             (x_offsets[off_set_loop-1], 0),
+                             (x_offsets[off_set_loop-1]+1, 0))
+                    add_rail(width,height,grid_map,
+                             (x_offsets[off_set_loop], 1),
+                             (x_offsets[off_set_loop], 0),
+                             (x_offsets[off_set_loop]-1, 0))
+                    add_rail(width,height,grid_map,
+                             (x_offsets[off_set_loop-1], 0),
+                             (x_offsets[off_set_loop-1]+1, 0),
+                             (x_offsets[off_set_loop-1]+2, 0))
+                    add_rail(width,height,grid_map,
+                             (x_offsets[off_set_loop], 0),
+                             (x_offsets[off_set_loop]-1, 0),
+                             (x_offsets[off_set_loop]-2, 0))
 
             for nbr_track_loop in range(height-1):
                 if len(data) < 2*n_track_seg+1:
@@ -687,6 +751,26 @@ def realistic_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dis
                         make_switch_e_w(width,height,grid_map, c)
                         c = (off_set+nbr_track_loop, x[2 * x_loop + 1]+1)
                         make_switch_w_e(width,height,grid_map, c)
+
+
+                    add_pos = (int((start[0]+goal[0])/2),int((start[1]+goal[1])/2))
+                    agents_position.append(add_pos)
+                    agents_target.append(add_pos)
+                    agents_direction.append(np.random.choice([3,1]))
+
+        print(agents_direction)
+        print(agents_position)
+        print(agents_target)
+
+        x = np.arange(len(agents_direction))
+        num_a = min(num_agents,np.floor(len(agents_direction)/2))
+        if num_a > 1:
+            filter_agent = np.random.choice(x,num_a,False)
+            agents_position = agents_position[filter_agent]
+            agents_direction = agents_direction[filter_agent]
+            np.delete(x,filter_agent)
+            filter_agent = np.random.choice(x,num_a,False)
+            agents_target = agents_target[filter_agent]
 
         return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
