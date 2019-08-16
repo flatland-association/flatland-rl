@@ -8,7 +8,7 @@ from flatland.utils.rendertools import RenderTool
 import numpy as np
 
 def test_realistic_rail_generator():
-    for test_loop in range(20):
+    for test_loop in range(5):
         num_agents = np.random.randint(10,30)
         env = RailEnv(width=np.random.randint(40,80),
                       height=np.random.randint(10,20),
@@ -18,7 +18,7 @@ def test_realistic_rail_generator():
         # reset to initialize agents_static
         env_renderer = RenderTool(env, gl="PILSVG", )
         env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
-        time.sleep(1)
+        time.sleep(2)
         env_renderer.close_window()
 
 def test_sparse_rail_generator():
