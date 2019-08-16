@@ -8,7 +8,7 @@ from flatland.utils.rendertools import RenderTool
 import numpy as np
 
 def test_realistic_rail_generator():
-    for test_loop in range(5):
+    for test_loop in range(20):
         num_agents = np.random.randint(10,30)
         env = RailEnv(width=np.random.randint(40,80),
                       height=np.random.randint(10,20),
