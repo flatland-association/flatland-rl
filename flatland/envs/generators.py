@@ -673,9 +673,9 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
         max_n_track_seg = np.random.choice([3, 4, 5])
         x_offsets = np.arange(0, height, max_n_track_seg).astype(int)
 
-        agents_position = []
-        agents_target = []
-        agents_direction = []
+        agents_positions = []
+        agents_targets = []
+        agents_directions = []
 
         for off_set_loop in range(len(x_offsets)):
             off_set = x_offsets[off_set_loop]
@@ -686,6 +686,13 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
             start_track = (off_set, 0)
             goal_track = (off_set, width - 1)
             new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+
+            
+            add_pos = (int((start_track[0] + goal_track[0]) / 2), int((start_track[1] + goal_track[1]) / 2))
+            agents_positions.append(add_pos)
+            agents_directions.append(np.random.choice([3, 1]))
+            add_pos = (int((start_track[0] + goal_track[0]) / 2), int((2 * start_track[1] + goal_track[1]) / 3))
+            agents_targets.append(add_pos)
 
             # track one (full track : left right)
             if off_set_loop > 0:
@@ -753,10 +760,24 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
 
                     if nbr_track_loop > 0:
                         add_pos = (int((start[0] + goal[0]) / 2), int((start[1] + goal[1]) / 2))
-                        agents_position.append(add_pos)
-                        agents_target.append(add_pos)
-                        agents_direction.append(np.random.choice([3, 1]))
+                        agents_positions.append(add_pos)
+                        agents_directions.append(np.random.choice([3, 1]))
+                        add_pos = (int((start[0] + goal[0]) / 2), int((2*start[1] + goal[1]) / 3))
+                        agents_targets.append(add_pos)
 
+        agents_position = []
+        agents_target = []
+        agents_direction = []
+        filter_agent = np.random.choice(np.arange(len(agents_positions)),min(len(agents_positions),num_agents),False)
+        for f in filter_agent:
+            d = agents_positions[f]
+            agents_position.append(d)
+            d = agents_directions[f]
+            agents_direction.append(d)
+        filter_target = np.random.choice(np.arange(len(agents_targets)),min(len(agents_targets),num_agents),False)
+        for f in filter_target:
+            d = agents_targets[f]
+            agents_target.append(d)
 
         return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
@@ -868,6 +889,7 @@ def sparse_rail_generator(nr_nodes=100, max_neigbours=2, min_node_dist=20, node_
                                           agents_target[agent_idx])
             agents_direction.append(0)
             agent_idx += 1
+
         return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
     return generator
