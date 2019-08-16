@@ -5,19 +5,21 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool
 
+import numpy as np
 
 def test_realistic_rail_generator():
-
-    env = RailEnv(width=40,
-                  height=16,
-                  rail_generator=realistic_rail_generator(),
-                  number_of_agents=15,
-                  obs_builder_object=GlobalObsForRailEnv())
-    # reset to initialize agents_static
-    env_renderer = RenderTool(env, gl="PILSVG", )
-    env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
-    time.sleep(10)
-
+    for test_loop in range(20):
+        num_agents = np.random.randint(10,30)
+        env = RailEnv(width=np.random.randint(40,80),
+                      height=np.random.randint(10,20),
+                      rail_generator=realistic_rail_generator(nr_start_goal=num_agents+1,seed=test_loop),
+                      number_of_agents=num_agents,
+                      obs_builder_object=GlobalObsForRailEnv())
+        # reset to initialize agents_static
+        env_renderer = RenderTool(env, gl="PILSVG", )
+        env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
+        time.sleep(1)
+        env_renderer.close_window()
 
 def test_sparse_rail_generator():
 
