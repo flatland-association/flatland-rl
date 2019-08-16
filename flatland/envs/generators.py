@@ -733,7 +733,7 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
                              (x_offsets[off_set_loop] - 1, 0),
                              (x_offsets[off_set_loop] - 2, 0))
 
-            for nbr_track_loop in range(height - 1):
+            for nbr_track_loop in range(max_n_track_seg-1): 
                 if len(data) < 2 * n_track_seg + 1:
                     break
                 x = np.sort(np.random.choice(data, 2 * n_track_seg, False)).astype(int)
