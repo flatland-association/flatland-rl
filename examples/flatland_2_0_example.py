@@ -12,24 +12,25 @@ np.random.seed(1)
 # Training on simple small tasks is the best way to get familiar with the environment
 
 # Use a the malfunction generator to break agents from time to time
-stochastic_data = {'prop_malfunction': 0.5,
-                   'malfunction_rate': 30,
-                   'min_duration': 3,
-                   'max_duration': 10}
+stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
+                   'malfunction_rate': 30,  # Rate of malfunction occurence
+                   'min_duration': 3,  # Minimal duration of malfunction
+                   'max_duration': 10  # Max duration of malfunction
+                   }
 
 
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
-env = RailEnv(width=50,
-              height=50,
-              rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
-                                                   num_intersections=3,  # Number of interesections in map
-                                                   num_trainstations=40,  # Number of possible start/targets on map
-                                                   min_node_dist=10,  # Minimal distance of nodes
+env = RailEnv(width=10,
+              height=10,
+              rail_generator=sparse_rail_generator(num_cities=3,  # Number of cities in map
+                                                   num_intersections=1,  # Number of interesections in map
+                                                   num_trainstations=8,  # Number of possible start/targets on map
+                                                   min_node_dist=3,  # Minimal distance of nodes
                                                    node_radius=2,  # Proximity of stations to city center
-                                                   num_neighb=4,  # Number of connections to other cities
+                                                   num_neighb=2,  # Number of connections to other cities
                                                    seed=15,  # Random seed
                                                    ),
-              number_of_agents=10,
+              number_of_agents=5,
               stochastic_data=stochastic_data,  # Malfunction generator data
               obs_builder_object=TreeObservation)
 

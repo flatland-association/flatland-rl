@@ -875,7 +875,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             # Set number of neighboring nodes
             if len(available_nodes) >= num_neighb:
                 connected_neighb_idx = available_nodes[
-                                       0:2]  # np.random.choice(available_nodes, num_neighb, replace=False)
+                                       0:num_neighb]  # np.random.choice(available_nodes, num_neighb, replace=False)
             else:
                 connected_neighb_idx = available_nodes
 
@@ -885,10 +885,8 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                     node_stack.append(neighb)
                 connect_nodes(rail_trans, rail_array, node_positions[current_node], node_positions[neighb])
             node_stack.pop(0)
-
         # Place train stations close to the node
         # We currently place them uniformly distirbuted among all cities
-
         train_stations = [[] for i in range(num_cities)]
 
         for station in range(num_trainstations):
@@ -940,6 +938,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                 tries += 1
                 # Test again with new start node if no pair is found (This code needs to be improved)
                 if tries > 10:
+                    break
                     start_node = np.random.choice(avail_start_nodes)
 
             node_available_start[start_node] -= 1
