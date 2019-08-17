@@ -21,7 +21,7 @@ def test_realistic_rail_generator():
 
 
 def test_sparse_rail_generator():
-    env = RailEnv(width=20,
+    env = RailEnv(width=50,
                   height=50,
                   rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
                                                        num_intersections=3,  # Number of interesections in map
