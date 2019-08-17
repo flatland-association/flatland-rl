@@ -543,7 +543,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
     return generator
 
 
-def realistic_rail_generator(nr_start_goal=1,  seed=0):
+def realistic_rail_generator(nr_start_goal=1, seed=0):
     """
     Parameters
     -------
@@ -682,7 +682,7 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
         idx_forward = []
         idx_backward = []
 
-        idx_target=0
+        idx_target = 0
         for off_set_loop in range(len(x_offsets)):
             off_set = x_offsets[off_set_loop]
             # second track
@@ -739,14 +739,17 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
                              (x_offsets[off_set_loop] - 1, 0),
                              (x_offsets[off_set_loop] - 2, 0))
 
-            for nbr_track_loop in range(max_n_track_seg-1):
+            for nbr_track_loop in range(max_n_track_seg - 1):
                 if len(data) < 2 * n_track_seg + 1:
                     break
                 x = np.sort(np.random.choice(data, 2 * n_track_seg, False)).astype(int)
                 data = []
                 for x_loop in range(int(len(x) / 2)):
-                    start = (max(0, min(off_set + nbr_track_loop + 1, height - 1)), max(0, min(x[2 * x_loop], width - 1)))
-                    goal = (max(0, min(off_set + nbr_track_loop + 1, height - 1)), max(0, min(x[2 * x_loop + 1], width - 1)))
+                    start = (
+                        max(0, min(off_set + nbr_track_loop + 1, height - 1)), max(0, min(x[2 * x_loop], width - 1)))
+                    goal = (
+                        max(0, min(off_set + nbr_track_loop + 1, height - 1)),
+                        max(0, min(x[2 * x_loop + 1], width - 1)))
                     d = np.arange(x[2 * x_loop] + 1, x[2 * x_loop + 1] - 1, 2)
                     data.extend(d)
 
@@ -767,15 +770,15 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
                         agents_directions_backward.append(([1, 3][off_set_loop % 2]))
                         idx_backward.append(idx_target)
 
-                    add_pos = (int((start[0] + goal[0]) / 2), int((2*start[1] + goal[1]) / 3),idx_target)
+                    add_pos = (int((start[0] + goal[0]) / 2), int((2 * start[1] + goal[1]) / 3), idx_target)
                     agents_targets.append(add_pos)
-                    idx_target+=1
+                    idx_target += 1
 
         agents_position = []
         agents_target = []
         agents_direction = []
 
-        for a in range(min(len(agents_targets),num_agents)):
+        for a in range(min(len(agents_targets), num_agents)):
             t = np.random.choice(range(len(agents_targets)))
             d = agents_targets[t]
             agents_targets.pop(t)
@@ -789,7 +792,7 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
                     agents_positions_backward.pop(sel)
                     agents_directions_backward.pop(sel)
                     idx_backward.pop(sel)
-                    agents_position.append((p[0],p[1]))
+                    agents_position.append((p[0], p[1]))
                     agents_direction.append(d)
             else:
                 if len(idx_forward) > 0:
@@ -801,9 +804,8 @@ def realistic_rail_generator(nr_start_goal=1,  seed=0):
                     agents_positions_forward.pop(sel)
                     agents_directions_forward.pop(sel)
                     idx_forward.pop(sel)
-                    agents_position.append((p[0],p[1]))
+                    agents_position.append((p[0], p[1]))
                     agents_direction.append(d)
-
 
         return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
@@ -881,7 +883,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             for neighb in connected_neighb_idx:
                 if neighb not in node_stack:
                     node_stack.append(neighb)
-                new_path = connect_nodes(rail_trans, rail_array, node_positions[current_node], node_positions[neighb])
+                connect_nodes(rail_trans, rail_array, node_positions[current_node], node_positions[neighb])
             node_stack.pop(0)
 
         # Place train stations close to the node
@@ -908,8 +910,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             train_stations[trainstation_node].append((station_x, station_y))
 
             # Connect train station to the correct node
-            new_path = connect_from_nodes(rail_trans, rail_array, node_positions[trainstation_node],
-                                          (station_x, station_y))
+            connect_from_nodes(rail_trans, rail_array, node_positions[trainstation_node], (station_x, station_y))
 
         # Fix all nodes with illegal transition maps
         for current_node in node_positions:

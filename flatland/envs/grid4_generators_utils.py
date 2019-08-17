@@ -194,6 +194,7 @@ def connect_to_nodes(rail_trans, rail_array, start, end):
         current_dir = new_dir
     return path
 
+
 def get_rnd_agents_pos_tgt_dir_on_rail(rail, num_agents):
     """
     Given a `rail' GridTransitionMap, return a random placement of agents (initial position, direction and target).
