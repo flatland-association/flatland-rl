@@ -77,7 +77,7 @@ for trials in range(1, n_trials + 1):
 
     score = 0
     # Run episode
-    for step in range(100):
+    for step in range(500):
         # Chose an action for each agent in the environment
         for a in range(env.get_num_agents()):
             action = agent.act(obs[a])

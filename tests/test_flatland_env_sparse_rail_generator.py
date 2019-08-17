@@ -23,23 +23,22 @@ def test_realistic_rail_generator():
         env_renderer.close_window()
 
 def test_sparse_rail_generator():
-
-    env = RailEnv(width=50,
+    env = RailEnv(width=20,
                   height=50,
                   rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
                                                        num_intersections=3,  # Number of interesections in map
-                                                       num_trainstations=30,  # Number of possible start/targets on map
+                                                       num_trainstations=10,  # Number of possible start/targets on map
                                                        min_node_dist=10,  # Minimal distance of nodes
                                                        node_radius=2,  # Proximity of stations to city center
                                                        num_neighb=4,  # Number of connections to other cities
                                                        seed=15,  # Random seed
                                                        ),
-                  number_of_agents=20,
+                  number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
     # reset to initialize agents_static
     env_renderer = RenderTool(env, gl="PILSVG", )
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
-    time.sleep(2)
+    time.sleep(20)
 
     env_renderer.gl.save_image("flatalnd_2_0.png")
-    time.sleep(100)
+    time.sleep(1)

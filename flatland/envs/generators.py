@@ -841,8 +841,8 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             to_close = True
             tries = 0
             while to_close:
-                x_tmp = 1 + np.random.randint(height - 1)
-                y_tmp = 1 + np.random.randint(width - 1)
+                x_tmp = 1 + np.random.randint(height - 2)
+                y_tmp = 1 + np.random.randint(width - 2)
                 to_close = False
                 for node_pos in node_positions:
                     if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
@@ -871,8 +871,6 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             available_nodes = available_nodes[np.argsort(node_dist)]
 
             # Set number of neighboring nodes
-            # np.random.randint(1, max_neigbours)
-
             if len(available_nodes) >= num_neighb:
                 connected_neighb_idx = available_nodes[
                                        0:2]  # np.random.choice(available_nodes, num_neighb, replace=False)
@@ -887,6 +885,8 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             node_stack.pop(0)
 
         # Place train stations close to the node
+        # We currently place them uniformly distirbuted among all cities
+
         train_stations = [[] for i in range(num_cities)]
 
         for station in range(num_trainstations):
@@ -911,6 +911,11 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             new_path = connect_from_nodes(rail_trans, rail_array, node_positions[trainstation_node],
                                           (station_x, station_y))
 
+        # Fix all nodes with illegal transition maps
+        for current_node in node_positions:
+            if not grid_map.cell_neighbours_valid(current_node):
+                grid_map.fix_neighbours(current_node)
+
         # Generate start and target node directory for all agents.
         # Assure that start and target are not in the same node
         agent_start_targets_nodes = []
@@ -924,20 +929,24 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
 
         # Assign agents to slots
         for agent_idx in range(num_agents):
-            av_start_nodes = [idx for idx, val in enumerate(node_available_start) if val > 0]
-            av_target_nodes = [idx for idx, val in enumerate(node_available_target) if val > 0]
-            start_node = np.random.choice(av_start_nodes)
-            target_node = np.random.choice(av_target_nodes)
+            avail_start_nodes = [idx for idx, val in enumerate(node_available_start) if val > 0]
+            avail_target_nodes = [idx for idx, val in enumerate(node_available_target) if val > 0]
+            start_node = np.random.choice(avail_start_nodes)
+            target_node = np.random.choice(avail_target_nodes)
+            tries = 0
             while target_node == start_node:
-                target_node = np.random.choice(av_target_nodes)
+                target_node = np.random.choice(avail_target_nodes)
+                tries += 1
+                # Test again with new start node if no pair is found (This code needs to be improved)
+                if tries > 10:
+                    start_node = np.random.choice(avail_start_nodes)
+
             node_available_start[start_node] -= 1
             node_available_target[target_node] -= 1
-            print(node_available_target, node_available_start)
 
             agent_start_targets_nodes.append((start_node, target_node))
 
         # Place agents and targets within available train stations
-
         agents_position = []
         agents_target = []
         agents_direction = []
@@ -956,7 +965,13 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                 start = train_stations[current_start_node][start_station_idx]
             agents_position.append((start[0], start[1]))
             agents_target.append((target[0], target[1]))
-            agents_direction.append(0)
+
+            # Orient the agent correctly
+            for orientation in range(4):
+                transitions = grid_map.get_transitions(start[0], start[1], orientation)
+                if any(transitions) > 0:
+                    agents_direction.append(orientation)
+                    continue
             agent_idx += 1
 
         return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
