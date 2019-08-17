@@ -838,7 +838,10 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
         np.random.seed(seed + num_resets)
 
         # Generate a set of nodes for the sparse network
+        # Try to connect cities to nodes first
         node_positions = []
+        city_positions = []
+        intersection_positions = []
         for node_idx in range(num_cities + num_intersections):
             to_close = True
             tries = 0
@@ -851,21 +854,34 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                         to_close = True
                 if not to_close:
                     node_positions.append((x_tmp, y_tmp))
+                    if node_idx < num_cities:
+                        city_positions.append((x_tmp, y_tmp))
+                    else:
+                        intersection_positions.append((x_tmp, y_tmp))
                 tries += 1
                 if tries > 100:
                     warnings.warn("Could not set nodes, please change initial parameters!!!!")
                     break
 
         # Chose node connection
-        available_nodes = np.arange(num_cities + num_intersections)
+        available_nodes_full = np.arange(num_cities + num_intersections)
+        available_cities = np.arange(num_cities)
+        available_intersections = np.arange(num_cities, num_cities + num_intersections)
         current_node = 0
         node_stack = [current_node]
 
         while len(node_stack) > 0:
             current_node = node_stack[0]
-            delete_idx = np.where(available_nodes == current_node)
-            available_nodes = np.delete(available_nodes, delete_idx, 0)
-
+            delete_idx = np.where(available_nodes_full == current_node)
+            available_nodes_full = np.delete(available_nodes_full, delete_idx, 0)
+            if current_node < num_cities and len(available_intersections) > 0:
+                available_nodes = available_intersections
+                available_cities = np.delete(available_cities, delete_idx, 0)
+            elif len(available_intersections) > 0:
+                available_nodes = available_cities
+                available_intersections = np.delete(available_intersections, delete_idx, 0)
+            else:
+                available_nodes = available_nodes_full
             # Sort available neighbors according to their distance.
             node_dist = []
             for av_node in available_nodes:
@@ -885,30 +901,36 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                     node_stack.append(neighb)
                 connect_nodes(rail_trans, rail_array, node_positions[current_node], node_positions[neighb])
             node_stack.pop(0)
+
         # Place train stations close to the node
         # We currently place them uniformly distirbuted among all cities
-        train_stations = [[] for i in range(num_cities)]
+        if num_cities > 1:
+            train_stations = [[] for i in range(num_cities)]
 
-        for station in range(num_trainstations):
-            trainstation_node = int(station / num_trainstations * num_cities)
+            for station in range(num_trainstations):
+                trainstation_node = int(station / num_trainstations * num_cities)
 
-            station_x = np.clip(node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius), 0,
-                                height - 1)
-            station_y = np.clip(node_positions[trainstation_node][1] + np.random.randint(-node_radius, node_radius), 0,
-                                width - 1)
-            while (station_x, station_y) in train_stations or (station_x, station_y) == node_positions[
-                trainstation_node] or \
-                rail_array[(station_x, station_y)] != 0:
                 station_x = np.clip(node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
                                     0,
                                     height - 1)
                 station_y = np.clip(node_positions[trainstation_node][1] + np.random.randint(-node_radius, node_radius),
                                     0,
                                     width - 1)
-            train_stations[trainstation_node].append((station_x, station_y))
+                while (station_x, station_y) in train_stations or (station_x, station_y) == node_positions[
+                    trainstation_node] or \
+                    rail_array[(station_x, station_y)] != 0:
+                    station_x = np.clip(
+                        node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
+                        0,
+                        height - 1)
+                    station_y = np.clip(
+                        node_positions[trainstation_node][1] + np.random.randint(-node_radius, node_radius),
+                        0,
+                        width - 1)
+                train_stations[trainstation_node].append((station_x, station_y))
 
-            # Connect train station to the correct node
-            connect_from_nodes(rail_trans, rail_array, node_positions[trainstation_node], (station_x, station_y))
+                # Connect train station to the correct node
+                connect_from_nodes(rail_trans, rail_array, node_positions[trainstation_node], (station_x, station_y))
 
         # Fix all nodes with illegal transition maps
         for current_node in node_positions:
