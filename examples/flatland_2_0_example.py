@@ -11,6 +11,13 @@ np.random.seed(1)
 # Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
 # Training on simple small tasks is the best way to get familiar with the environment
 
+# Use a the malfunction generator to break agents from time to time
+stochastic_data = {'prop_malfunction': 0.5,
+                   'malfunction_rate': 30,
+                   'min_duration': 3,
+                   'max_duration': 10}
+
+
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 env = RailEnv(width=50,
               height=50,
@@ -23,6 +30,7 @@ env = RailEnv(width=50,
                                                    seed=15,  # Random seed
                                                    ),
               number_of_agents=35,
+              stochastic_data=stochastic_data,  # Malfunction generator data
               obs_builder_object=TreeObservation)
 
 env_renderer = RenderTool(env, gl="PILSVG", )
@@ -64,6 +72,7 @@ class RandomAgent:
 
 
 # Initialize the agent with the parameters corresponding to the environment and observation_builder
+# Set action space to 4 to remove stop action
 agent = RandomAgent(218, 4)
 n_trials = 5
 
