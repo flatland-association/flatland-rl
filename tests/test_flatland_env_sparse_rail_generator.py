@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from flatland.envs.generators import sparse_rail_generator, realistic_rail_generator
@@ -31,8 +33,9 @@ def test_sparse_rail_generator():
                                                        num_neighb=2,  # Number of connections to other cities
                                                        seed=5,  # Random seed
                                                        ),
-                  number_of_agents=10,
+                  number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
     # reset to initialize agents_static
     env_renderer = RenderTool(env, gl="PILSVG", )
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
+    time.sleep(2)
