@@ -897,7 +897,6 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             if len(available_nodes) >= num_neighb:
                 connected_neighb_idx = available_nodes[
                                        0:num_neighb]  # np.random.choice(available_nodes, num_neighb, replace=False)
-                print(current_node, "-->", connected_neighb_idx)
             else:
                 connected_neighb_idx = available_nodes
 
