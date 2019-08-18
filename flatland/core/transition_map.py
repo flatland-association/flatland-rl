@@ -455,8 +455,15 @@ class GridTransitionMap(TransitionMap):
             self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[2])), connect_directions[0], 1)
         # Make a cross
         if number_of_incoming == 4:
-            for direction in range(4):
-                self.set_transition((grcPos[0], grcPos[1], direction), direction, 1)
+            connect_directions = np.arange(4)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[0]), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[0]), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[1]), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[1]), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[2]), connect_directions[2], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[2]), connect_directions[3], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[3]), connect_directions[2], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[3]), connect_directions[3], 1)
         return True
 
 
