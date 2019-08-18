@@ -842,6 +842,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
         node_positions = []
         city_positions = []
         intersection_positions = []
+
         for node_idx in range(num_cities + num_intersections):
             to_close = True
             tries = 0

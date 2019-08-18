@@ -52,10 +52,10 @@ class PILGL(GraphicsLayer):
         self.background_grid = np.zeros(shape=(self.width, self.height))
 
         if jupyter is False:
-            # NOTE: Currently removed the dependency on 
-            #       screeninfo. We have to find an alternate 
+            # NOTE: Currently removed the dependency on
+            #       screeninfo. We have to find an alternate
             #       way to compute the screen width and height
-            #       In the meantime, we are harcoding the 800x600 
+            #       In the meantime, we are harcoding the 800x600
             #       assumption
             self.screen_width = 800
             self.screen_height = 600
@@ -114,7 +114,7 @@ class PILGL(GraphicsLayer):
                     for rc in dTargets:
                         r = rc[1]
                         c = rc[0]
-                        d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)))
+                        d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)) / 0.5)
                         distance = min(d, distance)
                     self.background_grid[x][y] = distance
 
@@ -444,7 +444,7 @@ class PILSVG(PILGL):
 
         for transition, file in file_directory.items():
 
-            # Translate the ascii transition description in the format  "NE WS" to the 
+            # Translate the ascii transition description in the format  "NE WS" to the
             # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
             transition_16_bit = ["0"] * 16
             for sTran in transition.split(" "):
