@@ -863,7 +863,6 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                 if tries > 100:
                     warnings.warn("Could not set nodes, please change initial parameters!!!!")
                     break
-        print(node_positions)
         # Chose node connection
         available_nodes_full = np.arange(num_cities + num_intersections)
         available_cities = np.arange(num_cities)
