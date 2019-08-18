@@ -30,12 +30,12 @@ def test_sparse_rail_generator():
                                                        num_trainstations=10,  # Number of possible start/targets on map
                                                        min_node_dist=10,  # Minimal distance of nodes
                                                        node_radius=2,  # Proximity of stations to city center
-                                                       num_neighb=2,  # Number of connections to other cities
-                                                       seed=15,  # Random seed
+                                                       num_neighb=1,  # Number of connections to other cities
+                                                       seed=5,  # Random seed
                                                        ),
                   number_of_agents=0,
                   obs_builder_object=GlobalObsForRailEnv())
     # reset to initialize agents_static
     env_renderer = RenderTool(env, gl="PILSVG", )
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
-    time.sleep(5)
+    time.sleep(19)

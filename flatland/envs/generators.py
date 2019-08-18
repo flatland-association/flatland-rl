@@ -874,11 +874,16 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             current_node = node_stack[0]
             delete_idx = np.where(available_nodes_full == current_node)
             available_nodes_full = np.delete(available_nodes_full, delete_idx, 0)
+
             if current_node < num_cities and len(available_intersections) > 0:
                 available_nodes = available_intersections
+                delete_idx = np.where(available_cities == current_node)
+
                 available_cities = np.delete(available_cities, delete_idx, 0)
             elif len(available_intersections) > 0:
                 available_nodes = available_cities
+                delete_idx = np.where(available_intersections == current_node)
+
                 available_intersections = np.delete(available_intersections, delete_idx, 0)
             else:
                 available_nodes = available_nodes_full
@@ -892,6 +897,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             if len(available_nodes) >= num_neighb:
                 connected_neighb_idx = available_nodes[
                                        0:num_neighb]  # np.random.choice(available_nodes, num_neighb, replace=False)
+                print(current_node, "-->", connected_neighb_idx)
             else:
                 connected_neighb_idx = available_nodes
 
