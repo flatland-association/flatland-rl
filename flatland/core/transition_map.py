@@ -403,6 +403,62 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
+    def fix_transitions(self, rcPos):
+        """
+        Fixes broken transitions
+        """
+        gDir2dRC = self.transitions.gDir2dRC  # [[-1,0] = N, [0,1]=E, etc]
+        grcPos = array(rcPos)
+        grcMax = self.grid.shape
+
+        # loop over available outbound directions (indices) for rcPos
+        incomping_connections = np.zeros(4)
+        for iDirOut in np.arange(4):
+            gdRC = gDir2dRC[iDirOut]  # row,col increment
+            gPos2 = grcPos + gdRC  # next cell in that direction
+
+            # Check the adjacent cell is within bounds
+            # if not, then this transition is invalid!
+            if np.any(gPos2 < 0):
+                return False
+            if np.any(gPos2 >= grcMax):
+                return False
+
+            # Get the transitions out of gPos2, using iDirOut as the inbound direction
+            # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
+            connected = 0
+            for orientation in range(4):
+                connected += self.get_transition((gPos2[0], gPos2[1], orientation), mirror(iDirOut))
+            if connected > 0:
+                incomping_connections[iDirOut] = 1
+
+        number_of_incoming = np.sum(incomping_connections)
+        # Only one incoming direction --> Straight line
+        if number_of_incoming == 1:
+
+            for direction in range(4):
+                if incomping_connections[direction] > 0:
+                    self.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
+        # Connect all incoming connections
+        if number_of_incoming == 2:
+            connect_directions = np.argwhere(incomping_connections > 0)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1])), connect_directions[0], 1)
+
+        # Find feasible connection fro three entries
+        if number_of_incoming == 3:
+            hole = np.argwhere(incomping_connections < 1)[0][0]
+            connect_directions = [(hole + 1) % 4, (hole + 2) % 4, (hole + 3) % 4]
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[2], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1])), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[2])), connect_directions[0], 1)
+        # Make a cross
+        if number_of_incoming == 4:
+            for direction in range(4):
+                self.set_transition((grcPos[0], grcPos[1], direction), direction, 1)
+        return True
+
 
 def mirror(dir):
     return (dir + 2) % 4

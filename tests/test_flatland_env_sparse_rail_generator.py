@@ -1,5 +1,3 @@
-import time
-
 import numpy as np
 
 from flatland.envs.generators import sparse_rail_generator, realistic_rail_generator
@@ -23,11 +21,11 @@ def test_realistic_rail_generator():
 
 
 def test_sparse_rail_generator():
-    env = RailEnv(width=50,
-                  height=50,
-                  rail_generator=sparse_rail_generator(num_cities=3,  # Number of cities in map
+    env = RailEnv(width=20,
+                  height=20,
+                  rail_generator=sparse_rail_generator(num_cities=5,  # Number of cities in map
                                                        num_intersections=2,  # Number of interesections in map
-                                                       num_trainstations=15,  # Number of possible start/targets on map
+                                                       num_trainstations=20,  # Number of possible start/targets on map
                                                        min_node_dist=6,  # Minimal distance of nodes
                                                        node_radius=3,  # Proximity of stations to city center
                                                        num_neighb=2,  # Number of connections to other cities
@@ -38,4 +36,3 @@ def test_sparse_rail_generator():
     # reset to initialize agents_static
     env_renderer = RenderTool(env, gl="PILSVG", )
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
-    time.sleep(10)

@@ -103,4 +103,5 @@ def a_star(rail_trans, rail_array, start, end):
 
         # no full path found
         if len(open_nodes) == 0:
+            print("could not make path")
             return []

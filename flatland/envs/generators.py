@@ -9,7 +9,7 @@ from flatland.core.grid.grid_utils import distance_on_rail
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic
-from flatland.envs.grid4_generators_utils import connect_rail, connect_from_nodes, connect_nodes
+from flatland.envs.grid4_generators_utils import connect_rail, connect_nodes, connect_from_nodes
 from flatland.envs.grid4_generators_utils import get_rnd_agents_pos_tgt_dir_on_rail
 
 
@@ -863,7 +863,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                 if tries > 100:
                     warnings.warn("Could not set nodes, please change initial parameters!!!!")
                     break
-
+        print(node_positions)
         # Chose node connection
         available_nodes_full = np.arange(num_cities + num_intersections)
         available_cities = np.arange(num_cities)
@@ -881,7 +881,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                 delete_idx = np.where(available_cities == current_node)
 
                 available_cities = np.delete(available_cities, delete_idx, 0)
-            elif len(available_intersections) > 0:
+            elif len(available_intersections) > 0 and len(available_cities) > 0:
                 available_nodes = available_cities
                 delete_idx = np.where(available_intersections == current_node)
                 available_intersections = np.delete(available_intersections, delete_idx, 0)
@@ -894,8 +894,6 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             available_nodes = available_nodes[np.argsort(node_dist)]
 
             # Set number of neighboring nodes
-
-            print(current_node, allowed_connections)
             if len(available_nodes) >= allowed_connections:
                 connected_neighb_idx = available_nodes[:allowed_connections]
             else:
@@ -903,6 +901,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
 
             if current_node == 0:
                 allowed_connections -= 1
+
             # Connect to the neighboring nodes
             for neighb in connected_neighb_idx:
                 if neighb not in node_stack:
@@ -938,12 +937,14 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                 train_stations[trainstation_node].append((station_x, station_y))
 
                 # Connect train station to the correct node
-                connect_from_nodes(rail_trans, rail_array, node_positions[trainstation_node], (station_x, station_y))
-
+                connection = connect_from_nodes(rail_trans, rail_array, node_positions[trainstation_node],
+                                                (station_x, station_y))
+                # Check if connection was made
+                if len(connection) == 0:
+                    train_stations[trainstation_node].pop(-1)
         # Fix all nodes with illegal transition maps
         for current_node in node_positions:
-            if not grid_map.cell_neighbours_valid(current_node):
-                grid_map.fix_neighbours(current_node)
+            grid_map.fix_transitions(current_node)
 
         # Generate start and target node directory for all agents.
         # Assure that start and target are not in the same node

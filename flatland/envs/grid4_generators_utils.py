@@ -76,8 +76,8 @@ def connect_nodes(rail_trans, rail_array, start, end):
         if index == 0:
             if new_trans == 0:
                 # end-point
-                # need to flip direction because of how end points are defined
-                new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+                # don't set any transition at node yet
+                new_trans = 0
             else:
                 # into existing rail
                 new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
@@ -93,7 +93,9 @@ def connect_nodes(rail_trans, rail_array, start, end):
             new_trans_e = rail_array[end_pos]
             if new_trans_e == 0:
                 # end-point
-                new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
+                # don't set any transition at node yet
+
+                new_trans_e = 0
             else:
                 # into existing rail
                 new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
