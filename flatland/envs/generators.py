@@ -1034,7 +1034,6 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
         agents_direction = []
 
         for agent_idx in range(num_agents):
-            current_start_node = agent_start_targets_nodes[agent_idx][0]
             current_target_node = agent_start_targets_nodes[agent_idx][1]
             target_station_idx = np.random.randint(len(train_stations[current_target_node]))
             target = train_stations[current_target_node][target_station_idx]
@@ -1043,13 +1042,11 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                 target = train_stations[current_target_node][target_station_idx]
             agents_target.append((target[0], target[1]))
 
-        for agent_idx in range(num_agents):
             current_start_node = agent_start_targets_nodes[agent_idx][0]
-            current_target_node = agent_start_targets_nodes[agent_idx][1]
             start_station_idx = np.random.randint(len(train_stations[current_start_node]))
             start = train_stations[current_start_node][start_station_idx]
 
-            while (start[0], start[1]) in agents_position or (start[0], start[1]) in agents_target:
+            while (start[0], start[1]) in agents_position:
                 start_station_idx = np.random.randint(len(train_stations[current_start_node]))
                 start = train_stations[current_start_node][start_station_idx]
             agents_position.append((start[0], start[1]))
