@@ -1034,14 +1034,18 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
         agents_direction = []
 
         for agent_idx in range(num_agents):
+
+            # Set target for agent
             current_target_node = agent_start_targets_nodes[agent_idx][1]
             target_station_idx = np.random.randint(len(train_stations[current_target_node]))
             target = train_stations[current_target_node][target_station_idx]
             while (target[0], target[1]) in agents_target:
                 target_station_idx = np.random.randint(len(train_stations[current_target_node]))
                 target = train_stations[current_target_node][target_station_idx]
+
             agents_target.append((target[0], target[1]))
 
+            # Set start for agent
             current_start_node = agent_start_targets_nodes[agent_idx][0]
             start_station_idx = np.random.randint(len(train_stations[current_start_node]))
             start = train_stations[current_start_node][start_station_idx]
@@ -1049,6 +1053,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
             while (start[0], start[1]) in agents_position:
                 start_station_idx = np.random.randint(len(train_stations[current_start_node]))
                 start = train_stations[current_start_node][start_station_idx]
+
             agents_position.append((start[0], start[1]))
 
             # Orient the agent correctly
@@ -1057,7 +1062,6 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                 if any(transitions) > 0:
                     agents_direction.append(orientation)
                     continue
-            agent_idx += 1
 
         return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
