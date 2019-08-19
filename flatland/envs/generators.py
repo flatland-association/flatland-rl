@@ -543,7 +543,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
     return generator
 
 
-def realistic_rail_generator(nr_start_goal=1, seed=0):
+def realistic_rail_generator(nr_start_goal=1, seed=0,max_add_dead_end = 7):
     """
     Parameters
     -------
@@ -746,33 +746,80 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
                 data = []
                 for x_loop in range(int(len(x) / 2)):
                     start = (
-                        max(0, min(off_set + nbr_track_loop + 1, height - 1)), max(0, min(x[2 * x_loop], width - 1)))
+                        max(0, min(off_set + nbr_track_loop + 1, height - 1)),
+                        max(0, min(x[2 * x_loop], width - 1)))
                     goal = (
                         max(0, min(off_set + nbr_track_loop + 1, height - 1)),
                         max(0, min(x[2 * x_loop + 1], width - 1)))
-                    d = np.arange(x[2 * x_loop] + 1, x[2 * x_loop + 1] - 1, 2)
-                    data.extend(d)
 
-                    new_path = connect_rail(rail_trans, rail_array, start, goal)
-                    if len(new_path) > 0:
-                        c = (off_set + nbr_track_loop, x[2 * x_loop] + 1)
-                        make_switch_e_w(width, height, grid_map, c)
-                        c = (off_set + nbr_track_loop, x[2 * x_loop + 1] + 1)
-                        make_switch_w_e(width, height, grid_map, c)
+                    if (off_set + nbr_track_loop + 1 == start[0]) and (off_set + nbr_track_loop + 1 == goal[0]):
+                        d = np.arange(x[2 * x_loop] + 1, x[2 * x_loop + 1] - 1, 2)
+                        data.extend(d)
 
-                    add_pos = (int((start[0] + goal[0]) / 2), int((start[1] + goal[1]) / 2))
-                    if nbr_track_loop % 2 == 0:
-                        agents_positions_forward.append(add_pos)
-                        agents_directions_forward.append(([1, 3][off_set_loop % 2]))
-                        idx_forward.append(idx_target)
+                        new_path = connect_rail(rail_trans, rail_array, start, goal)
+                        if len(new_path) > 0:
+                            c = (off_set + nbr_track_loop, x[2 * x_loop] + 1)
+                            make_switch_e_w(width, height, grid_map, c)
+                            c = (off_set + nbr_track_loop, x[2 * x_loop + 1] + 1)
+                            make_switch_w_e(width, height, grid_map, c)
+
+                            add_pos = (int((start[0] + goal[0]) / 2), int((start[1] + goal[1]) / 2))
+                            if off_set_loop % 2 == 0:
+                                agents_positions_forward.append(add_pos)
+                                agents_directions_forward.append(([1, 3][nbr_track_loop % 2]))
+                                idx_forward.append(idx_target)
+                            else:
+                                agents_positions_backward.append(add_pos)
+                                agents_directions_backward.append(([3, 1][nbr_track_loop % 2]))
+                                idx_backward.append(idx_target)
+
+                            add_pos = (int((start[0] + goal[0]) / 2), int((2 * start[1] + goal[1]) / 3), idx_target)
+                            agents_targets.append(add_pos)
+                            idx_target += 1
+
+            # add dead-end
+            if True:
+                n = max_add_dead_end#int(np.random.choice(np.arange(max_add_dead_end-2)+1, 1)[0])
+                for pos_y in np.random.choice(np.arange(width - 7) + 3, n):
+                    pos_x = off_set
+                    pos_x1 = max(0, min(pos_x + 1, height - 1))
+                    if np.random.random() > 0.5:
+                        if pos_x + 1 < height - 1:
+                            start_track = (pos_x1, pos_y)
+                            goal_track = (pos_x1, pos_y + 1)
+                            ok = True
+                            for k in range(4):
+                                ok &= grid_map.grid[pos_x1][pos_y + (k-1) ] == 0
+                            if ok:
+                                new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+                                if len(new_path) > 0:
+                                    c = (pos_x1 - 1, pos_y + 1)
+                                    make_switch_e_w(width, height, grid_map, c)
+                                    add_pos = goal_track  # (int((start_track[0] + goal_track[0]) / 2), int((start_track[1] + goal_track[1]) / 2))
+                                    agents_positions_forward.append(add_pos)
+                                    agents_directions_forward.append(3)
+                                    idx_forward.append(idx_target)
+                                    agents_targets.append((goal_track[0], goal_track[1], idx_target))
+                                    idx_target += 1
                     else:
-                        agents_positions_backward.append(add_pos)
-                        agents_directions_backward.append(([1, 3][off_set_loop % 2]))
-                        idx_backward.append(idx_target)
-
-                    add_pos = (int((start[0] + goal[0]) / 2), int((2 * start[1] + goal[1]) / 3), idx_target)
-                    agents_targets.append(add_pos)
-                    idx_target += 1
+                        pos_x = max(0, min(pos_x + 1, height - 1))
+                        if pos_x + 1 < height - 1:
+                            start_track = (pos_x1, pos_y - 1)
+                            goal_track = (pos_x1, pos_y - 2)
+                            ok = True
+                            for k in range(4):
+                                ok &= grid_map.grid[pos_x1][pos_y - k] == 0
+                            if ok:
+                                new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+                                if len(new_path) > 0:
+                                    c = (pos_x1 - 1, pos_y)
+                                    make_switch_w_e(width, height, grid_map, c)
+                                    add_pos = goal_track  # (int((start_track[0] + goal_track[0]) / 2), int((start_track[1] + goal_track[1]) / 2))
+                                    agents_positions_backward.append(add_pos)
+                                    agents_directions_backward.append(1)
+                                    idx_backward.append(idx_target)
+                                    agents_targets.append((goal_track[0], goal_track[1], idx_target))
+                                    idx_target += 1
 
         agents_position = []
         agents_target = []
