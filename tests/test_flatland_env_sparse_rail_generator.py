@@ -1,5 +1,5 @@
 import numpy as np
-
+import os
 from flatland.envs.generators import sparse_rail_generator, realistic_rail_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -19,7 +19,14 @@ def test_realistic_rail_generator(vizualization_folder_name=None):
                                   screen_height=1200,
                                   screen_width=1600)
         env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
+        if vizualization_folder_name is not None:
+            env_renderer.gl.save_image(
+                os.path.join(
+                    vizualization_folder_name,
+                    "flatland_frame_{:04d}.png".format(test_loop)
+                ))
         env_renderer.close_window()
+
 
 def test_sparse_rail_generator():
     env = RailEnv(width=50,
@@ -40,4 +47,4 @@ def test_sparse_rail_generator():
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
 
 
-test_realistic_rail_generator()
+test_realistic_rail_generator("rendering/")

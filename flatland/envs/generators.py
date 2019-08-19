@@ -790,6 +790,12 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
                             if len(new_path) > 0:
                                 c = (pos_x - 1, pos_y - 1)
                                 make_switch_e_w(width, height, grid_map, c)
+                                agents_positions_backward.append(add_pos)
+                                agents_directions_backward.append(1)
+                                idx_backward.append(idx_target)
+                                add_pos = (goal_track[0], goal_track[1], idx_target)
+                                agents_targets.append(add_pos)
+                                idx_target += 1
                         else:
                             start_track = (pos_x, pos_y)
                             goal_track = (pos_x, pos_y - 2)
@@ -797,6 +803,12 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
                             if len(new_path) > 0:
                                 c = (pos_x - 1, pos_y + 1)
                                 make_switch_w_e(width, height, grid_map, c)
+                                agents_positions_forward.append(add_pos)
+                                agents_directions_forward.append(3)
+                                idx_forward.append(idx_target)
+                                add_pos = (goal_track[0], goal_track[1], idx_target)
+                                agents_targets.append(add_pos)
+                                idx_target += 1
 
         agents_position = []
         agents_target = []
