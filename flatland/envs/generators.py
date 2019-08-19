@@ -790,10 +790,11 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
                             if len(new_path) > 0:
                                 c = (pos_x - 1, pos_y - 1)
                                 make_switch_e_w(width, height, grid_map, c)
+                                add_pos = (int((goal_track[0] + start_track[0]) / 2), int((goal_track[1] + start_track[1]) / 2), idx_target)
                                 agents_positions_backward.append(add_pos)
-                                agents_directions_backward.append(1)
+                                agents_directions_backward.append(3)
                                 idx_backward.append(idx_target)
-                                add_pos = (goal_track[0], goal_track[1], idx_target)
+                                add_pos = (int((goal_track[0] + start_track[0]) / 2), int((goal_track[1] + start_track[1]) / 2), idx_target)
                                 agents_targets.append(add_pos)
                                 idx_target += 1
                         else:
@@ -803,10 +804,11 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
                             if len(new_path) > 0:
                                 c = (pos_x - 1, pos_y + 1)
                                 make_switch_w_e(width, height, grid_map, c)
+                                add_pos = (int((goal_track[0] + start_track[0]) / 2), int((goal_track[1] + start_track[1]) / 2), idx_target)
                                 agents_positions_forward.append(add_pos)
-                                agents_directions_forward.append(3)
+                                agents_directions_forward.append(1)
                                 idx_forward.append(idx_target)
-                                add_pos = (goal_track[0], goal_track[1], idx_target)
+                                add_pos = (int((goal_track[0] + start_track[0]) / 2), int((goal_track[1] + start_track[1]) / 2), idx_target)
                                 agents_targets.append(add_pos)
                                 idx_target += 1
 
