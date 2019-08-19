@@ -774,6 +774,31 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
                     agents_targets.append(add_pos)
                     idx_target += 1
 
+            add_max_dead_end = 20
+            for pos_y in np.random.choice(np.arange(width-7)+3,add_max_dead_end,False):
+                pos_x = off_set+1
+                if pos_x < height - 1:
+                    ok = True
+                    for k in range(6):
+                        c = (pos_x,pos_y-k+1)
+                        ok &= grid_map.grid[c[0]][c[1]] == 0
+                    if ok:
+                        if np.random.random() < 0.5:
+                            start_track = (pos_x, pos_y)
+                            goal_track = (pos_x, pos_y - 2)
+                            new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+                            if len(new_path) > 0:
+                                c = (pos_x-1, pos_y-1)
+                                make_switch_e_w(width, height, grid_map, c)
+                        else:
+                            start_track = (pos_x, pos_y)
+                            goal_track = (pos_x, pos_y - 2)
+                            new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+                            if len(new_path) > 0:
+                                c = (pos_x-1, pos_y+1)
+                                make_switch_w_e(width, height, grid_map, c)
+
+
         agents_position = []
         agents_target = []
         agents_direction = []
