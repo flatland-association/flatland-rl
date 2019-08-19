@@ -543,7 +543,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
     return generator
 
 
-def realistic_rail_generator(nr_start_goal=1, seed=0,max_add_dead_end = 3):
+def realistic_rail_generator(nr_start_goal=1, seed=0,max_add_dead_end = 7):
     """
     Parameters
     -------
