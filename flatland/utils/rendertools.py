@@ -39,7 +39,8 @@ class RenderTool(object):
     theta = np.linspace(0, np.pi / 2, 5)
     arc = array([np.cos(theta), np.sin(theta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env, gl="PILSVG", jupyter=False, agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND, screen_width=800,screen_height=600):
+    def __init__(self, env, gl="PILSVG", jupyter=False, agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+                 screen_width=800, screen_height=600):
         self.env = env
         self.frame_nr = 0
         self.start_time = time.time()
@@ -48,12 +49,12 @@ class RenderTool(object):
         self.agent_render_variant = agent_render_variant
 
         if gl == "PIL":
-            self.gl = PILGL(env.width, env.height, jupyter, screen_width=screen_width,screen_height=screen_height)
+            self.gl = PILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         elif gl == "PILSVG":
-            self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width,screen_height=screen_height)
+            self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         else:
             print("[", gl, "] not found, switch to PILSVG")
-            self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width,screen_height=screen_height)
+            self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
 
         self.new_rail = True
         self.update_background()

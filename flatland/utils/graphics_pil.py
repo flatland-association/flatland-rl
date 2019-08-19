@@ -41,7 +41,7 @@ class PILGL(GraphicsLayer):
     SELECTED_AGENT_LAYER = 4
     SELECTED_TARGET_LAYER = 5
 
-    def __init__(self, width, height, jupyter=False, screen_width=800,screen_height=600):
+    def __init__(self, width, height, jupyter=False, screen_width=800, screen_height=600):
         self.yxBase = (0, 0)
         self.linewidth = 4
         self.n_agent_colors = 1  # overridden in loadAgent
@@ -263,9 +263,9 @@ class PILGL(GraphicsLayer):
 
 
 class PILSVG(PILGL):
-    def __init__(self, width, height, jupyter=False, screen_width=800,screen_height=600):
+    def __init__(self, width, height, jupyter=False, screen_width=800, screen_height=600):
         oSuper = super()
-        oSuper.__init__(width, height, jupyter,screen_width,screen_height)
+        oSuper.__init__(width, height, jupyter, screen_width, screen_height)
 
         self.lwAgents = []
         self.agents_prev = []

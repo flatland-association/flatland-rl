@@ -1,6 +1,3 @@
-import os
-import time
-
 import numpy as np
 
 from flatland.envs.generators import sparse_rail_generator, realistic_rail_generator
@@ -22,15 +19,6 @@ def test_realistic_rail_generator(vizualization_folder_name=None):
                                   screen_width=1600)
         env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
 
-        if vizualization_folder_name is not None:
-            env_renderer.gl.save_image(
-                os.path.join(
-                    vizualization_folder_name,
-                    "flatland_frame_{:04d}.png".format(test_loop)
-                ))
-        env_renderer.close_window()
-
-
 def test_sparse_rail_generator():
     env = RailEnv(width=50,
                   height=50,
@@ -39,15 +27,13 @@ def test_sparse_rail_generator():
                                                        num_trainstations=50,  # Number of possible start/targets on map
                                                        min_node_dist=6,  # Minimal distance of nodes
                                                        node_radius=3,  # Proximity of stations to city center
-                                                       num_neighb=4,  # Number of connections to other cities
+                                                       num_neighb=3,  # Number of connections to other cities
                                                        seed=5,  # Random seed
+                                                       realistic_mode=True  # Ordered distribution of nodes
                                                        ),
-                  number_of_agents=45,
+                  number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
     # reset to initialize agents_static
     env_renderer = RenderTool(env, gl="PILSVG", )
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
-    time.sleep(2)
 
-
-test_realistic_rail_generator(vizualization_folder_name="./rendering")

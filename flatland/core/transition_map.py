@@ -412,6 +412,8 @@ class GridTransitionMap(TransitionMap):
         grcMax = self.grid.shape
 
         # loop over available outbound directions (indices) for rcPos
+        self.set_transitions(rcPos, 0)
+
         incomping_connections = np.zeros(4)
         for iDirOut in np.arange(4):
             gdRC = gDir2dRC[iDirOut]  # row,col increment
