@@ -779,7 +779,7 @@ def realistic_rail_generator(nr_start_goal=1, seed=0,max_add_dead_end = 7):
 
             # add dead-end
             if True:
-                n = int(np.random.choice(np.arange(max_add_dead_end), 1)[0])
+                n = max_add_dead_end#int(np.random.choice(np.arange(max_add_dead_end-2)+1, 1)[0])
                 for pos_y in np.random.choice(np.arange(width - 7) + 3, n):
                     pos_x = off_set
                     pos_x1 = max(0, min(pos_x + 1, height - 1))
