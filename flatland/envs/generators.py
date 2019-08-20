@@ -670,7 +670,7 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=20, two_t
 
         np.random.seed(seed + num_resets)
 
-        max_n_track_seg = np.random.choice([2, 3, 4]) + int(two_track_back_bone)
+        max_n_track_seg = np.random.choice([3, 4, 5, 6]) + int(two_track_back_bone)
         x_offsets = np.arange(0, height, max_n_track_seg).astype(int)
 
         agents_positions_forward = []
@@ -863,19 +863,20 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=20, two_t
                             if len(new_path) > 0:
                                 c = (pos_x - 1, pos_y - 1)
                                 make_switch_e_w(width, height, grid_map, c)
-                                add_pos = (
-                                    int((goal_track[0] + start_track[0]) / 2),
-                                    int((goal_track[1] + start_track[1]) / 2),
-                                    idx_target)
-                                agents_positions_backward.append(add_pos)
-                                agents_directions_backward.append(3)
-                                idx_backward.append(idx_target)
-                                add_pos = (
-                                    int((goal_track[0] + start_track[0]) / 2),
-                                    int((goal_track[1] + start_track[1]) / 2),
-                                    idx_target)
-                                agents_targets.append(add_pos)
-                                idx_target += 1
+                                if np.random.random() < 0.5:
+                                    add_pos = (
+                                        int((goal_track[0] + start_track[0]) / 2),
+                                        int((goal_track[1] + start_track[1]) / 2),
+                                        idx_target)
+                                    agents_positions_backward.append(add_pos)
+                                    agents_directions_backward.append(3)
+                                    idx_backward.append(idx_target)
+                                    add_pos = (
+                                        int((goal_track[0] + start_track[0]) / 2),
+                                        int((goal_track[1] + start_track[1]) / 2),
+                                        idx_target)
+                                    agents_targets.append(add_pos)
+                                    idx_target += 1
                         else:
                             start_track = (pos_x, pos_y)
                             goal_track = (pos_x, pos_y - 2)
@@ -883,19 +884,20 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=20, two_t
                             if len(new_path) > 0:
                                 c = (pos_x - 1, pos_y + 1)
                                 make_switch_w_e(width, height, grid_map, c)
-                                add_pos = (
-                                    int((goal_track[0] + start_track[0]) / 2),
-                                    int((goal_track[1] + start_track[1]) / 2),
-                                    idx_target)
-                                agents_positions_forward.append(add_pos)
-                                agents_directions_forward.append(1)
-                                idx_forward.append(idx_target)
-                                add_pos = (
-                                    int((goal_track[0] + start_track[0]) / 2),
-                                    int((goal_track[1] + start_track[1]) / 2),
-                                    idx_target)
-                                agents_targets.append(add_pos)
-                                idx_target += 1
+                                if np.random.random() < 0.5:
+                                    add_pos = (
+                                        int((goal_track[0] + start_track[0]) / 2),
+                                        int((goal_track[1] + start_track[1]) / 2),
+                                        idx_target)
+                                    agents_positions_forward.append(add_pos)
+                                    agents_directions_forward.append(1)
+                                    idx_forward.append(idx_target)
+                                    add_pos = (
+                                        int((goal_track[0] + start_track[0]) / 2),
+                                        int((goal_track[1] + start_track[1]) / 2),
+                                        idx_target)
+                                    agents_targets.append(add_pos)
+                                    idx_target += 1
 
         agents_position = []
         agents_target = []
@@ -905,7 +907,7 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=20, two_t
             t = np.random.choice(range(len(agents_targets)))
             d = agents_targets[t]
             agents_targets.pop(t)
-            if d[2] < idx_target / 2:
+            if np.random.random() < 0.5:  # d[2] < idx_target:
                 if len(idx_backward) > 0:
                     agents_target.append((d[0], d[1]))
                     sel = np.random.choice(range(len(idx_backward)))
