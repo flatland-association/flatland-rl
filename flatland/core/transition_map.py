@@ -437,7 +437,6 @@ class GridTransitionMap(TransitionMap):
         number_of_incoming = np.sum(incomping_connections)
         # Only one incoming direction --> Straight line
         if number_of_incoming == 1:
-
             for direction in range(4):
                 if incomping_connections[direction] > 0:
                     self.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
