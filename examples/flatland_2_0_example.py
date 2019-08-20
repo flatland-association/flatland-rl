@@ -18,7 +18,6 @@ stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
                    'max_duration': 10  # Max duration of malfunction
                    }
 
-
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 env = RailEnv(width=10,
               height=10,
@@ -106,7 +105,10 @@ for trials in range(1, n_trials + 1):
         # reward and whether their are done
         next_obs, all_rewards, done, _ = env.step(action_dict)
         env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-        env_renderer.gl.save_image("./Images/flatland_2_0_frame_{:04d}.bmp".format(frame_step))
+        try:
+            env_renderer.gl.save_image("./../rendering/flatland_2_0_frame_{:04d}.bmp".format(frame_step))
+        except:
+            print("Path not found: ./../rendering/")
         frame_step += 1
         # Update replay buffer and train agent
         for a in range(env.get_num_agents()):
