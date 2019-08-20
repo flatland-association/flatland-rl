@@ -7,9 +7,8 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
-
 def test_realistic_rail_generator(vizualization_folder_name=None):
-    for test_loop in range(20):
+    for test_loop in range(5):
         print("test_loop", test_loop)
         num_agents = np.random.randint(10, 30)
         env = RailEnv(width=np.random.randint(40, 80),
@@ -21,8 +20,8 @@ def test_realistic_rail_generator(vizualization_folder_name=None):
                       obs_builder_object=GlobalObsForRailEnv())
         # reset to initialize agents_static
         env_renderer = RenderTool(env, gl="PILSVG", agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                                  screen_height=1200,
-                                  screen_width=1600)
+                                  screen_height=600,
+                                  screen_width=800)
         env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
         if vizualization_folder_name is not None:
             env_renderer.gl.save_image(
@@ -50,5 +49,6 @@ def test_sparse_rail_generator():
     # reset to initialize agents_static
     env_renderer = RenderTool(env, gl="PILSVG", )
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
+    env_renderer.close_window()
 
-test_realistic_rail_generator("./../rendering/")
+# test_realistic_rail_generator("./../rendering/")
