@@ -847,16 +847,16 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
 
         for off_set_loop in range(len(x_offsets)):
             off_set = x_offsets[off_set_loop]
-            pos_ys = np.random.choice(np.arange(width - 7) + 3, min(width - 7, add_max_dead_end), False)
+            pos_ys = np.random.choice(np.arange(width - 7) + 4, min(width - 7, add_max_dead_end), False)
             for pos_y in pos_ys:
                 pos_x = off_set + 1 + int(two_track_back_bone)
                 if pos_x < height - 1:
                     ok = True
-                    for k in range(4):
+                    for k in range(5):
                         if two_track_back_bone:
-                            c = (pos_x - 1, pos_y - k + 1)
+                            c = (pos_x - 1, pos_y - k + 2)
                             ok &= grid_map.grid[c[0]][c[1]] == 1025
-                        c = (pos_x, pos_y - k + 1)
+                        c = (pos_x, pos_y - k + 2)
                         ok &= grid_map.grid[c[0]][c[1]] == 0
                     if ok:
                         if np.random.random() < 0.5:

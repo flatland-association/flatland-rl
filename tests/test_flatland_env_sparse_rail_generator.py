@@ -53,4 +53,4 @@ def test_sparse_rail_generator():
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
     env_renderer.close_window()
 
-test_realistic_rail_generator("./../rendering/")
+# test_realistic_rail_generator("./../rendering/")
