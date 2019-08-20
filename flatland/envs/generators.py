@@ -896,6 +896,23 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
         agents_target = []
         agents_direction = []
 
+        remove_a = []
+        for a in range(len(agents_positions)):
+            cell_transitions = grid_map.get_transitions(agents_positions[a][0], agents_positions[a][1],
+                                                        agents_directions[a])
+            if np.sum(cell_transitions) == 0:
+                for i in range(4):
+                    agents_directions[a] = i
+                    cell_transitions = grid_map.get_transitions(agents_positions[a][0], agents_positions[a][1],
+                                                                agents_directions[a])
+                    if np.sum(cell_transitions) != 0:
+                        break
+                if np.sum(cell_transitions):
+                    remove_a.extend([a])
+        for i in range(len(remove_a)):
+            agents_positions.pop(i)
+            agents_directions.pop(i)
+
         for a in range(min(len(agents_targets), num_agents)):
             t = np.random.choice(range(len(agents_targets)))
             d = agents_targets[t]
@@ -1048,7 +1065,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                                     width - 1)
                 tries = 0
                 while (station_x, station_y) in train_stations or (station_x, station_y) == node_positions[
-                        trainstation_node] or rail_array[(station_x, station_y)] != 0:
+                    trainstation_node] or rail_array[(station_x, station_y)] != 0:
                     station_x = np.clip(
                         node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
                         0,
