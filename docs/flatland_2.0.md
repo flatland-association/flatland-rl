@@ -59,7 +59,7 @@ You can tune the following parameters:
 
 - `num_citeis` is the number of cities on a map. Cities are the only nodes that can host start and end points for agent tasks (Train stations). Here you have to be carefull that the number is not too high as all the cities have to fit on the map. When `realistic_mode=False` you have to be carefull when chosing `min_node_dist` because leves will fails if not all cities (and intersections) can be placed with at least `min_node_dist` between them.
 - `num_intersections` is the number of nodes that don't hold any trainstations. They are also the first priority that a city connects to. We use these to allow for sparse connections between cities.
-- `num_trainstations`defines the *Total* number of trainstations in the network. This also sets the max number of allowed agents in the environment. This is also a delicate parameter as there is only a limitid amount of space available around nodes and thus if the number is too high the level generation will fail.
+- `num_trainstations`defines the *Total* number of trainstations in the network. This also sets the max number of allowed agents in the environment. This is also a delicate parameter as there is only a limitid amount of space available around nodes and thus if the number is too high the level generation will fail. *Important*: Only the number of agents provided to the environment will actually produce active train stations. The others will just be present as dead-ends (See figures below).
 - `min_node_dist`is only used if `realistic_mode=False` and represents the minimal distance between two nodes.
 - `node_radius` defines the extent of a city. Each trainstation is placed at a distance to the closes city node that is smaller or equal to this number.
 - `num_neighb`defines the number of neighbouring nodes that connect to each other. Thus this changes the connectivity and thus the amount of alternative routes in the network.
@@ -68,7 +68,7 @@ You can tune the following parameters:
 
 If you run into any bugs with sets of parameters please let us know.
 
-Here is a network with `realistic_mode=False`
+Here is a network with `realistic_mode=False` and the parameters from above.
 
 ![sparse_random](https://i.imgur.com/Xg7nifF.png)
 
@@ -78,4 +78,73 @@ and here with `realistic_mode=True`
 
 ## Add Stochasticity
 
+Another area where we improve *Flat*land 2.0 is by adding stochastic events during the episodes. This is very common for railway networks where the initial plan usually needs to be rescheduled during operations as minor events such as delayed departure from trainstations, malfunctions on trains or infrastructure or just the weather lead to delayed trains.
+
+We implemted a poisson process to simulate delays by stopping agents at random times for random durations. The parameters necessary for the stochastic events can be provided when creating the environment.
+
+```
+# Use a the malfunction generator to break agents from time to time
+stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
+                   'malfunction_rate': 30,  # Rate of malfunction occurence
+                   'min_duration': 3,  # Minimal duration of malfunction
+                   'max_duration': 10  # Max duration of malfunction
+                   }
+
+```
+
+The parameters are as follows:
+
+- `prop_malfunction` is the proportion of agents that can malfunction. `1.0` means that each agent can break.
+- `malfunction_rate` is the mean rate of the poisson process in number of environment steps.
+- `min_dutation` and `max_duration` set the range of malfunction durations. They are sampled uniformly
+
+You can introduce stochasticity by simply creating the env as follows:
+
+```
+# Use a the malfunction generator to break agents from time to time
+stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
+                   'malfunction_rate': 30,  # Rate of malfunction occurence
+                   'min_duration': 3,  # Minimal duration of malfunction
+                   'max_duration': 10  # Max duration of malfunction
+                   }
+
+# Use your own observation builder
+TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
+
+env = RailEnv(width=10,
+              height=10,
+              rail_generator=sparse_rail_generator(num_cities=3,  # Number of cities in map (where train stations are)
+                                                   num_intersections=1,  # Number of interesections (no start / target)
+                                                   num_trainstations=8,  # Number of possible start/targets on map
+                                                   min_node_dist=3,  # Minimal distance of nodes
+                                                   node_radius=2,  # Proximity of stations to city center
+                                                   num_neighb=2,  # Number of connections to other cities/intersections
+                                                   seed=15,  # Random seed
+                                                   ),
+              number_of_agents=5,
+              stochastic_data=stochastic_data,  # Malfunction generator data
+              obs_builder_object=TreeObservation)
+```
+
+You will quickly realize that this will lead to unforseen difficulties which means that *your controller* needs to observe the environment at all times to be able to react to the stochastic events.
+
 ## Add different speed profiles
+
+One of the main contributions to the complexity of railway network operations stems from the fact that all trains travel at different speeds while sharing a very limited railway network. In *Flat*land 2.0 this feature will be enabled as well and will lead to much more complex configurations. This is still in early *beta* and even though stock observation builders and predictors do support these changes we have not yet fully tested them. Here we count on your support :).
+
+Currently you have to initialize the speed profiles manually after the environment has been reset (*Attention*: this is currently being worked on and will change soon). In order for agent to have differnt speed profiles you can include this after your `env.reset()` call:
+
+```
+# Reset environment and get initial observations for all agents
+    obs = env.reset()
+    for idx in range(env.get_num_agents()):
+        tmp_agent = env.agents[idx]
+        speed = (idx % 4) + 1
+        tmp_agent.speed_data["speed"] = 1 / speed
+```
+
+Where you can actually chose as many different speeds as you like. Keep in mind that the *fastest speed* is 1 and all slower speeds must be between 1 and 0. For the submission scoring you can assume that there will be no more than 5 speed profiles.
+
+## Example code
+
+To see allt he changes in action you can just run the `flatland_example_2_0.py` file in the examples folder. The file can be found [here](https://gitlab.aicrowd.com/flatland/flatland/blob/147_new_level_generator/examples/flatland_2_0_example.py)
