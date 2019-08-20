@@ -705,6 +705,20 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=20, two_t
             goal_track = (off_set, width - 1 - int((off_set_loop) % 2) * int(two_track_back_bone) * int(track_2))
             new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
 
+            if track_2:
+                if np.random.random() < 0.75:
+                    c = (off_set, 3)
+                    if np.random.random() < 0.5:
+                        make_switch_e_w(width, height, grid_map, c)
+                    else:
+                        make_switch_w_e(width, height, grid_map, c)
+                if np.random.random() < 0.5:
+                    c = (off_set, width - 3)
+                    if np.random.random() < 0.5:
+                        make_switch_e_w(width, height, grid_map, c)
+                    else:
+                        make_switch_w_e(width, height, grid_map, c)
+
             # track one (full track : left right)
             for two_track_back_bone_loop in range(1 + int(track_2) * int(two_track_back_bone)):
                 if off_set_loop > 0:
@@ -832,7 +846,7 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=20, two_t
                     agents_targets.append(add_pos)
                     idx_target += 1
 
-            for pos_y in np.random.choice(np.arange(width - 7) + 3, add_max_dead_end, False):
+            for pos_y in np.random.choice(np.arange(width - 7) + 3, min(width - 7, add_max_dead_end), False):
                 pos_x = off_set + 1 + int(two_track_back_bone)
                 if pos_x < height - 1:
                     ok = True
@@ -1054,7 +1068,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                                     width - 1)
                 while (station_x, station_y) in train_stations or (station_x, station_y) == node_positions[
                     trainstation_node] or \
-                        rail_array[(station_x, station_y)] != 0:
+                    rail_array[(station_x, station_y)] != 0:
                     station_x = np.clip(
                         node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
                         0,
