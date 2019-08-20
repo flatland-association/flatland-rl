@@ -1,36 +1,36 @@
 # Flatland 2.0 Introduction (Beta)
 
-Curious to see whats coming in *Flat*land 2.0? Have a look at the current development and report bugs and give us feedback on the environment.
+Curious to see whats coming in **Flat**land 2.0? Have a look at the current development and report bugs and give us feedback on the environment.
 
-*WARNING*: Flatlnadn 2.0 Beta is under current development and not stable nor final. We would however like you to play with the code and help us get the best possible environment for multi-agent control problems.
+**WARNING**: Flatlnadn 2.0 Beta is under current development and not stable nor final. We would however like you to play with the code and help us get the best possible environment for multi-agent control problems.
 
 ## Whats new
 
-In this version of *Flat*land we are moving closer to realistic and more complex railway problems. Earlier versions of *Flat*land which introduced you to the concept of restricted transitions was still to simplified to give us feasible solutions for daily operations. Thus the following changes are coming in the next version to be closer to real railway network challenges:
+In this version of **Flat**land we are moving closer to realistic and more complex railway problems. Earlier versions of **Flat**land which introduced you to the concept of restricted transitions was still to simplified to give us feasible solutions for daily operations. Thus the following changes are coming in the next version to be closer to real railway network challenges:
 
-- *New Level Generator* with less connections between different nodes in the network and thus much higher agent densities on rails.
-- *Stochastic Events* that cause agents to stop and get stuck for different number of time steps.
-- *Different Speed Classes* allow agents to move at different speeds and thus enhance complexity in the search for optimal solutions.
+- **New Level Generator** with less connections between different nodes in the network and thus much higher agent densities on rails.
+- **Stochastic Events** that cause agents to stop and get stuck for different number of time steps.
+- **Different Speed Classes** allow agents to move at different speeds and thus enhance complexity in the search for optimal solutions.
 
-Below we explain these changes in more detail and how you can play with their parametrization. We appreciate *your feedback* on the performance and the difficulty on these levels to help us shape the best possible *Flat*land 2.0 environment.
+Below we explain these changes in more detail and how you can play with their parametrization. We appreciate *your feedback* on the performance and the difficulty on these levels to help us shape the best possible **Flat**land 2.0 environment.
 
 ## Get the new level generators
-Since this is currently still in *beta* phase you can only install this version of *Flat*land through the gitlab repository. Once you have downloaded the [Flatland Repository](https://gitlab.aicrowd.com/flatland/flatland) you have to switch to the [147_new_level_generator](https://gitlab.aicrowd.com/flatland/flatland/tree/147_new_level_generator) branch to be able access the latest changes in *Flat*land.
+Since this is currently still in *beta* phase you can only install this version of **Flat**land through the gitlab repository. Once you have downloaded the [Flatland Repository](https://gitlab.aicrowd.com/flatland/flatland) you have to switch to the [147_new_level_generator](https://gitlab.aicrowd.com/flatland/flatland/tree/147_new_level_generator) branch to be able access the latest changes in **Flat**land.
 
-Once you have switched to this branch install *Flat*land by running `python setup.py install`.
+Once you have switched to this branch install **Flat**land by running `python setup.py install`.
 
 ## Generate levels
 
 We are currently working on different new level generators and you can expect that the levels in the submission testing will not all come from just one but rather different level generators to be sure that the controllers can handle any railway specific challenge.
 
-For this early *beta* testing we suggest you have a look at the `sparse_rail_generator` and `realistic_rail_generator`.
+For this early **beta** testing we suggest you have a look at the `sparse_rail_generator` and `realistic_rail_generator`.
 
 ### Sparse Rail Generator
 ![Example_Sparse](https://i.imgur.com/DP8sIyx.png)
 
 The idea behind the sparse rail generator is to mimic classic railway structures where dense nodes (cities) are sparsly connected to each other and where you have to manage traffic flow between the nodes efficiently. The cities in this level generator are much simplified in comparison to real city networks but it mimics parts of the problems faced in daily operations of any railway company.
 
-There are a few parameters you can tune to build your own map and test different complexity levels of the levels. *Warning* some combinations of parameters do not go well together and will lead to infeasible level generation. In the worst case, the level generator currently issues a warning when it cannot build the environment according to the parameters provided. This will lead to a crash of the whole env. We are currently working on improvements here and are *happy for any suggestions from your side*.
+There are a few parameters you can tune to build your own map and test different complexity levels of the levels. **Warning** some combinations of parameters do not go well together and will lead to infeasible level generation. In the worst case, the level generator currently issues a warning when it cannot build the environment according to the parameters provided. This will lead to a crash of the whole env. We are currently working on improvements here and are **happy for any suggestions from your side**.
 
 To build en environment you instantiate a `RailEnv` follows
 
@@ -78,7 +78,7 @@ and here with `realistic_mode=True`
 
 ## Add Stochasticity
 
-Another area where we improve *Flat*land 2.0 is by adding stochastic events during the episodes. This is very common for railway networks where the initial plan usually needs to be rescheduled during operations as minor events such as delayed departure from trainstations, malfunctions on trains or infrastructure or just the weather lead to delayed trains.
+Another area where we improve **Flat**land 2.0 is by adding stochastic events during the episodes. This is very common for railway networks where the initial plan usually needs to be rescheduled during operations as minor events such as delayed departure from trainstations, malfunctions on trains or infrastructure or just the weather lead to delayed trains.
 
 We implemted a poisson process to simulate delays by stopping agents at random times for random durations. The parameters necessary for the stochastic events can be provided when creating the environment.
 
@@ -126,11 +126,11 @@ env = RailEnv(width=10,
               obs_builder_object=TreeObservation)
 ```
 
-You will quickly realize that this will lead to unforseen difficulties which means that *your controller* needs to observe the environment at all times to be able to react to the stochastic events.
+You will quickly realize that this will lead to unforseen difficulties which means that **your controller** needs to observe the environment at all times to be able to react to the stochastic events.
 
 ## Add different speed profiles
 
-One of the main contributions to the complexity of railway network operations stems from the fact that all trains travel at different speeds while sharing a very limited railway network. In *Flat*land 2.0 this feature will be enabled as well and will lead to much more complex configurations. This is still in early *beta* and even though stock observation builders and predictors do support these changes we have not yet fully tested them. Here we count on your support :).
+One of the main contributions to the complexity of railway network operations stems from the fact that all trains travel at different speeds while sharing a very limited railway network. In **Flat**land 2.0 this feature will be enabled as well and will lead to much more complex configurations. This is still in early *beta* and even though stock observation builders and predictors do support these changes we have not yet fully tested them. Here we count on your support :).
 
 Currently you have to initialize the speed profiles manually after the environment has been reset (*Attention*: this is currently being worked on and will change soon). In order for agent to have differnt speed profiles you can include this after your `env.reset()` call:
 
