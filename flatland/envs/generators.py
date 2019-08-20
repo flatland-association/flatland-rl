@@ -681,7 +681,7 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
             off_set = x_offsets[off_set_loop]
             # second track
             data = np.arange(2, width - 2)
-            n_track_seg = np.random.choice([1,2])
+            n_track_seg = np.random.choice([1, 2])
 
             track_2 = False
             if two_track_back_bone:
