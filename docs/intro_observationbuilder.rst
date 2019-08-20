@@ -312,7 +312,7 @@ To access the possible transitions at any given cell there are different possibi
 
 2. When more detailed information about the cell in general is necessary you can also get the full transitions of a cell by calling :code:`transition_int = env.rail.get_full_transitions(*position)`. This will return an :code:`int16` for the cell representing the allowed transitions. To understand the transitions returned it is best to represent it as a binary number :code:`bin(transition_int)`, where the bits have to following meaning: :code:`NN NE NS NW EN EE ES EW SN SE SS SW WN WE WS WW`. For example the binary code :code:`1000 0000 0010 0000`, represents a straigt where an agent facing north can transition north and an agent facing south can transition south and no other transitions are possible. To get a better feeling what the binary representations of the elements look like go to this Link_
 
-.._Link:https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/core/grid/rail_env_grid.py#L29
+.. _Link:https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/core/grid/rail_env_grid.py#L29
 
 
 These two objects can be used for example to detect switches that are usable by other agents but not the observing agent itself. This can be an important feature when actions have to be taken in order to avoid conflicts.
