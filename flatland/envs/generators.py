@@ -543,7 +543,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
     return generator
 
 
-def realistic_rail_generator(nr_start_goal=1, seed=0):
+def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=20, two_track_back_bone=True):
     """
     Parameters
     -------
@@ -670,7 +670,7 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
 
         np.random.seed(seed + num_resets)
 
-        max_n_track_seg = np.random.choice([3, 4, 5])
+        max_n_track_seg = np.random.choice([2, 3, 4]) + int(two_track_back_bone)
         x_offsets = np.arange(0, height, max_n_track_seg).astype(int)
 
         agents_positions_forward = []
@@ -686,58 +686,116 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
         for off_set_loop in range(len(x_offsets)):
             off_set = x_offsets[off_set_loop]
             # second track
-            data = np.arange(int((width - 4 - max_n_track_seg) / max_n_track_seg)) * max_n_track_seg + 4
+            data = np.arange(
+                int((width - 4 - 2 * int(
+                    two_track_back_bone) - max_n_track_seg) / max_n_track_seg)) * max_n_track_seg + 4 + int(
+                two_track_back_bone)
             n_track_seg = np.random.choice(max_n_track_seg) + 1
 
-            start_track = (off_set, 0)
-            goal_track = (off_set, width - 1)
+            track_2 = False
+            if two_track_back_bone:
+                if off_set + 1 < height:
+                    start_track = (off_set + 1, int((off_set_loop) % 2) * int(two_track_back_bone))
+                    goal_track = (off_set + 1, width - 1 - int((off_set_loop + 1) % 2) * int(two_track_back_bone))
+                    new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+                    if len(new_path):
+                        track_2 = True
+
+            start_track = (off_set, int((off_set_loop + 1) % 2) * int(two_track_back_bone) * int(track_2))
+            goal_track = (off_set, width - 1 - int((off_set_loop) % 2) * int(two_track_back_bone) * int(track_2))
             new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
 
             # track one (full track : left right)
-            if off_set_loop > 0:
-                if off_set_loop % 2 == 1:
-                    start_track = (x_offsets[off_set_loop - 1] + 1, width - 1)
-                    goal_track = (x_offsets[off_set_loop] - 1, width - 1)
-                    new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+            for two_track_back_bone_loop in range(1 + int(track_2) * int(two_track_back_bone)):
+                if off_set_loop > 0:
+                    if off_set_loop % 2 == 1:
+                        start_track = (
+                            x_offsets[off_set_loop - 1] + 1 + int(two_track_back_bone_loop),
+                            width - 1 - int(two_track_back_bone_loop))
+                        goal_track = (x_offsets[off_set_loop] - 1 + int(two_track_back_bone) * int(track_2) - int(
+                            two_track_back_bone_loop),
+                                      width - 1 - int(
+                                          two_track_back_bone_loop))
+                        new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
 
-                    add_rail(width, height, grid_map,
-                             (x_offsets[off_set_loop - 1], width - 2),
-                             (x_offsets[off_set_loop - 1], width - 1),
-                             (x_offsets[off_set_loop - 1] + 1, width - 1))
-                    add_rail(width, height, grid_map,
-                             (x_offsets[off_set_loop], width - 2),
-                             (x_offsets[off_set_loop], width - 1),
-                             (x_offsets[off_set_loop] - 1, width - 1))
-                    add_rail(width, height, grid_map,
-                             (x_offsets[off_set_loop - 1], width - 1),
-                             (x_offsets[off_set_loop - 1] + 1, width - 1),
-                             (x_offsets[off_set_loop - 1] + 2, width - 1))
-                    add_rail(width, height, grid_map,
-                             (x_offsets[off_set_loop], width - 1),
-                             (x_offsets[off_set_loop] - 1, width - 1),
-                             (x_offsets[off_set_loop] - 2, width - 1))
+                        add_rail(width, height, grid_map,
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop),
+                                  width - 2 - int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop),
+                                  width - 1 - int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop) + 1,
+                                  width - 1 - int(two_track_back_bone_loop)))
+                        add_rail(width, height, grid_map,
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2),
+                                  width - 2 - int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2),
+                                  width - 1 - int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2) - 1,
+                                  width - 1 - int(two_track_back_bone_loop)))
+                        add_rail(width, height, grid_map,
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop),
+                                  width - 1 - int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop) + 1,
+                                  width - 1 - int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop) + 2,
+                                  width - 1 - int(two_track_back_bone_loop)))
+                        add_rail(width, height, grid_map,
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2),
+                                  width - 1 - int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2) - 1,
+                                  width - 1 - int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2) - 2,
+                                  width - 1 - int(two_track_back_bone_loop)))
 
-                else:
-                    start_track = (x_offsets[off_set_loop - 1] + 1, 0)
-                    goal_track = (x_offsets[off_set_loop] - 1, 0)
-                    new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
+                    else:
+                        start_track = (
+                            x_offsets[off_set_loop - 1] + 1 + int(two_track_back_bone_loop),
+                            int(two_track_back_bone_loop))
+                        goal_track = (x_offsets[off_set_loop] - 1 + int(two_track_back_bone) * int(track_2) - int(
+                            two_track_back_bone_loop),
+                                      int(two_track_back_bone_loop))
+                        new_path = connect_rail(rail_trans, rail_array, start_track, goal_track)
 
-                    add_rail(width, height, grid_map,
-                             (x_offsets[off_set_loop - 1], 1),
-                             (x_offsets[off_set_loop - 1], 0),
-                             (x_offsets[off_set_loop - 1] + 1, 0))
-                    add_rail(width, height, grid_map,
-                             (x_offsets[off_set_loop], 1),
-                             (x_offsets[off_set_loop], 0),
-                             (x_offsets[off_set_loop] - 1, 0))
-                    add_rail(width, height, grid_map,
-                             (x_offsets[off_set_loop - 1], 0),
-                             (x_offsets[off_set_loop - 1] + 1, 0),
-                             (x_offsets[off_set_loop - 1] + 2, 0))
-                    add_rail(width, height, grid_map,
-                             (x_offsets[off_set_loop], 0),
-                             (x_offsets[off_set_loop] - 1, 0),
-                             (x_offsets[off_set_loop] - 2, 0))
+                        add_rail(width, height, grid_map,
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop),
+                                  1 + int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop),
+                                  0 + int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop) + 1,
+                                  0 + int(two_track_back_bone_loop)))
+                        add_rail(width, height, grid_map,
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2),
+                                  1 + int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2),
+                                  0 + int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2) - 1,
+                                  0 + int(two_track_back_bone_loop)))
+                        add_rail(width, height, grid_map,
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop),
+                                  0 + int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop) + 1,
+                                  0 + int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop) + 2,
+                                  0 + int(two_track_back_bone_loop)))
+                        add_rail(width, height, grid_map,
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2),
+                                  0 + int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2) - 1,
+                                  0 + int(two_track_back_bone_loop)),
+                                 (x_offsets[off_set_loop] - int(two_track_back_bone_loop) + int(
+                                     two_track_back_bone) * int(track_2) - 2,
+                                  0 + int(two_track_back_bone_loop)))
 
             for nbr_track_loop in range(max_n_track_seg - 1):
                 if len(data) < 2 * n_track_seg + 1:
@@ -774,12 +832,13 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
                     agents_targets.append(add_pos)
                     idx_target += 1
 
-            add_max_dead_end = 20
             for pos_y in np.random.choice(np.arange(width - 7) + 3, add_max_dead_end, False):
-                pos_x = off_set + 1
+                pos_x = off_set + 1 + int(two_track_back_bone)
                 if pos_x < height - 1:
                     ok = True
                     for k in range(6):
+                        c = (pos_x - 1, pos_y - k + 1)
+                        ok &= grid_map.grid[c[0]][c[1]] == 1025
                         c = (pos_x, pos_y - k + 1)
                         ok &= grid_map.grid[c[0]][c[1]] == 0
                     if ok:
@@ -790,11 +849,17 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
                             if len(new_path) > 0:
                                 c = (pos_x - 1, pos_y - 1)
                                 make_switch_e_w(width, height, grid_map, c)
-                                add_pos = (int((goal_track[0] + start_track[0]) / 2), int((goal_track[1] + start_track[1]) / 2), idx_target)
+                                add_pos = (
+                                    int((goal_track[0] + start_track[0]) / 2),
+                                    int((goal_track[1] + start_track[1]) / 2),
+                                    idx_target)
                                 agents_positions_backward.append(add_pos)
                                 agents_directions_backward.append(3)
                                 idx_backward.append(idx_target)
-                                add_pos = (int((goal_track[0] + start_track[0]) / 2), int((goal_track[1] + start_track[1]) / 2), idx_target)
+                                add_pos = (
+                                    int((goal_track[0] + start_track[0]) / 2),
+                                    int((goal_track[1] + start_track[1]) / 2),
+                                    idx_target)
                                 agents_targets.append(add_pos)
                                 idx_target += 1
                         else:
@@ -804,11 +869,17 @@ def realistic_rail_generator(nr_start_goal=1, seed=0):
                             if len(new_path) > 0:
                                 c = (pos_x - 1, pos_y + 1)
                                 make_switch_w_e(width, height, grid_map, c)
-                                add_pos = (int((goal_track[0] + start_track[0]) / 2), int((goal_track[1] + start_track[1]) / 2), idx_target)
+                                add_pos = (
+                                    int((goal_track[0] + start_track[0]) / 2),
+                                    int((goal_track[1] + start_track[1]) / 2),
+                                    idx_target)
                                 agents_positions_forward.append(add_pos)
                                 agents_directions_forward.append(1)
                                 idx_forward.append(idx_target)
-                                add_pos = (int((goal_track[0] + start_track[0]) / 2), int((goal_track[1] + start_track[1]) / 2), idx_target)
+                                add_pos = (
+                                    int((goal_track[0] + start_track[0]) / 2),
+                                    int((goal_track[1] + start_track[1]) / 2),
+                                    idx_target)
                                 agents_targets.append(add_pos)
                                 idx_target += 1
 
@@ -983,7 +1054,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                                     width - 1)
                 while (station_x, station_y) in train_stations or (station_x, station_y) == node_positions[
                     trainstation_node] or \
-                    rail_array[(station_x, station_y)] != 0:
+                        rail_array[(station_x, station_y)] != 0:
                     station_x = np.clip(
                         node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
                         0,
