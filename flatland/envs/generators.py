@@ -1032,7 +1032,6 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                 connect_nodes(rail_trans, rail_array, node_positions[current_node], node_positions[neighb])
             node_stack.pop(0)
 
-
         # Place train stations close to the node
         # We currently place them uniformly distirbuted among all cities
         if num_cities > 1:
