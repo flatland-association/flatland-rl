@@ -680,8 +680,8 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
         for off_set_loop in range(len(x_offsets)):
             off_set = x_offsets[off_set_loop]
             # second track
-            data = np.arange(2, width - 2)
-            n_track_seg = np.random.choice([1, 2])
+            data = np.arange(4, width - 4)
+            n_track_seg = np.random.choice([1, 2, 3])
 
             track_2 = False
             if two_track_back_bone:
@@ -1047,8 +1047,7 @@ def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstation
                                     0,
                                     width - 1)
                 while (station_x, station_y) in train_stations or (station_x, station_y) == node_positions[
-                    trainstation_node] or \
-                    rail_array[(station_x, station_y)] != 0:
+                        trainstation_node] or rail_array[(station_x, station_y)] != 0:
                     station_x = np.clip(
                         node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
                         0,
