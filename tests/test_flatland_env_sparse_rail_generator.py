@@ -13,9 +13,9 @@ def test_realistic_rail_generator(vizualization_folder_name=None):
     env = RailEnv(width=np.random.randint(40, 80),
                   height=np.random.randint(10, 20),
                   rail_generator=realistic_rail_generator(nr_start_goal=num_agents + 1,
-                                                          seed=test_loop,
+                                                          seed=1,
                                                           add_max_dead_end=4,
-                                                          two_track_back_bone=test_loop % 2 == 0),
+                                                          two_track_back_bone=1 % 2 == 0),
                   number_of_agents=num_agents,
                   obs_builder_object=GlobalObsForRailEnv())
     # reset to initialize agents_static
