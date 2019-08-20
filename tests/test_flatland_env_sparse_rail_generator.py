@@ -42,10 +42,11 @@ def test_sparse_rail_generator():
                                                        node_radius=3,  # Proximity of stations to city center
                                                        num_neighb=3,  # Number of connections to other cities
                                                        seed=5,  # Random seed
-                                                       realistic_mode=True  # Ordered distribution of nodes
+                                                       realistic_mode=False  # Ordered distribution of nodes
                                                        ),
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
     # reset to initialize agents_static
     env_renderer = RenderTool(env, gl="PILSVG", )
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
+    env_renderer.gl.save_image("./sparse_generator_false.png")

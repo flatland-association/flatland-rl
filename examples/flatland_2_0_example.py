@@ -19,15 +19,16 @@ stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
                    }
 
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
-env = RailEnv(width=10,
-              height=10,
-              rail_generator=sparse_rail_generator(num_cities=3,  # Number of cities in map (where train stations are)
-                                                   num_intersections=1,  # Number of interesections (no start / target)
-                                                   num_trainstations=8,  # Number of possible start/targets on map
+env = RailEnv(width=20,
+              height=20,
+              rail_generator=sparse_rail_generator(num_cities=5,  # Number of cities in map (where train stations are)
+                                                   num_intersections=4,  # Number of interesections (no start / target)
+                                                   num_trainstations=15,  # Number of possible start/targets on map
                                                    min_node_dist=3,  # Minimal distance of nodes
-                                                   node_radius=2,  # Proximity of stations to city center
-                                                   num_neighb=2,  # Number of connections to other cities/intersections
+                                                   node_radius=3,  # Proximity of stations to city center
+                                                   num_neighb=3,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
+                                                   realistic_mode=True
                                                    ),
               number_of_agents=5,
               stochastic_data=stochastic_data,  # Malfunction generator data
@@ -86,7 +87,7 @@ for trials in range(1, n_trials + 1):
     obs = env.reset()
     for idx in range(env.get_num_agents()):
         tmp_agent = env.agents[idx]
-        speed = (idx % 4) + 1
+        speed = (idx % 5) + 1
         tmp_agent.speed_data["speed"] = 1 / speed
     env_renderer.reset()
     # Here you can also further enhance the provided observation by means of normalization
