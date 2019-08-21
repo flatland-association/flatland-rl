@@ -932,18 +932,25 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
     return generator
 
 
-def sparse_rail_generator(num_cities=100, num_intersections=10, num_trainstations=2, min_node_dist=20, node_radius=2,
-                          num_neighb=4, realistic_mode=False, enhance_intersection=False, seed=0):
+def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2, min_node_dist=20, node_radius=2,
+                          num_neighb=3, realistic_mode=False, enhance_intersection=False, seed=0):
     '''
+    This is a level generator which generates complex sparse rail configurations
 
-    :param nr_train_stations:
-    :param num_cities:
-    :param mean_node_neighbours:
-    :param min_node_dist:
-    :param seed:
+    :param num_cities: Number of city node (can hold trainstations)
+    :param num_intersections: Number of intersection that city nodes can connect to
+    :param num_trainstations: Total number of trainstations in env
+    :param min_node_dist: Minimal distance between nodes
+    :param node_radius: Proximity of trainstations to center of city node
+    :param num_neighb: Number of neighbouring nodes each node connects to
+    :param realistic_mode: True -> NOdes evenly distirbuted in env, False-> Random distribution of nodes
+    :param enhance_intersection: True -> Extra rail elements added at intersections
+    :param seed: Random Seed
     :return:
+        -------
+    numpy.ndarray of type numpy.uint16
+        The matrix with the correct 16-bit bitmaps for each cell.
     '''
-
     def generator(width, height, num_agents, num_resets=0):
 
         if num_agents > num_trainstations:
