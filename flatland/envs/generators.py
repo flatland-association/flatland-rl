@@ -934,7 +934,7 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
 
 def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2, min_node_dist=20, node_radius=2,
                           num_neighb=3, realistic_mode=False, enhance_intersection=False, seed=0):
-    '''
+    """
     This is a level generator which generates complex sparse rail configurations
 
     :param num_cities: Number of city node (can hold trainstations)
@@ -950,7 +950,8 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         -------
     numpy.ndarray of type numpy.uint16
         The matrix with the correct 16-bit bitmaps for each cell.
-    '''
+    """
+
     def generator(width, height, num_agents, num_resets=0):
 
         if num_agents > num_trainstations:
