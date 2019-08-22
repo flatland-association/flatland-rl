@@ -915,13 +915,24 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
 
         for a in range(min(len(agents_targets), num_agents)):
             t = np.random.choice(range(len(agents_targets)))
-            d = agents_targets[t]
+            tp = agents_targets[t]
             agents_targets.pop(t)
-            agents_target.append((d[0], d[1]))
+            agents_target.append((tp[0], tp[1]))
+
             sel = np.random.choice(range(len(agents_positions)))
             # backward
             p = agents_positions[sel]
             d = agents_directions[sel]
+            cnt = 0
+            while (p[0] == tp[0] and p[1] == tp[1]):
+                sel = np.random.choice(range(len(agents_positions)))
+                # backward
+                p = agents_positions[sel]
+                d = agents_directions[sel]
+                cnt += 1
+                if cnt > 10:
+                    print("target postion == agent postion !")
+                    break
             agents_positions.pop(sel)
             agents_directions.pop(sel)
             agents_position.append((p[0], p[1]))
