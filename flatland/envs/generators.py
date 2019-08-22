@@ -543,7 +543,8 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
     return generator
 
 
-def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_track_back_bone=True):
+def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, goals_only_in_dead_end=False,
+                             two_track_back_bone=True):
     """
     Parameters
     -------
@@ -728,7 +729,8 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
                                 int((start_track[0] + goal_track[0]) / 2), int((start_track[1] + goal_track[1]) / 2))
                             agents_positions.append(add_pos)
                             agents_directions.append(([1, 3][off_set_loop % 2]))
-                            agents_targets.append(add_pos)
+                            if not goals_only_in_dead_end:
+                                agents_targets.append(add_pos)
 
                         add_rail(width, height, grid_map,
                                  (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop),
@@ -779,7 +781,8 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
                                 int((start_track[0] + goal_track[0]) / 2), int((start_track[1] + goal_track[1]) / 2))
                             agents_positions.append(add_pos)
                             agents_directions.append(([1, 3][off_set_loop % 2]))
-                            agents_targets.append(add_pos)
+                            if not goals_only_in_dead_end:
+                                agents_targets.append(add_pos)
 
                         add_rail(width, height, grid_map,
                                  (x_offsets[off_set_loop - 1] + int(two_track_back_bone_loop),
@@ -843,7 +846,8 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, two_tr
                     agents_positions.append(add_pos)
                     agents_directions.append(([1, 3][off_set_loop % 2]))
                     add_pos = (int((start[0] + goal[0]) / 2), int((2 * start[1] + goal[1]) / 3))
-                    agents_targets.append(add_pos)
+                    if not goals_only_in_dead_end:
+                        agents_targets.append(add_pos)
 
         for off_set_loop in range(len(x_offsets)):
             off_set = x_offsets[off_set_loop]
