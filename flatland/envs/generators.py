@@ -975,7 +975,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
 
         if num_agents > num_trainstations:
             num_agents = num_trainstations
-            warnings.warn("complex_rail_generator: num_agents > nr_start_goal, changing num_agents")
+            warnings.warn("sparse_rail_generator: num_agents > nr_start_goal, changing num_agents")
 
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
@@ -997,6 +997,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             nodes_per_col = int(np.ceil(tot_num_node / nodes_per_row))
             x_positions = np.linspace(node_radius, height - node_radius, nodes_per_row, dtype=int)
             y_positions = np.linspace(node_radius, width - node_radius, nodes_per_col, dtype=int)
+
 
         for node_idx in range(num_cities + num_intersections):
             to_close = True
@@ -1043,18 +1044,15 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         available_cities = np.arange(num_cities)
         available_intersections = np.arange(num_cities, num_cities + num_intersections)
 
-        # Keep track of number of incoming connection
-        incoming_connections = np.zeros(num_intersections + num_cities)
-
         # Start at some node
         current_node = np.random.randint(len(available_nodes_full))
         node_stack = [current_node]
         allowed_connections = num_neighb
+        first_node = True
         while len(node_stack) > 0:
             current_node = node_stack[0]
             delete_idx = np.where(available_nodes_full == current_node)
             available_nodes_full = np.delete(available_nodes_full, delete_idx, 0)
-            filled_nodes = np.where(incoming_connections >= num_neighb)
             # Priority city to intersection connections
             if current_node < num_cities and len(available_intersections) > 0:
                 available_nodes = available_intersections
@@ -1083,16 +1081,16 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             else:
                 connected_neighb_idx = available_nodes
 
-            if current_node == 0:
+            # Less connections for subsequent nodes
+            if first_node:
                 allowed_connections -= 1
+                first_node = False
 
             # Connect to the neighboring nodes
             for neighb in connected_neighb_idx:
                 if neighb not in node_stack:
                     node_stack.append(neighb)
                 connect_nodes(rail_trans, rail_array, node_positions[current_node], node_positions[neighb])
-                incoming_connections[neighb] += 1
-                incoming_connections[current_node] += 1
             node_stack.pop(0)
 
         # Place train stations close to the node
@@ -1132,6 +1130,12 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                 # Check if connection was made
                 if len(connection) == 0:
                     train_stations[trainstation_node].pop(-1)
+
+        # Adjust the number of agents if you could not build enough trainstations
+        built_num_trainstation = len(train_stations)
+        if num_agents > built_num_trainstation:
+            num_agents = built_num_trainstation
+            warnings.warn("sparse_rail_generator: num_agents > nr_start_goal, changing num_agents")
 
         # Place passing lanes at intersections
         # We currently place them uniformly distirbuted among all cities

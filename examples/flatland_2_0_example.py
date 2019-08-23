@@ -21,14 +21,15 @@ stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 env = RailEnv(width=20,
               height=20,
-              rail_generator=sparse_rail_generator(num_cities=5,  # Number of cities in map (where train stations are)
-                                                   num_intersections=4,  # Number of interesections (no start / target)
+              rail_generator=sparse_rail_generator(num_cities=2,  # Number of cities in map (where train stations are)
+                                                   num_intersections=1,  # Number of interesections (no start / target)
                                                    num_trainstations=15,  # Number of possible start/targets on map
                                                    min_node_dist=3,  # Minimal distance of nodes
                                                    node_radius=3,  # Proximity of stations to city center
-                                                   num_neighb=3,  # Number of connections to other cities/intersections
+                                                   num_neighb=2,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
-                                                   realistic_mode=True
+                                                   realistic_mode=True,
+                                                   enhance_intersection=True
                                                    ),
               number_of_agents=5,
               stochastic_data=stochastic_data,  # Malfunction generator data
