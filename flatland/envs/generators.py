@@ -923,7 +923,7 @@ def realistic_rail_generator(nr_start_goal=1, seed=0, add_max_dead_end=4, goals_
             agents_targets.pop(t)
             agents_target.append((tp[0], tp[1]))
 
-            if len(agents_position) == 0:
+            if len(agents_positions) == 0:
                 print("no more position left")
                 break
 
