@@ -4,7 +4,7 @@ import time
 import tkinter as tk
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageTk  # , ImageFont
+from PIL import Image, ImageDraw, ImageTk, ImageFont
 from numpy import array
 from pkg_resources import resource_string as resource_bytes
 
@@ -90,6 +90,8 @@ class PILGL(GraphicsLayer):
         self.old_background_image = (None, None, None)
         self.create_layers()
 
+        self.font = ImageFont.load_default()
+
     def build_background_map(self, dTargets):
         x = self.old_background_image
         rebuild = False
@@ -167,8 +169,14 @@ class PILGL(GraphicsLayer):
         # quit but not destroy!
         self.__class__.window.quit()
 
-    def text(self, *args, **kwargs):
-        pass
+    def text(self, xPx, yPx, strText, layer=RAIL_LAYER):
+        xyPixLeftTop = (xPx, yPx)
+        self.draws[layer].text(xyPixLeftTop, strText, font=self.font, fill=(0, 0, 0, 255))
+        
+    def text_rowcol(self, rcTopLeft, strText, layer=AGENT_LAYER):
+        print("Text:", "rc:", rcTopLeft, "text:", strText, "layer:", layer)
+        xyPixLeftTop = tuple((array(rcTopLeft) * self.nPixCell)[[1, 0]])
+        self.text(*xyPixLeftTop, strText, layer)
 
     def prettify(self, *args, **kwargs):
         pass
@@ -492,13 +500,17 @@ class PILSVG(PILGL):
                                           False)[0]
         self.draw_image_row_col(colored_rail, (row, col), layer=PILGL.PREDICTION_PATH_LAYER)
 
-    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None):
+    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None, 
+            show_debug=True):
+        
         if binary_trans in self.pil_rail:
             pil_track = self.pil_rail[binary_trans]
             if target is not None:
                 target_img = self.station_colors[target % len(self.station_colors)]
                 target_img = Image.alpha_composite(pil_track, target_img)
                 self.draw_image_row_col(target_img, (row, col), layer=PILGL.TARGET_LAYER)
+                if show_debug:
+                    self.text_rowcol((row+0.8, col+0.0), strText=str(target), layer=PILGL.TARGET_LAYER)
 
             if binary_trans == 0:
                 if self.background_grid[col][row] <= 4:
@@ -579,7 +591,7 @@ class PILSVG(PILGL):
                 for color_idx, pil_zug_3 in enumerate(pils):
                     self.pil_zug[(in_direction_2, out_direction_2, color_idx)] = pils[color_idx]
 
-    def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected):
+    def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected, show_debug=False):
         delta_dir = (out_direction - in_direction) % 4
         color_idx = agent_idx % self.n_agent_colors
         # when flipping direction at a dead end, use the "out_direction" direction.
@@ -592,6 +604,10 @@ class PILSVG(PILGL):
             bg_svg = self.pil_from_svg_file("svg", "Selected_Agent.svg")
             self.clear_layer(PILGL.SELECTED_AGENT_LAYER, 0)
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
+
+        if show_debug:
+            print("Call text:")
+            self.text_rowcol((row+0.2, col+0.2,), str(agent_idx))
 
     def set_cell_occupied(self, agent_idx, row, col):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]
