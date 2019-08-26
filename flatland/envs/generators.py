@@ -1,3 +1,5 @@
+from typing import Mapping, Tuple, List, Callable
+
 import msgpack
 import numpy as np
 
@@ -27,7 +29,12 @@ def empty_rail_generator():
     return generator
 
 
-def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=99999, seed=0):
+def complex_rail_generator(nr_start_goal=1,
+                           nr_extra=100,
+                           min_dist=20,
+                           max_dist=99999,
+                           seed=0,
+                           speed_initializer: Callable[[int], List[float]] = None):
     """
     Parameters
     -------
@@ -35,6 +42,8 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
         The width (number of cells) of the grid to generate.
     height : int
         The height (number of cells) of the grid to generate.
+    speed_initializer : Callable[[int], List[float]]
+        Function that returns a list of speeds for the numer of agents given as argument.
 
     Returns
     -------
@@ -145,7 +154,11 @@ def complex_rail_generator(nr_start_goal=1, nr_extra=100, min_dist=20, max_dist=
         agents_target = [sg[1] for sg in start_goal[:num_agents]]
         agents_direction = start_dir[:num_agents]
 
-        return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
+        if speed_initializer:
+            speeds = speed_initializer(num_agents)
+        else:
+            speeds = [1.0] * len(agents_position)
+        return grid_map, agents_position, agents_direction, agents_target, speeds
 
     return generator
 
@@ -538,3 +551,24 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11):
         return return_rail, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
 
     return generator
+
+
+def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float]) -> List[float]:
+    """
+    Parameters
+    -------
+    nb_agents : int
+        The number of agents to generate a speed for
+    speed_ratio_map : Mapping[float,float]
+        A map of speeds mappint to their ratio of appearance. The ratios must sum up to 1.
+
+    Returns
+    -------
+    List[float]
+        A list of size nb_agents of speeds with the corresponding probabilistic ratios.
+    """
+    nb_classes = len(speed_ratio_map.keys())
+    speed_ratio_map_as_list: List[Tuple[float, float]] = list(speed_ratio_map.items())
+    speed_ratios = list(map(lambda t: t[1], speed_ratio_map_as_list))
+    speeds = list(map(lambda t: t[0], speed_ratio_map_as_list))
+    return list(map(lambda index: speeds[index], np.random.choice(nb_classes, nb_agents, p=speed_ratios)))
