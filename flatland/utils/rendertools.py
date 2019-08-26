@@ -39,10 +39,9 @@ class RenderTool(object):
     theta = np.linspace(0, np.pi / 2, 5)
     arc = array([np.cos(theta), np.sin(theta)]).T  # from [1,0] to [0,1]
 
-
     def __init__(self, env, gl="PILSVG", jupyter=False,
-            agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-            show_debug=True,screen_width=800, screen_height=600):
+                 agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+                 show_debug=True, screen_width=800, screen_height=600):
 
         self.env = env
         self.frame_nr = 0
@@ -556,7 +555,7 @@ class RenderTool(object):
                 if self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
                     self.gl.set_cell_occupied(agent_idx, *(agent.position))
                 self.gl.set_agent_at(agent_idx, *position, old_direction, direction,
-                    selected_agent == agent_idx, show_debug=self.show_debug)
+                                     selected_agent == agent_idx, show_debug=self.show_debug)
             else:
                 position = agent.position
                 direction = agent.direction
