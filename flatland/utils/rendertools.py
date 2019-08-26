@@ -39,8 +39,11 @@ class RenderTool(object):
     theta = np.linspace(0, np.pi / 2, 5)
     arc = array([np.cos(theta), np.sin(theta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env, gl="PILSVG", jupyter=False, agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                 screen_width=800, screen_height=600):
+
+    def __init__(self, env, gl="PILSVG", jupyter=False,
+            agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+            show_debug=True,screen_width=800, screen_height=600):
+
         self.env = env
         self.frame_nr = 0
         self.start_time = time.time()
@@ -57,6 +60,7 @@ class RenderTool(object):
             self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
 
         self.new_rail = True
+        self.show_debug = show_debug
         self.update_background()
 
     def reset(self):
@@ -283,7 +287,7 @@ class RenderTool(object):
         if len(observation_dict) < 1:
             warnings.warn(
                 "Predictor did not provide any predicted cells to render. \
-                Observaiton builder needs to populate: env.dev_obs_dict")
+                Observation builder needs to populate: env.dev_obs_dict")
         else:
             for agent in agent_handles:
                 color = self.gl.get_agent_color(agent)
@@ -526,7 +530,7 @@ class RenderTool(object):
                         is_selected = False
 
                     self.gl.set_rail_at(r, c, transitions, target=target, is_selected=is_selected,
-                                        rail_grid=env.rail.grid)
+                                        rail_grid=env.rail.grid, show_debug=self.show_debug)
 
             self.gl.build_background_map(targets)
 
@@ -551,7 +555,8 @@ class RenderTool(object):
                 # set_agent_at uses the agent index for the color
                 if self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
                     self.gl.set_cell_occupied(agent_idx, *(agent.position))
-                self.gl.set_agent_at(agent_idx, *position, old_direction, direction, selected_agent == agent_idx)
+                self.gl.set_agent_at(agent_idx, *position, old_direction, direction,
+                    selected_agent == agent_idx, show_debug=self.show_debug)
             else:
                 position = agent.position
                 direction = agent.direction
@@ -563,7 +568,7 @@ class RenderTool(object):
 
                         # set_agent_at uses the agent index for the color
                         self.gl.set_agent_at(agent_idx, *position, agent.direction, direction,
-                                             selected_agent == agent_idx)
+                                             selected_agent == agent_idx, show_debug=self.show_debug)
 
                 # set_agent_at uses the agent index for the color
                 if self.agent_render_variant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:
