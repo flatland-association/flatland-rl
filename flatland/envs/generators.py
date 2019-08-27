@@ -10,7 +10,8 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_rail
 
-RailGenerator = Callable[[int, int, int, int], Tuple[GridTransitionMap, Optional[Any]]]
+RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Any]]
+RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
 
 
 def empty_rail_generator() -> RailGenerator:
@@ -19,13 +20,13 @@ def empty_rail_generator() -> RailGenerator:
     Primarily used by the editor
     """
 
-    def generator(width, height, num_agents=0, num_resets=0):
+    def generator(width: int, height: int, num_agents: int = 0, num_resets: int = 0) -> RailGeneratorProduct:
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         rail_array = grid_map.grid
         rail_array.fill(0)
 
-        return [grid_map, None]
+        return grid_map, None
 
     return generator
 
@@ -249,8 +250,8 @@ def rail_from_grid_transition_map(rail_map) -> RailGenerator:
         Generator function that always returns the given `rail_map' object.
     """
 
-    def generator(width, height, num_agents, num_resets=0):
-        return [rail_map, None]
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0) -> RailGeneratorProduct:
+        return rail_map, None
 
     return generator
 
@@ -287,7 +288,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
         The matrix with the correct 16-bit bitmaps for each cell.
     """
 
-    def generator(width, height, num_agents, num_resets=0):
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0) -> RailGeneratorProduct:
         t_utils = RailEnvTransitions()
 
         transition_probability = cell_type_relative_proportion
@@ -519,6 +520,6 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
         return_rail = GridTransitionMap(width=width, height=height, transitions=t_utils)
         return_rail.grid = tmp_rail
 
-        return [return_rail, None]
+        return return_rail, None
 
     return generator

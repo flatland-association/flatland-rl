@@ -73,7 +73,7 @@ def get_rnd_agents_pos_tgt_dir_on_rail(speed_ratio_map: Mapping[float, float] = 
         initial positions, directions, targets speeds
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> AgentGeneratorProduct:
         def _path_exists(rail, start, direction, end):
             # BFS - Check if a path exists between the 2 nodes
 
@@ -165,7 +165,7 @@ def agents_from_file(filename) -> AgentGenerator:
         initial positions, directions, targets speeds
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> AgentGeneratorProduct:
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
         data = msgpack.unpackb(load_data, use_list=False)
