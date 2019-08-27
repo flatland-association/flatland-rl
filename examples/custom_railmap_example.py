@@ -5,9 +5,9 @@ import numpy as np
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_generators import AgentGenerator, AgentGeneratorProduct
-from flatland.envs.generators import RailGenerator, RailGeneratorProduct
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import RailGenerator, RailGeneratorProduct
+from flatland.envs.schedule_generators import ScheduleGenerator, ScheduleGeneratorProduct
 from flatland.utils.rendertools import RenderTool
 
 random.seed(100)
@@ -29,8 +29,8 @@ def custom_rail_generator() -> RailGenerator:
     return generator
 
 
-def custom_agent_generator() -> AgentGenerator:
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> AgentGeneratorProduct:
+def custom_agent_generator() -> ScheduleGenerator:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
         agents_positions = []
         agents_direction = []
         agents_target = []

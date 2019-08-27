@@ -5,11 +5,11 @@ import numpy as np
 
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_utils import coordinate_to_position
-from flatland.envs.agent_generators import complex_rail_generator_agents_placer
-from flatland.envs.generators import random_rail_generator, complex_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import random_rail_generator, complex_rail_generator
+from flatland.envs.schedule_generators import complex_rail_generator_agents_placer
 from flatland.utils.rendertools import RenderTool
 
 random.seed(100)

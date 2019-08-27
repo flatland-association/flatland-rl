@@ -8,9 +8,9 @@ import click
 import numpy as np
 import redis
 
-from flatland.envs.agent_generators import complex_rail_generator_agents_placer
-from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import complex_rail_generator
+from flatland.envs.schedule_generators import complex_rail_generator_agents_placer
 from flatland.evaluators.service import FlatlandRemoteEvaluationService
 from flatland.utils.rendertools import RenderTool
 

@@ -3,13 +3,13 @@
 
 import numpy as np
 
-from flatland.envs.agent_generators import get_rnd_agents_pos_tgt_dir_on_rail, complex_rail_generator_agents_placer, \
-    agents_from_file
-from flatland.envs.generators import rail_from_grid_transition_map, rail_from_file, complex_rail_generator, \
-    random_rail_generator, empty_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_from_file, complex_rail_generator, \
+    random_rail_generator, empty_rail_generator
+from flatland.envs.schedule_generators import get_rnd_agents_pos_tgt_dir_on_rail, complex_rail_generator_agents_placer, \
+    agents_from_file
 from flatland.utils.simple_rail import make_simple_rail
 
 

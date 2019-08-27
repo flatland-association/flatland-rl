@@ -1,4 +1,4 @@
-"""Agent generators (railway undertaking, "EVU")."""
+"""Schedule generators (railway undertaking, "EVU")."""
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 import msgpack
@@ -9,8 +9,8 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic
 
 AgentPosition = Tuple[int, int]
-AgentGeneratorProduct = Tuple[List[AgentPosition], List[AgentPosition], List[AgentPosition], List[float]]
-AgentGenerator = Callable[[GridTransitionMap, int, Optional[Any]], AgentGeneratorProduct]
+ScheduleGeneratorProduct = Tuple[List[AgentPosition], List[AgentPosition], List[AgentPosition], List[float]]
+ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGeneratorProduct]
 
 
 def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None) -> List[float]:
@@ -37,7 +37,7 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
     return list(map(lambda index: speeds[index], np.random.choice(nb_classes, nb_agents, p=speed_ratios)))
 
 
-def complex_rail_generator_agents_placer(speed_ratio_map: Mapping[float, float] = None) -> AgentGenerator:
+def complex_rail_generator_agents_placer(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         start_goal = hints['start_goal']
         start_dir = hints['start_dir']
@@ -55,7 +55,7 @@ def complex_rail_generator_agents_placer(speed_ratio_map: Mapping[float, float] 
     return generator
 
 
-def get_rnd_agents_pos_tgt_dir_on_rail(speed_ratio_map: Mapping[float, float] = None) -> AgentGenerator:
+def get_rnd_agents_pos_tgt_dir_on_rail(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
     """
     Given a `rail' GridTransitionMap, return a random placement of agents (initial position, direction and target).
 
@@ -73,7 +73,7 @@ def get_rnd_agents_pos_tgt_dir_on_rail(speed_ratio_map: Mapping[float, float] = 
         initial positions, directions, targets speeds
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> AgentGeneratorProduct:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
         def _path_exists(rail, start, direction, end):
             # BFS - Check if a path exists between the 2 nodes
 
@@ -151,7 +151,7 @@ def get_rnd_agents_pos_tgt_dir_on_rail(speed_ratio_map: Mapping[float, float] = 
     return generator
 
 
-def agents_from_file(filename) -> AgentGenerator:
+def agents_from_file(filename) -> ScheduleGenerator:
     """
     Utility to load pickle file
 
@@ -165,7 +165,7 @@ def agents_from_file(filename) -> AgentGenerator:
         initial positions, directions, targets speeds
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> AgentGeneratorProduct:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
         data = msgpack.unpackb(load_data, use_list=False)

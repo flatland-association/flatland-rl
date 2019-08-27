@@ -5,11 +5,11 @@ import pprint
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_generators import get_rnd_agents_pos_tgt_dir_on_rail
-from flatland.envs.generators import rail_from_grid_transition_map
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.schedule_generators import get_rnd_agents_pos_tgt_dir_on_rail
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
 

@@ -2,10 +2,10 @@ import random
 
 import numpy as np
 
-from flatland.envs.agent_generators import complex_rail_generator_agents_placer
-from flatland.envs.generators import complex_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import complex_rail_generator
+from flatland.envs.schedule_generators import complex_rail_generator_agents_placer
 from flatland.utils.rendertools import RenderTool
 
 random.seed(1)

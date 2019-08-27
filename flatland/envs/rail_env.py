@@ -11,10 +11,10 @@ import numpy as np
 
 from flatland.core.env import Environment
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.agent_generators import get_rnd_agents_pos_tgt_dir_on_rail, AgentGenerator
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
-from flatland.envs.generators import random_rail_generator, RailGenerator
 from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.rail_generators import random_rail_generator, RailGenerator
+from flatland.envs.schedule_generators import get_rnd_agents_pos_tgt_dir_on_rail, ScheduleGenerator
 
 m.patch()
 
@@ -93,7 +93,7 @@ class RailEnv(Environment):
                  width,
                  height,
                  rail_generator: RailGenerator = random_rail_generator(),
-                 agent_generator: AgentGenerator = get_rnd_agents_pos_tgt_dir_on_rail(),
+                 agent_generator: ScheduleGenerator = get_rnd_agents_pos_tgt_dir_on_rail(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
                  max_episode_steps=None,
@@ -110,11 +110,11 @@ class RailEnv(Environment):
             the env has been reset, and returns a GridTransitionMap object and a list of
             starting positions, targets, and initial orientations for agent handle.
             The rail_generator can pass a distance map in the hints or information for specific agent_generators.
-            Implementations can be found in flatland/envs/generators.py
+            Implementations can be found in flatland/envs/rail_generators.py
         agent_generator : function
             The agent_generator function is a function that takes the grid, the number of agents and optional hints
             and returns a list of starting positions, targets, initial orientations and speed for all agent handles.
-            Implementations can be found in flatland/envs/agent_generators.py
+            Implementations can be found in flatland/envs/schedule_generators.py
         width : int
             The width of the rail map. Potentially in the future,
             a range of widths to sample from.
@@ -133,7 +133,7 @@ class RailEnv(Environment):
         """
 
         self.rail_generator: RailGenerator = rail_generator
-        self.agent_generator: AgentGenerator = agent_generator
+        self.agent_generator: ScheduleGenerator = agent_generator
         self.rail = None
         self.width = width
         self.height = height

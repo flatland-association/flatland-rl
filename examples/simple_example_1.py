@@ -1,5 +1,5 @@
-from flatland.envs.generators import rail_from_manual_specifications_generator
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import rail_from_manual_specifications_generator
 from flatland.utils.rendertools import RenderTool
 
 # Example generate a rail given a manual specification,
