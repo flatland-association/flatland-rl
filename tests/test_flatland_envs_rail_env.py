@@ -5,6 +5,7 @@ import numpy as np
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.agent_generators import get_rnd_agents_pos_tgt_dir_on_rail, complex_rail_generator_agents_placer
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.agent_utils import EnvAgentStatic
 from flatland.envs.generators import complex_rail_generator
@@ -27,6 +28,7 @@ def test_load_env():
 def test_save_load():
     env = RailEnv(width=10, height=10,
                   rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=0),
+                  agent_generator=complex_rail_generator_agents_placer(),
                   number_of_agents=2)
     env.reset()
     agent_1_pos = env.agents_static[0].position
@@ -86,6 +88,7 @@ def test_rail_environment_single_agent():
     rail_env = RailEnv(width=3,
                        height=3,
                        rail_generator=rail_from_grid_transition_map(rail),
+                       agent_generator=get_rnd_agents_pos_tgt_dir_on_rail(),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
@@ -165,6 +168,7 @@ def test_dead_end():
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
                        rail_generator=rail_from_grid_transition_map(rail),
+                       agent_generator=get_rnd_agents_pos_tgt_dir_on_rail(),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
@@ -209,6 +213,7 @@ def test_dead_end():
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
                        rail_generator=rail_from_grid_transition_map(rail),
+                       agent_generator=get_rnd_agents_pos_tgt_dir_on_rail(),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 

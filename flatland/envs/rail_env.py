@@ -11,8 +11,9 @@ import numpy as np
 
 from flatland.core.env import Environment
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.agent_generators import get_rnd_agents_pos_tgt_dir_on_rail, AgentGenerator
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
-from flatland.envs.generators import random_rail_generator
+from flatland.envs.generators import random_rail_generator, RailGenerator
 from flatland.envs.observations import TreeObsForRailEnv
 
 m.patch()
@@ -91,7 +92,8 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator=random_rail_generator(),
+                 rail_generator: RailGenerator = random_rail_generator(),
+                 agent_generator: AgentGenerator = get_rnd_agents_pos_tgt_dir_on_rail(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
                  max_episode_steps=None,
@@ -107,13 +109,12 @@ class RailEnv(Environment):
             height and agents handles of a  rail environment, along with the number of times
             the env has been reset, and returns a GridTransitionMap object and a list of
             starting positions, targets, and initial orientations for agent handle.
-            Implemented functions are:
-                random_rail_generator : generate a random rail of given size
-                rail_from_grid_transition_map(rail_map) : generate a rail from
-                                        a GridTransitionMap object
-                rail_from_manual_sp ecifications_generator(rail_spec) : generate a rail from
-                                        a rail specifications array
-                TODO: generate_rail_from_saved_list or from list of ndarray bitmaps ---
+            The rail_generator can pass a distance map in the hints or information for specific agent_generators.
+            Implementations can be found in flatland/envs/generators.py
+        agent_generator : function
+            The agent_generator function is a function that takes the grid, the number of agents and optional hints
+            and returns a list of starting positions, targets, initial orientations and speed for all agent handles.
+            Implementations can be found in flatland/envs/agent_generators.py
         width : int
             The width of the rail map. Potentially in the future,
             a range of widths to sample from.
@@ -131,7 +132,8 @@ class RailEnv(Environment):
         file_name: you can load a pickle file.
         """
 
-        self.rail_generator = rail_generator
+        self.rail_generator: RailGenerator = rail_generator
+        self.agent_generator: AgentGenerator = agent_generator
         self.rail = None
         self.width = width
         self.height = height
@@ -213,18 +215,21 @@ class RailEnv(Environment):
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
-        tRailAgents = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
+        rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
-        # Check if generator provided a distance map TODO: Make this check safer!
-        if len(tRailAgents) > 5:
-            self.obs_builder.distance_map = tRailAgents[-1]
+        if optionals and 'distance_maps' in optionals:
+            self.obs_builder.distance_map = optionals['distance_maps']
 
         if regen_rail or self.rail is None:
-            self.rail = tRailAgents[0]
+            self.rail = rail
             self.height, self.width = self.rail.grid.shape
 
         if replace_agents:
-            self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:5])
+            agents_hints = None
+            if optionals and 'agents_hints' in optionals:
+                agents_hints = optionals['agents_hints']
+            self.agents_static = EnvAgentStatic.from_lists(
+                *self.agent_generator(self.rail, self.get_num_agents(), hints=agents_hints))
 
         self.restart_agents()
 

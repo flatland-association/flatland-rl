@@ -1,7 +1,8 @@
 """Test speed initialization by a map of speeds and their corresponding ratios."""
 import numpy as np
 
-from flatland.envs.generators import speed_initialization_helper, complex_rail_generator
+from flatland.envs.agent_generators import speed_initialization_helper, complex_rail_generator_agents_placer
+from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
 
 
@@ -17,13 +18,11 @@ def test_speed_initialization_helper():
 def test_rail_env_speed_intializer():
     speed_ratio_map = {1: 0.3, 2: 0.4, 3: 0.1, 5: 0.2}
 
-    def my_speed_initializer(nb_agents):
-        return speed_initialization_helper(nb_agents, speed_ratio_map)
-
     env = RailEnv(width=50,
                   height=50,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999,
-                                                        seed=0, speed_initializer=my_speed_initializer),
+                                                        seed=0),
+                  agent_generator=complex_rail_generator_agents_placer(),
                   number_of_agents=10)
     env.reset()
     actual_speeds = list(map(lambda agent: agent.speed_data['speed'], env.agents))

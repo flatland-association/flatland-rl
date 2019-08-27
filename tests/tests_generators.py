@@ -3,6 +3,8 @@
 
 import numpy as np
 
+from flatland.envs.agent_generators import get_rnd_agents_pos_tgt_dir_on_rail, complex_rail_generator_agents_placer, \
+    agents_from_file
 from flatland.envs.generators import rail_from_grid_transition_map, rail_from_file, complex_rail_generator, \
     random_rail_generator, empty_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
@@ -58,7 +60,8 @@ def test_complex_rail_generator():
     env = RailEnv(width=x_dim,
                   height=y_dim,
                   number_of_agents=n_agents,
-                  rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist)
+                  rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist),
+                  agent_generator=complex_rail_generator_agents_placer()
                   )
     assert env.get_num_agents() == 2
     assert env.rail.grid.shape == (y_dim, x_dim)
@@ -69,7 +72,8 @@ def test_complex_rail_generator():
     env = RailEnv(width=x_dim,
                   height=y_dim,
                   number_of_agents=n_agents,
-                  rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist)
+                  rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist),
+                  agent_generator=complex_rail_generator_agents_placer()
                   )
     assert env.get_num_agents() == 0
     assert env.rail.grid.shape == (y_dim, x_dim)
@@ -82,7 +86,8 @@ def test_complex_rail_generator():
     env = RailEnv(width=x_dim,
                   height=y_dim,
                   number_of_agents=n_agents,
-                  rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist)
+                  rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist),
+                  agent_generator=complex_rail_generator_agents_placer()
                   )
     assert env.get_num_agents() == n_agents
     assert env.rail.grid.shape == (y_dim, x_dim)
@@ -94,6 +99,7 @@ def test_rail_from_grid_transition_map():
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
                   rail_generator=rail_from_grid_transition_map(rail),
+                  agent_generator=get_rnd_agents_pos_tgt_dir_on_rail(),
                   number_of_agents=n_agents
                   )
     nr_rail_elements = np.count_nonzero(env.rail.grid)
@@ -118,6 +124,7 @@ def tests_rail_from_file():
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
                   rail_generator=rail_from_grid_transition_map(rail),
+                  agent_generator=get_rnd_agents_pos_tgt_dir_on_rail(),
                   number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
@@ -130,6 +137,7 @@ def tests_rail_from_file():
     env = RailEnv(width=1,
                   height=1,
                   rail_generator=rail_from_file(file_name),
+                  agent_generator=agents_from_file(file_name),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
@@ -151,6 +159,7 @@ def tests_rail_from_file():
     env2 = RailEnv(width=rail_map.shape[1],
                    height=rail_map.shape[0],
                    rail_generator=rail_from_grid_transition_map(rail),
+                   agent_generator=get_rnd_agents_pos_tgt_dir_on_rail(),
                    number_of_agents=3,
                    obs_builder_object=GlobalObsForRailEnv(),
                    )
@@ -164,6 +173,7 @@ def tests_rail_from_file():
     env2 = RailEnv(width=1,
                    height=1,
                    rail_generator=rail_from_file(file_name_2),
+                   agent_generator=agents_from_file(file_name_2),
                    number_of_agents=1,
                    obs_builder_object=GlobalObsForRailEnv(),
                    )
@@ -180,6 +190,7 @@ def tests_rail_from_file():
     env3 = RailEnv(width=1,
                    height=1,
                    rail_generator=rail_from_file(file_name),
+                   agent_generator=agents_from_file(file_name),
                    number_of_agents=1,
                    obs_builder_object=GlobalObsForRailEnv(),
                    )
@@ -197,6 +208,7 @@ def tests_rail_from_file():
     env4 = RailEnv(width=1,
                    height=1,
                    rail_generator=rail_from_file(file_name_2),
+                   agent_generator=agents_from_file(file_name_2),
                    number_of_agents=1,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2),
                    )

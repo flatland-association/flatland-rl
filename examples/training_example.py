@@ -1,5 +1,6 @@
 import numpy as np
 
+from flatland.envs.agent_generators import complex_rail_generator_agents_placer
 from flatland.envs.generators import complex_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv, LocalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -16,10 +17,12 @@ LocalGridObs = LocalObsForRailEnv(view_height=10, view_width=2, center=2)
 env = RailEnv(width=20,
               height=20,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
+              agent_generator=complex_rail_generator_agents_placer(),
               obs_builder_object=TreeObservation,
               number_of_agents=3)
 
 env_renderer = RenderTool(env, gl="PILSVG", )
+
 
 # Import your own Agent or use RLlib to train agents on Flatland
 # As an example we use a random agent here

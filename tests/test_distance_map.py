@@ -2,6 +2,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.agent_generators import get_rnd_agents_pos_tgt_dir_on_rail
 from flatland.envs.generators import rail_from_grid_transition_map
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -34,6 +35,7 @@ def test_walker():
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
                   rail_generator=rail_from_grid_transition_map(rail),
+                  agent_generator=get_rnd_agents_pos_tgt_dir_on_rail(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2,
                                                        predictor=ShortestPathPredictorForRailEnv(max_depth=10)),
