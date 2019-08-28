@@ -40,8 +40,9 @@ class RenderTool(object):
     arc = array([np.cos(theta), np.sin(theta)]).T  # from [1,0] to [0,1]
 
     def __init__(self, env, gl="PILSVG", jupyter=False,
-            agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-            show_debug=True):
+                 agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+                 show_debug=False, screen_width=800, screen_height=600):
+
         self.env = env
         self.frame_nr = 0
         self.start_time = time.time()
@@ -50,12 +51,12 @@ class RenderTool(object):
         self.agent_render_variant = agent_render_variant
 
         if gl == "PIL":
-            self.gl = PILGL(env.width, env.height, jupyter)
+            self.gl = PILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         elif gl == "PILSVG":
-            self.gl = PILSVG(env.width, env.height, jupyter)
+            self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         else:
             print("[", gl, "] not found, switch to PILSVG")
-            self.gl = PILSVG(env.width, env.height, jupyter)
+            self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
 
         self.new_rail = True
         self.show_debug = show_debug
@@ -554,7 +555,7 @@ class RenderTool(object):
                 if self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
                     self.gl.set_cell_occupied(agent_idx, *(agent.position))
                 self.gl.set_agent_at(agent_idx, *position, old_direction, direction,
-                    selected_agent == agent_idx, show_debug=self.show_debug)
+                                     selected_agent == agent_idx, show_debug=self.show_debug)
             else:
                 position = agent.position
                 direction = agent.direction

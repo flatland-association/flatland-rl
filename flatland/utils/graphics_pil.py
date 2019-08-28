@@ -41,7 +41,7 @@ class PILGL(GraphicsLayer):
     SELECTED_AGENT_LAYER = 4
     SELECTED_TARGET_LAYER = 5
 
-    def __init__(self, width, height, jupyter=False):
+    def __init__(self, width, height, jupyter=False, screen_width=800, screen_height=600):
         self.yxBase = (0, 0)
         self.linewidth = 4
         self.n_agent_colors = 1  # overridden in loadAgent
@@ -52,13 +52,13 @@ class PILGL(GraphicsLayer):
         self.background_grid = np.zeros(shape=(self.width, self.height))
 
         if jupyter is False:
-            # NOTE: Currently removed the dependency on 
-            #       screeninfo. We have to find an alternate 
+            # NOTE: Currently removed the dependency on
+            #       screeninfo. We have to find an alternate
             #       way to compute the screen width and height
-            #       In the meantime, we are harcoding the 800x600 
+            #       In the meantime, we are harcoding the 800x600
             #       assumption
-            self.screen_width = 800
-            self.screen_height = 600
+            self.screen_width = screen_width
+            self.screen_height = screen_height
             w = (self.screen_width - self.width - 10) / (self.width + 1 + self.linewidth)
             h = (self.screen_height - self.height - 10) / (self.height + 1 + self.linewidth)
             self.nPixCell = int(max(1, np.ceil(min(w, h))))
@@ -116,7 +116,7 @@ class PILGL(GraphicsLayer):
                     for rc in dTargets:
                         r = rc[1]
                         c = rc[0]
-                        d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)))
+                        d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)) / 0.5)
                         distance = min(d, distance)
                     self.background_grid[x][y] = distance
 
@@ -271,9 +271,9 @@ class PILGL(GraphicsLayer):
 
 
 class PILSVG(PILGL):
-    def __init__(self, width, height, jupyter=False):
+    def __init__(self, width, height, jupyter=False, screen_width=800, screen_height=600):
         oSuper = super()
-        oSuper.__init__(width, height, jupyter)
+        oSuper.__init__(width, height, jupyter, screen_width, screen_height)
 
         self.lwAgents = []
         self.agents_prev = []
@@ -452,7 +452,7 @@ class PILSVG(PILGL):
 
         for transition, file in file_directory.items():
 
-            # Translate the ascii transition description in the format  "NE WS" to the 
+            # Translate the ascii transition description in the format  "NE WS" to the
             # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
             transition_16_bit = ["0"] * 16
             for sTran in transition.split(" "):
