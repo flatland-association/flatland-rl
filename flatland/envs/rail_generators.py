@@ -786,48 +786,9 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             else:
                 num_agents -= 1
 
-        # Place agents and targets within available train stations
-        agents_position = []
-        agents_target = []
-        agents_direction = []
-
-        for agent_idx in range(num_agents):
-            # Set target for agent
-            current_target_node = agent_start_targets_nodes[agent_idx][1]
-            target_station_idx = np.random.randint(len(train_stations[current_target_node]))
-            target = train_stations[current_target_node][target_station_idx]
-            tries = 0
-            while (target[0], target[1]) in agents_target:
-                target_station_idx = np.random.randint(len(train_stations[current_target_node]))
-                target = train_stations[current_target_node][target_station_idx]
-                tries += 1
-                if tries > 100:
-                    warnings.warn("Could not set target position, removing an agent")
-                    break
-            agents_target.append((target[0], target[1]))
-
-            # Set start for agent
-            current_start_node = agent_start_targets_nodes[agent_idx][0]
-            start_station_idx = np.random.randint(len(train_stations[current_start_node]))
-            start = train_stations[current_start_node][start_station_idx]
-            tries = 0
-            while (start[0], start[1]) in agents_position:
-                tries += 1
-                if tries > 100:
-                    warnings.warn("Could not set start position, please change initial parameters!!!!")
-                    break
-                start_station_idx = np.random.randint(len(train_stations[current_start_node]))
-                start = train_stations[current_start_node][start_station_idx]
-
-            agents_position.append((start[0], start[1]))
-
-            # Orient the agent correctly
-            for orientation in range(4):
-                transitions = grid_map.get_transitions(start[0], start[1], orientation)
-                if any(transitions) > 0:
-                    agents_direction.append(orientation)
-                    continue
-
-        return grid_map, agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
+        return grid_map, {'agents_hints': {
+            'agent_start_targets_nodes': agent_start_targets_nodes,
+            'train_stations': train_stations
+        }}
 
     return generator

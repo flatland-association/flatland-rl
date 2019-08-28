@@ -172,7 +172,7 @@ class PILGL(GraphicsLayer):
     def text(self, xPx, yPx, strText, layer=RAIL_LAYER):
         xyPixLeftTop = (xPx, yPx)
         self.draws[layer].text(xyPixLeftTop, strText, font=self.font, fill=(0, 0, 0, 255))
-        
+
     def text_rowcol(self, rcTopLeft, strText, layer=AGENT_LAYER):
         print("Text:", "rc:", rcTopLeft, "text:", strText, "layer:", layer)
         xyPixLeftTop = tuple((array(rcTopLeft) * self.nPixCell)[[1, 0]])
@@ -500,9 +500,9 @@ class PILSVG(PILGL):
                                           False)[0]
         self.draw_image_row_col(colored_rail, (row, col), layer=PILGL.PREDICTION_PATH_LAYER)
 
-    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None, 
-            show_debug=True):
-        
+    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None,
+                    show_debug=True):
+
         if binary_trans in self.pil_rail:
             pil_track = self.pil_rail[binary_trans]
             if target is not None:
@@ -510,7 +510,7 @@ class PILSVG(PILGL):
                 target_img = Image.alpha_composite(pil_track, target_img)
                 self.draw_image_row_col(target_img, (row, col), layer=PILGL.TARGET_LAYER)
                 if show_debug:
-                    self.text_rowcol((row+0.8, col+0.0), strText=str(target), layer=PILGL.TARGET_LAYER)
+                    self.text_rowcol((row + 0.8, col + 0.0), strText=str(target), layer=PILGL.TARGET_LAYER)
 
             if binary_trans == 0:
                 if self.background_grid[col][row] <= 4:
@@ -607,7 +607,7 @@ class PILSVG(PILGL):
 
         if show_debug:
             print("Call text:")
-            self.text_rowcol((row+0.2, col+0.2,), str(agent_idx))
+            self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
 
     def set_cell_occupied(self, agent_idx, row, col):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]

@@ -1,4 +1,5 @@
 """Schedule generators (railway undertaking, "EVU")."""
+import warnings
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 import msgpack
@@ -44,6 +45,61 @@ def complex_rail_generator_agents_placer(speed_ratio_map: Mapping[float, float] 
         agents_position = [sg[0] for sg in start_goal[:num_agents]]
         agents_target = [sg[1] for sg in start_goal[:num_agents]]
         agents_direction = start_dir[:num_agents]
+
+        if speed_ratio_map:
+            speeds = speed_initialization_helper(num_agents, speed_ratio_map)
+        else:
+            speeds = [1.0] * len(agents_position)
+
+        return agents_position, agents_direction, agents_target, speeds
+
+    return generator
+
+
+def sparse_rail_generator_agents_placer(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
+        train_stations = hints['train_stations']
+        agent_start_targets_nodes = hints['agent_start_targets_nodes']
+        # Place agents and targets within available train stations
+        agents_position = []
+        agents_target = []
+        agents_direction = []
+        for agent_idx in range(num_agents):
+            # Set target for agent
+            current_target_node = agent_start_targets_nodes[agent_idx][1]
+            target_station_idx = np.random.randint(len(train_stations[current_target_node]))
+            target = train_stations[current_target_node][target_station_idx]
+            tries = 0
+            while (target[0], target[1]) in agents_target:
+                target_station_idx = np.random.randint(len(train_stations[current_target_node]))
+                target = train_stations[current_target_node][target_station_idx]
+                tries += 1
+                if tries > 100:
+                    warnings.warn("Could not set target position, removing an agent")
+                    break
+            agents_target.append((target[0], target[1]))
+
+            # Set start for agent
+            current_start_node = agent_start_targets_nodes[agent_idx][0]
+            start_station_idx = np.random.randint(len(train_stations[current_start_node]))
+            start = train_stations[current_start_node][start_station_idx]
+            tries = 0
+            while (start[0], start[1]) in agents_position:
+                tries += 1
+                if tries > 100:
+                    warnings.warn("Could not set start position, please change initial parameters!!!!")
+                    break
+                start_station_idx = np.random.randint(len(train_stations[current_start_node]))
+                start = train_stations[current_start_node][start_station_idx]
+
+            agents_position.append((start[0], start[1]))
+
+            # Orient the agent correctly
+            for orientation in range(4):
+                transitions = rail.get_transitions(start[0], start[1], orientation)
+                if any(transitions) > 0:
+                    agents_direction.append(orientation)
+                    continue
 
         if speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, speed_ratio_map)
