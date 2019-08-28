@@ -3,13 +3,15 @@ import time
 
 import numpy as np
 
-from flatland.envs.generators import complex_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import complex_rail_generator
+from flatland.envs.schedule_generators import complex_schedule_generator
 from flatland.utils.rendertools import RenderTool
 
 random.seed(1)
 np.random.seed(1)
+
 
 class SingleAgentNavigationObs(TreeObsForRailEnv):
     """
@@ -21,6 +23,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
     E.g., if taking the Left branch (if available) is the shortest route to the agent's target, the observation vector
     will be [1, 0, 0].
     """
+
     def __init__(self):
         super().__init__(max_depth=0)
         self.observation_space = [3]
@@ -58,6 +61,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
 env = RailEnv(width=14,
               height=14,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=5, max_dist=99999, seed=0),
+              schedule_generator=complex_schedule_generator(),
               number_of_agents=2,
               obs_builder_object=SingleAgentNavigationObs())
 
@@ -67,11 +71,11 @@ env_renderer.render_env(show=True, frames=True, show_observations=False)
 for step in range(100):
     actions = {}
     for i in range(len(obs)):
-        actions[i] = np.argmax(obs[i])+1
+        actions[i] = np.argmax(obs[i]) + 1
 
-    if step%5 == 0:
+    if step % 5 == 0:
         print("Agent halts")
-        actions[0] = 4 # Halt
+        actions[0] = 4  # Halt
 
     obs, all_rewards, done, _ = env.step(actions)
     if env.agents[0].malfunction_data['malfunction'] > 0:
@@ -82,4 +86,3 @@ for step in range(100):
     if done["__all__"]:
         break
 env_renderer.close_window()
-

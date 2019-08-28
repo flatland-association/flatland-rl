@@ -2,29 +2,33 @@
 
 """Console script for flatland."""
 import sys
+import time
+
 import click
 import numpy as np
-import time
-from flatland.envs.generators import complex_rail_generator
-from flatland.envs.rail_env import RailEnv
-from flatland.utils.rendertools import RenderTool
-from flatland.evaluators.service import FlatlandRemoteEvaluationService
 import redis
+
+from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import complex_rail_generator
+from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.evaluators.service import FlatlandRemoteEvaluationService
+from flatland.utils.rendertools import RenderTool
 
 
 @click.command()
 def demo(args=None):
     """Demo script to check installation"""
     env = RailEnv(
-            width=15,
-            height=15,
-            rail_generator=complex_rail_generator(
-                                    nr_start_goal=10,
-                                    nr_extra=1,
-                                    min_dist=8,
-                                    max_dist=99999),
-            number_of_agents=5)
-    
+        width=15,
+        height=15,
+        rail_generator=complex_rail_generator(
+            nr_start_goal=10,
+            nr_extra=1,
+            min_dist=8,
+            max_dist=99999),
+        schedule_generator=complex_schedule_generator(),
+        number_of_agents=5)
+
     env._max_episode_steps = int(15 * (env.width + env.height))
     env_renderer = RenderTool(env)
 
@@ -52,12 +56,12 @@ def demo(args=None):
 
 
 @click.command()
-@click.option('--tests', 
+@click.option('--tests',
               type=click.Path(exists=True),
               help="Path to folder containing Flatland tests",
               required=True
               )
-@click.option('--service_id', 
+@click.option('--service_id',
               default="FLATLAND_RL_SERVICE_ID",
               help="Evaluation Service ID. This has to match the service id on the client.",
               required=False
@@ -70,14 +74,14 @@ def evaluator(tests, service_id):
         raise Exception(
             "\nRedis server does not seem to be running on your localhost.\n"
             "Please ensure that you have a redis server running on your localhost"
-            )
-    
+        )
+
     grader = FlatlandRemoteEvaluationService(
-                test_env_folder=tests,
-                flatland_rl_service_id=service_id,
-                visualize=False,
-                verbose=False
-                )
+        test_env_folder=tests,
+        flatland_rl_service_id=service_id,
+        visualize=False,
+        verbose=False
+    )
     grader.run()
 
 

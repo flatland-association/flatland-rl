@@ -6,10 +6,11 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.agent_utils import EnvAgentStatic
-from flatland.envs.generators import complex_rail_generator
-from flatland.envs.generators import rail_from_grid_transition_map
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import complex_rail_generator
+from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.schedule_generators import random_schedule_generator, complex_schedule_generator
 
 """Tests for `flatland` package."""
 
@@ -26,6 +27,7 @@ def test_load_env():
 def test_save_load():
     env = RailEnv(width=10, height=10,
                   rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=0),
+                  schedule_generator=complex_schedule_generator(),
                   number_of_agents=2)
     env.reset()
     agent_1_pos = env.agents_static[0].position
@@ -77,6 +79,7 @@ def test_rail_environment_single_agent():
     rail_env = RailEnv(width=3,
                        height=3,
                        rail_generator=rail_from_grid_transition_map(rail),
+                       schedule_generator=random_schedule_generator(),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
@@ -156,6 +159,7 @@ def test_dead_end():
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
                        rail_generator=rail_from_grid_transition_map(rail),
+                       schedule_generator=random_schedule_generator(),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
@@ -200,6 +204,7 @@ def test_dead_end():
     rail_env = RailEnv(width=rail_map.shape[1],
                        height=rail_map.shape[0],
                        rail_generator=rail_from_grid_transition_map(rail),
+                       schedule_generator=random_schedule_generator(),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 

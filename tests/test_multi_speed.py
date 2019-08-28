@@ -1,9 +1,11 @@
 import numpy as np
 
-from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import complex_rail_generator
+from flatland.envs.schedule_generators import complex_schedule_generator
 
 np.random.seed(1)
+
 
 # Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
 # Training on simple small tasks is the best way to get familiar with the environment
@@ -46,6 +48,7 @@ def test_multi_speed_init():
                   height=50,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999,
                                                         seed=0),
+                  schedule_generator=complex_schedule_generator(),
                   number_of_agents=5)
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
     agent = RandomAgent(218, 4)

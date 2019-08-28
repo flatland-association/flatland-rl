@@ -13,8 +13,9 @@ from flatland.core.env import Environment
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
-from flatland.envs.generators import random_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.rail_generators import random_rail_generator, RailGenerator
+from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
 
 m.patch()
 
@@ -92,7 +93,8 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator=random_rail_generator(),
+                 rail_generator: RailGenerator = random_rail_generator(),
+                 schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
                  max_episode_steps=None,
@@ -108,13 +110,12 @@ class RailEnv(Environment):
             height and agents handles of a  rail environment, along with the number of times
             the env has been reset, and returns a GridTransitionMap object and a list of
             starting positions, targets, and initial orientations for agent handle.
-            Implemented functions are:
-                random_rail_generator : generate a random rail of given size
-                rail_from_grid_transition_map(rail_map) : generate a rail from
-                                        a GridTransitionMap object
-                rail_from_manual_sp ecifications_generator(rail_spec) : generate a rail from
-                                        a rail specifications array
-                TODO: generate_rail_from_saved_list or from list of ndarray bitmaps ---
+            The rail_generator can pass a distance map in the hints or information for specific schedule_generators.
+            Implementations can be found in flatland/envs/rail_generators.py
+        schedule_generator : function
+            The schedule_generator function is a function that takes the grid, the number of agents and optional hints
+            and returns a list of starting positions, targets, initial orientations and speed for all agent handles.
+            Implementations can be found in flatland/envs/schedule_generators.py
         width : int
             The width of the rail map. Potentially in the future,
             a range of widths to sample from.
@@ -132,6 +133,8 @@ class RailEnv(Environment):
         file_name: you can load a pickle file.
         """
 
+        self.rail_generator: RailGenerator = rail_generator
+        self.schedule_generator: ScheduleGenerator = schedule_generator
         self.rail_generator = rail_generator
         self.rail: GridTransitionMap = None
         self.width = width
@@ -214,14 +217,13 @@ class RailEnv(Environment):
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
-        tRailAgents = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
+        rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
-        # Check if generator provided a distance map TODO: Make this check safer!
-        if len(tRailAgents) > 5:
-            self.obs_builder.distance_map = tRailAgents[-1]
+        if optionals and 'distance_maps' in optionals:
+            self.obs_builder.distance_map = optionals['distance_maps']
 
         if regen_rail or self.rail is None:
-            self.rail = tRailAgents[0]
+            self.rail = rail
             self.height, self.width = self.rail.grid.shape
             for r in range(self.height):
                 for c in range(self.width):
@@ -231,7 +233,11 @@ class RailEnv(Environment):
                         warnings.warn("Invalid grid at {} -> {}".format(rcPos, check))
 
         if replace_agents:
-            self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:5])
+            agents_hints = None
+            if optionals and 'agents_hints' in optionals:
+                agents_hints = optionals['agents_hints']
+            self.agents_static = EnvAgentStatic.from_lists(
+                *self.schedule_generator(self.rail, self.get_num_agents(), hints=agents_hints))
 
         self.restart_agents()
 

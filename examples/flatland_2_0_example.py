@@ -1,9 +1,10 @@
 import numpy as np
+from flatland.envs.rail_generators import sparse_rail_generator
 
-from flatland.envs.generators import sparse_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.schedule_generators import sparse_schedule_generator
 from flatland.utils.rendertools import RenderTool
 
 np.random.seed(1)
@@ -31,6 +32,7 @@ env = RailEnv(width=20,
                                                    realistic_mode=True,
                                                    enhance_intersection=True
                                                    ),
+              schedule_generator=sparse_schedule_generator(),
               number_of_agents=5,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=TreeObservation)
@@ -74,7 +76,6 @@ class RandomAgent:
 # Initialize the agent with the parameters corresponding to the environment and observation_builder
 # Set action space to 4 to remove stop action
 agent = RandomAgent(218, 4)
-
 
 # Empty dictionary for all agent action
 action_dict = dict()

@@ -2,9 +2,10 @@ import random
 
 import numpy as np
 
-from flatland.envs.generators import complex_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import complex_rail_generator
+from flatland.envs.schedule_generators import complex_schedule_generator
 from flatland.utils.rendertools import RenderTool
 
 random.seed(1)
@@ -13,6 +14,7 @@ np.random.seed(1)
 env = RailEnv(width=7,
               height=7,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
+              schedule_generator=complex_schedule_generator(),
               number_of_agents=2,
               obs_builder_object=TreeObsForRailEnv(max_depth=2))
 

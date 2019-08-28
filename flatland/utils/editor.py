@@ -11,9 +11,9 @@ from numpy import array
 import flatland.utils.rendertools as rt
 from flatland.core.grid.grid4_utils import mirror
 from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
-from flatland.envs.generators import complex_rail_generator, empty_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, random_rail_generator
+from flatland.envs.rail_generators import complex_rail_generator, empty_rail_generator
 
 
 class EditorMVC(object):

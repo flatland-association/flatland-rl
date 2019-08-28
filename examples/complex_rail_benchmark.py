@@ -3,8 +3,9 @@ import random
 
 import numpy as np
 
-from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import complex_rail_generator
+from flatland.envs.schedule_generators import complex_schedule_generator
 
 
 def run_benchmark():
@@ -15,6 +16,7 @@ def run_benchmark():
     # Example generate a random rail
     env = RailEnv(width=15, height=15,
                   rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12),
+                  schedule_generator=complex_schedule_generator(),
                   number_of_agents=5)
 
     n_trials = 20
