@@ -2,7 +2,7 @@
 Definition of the RailEnv environment.
 """
 # TODO:  _ this is a global method --> utils or remove later
-
+import warnings
 from enum import IntEnum
 
 import msgpack
@@ -228,7 +228,7 @@ class RailEnv(Environment):
                     rcPos = (r, c)
                     check = self.rail.cell_neighbours_valid(rcPos, True)
                     if not check:
-                        print("WARNING: Invalid grid at {} -> {}".format(rcPos, check))
+                        warnings.warn("Invalid grid at {} -> {}".format(rcPos, check))
 
         if replace_agents:
             self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:5])

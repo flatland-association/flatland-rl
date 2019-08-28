@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
@@ -49,15 +48,6 @@ def test_save_load():
 
 
 def test_rail_environment_single_agent():
-    cells = [int('0000000000000000', 2),  # empty cell - Case 0
-             int('1000000000100000', 2),  # Case 1 - straight
-             int('1001001000100000', 2),  # Case 2 - simple switch
-             int('1000010000100001', 2),  # Case 3 - diamond drossing
-             int('1001011000100001', 2),  # Case 4 - single slip switch
-             int('1100110000110011', 2),  # Case 5 - double slip switch
-             int('0101001000000010', 2),  # Case 6 - symmetrical switch
-             int('0010000000000000', 2)]  # Case 7 - dead end
-
     # We instantiate the following map on a 3x3 grid
     #  _  _
     # / \/ \
@@ -65,6 +55,7 @@ def test_rail_environment_single_agent():
     # \_/\_/
 
     transitions = RailEnvTransitions()
+    cells = transitions.transition_list
     vertical_line = cells[1]
     south_symmetrical_switch = cells[6]
     north_symmetrical_switch = transitions.rotate_transition(south_symmetrical_switch, 180)
@@ -139,7 +130,7 @@ test_rail_environment_single_agent()
 
 
 def test_dead_end():
-    transitions = Grid4Transitions([])
+    transitions = RailEnvTransitions()
 
     straight_vertical = int('1000000000100000', 2)  # Case 1 - straight
     straight_horizontal = transitions.rotate_transition(straight_vertical,
