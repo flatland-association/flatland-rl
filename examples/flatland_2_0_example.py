@@ -1,5 +1,5 @@
 import numpy as np
-from flatland.envs.generators import sparse_rail_generator
+from flatland.envs.rail_generators import sparse_rail_generator
 
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
