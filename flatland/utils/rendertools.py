@@ -41,7 +41,7 @@ class RenderTool(object):
 
     def __init__(self, env, gl="PILSVG", jupyter=False,
                  agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                 show_debug=True, screen_width=800, screen_height=600):
+                 show_debug=False, screen_width=800, screen_height=600):
 
         self.env = env
         self.frame_nr = 0
