@@ -2,7 +2,7 @@
 Definition of the RailEnv environment.
 """
 # TODO:  _ this is a global method --> utils or remove later
-
+import warnings
 from enum import IntEnum
 
 import msgpack
@@ -11,6 +11,7 @@ import numpy as np
 
 from flatland.core.env import Environment
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
@@ -134,7 +135,8 @@ class RailEnv(Environment):
 
         self.rail_generator: RailGenerator = rail_generator
         self.agent_generator: ScheduleGenerator = agent_generator
-        self.rail = None
+        self.rail_generator = rail_generator
+        self.rail: GridTransitionMap = None
         self.width = width
         self.height = height
 
@@ -223,6 +225,12 @@ class RailEnv(Environment):
         if regen_rail or self.rail is None:
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
+            for r in range(self.height):
+                for c in range(self.width):
+                    rcPos = (r, c)
+                    check = self.rail.cell_neighbours_valid(rcPos, True)
+                    if not check:
+                        warnings.warn("Invalid grid at {} -> {}".format(rcPos, check))
 
         if replace_agents:
             agents_hints = None

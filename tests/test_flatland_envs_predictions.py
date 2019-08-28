@@ -11,13 +11,13 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import get_rnd_agents_pos_tgt_dir_on_rail
 from flatland.utils.rendertools import RenderTool
-from flatland.utils.simple_rail import make_simple_rail
+from flatland.utils.simple_rail import make_simple_rail, make_simple_rail2, make_invalid_simple_rail
 
 """Test predictions for `flatland` package."""
 
 
 def test_dummy_predictor(rendering=False):
-    rail, rail_map = make_simple_rail()
+    rail, rail_map = make_simple_rail2()
 
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
@@ -91,7 +91,7 @@ def test_dummy_predictor(rendering=False):
     expected_actions = np.array([[0.],
                                  [2.],
                                  [2.],
-                                 [1.],
+                                 [2.],
                                  [2.],
                                  [2.],
                                  [2.],
@@ -229,7 +229,7 @@ def test_shortest_path_predictor(rendering=False):
 
 
 def test_shortest_path_predictor_conflicts(rendering=False):
-    rail, rail_map = make_simple_rail()
+    rail, rail_map = make_invalid_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
                   rail_generator=rail_from_grid_transition_map(rail),

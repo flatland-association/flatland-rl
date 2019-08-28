@@ -350,4 +350,124 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
+    def fix_neighbours(self, rcPos, check_this_cell=False):
+        """
+        Check validity of cell at rcPos = tuple(row, column)
+        Checks that:
+        - surrounding cells have inbound transitions for all the
+            outbound transitions of this cell.
+
+        These are NOT checked - see transition.is_valid:
+        - all transitions have the mirror transitions (N->E <=> W->S)
+        - Reverse transitions (N -> S) only exist for a dead-end
+        - a cell contains either no dead-ends or exactly one
+
+        Returns: True (valid) or False (invalid)
+        """
+        cell_transition = self.grid[tuple(rcPos)]
+
+        if check_this_cell:
+            if not self.transitions.is_valid(cell_transition):
+                return False
+
+        gDir2dRC = self.transitions.gDir2dRC  # [[-1,0] = N, [0,1]=E, etc]
+        grcPos = array(rcPos)
+        grcMax = self.grid.shape
+
+        binTrans = self.get_full_transitions(*rcPos)  # 16bit integer - all trans in/out
+        lnBinTrans = array([binTrans >> 8, binTrans & 0xff], dtype=np.uint8)  # 2 x uint8
+        g2binTrans = np.unpackbits(lnBinTrans).reshape(4, 4)  # 4x4 x uint8 binary(0,1)
+        gDirOut = g2binTrans.any(axis=0)  # outbound directions as boolean array (4)
+        giDirOut = np.argwhere(gDirOut)[:, 0]  # valid outbound directions as array of int
+
+        # loop over available outbound directions (indices) for rcPos
+        for iDirOut in giDirOut:
+            gdRC = gDir2dRC[iDirOut]  # row,col increment
+            gPos2 = grcPos + gdRC  # next cell in that direction
+
+            # Check the adjacent cell is within bounds
+            # if not, then this transition is invalid!
+            if np.any(gPos2 < 0):
+                return False
+            if np.any(gPos2 >= grcMax):
+                return False
+
+            # Get the transitions out of gPos2, using iDirOut as the inbound direction
+            # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
+            t4Trans2 = self.get_transitions(*gPos2, iDirOut)
+            if any(t4Trans2):
+                continue
+            else:
+                self.set_transition((gPos2[0], gPos2[1], iDirOut), mirror(iDirOut), 1)
+                return False
+
+        return True
+
+    def fix_transitions(self, rcPos):
+        """
+        Fixes broken transitions
+        """
+        gDir2dRC = self.transitions.gDir2dRC  # [[-1,0] = N, [0,1]=E, etc]
+        grcPos = array(rcPos)
+        grcMax = self.grid.shape
+
+        # loop over available outbound directions (indices) for rcPos
+        self.set_transitions(rcPos, 0)
+
+        incoming_connections = np.zeros(4)
+        for iDirOut in np.arange(4):
+            gdRC = gDir2dRC[iDirOut]  # row,col increment
+            gPos2 = grcPos + gdRC  # next cell in that direction
+
+            # Check the adjacent cell is within bounds
+            # if not, then ignore it for the count of incoming connections
+            if np.any(gPos2 < 0):
+                continue
+            if np.any(gPos2 >= grcMax):
+                continue
+
+            # Get the transitions out of gPos2, using iDirOut as the inbound direction
+            # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
+            connected = 0
+            for orientation in range(4):
+                connected += self.get_transition((gPos2[0], gPos2[1], orientation), mirror(iDirOut))
+            if connected > 0:
+                incoming_connections[iDirOut] = 1
+
+        number_of_incoming = np.sum(incoming_connections)
+        # Only one incoming direction --> Straight line
+        if number_of_incoming == 1:
+            for direction in range(4):
+                if incoming_connections[direction] > 0:
+                    self.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
+        # Connect all incoming connections
+        if number_of_incoming == 2:
+            connect_directions = np.argwhere(incoming_connections > 0)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1])), connect_directions[0], 1)
+
+        # Find feasible connection fro three entries
+        if number_of_incoming == 3:
+            hole = np.argwhere(incoming_connections < 1)[0][0]
+            connect_directions = [(hole + 1) % 4, (hole + 2) % 4, (hole + 3) % 4]
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[2], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1])), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[2])), connect_directions[0], 1)
+        # Make a cross
+        if number_of_incoming == 4:
+            connect_directions = np.arange(4)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[0]), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[0]), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[1]), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[1]), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[2]), connect_directions[2], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[2]), connect_directions[3], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[3]), connect_directions[2], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[3]), connect_directions[3], 1)
+        return True
+
+
+def mirror(dir):
+    return (dir + 2) % 4
 # TODO: improvement override __getitem__ and __setitem__ (cell contents, not transitions?)
