@@ -3,7 +3,7 @@ import numpy as np
 
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
-from flatland.envs.schedule_generators import speed_initialization_helper, complex_rail_generator_agents_placer
+from flatland.envs.schedule_generators import speed_initialization_helper, complex_schedule_generator
 
 
 def test_speed_initialization_helper():
@@ -22,7 +22,7 @@ def test_rail_env_speed_intializer():
                   height=50,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999,
                                                         seed=0),
-                  agent_generator=complex_rail_generator_agents_placer(),
+                  schedule_generator=complex_schedule_generator(),
                   number_of_agents=10)
     env.reset()
     actual_speeds = list(map(lambda agent: agent.speed_data['speed'], env.agents))

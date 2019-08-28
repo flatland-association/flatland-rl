@@ -38,7 +38,7 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
     return list(map(lambda index: speeds[index], np.random.choice(nb_classes, nb_agents, p=speed_ratios)))
 
 
-def complex_rail_generator_agents_placer(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
+def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         start_goal = hints['start_goal']
         start_dir = hints['start_dir']
@@ -56,7 +56,7 @@ def complex_rail_generator_agents_placer(speed_ratio_map: Mapping[float, float] 
     return generator
 
 
-def sparse_rail_generator_agents_placer(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
+def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         train_stations = hints['train_stations']
         agent_start_targets_nodes = hints['agent_start_targets_nodes']
@@ -111,7 +111,7 @@ def sparse_rail_generator_agents_placer(speed_ratio_map: Mapping[float, float] =
     return generator
 
 
-def get_rnd_agents_pos_tgt_dir_on_rail(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
+def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
     """
     Given a `rail' GridTransitionMap, return a random placement of agents (initial position, direction and target).
 

@@ -10,7 +10,7 @@ import redis
 
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
-from flatland.envs.schedule_generators import complex_rail_generator_agents_placer
+from flatland.envs.schedule_generators import complex_schedule_generator
 from flatland.evaluators.service import FlatlandRemoteEvaluationService
 from flatland.utils.rendertools import RenderTool
 
@@ -26,7 +26,7 @@ def demo(args=None):
             nr_extra=1,
             min_dist=8,
             max_dist=99999),
-        agent_generator=complex_rail_generator_agents_placer(),
+        schedule_generator=complex_schedule_generator(),
         number_of_agents=5)
 
     env._max_episode_steps = int(15 * (env.width + env.height))

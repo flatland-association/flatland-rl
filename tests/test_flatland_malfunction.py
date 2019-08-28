@@ -3,7 +3,7 @@ import numpy as np
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
-from flatland.envs.schedule_generators import complex_rail_generator_agents_placer
+from flatland.envs.schedule_generators import complex_schedule_generator
 
 
 class SingleAgentNavigationObs(TreeObsForRailEnv):
@@ -63,7 +63,7 @@ def test_malfunction_process():
                   height=20,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=5, max_dist=99999,
                                                         seed=0),
-                  agent_generator=complex_rail_generator_agents_placer(),
+                  schedule_generator=complex_schedule_generator(),
                   number_of_agents=2,
                   obs_builder_object=SingleAgentNavigationObs(),
                   stochastic_data=stochastic_data)

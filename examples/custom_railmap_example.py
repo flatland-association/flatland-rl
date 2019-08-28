@@ -29,7 +29,7 @@ def custom_rail_generator() -> RailGenerator:
     return generator
 
 
-def custom_agent_generator() -> ScheduleGenerator:
+def custom_schedule_generator() -> ScheduleGenerator:
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
         agents_positions = []
         agents_direction = []

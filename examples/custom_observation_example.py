@@ -9,7 +9,7 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import random_rail_generator, complex_rail_generator
-from flatland.envs.schedule_generators import complex_rail_generator_agents_placer
+from flatland.envs.schedule_generators import complex_schedule_generator
 from flatland.utils.rendertools import RenderTool
 
 random.seed(100)
@@ -93,7 +93,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
 env = RailEnv(width=7,
               height=7,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=5, max_dist=99999, seed=0),
-              agent_generator=complex_rail_generator_agents_placer(),
+              schedule_generator=complex_schedule_generator(),
               number_of_agents=1,
               obs_builder_object=SingleAgentNavigationObs())
 
@@ -204,7 +204,7 @@ CustomObsBuilder = ObservePredictions(CustomPredictor)
 env = RailEnv(width=10,
               height=10,
               rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
-              agent_generator=complex_rail_generator_agents_placer(),
+              schedule_generator=complex_schedule_generator(),
               number_of_agents=3,
               obs_builder_object=CustomObsBuilder)
 

@@ -15,7 +15,7 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
-from flatland.envs.schedule_generators import get_rnd_agents_pos_tgt_dir_on_rail, ScheduleGenerator
+from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
 
 m.patch()
 
@@ -94,7 +94,7 @@ class RailEnv(Environment):
                  width,
                  height,
                  rail_generator: RailGenerator = random_rail_generator(),
-                 agent_generator: ScheduleGenerator = get_rnd_agents_pos_tgt_dir_on_rail(),
+                 schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
                  max_episode_steps=None,
@@ -110,10 +110,10 @@ class RailEnv(Environment):
             height and agents handles of a  rail environment, along with the number of times
             the env has been reset, and returns a GridTransitionMap object and a list of
             starting positions, targets, and initial orientations for agent handle.
-            The rail_generator can pass a distance map in the hints or information for specific agent_generators.
+            The rail_generator can pass a distance map in the hints or information for specific schedule_generators.
             Implementations can be found in flatland/envs/rail_generators.py
-        agent_generator : function
-            The agent_generator function is a function that takes the grid, the number of agents and optional hints
+        schedule_generator : function
+            The schedule_generator function is a function that takes the grid, the number of agents and optional hints
             and returns a list of starting positions, targets, initial orientations and speed for all agent handles.
             Implementations can be found in flatland/envs/schedule_generators.py
         width : int
@@ -134,7 +134,7 @@ class RailEnv(Environment):
         """
 
         self.rail_generator: RailGenerator = rail_generator
-        self.agent_generator: ScheduleGenerator = agent_generator
+        self.schedule_generator: ScheduleGenerator = schedule_generator
         self.rail_generator = rail_generator
         self.rail: GridTransitionMap = None
         self.width = width
@@ -237,7 +237,7 @@ class RailEnv(Environment):
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
             self.agents_static = EnvAgentStatic.from_lists(
-                *self.agent_generator(self.rail, self.get_num_agents(), hints=agents_hints))
+                *self.schedule_generator(self.rail, self.get_num_agents(), hints=agents_hints))
 
         self.restart_agents()
 

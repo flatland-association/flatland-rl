@@ -1,7 +1,7 @@
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
-from flatland.envs.schedule_generators import sparse_rail_generator_agents_placer
+from flatland.envs.schedule_generators import sparse_schedule_generator
 from flatland.utils.rendertools import RenderTool
 
 
@@ -17,7 +17,7 @@ def test_sparse_rail_generator():
                                                        seed=5,  # Random seed
                                                        realistic_mode=False  # Ordered distribution of nodes
                                                        ),
-                  agent_generator=sparse_rail_generator_agents_placer(),
+                  schedule_generator=sparse_schedule_generator(),
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
     # reset to initialize agents_static
