@@ -66,7 +66,7 @@ def test_multi_speed_init():
     # Run episode
     for step in range(100):
 
-        # Chose an action for each agent in the environment
+        # Choose an action for each agent in the environment
         for a in range(env.get_num_agents()):
             action = agent.act(0)
             action_dict.update({a: action})
@@ -75,12 +75,11 @@ def test_multi_speed_init():
             assert old_pos[a] == env.agents[a].position
 
         # Environment step which returns the observations for all agents, their corresponding
-        # reward and whether their are done
+        # reward and whether they are done
         _, _, _, _ = env.step(action_dict)
 
         # Update old position whenever an agent was allowed to move
         for i_agent in range(env.get_num_agents()):
             if (step + 1) % (i_agent + 1) == 0:
-                print(step, i_agent, env.agents[a].position)
-
+                print(step, i_agent, env.agents[i_agent].position)
                 old_pos[i_agent] = env.agents[i_agent].position
