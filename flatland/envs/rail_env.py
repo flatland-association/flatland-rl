@@ -11,6 +11,7 @@ import numpy as np
 
 from flatland.core.env import Environment
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 from flatland.envs.generators import random_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
@@ -132,7 +133,7 @@ class RailEnv(Environment):
         """
 
         self.rail_generator = rail_generator
-        self.rail = None
+        self.rail: GridTransitionMap = None
         self.width = width
         self.height = height
 
@@ -222,6 +223,12 @@ class RailEnv(Environment):
         if regen_rail or self.rail is None:
             self.rail = tRailAgents[0]
             self.height, self.width = self.rail.grid.shape
+            for r in range(self.height):
+                for c in range(self.width):
+                    rcPos = (r, c)
+                    check = self.rail.cell_neighbours_valid(rcPos, True)
+                    if not check:
+                        print("WARNING: Invalid grid at {} -> {}".format(rcPos, check))
 
         if replace_agents:
             self.agents_static = EnvAgentStatic.from_lists(*tRailAgents[1:5])

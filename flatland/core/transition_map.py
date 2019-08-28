@@ -422,9 +422,9 @@ class GridTransitionMap(TransitionMap):
             # Check the adjacent cell is within bounds
             # if not, then this transition is invalid!
             if np.any(gPos2 < 0):
-                return False
+                continue
             if np.any(gPos2 >= grcMax):
-                return False
+                continue
 
             # Get the transitions out of gPos2, using iDirOut as the inbound direction
             # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
