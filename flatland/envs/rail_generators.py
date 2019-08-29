@@ -683,8 +683,10 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                                     0,
                                     width - 1)
                 tries = 0
-                while (station_x, station_y) in train_stations or (station_x, station_y) == node_positions[
-                    trainstation_node] or rail_array[(station_x, station_y)] != 0:
+                while (station_x, station_y) in train_stations \
+                    or (station_x, station_y) == node_positions[trainstation_node] \
+                    or rail_array[(station_x, station_y)] != 0:  # noqa: E125
+
                     station_x = np.clip(
                         node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
                         0,

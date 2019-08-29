@@ -271,8 +271,7 @@ class RailEnv(Environment):
         agent.malfunction_data['next_malfunction'] -= 1
 
         # Only agents that have a positive rate for malfunctions and are not currently broken are considered
-        if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data[
-            'malfunction']:
+        if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction']:
 
             # If counter has come to zero --> Agent has malfunction
             # set next malfunction time and duration of current malfunction
