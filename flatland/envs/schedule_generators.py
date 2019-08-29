@@ -183,8 +183,8 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                 valid_starting_directions = []
                 for m in valid_movements:
                     new_position = get_new_position(agents_position[i], m[1])
-                    if m[0] not in valid_starting_directions and rail._path_exists(new_position, m[0],
-                                                                                   agents_target[i]):
+                    if m[0] not in valid_starting_directions and rail.check_path_exists(new_position, m[0],
+                                                                                        agents_target[i]):
                         valid_starting_directions.append(m[0])
 
                 if len(valid_starting_directions) == 0:

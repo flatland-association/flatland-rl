@@ -63,7 +63,7 @@ def check_path(env, rail, position, direction, target, expected, rendering=False
         renderer = RenderTool(env, gl="PILSVG")
         renderer.render_env(show=True, show_observations=False)
         input("Continue?")
-    assert rail._path_exists(agent.position, agent.direction, agent.target) == expected
+    assert rail.check_path_exists(agent.position, agent.direction, agent.target) == expected
 
 
 def test_path_exists(rendering=False):
