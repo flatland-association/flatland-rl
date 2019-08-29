@@ -7,6 +7,7 @@ from importlib_resources import path
 from numpy import array
 
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transitions import Transitions
 
 
@@ -297,6 +298,76 @@ class GridTransitionMap(TransitionMap):
         self.width = new_width
         self.height = new_height
         self.grid = new_grid
+
+    def is_dead_end(self, rcPos):
+        """
+        Check if the cell is a dead-end.
+
+        Parameters
+        ----------
+        rcPos: Tuple[int,int]
+            tuple(row, column) with grid coordinate
+        Returns
+        -------
+        boolean
+            True if and only if the cell is a dead-end.
+        """
+        nbits = 0
+        tmp = self.get_full_transitions(rcPos[0], rcPos[1])
+        while tmp > 0:
+            nbits += (tmp & 1)
+            tmp = tmp >> 1
+        return nbits == 1
+
+    def is_simple_turn(self, rcPos):
+        """
+        Check if the cell is a left/right simple turn
+
+        Parameters
+        ----------
+            rcPos: Tuple[int,int]
+                tuple(row, column) with grid coordinate
+        Returns
+        -------
+            boolean
+                True if and only if the cell is a left/right simple turn.
+        """
+        tmp = self.get_full_transitions(rcPos[0], rcPos[1])
+
+        def is_simple_turn(trans):
+            all_simple_turns = set()
+            for trans in [int('0100000000000010', 2),  # Case 1b (8)  - simple turn right
+                          int('0001001000000000', 2)  # Case 1c (9)  - simple turn left]:
+                          ]:
+                for _ in range(3):
+                    trans = self.transitions.rotate_transition(trans, rotation=90)
+                    all_simple_turns.add(trans)
+            return trans in all_simple_turns
+
+        return is_simple_turn(tmp)
+
+    def check_path_exists(self, start, direction, end):
+        # print("_path_exists({},{},{}".format(start, direction, end))
+        # BFS - Check if a path exists between the 2 nodes
+
+        visited = set()
+        stack = [(start, direction)]
+        while stack:
+            node = stack.pop()
+            node_position = node[0]
+            node_direction = node[1]
+            if node_position[0] == end[0] and node_position[1] == end[1]:
+                return True
+            if node not in visited:
+                visited.add(node)
+
+                moves = self.get_transitions(node_position[0], node_position[1], node_direction)
+                for move_index in range(4):
+                    if moves[move_index]:
+                        stack.append((get_new_position(node_position, move_index),
+                                      move_index))
+
+        return False
 
     def cell_neighbours_valid(self, rcPos, check_this_cell=False):
         """

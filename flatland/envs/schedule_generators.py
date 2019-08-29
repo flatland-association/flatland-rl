@@ -131,34 +131,6 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
     """
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
-        def _path_exists(rail, start, direction, end):
-            # BFS - Check if a path exists between the 2 nodes
-
-            visited = set()
-            stack = [(start, direction)]
-            while stack:
-                node = stack.pop()
-                if node[0][0] == end[0] and node[0][1] == end[1]:
-                    return 1
-                if node not in visited:
-                    visited.add(node)
-                    moves = rail.get_transitions(node[0][0], node[0][1], node[1])
-                    for move_index in range(4):
-                        if moves[move_index]:
-                            stack.append((get_new_position(node[0], move_index),
-                                          move_index))
-
-                    # If cell is a dead-end, append previous node with reversed
-                    # orientation!
-                    nbits = 0
-                    tmp = rail.get_full_transitions(node[0][0], node[0][1])
-                    while tmp > 0:
-                        nbits += (tmp & 1)
-                        tmp = tmp >> 1
-                    if nbits == 1:
-                        stack.append((node[0], (node[1] + 2) % 4))
-
-            return 0
 
         valid_positions = []
         for r in range(rail.height):
@@ -167,14 +139,35 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                     valid_positions.append((r, c))
         if len(valid_positions) == 0:
             return [], [], [], []
+
+        if len(valid_positions) < num_agents:
+            warnings.warn("schedule_generators: len(valid_positions) < num_agents")
+            return [], [], [], []
+
+        agents_position_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
+        agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]
+        agents_target_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
+        agents_target = [valid_positions[agents_target_idx[i]] for i in range(num_agents)]
+        update_agents = np.zeros(num_agents)
+
         re_generate = True
+        cnt = 0
         while re_generate:
-            agents_position = [
-                valid_positions[i] for i in
-                np.random.choice(len(valid_positions), num_agents)]
-            agents_target = [
-                valid_positions[i] for i in
-                np.random.choice(len(valid_positions), num_agents)]
+            cnt += 1
+            if cnt > 1:
+                print("re_generate cnt={}".format(cnt))
+            if cnt > 1000:
+                raise Exception("After 1000 re_generates still not success, giving up.")
+            # update position
+            for i in range(num_agents):
+                if update_agents[i] == 1:
+                    x = np.setdiff1d(np.arange(len(valid_positions)), agents_position_idx)
+                    agents_position_idx[i] = np.random.choice(x)
+                    agents_position[i] = valid_positions[agents_position_idx[i]]
+                    x = np.setdiff1d(np.arange(len(valid_positions)), agents_target_idx)
+                    agents_target_idx[i] = np.random.choice(x)
+                    agents_target[i] = valid_positions[agents_target_idx[i]]
+            update_agents = np.zeros(num_agents)
 
             # agents_direction must be a direction for which a solution is
             # guaranteed.
@@ -192,12 +185,15 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                 valid_starting_directions = []
                 for m in valid_movements:
                     new_position = get_new_position(agents_position[i], m[1])
-                    if m[0] not in valid_starting_directions and _path_exists(rail, new_position, m[0],
-                                                                              agents_target[i]):
+                    if m[0] not in valid_starting_directions and rail.check_path_exists(new_position, m[1],
+                                                                                        agents_target[i]):
                         valid_starting_directions.append(m[0])
 
                 if len(valid_starting_directions) == 0:
+                    update_agents[i] = 1
+                    warnings.warn("reset position for agent[{}]: {} -> {}".format(i, agents_position[i], agents_target[i]))
                     re_generate = True
+                    break
                 else:
                     agents_direction[i] = valid_starting_directions[
                         np.random.choice(len(valid_starting_directions), 1)[0]]
