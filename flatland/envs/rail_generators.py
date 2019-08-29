@@ -787,6 +787,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                 num_agents -= 1
 
         return grid_map, {'agents_hints': {
+            'num_agents': num_agents,
             'agent_start_targets_nodes': agent_start_targets_nodes,
             'train_stations': train_stations
         }}
