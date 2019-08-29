@@ -60,6 +60,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         train_stations = hints['train_stations']
         agent_start_targets_nodes = hints['agent_start_targets_nodes']
+        num_agents = hints['num_agents']
         # Place agents and targets within available train stations
         agents_position = []
         agents_target = []
@@ -207,7 +208,7 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
     return generator
 
 
-def agents_from_file(filename) -> ScheduleGenerator:
+def schedule_from_file(filename) -> ScheduleGenerator:
     """
     Utility to load pickle file
 

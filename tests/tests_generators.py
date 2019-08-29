@@ -9,7 +9,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_from_file, complex_rail_generator, \
     random_rail_generator, empty_rail_generator
 from flatland.envs.schedule_generators import random_schedule_generator, complex_schedule_generator, \
-    agents_from_file
+    schedule_from_file
 from flatland.utils.simple_rail import make_simple_rail
 
 
@@ -137,7 +137,7 @@ def tests_rail_from_file():
     env = RailEnv(width=1,
                   height=1,
                   rail_generator=rail_from_file(file_name),
-                  schedule_generator=agents_from_file(file_name),
+                  schedule_generator=schedule_from_file(file_name),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
@@ -173,7 +173,7 @@ def tests_rail_from_file():
     env2 = RailEnv(width=1,
                    height=1,
                    rail_generator=rail_from_file(file_name_2),
-                   schedule_generator=agents_from_file(file_name_2),
+                   schedule_generator=schedule_from_file(file_name_2),
                    number_of_agents=1,
                    obs_builder_object=GlobalObsForRailEnv(),
                    )
@@ -190,7 +190,7 @@ def tests_rail_from_file():
     env3 = RailEnv(width=1,
                    height=1,
                    rail_generator=rail_from_file(file_name),
-                   schedule_generator=agents_from_file(file_name),
+                   schedule_generator=schedule_from_file(file_name),
                    number_of_agents=1,
                    obs_builder_object=GlobalObsForRailEnv(),
                    )
@@ -208,7 +208,7 @@ def tests_rail_from_file():
     env4 = RailEnv(width=1,
                    height=1,
                    rail_generator=rail_from_file(file_name_2),
-                   schedule_generator=agents_from_file(file_name_2),
+                   schedule_generator=schedule_from_file(file_name_2),
                    number_of_agents=1,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2),
                    )
