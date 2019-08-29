@@ -154,7 +154,7 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
         cnt = 0
         while re_generate:
             cnt += 1
-            if cnt >= 1:
+            if cnt > 1:
                 print("re_generate cnt={}".format(cnt))
             if cnt > 1000:
                 raise Exception("After 1000 re_generates still not success, giving up.")
