@@ -7,6 +7,7 @@ from importlib_resources import path
 from numpy import array
 
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transitions import Transitions
 
 
@@ -298,8 +299,7 @@ class GridTransitionMap(TransitionMap):
         self.height = new_height
         self.grid = new_grid
 
-
-    def is_dead_end(self,rcPos):
+    def is_dead_end(self, rcPos):
         """
         Check if the cell is a dead-end
         :param rcPos: tuple(row, column) with grid coordinate
@@ -310,7 +310,30 @@ class GridTransitionMap(TransitionMap):
         while tmp > 0:
             nbits += (tmp & 1)
             tmp = tmp >> 1
-        return nbits==1
+        return nbits == 1
+
+    def _path_exists(self, start, direction, end):
+        # print("_path_exists({},{},{}".format(start, direction, end))
+        # BFS - Check if a path exists between the 2 nodes
+
+        visited = set()
+        stack = [(start, direction)]
+        while stack:
+            node = stack.pop()
+            node_position = node[0]
+            node_direction = node[1]
+            if node_position[0] == end[0] and node_position[1] == end[1]:
+                return True
+            if node not in visited:
+                visited.add(node)
+
+                moves = self.get_transitions(node_position[0], node_position[1], node_direction)
+                for move_index in range(4):
+                    if moves[move_index]:
+                        stack.append((get_new_position(node_position, move_index),
+                                      move_index))
+
+        return False
 
     def cell_neighbours_valid(self, rcPos, check_this_cell=False):
         """

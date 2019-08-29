@@ -131,29 +131,6 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
     """
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
-        def _path_exists(rail, start, direction, end):
-            # BFS - Check if a path exists between the 2 nodes
-
-            visited = set()
-            stack = [(start, direction)]
-            while stack:
-                node = stack.pop()
-                if node[0][0] == end[0] and node[0][1] == end[1]:
-                    return True
-                if node not in visited:
-                    visited.add(node)
-                    moves = rail.get_transitions(node[0][0], node[0][1], node[1])
-                    for move_index in range(4):
-                        if moves[move_index]:
-                            stack.append((get_new_position(node[0], move_index),
-                                          move_index))
-
-                    # If cell is a dead-end, append previous node with reversed
-                    # orientation!
-                    if rail.is_dead_end(node[0]):
-                        stack.append((node[0], (node[1] + 2) % 4))
-
-            return False
 
         valid_positions = []
         for r in range(rail.height):
@@ -194,6 +171,8 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             re_generate = False
             for i in range(num_agents):
                 valid_movements = []
+                if rail.is_dead_end(agents_position[i]):
+                    print("   dead_end", agents_position[i])
                 for direction in range(4):
                     position = agents_position[i]
                     moves = rail.get_transitions(position[0], position[1], direction)
@@ -204,14 +183,15 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                 valid_starting_directions = []
                 for m in valid_movements:
                     new_position = get_new_position(agents_position[i], m[1])
-                    if m[0] not in valid_starting_directions and _path_exists(rail, new_position, m[0],
-                                                                              agents_target[i]):
+                    if m[0] not in valid_starting_directions and rail._path_exists(new_position, m[0],
+                                                                                   agents_target[i]):
                         valid_starting_directions.append(m[0])
 
                 if len(valid_starting_directions) == 0:
-                    re_generate = True
                     update_agents[i] = 1
-                    print("reset position for agents:",i, agents_position[i],agents_target[i])
+                    print("reset position for agents:", i, agents_position[i], agents_target[i])
+                    print("   dead_end", rail.is_dead_end(agents_position[i]))
+                    re_generate = True
                     break
                 else:
                     agents_direction[i] = valid_starting_directions[
