@@ -298,6 +298,20 @@ class GridTransitionMap(TransitionMap):
         self.height = new_height
         self.grid = new_grid
 
+
+    def is_dead_end(self,rcPos):
+        """
+        Check if the cell is a dead-end
+        :param rcPos: tuple(row, column) with grid coordinate
+        :return: False : if not a dead-end else True
+        """
+        nbits = 0
+        tmp = self.get_full_transitions(rcPos[0], rcPos[1])
+        while tmp > 0:
+            nbits += (tmp & 1)
+            tmp = tmp >> 1
+        return nbits==1
+
     def cell_neighbours_valid(self, rcPos, check_this_cell=False):
         """
         Check validity of cell at rcPos = tuple(row, column)

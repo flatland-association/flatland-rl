@@ -138,7 +138,7 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             while stack:
                 node = stack.pop()
                 if node[0][0] == end[0] and node[0][1] == end[1]:
-                    return 1
+                    return True
                 if node not in visited:
                     visited.add(node)
                     moves = rail.get_transitions(node[0][0], node[0][1], node[1])
@@ -149,15 +149,10 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
 
                     # If cell is a dead-end, append previous node with reversed
                     # orientation!
-                    nbits = 0
-                    tmp = rail.get_full_transitions(node[0][0], node[0][1])
-                    while tmp > 0:
-                        nbits += (tmp & 1)
-                        tmp = tmp >> 1
-                    if nbits == 1:
+                    if rail.is_dead_end(node[0]):
                         stack.append((node[0], (node[1] + 2) % 4))
 
-            return 0
+            return False
 
         valid_positions = []
         for r in range(rail.height):
@@ -166,14 +161,33 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                     valid_positions.append((r, c))
         if len(valid_positions) == 0:
             return [], [], [], []
+
+        if len(valid_positions) < num_agents:
+            warnings("schedule_generators: len(valid_positions) < num_agents")
+            return [], [], [], []
+
+        agents_position_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
+        agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]
+        agents_target_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
+        agents_target = [valid_positions[agents_target_idx[i]] for i in range(num_agents)]
+        update_agents = np.ones(num_agents)
+
         re_generate = True
-        while re_generate:
-            agents_position = [
-                valid_positions[i] for i in
-                np.random.choice(len(valid_positions), num_agents)]
-            agents_target = [
-                valid_positions[i] for i in
-                np.random.choice(len(valid_positions), num_agents)]
+        cnt = 0
+        while re_generate and cnt < 100:
+            cnt += 1
+            # update position
+            for i in range(num_agents):
+                if update_agents[i] == 1:
+                    x = np.arange(len(valid_positions))
+                    x = np.setdiff1d(x,agents_position_idx)
+                    agents_position_idx[i] = np.random.choice(x)
+                    agents_position[i] = valid_positions[agents_position_idx[i]]
+                    x = np.arange(len(valid_positions))
+                    x = np.setdiff1d(x,agents_target_idx)
+                    agents_target_idx[i] = np.random.choice(x)
+                    agents_target[i] = valid_positions[agents_target_idx[i]]
+            update_agents = np.zeros(num_agents)
 
             # agents_direction must be a direction for which a solution is
             # guaranteed.
@@ -197,9 +211,16 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
 
                 if len(valid_starting_directions) == 0:
                     re_generate = True
+                    print("agent:", i, new_position)
+                    print("invalid")
+                    update_agents[i] = 1
+                    break
                 else:
                     agents_direction[i] = valid_starting_directions[
                         np.random.choice(len(valid_starting_directions), 1)[0]]
+
+        if re_generate:
+            print("re_generate")
 
         agents_speed = speed_initialization_helper(num_agents, speed_ratio_map)
         return agents_position, agents_direction, agents_target, agents_speed
