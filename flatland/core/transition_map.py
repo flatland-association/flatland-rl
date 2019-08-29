@@ -301,9 +301,16 @@ class GridTransitionMap(TransitionMap):
 
     def is_dead_end(self, rcPos):
         """
-        Check if the cell is a dead-end
-        :param rcPos: tuple(row, column) with grid coordinate
-        :return: False : if not a dead-end else True
+        Check if the cell is a dead-end.
+
+        Parameters
+        ----------
+        rcPos: Tuple[int,int]
+            tuple(row, column) with grid coordinate
+        Returns
+        -------
+        boolean
+            True if and only if the cell is a dead-end.
         """
         nbits = 0
         tmp = self.get_full_transitions(rcPos[0], rcPos[1])
@@ -311,6 +318,33 @@ class GridTransitionMap(TransitionMap):
             nbits += (tmp & 1)
             tmp = tmp >> 1
         return nbits == 1
+
+    def is_simple_turn(self, rcPos):
+        """
+        Check if the cell is a left/right simple turn
+
+        Parameters
+        ----------
+            rcPos: Tuple[int,int]
+                tuple(row, column) with grid coordinate
+        Returns
+        -------
+            boolean
+                True if and only if the cell is a left/right simple turn.
+        """
+        tmp = self.get_full_transitions(rcPos[0], rcPos[1])
+
+        def is_simple_turn(trans):
+            all_simple_turns = set()
+            for trans in [int('0100000000000010', 2),  # Case 1b (8)  - simple turn right
+                          int('0001001000000000', 2)  # Case 1c (9)  - simple turn left]:
+                          ]:
+                for _ in range(3):
+                    trans = self.transitions.rotate_transition(trans, rotation=90)
+                    all_simple_turns.add(trans)
+            return trans in all_simple_turns
+
+        return is_simple_turn(tmp)
 
     def check_path_exists(self, start, direction, end):
         # print("_path_exists({},{},{}".format(start, direction, end))

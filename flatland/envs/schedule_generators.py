@@ -152,8 +152,12 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
 
         re_generate = True
         cnt = 0
-        while re_generate and cnt < 100:
+        while re_generate:
             cnt += 1
+            if cnt >= 1:
+                print("re_generate cnt={}".format(cnt))
+            if cnt > 1000:
+                raise Exception("After 1000 re_generates still not success, giving up.")
             # update position
             for i in range(num_agents):
                 if update_agents[i] == 1:
@@ -171,8 +175,6 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             re_generate = False
             for i in range(num_agents):
                 valid_movements = []
-                if rail.is_dead_end(agents_position[i]):
-                    print("   dead_end", agents_position[i])
                 for direction in range(4):
                     position = agents_position[i]
                     moves = rail.get_transitions(position[0], position[1], direction)
@@ -183,22 +185,18 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                 valid_starting_directions = []
                 for m in valid_movements:
                     new_position = get_new_position(agents_position[i], m[1])
-                    if m[0] not in valid_starting_directions and rail.check_path_exists(new_position, m[0],
+                    if m[0] not in valid_starting_directions and rail.check_path_exists(new_position, m[1],
                                                                                         agents_target[i]):
                         valid_starting_directions.append(m[0])
 
                 if len(valid_starting_directions) == 0:
                     update_agents[i] = 1
-                    print("reset position for agents:", i, agents_position[i], agents_target[i])
-                    print("   dead_end", rail.is_dead_end(agents_position[i]))
+                    warnings.warn("reset position for agents:", i, agents_position[i], agents_target[i])
                     re_generate = True
                     break
                 else:
                     agents_direction[i] = valid_starting_directions[
                         np.random.choice(len(valid_starting_directions), 1)[0]]
-
-        if re_generate:
-            print("re_generate")
 
         agents_speed = speed_initialization_helper(num_agents, speed_ratio_map)
         return agents_position, agents_direction, agents_target, agents_speed
