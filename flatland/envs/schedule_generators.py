@@ -191,7 +191,7 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
 
                 if len(valid_starting_directions) == 0:
                     update_agents[i] = 1
-                    warnings.warn("reset position for agents:", i, agents_position[i], agents_target[i])
+                    warnings.warn("reset position for agent[{}]: {} -> {}".format(i, agents_position[i], agents_target[i]))
                     re_generate = True
                     break
                 else:
