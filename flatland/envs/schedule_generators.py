@@ -224,16 +224,19 @@ def schedule_from_file(filename) -> ScheduleGenerator:
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
-        data = msgpack.unpackb(load_data, use_list=False)
+        data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
 
         # agents are always reset as not moving
-        agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3], d[4], d[5]) for d in data[b"agents_static"]]
+        agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3], d[4], d[5]) for d in data["agents_static"]]
+
 
         # setup with loaded data
         agents_position = [a.position for a in agents_static]
         agents_direction = [a.direction for a in agents_static]
         agents_target = [a.target for a in agents_static]
-        agents_speed = [a.speed_data[b'speed'] for a in agents_static]
-        return agents_position, agents_direction, agents_target, agents_speed
+        agents_speed = [a.speed_data['speed'] for a in agents_static]
+        agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents_static]
+        return agents_position, agents_direction, agents_target, agents_speed, agents_malfunction
 
     return generator
+
