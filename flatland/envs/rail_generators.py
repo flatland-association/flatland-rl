@@ -573,14 +573,15 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             x_positions = np.linspace(node_radius, height - node_radius, nodes_per_row, dtype=int)
             y_positions = np.linspace(node_radius, width - node_radius, nodes_per_col, dtype=int)
 
-        fraction = 0
-        city_fraction = num_cities / tot_num_node
-        step = np.gcd(num_intersections, num_cities) / tot_num_node
+            fraction = 0
+            city_fraction = num_cities / tot_num_node
+            step = np.gcd(num_intersections, num_cities) / tot_num_node
+
         for node_idx in range(num_cities + num_intersections):
             to_close = True
             tries = 0
 
-            fraction = (fraction + step) % 1.
+
             if not realistic_mode:
                 while to_close:
                     x_tmp = node_radius + np.random.randint(height - node_radius)
@@ -608,13 +609,13 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                         warnings.warn("Could not set nodes, please change initial parameters!!!!")
                         break
             else:
+                fraction = (fraction + step) % 1.
                 x_tmp = x_positions[node_idx % nodes_per_row]
                 y_tmp = y_positions[node_idx // nodes_per_row]
                 if len(city_positions) < num_cities and fraction < city_fraction:
                     city_positions.append((x_tmp, y_tmp))
                 else:
                     intersection_positions.append((x_tmp, y_tmp))
-        print(len(city_positions))
         node_positions = city_positions + intersection_positions
 
         # Chose node connection
@@ -634,13 +635,13 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             available_nodes_full = np.delete(available_nodes_full, delete_idx, 0)
 
             # Priority city to intersection connections
-            if current_node < num_cities and len(available_intersections) > 0:
+            if False and current_node < num_cities and len(available_intersections) > 0:
                 available_nodes = available_intersections
                 delete_idx = np.where(available_cities == current_node)
                 available_cities = np.delete(available_cities, delete_idx, 0)
 
             # Priority intersection to city connections
-            elif current_node >= num_cities and len(available_cities) > 0:
+            elif False and current_node >= num_cities and len(available_cities) > 0:
                 available_nodes = available_cities
                 delete_idx = np.where(available_intersections == current_node)
                 available_intersections = np.delete(available_intersections, delete_idx, 0)
