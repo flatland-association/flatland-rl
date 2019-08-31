@@ -194,7 +194,8 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
 
                 if len(valid_starting_directions) == 0:
                     update_agents[i] = 1
-                    warnings.warn("reset position for agent[{}]: {} -> {}".format(i, agents_position[i], agents_target[i]))
+                    warnings.warn(
+                        "reset position for agent[{}]: {} -> {}".format(i, agents_position[i], agents_target[i]))
                     re_generate = True
                     break
                 else:
@@ -229,7 +230,6 @@ def schedule_from_file(filename) -> ScheduleGenerator:
         # agents are always reset as not moving
         agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3], d[4], d[5]) for d in data["agents_static"]]
 
-
         # setup with loaded data
         agents_position = [a.position for a in agents_static]
         agents_direction = [a.direction for a in agents_static]
@@ -239,4 +239,3 @@ def schedule_from_file(filename) -> ScheduleGenerator:
         return agents_position, agents_direction, agents_target, agents_speed, agents_malfunction
 
     return generator
-

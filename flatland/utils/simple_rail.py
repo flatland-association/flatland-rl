@@ -81,6 +81,7 @@ def make_simple_rail2() -> Tuple[GridTransitionMap, np.array]:
     rail.grid = rail_map
     return rail, rail_map
 
+
 def make_simple_rail_unconnected() -> Tuple[GridTransitionMap, np.array]:
     # We instantiate a very simple rail network on a 7x10 grid:
     # Note that that cells have invalid RailEnvTransitions!
@@ -107,9 +108,9 @@ def make_simple_rail_unconnected() -> Tuple[GridTransitionMap, np.array]:
     simple_switch_east_west_south = transitions.rotate_transition(simple_switch_north_left, 270)
     rail_map = np.array(
         [[empty] * 3 + [dead_end_from_south] + [empty] * 6] +
-        [[empty] * 3 + [vertical_straight] + [empty] * 6]  +
-        [[empty] * 3 + [dead_end_from_north] + [empty] * 6]  +
-        [[dead_end_from_east] + [horizontal_straight]  * 5 + [simple_switch_east_west_south] +
+        [[empty] * 3 + [vertical_straight] + [empty] * 6] +
+        [[empty] * 3 + [dead_end_from_north] + [empty] * 6] +
+        [[dead_end_from_east] + [horizontal_straight] * 5 + [simple_switch_east_west_south] +
          [horizontal_straight] * 2 + [dead_end_from_west]] +
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)

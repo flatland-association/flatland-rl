@@ -581,7 +581,6 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             to_close = True
             tries = 0
 
-
             if not realistic_mode:
                 while to_close:
                     x_tmp = node_radius + np.random.randint(height - node_radius)

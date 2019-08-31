@@ -116,18 +116,18 @@ def test_path_exists(rendering=False):
     check_path(
         env,
         rail,
-        (1,3),  # east dead-end
+        (1, 3),  # east dead-end
         2,  # south
-        (3,3),  # north dead-end
+        (3, 3),  # north dead-end
         True
     )
 
     check_path(
         env,
         rail,
-        (1,3),  # east dead-end
+        (1, 3),  # east dead-end
         0,  # north
-        (3,3),  # north dead-end
+        (3, 3),  # north dead-end
         True
     )
 

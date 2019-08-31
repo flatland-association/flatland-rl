@@ -254,13 +254,11 @@ class FlatlandRemoteClient(object):
 if __name__ == "__main__":
     remote_client = FlatlandRemoteClient()
 
-
     def my_controller(obs, _env):
         _action = {}
         for _idx, _ in enumerate(_env.agents):
             _action[_idx] = np.random.randint(0, 5)
         return _action
-
 
     my_observation_builder = TreeObsForRailEnv(max_depth=3,
                                                predictor=ShortestPathPredictorForRailEnv())
