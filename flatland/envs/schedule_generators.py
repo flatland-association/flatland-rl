@@ -60,7 +60,10 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         train_stations = hints['train_stations']
         agent_start_targets_nodes = hints['agent_start_targets_nodes']
-        num_agents = hints['num_agents']
+        max_num_agents = hints['num_agents']
+        if num_agents > max_num_agents:
+            num_agents = max_num_agents
+            warnings.warn("Too many agents! Changes number of agents.")
         # Place agents and targets within available train stations
         agents_position = []
         agents_target = []
