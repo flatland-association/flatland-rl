@@ -11,9 +11,9 @@ from importlib_resources import path
 
 import flatland.utils.rendertools as rt
 import images.test
-from flatland.envs.generators import empty_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import empty_rail_generator
 
 
 def checkFrozenImage(oRT, sFileImage, resave=False):

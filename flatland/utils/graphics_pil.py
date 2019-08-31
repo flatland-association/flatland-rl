@@ -4,7 +4,7 @@ import time
 import tkinter as tk
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageTk  # , ImageFont
+from PIL import Image, ImageDraw, ImageTk, ImageFont
 from numpy import array
 from pkg_resources import resource_string as resource_bytes
 
@@ -41,7 +41,7 @@ class PILGL(GraphicsLayer):
     SELECTED_AGENT_LAYER = 4
     SELECTED_TARGET_LAYER = 5
 
-    def __init__(self, width, height, jupyter=False):
+    def __init__(self, width, height, jupyter=False, screen_width=800, screen_height=600):
         self.yxBase = (0, 0)
         self.linewidth = 4
         self.n_agent_colors = 1  # overridden in loadAgent
@@ -52,13 +52,13 @@ class PILGL(GraphicsLayer):
         self.background_grid = np.zeros(shape=(self.width, self.height))
 
         if jupyter is False:
-            # NOTE: Currently removed the dependency on 
-            #       screeninfo. We have to find an alternate 
+            # NOTE: Currently removed the dependency on
+            #       screeninfo. We have to find an alternate
             #       way to compute the screen width and height
-            #       In the meantime, we are harcoding the 800x600 
+            #       In the meantime, we are harcoding the 800x600
             #       assumption
-            self.screen_width = 800
-            self.screen_height = 600
+            self.screen_width = screen_width
+            self.screen_height = screen_height
             w = (self.screen_width - self.width - 10) / (self.width + 1 + self.linewidth)
             h = (self.screen_height - self.height - 10) / (self.height + 1 + self.linewidth)
             self.nPixCell = int(max(1, np.ceil(min(w, h))))
@@ -90,6 +90,8 @@ class PILGL(GraphicsLayer):
         self.old_background_image = (None, None, None)
         self.create_layers()
 
+        self.font = ImageFont.load_default()
+
     def build_background_map(self, dTargets):
         x = self.old_background_image
         rebuild = False
@@ -114,7 +116,7 @@ class PILGL(GraphicsLayer):
                     for rc in dTargets:
                         r = rc[1]
                         c = rc[0]
-                        d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)))
+                        d = int(np.floor(np.sqrt((x - r) ** 2 + (y - c) ** 2)) / 0.5)
                         distance = min(d, distance)
                     self.background_grid[x][y] = distance
 
@@ -167,8 +169,14 @@ class PILGL(GraphicsLayer):
         # quit but not destroy!
         self.__class__.window.quit()
 
-    def text(self, *args, **kwargs):
-        pass
+    def text(self, xPx, yPx, strText, layer=RAIL_LAYER):
+        xyPixLeftTop = (xPx, yPx)
+        self.draws[layer].text(xyPixLeftTop, strText, font=self.font, fill=(0, 0, 0, 255))
+
+    def text_rowcol(self, rcTopLeft, strText, layer=AGENT_LAYER):
+        print("Text:", "rc:", rcTopLeft, "text:", strText, "layer:", layer)
+        xyPixLeftTop = tuple((array(rcTopLeft) * self.nPixCell)[[1, 0]])
+        self.text(*xyPixLeftTop, strText, layer)
 
     def prettify(self, *args, **kwargs):
         pass
@@ -263,9 +271,9 @@ class PILGL(GraphicsLayer):
 
 
 class PILSVG(PILGL):
-    def __init__(self, width, height, jupyter=False):
+    def __init__(self, width, height, jupyter=False, screen_width=800, screen_height=600):
         oSuper = super()
-        oSuper.__init__(width, height, jupyter)
+        oSuper.__init__(width, height, jupyter, screen_width, screen_height)
 
         self.lwAgents = []
         self.agents_prev = []
@@ -444,7 +452,7 @@ class PILSVG(PILGL):
 
         for transition, file in file_directory.items():
 
-            # Translate the ascii transition description in the format  "NE WS" to the 
+            # Translate the ascii transition description in the format  "NE WS" to the
             # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
             transition_16_bit = ["0"] * 16
             for sTran in transition.split(" "):
@@ -492,13 +500,17 @@ class PILSVG(PILGL):
                                           False)[0]
         self.draw_image_row_col(colored_rail, (row, col), layer=PILGL.PREDICTION_PATH_LAYER)
 
-    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None):
+    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None,
+                    show_debug=True):
+
         if binary_trans in self.pil_rail:
             pil_track = self.pil_rail[binary_trans]
             if target is not None:
                 target_img = self.station_colors[target % len(self.station_colors)]
                 target_img = Image.alpha_composite(pil_track, target_img)
                 self.draw_image_row_col(target_img, (row, col), layer=PILGL.TARGET_LAYER)
+                if show_debug:
+                    self.text_rowcol((row + 0.8, col + 0.0), strText=str(target), layer=PILGL.TARGET_LAYER)
 
             if binary_trans == 0:
                 if self.background_grid[col][row] <= 4:
@@ -579,7 +591,7 @@ class PILSVG(PILGL):
                 for color_idx, pil_zug_3 in enumerate(pils):
                     self.pil_zug[(in_direction_2, out_direction_2, color_idx)] = pils[color_idx]
 
-    def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected):
+    def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected, show_debug=False):
         delta_dir = (out_direction - in_direction) % 4
         color_idx = agent_idx % self.n_agent_colors
         # when flipping direction at a dead end, use the "out_direction" direction.
@@ -592,6 +604,10 @@ class PILSVG(PILGL):
             bg_svg = self.pil_from_svg_file("svg", "Selected_Agent.svg")
             self.clear_layer(PILGL.SELECTED_AGENT_LAYER, 0)
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
+
+        if show_debug:
+            print("Call text:")
+            self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
 
     def set_cell_occupied(self, agent_idx, row, col):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]

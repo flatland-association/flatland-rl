@@ -1,9 +1,11 @@
 import numpy as np
 
-from flatland.envs.generators import complex_rail_generator
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import complex_rail_generator
+from flatland.envs.schedule_generators import complex_schedule_generator
 
 np.random.seed(1)
+
 
 # Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
 # Training on simple small tasks is the best way to get familiar with the environment
@@ -46,6 +48,7 @@ def test_multi_speed_init():
                   height=50,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999,
                                                         seed=0),
+                  schedule_generator=complex_schedule_generator(),
                   number_of_agents=5)
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
     agent = RandomAgent(218, 4)
@@ -66,7 +69,7 @@ def test_multi_speed_init():
     # Run episode
     for step in range(100):
 
-        # Chose an action for each agent in the environment
+        # Choose an action for each agent in the environment
         for a in range(env.get_num_agents()):
             action = agent.act(0)
             action_dict.update({a: action})
@@ -75,12 +78,11 @@ def test_multi_speed_init():
             assert old_pos[a] == env.agents[a].position
 
         # Environment step which returns the observations for all agents, their corresponding
-        # reward and whether their are done
+        # reward and whether they are done
         _, _, _, _ = env.step(action_dict)
 
         # Update old position whenever an agent was allowed to move
         for i_agent in range(env.get_num_agents()):
             if (step + 1) % (i_agent + 1) == 0:
-                print(step, i_agent, env.agents[a].position)
-
+                print(step, i_agent, env.agents[i_agent].position)
                 old_pos[i_agent] = env.agents[i_agent].position

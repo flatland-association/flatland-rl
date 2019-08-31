@@ -5,10 +5,11 @@ import numpy as np
 
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_utils import coordinate_to_position
-from flatland.envs.generators import random_rail_generator, complex_rail_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import random_rail_generator, complex_rail_generator
+from flatland.envs.schedule_generators import complex_schedule_generator
 from flatland.utils.rendertools import RenderTool
 
 random.seed(100)
@@ -20,6 +21,7 @@ class SimpleObs(ObservationBuilder):
     Simplest observation builder. The object returns observation vectors with 5 identical components,
     all equal to the ID of the respective agent.
     """
+
     def __init__(self):
         self.observation_space = [5]
 
@@ -53,6 +55,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
     E.g., if taking the Left branch (if available) is the shortest route to the agent's target, the observation vector
     will be [1, 0, 0].
     """
+
     def __init__(self):
         super().__init__(max_depth=0)
         self.observation_space = [3]
@@ -90,6 +93,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
 env = RailEnv(width=7,
               height=7,
               rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=5, max_dist=99999, seed=0),
+              schedule_generator=complex_schedule_generator(),
               number_of_agents=1,
               obs_builder_object=SingleAgentNavigationObs())
 
@@ -97,8 +101,8 @@ obs = env.reset()
 env_renderer = RenderTool(env, gl="PILSVG")
 env_renderer.render_env(show=True, frames=True, show_observations=True)
 for step in range(100):
-    action = np.argmax(obs[0])+1
-    obs, all_rewards, done, _ = env.step({0:action})
+    action = np.argmax(obs[0]) + 1
+    obs, all_rewards, done, _ = env.step({0: action})
     print("Rewards: ", all_rewards, "  [done=", done, "]")
     env_renderer.render_env(show=True, frames=True, show_observations=True)
     time.sleep(0.1)
@@ -200,6 +204,7 @@ CustomObsBuilder = ObservePredictions(CustomPredictor)
 env = RailEnv(width=10,
               height=10,
               rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
+              schedule_generator=complex_schedule_generator(),
               number_of_agents=3,
               obs_builder_object=CustomObsBuilder)
 

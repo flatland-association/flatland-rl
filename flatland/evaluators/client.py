@@ -1,18 +1,21 @@
-import redis
+import hashlib
 import json
+import logging
 import os
-import numpy as np
+import random
+import time
+
 import msgpack
 import msgpack_numpy as m
-import hashlib
-import random
-from flatland.evaluators import messages
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.generators import rail_from_file
+import numpy as np
+import redis
+
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-import time
-import logging
+from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import rail_from_file
+from flatland.evaluators import messages
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 m.patch()
@@ -22,8 +25,8 @@ def are_dicts_equal(d1, d2):
     """ return True if all keys and values are the same """
     return all(k in d2 and d1[k] == d2[k]
                for k in d1) \
-        and all(k in d1 and d1[k] == d2[k]
-               for k in d2)
+           and all(k in d1 and d1[k] == d2[k]
+                   for k in d2)
 
 
 class FlatlandRemoteClient(object):
@@ -41,39 +44,40 @@ class FlatlandRemoteClient(object):
         where `service_id` is either provided as an `env` variable or is
         instantiated to "flatland_rl_redis_service_id"
     """
-    def __init__(self,  
-                remote_host='127.0.0.1',
-                remote_port=6379,
-                remote_db=0,
-                remote_password=None,
-                test_envs_root=None,
-                verbose=False):
+
+    def __init__(self,
+                 remote_host='127.0.0.1',
+                 remote_port=6379,
+                 remote_db=0,
+                 remote_password=None,
+                 test_envs_root=None,
+                 verbose=False):
 
         self.remote_host = remote_host
         self.remote_port = remote_port
         self.remote_db = remote_db
         self.remote_password = remote_password
         self.redis_pool = redis.ConnectionPool(
-                                host=remote_host,
-                                port=remote_port,
-                                db=remote_db,
-                                password=remote_password)
+            host=remote_host,
+            port=remote_port,
+            db=remote_db,
+            password=remote_password)
         self.namespace = "flatland-rl"
         self.service_id = os.getenv(
-                            'FLATLAND_RL_SERVICE_ID',
-                            'FLATLAND_RL_SERVICE_ID'
-                            )
+            'FLATLAND_RL_SERVICE_ID',
+            'FLATLAND_RL_SERVICE_ID'
+        )
         self.command_channel = "{}::{}::commands".format(
-                                    self.namespace,
-                                    self.service_id
-                                )
+            self.namespace,
+            self.service_id
+        )
         if test_envs_root:
             self.test_envs_root = test_envs_root
         else:
             self.test_envs_root = os.getenv(
-                                'AICROWD_TESTS_FOLDER',
-                                '/tmp/flatland_envs'
-                                )
+                'AICROWD_TESTS_FOLDER',
+                '/tmp/flatland_envs'
+            )
 
         self.verbose = verbose
 
@@ -85,12 +89,12 @@ class FlatlandRemoteClient(object):
 
     def _generate_response_channel(self):
         random_hash = hashlib.md5(
-                        "{}".format(
-                                random.randint(0, 10**10)
-                            ).encode('utf-8')).hexdigest()
+            "{}".format(
+                random.randint(0, 10 ** 10)
+            ).encode('utf-8')).hexdigest()
         response_channel = "{}::{}::response::{}".format(self.namespace,
-                                                        self.service_id,
-                                                        random_hash)
+                                                         self.service_id,
+                                                         random_hash)
         return response_channel
 
     def _blocking_request(self, _request):
@@ -124,9 +128,9 @@ class FlatlandRemoteClient(object):
         if self.verbose:
             print("Response : ", _response)
         _response = msgpack.unpackb(
-                        _response, 
-                        object_hook=m.decode, 
-                        encoding="utf8")
+            _response,
+            object_hook=m.decode,
+            encoding="utf8")
         if _response['type'] == messages.FLATLAND_RL.ERROR:
             raise Exception(str(_response["payload"]))
         else:
@@ -181,7 +185,7 @@ class FlatlandRemoteClient(object):
                 "Did you remember to set the AICROWD_TESTS_FOLDER environment variable "
                 "to point to the location of the Tests folder ? \n"
                 "We are currently looking at `{}` for the tests".format(self.test_envs_root)
-                )
+            )
         print("Current env path : ", test_env_file_path)
         self.env = RailEnv(
             width=1,
@@ -207,7 +211,7 @@ class FlatlandRemoteClient(object):
         _request['payload']['action'] = action
         _response = self._blocking_request(_request)
         _payload = _response['payload']
-        
+
         # remote_observation = _payload['observation']
         remote_reward = _payload['reward']
         remote_done = _payload['done']
@@ -216,14 +220,14 @@ class FlatlandRemoteClient(object):
         # Replicate the action in the local env
         local_observation, local_reward, local_done, local_info = \
             self.env.step(action)
-        
+
         print(local_reward)
         if not are_dicts_equal(remote_reward, local_reward):
             raise Exception("local and remote `reward` are diverging")
             print(remote_reward, local_reward)
         if not are_dicts_equal(remote_done, local_done):
             raise Exception("local and remote `done` are diverging")
-        
+
         # Return local_observation instead of remote_observation
         # as the remote_observation is build using a dummy observation
         # builder
@@ -250,21 +254,23 @@ class FlatlandRemoteClient(object):
 if __name__ == "__main__":
     remote_client = FlatlandRemoteClient()
 
+
     def my_controller(obs, _env):
         _action = {}
         for _idx, _ in enumerate(_env.agents):
             _action[_idx] = np.random.randint(0, 5)
         return _action
-    
+
+
     my_observation_builder = TreeObsForRailEnv(max_depth=3,
-                                predictor=ShortestPathPredictorForRailEnv())
+                                               predictor=ShortestPathPredictorForRailEnv())
 
     episode = 0
     obs = True
-    while obs:        
+    while obs:
         obs = remote_client.env_create(
-                    obs_builder_object=my_observation_builder
-                    )
+            obs_builder_object=my_observation_builder
+        )
         if not obs:
             """
             The remote env returns False as the first obs
@@ -285,7 +291,5 @@ if __name__ == "__main__":
                 print("Reward : ", sum(list(all_rewards.values())))
                 break
 
-    print("Evaluation Complete...")       
+    print("Evaluation Complete...")
     print(remote_client.submit())
-
-

@@ -7,6 +7,7 @@ from importlib_resources import path
 from numpy import array
 
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transitions import Transitions
 
 
@@ -298,6 +299,76 @@ class GridTransitionMap(TransitionMap):
         self.height = new_height
         self.grid = new_grid
 
+    def is_dead_end(self, rcPos):
+        """
+        Check if the cell is a dead-end.
+
+        Parameters
+        ----------
+        rcPos: Tuple[int,int]
+            tuple(row, column) with grid coordinate
+        Returns
+        -------
+        boolean
+            True if and only if the cell is a dead-end.
+        """
+        nbits = 0
+        tmp = self.get_full_transitions(rcPos[0], rcPos[1])
+        while tmp > 0:
+            nbits += (tmp & 1)
+            tmp = tmp >> 1
+        return nbits == 1
+
+    def is_simple_turn(self, rcPos):
+        """
+        Check if the cell is a left/right simple turn
+
+        Parameters
+        ----------
+            rcPos: Tuple[int,int]
+                tuple(row, column) with grid coordinate
+        Returns
+        -------
+            boolean
+                True if and only if the cell is a left/right simple turn.
+        """
+        tmp = self.get_full_transitions(rcPos[0], rcPos[1])
+
+        def is_simple_turn(trans):
+            all_simple_turns = set()
+            for trans in [int('0100000000000010', 2),  # Case 1b (8)  - simple turn right
+                          int('0001001000000000', 2)  # Case 1c (9)  - simple turn left]:
+                          ]:
+                for _ in range(3):
+                    trans = self.transitions.rotate_transition(trans, rotation=90)
+                    all_simple_turns.add(trans)
+            return trans in all_simple_turns
+
+        return is_simple_turn(tmp)
+
+    def check_path_exists(self, start, direction, end):
+        # print("_path_exists({},{},{}".format(start, direction, end))
+        # BFS - Check if a path exists between the 2 nodes
+
+        visited = set()
+        stack = [(start, direction)]
+        while stack:
+            node = stack.pop()
+            node_position = node[0]
+            node_direction = node[1]
+            if node_position[0] == end[0] and node_position[1] == end[1]:
+                return True
+            if node not in visited:
+                visited.add(node)
+
+                moves = self.get_transitions(node_position[0], node_position[1], node_direction)
+                for move_index in range(4):
+                    if moves[move_index]:
+                        stack.append((get_new_position(node_position, move_index),
+                                      move_index))
+
+        return False
+
     def cell_neighbours_valid(self, rcPos, check_this_cell=False):
         """
         Check validity of cell at rcPos = tuple(row, column)
@@ -350,4 +421,124 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
+    def fix_neighbours(self, rcPos, check_this_cell=False):
+        """
+        Check validity of cell at rcPos = tuple(row, column)
+        Checks that:
+        - surrounding cells have inbound transitions for all the
+            outbound transitions of this cell.
+
+        These are NOT checked - see transition.is_valid:
+        - all transitions have the mirror transitions (N->E <=> W->S)
+        - Reverse transitions (N -> S) only exist for a dead-end
+        - a cell contains either no dead-ends or exactly one
+
+        Returns: True (valid) or False (invalid)
+        """
+        cell_transition = self.grid[tuple(rcPos)]
+
+        if check_this_cell:
+            if not self.transitions.is_valid(cell_transition):
+                return False
+
+        gDir2dRC = self.transitions.gDir2dRC  # [[-1,0] = N, [0,1]=E, etc]
+        grcPos = array(rcPos)
+        grcMax = self.grid.shape
+
+        binTrans = self.get_full_transitions(*rcPos)  # 16bit integer - all trans in/out
+        lnBinTrans = array([binTrans >> 8, binTrans & 0xff], dtype=np.uint8)  # 2 x uint8
+        g2binTrans = np.unpackbits(lnBinTrans).reshape(4, 4)  # 4x4 x uint8 binary(0,1)
+        gDirOut = g2binTrans.any(axis=0)  # outbound directions as boolean array (4)
+        giDirOut = np.argwhere(gDirOut)[:, 0]  # valid outbound directions as array of int
+
+        # loop over available outbound directions (indices) for rcPos
+        for iDirOut in giDirOut:
+            gdRC = gDir2dRC[iDirOut]  # row,col increment
+            gPos2 = grcPos + gdRC  # next cell in that direction
+
+            # Check the adjacent cell is within bounds
+            # if not, then this transition is invalid!
+            if np.any(gPos2 < 0):
+                return False
+            if np.any(gPos2 >= grcMax):
+                return False
+
+            # Get the transitions out of gPos2, using iDirOut as the inbound direction
+            # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
+            t4Trans2 = self.get_transitions(*gPos2, iDirOut)
+            if any(t4Trans2):
+                continue
+            else:
+                self.set_transition((gPos2[0], gPos2[1], iDirOut), mirror(iDirOut), 1)
+                return False
+
+        return True
+
+    def fix_transitions(self, rcPos):
+        """
+        Fixes broken transitions
+        """
+        gDir2dRC = self.transitions.gDir2dRC  # [[-1,0] = N, [0,1]=E, etc]
+        grcPos = array(rcPos)
+        grcMax = self.grid.shape
+
+        # loop over available outbound directions (indices) for rcPos
+        self.set_transitions(rcPos, 0)
+
+        incoming_connections = np.zeros(4)
+        for iDirOut in np.arange(4):
+            gdRC = gDir2dRC[iDirOut]  # row,col increment
+            gPos2 = grcPos + gdRC  # next cell in that direction
+
+            # Check the adjacent cell is within bounds
+            # if not, then ignore it for the count of incoming connections
+            if np.any(gPos2 < 0):
+                continue
+            if np.any(gPos2 >= grcMax):
+                continue
+
+            # Get the transitions out of gPos2, using iDirOut as the inbound direction
+            # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
+            connected = 0
+            for orientation in range(4):
+                connected += self.get_transition((gPos2[0], gPos2[1], orientation), mirror(iDirOut))
+            if connected > 0:
+                incoming_connections[iDirOut] = 1
+
+        number_of_incoming = np.sum(incoming_connections)
+        # Only one incoming direction --> Straight line
+        if number_of_incoming == 1:
+            for direction in range(4):
+                if incoming_connections[direction] > 0:
+                    self.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
+        # Connect all incoming connections
+        if number_of_incoming == 2:
+            connect_directions = np.argwhere(incoming_connections > 0)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1])), connect_directions[0], 1)
+
+        # Find feasible connection fro three entries
+        if number_of_incoming == 3:
+            hole = np.argwhere(incoming_connections < 1)[0][0]
+            connect_directions = [(hole + 1) % 4, (hole + 2) % 4, (hole + 3) % 4]
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[2], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1])), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[2])), connect_directions[0], 1)
+        # Make a cross
+        if number_of_incoming == 4:
+            connect_directions = np.arange(4)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[0]), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[0]), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[1]), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[1]), connect_directions[1], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[2]), connect_directions[2], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[2]), connect_directions[3], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[3]), connect_directions[2], 1)
+            self.set_transition((rcPos[0], rcPos[1], connect_directions[3]), connect_directions[3], 1)
+        return True
+
+
+def mirror(dir):
+    return (dir + 2) % 4
 # TODO: improvement override __getitem__ and __setitem__ (cell contents, not transitions?)
