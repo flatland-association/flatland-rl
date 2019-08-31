@@ -13,33 +13,35 @@ np.random.seed(1)
 # Training on simple small tasks is the best way to get familiar with the environment
 
 # Use a the malfunction generator to break agents from time to time
-stochastic_data = {'prop_malfunction': 0.0,  # Percentage of defective agents
+stochastic_data = {'prop_malfunction': 0.1,  # Percentage of defective agents
                    'malfunction_rate': 30,  # Rate of malfunction occurence
                    'min_duration': 3,  # Minimal duration of malfunction
-                   'max_duration': 10  # Max duration of malfunction
+                   'max_duration': 20  # Max duration of malfunction
                    }
 
+# Custom observation builder
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 
-speed_ration_map = {1.: 0.1,  # Fast passenger train
-                    0.5: 0.2,  # Slow commuter train
-                    0.25: 0.2,  # Fast freight train
-                    0.125: 0.5}  # Slow freight train
+# Different agent types (trains) with different speeds.
+speed_ration_map = {1.: 0.25,  # Fast passenger train
+                    1. / 2.: 0.25,  # Slow commuter train
+                    1. / 3.: 0.25,  # Fast freight train
+                    1. / 4.: 0.25}  # Slow freight train
 
 env = RailEnv(width=50,
               height=50,
               rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map (where train stations are)
-                                                   num_intersections=5,  # Number of intersections (no start / target)
-                                                   num_trainstations=15,  # Number of possible start/targets on map
+                                                   num_intersections=15,  # Number of intersections (no start / target)
+                                                   num_trainstations=50,  # Number of possible start/targets on map
                                                    min_node_dist=3,  # Minimal distance of nodes
                                                    node_radius=3,  # Proximity of stations to city center
-                                                   num_neighb=2,  # Number of connections to other cities/intersections
+                                                   num_neighb=3,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
                                                    realistic_mode=True,
                                                    enhance_intersection=True
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=5,
+              number_of_agents=20,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=TreeObservation)
 
