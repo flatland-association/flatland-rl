@@ -227,12 +227,13 @@ def schedule_from_file(filename) -> ScheduleGenerator:
         data = msgpack.unpackb(load_data, use_list=False)
 
         # agents are always reset as not moving
-        agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data[b"agents_static"]]
+        agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3], d[4], d[5]) for d in data[b"agents_static"]]
+
         # setup with loaded data
         agents_position = [a.position for a in agents_static]
         agents_direction = [a.direction for a in agents_static]
         agents_target = [a.target for a in agents_static]
-
-        return agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
+        agents_speed = [a.speed_data[b'speed'] for a in agents_static]
+        return agents_position, agents_direction, agents_target, agents_speed
 
     return generator

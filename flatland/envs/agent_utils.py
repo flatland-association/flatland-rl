@@ -44,7 +44,7 @@ class EnvAgentStatic(object):
         malfunction_datas = []
         for i in range(len(positions)):
             malfunction_datas.append({'malfunction': 0,
-                                 'malfunction_rate': 0,
+                                      'malfunction_rate': 0,
                                       'next_malfunction': 0,
                                       'nr_malfunctions': 0})
 
