@@ -261,7 +261,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         Missing values in present node are filled in with +inf (truncated).
 
 
-        In case of the root node, the values are [0, 0, 0, 0, distance from agent to target].
+        In case of the root node, the values are [0, 0, 0, 0, distance from agent to target, own malfunction, own speed]
         In case the target node is reached, the values are [0, 0, 0, 0, 0].
         """
 
