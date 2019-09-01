@@ -61,6 +61,8 @@ stochastic_data = {'prop_malfunction': 0.1,  # Percentage of defective agents
 ```
 The duration of a malfunction is uniformly drawn from the intervall `[min_duration,max_duration0]` and the occurance of malfunctions follows a point poisson process with mean rate `malfunctin_rate`.
 
+**!!!!IMPORTANT!!!!** Once a malfunction duration has finished, the agent will **automatically** resume movement. This is important because otherwise it can get stuck in fractional positions and your code might forget to restart the agent at the first possible time. Therefore this has been automated. You can however stop the agent again at the next cell. This might in rare occasions lead to unexpected behavior, we are looking into this and will push a fix soon.
+
 ## Changes since Flatland 0.2
 
 Please list all major changes since the last version:
