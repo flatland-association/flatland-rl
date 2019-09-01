@@ -253,10 +253,6 @@ class TreeObsForRailEnv(ObservationBuilder):
 
             min_fractional speed otherwise
 
-
-
-
-
         Missing/padding nodes are filled in with -inf (truncated).
         Missing values in present node are filled in with +inf (truncated).
 
