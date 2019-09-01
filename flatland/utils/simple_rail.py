@@ -103,7 +103,7 @@ def make_simple_rail_unconnected() -> Tuple[GridTransitionMap, np.array]:
     vertical_straight = cells[1]
     horizontal_straight = transitions.rotate_transition(vertical_straight, 90)
     simple_switch_north_left = cells[2]
-    simple_switch_north_right = cells[10]
+    # simple_switch_north_right = cells[10]
     # simple_switch_east_west_north = transitions.rotate_transition(simple_switch_north_right, 270)
     simple_switch_east_west_south = transitions.rotate_transition(simple_switch_north_left, 270)
     rail_map = np.array(
