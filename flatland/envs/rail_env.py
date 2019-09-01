@@ -266,7 +266,8 @@ class RailEnv(Environment):
 
     def _agent_malfunction(self, agent):
         # Decrease counter for next event
-        agent.malfunction_data['next_malfunction'] -= 1
+        if agent.malfunction_data['malfunction_rate'] > 0:
+            agent.malfunction_data['next_malfunction'] -= 1
 
         # Only agents that have a positive rate for malfunctions and are not currently broken are considered
         if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction']:
@@ -328,15 +329,22 @@ class RailEnv(Environment):
 
             # The train is broken
             if agent.malfunction_data['malfunction'] > 0:
-                agent.malfunction_data['malfunction'] -= 1
+                # Last step of malfunction --> Agent starts moving again
+                if agent.malfunction_data['malfunction'] < 2:
+                    agent.malfunction_data['malfunction'] -= 1
+                    self.agents[i_agent].moving = True
+                    action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
-                # Broken agents are stopped
-                self.rewards_dict[i_agent] += step_penalty  # * agent.speed_data['speed']
-                self.agents[i_agent].moving = False
-                action_dict[i_agent] = RailEnvActions.DO_NOTHING
+                else:
+                    agent.malfunction_data['malfunction'] -= 1
 
-                # Nothing left to do with broken agent
-                continue
+                    # Broken agents are stopped
+                    self.rewards_dict[i_agent] += step_penalty  # * agent.speed_data['speed']
+                    self.agents[i_agent].moving = False
+                    action_dict[i_agent] = RailEnvActions.DO_NOTHING
+
+                    # Nothing left to do with broken agent
+                    continue
 
             if action_dict[i_agent] < 0 or action_dict[i_agent] > len(RailEnvActions):
                 print('ERROR: illegal action=', action_dict[i_agent],
