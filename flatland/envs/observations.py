@@ -670,6 +670,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
 
 class LocalObsForRailEnv(ObservationBuilder):
     """
+    !!!!!!WARNING!!! THIS IS DEPRACTED AND NOT UPDATED TO FLATLAND 2.0!!!!!
     Gives a local observation of the rail environment around the agent.
     The observation is composed of the following elements:
 
