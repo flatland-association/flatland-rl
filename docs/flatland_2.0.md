@@ -1,8 +1,4 @@
-# Flatland 2.0 Introduction (Beta)
-
-Curious to see whats coming in **Flat**land 2.0? Have a look at the current development and report bugs and give us feedback on the environment.
-
-**WARNING**: Flatlnadn 2.0 Beta is under current development and not stable nor final. We would however like you to play with the code and help us get the best possible environment for multi-agent control problems.
+# Flatland 2.0 Introduction
 
 ## Whats new
 
@@ -145,6 +141,16 @@ The different speed profiles can be generated using the `schedule_generator`. Th
 
 Where you can actually chose as many different speeds as you like. Keep in mind that the *fastest speed* is 1 and all slower speeds must be between 1 and 0. For the submission scoring you can assume that there will be no more than 5 speed profiles.
 
+## Actions and observation with different speed levels
+
+Because the different speeds are implemented as fractions the agents ability to perform actions has been updated. We **do not allow actions to change within the cell **. This means that each agent can only chose an action to be taken when entering a cell. This action is then executed when a step to the next cell is valid. For example
+
+- Agent enters switch and choses to deviate left. Agent fractional speed is 1/4 and thus the agent will take for time steps to complete its journey through the cell. On the 4th time step the agent will leave the cell deviating left as chosen at the entry of the cell.
+    - All actions chosen by the agent during its travels within a cell are ignored
+    - Agents can make observations at any time step. Make sure to dscard observations without any information.
+- The environment checks if agent is allowed to move to next cell only at the time of the switch to the next cell
+
+
 ## Example code
 
-To see allt he changes in action you can just run the `flatland_example_2_0.py` file in the examples folder. The file can be found [here](https://gitlab.aicrowd.com/flatland/flatland/blob/147_new_level_generator/examples/flatland_2_0_example.py)
+To see all the changes in action you can just run the `flatland_example_2_0.py` file in the examples folder. The file can be found [here](https://gitlab.aicrowd.com/flatland/flatland/blob/147_new_level_generator/examples/flatland_2_0_example.py).
