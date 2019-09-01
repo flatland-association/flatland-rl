@@ -675,9 +675,11 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
 
         # Place train stations close to the node
         # We currently place them uniformly distirbuted among all cities
+        built_num_trainstation = 0
+        train_stations = [[] for i in range(num_cities)]
+
         if num_cities > 1:
-            train_stations = [[] for i in range(num_cities)]
-            built_num_trainstation = 0
+
             for station in range(num_trainstations):
                 spot_found = True
                 trainstation_node = int(station / num_trainstations * num_cities)

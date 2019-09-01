@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from flatland.envs.observations import TreeObsForRailEnv
@@ -30,18 +32,18 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
 
 env = RailEnv(width=50,
               height=50,
-              rail_generator=sparse_rail_generator(num_cities=20,  # Number of cities in map (where train stations are)
-                                                   num_intersections=5,  # Number of intersections (no start / target)
-                                                   num_trainstations=15,  # Number of possible start/targets on map
+              rail_generator=sparse_rail_generator(num_cities=25,  # Number of cities in map (where train stations are)
+                                                   num_intersections=0,  # Number of intersections (no start / target)
+                                                   num_trainstations=0,  # Number of possible start/targets on map
                                                    min_node_dist=3,  # Minimal distance of nodes
                                                    node_radius=2,  # Proximity of stations to city center
-                                                   num_neighb=4,  # Number of connections to other cities/intersections
+                                                   num_neighb=3,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
                                                    realistic_mode=True,
-                                                   enhance_intersection=True
+                                                   enhance_intersection=False
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=10,
+              number_of_agents=0,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=TreeObservation)
 
@@ -112,6 +114,7 @@ for step in range(500):
     next_obs, all_rewards, done, _ = env.step(action_dict)
     env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
     frame_step += 1
+    time.sleep(10.1)
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
         agent.step((obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a]))

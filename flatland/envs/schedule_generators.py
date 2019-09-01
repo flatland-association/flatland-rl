@@ -110,7 +110,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
         else:
             speeds = [1.0] * len(agents_position)
 
-        return agents_position, agents_direction, agents_target, speeds
+        return agents_position, agents_direction, agents_target, speeds, None
 
     return generator
 
@@ -203,7 +203,7 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                         np.random.choice(len(valid_starting_directions), 1)[0]]
 
         agents_speed = speed_initialization_helper(num_agents, speed_ratio_map)
-        return agents_position, agents_direction, agents_target, agents_speed
+        return agents_position, agents_direction, agents_target, agents_speed, None
 
     return generator
 
