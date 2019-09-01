@@ -219,7 +219,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         #1: if own target lies on the explored branch the current distance from the agent in number of cells is stored.
 
-        #2: if another agents target is detected the distance in number of cells from the agents current locaiton
+        #2: if another agents target is detected the distance in number of cells from the agents current location
             is stored
 
         #3: if another agent is detected the distance in number of cells from current agent position is stored.
@@ -246,6 +246,15 @@ class TreeObsForRailEnv(ObservationBuilder):
                 (possible future use: number of other agents in other direction in this branch, ie. number of conflicts)
             0 = no agent present other direction than myself
 
+        #10: malfunctioning/blokcing agents
+            n = number of time steps the oberved agent remains blocked
+
+        #11: slowest observed speed of an agent in same direction
+            1 if no agent is observed
+
+            min_fractional speed otherwise
+
+
 
 
 
@@ -260,6 +269,10 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Update local lookup table for all agents' positions
         self.location_has_agent = {tuple(agent.position): 1 for agent in self.env.agents}
         self.location_has_agent_direction = {tuple(agent.position): agent.direction for agent in self.env.agents}
+        self.location_has_agent_speed = {tuple(agent.position): agent.speed_data['speed'] for agent in self.env.agents}
+        self.location_has_agent_malfunction = {tuple(agent.position): agent.malfunction_data['malfunction'] for agent in
+                                               self.env.agents}
+
         if handle > len(self.env.agents):
             print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
         agent = self.env.agents[handle]  # TODO: handle being treated as index
@@ -332,7 +345,8 @@ class TreeObsForRailEnv(ObservationBuilder):
         unusable_switch = np.inf
         other_agent_same_direction = 0
         other_agent_opposite_direction = 0
-
+        malfunctioning_agent = 0
+        min_fractional_speed = 1.
         num_steps = 1
         while exploring:
             # #############################
@@ -347,6 +361,10 @@ class TreeObsForRailEnv(ObservationBuilder):
                     # Cummulate the number of agents on branch with same direction
                     other_agent_same_direction += 1
 
+                    # Check fractional speed of agents
+                    current_fractional_speed = self.location_has_agent_speed[position]
+                    if current_fractional_speed < min_fractional_speed:
+                        min_fractional_speed = current_fractional_speed
                 if self.location_has_agent_direction[position] != direction:
                     # Cummulate the number of agents on branch with other direction
                     other_agent_opposite_direction += 1
