@@ -527,7 +527,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
 
 
 def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2, min_node_dist=20, node_radius=2,
-                          num_neighb=3, realistic_mode=False, enhance_intersection=False, seed=0):
+                          num_neighb=3, grid_mode=False, enhance_intersection=False, seed=0):
     """
     This is a level generator which generates complex sparse rail configurations
 
@@ -537,7 +537,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
     :param min_node_dist: Minimal distance between nodes
     :param node_radius: Proximity of trainstations to center of city node
     :param num_neighb: Number of neighbouring nodes each node connects to
-    :param realistic_mode: True -> NOdes evenly distirbuted in env, False-> Random distribution of nodes
+    :param grid_mode: True -> NOdes evenly distirbuted in env, False-> Random distribution of nodes
     :param enhance_intersection: True -> Extra rail elements added at intersections
     :param seed: Random Seed
     :return:
@@ -565,7 +565,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         intersection_positions = []
 
         # Evenly distribute cities and intersections
-        if realistic_mode:
+        if grid_mode:
             tot_num_node = num_intersections + num_cities
             nodes_ratio = height / width
             nodes_per_row = int(np.ceil(np.sqrt(tot_num_node * nodes_ratio)))
@@ -581,7 +581,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             to_close = True
             tries = 0
 
-            if not realistic_mode:
+            if not grid_mode:
                 while to_close:
                     x_tmp = node_radius + np.random.randint(height - node_radius)
                     y_tmp = node_radius + np.random.randint(width - node_radius)

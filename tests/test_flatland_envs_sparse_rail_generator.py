@@ -15,7 +15,7 @@ def test_sparse_rail_generator():
                                                        node_radius=3,  # Proximity of stations to city center
                                                        num_neighb=3,  # Number of connections to other cities
                                                        seed=5,  # Random seed
-                                                       realistic_mode=False  # Ordered distribution of nodes
+                                                       grid_mode=False  # Ordered distribution of nodes
                                                        ),
                   schedule_generator=sparse_schedule_generator(),
                   number_of_agents=10,

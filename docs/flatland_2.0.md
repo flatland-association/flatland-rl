@@ -43,7 +43,7 @@ RailGenerator = sparse_rail_generator(num_cities=10,                        # Nu
                                                    node_radius=3,           # Proximity of stations to city center
                                                    num_neighb=3,            # Number of connections to other cities
                                                    seed=5,                  # Random seed
-                                                   realistic_mode=True      # Ordered distribution of nodes
+                                                   grid_mode=True      # Ordered distribution of nodes
                                                    )
 
 # Build the environment
@@ -57,22 +57,22 @@ env = RailEnv(width=50,
 
 You can tune the following parameters:
 
-- `num_citeis` is the number of cities on a map. Cities are the only nodes that can host start and end points for agent tasks (Train stations). Here you have to be carefull that the number is not too high as all the cities have to fit on the map. When `realistic_mode=False` you have to be carefull when chosing `min_node_dist` because leves will fails if not all cities (and intersections) can be placed with at least `min_node_dist` between them.
+- `num_citeis` is the number of cities on a map. Cities are the only nodes that can host start and end points for agent tasks (Train stations). Here you have to be carefull that the number is not too high as all the cities have to fit on the map. When `grid_mode=False` you have to be carefull when chosing `min_node_dist` because leves will fails if not all cities (and intersections) can be placed with at least `min_node_dist` between them.
 - `num_intersections` is the number of nodes that don't hold any trainstations. They are also the first priority that a city connects to. We use these to allow for sparse connections between cities.
 - `num_trainstations`defines the *Total* number of trainstations in the network. This also sets the max number of allowed agents in the environment. This is also a delicate parameter as there is only a limitid amount of space available around nodes and thus if the number is too high the level generation will fail. *Important*: Only the number of agents provided to the environment will actually produce active train stations. The others will just be present as dead-ends (See figures below).
-- `min_node_dist`is only used if `realistic_mode=False` and represents the minimal distance between two nodes.
+- `min_node_dist`is only used if `grid_mode=False` and represents the minimal distance between two nodes.
 - `node_radius` defines the extent of a city. Each trainstation is placed at a distance to the closes city node that is smaller or equal to this number.
 - `num_neighb`defines the number of neighbouring nodes that connect to each other. Thus this changes the connectivity and thus the amount of alternative routes in the network.
 - `seed` is used to initialize the random generator
-- `realistic_mode` currently only changes how the nodes are distirbuted. If it is set to `True` the nodes are evenly spreas out and cities and intersecitons are set between each other.
+- `grid_mode` currently only changes how the nodes are distirbuted. If it is set to `True` the nodes are evenly spreas out and cities and intersecitons are set between each other.
 
 If you run into any bugs with sets of parameters please let us know.
 
-Here is a network with `realistic_mode=False` and the parameters from above.
+Here is a network with `grid_mode=False` and the parameters from above.
 
 ![sparse_random](https://i.imgur.com/Xg7nifF.png)
 
-and here with `realistic_mode=True`
+and here with `grid_mode=True`
 
 ![sparse_ordered](https://i.imgur.com/jyA7Pt4.png)
 
