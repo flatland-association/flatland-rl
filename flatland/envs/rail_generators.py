@@ -714,7 +714,8 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                                                 (station_x, station_y))
                 # Check if connection was made
                 if len(connection) == 0:
-                    train_stations[trainstation_node].pop(-1)
+                    if len(train_stations) > 0:
+                        train_stations[trainstation_node].pop(-1)
                 else:
                     built_num_trainstation += 1
 
