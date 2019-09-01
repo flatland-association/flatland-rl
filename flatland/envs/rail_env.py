@@ -329,7 +329,7 @@ class RailEnv(Environment):
 
             # The train is broken
             if agent.malfunction_data['malfunction'] > 0:
-                # Last step of malfunction --> Agent starts moving again
+                # Last step of malfunction --> Agent starts moving again after getting fixed
                 if agent.malfunction_data['malfunction'] < 2:
                     agent.malfunction_data['malfunction'] -= 1
                     self.agents[i_agent].moving = True
