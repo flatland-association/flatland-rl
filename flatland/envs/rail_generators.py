@@ -563,7 +563,6 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         node_positions = []
         city_positions = []
         intersection_positions = []
-
         # Evenly distribute cities and intersections
         if grid_mode:
             tot_num_node = num_intersections + num_cities
@@ -572,10 +571,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             nodes_per_col = int(np.ceil(tot_num_node / nodes_per_row))
             x_positions = np.linspace(node_radius, height - node_radius, nodes_per_row, dtype=int)
             y_positions = np.linspace(node_radius, width - node_radius, nodes_per_col, dtype=int)
-
-            fraction = 0
-            city_fraction = num_cities / tot_num_node
-            step = np.gcd(num_intersections, num_cities) / tot_num_node
+            city_idx = np.random.choice(np.arange(tot_num_node), num_cities)
 
         for node_idx in range(num_cities + num_intersections):
             to_close = True
@@ -608,10 +604,9 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                         warnings.warn("Could not set nodes, please change initial parameters!!!!")
                         break
             else:
-                fraction = (fraction + step) % 1.
                 x_tmp = x_positions[node_idx % nodes_per_row]
                 y_tmp = y_positions[node_idx // nodes_per_row]
-                if len(city_positions) < num_cities and fraction < city_fraction:
+                if node_idx in city_idx:
                     city_positions.append((x_tmp, y_tmp))
                 else:
                     intersection_positions.append((x_tmp, y_tmp))

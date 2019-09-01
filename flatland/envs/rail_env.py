@@ -266,7 +266,8 @@ class RailEnv(Environment):
 
     def _agent_malfunction(self, agent):
         # Decrease counter for next event
-        agent.malfunction_data['next_malfunction'] -= 1
+        if agent.malfunction_data['malfunction_rate'] > 0:
+            agent.malfunction_data['next_malfunction'] -= 1
 
         # Only agents that have a positive rate for malfunctions and are not currently broken are considered
         if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction']:
@@ -294,7 +295,8 @@ class RailEnv(Environment):
 
         alpha = 1.0
         beta = 1.0
-
+        # Epsilon to avoid rounding errors
+        epsilon = 0.01
         invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
         step_penalty = -1 * alpha
         global_reward = 1 * beta
@@ -310,7 +312,6 @@ class RailEnv(Environment):
             self.rewards_dict = {i: r + global_reward for i, r in self.rewards_dict.items()}
             return self._get_observations(), self.rewards_dict, self.dones, {}
 
-        # for i in range(len(self.agents_handles)):
         for i_agent in range(self.get_num_agents()):
             agent = self.agents[i_agent]
             agent.old_direction = agent.direction
@@ -328,15 +329,22 @@ class RailEnv(Environment):
 
             # The train is broken
             if agent.malfunction_data['malfunction'] > 0:
-                agent.malfunction_data['malfunction'] -= 1
+                # Last step of malfunction --> Agent starts moving again after getting fixed
+                if agent.malfunction_data['malfunction'] < 2:
+                    agent.malfunction_data['malfunction'] -= 1
+                    self.agents[i_agent].moving = True
+                    action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
-                # Broken agents are stopped
-                self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
-                self.agents[i_agent].moving = False
-                action_dict[i_agent] = RailEnvActions.DO_NOTHING
+                else:
+                    agent.malfunction_data['malfunction'] -= 1
 
-                # Nothing left to do with broken agent
-                continue
+                    # Broken agents are stopped
+                    self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
+                    self.agents[i_agent].moving = False
+                    action_dict[i_agent] = RailEnvActions.DO_NOTHING
+
+                    # Nothing left to do with broken agent
+                    continue
 
             if action_dict[i_agent] < 0 or action_dict[i_agent] > len(RailEnvActions):
                 print('ERROR: illegal action=', action_dict[i_agent],
@@ -350,7 +358,8 @@ class RailEnv(Environment):
                 # Keep moving
                 action = RailEnvActions.MOVE_FORWARD
 
-            if action == RailEnvActions.STOP_MOVING and agent.moving and agent.speed_data['position_fraction'] == 0.:
+            if action == RailEnvActions.STOP_MOVING and agent.moving and agent.speed_data[
+                'position_fraction'] <= epsilon:
                 # Only allow halting an agent on entering new cells.
                 agent.moving = False
                 self.rewards_dict[i_agent] += stop_penalty
@@ -372,7 +381,7 @@ class RailEnv(Environment):
 
             # If the agent can make an action
             action_selected = False
-            if agent.speed_data['position_fraction'] == 0.:
+            if agent.speed_data['position_fraction'] <= epsilon:
                 if action != RailEnvActions.DO_NOTHING and action != RailEnvActions.STOP_MOVING:
                     cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
                         self._check_action_on_agent(action, agent)

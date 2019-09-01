@@ -13,7 +13,7 @@ np.random.seed(1)
 # Training on simple small tasks is the best way to get familiar with the environment
 
 # Use a the malfunction generator to break agents from time to time
-stochastic_data = {'prop_malfunction': 0.1,  # Percentage of defective agents
+stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
                    'malfunction_rate': 30,  # Rate of malfunction occurence
                    'min_duration': 3,  # Minimal duration of malfunction
                    'max_duration': 20  # Max duration of malfunction
@@ -31,11 +31,11 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
 env = RailEnv(width=50,
               height=50,
               rail_generator=sparse_rail_generator(num_cities=25,  # Number of cities in map (where train stations are)
-                                                   num_intersections=0,  # Number of intersections (no start / target)
+                                                   num_intersections=10,  # Number of intersections (no start / target)
                                                    num_trainstations=50,  # Number of possible start/targets on map
                                                    min_node_dist=3,  # Minimal distance of nodes
-                                                   node_radius=2,  # Proximity of stations to city center
-                                                   num_neighb=3,  # Number of connections to other cities/intersections
+                                                   node_radius=4,  # Proximity of stations to city center
+                                                   num_neighb=4,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
                                                    grid_mode=True,
                                                    enhance_intersection=False
