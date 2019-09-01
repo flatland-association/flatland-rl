@@ -102,27 +102,36 @@ You can introduce stochasticity by simply creating the env as follows:
 
 ```
 # Use a the malfunction generator to break agents from time to time
-stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
+stochastic_data = {'prop_malfunction': 0.1,  # Percentage of defective agents
                    'malfunction_rate': 30,  # Rate of malfunction occurence
                    'min_duration': 3,  # Minimal duration of malfunction
-                   'max_duration': 10  # Max duration of malfunction
+                   'max_duration': 20  # Max duration of malfunction
                    }
 
-# Use your own observation builder
+# Custom observation builder
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 
-env = RailEnv(width=10,
-              height=10,
-              rail_generator=sparse_rail_generator(num_cities=3,  # Number of cities in map (where train stations are)
-                                                   num_intersections=1,  # Number of interesections (no start / target)
-                                                   num_trainstations=8,  # Number of possible start/targets on map
+# Different agent types (trains) with different speeds.
+speed_ration_map = {1.: 0.25,  # Fast passenger train
+                    1. / 2.: 0.25,  # Fast freight train
+                    1. / 3.: 0.25,  # Slow commuter train
+                    1. / 4.: 0.25}  # Slow freight train
+
+env = RailEnv(width=50,
+              height=50,
+              rail_generator=sparse_rail_generator(num_cities=20,  # Number of cities in map (where train stations are)
+                                                   num_intersections=5,  # Number of intersections (no start / target)
+                                                   num_trainstations=15,  # Number of possible start/targets on map
                                                    min_node_dist=3,  # Minimal distance of nodes
                                                    node_radius=2,  # Proximity of stations to city center
-                                                   num_neighb=2,  # Number of connections to other cities/intersections
+                                                   num_neighb=4,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
+                                                   grid_mode=True,
+                                                   enhance_intersection=True
                                                    ),
-              number_of_agents=5,
-              stochastic_data=stochastic_data,  # Malfunction generator data
+              schedule_generator=sparse_schedule_generator(speed_ration_map),
+              number_of_agents=10,
+              stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=TreeObservation)
 ```
 
@@ -132,16 +141,7 @@ You will quickly realize that this will lead to unforseen difficulties which mea
 
 One of the main contributions to the complexity of railway network operations stems from the fact that all trains travel at different speeds while sharing a very limited railway network. In **Flat**land 2.0 this feature will be enabled as well and will lead to much more complex configurations. This is still in early *beta* and even though stock observation builders and predictors do support these changes we have not yet fully tested them. Here we count on your support :).
 
-Currently you have to initialize the speed profiles manually after the environment has been reset (*Attention*: this is currently being worked on and will change soon). In order for agent to have differnt speed profiles you can include this after your `env.reset()` call:
-
-```
-# Reset environment and get initial observations for all agents
-    obs = env.reset()
-    for idx in range(env.get_num_agents()):
-        tmp_agent = env.agents[idx]
-        speed = (idx % 4) + 1
-        tmp_agent.speed_data["speed"] = 1 / speed
-```
+The different speed profiles can be generated using the `schedule_generator`. The schedule 
 
 Where you can actually chose as many different speeds as you like. Keep in mind that the *fastest speed* is 1 and all slower speeds must be between 1 and 0. For the submission scoring you can assume that there will be no more than 5 speed profiles.
 
