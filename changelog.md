@@ -1,6 +1,13 @@
 # Keeping track of major Flatland Changes
 
 ## Changes since Flatland 0.3
+### Changes in stock predictors
+The stock `ShortestPathPredictorForRailEnv` now respects the different agent speeds and updates their prediction accordingly.
+
+### Changes in stock observation biulders
+- `TreeObsForRailEnv` now has **11** features!
+    - 10th feature now indicates if a malfunctioning agent has been detected and how long the malfunction will still be present
+    - 11th feautre now indicates the minimal observed fractional speed of agents traveling in the same direction
 ### Changes in level generation
 - Separation of `schedule_generator` from `rail_generator`: 
   - Renaming of `flatland/envs/generators.py` to `flatland/envs/rail_generators.py`
