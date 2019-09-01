@@ -339,7 +339,7 @@ class RailEnv(Environment):
                     agent.malfunction_data['malfunction'] -= 1
 
                     # Broken agents are stopped
-                    self.rewards_dict[i_agent] += step_penalty  # * agent.speed_data['speed']
+                    self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                     self.agents[i_agent].moving = False
                     action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
@@ -404,14 +404,14 @@ class RailEnv(Environment):
                             else:
                                 # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
                                 self.rewards_dict[i_agent] += invalid_action_penalty
-                                self.rewards_dict[i_agent] += step_penalty  #* agent.speed_data['speed']
+                                self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                                 self.rewards_dict[i_agent] += stop_penalty
                                 agent.moving = False
                                 continue
                         else:
                             # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
                             self.rewards_dict[i_agent] += invalid_action_penalty
-                            self.rewards_dict[i_agent] += step_penalty  #* agent.speed_data['speed']
+                            self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                             self.rewards_dict[i_agent] += stop_penalty
                             agent.moving = False
                             continue
