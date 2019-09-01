@@ -37,7 +37,7 @@ ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGe
 
 ### Multi Speed
 
-- Different agent speeds are introduced. Agents now travel at a max speed which is afraction of 1.
+- Different agent speeds are introduced. Agents now travel at a max speed which is a fraction. Meaning that they only advance parts within a cell and need several steps to move to the next cell.
     - Fastest speed is 1. At this speed an agent can move to a new cell at each time step t.
     - Slower speeds are smaller than one. At each time step an agent moves the fraction of its speed forward within a cell. It only changes cell when it's fractional position is greater or equal to 1.
     - Multi-speed introduces the challenge of ordering the trains correctly when traveling in the same direction.
@@ -45,7 +45,7 @@ ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGe
 
 To set up multiple speeds you have to modify the `agent.speed_data` within your `schedule_generator`. See [this file](https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/schedule_generators.py#L59) for a good example.
 
-**ATTENTION** multi speed means that the agents actions are not registered on every time step. Only at new cell entry can new actions be chosen! Beware to respect this with your controller as actions are only important at the specific time steps!
+**ATTENTION** multi speed means that the agents actions are not registered on every time step. Only at new cell entry can new actions be chosen! Beware to respect this with your controller as actions are only important at the specific time steps! This is shown as an example in the [navigation training](https://gitlab.aicrowd.com/flatland/baselines/blob/master/torch_training/training_navigation.py#L163)
 
 ### Stochastic events
 Just like in real-worl transportation systems we introduced stochastic events to disturb normal traffic flow. Currently we implemented a malfunction process that stops agents at random time intervalls for a random time of duration.
@@ -67,6 +67,7 @@ The duration of a malfunction is uniformly drawn from the intervall `[min_durati
 ## Baselines repository
 
 The baselines repository is not yet fully updated to handle multi-speed and stochastic events. Training needs to be modified to omitt all states inbetween the states where an agent can chose an action. Simple navigation training is already up to date. See [here](https://gitlab.aicrowd.com/flatland/baselines/blob/master/torch_training/training_navigation.py) for more details.
+
 ## Changes since Flatland 0.2
 
 Please list all major changes since the last version:
