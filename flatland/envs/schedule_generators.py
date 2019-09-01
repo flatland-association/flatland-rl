@@ -229,7 +229,6 @@ def schedule_from_file(filename) -> ScheduleGenerator:
 
         # agents are always reset as not moving
         if len(data['agents_static'][0]) > 5:
-            print(len(data['agents_static'][0]))
             agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3], d[4], d[5]) for d in data["agents_static"]]
         else:
             agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3]) for d in data["agents_static"]]
