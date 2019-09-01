@@ -30,10 +30,11 @@ class EnvAgentStatic(object):
             lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0})))
 
     @classmethod
-    def from_lists(cls, positions, directions, targets, speeds=None):
+    def from_lists(cls, positions, directions, targets, speeds=None, malfunction_rates=None):
         """ Create a list of EnvAgentStatics from lists of positions, directions and targets
         """
         speed_datas = []
+
         for i in range(len(positions)):
             speed_datas.append({'position_fraction': 0.0,
                                 'speed': speeds[i] if speeds is not None else 1.0,
@@ -41,10 +42,11 @@ class EnvAgentStatic(object):
 
         # TODO: on initialization, all agents are re-set as non-broken. Perhaps it may be desirable to set
         # some as broken?
+
         malfunction_datas = []
         for i in range(len(positions)):
             malfunction_datas.append({'malfunction': 0,
-                                 'malfunction_rate': 0,
+                                      'malfunction_rate': malfunction_rates[i] if malfunction_rates is not None else 0.,
                                       'next_malfunction': 0,
                                       'nr_malfunctions': 0})
 

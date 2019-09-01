@@ -573,9 +573,14 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             x_positions = np.linspace(node_radius, height - node_radius, nodes_per_row, dtype=int)
             y_positions = np.linspace(node_radius, width - node_radius, nodes_per_col, dtype=int)
 
+            fraction = 0
+            city_fraction = num_cities / tot_num_node
+            step = np.gcd(num_intersections, num_cities) / tot_num_node
+
         for node_idx in range(num_cities + num_intersections):
             to_close = True
             tries = 0
+
             if not realistic_mode:
                 while to_close:
                     x_tmp = node_radius + np.random.randint(height - node_radius)
@@ -587,7 +592,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                         if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
                             to_close = True
 
-                    # CHeck distance to intersections
+                    # Check distance to intersections
                     for node_pos in intersection_positions:
                         if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
                             to_close = True
@@ -603,13 +608,13 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                         warnings.warn("Could not set nodes, please change initial parameters!!!!")
                         break
             else:
+                fraction = (fraction + step) % 1.
                 x_tmp = x_positions[node_idx % nodes_per_row]
                 y_tmp = y_positions[node_idx // nodes_per_row]
-                if len(city_positions) < num_cities and (node_idx % (tot_num_node // num_cities)) == 0:
+                if len(city_positions) < num_cities and fraction < city_fraction:
                     city_positions.append((x_tmp, y_tmp))
                 else:
                     intersection_positions.append((x_tmp, y_tmp))
-
         node_positions = city_positions + intersection_positions
 
         # Chose node connection
@@ -627,14 +632,15 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             current_node = node_stack[0]
             delete_idx = np.where(available_nodes_full == current_node)
             available_nodes_full = np.delete(available_nodes_full, delete_idx, 0)
+
             # Priority city to intersection connections
-            if current_node < num_cities and len(available_intersections) > 0:
+            if False and current_node < num_cities and len(available_intersections) > 0:
                 available_nodes = available_intersections
                 delete_idx = np.where(available_cities == current_node)
                 available_cities = np.delete(available_cities, delete_idx, 0)
 
             # Priority intersection to city connections
-            elif current_node >= num_cities and len(available_cities) > 0:
+            elif False and current_node >= num_cities and len(available_cities) > 0:
                 available_nodes = available_cities
                 delete_idx = np.where(available_intersections == current_node)
                 available_intersections = np.delete(available_intersections, delete_idx, 0)
@@ -672,8 +678,8 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         if num_cities > 1:
             train_stations = [[] for i in range(num_cities)]
             built_num_trainstation = 0
-            spot_found = True
             for station in range(num_trainstations):
+                spot_found = True
                 trainstation_node = int(station / num_trainstations * num_cities)
 
                 station_x = np.clip(node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
@@ -699,7 +705,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                     if tries > 100:
                         warnings.warn("Could not set trainstations, please change initial parameters!!!!")
                         spot_found = False
-                        break
+
                 if spot_found:
                     train_stations[trainstation_node].append((station_x, station_y))
 
@@ -708,12 +714,12 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                                                 (station_x, station_y))
                 # Check if connection was made
                 if len(connection) == 0:
-                    train_stations[trainstation_node].pop(-1)
+                    if len(train_stations[trainstation_node]) > 0:
+                        train_stations[trainstation_node].pop(-1)
                 else:
                     built_num_trainstation += 1
 
         # Adjust the number of agents if you could not build enough trainstations
-
         if num_agents > built_num_trainstation:
             num_agents = built_num_trainstation
             warnings.warn("sparse_rail_generator: num_agents > nr_start_goal, changing num_agents")

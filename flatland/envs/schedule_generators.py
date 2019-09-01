@@ -60,7 +60,10 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         train_stations = hints['train_stations']
         agent_start_targets_nodes = hints['agent_start_targets_nodes']
-        num_agents = hints['num_agents']
+        max_num_agents = hints['num_agents']
+        if num_agents > max_num_agents:
+            num_agents = max_num_agents
+            warnings.warn("Too many agents! Changes number of agents.")
         # Place agents and targets within available train stations
         agents_position = []
         agents_target = []
@@ -191,7 +194,8 @@ def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
 
                 if len(valid_starting_directions) == 0:
                     update_agents[i] = 1
-                    warnings.warn("reset position for agent[{}]: {} -> {}".format(i, agents_position[i], agents_target[i]))
+                    warnings.warn(
+                        "reset position for agent[{}]: {} -> {}".format(i, agents_position[i], agents_target[i]))
                     re_generate = True
                     break
                 else:
@@ -221,15 +225,25 @@ def schedule_from_file(filename) -> ScheduleGenerator:
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
         with open(filename, "rb") as file_in:
             load_data = file_in.read()
-        data = msgpack.unpackb(load_data, use_list=False)
+        data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
 
         # agents are always reset as not moving
-        agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data[b"agents_static"]]
+        if len(data['agents_static'][0]) > 5:
+            print(len(data['agents_static'][0]))
+            agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3], d[4], d[5]) for d in data["agents_static"]]
+        else:
+            agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3]) for d in data["agents_static"]]
+
         # setup with loaded data
         agents_position = [a.position for a in agents_static]
         agents_direction = [a.direction for a in agents_static]
         agents_target = [a.target for a in agents_static]
-
-        return agents_position, agents_direction, agents_target, [1.0] * len(agents_position)
+        if len(data['agents_static'][0]) > 5:
+            agents_speed = [a.speed_data['speed'] for a in agents_static]
+            agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents_static]
+        else:
+            agents_speed = None
+            agents_malfunction = None
+        return agents_position, agents_direction, agents_target, agents_speed, agents_malfunction
 
     return generator

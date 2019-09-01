@@ -238,7 +238,6 @@ class RailEnv(Environment):
                 agents_hints = optionals['agents_hints']
             self.agents_static = EnvAgentStatic.from_lists(
                 *self.schedule_generator(self.rail, self.get_num_agents(), hints=agents_hints))
-
         self.restart_agents()
 
         for i_agent in range(self.get_num_agents()):
@@ -248,7 +247,6 @@ class RailEnv(Environment):
             if np.random.random() < self.proportion_malfunctioning_trains:
                 agent.malfunction_data['malfunction_rate'] = self.mean_malfunction_rate
 
-            agent.speed_data['position_fraction'] = 0.0
             agent.malfunction_data['malfunction'] = 0
 
             self._agent_malfunction(agent)
@@ -510,11 +508,9 @@ class RailEnv(Environment):
         grid_data = self.rail.grid.tolist()
         agent_static_data = [agent.to_list() for agent in self.agents_static]
         agent_data = [agent.to_list() for agent in self.agents]
-
-        msgpack.packb(grid_data)
-        msgpack.packb(agent_data)
-        msgpack.packb(agent_static_data)
-
+        msgpack.packb(grid_data, use_bin_type=True)
+        msgpack.packb(agent_data, use_bin_type=True)
+        msgpack.packb(agent_static_data, use_bin_type=True)
         msg_data = {
             "grid": grid_data,
             "agents_static": agent_static_data,
@@ -528,11 +524,11 @@ class RailEnv(Environment):
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def set_full_state_msg(self, msg_data):
-        data = msgpack.unpackb(msg_data, use_list=False)
-        self.rail.grid = np.array(data[b"grid"])
+        data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
+        self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data[b"agents_static"]]
-        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4]) for d in data[b"agents"]]
+        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data["agents_static"]]
+        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]) for d in data["agents"]]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -540,13 +536,13 @@ class RailEnv(Environment):
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
 
     def set_full_state_dist_msg(self, msg_data):
-        data = msgpack.unpackb(msg_data, use_list=False)
-        self.rail.grid = np.array(data[b"grid"])
+        data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
+        self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data[b"agents_static"]]
-        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4]) for d in data[b"agents"]]
-        if hasattr(self.obs_builder, 'distance_map') and b"distance_maps" in data.keys():
-            self.obs_builder.distance_map = data[b"distance_maps"]
+        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data["agents_static"]]
+        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]) for d in data["agents"]]
+        if hasattr(self.obs_builder, 'distance_map') and "distance_maps" in data.keys():
+            self.obs_builder.distance_map = data["distance_maps"]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -557,13 +553,12 @@ class RailEnv(Environment):
         grid_data = self.rail.grid.tolist()
         agent_static_data = [agent.to_list() for agent in self.agents_static]
         agent_data = [agent.to_list() for agent in self.agents]
-
-        msgpack.packb(grid_data)
-        msgpack.packb(agent_data)
-        msgpack.packb(agent_static_data)
+        msgpack.packb(grid_data, use_bin_type=True)
+        msgpack.packb(agent_data, use_bin_type=True)
+        msgpack.packb(agent_static_data, use_bin_type=True)
         if hasattr(self.obs_builder, 'distance_map'):
             distance_map_data = self.obs_builder.distance_map
-            msgpack.packb(distance_map_data)
+            msgpack.packb(distance_map_data, use_bin_type=True)
             msg_data = {
                 "grid": grid_data,
                 "agents_static": agent_static_data,
