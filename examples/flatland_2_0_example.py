@@ -1,5 +1,3 @@
-import time
-
 import numpy as np
 
 from flatland.envs.observations import TreeObsForRailEnv
@@ -114,7 +112,6 @@ for step in range(500):
     next_obs, all_rewards, done, _ = env.step(action_dict)
     env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
     frame_step += 1
-    time.sleep(10.1)
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
         agent.step((obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a]))
