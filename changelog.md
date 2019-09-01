@@ -45,6 +45,7 @@ ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGe
 
 To set up multiple speeds you have to modify the `agent.speed_data` within your `schedule_generator`. See [this file](https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/schedule_generators.py#L59) for a good example.
 
+**ATTENTION** multi speed means that the agents actions are not registered on every time step. Only at new cell entry can new actions be chosen! Beware to respect this with your controller as actions are only important at the specific time steps!
 
 ### Stochastic events
 Just like in real-worl transportation systems we introduced stochastic events to disturb normal traffic flow. Currently we implemented a malfunction process that stops agents at random time intervalls for a random time of duration.
