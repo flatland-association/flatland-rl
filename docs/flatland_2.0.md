@@ -77,7 +77,7 @@ If you run into any bugs with sets of parameters please let us know.
 
 Here is a network with `realistic_mode=False` and the parameters from above.
 
-![sparse_random](thttps://i.imgur.com/Xg7nifF.png)
+![sparse_random](https://i.imgur.com/Xg7nifF.png)
 
 and here with `realistic_mode=True`
 
