@@ -90,14 +90,14 @@ This is very common for railway networks where the initial plan usually needs to
 
 We implemted a poisson process to simulate delays by stopping agents at random times for random durations. The parameters necessary for the stochastic events can be provided when creating the environment.
 
-```
 # Use a the malfunction generator to break agents from time to time
-stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
-                   'malfunction_rate': 30,  # Rate of malfunction occurence
-                   'min_duration': 3,  # Minimal duration of malfunction
-                   'max_duration': 10  # Max duration of malfunction
-                   }
-
+```
+stochastic_data = {
+    'prop_malfunction': 0.5,  # Percentage of defective agents
+    'malfunction_rate': 30,  # Rate of malfunction occurence
+    'min_duration': 3,  # Minimal duration of malfunction
+    'max_duration': 10  # Max duration of malfunction
+}
 ```
 
 The parameters are as follows:
@@ -109,12 +109,23 @@ The parameters are as follows:
 You can introduce stochasticity by simply creating the env as follows:
 
 ```
-# Use a the malfunction generator to break agents from time to time
-stochastic_data = {'prop_malfunction': 0.1,  # Percentage of defective agents
-                   'malfunction_rate': 30,  # Rate of malfunction occurence
-                   'min_duration': 3,  # Minimal duration of malfunction
-                   'max_duration': 20  # Max duration of malfunction
-                   }
+env = RailEnv(
+    ...
+    stochastic_data=stochastic_data,  # Malfunction data generator
+    ...    
+)
+```
+In your controller, you can check whether an agent is malfunctioning: 
+```
+obs, rew, done, info = env.step(actions) 
+...
+action_dict = dict()
+for a in range(env.get_num_agents()):
+    if info['malfunction'][a] == 0:
+        action_dict.update({a: ...})
+
+```
+
 
 # Custom observation builder
 tree_observation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
@@ -166,18 +177,18 @@ This action is then executed when a step to the next cell is valid. For example
     - Agents can make observations at any time step. Make sure to discard observations without any information. See this [example](https://gitlab.aicrowd.com/flatland/baselines/blob/master/torch_training/training_navigation.py) for a simple implementation.
 - The environment checks if agent is allowed to move to next cell only at the time of the switch to the next cell
 
-You can check whether an action has an effect in the environment's next step: 
+In your controller, you can check whether an action has an effect in the environment's next step: 
 ```
 obs, rew, done, info = env.step(actions) 
 ...
 action_dict = dict()
 for a in range(env.get_num_agents()):
-    if info['actionable_agents'][a]:
+    if info['entering'][a] && info['malfunction'][a] == 0 &&:
         action_dict.update({a: ...})
 
 ```
-Notice that `info['actionable_agents'][a]` does not mean that the action has an effect: 
-if the next cell is blocked, the action cannot be performed. If the action is valid, it will be performend, though. 
+Notice that `info['entering'][a]` does not mean that the action will have an effect: 
+if the next cell is blocked or the agent is malfunctioning, the action cannot be performed. 
 
 ## Example code
 
