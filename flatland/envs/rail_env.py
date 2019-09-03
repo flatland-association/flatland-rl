@@ -130,7 +130,7 @@ class RailEnv(Environment):
             vectors for each agent.
         max_episode_steps : int or None
 
-        file_name: you can load a pickle file.
+        file_name: you can load a pickle file. from previously saved *.pkl file
 
         """
 
