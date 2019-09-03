@@ -131,6 +131,7 @@ class RailEnv(Environment):
         max_episode_steps : int or None
 
         file_name: you can load a pickle file.
+
         """
 
         self.rail_generator: RailGenerator = rail_generator
