@@ -7,12 +7,12 @@ Flatland
 .. image:: https://gitlab.aicrowd.com/flatland/flatland/badges/master/pipeline.svg
      :target: https://gitlab.aicrowd.com/flatland/flatland/pipelines
      :alt: Test Running
-     
+
 .. image:: https://gitlab.aicrowd.com/flatland/flatland/badges/master/coverage.svg
      :target: https://gitlab.aicrowd.com/flatland/flatland/pipelines
      :alt: Test Coverage
 
-'   
+'
 
 .. image:: https://i.imgur.com/0rnbSLY.gif
   :width: 800
@@ -21,9 +21,9 @@ Flatland
 Flatland is a opensource toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (or ridiculously large !) gridworlds.
 The base environment is a two-dimensional grid in which many agents can be placed, and each agent must solve one or more navigational tasks in the grid world. More details about the environment and the problem statement can be found in the `official docs <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/>`_.
 
-This library was developed by `SBB <https://www.sbb.ch/en/>`_ , `AIcrowd <https://www.aicrowd.com/>`_ and numerous contributors and AIcrowd research fellows from the AIcrowd community. 
+This library was developed by `SBB <https://www.sbb.ch/en/>`_ , `AIcrowd <https://www.aicrowd.com/>`_ and numerous contributors and AIcrowd research fellows from the AIcrowd community.
 
-This library was developed specifically for the `Flatland Challenge <https://www.aicrowd.com/challenges/flatland-challenge>`_ in which we strongly encourage you to take part in. 
+This library was developed specifically for the `Flatland Challenge <https://www.aicrowd.com/challenges/flatland-challenge>`_ in which we strongly encourage you to take part in.
 
 
 **NOTE This document is best viewed in the official documentation site at** `Flatland-RL Docs <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/readme.html>`_
@@ -45,13 +45,13 @@ Quick Start
 
 * Install `Anaconda <https://www.anaconda.com/distribution/>`_ by following the instructions `here <https://www.anaconda.com/distribution/>`_
 * Install the dependencies and the library
- 
+
 .. code-block:: console
 
     $ conda create python=3.6 --name flatland-rl
     $ conda activate flatland-rl
     $ conda install -c conda-forge cairosvg pycairo
-    $ conda install -c anaconda tk  
+    $ conda install -c anaconda tk
     $ pip install flatland-rl
 
 * Test that the installation works
@@ -70,7 +70,8 @@ Basic usage of the RailEnv environment used by the Flatland Challenge
 
     import numpy as np
     import time
-    from flatland.envs.generators import complex_rail_generator
+    from flatland.envs.rail_generators import complex_rail_generator
+    from flatland.envs.schedule_generators import complex_schedule_generator
     from flatland.envs.rail_env import RailEnv
     from flatland.utils.rendertools import RenderTool
 
@@ -84,6 +85,7 @@ Basic usage of the RailEnv environment used by the Flatland Challenge
                                         min_dist=8,
                                         max_dist=99999,
                                         seed=0),
+                schedule_generator=complex_schedule_generator()
                 number_of_agents=NUMBER_OF_AGENTS)
 
     env_renderer = RenderTool(env)
@@ -105,7 +107,7 @@ Basic usage of the RailEnv environment used by the Flatland Challenge
         env_renderer.render_env(show=True, frames=False, show_observations=False)
         time.sleep(0.3)
 
-and **ideally** you should see something along the lines of 
+and **ideally** you should see something along the lines of
 
 .. image:: https://i.imgur.com/VrTQVeM.gif
   :align: center
@@ -118,7 +120,7 @@ Contributions
 Flatland is an opensource project, and we very much value all and any contributions you make towards the project.
 Please follow the `Contribution Guidelines <http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/contributing.html>`_ for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions.
 
-Partners 
+Partners
 ============
 .. image:: https://i.imgur.com/OSCXtde.png
    :target: https://sbb.ch
@@ -142,4 +144,4 @@ Authors
 Acknowledgements
 ====================
 * Vaibhav Agrawal <theinfamouswayne@gmail.com>
-* Anurag Ghosh  
+* Anurag Ghosh
