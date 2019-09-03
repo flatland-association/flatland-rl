@@ -166,6 +166,18 @@ This action is then executed when a step to the next cell is valid. For example
     - Agents can make observations at any time step. Make sure to discard observations without any information. See this [example](https://gitlab.aicrowd.com/flatland/baselines/blob/master/torch_training/training_navigation.py) for a simple implementation.
 - The environment checks if agent is allowed to move to next cell only at the time of the switch to the next cell
 
+You can check whether an action has an effect in the environment's next step: 
+```
+obs, rew, done, info = env.step(actions) 
+...
+action_dict = dict()
+for a in range(env.get_num_agents()):
+    if info['actionable_agents'][a]:
+        action_dict.update({a: ...})
+
+```
+Notice that `info['actionable_agents'][a]` does not mean that the action has an effect: 
+if the next cell is blocked, the action cannot be performed. If the action is valid, it will be performend, though. 
 
 ## Example code
 
