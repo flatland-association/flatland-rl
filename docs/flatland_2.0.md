@@ -202,6 +202,85 @@ for a in range(env.get_num_agents()):
 Notice that `info['entering'][a]` does not mean that the action will have an effect: 
 if the next cell is blocked or the agent is malfunctioning, the action cannot be performed. 
 
+## Rail Generators and Schedule Generators
+The separation between rail generator and schedule generator reflects the organisational separation in the railway domain
+- Infrastructure Manager (IM): is responsible for the layout and maintenance of tracks
+- Railway Undertaking (RU): operates trains on the infrastructure
+Usually, there is a third organisation, which ensures discrimination-free access to the infrastructure for concurrent requests for the infrastructure in a **schedule planning phase**.
+However, in the **Flat**land challenge, we focus on the re-scheduling problem during live operations.
+
+Technically, 
+``` 
+RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Any]]
+RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
+
+AgentPosition = Tuple[int, int]
+ScheduleGeneratorProduct = Tuple[List[AgentPosition], List[AgentPosition], List[AgentPosition], List[float]]
+ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGeneratorProduct]
+```
+
+We can then produce `RailGenerator`s by currying:
+```
+def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2, min_node_dist=20, node_radius=2,
+                          num_neighb=3, grid_mode=False, enhance_intersection=False, seed=0):
+
+    def generator(width, height, num_agents, num_resets=0):
+    
+        # generate the grid and (optionally) some hints for the schedule_generator
+        ...
+         
+        return grid_map, {'agents_hints': {
+            'num_agents': num_agents,
+            'agent_start_targets_nodes': agent_start_targets_nodes,
+            'train_stations': train_stations
+        }}
+
+    return generator
+```
+And, similarly, `ScheduleGenerator`s:
+```
+def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
+        # place agents:
+        # - initial position
+        # - initial direction
+        # - (initial) speed
+        # - malfunction
+        ...
+                
+        return agents_position, agents_direction, agents_target, speeds, agents_malfunction
+
+    return generator
+```
+Notice that the `rail_generator` may pass `agents_hints` to the  `schedule_generator` which the latter may interpret.
+For instance, the way the `sparse_rail_generator` generates the grid, it already determines the agent's goal and target.
+Hence, `rail_generator` and `schedule_generator` have to match if `schedule_generator` presupposes some specific `agents_hints`.
+
+The environment's `reset` takes care of applying the two generators:
+```
+    def __init__(self,
+            ...
+             rail_generator: RailGenerator = random_rail_generator(),
+             schedule_generator: ScheduleGenerator = random_schedule_generator(),
+             ...
+             ):
+        self.rail_generator: RailGenerator = rail_generator
+        self.schedule_generator: ScheduleGenerator = schedule_generator
+        
+    def reset(self, regen_rail=True, replace_agents=True):
+        rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
+
+        ...
+
+        if replace_agents:
+            agents_hints = None
+            if optionals and 'agents_hints' in optionals:
+                agents_hints = optionals['agents_hints']
+            self.agents_static = EnvAgentStatic.from_lists(
+                *self.schedule_generator(self.rail, self.get_num_agents(), hints=agents_hints))
+```
+
+
 ## Example code
 
 To see all the changes in action you can just run the `flatland_example_2_0.py` file in the examples folder. The file can be found [here](https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/flatland_2_0_example.py).
