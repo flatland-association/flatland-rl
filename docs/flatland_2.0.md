@@ -165,6 +165,18 @@ The different speed profiles can be generated using the `schedule_generator`, wh
 Keep in mind that the *fastest speed* is 1 and all slower speeds must be between 1 and 0. 
 For the submission scoring you can assume that there will be no more than 5 speed profiles.
 
+
+ 
+Later versions of **Flat**land might have varying speeds during episodes. Therefore, we return the agent speeds. 
+Notice that we do not guarantee that the speed will be computed at each step, but if not costly we will return it at each step.
+In your controller, you can get the agents' speed from the `info` returned by `step`: 
+```
+obs, rew, done, info = env.step(actions) 
+...
+for a in range(env.get_num_agents()):
+    speed = info['speed'][a]
+```
+
 ## Actions and observation with different speed levels
 
 Because the different speeds are implemented as fractions the agents ability to perform actions has been updated. 
@@ -177,7 +189,7 @@ This action is then executed when a step to the next cell is valid. For example
     - Agents can make observations at any time step. Make sure to discard observations without any information. See this [example](https://gitlab.aicrowd.com/flatland/baselines/blob/master/torch_training/training_navigation.py) for a simple implementation.
 - The environment checks if agent is allowed to move to next cell only at the time of the switch to the next cell
 
-In your controller, you can check whether an action has an effect in the environment's next step: 
+In your controller, you can check whether an agent is entering by checking `info`: 
 ```
 obs, rew, done, info = env.step(actions) 
 ...

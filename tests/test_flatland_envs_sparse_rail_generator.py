@@ -55,24 +55,24 @@ def test_rail_env_entering_info():
                                 obs_builder_object=GlobalObsForRailEnv())
     np.random.seed(0)
     env_only_if_entering = RailEnv(width=50,
-                                     height=50,
-                                     rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
-                                                                          num_intersections=10,
-                                                                          # Number of interesections in map
-                                                                          num_trainstations=50,
-                                                                          # Number of possible start/targets on map
-                                                                          min_node_dist=6,  # Minimal distance of nodes
-                                                                          node_radius=3,
-                                                                          # Proximity of stations to city center
-                                                                          num_neighb=3,
-                                                                          # Number of connections to other cities
-                                                                          seed=5,  # Random seed
-                                                                          grid_mode=False
-                                                                          # Ordered distribution of nodes
-                                                                          ),
-                                     schedule_generator=sparse_schedule_generator(speed_ration_map),
-                                     number_of_agents=10,
-                                     obs_builder_object=GlobalObsForRailEnv())
+                                   height=50,
+                                   rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
+                                                                        num_intersections=10,
+                                                                        # Number of interesections in map
+                                                                        num_trainstations=50,
+                                                                        # Number of possible start/targets on map
+                                                                        min_node_dist=6,  # Minimal distance of nodes
+                                                                        node_radius=3,
+                                                                        # Proximity of stations to city center
+                                                                        num_neighb=3,
+                                                                        # Number of connections to other cities
+                                                                        seed=5,  # Random seed
+                                                                        grid_mode=False
+                                                                        # Ordered distribution of nodes
+                                                                        ),
+                                   schedule_generator=sparse_schedule_generator(speed_ration_map),
+                                   number_of_agents=10,
+                                   obs_builder_object=GlobalObsForRailEnv())
     env_renderer = RenderTool(env_always_action, gl="PILSVG", )
 
     for step in range(100):
@@ -108,7 +108,7 @@ def test_rail_env_entering_info():
             break
 
 
-def test_rail_env_malfunction_info():
+def test_rail_env_malfunction_speed_info():
     np.random.seed(0)
     stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
                        'malfunction_rate': 30,  # Rate of malfunction occurence
@@ -149,6 +149,8 @@ def test_rail_env_malfunction_info():
         assert 'malfunction' in info
         for a in range(env.get_num_agents()):
             assert info['malfunction'][a] >= 0
+            assert info['speed'][a] >= 0 and info['speed'][a] <= 1
+            assert info['speed'][a] == env.agents[a].speed_data['speed']
 
         env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
 
