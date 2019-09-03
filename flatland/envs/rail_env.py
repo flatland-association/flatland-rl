@@ -314,7 +314,7 @@ class RailEnv(Environment):
         if self.dones["__all__"]:
             self.rewards_dict = {i: r + global_reward for i, r in self.rewards_dict.items()}
             info_dict = {
-                'entering': {i: False for i in range(self.get_num_agents())},
+                'action_required': {i: False for i in range(self.get_num_agents())},
                 'malfunction': {i: 0 for i in range(self.get_num_agents())},
                 'speed': {i: 0 for i in range(self.get_num_agents())}
             }
@@ -457,7 +457,7 @@ class RailEnv(Environment):
             for k in self.dones.keys():
                 self.dones[k] = True
 
-        entering_agents = {
+        action_required_agents = {
             i: self.agents[i].speed_data['position_fraction'] <= epsilon for i in range(self.get_num_agents())
         }
         malfunction_agents = {
@@ -466,7 +466,7 @@ class RailEnv(Environment):
         speed_agents = {i: self.agents[i].speed_data['speed'] for i in range(self.get_num_agents())}
 
         info_dict = {
-            'entering': entering_agents,
+            'action_required': action_required_agents,
             'malfunction': malfunction_agents,
             'speed': speed_agents
         }

@@ -29,7 +29,7 @@ def test_sparse_rail_generator():
     # TODO test assertions!
 
 
-def test_rail_env_entering_info():
+def test_rail_env_action_required_info():
     np.random.seed(0)
     speed_ration_map = {1.: 0.25,  # Fast passenger train
                         1. / 2.: 0.25,  # Fast freight train
@@ -54,7 +54,7 @@ def test_rail_env_entering_info():
                                 number_of_agents=10,
                                 obs_builder_object=GlobalObsForRailEnv())
     np.random.seed(0)
-    env_only_if_entering = RailEnv(width=50,
+    env_only_if_action_required = RailEnv(width=50,
                                    height=50,
                                    rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
                                                                         num_intersections=10,
@@ -79,28 +79,28 @@ def test_rail_env_entering_info():
         print("step {}".format(step))
 
         action_dict_always_action = dict()
-        action_dict_only_if_entering = dict()
+        action_dict_only_if_action_required = dict()
         # Chose an action for each agent in the environment
         for a in range(env_always_action.get_num_agents()):
             action = np.random.choice(np.arange(4))
             action_dict_always_action.update({a: action})
-            if step == 0 or info_only_if_entering['entering'][a]:
-                action_dict_only_if_entering.update({a: action})
+            if step == 0 or info_only_if_action_required['action_required'][a]:
+                action_dict_only_if_action_required.update({a: action})
             else:
-                print("[{}] not entering {}, speed_data={}".format(step, a, env_always_action.agents[a].speed_data))
+                print("[{}] not action_required {}, speed_data={}".format(step, a, env_always_action.agents[a].speed_data))
 
         obs_always_action, rewards_always_action, done_always_action, info_always_action = env_always_action.step(
             action_dict_always_action)
-        obs_only_if_entering, rewards_only_if_entering, done_only_if_entering, info_only_if_entering = env_only_if_entering.step(
-            action_dict_only_if_entering)
+        obs_only_if_action_required, rewards_only_if_action_required, done_only_if_action_required, info_only_if_action_required = env_only_if_action_required.step(
+            action_dict_only_if_action_required)
 
         for a in range(env_always_action.get_num_agents()):
-            assert len(obs_always_action[a]) == len(obs_only_if_entering[a])
+            assert len(obs_always_action[a]) == len(obs_only_if_action_required[a])
             for i in range(len(obs_always_action[a])):
-                assert np.array_equal(obs_always_action[a][i], obs_only_if_entering[a][i])
-            assert np.array_equal(rewards_always_action[a], rewards_only_if_entering[a])
-            assert np.array_equal(done_always_action[a], done_only_if_entering[a])
-            assert info_always_action['entering'][a] == info_only_if_entering['entering'][a]
+                assert np.array_equal(obs_always_action[a][i], obs_only_if_action_required[a][i])
+            assert np.array_equal(rewards_always_action[a], rewards_only_if_action_required[a])
+            assert np.array_equal(done_always_action[a], done_only_if_action_required[a])
+            assert info_always_action['action_required'][a] == info_only_if_action_required['action_required'][a]
 
         env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
 

@@ -189,18 +189,18 @@ This action is then executed when a step to the next cell is valid. For example
     - Agents can make observations at any time step. Make sure to discard observations without any information. See this [example](https://gitlab.aicrowd.com/flatland/baselines/blob/master/torch_training/training_navigation.py) for a simple implementation.
 - The environment checks if agent is allowed to move to next cell only at the time of the switch to the next cell
 
-In your controller, you can check whether an agent is entering by checking `info`: 
+In your controller, you can check whether an agent requires an action by checking `info`: 
 ```
 obs, rew, done, info = env.step(actions) 
 ...
 action_dict = dict()
 for a in range(env.get_num_agents()):
-    if info['entering'][a] && info['malfunction'][a] == 0 &&:
+    if info['action_required'][a] and info['malfunction'][a] == 0:
         action_dict.update({a: ...})
 
 ```
-Notice that `info['entering'][a]` does not mean that the action will have an effect: 
-if the next cell is blocked or the agent is malfunctioning, the action cannot be performed. 
+Notice that `info['action_required'][a]` does not mean that the action will have an effect: 
+if the next cell is blocked or the agent breaks down, the action cannot be performed and an action will be required again in the next step. 
 
 ## Rail Generators and Schedule Generators
 The separation between rail generator and schedule generator reflects the organisational separation in the railway domain
