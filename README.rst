@@ -85,7 +85,7 @@ Basic usage of the RailEnv environment used by the Flatland Challenge
                                         min_dist=8,
                                         max_dist=99999,
                                         seed=0),
-                schedule_generator=complex_schedule_generator()
+                schedule_generator=complex_schedule_generator(),
                 number_of_agents=NUMBER_OF_AGENTS)
 
     env_renderer = RenderTool(env)
