@@ -1,6 +1,6 @@
 """Rail generators (infrastructure manager, "Infrastrukturbetreiber")."""
 import warnings
-from typing import Callable, Tuple, Any, Optional
+from typing import Callable, Tuple, Optional, Dict
 
 import msgpack
 import numpy as np
@@ -11,7 +11,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_rail, connect_nodes, connect_from_nodes
 
-RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Any]]
+RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
 
 

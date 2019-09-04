@@ -4,6 +4,7 @@ Definition of the RailEnv environment.
 # TODO:  _ this is a global method --> utils or remove later
 import warnings
 from enum import IntEnum
+from typing import List
 
 import msgpack
 import msgpack_numpy as m
@@ -165,8 +166,8 @@ class RailEnv(Environment):
         self.dev_obs_dict = {}
         self.dev_pred_dict = {}
 
-        self.agents = [None] * number_of_agents  # live agents
-        self.agents_static = [None] * number_of_agents  # static agent information
+        self.agents: List[EnvAgent] = [None] * number_of_agents  # live agents
+        self.agents_static: List[EnvAgentStatic] = [None] * number_of_agents  # static agent information
         self.num_resets = 0
 
         self.action_space = [1]
@@ -239,17 +240,17 @@ class RailEnv(Environment):
             self.height, self.width = self.rail.grid.shape
             for r in range(self.height):
                 for c in range(self.width):
-                    rcPos = (r, c)
-                    check = self.rail.cell_neighbours_valid(rcPos, True)
+                    rc_pos = (r, c)
+                    check = self.rail.cell_neighbours_valid(rc_pos, True)
                     if not check:
-                        warnings.warn("Invalid grid at {} -> {}".format(rcPos, check))
+                        warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
 
         if replace_agents:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
             self.agents_static = EnvAgentStatic.from_lists(
-                *self.schedule_generator(self.rail, self.get_num_agents(), hints=agents_hints))
+                *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints))
         self.restart_agents()
 
         for i_agent in range(self.get_num_agents()):
@@ -284,25 +285,24 @@ class RailEnv(Environment):
             agent.malfunction_data['next_malfunction'] -= 1
 
         # Only agents that have a positive rate for malfunctions and are not currently broken are considered
-        if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction']:
+        # If counter has come to zero --> Agent has malfunction
+        # set next malfunction time and duration of current malfunction
+        if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction'] and \
+            agent.malfunction_data['next_malfunction'] <= 0:
+            # Increase number of malfunctions
+            agent.malfunction_data['nr_malfunctions'] += 1
 
-            # If counter has come to zero --> Agent has malfunction
-            # set next malfunction time and duration of current malfunction
-            if agent.malfunction_data['next_malfunction'] <= 0:
-                # Increase number of malfunctions
-                agent.malfunction_data['nr_malfunctions'] += 1
+            # Next malfunction in number of stops
+            next_breakdown = int(
+                np.random.exponential(scale=agent.malfunction_data['malfunction_rate']))
+            agent.malfunction_data['next_malfunction'] = next_breakdown
 
-                # Next malfunction in number of stops
-                next_breakdown = int(
-                    np.random.exponential(scale=agent.malfunction_data['malfunction_rate']))
-                agent.malfunction_data['next_malfunction'] = next_breakdown
+            # Duration of current malfunction
+            num_broken_steps = np.random.randint(self.min_number_of_steps_broken,
+                                                 self.max_number_of_steps_broken + 1) + 1
+            agent.malfunction_data['malfunction'] = num_broken_steps
 
-                # Duration of current malfunction
-                num_broken_steps = np.random.randint(self.min_number_of_steps_broken,
-                                                     self.max_number_of_steps_broken + 1) + 1
-                agent.malfunction_data['malfunction'] = num_broken_steps
-
-                return True
+            return True
         return False
 
     def step(self, action_dict_):
@@ -353,6 +353,20 @@ class RailEnv(Environment):
             # TODO refactor!!!
             # If the agent can make an action
             if agent.speed_data['position_fraction'] == 0.0:
+                if action == RailEnvActions.DO_NOTHING and agent.moving:
+                    # Keep moving
+                    action = RailEnvActions.MOVE_FORWARD
+
+                if action == RailEnvActions.STOP_MOVING and agent.moving and agent.speed_data['position_fraction'] == 0.0:
+                    # Only allow halting an agent on entering new cells.
+                    agent.moving = False
+                    self.rewards_dict[i_agent] += self.stop_penalty
+
+                if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                    # Allow agent to start with any forward or direction action
+                    agent.moving = True
+                    self.rewards_dict[i_agent] += self.start_penalty
+
                 if action != RailEnvActions.DO_NOTHING and action != RailEnvActions.STOP_MOVING:
                     cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
                         self._check_action_on_agent(action, agent)
@@ -408,19 +422,6 @@ class RailEnv(Environment):
                     # Nothing left to do with broken agent
                     continue
 
-            if action == RailEnvActions.DO_NOTHING and agent.moving:
-                # Keep moving
-                action = RailEnvActions.MOVE_FORWARD
-
-            if action == RailEnvActions.STOP_MOVING and agent.moving and agent.speed_data['position_fraction'] == 0.0:
-                # Only allow halting an agent on entering new cells.
-                agent.moving = False
-                self.rewards_dict[i_agent] += self.stop_penalty
-
-            if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
-                # Allow agent to start with any forward or direction action
-                agent.moving = True
-                self.rewards_dict[i_agent] += self.start_penalty
 
             # Now perform a movement.
             # If the agent is in an initial position within a new cell (agent.speed_data['position_fraction']<eps)
