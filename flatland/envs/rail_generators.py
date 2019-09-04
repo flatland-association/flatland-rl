@@ -629,13 +629,13 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             available_nodes_full = np.delete(available_nodes_full, delete_idx, 0)
 
             # Priority city to intersection connections
-            if False and current_node < num_cities and len(available_intersections) > 0:
+            if current_node < num_cities and len(available_intersections) > 0:
                 available_nodes = available_intersections
                 delete_idx = np.where(available_cities == current_node)
                 available_cities = np.delete(available_cities, delete_idx, 0)
 
             # Priority intersection to city connections
-            elif False and current_node >= num_cities and len(available_cities) > 0:
+            elif current_node >= num_cities and len(available_cities) > 0:
                 available_nodes = available_cities
                 delete_idx = np.where(available_intersections == current_node)
                 available_intersections = np.delete(available_intersections, delete_idx, 0)

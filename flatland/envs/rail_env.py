@@ -218,6 +218,8 @@ class RailEnv(Environment):
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
+
+        # TODO can we not put 'self.rail_generator(..)' into 'if regen_rail or self.rail is None' condition?
         rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
         if optionals and 'distance_maps' in optionals:
@@ -312,7 +314,9 @@ class RailEnv(Environment):
         if self.dones["__all__"]:
             self.rewards_dict = {i: r + global_reward for i, r in self.rewards_dict.items()}
             info_dict = {
-                'actionable_agents': {i: False for i in range(self.get_num_agents())}
+                'action_required': {i: False for i in range(self.get_num_agents())},
+                'malfunction': {i: 0 for i in range(self.get_num_agents())},
+                'speed': {i: 0 for i in range(self.get_num_agents())}
             }
             return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
@@ -425,18 +429,17 @@ class RailEnv(Environment):
 
             if agent.speed_data['position_fraction'] >= 1.0:
 
-                # Perform stored action to transition to the next cell
+                # Perform stored action to transition to the next cell as soon as cell is free
                 cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
                     self._check_action_on_agent(agent.speed_data['transition_action_on_cellexit'], agent)
 
-                # Check that everything is still free and that the agent can move
-                if all([new_cell_valid, transition_valid, cell_free]):
+                if all([new_cell_valid, transition_valid, cell_free]) and agent.malfunction_data['malfunction'] == 0:
                     agent.position = new_position
                     agent.direction = new_direction
                     agent.speed_data['position_fraction'] = 0.0
-                # else:
-                #     # If the agent cannot move due to any reason, we set its state to not moving
-                #     agent.moving = False
+                elif not transition_valid or not new_cell_valid:
+                    # If the agent cannot move due to an invalid transition, we set its state to not moving
+                    agent.moving = False
 
             if np.equal(agent.position, agent.target).all():
                 self.dones[i_agent] = True
@@ -454,15 +457,20 @@ class RailEnv(Environment):
             for k in self.dones.keys():
                 self.dones[k] = True
 
-        actionable_agents = {i: self.agents[i].speed_data['position_fraction'] <= epsilon \
-                             for i in range(self.get_num_agents())
-                             }
+        action_required_agents = {
+            i: self.agents[i].speed_data['position_fraction'] <= epsilon for i in range(self.get_num_agents())
+        }
+        malfunction_agents = {
+            i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
+        }
+        speed_agents = {i: self.agents[i].speed_data['speed'] for i in range(self.get_num_agents())}
+
         info_dict = {
-            'actionable_agents': actionable_agents
+            'action_required': action_required_agents,
+            'malfunction': malfunction_agents,
+            'speed': speed_agents
         }
 
-        for i, agent in enumerate(self.agents):
-            print(" {}: {}".format(i, agent.position))
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
     def _check_action_on_agent(self, action, agent):
