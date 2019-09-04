@@ -291,6 +291,9 @@ class RailEnv(Environment):
                                                      self.max_number_of_steps_broken + 1) + 1
                 agent.malfunction_data['malfunction'] = num_broken_steps
 
+
+
+
     def step(self, action_dict_):
         self._elapsed_steps += 1
 
@@ -325,8 +328,6 @@ class RailEnv(Environment):
             agent.old_direction = agent.direction
             agent.old_position = agent.position
 
-            # Check if agent breaks at this step
-            self._agent_malfunction(agent)
 
             if self.dones[i_agent]:  # this agent has already completed...
                 continue
@@ -334,6 +335,15 @@ class RailEnv(Environment):
             # No action has been supplied for this agent
             if i_agent not in action_dict:
                 action_dict[i_agent] = RailEnvActions.DO_NOTHING
+
+
+            if action_dict[i_agent] < 0 or action_dict[i_agent] > len(RailEnvActions):
+                print('ERROR: illegal action=', action_dict[i_agent],
+                      'for agent with index=', i_agent,
+                      '"DO NOTHING" will be executed instead')
+                action_dict[i_agent] = RailEnvActions.DO_NOTHING
+
+            action = action_dict[i_agent]
 
             # The train is broken
             if agent.malfunction_data['malfunction'] > 0:
@@ -350,17 +360,14 @@ class RailEnv(Environment):
                     # Broken agents are stopped
                     self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                     self.agents[i_agent].moving = False
+                    action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
                     # Nothing left to do with broken agent
                     continue
 
-            if action_dict[i_agent] < 0 or action_dict[i_agent] > len(RailEnvActions):
-                print('ERROR: illegal action=', action_dict[i_agent],
-                      'for agent with index=', i_agent,
-                      '"DO NOTHING" will be executed instead')
-                action_dict[i_agent] = RailEnvActions.DO_NOTHING
+            # Check if agent breaks at this step
+            self._agent_malfunction(agent)
 
-            action = action_dict[i_agent]
 
             if action == RailEnvActions.DO_NOTHING and agent.moving:
                 # Keep moving
@@ -458,7 +465,7 @@ class RailEnv(Environment):
                 self.dones[k] = True
 
         action_required_agents = {
-            i: self.agents[i].speed_data['position_fraction'] <= epsilon for i in range(self.get_num_agents())
+            i: self.agents[i].speed_data['position_fraction'] == 0.0 for i in range(self.get_num_agents())
         }
         malfunction_agents = {
             i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
