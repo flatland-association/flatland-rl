@@ -350,7 +350,7 @@ All the agent in the initiated environment can be found in the :code:`env.agents
 Beyond the basic agent information we can also access more details about the agents type by looking at speed data:
 
 - Agent max speed :code:`agent.speed_data["speed"]` wich defines the traveling speed when the agent is moving.
-- Agent position fraction :code:``agent.speed_data["position_fraction"]` which is a number between 0 and 1 and inidicates when the move to the next cell will occur. Each speed of an agent is 1 or a smaller fraction. At each :code:`env.step()` the agent moves at its fractional speed forwards any only changes to the next cell when the cumulated fractions are :code:`agent.speed_data["position_fraction"] >= 1.`
+- Agent position fraction :code:``agent.speed_data["position_fraction"]` which is a number between 0 and 1 and indicates when the move to the next cell will occur. Each speed of an agent is 1 or a smaller fraction. At each :code:`env.step()` the agent moves at its fractional speed forwards and only changes to the next cell when the cumulated fractions are :code:`agent.speed_data["position_fraction"] >= 1.`
 
 **Agent malfunction information**
 
