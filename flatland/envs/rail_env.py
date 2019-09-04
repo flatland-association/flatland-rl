@@ -337,11 +337,11 @@ class RailEnv(Environment):
 
             # The train is broken
             if agent.malfunction_data['malfunction'] > 0:
+
                 # Last step of malfunction --> Agent starts moving again after getting fixed
                 if agent.malfunction_data['malfunction'] < 2:
                     agent.malfunction_data['malfunction'] -= 1
                     self.agents[i_agent].moving = True
-                    action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
                 else:
                     agent.malfunction_data['malfunction'] -= 1
@@ -349,7 +349,6 @@ class RailEnv(Environment):
                     # Broken agents are stopped
                     self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
                     self.agents[i_agent].moving = False
-                    action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
                     # Nothing left to do with broken agent
                     continue
