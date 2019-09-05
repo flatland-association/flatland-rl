@@ -433,20 +433,15 @@ class RailEnv(Environment):
                     # Perform stored action to transition to the next cell as soon as cell is free
                     # Notice that we've already check new_cell_valid and transition valid when we stored the action,
                     # so we only have to check cell_free now!
-                    if agent.speed_data['transition_action_on_cellexit'] in [RailEnvActions.DO_NOTHING,
-                                                                             RailEnvActions.STOP_MOVING]:
+
+                    # cell and transition validity was checked when we stored transition_action_on_cellexit!
+                    cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
+                        agent.speed_data['transition_action_on_cellexit'], agent)
+
+                    if cell_free:
+                        agent.position = new_position
+                        agent.direction = new_direction
                         agent.speed_data['position_fraction'] = 0.0
-                    else:
-                        # cell and transition validity was checked when we stored transition_action_on_cellexit!
-                        cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
-                            agent.speed_data['transition_action_on_cellexit'], agent)
-                        if not cell_free == all([cell_free, new_cell_valid, transition_valid]):
-                            warnings.warn(
-                                "Inconsistent state: cell or transition not valid although checked when we stored transition_action_on_cellexit!")
-                        if cell_free:
-                            agent.position = new_position
-                            agent.direction = new_direction
-                            agent.speed_data['position_fraction'] = 0.0
 
             if np.equal(agent.position, agent.target).all():
                 self.dones[i_agent] = True
