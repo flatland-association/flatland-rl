@@ -346,29 +346,28 @@ class RailEnv(Environment):
             # Check if agent breaks at this step
             malfunction = self._agent_malfunction(i_agent, action)
 
-            # if we're at the beginning of the cell, store the action
-            # As long as we're broken down at the beginning of the cell, we can choose other actions!
-            # This is a design choice made by Erik and Christian.
-
-            # TODO refactor!!!
-            # If the agent can make an action
+            # Is the agent at the beginning of the cell? Then, it can take an action
+            # Design choice (Erik+Christian):
+            #  as long as we're broken down at the beginning of the cell, we can choose other actions!
             if agent.speed_data['position_fraction'] == 0.0:
                 if action == RailEnvActions.DO_NOTHING and agent.moving:
                     # Keep moving
                     action = RailEnvActions.MOVE_FORWARD
 
-                if action == RailEnvActions.STOP_MOVING and agent.moving and agent.speed_data['position_fraction'] == 0.0:
+                if action == RailEnvActions.STOP_MOVING and agent.moving:
                     # Only allow halting an agent on entering new cells.
                     agent.moving = False
                     self.rewards_dict[i_agent] += self.stop_penalty
 
-                if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                if not agent.moving and not (
+                    action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                     # Allow agent to start with any forward or direction action
                     agent.moving = True
                     self.rewards_dict[i_agent] += self.start_penalty
 
-                if action != RailEnvActions.DO_NOTHING and action != RailEnvActions.STOP_MOVING:
-                    cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
+                # Store the action
+                if agent.moving and action not in [RailEnvActions.DO_NOTHING, RailEnvActions.STOP_MOVING]:
+                    _, new_cell_valid, new_direction, new_position, transition_valid = \
                         self._check_action_on_agent(action, agent)
 
                     if all([new_cell_valid, transition_valid]):
@@ -377,7 +376,7 @@ class RailEnv(Environment):
                         # But, if the chosen invalid action was LEFT/RIGHT, and the agent is moving,
                         # try to keep moving forward!
                         if (action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_RIGHT):
-                            cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
+                            _, new_cell_valid, new_direction, new_position, transition_valid = \
                                 self._check_action_on_agent(RailEnvActions.MOVE_FORWARD, agent)
 
                             if all([new_cell_valid, transition_valid]):
@@ -388,7 +387,6 @@ class RailEnv(Environment):
                                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
                                 self.rewards_dict[i_agent] += self.stop_penalty
                                 agent.moving = False
-                                action = RailEnvActions.DO_NOTHING
 
                         else:
                             # If the agent cannot move due to an invalid transition, we set its state to not moving
@@ -396,10 +394,10 @@ class RailEnv(Environment):
                             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
                             self.rewards_dict[i_agent] += self.stop_penalty
                             agent.moving = False
-                            action = RailEnvActions.DO_NOTHING
                 else:
                     agent.speed_data['transition_action_on_cellexit'] = action
 
+            # if we're broken, nothing else to do
             if malfunction:
                 continue
 
@@ -422,16 +420,10 @@ class RailEnv(Environment):
                     # Nothing left to do with broken agent
                     continue
 
-
             # Now perform a movement.
-            # If the agent is in an initial position within a new cell (agent.speed_data['position_fraction']<eps)
-            #   store the desired action in `transition_action_on_cellexit' (only if the desired transition is
-            #   allowed! otherwise DO_NOTHING!)
-            # Then in any case (if agent.moving) and the `transition_action_on_cellexit' is valid, increment the
-            #   position_fraction by the speed of the agent   (regardless of action taken, as long as no
-            #   STOP_MOVING, but that makes agent.moving=False)
+            # If agent.moving, increment the position_fraction by the speed of the agent
             # If the new position fraction is >= 1, reset to 0, and perform the stored
-            #   transition_action_on_cellexit
+            #   transition_action_on_cellexit if the cell is free.
 
             if agent.moving:
 
@@ -445,9 +437,11 @@ class RailEnv(Environment):
                                                                              RailEnvActions.STOP_MOVING]:
                         agent.speed_data['position_fraction'] = 0.0
                     else:
+                        # cell and transition validity was checked when we stored transition_action_on_cellexit!
                         cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
                             agent.speed_data['transition_action_on_cellexit'], agent)
-                        assert cell_free == all([cell_free, new_cell_valid, transition_valid])
+                        if not cell_free == all([cell_free, new_cell_valid, transition_valid]):
+                            warnings.warn("Inconsistent state: cell or transition not valid although checked when we stored transition_action_on_cellexit!")
                         if cell_free:
                             agent.position = new_position
                             agent.direction = new_direction
