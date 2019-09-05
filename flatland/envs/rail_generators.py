@@ -682,6 +682,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                     if tries > 100:
                         warnings.warn("Could not set trainstations, please change initial parameters!!!!")
                         spot_found = False
+                        break
 
                 if spot_found:
                     train_stations[trainstation_node].append((station_x, station_y))

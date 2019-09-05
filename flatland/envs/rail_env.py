@@ -395,8 +395,6 @@ class RailEnv(Environment):
                             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
                             self.rewards_dict[i_agent] += self.stop_penalty
                             agent.moving = False
-                else:
-                    agent.speed_data['transition_action_on_cellexit'] = action
 
             # if we've just broken in this step, nothing else to do
             if new_malfunction:
