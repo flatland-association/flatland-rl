@@ -110,3 +110,37 @@ def test_malfunction_process():
 
     # Check that malfunctioning data was standing around
     assert total_down_time > 0
+
+
+def test_malfunction_process_statistically():
+    """Tests hat malfunctions are produced by stochastic_data!"""
+    # Set fixed malfunction duration for this test
+    stochastic_data = {'prop_malfunction': 1.,
+                       'malfunction_rate': 2,
+                       'min_duration': 3,
+                       'max_duration': 3}
+    np.random.seed(5)
+
+    env = RailEnv(width=20,
+                  height=20,
+                  rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=5, max_dist=99999,
+                                                        seed=0),
+                  schedule_generator=complex_schedule_generator(),
+                  number_of_agents=2,
+                  obs_builder_object=SingleAgentNavigationObs(),
+                  stochastic_data=stochastic_data)
+
+    env.reset()
+    nb_malfunction = 0
+    for step in range(100):
+        action_dict = {}
+        for agent in env.agents:
+            if agent.malfunction_data['malfunction'] > 0:
+                nb_malfunction += 1
+            # We randomly select an action
+            action_dict[agent.handle] = np.random.randint(4)
+
+        env.step(action_dict)
+
+    # check that generation of malfunctions works as expected
+    assert nb_malfunction == 156

@@ -97,9 +97,23 @@ def test_multi_speed_init():
                 old_pos[i_agent] = env.agents[i_agent].position
 
 
-# TODO test malfunction
-# TODO test other agent blocking
-def test_multispeed_actions_no_malfunction(rendering=True):
+@attrs
+class Replay(object):
+    position = attrib()
+    direction = attrib()
+    action = attrib(type=RailEnvActions)
+    malfunction = attrib(default=0, type=int)
+
+
+@attrs
+class TestConfig(object):
+    replay = attrib(type=List[Replay])
+    target = attrib()
+    speed = attrib(type=float)
+
+
+def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
+    """Test that actions are correctly performed on cell exit for a single agent."""
     rail, rail_map = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
@@ -112,17 +126,135 @@ def test_multispeed_actions_no_malfunction(rendering=True):
     # initialize agents_static
     env.reset()
 
-    @attrs
-    class Replay(object):
-        position = attrib()
-        direction = attrib()
-        action = attrib(type=RailEnvActions)
+    # reset to set agents from agents_static
+    env.reset(False, False)
 
-    @attrs
-    class TestConfig(object):
-        replay = attrib(type=List[Replay])
-        target = attrib()
-        speed = attrib(type=float)
+    if rendering:
+        renderer = RenderTool(env, gl="PILSVG")
+
+    test_config = TestConfig(
+        replay=[
+            Replay(
+                position=(3, 9),  # east dead-end
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+            Replay(
+                position=(3, 9),
+                direction=Grid4TransitionsEnum.EAST,
+                action=None
+            ),
+            Replay(
+                position=(3, 8),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+            Replay(
+                position=(3, 8),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None
+            ),
+            Replay(
+                position=(3, 7),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+            Replay(
+                position=(3, 7),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None
+            ),
+            Replay(
+                position=(3, 6),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_LEFT
+            ),
+            Replay(
+                position=(3, 6),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None
+            ),
+            Replay(
+                position=(4, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=RailEnvActions.STOP_MOVING
+            ),
+            Replay(
+                position=(4, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=RailEnvActions.STOP_MOVING
+            ),
+            Replay(
+                position=(4, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+            Replay(
+                position=(4, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=None
+            ),
+            Replay(
+                position=(5, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+
+        ],
+        target=(3, 0),  # west dead-end
+        speed=0.5
+    )
+
+    # TODO test penalties!
+    agentStatic: EnvAgentStatic = env.agents_static[0]
+    info_dict = {
+        'action_required': [True]
+    }
+    for i, replay in enumerate(test_config.replay):
+        if i == 0:
+            # set the initial position
+            agentStatic.position = replay.position
+            agentStatic.direction = replay.direction
+            agentStatic.target = test_config.target
+            agentStatic.moving = True
+            agentStatic.speed_data['speed'] = test_config.speed
+
+            # reset to set agents from agents_static
+            env.reset(False, False)
+
+        def _assert(actual, expected, msg):
+            assert actual == expected, "[{}] {}:  actual={}, expected={}".format(i, msg, actual, expected)
+
+        agent: EnvAgent = env.agents[0]
+
+        _assert(agent.position, replay.position, 'position')
+        _assert(agent.direction, replay.direction, 'direction')
+
+        if replay.action:
+            assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
+            _, _, _, info_dict = env.step({0: replay.action})
+
+        else:
+            assert info_dict['action_required'][0] == False, "[{}] expecting action_required={}".format(i, False)
+            _, _, _, info_dict = env.step({})
+
+        if rendering:
+            renderer.render_env(show=True, show_observations=True)
+
+
+def test_multispeed_actions_no_malfunction_blocking(rendering=True):
+    """The second agent blocks the first because it is slower."""
+    rail, rail_map = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=2,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  )
+
+    # initialize agents_static
+    env.reset()
 
     # reset to set agents from agents_static
     env.reset(False, False)
@@ -131,6 +263,74 @@ def test_multispeed_actions_no_malfunction(rendering=True):
         renderer = RenderTool(env, gl="PILSVG")
 
     test_configs = [
+        TestConfig(
+            replay=[
+                Replay(
+                    position=(3, 8),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=RailEnvActions.MOVE_FORWARD
+                ),
+                Replay(
+                    position=(3, 8),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                ),
+                Replay(
+                    position=(3, 8),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                ),
+
+                Replay(
+                    position=(3, 7),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=RailEnvActions.MOVE_FORWARD
+                ),
+                Replay(
+                    position=(3, 7),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                ),
+                Replay(
+                    position=(3, 7),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                ),
+
+                Replay(
+                    position=(3, 6),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=RailEnvActions.MOVE_FORWARD
+                ),
+                Replay(
+                    position=(3, 6),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                ),
+                Replay(
+                    position=(3, 6),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                ),
+
+                Replay(
+                    position=(3, 5),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=RailEnvActions.MOVE_FORWARD
+                ),
+                Replay(
+                    position=(3, 5),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                ),
+                Replay(
+                    position=(3, 5),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                )
+            ],
+            target=(3, 0),  # west dead-end
+            speed=1 / 3),
         TestConfig(
             replay=[
                 Replay(
@@ -143,6 +343,13 @@ def test_multispeed_actions_no_malfunction(rendering=True):
                     direction=Grid4TransitionsEnum.EAST,
                     action=None
                 ),
+                # blocked although fraction >= 1.0
+                Replay(
+                    position=(3, 9),
+                    direction=Grid4TransitionsEnum.EAST,
+                    action=None
+                ),
+
                 Replay(
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
@@ -153,6 +360,13 @@ def test_multispeed_actions_no_malfunction(rendering=True):
                     direction=Grid4TransitionsEnum.WEST,
                     action=None
                 ),
+                # blocked although fraction >= 1.0
+                Replay(
+                    position=(3, 8),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                ),
+
                 Replay(
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
@@ -163,6 +377,13 @@ def test_multispeed_actions_no_malfunction(rendering=True):
                     direction=Grid4TransitionsEnum.WEST,
                     action=None
                 ),
+                # blocked although fraction >= 1.0
+                Replay(
+                    position=(3, 7),
+                    direction=Grid4TransitionsEnum.WEST,
+                    action=None
+                ),
+
                 Replay(
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
@@ -173,46 +394,28 @@ def test_multispeed_actions_no_malfunction(rendering=True):
                     direction=Grid4TransitionsEnum.WEST,
                     action=None
                 ),
-                Replay(
-                    position=(4, 6),
-                    direction=Grid4TransitionsEnum.SOUTH,
-                    action=RailEnvActions.STOP_MOVING
-                ),
-                Replay(
-                    position=(4, 6),
-                    direction=Grid4TransitionsEnum.SOUTH,
-                    action=RailEnvActions.STOP_MOVING
-                ),
+                # not blocked, action required!
                 Replay(
                     position=(4, 6),
                     direction=Grid4TransitionsEnum.SOUTH,
                     action=RailEnvActions.MOVE_FORWARD
                 ),
-                Replay(
-                    position=(4, 6),
-                    direction=Grid4TransitionsEnum.SOUTH,
-                    action=None
-                ),
-                Replay(
-                    position=(5, 6),
-                    direction=Grid4TransitionsEnum.SOUTH,
-                    action=RailEnvActions.MOVE_FORWARD
-                ),
-
             ],
             target=(3, 0),  # west dead-end
             speed=0.5
         )
+
     ]
 
     # TODO test penalties!
-    agentStatic: EnvAgentStatic = env.agents_static[0]
-    for test_config in test_configs:
-        info_dict = {
-            'action_required': [True]
-        }
-        for i, replay in enumerate(test_config.replay):
-            if i == 0:
+    info_dict = {
+        'action_required': [True for _ in test_configs]
+    }
+    for step in range(len(test_configs[0].replay)):
+        if step == 0:
+            for a, test_config in enumerate(test_configs):
+                agentStatic: EnvAgentStatic = env.agents_static[a]
+                replay = test_config.replay[0]
                 # set the initial position
                 agentStatic.position = replay.position
                 agentStatic.direction = replay.direction
@@ -220,24 +423,177 @@ def test_multispeed_actions_no_malfunction(rendering=True):
                 agentStatic.moving = True
                 agentStatic.speed_data['speed'] = test_config.speed
 
-                # reset to set agents from agents_static
-                env.reset(False, False)
+            # reset to set agents from agents_static
+            env.reset(False, False)
 
-            def _assert(actual, expected, msg):
-                assert actual == expected, "[{}] {}:  actual={}, expected={}".format(i, msg, actual, expected)
+        def _assert(a, actual, expected, msg):
+            assert actual == expected, "[{}] {} {}:  actual={}, expected={}".format(step, a, msg, actual, expected)
 
-            agent: EnvAgent = env.agents[0]
+        action_dict = {}
 
-            _assert(agent.position, replay.position, 'position')
-            _assert(agent.direction, replay.direction, 'direction')
+        for a, test_config in enumerate(test_configs):
+            agent: EnvAgent = env.agents[a]
+            replay = test_config.replay[step]
+
+            _assert(a, agent.position, replay.position, 'position')
+            _assert(a, agent.direction, replay.direction, 'direction')
+
+
 
             if replay.action:
-                assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
-                _, _, _, info_dict = env.step({0: replay.action})
-
+                assert info_dict['action_required'][a] == True, "[{}] agent {} expecting action_required={}".format(step, a, True)
+                action_dict[a] = replay.action
             else:
-                assert info_dict['action_required'][0] == False, "[{}] expecting action_required={}".format(i, False)
-                _, _, _, info_dict = env.step({})
+                assert info_dict['action_required'][a] == False, "[{}] agent {} expecting action_required={}".format(step, a, False)
+        _, _, _, info_dict = env.step(action_dict)
 
-            if rendering:
-                renderer.render_env(show=True, show_observations=True)
+        if rendering:
+            renderer.render_env(show=True, show_observations=True)
+
+
+def test_multispeed_actions_malfunction_no_blocking(rendering=True):
+    """Test on a single agent whether action on cell exit work correctly despite malfunction."""
+    rail, rail_map = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  )
+
+    # initialize agents_static
+    env.reset()
+
+    # reset to set agents from agents_static
+    env.reset(False, False)
+
+    if rendering:
+        renderer = RenderTool(env, gl="PILSVG")
+
+    test_config = TestConfig(
+        replay=[
+            Replay(
+                position=(3, 9),  # east dead-end
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+            Replay(
+                position=(3, 9),
+                direction=Grid4TransitionsEnum.EAST,
+                action=None
+            ),
+            Replay(
+                position=(3, 8),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+            # add additional step in the cell
+            Replay(
+                position=(3, 8),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None,
+                malfunction=2 # recovers in two steps from now!
+            ),
+            # agent recovers in this step
+            Replay(
+                position=(3, 8),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None
+            ),
+            Replay(
+                position=(3, 7),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+            Replay(
+                position=(3, 7),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None
+            ),
+            Replay(
+                position=(3, 6),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD,
+                malfunction=2 # recovers in two steps from now!
+            ),
+            # agent recovers in this step; since we're at the beginning, we provide a different action although we're broken!
+            Replay(
+                position=(3, 6),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_LEFT,
+            ),
+            Replay(
+                position=(3, 6),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None
+            ),
+            Replay(
+                position=(4, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=RailEnvActions.STOP_MOVING
+            ),
+            Replay(
+                position=(4, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=RailEnvActions.STOP_MOVING
+            ),
+            Replay(
+                position=(4, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+            Replay(
+                position=(4, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=None
+            ),
+            Replay(
+                position=(5, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=RailEnvActions.MOVE_FORWARD
+            ),
+
+        ],
+        target=(3, 0),  # west dead-end
+        speed=0.5
+    )
+
+    # TODO test penalties!
+    agentStatic: EnvAgentStatic = env.agents_static[0]
+    info_dict = {
+        'action_required': [True]
+    }
+    for i, replay in enumerate(test_config.replay):
+        if i == 0:
+            # set the initial position
+            agentStatic.position = replay.position
+            agentStatic.direction = replay.direction
+            agentStatic.target = test_config.target
+            agentStatic.moving = True
+            agentStatic.speed_data['speed'] = test_config.speed
+
+            # reset to set agents from agents_static
+            env.reset(False, False)
+
+        def _assert(actual, expected, msg):
+            assert actual == expected, "[{}] {}:  actual={}, expected={}".format(i, msg, actual, expected)
+
+        agent: EnvAgent = env.agents[0]
+
+        _assert(agent.position, replay.position, 'position')
+        _assert(agent.direction, replay.direction, 'direction')
+
+        if replay.malfunction:
+            agent.malfunction_data['malfunction'] = 2
+
+        if replay.action:
+            assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
+            _, _, _, info_dict = env.step({0: replay.action})
+
+        else:
+            assert info_dict['action_required'][0] == False, "[{}] expecting action_required={}".format(i, False)
+            _, _, _, info_dict = env.step({})
+
+        if rendering:
+            renderer.render_env(show=True, show_observations=True)

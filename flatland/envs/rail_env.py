@@ -305,6 +305,7 @@ class RailEnv(Environment):
             return True
         return False
 
+    # TODO refactor to decrease length of this method!
     def step(self, action_dict_):
         self._elapsed_steps += 1
 
@@ -344,7 +345,7 @@ class RailEnv(Environment):
                 action = RailEnvActions.DO_NOTHING
 
             # Check if agent breaks at this step
-            malfunction = self._agent_malfunction(i_agent, action)
+            new_malfunction = self._agent_malfunction(i_agent, action)
 
             # Is the agent at the beginning of the cell? Then, it can take an action
             # Design choice (Erik+Christian):
@@ -397,11 +398,11 @@ class RailEnv(Environment):
                 else:
                     agent.speed_data['transition_action_on_cellexit'] = action
 
-            # if we're broken, nothing else to do
-            if malfunction:
+            # if we've just broken in this step, nothing else to do
+            if new_malfunction:
                 continue
 
-            # The train is broken
+            # The train was broken before...
             if agent.malfunction_data['malfunction'] > 0:
 
                 # Last step of malfunction --> Agent starts moving again after getting fixed
@@ -424,11 +425,9 @@ class RailEnv(Environment):
             # If agent.moving, increment the position_fraction by the speed of the agent
             # If the new position fraction is >= 1, reset to 0, and perform the stored
             #   transition_action_on_cellexit if the cell is free.
-
             if agent.moving:
 
                 agent.speed_data['position_fraction'] += agent.speed_data['speed']
-
                 if agent.speed_data['position_fraction'] >= 1.0:
                     # Perform stored action to transition to the next cell as soon as cell is free
                     # Notice that we've already check new_cell_valid and transition valid when we stored the action,
@@ -441,7 +440,8 @@ class RailEnv(Environment):
                         cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
                             agent.speed_data['transition_action_on_cellexit'], agent)
                         if not cell_free == all([cell_free, new_cell_valid, transition_valid]):
-                            warnings.warn("Inconsistent state: cell or transition not valid although checked when we stored transition_action_on_cellexit!")
+                            warnings.warn(
+                                "Inconsistent state: cell or transition not valid although checked when we stored transition_action_on_cellexit!")
                         if cell_free:
                             agent.position = new_position
                             agent.direction = new_direction
