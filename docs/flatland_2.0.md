@@ -75,11 +75,11 @@ You can tune the following parameters:
 
 If you run into any bugs with sets of parameters please let us know.
 
-Here is a network with `realistic_mode=False` and the parameters from above.
+Here is a network with `grid_mode=False` and the parameters from above.
 
 ![sparse_random](https://i.imgur.com/Xg7nifF.png)
 
-and here with `realistic_mode=True`
+and here with `grid_mode=True`
 
 ![sparse_ordered](https://i.imgur.com/jyA7Pt4.png)
 
@@ -90,8 +90,9 @@ This is very common for railway networks where the initial plan usually needs to
 
 We implemted a poisson process to simulate delays by stopping agents at random times for random durations. The parameters necessary for the stochastic events can be provided when creating the environment.
 
-# Use a the malfunction generator to break agents from time to time
 ```
+# Use a the malfunction generator to break agents from time to time
+
 stochastic_data = {
     'prop_malfunction': 0.5,  # Percentage of defective agents
     'malfunction_rate': 30,  # Rate of malfunction occurence
@@ -123,9 +124,6 @@ action_dict = dict()
 for a in range(env.get_num_agents()):
     if info['malfunction'][a] == 0:
         action_dict.update({a: ...})
-
-```
-
 
 # Custom observation builder
 tree_observation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
