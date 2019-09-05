@@ -262,7 +262,7 @@ class RailEnv(Environment):
 
             agent.malfunction_data['malfunction'] = 0
 
-            self._agent_malfunction(i_agent, RailEnvActions.DO_NOTHING)
+            self._agent_new_malfunction(i_agent, RailEnvActions.DO_NOTHING)
 
         self.num_resets += 1
         self._elapsed_steps = 0
@@ -277,7 +277,10 @@ class RailEnv(Environment):
         # Return the new observation vectors for each agent
         return self._get_observations()
 
-    def _agent_malfunction(self, i_agent, action) -> bool:
+    def _agent_new_malfunction(self, i_agent, action) -> bool:
+        """
+        Returns true if the agent enters into malfunction. (False, if not broken down or already broken down before).
+        """
         agent = self.agents[i_agent]
 
         # Decrease counter for next event
@@ -345,7 +348,7 @@ class RailEnv(Environment):
                 action = RailEnvActions.DO_NOTHING
 
             # Check if agent breaks at this step
-            new_malfunction = self._agent_malfunction(i_agent, action)
+            new_malfunction = self._agent_new_malfunction(i_agent, action)
 
             # Is the agent at the beginning of the cell? Then, it can take an action
             # Design choice (Erik+Christian):
