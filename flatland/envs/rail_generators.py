@@ -1,6 +1,6 @@
 """Rail generators (infrastructure manager, "Infrastrukturbetreiber")."""
 import warnings
-from typing import Callable, Tuple, Any, Optional
+from typing import Callable, Tuple, Optional, Dict, List, Any
 
 import msgpack
 import numpy as np
@@ -11,7 +11,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_rail, connect_nodes, connect_from_nodes
 
-RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Any]]
+RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
 
 
@@ -560,63 +560,43 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
 
         # Generate a set of nodes for the sparse network
         # Try to connect cities to nodes first
-        node_positions = []
         city_positions = []
         intersection_positions = []
+
         # Evenly distribute cities and intersections
+        node_positions: List[Any] = None
+        nb_nodes = num_cities + num_intersections
         if grid_mode:
-            tot_num_node = num_intersections + num_cities
             nodes_ratio = height / width
-            nodes_per_row = int(np.ceil(np.sqrt(tot_num_node * nodes_ratio)))
-            nodes_per_col = int(np.ceil(tot_num_node / nodes_per_row))
+            nodes_per_row = int(np.ceil(np.sqrt(nb_nodes * nodes_ratio)))
+            nodes_per_col = int(np.ceil(nb_nodes / nodes_per_row))
             x_positions = np.linspace(node_radius, height - node_radius, nodes_per_row, dtype=int)
             y_positions = np.linspace(node_radius, width - node_radius, nodes_per_col, dtype=int)
-            city_idx = np.random.choice(np.arange(tot_num_node), num_cities)
+            city_idx = np.random.choice(np.arange(nb_nodes), num_cities)
 
-        for node_idx in range(num_cities + num_intersections):
-            to_close = True
-            tries = 0
+            node_positions = _generate_node_positions_grid_mode(city_idx, city_positions, intersection_positions,
+                                                                nb_nodes,
+                                                                nodes_per_row, x_positions,
+                                                                y_positions)
 
-            if not grid_mode:
-                while to_close:
-                    x_tmp = node_radius + np.random.randint(height - node_radius)
-                    y_tmp = node_radius + np.random.randint(width - node_radius)
-                    to_close = False
 
-                    # Check distance to cities
-                    for node_pos in city_positions:
-                        if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
-                            to_close = True
 
-                    # Check distance to intersections
-                    for node_pos in intersection_positions:
-                        if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
-                            to_close = True
+        else:
 
-                    if not to_close:
-                        node_positions.append((x_tmp, y_tmp))
-                        if node_idx < num_cities:
-                            city_positions.append((x_tmp, y_tmp))
-                        else:
-                            intersection_positions.append((x_tmp, y_tmp))
-                    tries += 1
-                    if tries > 100:
-                        warnings.warn("Could not set nodes, please change initial parameters!!!!")
-                        break
-            else:
-                x_tmp = x_positions[node_idx % nodes_per_row]
-                y_tmp = y_positions[node_idx // nodes_per_row]
-                if node_idx in city_idx:
-                    city_positions.append((x_tmp, y_tmp))
-                else:
-                    intersection_positions.append((x_tmp, y_tmp))
-        node_positions = city_positions + intersection_positions
+            node_positions = _generate_node_positions_not_grid_mode(city_positions, height,
+                                                                    intersection_positions,
+                                                                    nb_nodes, width)
+
+        # reduce nb_nodes, _num_cities, _num_intersections if less were generated in not_grid_mode
+        nb_nodes = len(node_positions)
+        _num_cities = len(city_positions)
+        _num_intersections = len(intersection_positions)
 
         # Chose node connection
         # Set up list of available nodes to connect to
-        available_nodes_full = np.arange(num_cities + num_intersections)
-        available_cities = np.arange(num_cities)
-        available_intersections = np.arange(num_cities, num_cities + num_intersections)
+        available_nodes_full = np.arange(nb_nodes)
+        available_cities = np.arange(_num_cities)
+        available_intersections = np.arange(_num_cities, nb_nodes)
 
         # Start at some node
         current_node = np.random.randint(len(available_nodes_full))
@@ -629,13 +609,13 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             available_nodes_full = np.delete(available_nodes_full, delete_idx, 0)
 
             # Priority city to intersection connections
-            if current_node < num_cities and len(available_intersections) > 0:
+            if current_node < _num_cities and len(available_intersections) > 0:
                 available_nodes = available_intersections
                 delete_idx = np.where(available_cities == current_node)
                 available_cities = np.delete(available_cities, delete_idx, 0)
 
             # Priority intersection to city connections
-            elif current_node >= num_cities and len(available_cities) > 0:
+            elif current_node >= _num_cities and len(available_cities) > 0:
                 available_nodes = available_cities
                 delete_idx = np.where(available_intersections == current_node)
                 available_intersections = np.delete(available_intersections, delete_idx, 0)
@@ -669,15 +649,15 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             node_stack.pop(0)
 
         # Place train stations close to the node
-        # We currently place them uniformly distirbuted among all cities
+        # We currently place them uniformly distributed among all cities
         built_num_trainstation = 0
-        train_stations = [[] for i in range(num_cities)]
+        train_stations = [[] for i in range(_num_cities)]
 
-        if num_cities > 1:
+        if _num_cities > 1:
 
             for station in range(num_trainstations):
                 spot_found = True
-                trainstation_node = int(station / num_trainstations * num_cities)
+                trainstation_node = int(station / num_trainstations * _num_cities)
 
                 station_x = np.clip(node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
                                     0,
@@ -702,6 +682,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                     if tries > 100:
                         warnings.warn("Could not set trainstations, please change initial parameters!!!!")
                         spot_found = False
+                        break
 
                 if spot_found:
                     train_stations[trainstation_node].append((station_x, station_y))
@@ -725,7 +706,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         # We currently place them uniformly distirbuted among all cities
         if enhance_intersection:
 
-            for intersection in range(num_intersections):
+            for intersection in range(_num_intersections):
                 intersect_x_1 = np.clip(intersection_positions[intersection][0] + np.random.randint(1, 3),
                                         1,
                                         height - 2)
@@ -762,7 +743,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         # Slot availability in node
         node_available_start = []
         node_available_target = []
-        for node_idx in range(num_cities):
+        for node_idx in range(_num_cities):
             node_available_start.append(len(train_stations[node_idx]))
             node_available_target.append(len(train_stations[node_idx]))
 
@@ -796,5 +777,58 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             'agent_start_targets_nodes': agent_start_targets_nodes,
             'train_stations': train_stations
         }}
+
+    def _generate_node_positions_not_grid_mode(city_positions, height, intersection_positions, nb_nodes,
+                                               width):
+
+        node_positions = []
+        for node_idx in range(nb_nodes):
+            to_close = True
+            tries = 0
+
+            while to_close:
+                x_tmp = node_radius + np.random.randint(height - node_radius)
+                y_tmp = node_radius + np.random.randint(width - node_radius)
+                to_close = False
+
+                # Check distance to cities
+                for node_pos in city_positions:
+                    if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
+                        to_close = True
+
+                # Check distance to intersections
+                for node_pos in intersection_positions:
+                    if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
+                        to_close = True
+
+                if not to_close:
+                    node_positions.append((x_tmp, y_tmp))
+                    if node_idx < num_cities:
+                        city_positions.append((x_tmp, y_tmp))
+                    else:
+                        intersection_positions.append((x_tmp, y_tmp))
+                tries += 1
+                if tries > 100:
+                    warnings.warn(
+                        "Could not only set {} nodes after {} tries, although {} of nodes required to be generated!".format(
+                            len(node_positions),
+                            tries, nb_nodes))
+                    break
+
+        node_positions = city_positions + intersection_positions
+        return node_positions
+
+    def _generate_node_positions_grid_mode(city_idx, city_positions, intersection_positions, nb_nodes,
+                                           nodes_per_row, x_positions, y_positions):
+        for node_idx in range(nb_nodes):
+
+            x_tmp = x_positions[node_idx % nodes_per_row]
+            y_tmp = y_positions[node_idx // nodes_per_row]
+            if node_idx in city_idx:
+                city_positions.append((x_tmp, y_tmp))
+            else:
+                intersection_positions.append((x_tmp, y_tmp))
+        node_positions = city_positions + intersection_positions
+        return node_positions
 
     return generator

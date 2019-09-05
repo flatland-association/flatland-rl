@@ -4,6 +4,7 @@ Definition of the RailEnv environment.
 # TODO:  _ this is a global method --> utils or remove later
 import warnings
 from enum import IntEnum
+from typing import List
 
 import msgpack
 import msgpack_numpy as m
@@ -89,6 +90,15 @@ class RailEnv(Environment):
     For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
 
     """
+    alpha = 1.0
+    beta = 1.0
+    # Epsilon to avoid rounding errors
+    epsilon = 0.01
+    invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
+    step_penalty = -1 * alpha
+    global_reward = 1 * beta
+    stop_penalty = 0  # penalty for stopping a moving agent
+    start_penalty = 0  # penalty for starting a stopped agent
 
     def __init__(self,
                  width,
@@ -156,8 +166,8 @@ class RailEnv(Environment):
         self.dev_obs_dict = {}
         self.dev_pred_dict = {}
 
-        self.agents = [None] * number_of_agents  # live agents
-        self.agents_static = [None] * number_of_agents  # static agent information
+        self.agents: List[EnvAgent] = [None] * number_of_agents  # live agents
+        self.agents_static: List[EnvAgentStatic] = [None] * number_of_agents  # static agent information
         self.num_resets = 0
 
         self.action_space = [1]
@@ -230,17 +240,17 @@ class RailEnv(Environment):
             self.height, self.width = self.rail.grid.shape
             for r in range(self.height):
                 for c in range(self.width):
-                    rcPos = (r, c)
-                    check = self.rail.cell_neighbours_valid(rcPos, True)
+                    rc_pos = (r, c)
+                    check = self.rail.cell_neighbours_valid(rc_pos, True)
                     if not check:
-                        warnings.warn("Invalid grid at {} -> {}".format(rcPos, check))
+                        warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
 
         if replace_agents:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
             self.agents_static = EnvAgentStatic.from_lists(
-                *self.schedule_generator(self.rail, self.get_num_agents(), hints=agents_hints))
+                *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints))
         self.restart_agents()
 
         for i_agent in range(self.get_num_agents()):
@@ -252,7 +262,7 @@ class RailEnv(Environment):
 
             agent.malfunction_data['malfunction'] = 0
 
-            self._agent_malfunction(agent)
+            self._agent_new_malfunction(i_agent, RailEnvActions.DO_NOTHING)
 
         self.num_resets += 1
         self._elapsed_steps = 0
@@ -267,44 +277,40 @@ class RailEnv(Environment):
         # Return the new observation vectors for each agent
         return self._get_observations()
 
-    def _agent_malfunction(self, agent):
+    def _agent_new_malfunction(self, i_agent, action) -> bool:
+        """
+        Returns true if the agent enters into malfunction. (False, if not broken down or already broken down before).
+        """
+        agent = self.agents[i_agent]
+
         # Decrease counter for next event
         if agent.malfunction_data['malfunction_rate'] > 0:
             agent.malfunction_data['next_malfunction'] -= 1
 
         # Only agents that have a positive rate for malfunctions and are not currently broken are considered
-        if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction']:
+        # If counter has come to zero --> Agent has malfunction
+        # set next malfunction time and duration of current malfunction
+        if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction'] and \
+            agent.malfunction_data['next_malfunction'] <= 0:
+            # Increase number of malfunctions
+            agent.malfunction_data['nr_malfunctions'] += 1
 
-            # If counter has come to zero --> Agent has malfunction
-            # set next malfunction time and duration of current malfunction
-            if agent.malfunction_data['next_malfunction'] <= 0:
-                # Increase number of malfunctions
-                agent.malfunction_data['nr_malfunctions'] += 1
+            # Next malfunction in number of stops
+            next_breakdown = int(
+                np.random.exponential(scale=agent.malfunction_data['malfunction_rate']))
+            agent.malfunction_data['next_malfunction'] = next_breakdown
 
-                # Next malfunction in number of stops
-                next_breakdown = int(
-                    np.random.exponential(scale=agent.malfunction_data['malfunction_rate']))
-                agent.malfunction_data['next_malfunction'] = next_breakdown
+            # Duration of current malfunction
+            num_broken_steps = np.random.randint(self.min_number_of_steps_broken,
+                                                 self.max_number_of_steps_broken + 1) + 1
+            agent.malfunction_data['malfunction'] = num_broken_steps
 
-                # Duration of current malfunction
-                num_broken_steps = np.random.randint(self.min_number_of_steps_broken,
-                                                     self.max_number_of_steps_broken + 1) + 1
-                agent.malfunction_data['malfunction'] = num_broken_steps
+            return True
+        return False
 
+    # TODO refactor to decrease length of this method!
     def step(self, action_dict_):
         self._elapsed_steps += 1
-
-        action_dict = action_dict_.copy()
-
-        alpha = 1.0
-        beta = 1.0
-        # Epsilon to avoid rounding errors
-        epsilon = 0.01
-        invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
-        step_penalty = -1 * alpha
-        global_reward = 1 * beta
-        stop_penalty = 0  # penalty for stopping a moving agent
-        start_penalty = 0  # penalty for starting a stopped agent
 
         # Reset the step rewards
         self.rewards_dict = dict()
@@ -312,7 +318,7 @@ class RailEnv(Environment):
             self.rewards_dict[i_agent] = 0
 
         if self.dones["__all__"]:
-            self.rewards_dict = {i: r + global_reward for i, r in self.rewards_dict.items()}
+            self.rewards_dict = {i: r + self.global_reward for i, r in self.rewards_dict.items()}
             info_dict = {
                 'action_required': {i: False for i in range(self.get_num_agents())},
                 'malfunction': {i: 0 for i in range(self.get_num_agents())},
@@ -321,136 +327,132 @@ class RailEnv(Environment):
             return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
         for i_agent in range(self.get_num_agents()):
-            agent = self.agents[i_agent]
-            agent.old_direction = agent.direction
-            agent.old_position = agent.position
-
-            # Check if agent breaks at this step
-            self._agent_malfunction(agent)
 
             if self.dones[i_agent]:  # this agent has already completed...
                 continue
 
-            # No action has been supplied for this agent
-            if i_agent not in action_dict:
-                action_dict[i_agent] = RailEnvActions.DO_NOTHING
+            agent = self.agents[i_agent]
+            agent.old_direction = agent.direction
+            agent.old_position = agent.position
 
-            # The train is broken
+            # No action has been supplied for this agent -> set DO_NOTHING as default
+            if i_agent not in action_dict_:
+                action = RailEnvActions.DO_NOTHING
+            else:
+                action = action_dict_[i_agent]
+
+            if action < 0 or action > len(RailEnvActions):
+                print('ERROR: illegal action=', action,
+                      'for agent with index=', i_agent,
+                      '"DO NOTHING" will be executed instead')
+                action = RailEnvActions.DO_NOTHING
+
+            # Check if agent breaks at this step
+            new_malfunction = self._agent_new_malfunction(i_agent, action)
+
+            # Is the agent at the beginning of the cell? Then, it can take an action
+            # Design choice (Erik+Christian):
+            #  as long as we're broken down at the beginning of the cell, we can choose other actions!
+            if agent.speed_data['position_fraction'] == 0.0:
+                if action == RailEnvActions.DO_NOTHING and agent.moving:
+                    # Keep moving
+                    action = RailEnvActions.MOVE_FORWARD
+
+                if action == RailEnvActions.STOP_MOVING and agent.moving:
+                    # Only allow halting an agent on entering new cells.
+                    agent.moving = False
+                    self.rewards_dict[i_agent] += self.stop_penalty
+
+                if not agent.moving and not (
+                    action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                    # Allow agent to start with any forward or direction action
+                    agent.moving = True
+                    self.rewards_dict[i_agent] += self.start_penalty
+
+                # Store the action
+                if agent.moving and action not in [RailEnvActions.DO_NOTHING, RailEnvActions.STOP_MOVING]:
+                    _, new_cell_valid, new_direction, new_position, transition_valid = \
+                        self._check_action_on_agent(action, agent)
+
+                    if all([new_cell_valid, transition_valid]):
+                        agent.speed_data['transition_action_on_cellexit'] = action
+                    else:
+                        # But, if the chosen invalid action was LEFT/RIGHT, and the agent is moving,
+                        # try to keep moving forward!
+                        if (action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_RIGHT):
+                            _, new_cell_valid, new_direction, new_position, transition_valid = \
+                                self._check_action_on_agent(RailEnvActions.MOVE_FORWARD, agent)
+
+                            if all([new_cell_valid, transition_valid]):
+                                agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.MOVE_FORWARD
+                            else:
+                                # If the agent cannot move due to an invalid transition, we set its state to not moving
+                                self.rewards_dict[i_agent] += self.invalid_action_penalty
+                                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+                                self.rewards_dict[i_agent] += self.stop_penalty
+                                agent.moving = False
+
+                        else:
+                            # If the agent cannot move due to an invalid transition, we set its state to not moving
+                            self.rewards_dict[i_agent] += self.invalid_action_penalty
+                            self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+                            self.rewards_dict[i_agent] += self.stop_penalty
+                            agent.moving = False
+
+            # if we've just broken in this step, nothing else to do
+            if new_malfunction:
+                continue
+
+            # The train was broken before...
             if agent.malfunction_data['malfunction'] > 0:
+
                 # Last step of malfunction --> Agent starts moving again after getting fixed
                 if agent.malfunction_data['malfunction'] < 2:
                     agent.malfunction_data['malfunction'] -= 1
                     self.agents[i_agent].moving = True
-                    action_dict[i_agent] = RailEnvActions.DO_NOTHING
+                    action = RailEnvActions.DO_NOTHING
 
                 else:
                     agent.malfunction_data['malfunction'] -= 1
 
                     # Broken agents are stopped
-                    self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
+                    self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
                     self.agents[i_agent].moving = False
-                    action_dict[i_agent] = RailEnvActions.DO_NOTHING
 
                     # Nothing left to do with broken agent
                     continue
 
-            if action_dict[i_agent] < 0 or action_dict[i_agent] > len(RailEnvActions):
-                print('ERROR: illegal action=', action_dict[i_agent],
-                      'for agent with index=', i_agent,
-                      '"DO NOTHING" will be executed instead')
-                action_dict[i_agent] = RailEnvActions.DO_NOTHING
-
-            action = action_dict[i_agent]
-
-            if action == RailEnvActions.DO_NOTHING and agent.moving:
-                # Keep moving
-                action = RailEnvActions.MOVE_FORWARD
-
-            if action == RailEnvActions.STOP_MOVING and agent.moving and agent.speed_data[
-                'position_fraction'] <= epsilon:
-                # Only allow halting an agent on entering new cells.
-                agent.moving = False
-                self.rewards_dict[i_agent] += stop_penalty
-
-            if not agent.moving and not (action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
-                # Allow agent to start with any forward or direction action
-                agent.moving = True
-                self.rewards_dict[i_agent] += start_penalty
-
             # Now perform a movement.
-            # If the agent is in an initial position within a new cell (agent.speed_data['position_fraction']<eps)
-            #   store the desired action in `transition_action_on_cellexit' (only if the desired transition is
-            #   allowed! otherwise DO_NOTHING!)
-            # Then in any case (if agent.moving) and the `transition_action_on_cellexit' is valid, increment the
-            #   position_fraction by the speed of the agent   (regardless of action taken, as long as no
-            #   STOP_MOVING, but that makes agent.moving=False)
+            # If agent.moving, increment the position_fraction by the speed of the agent
             # If the new position fraction is >= 1, reset to 0, and perform the stored
-            #   transition_action_on_cellexit
+            #   transition_action_on_cellexit if the cell is free.
+            if agent.moving:
 
-            # If the agent can make an action
-            action_selected = False
-            if agent.speed_data['position_fraction'] <= epsilon:
-                if action != RailEnvActions.DO_NOTHING and action != RailEnvActions.STOP_MOVING:
-                    cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
-                        self._check_action_on_agent(action, agent)
-
-                    if all([new_cell_valid, transition_valid]):
-                        agent.speed_data['transition_action_on_cellexit'] = action
-                        action_selected = True
-
-                    else:
-                        # But, if the chosen invalid action was LEFT/RIGHT, and the agent is moving,
-                        # try to keep moving forward!
-                        if (action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_RIGHT) and agent.moving:
-                            cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
-                                self._check_action_on_agent(RailEnvActions.MOVE_FORWARD, agent)
-
-                            if all([new_cell_valid, transition_valid]):
-                                agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.MOVE_FORWARD
-                                action_selected = True
-
-                            else:
-                                # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
-                                self.rewards_dict[i_agent] += invalid_action_penalty
-                                self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
-                                self.rewards_dict[i_agent] += stop_penalty
-                                agent.moving = False
-                                continue
-                        else:
-                            # TODO: an invalid action was chosen after entering the cell. The agent cannot move.
-                            self.rewards_dict[i_agent] += invalid_action_penalty
-                            self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
-                            self.rewards_dict[i_agent] += stop_penalty
-                            agent.moving = False
-                            continue
-
-            if agent.moving and (action_selected or agent.speed_data['position_fraction'] > 0.0):
                 agent.speed_data['position_fraction'] += agent.speed_data['speed']
+                if agent.speed_data['position_fraction'] >= 1.0:
+                    # Perform stored action to transition to the next cell as soon as cell is free
+                    # Notice that we've already check new_cell_valid and transition valid when we stored the action,
+                    # so we only have to check cell_free now!
 
-            if agent.speed_data['position_fraction'] >= 1.0:
+                    # cell and transition validity was checked when we stored transition_action_on_cellexit!
+                    cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
+                        agent.speed_data['transition_action_on_cellexit'], agent)
 
-                # Perform stored action to transition to the next cell as soon as cell is free
-                cell_free, new_cell_valid, new_direction, new_position, transition_valid = \
-                    self._check_action_on_agent(agent.speed_data['transition_action_on_cellexit'], agent)
-
-                if all([new_cell_valid, transition_valid, cell_free]) and agent.malfunction_data['malfunction'] == 0:
-                    agent.position = new_position
-                    agent.direction = new_direction
-                    agent.speed_data['position_fraction'] = 0.0
-                elif not transition_valid or not new_cell_valid:
-                    # If the agent cannot move due to an invalid transition, we set its state to not moving
-                    agent.moving = False
+                    if cell_free:
+                        agent.position = new_position
+                        agent.direction = new_direction
+                        agent.speed_data['position_fraction'] = 0.0
 
             if np.equal(agent.position, agent.target).all():
                 self.dones[i_agent] = True
                 agent.moving = False
             else:
-                self.rewards_dict[i_agent] += step_penalty * agent.speed_data['speed']
+                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
 
         # Check for end of episode + add global reward to all rewards!
         if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
             self.dones["__all__"] = True
-            self.rewards_dict = {i: 0 * r + global_reward for i, r in self.rewards_dict.items()}
+            self.rewards_dict = {i: 0 * r + self.global_reward for i, r in self.rewards_dict.items()}
 
         if (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps):
             self.dones["__all__"] = True
@@ -458,7 +460,7 @@ class RailEnv(Environment):
                 self.dones[k] = True
 
         action_required_agents = {
-            i: self.agents[i].speed_data['position_fraction'] <= epsilon for i in range(self.get_num_agents())
+            i: self.agents[i].speed_data['position_fraction'] == 0.0 for i in range(self.get_num_agents())
         }
         malfunction_agents = {
             i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
@@ -474,6 +476,7 @@ class RailEnv(Environment):
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
     def _check_action_on_agent(self, action, agent):
+
         # compute number of possible transitions in the current
         # cell used to check for invalid actions
         new_direction, transition_valid = self.check_action(agent, action)

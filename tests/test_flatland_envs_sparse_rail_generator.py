@@ -55,24 +55,25 @@ def test_rail_env_action_required_info():
                                 obs_builder_object=GlobalObsForRailEnv())
     np.random.seed(0)
     env_only_if_action_required = RailEnv(width=50,
-                                   height=50,
-                                   rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
-                                                                        num_intersections=10,
-                                                                        # Number of interesections in map
-                                                                        num_trainstations=50,
-                                                                        # Number of possible start/targets on map
-                                                                        min_node_dist=6,  # Minimal distance of nodes
-                                                                        node_radius=3,
-                                                                        # Proximity of stations to city center
-                                                                        num_neighb=3,
-                                                                        # Number of connections to other cities
-                                                                        seed=5,  # Random seed
-                                                                        grid_mode=False
-                                                                        # Ordered distribution of nodes
-                                                                        ),
-                                   schedule_generator=sparse_schedule_generator(speed_ration_map),
-                                   number_of_agents=10,
-                                   obs_builder_object=GlobalObsForRailEnv())
+                                          height=50,
+                                          rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
+                                                                               num_intersections=10,
+                                                                               # Number of interesections in map
+                                                                               num_trainstations=50,
+                                                                               # Number of possible start/targets on map
+                                                                               min_node_dist=6,
+                                                                               # Minimal distance of nodes
+                                                                               node_radius=3,
+                                                                               # Proximity of stations to city center
+                                                                               num_neighb=3,
+                                                                               # Number of connections to other cities
+                                                                               seed=5,  # Random seed
+                                                                               grid_mode=False
+                                                                               # Ordered distribution of nodes
+                                                                               ),
+                                          schedule_generator=sparse_schedule_generator(speed_ration_map),
+                                          number_of_agents=10,
+                                          obs_builder_object=GlobalObsForRailEnv())
     env_renderer = RenderTool(env_always_action, gl="PILSVG", )
 
     for step in range(100):
@@ -87,7 +88,8 @@ def test_rail_env_action_required_info():
             if step == 0 or info_only_if_action_required['action_required'][a]:
                 action_dict_only_if_action_required.update({a: action})
             else:
-                print("[{}] not action_required {}, speed_data={}".format(step, a, env_always_action.agents[a].speed_data))
+                print("[{}] not action_required {}, speed_data={}".format(step, a,
+                                                                          env_always_action.agents[a].speed_data))
 
         obs_always_action, rewards_always_action, done_always_action, info_always_action = env_always_action.step(
             action_dict_always_action)
@@ -156,3 +158,23 @@ def test_rail_env_malfunction_speed_info():
 
         if done['__all__']:
             break
+
+
+def test_sparse_generator_with_too_man_cities_does_not_break_down():
+    np.random.seed(0)
+
+    RailEnv(width=50,
+            height=50,
+            rail_generator=sparse_rail_generator(
+                num_cities=100,  # Number of cities in map
+                num_intersections=10,  # Number of interesections in map
+                num_trainstations=50,  # Number of possible start/targets on map
+                min_node_dist=6,  # Minimal distance of nodes
+                node_radius=3,  # Proximity of stations to city center
+                num_neighb=3,  # Number of connections to other cities
+                seed=5,  # Random seed
+                grid_mode=False  # Ordered distribution of nodes
+            ),
+            schedule_generator=sparse_schedule_generator(),
+            number_of_agents=10,
+            obs_builder_object=GlobalObsForRailEnv())
