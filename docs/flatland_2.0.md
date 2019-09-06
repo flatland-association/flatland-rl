@@ -46,7 +46,7 @@ rail_generator=sparse_rail_generator(
     node_radius=3,  # Proximity of stations to city center
     num_neighb=3,  # Number of connections to other cities
     seed=5,  # Random seed
-    realistic_mode=False  # Ordered distribution of nodes
+    grid_mode=False  # Ordered distribution of nodes
 )
 
 # Build the environment
@@ -68,7 +68,7 @@ You can tune the following parameters:
 - `min_node_dist` is only used if `grid_mode=False` and represents the minimal distance between two nodes.
 - `node_radius` defines the extent of a city. Each trainstation is placed at a distance to the closes city node that is smaller or equal to this number.
 - `num_neighb`defines the number of neighbouring nodes that connect to each other. Thus this changes the connectivity and thus the amount of alternative routes in the network.
-- `realistic_mode` True -> Nodes evenly distriubted in env, False-> Random distribution of nodes
+- `grid_mode` True -> Nodes evenly distriubted in env, False-> Random distribution of nodes
 - `enhance_intersection`: True -> Extra rail elements added at intersections
 - `seed` is used to initialize the random generator
 
@@ -143,7 +143,7 @@ env = RailEnv(width=50,
                                                    node_radius=2,  # Proximity of stations to city center
                                                    num_neighb=4,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
-                                                   realistic_mode=True,
+                                                   grid_mode=True,
                                                    enhance_intersection=True
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
