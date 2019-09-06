@@ -12,10 +12,6 @@ Thus the following changes are coming in the next version to be closer to real r
 
 Below we explain these changes in more detail and how you can play with their parametrization. We appreciate *your feedback* on the performance and the difficulty on these levels to help us shape the best possible **Flat**land 2.0 environment.
 
-## Get the new level generators
-As long as **Flat**land 2.0 is not yet released, can only install this version of **Flat**land through the gitlab repository. 
-Once you have have checkout the latest version from the master, install **Flat**land by running `python setup.py install`.
-
 ## Generate levels
 
 We are currently working on different new level generators and you can expect that the levels in the submission testing will not all come from just one but rather different level generators to be sure that the controllers can handle any railway specific challenge.
@@ -60,7 +56,9 @@ env = RailEnv(
 )
 ```
 
-You can tune the following parameters:
+You can see that you now need bot a `rail_generator` and a `schedule_generator` to generate a level. These need to work nicely together. The `rail_generator` will only generate the railway infrastructure and provide hints to the `schedule_generator` about where to place agents. The `schedule_generator` will then generate a schedule, meaning it places agents at different train stations and gives them tasks by providing individual targets.
+
+You can tune the following parameters in the `sparse_rail_generator`:
 
 - `num_cities` is the number of cities on a map. Cities are the only nodes that can host start and end points for agent tasks (Train stations). Here you have to be carefull that the number is not too high as all the cities have to fit on the map. When `grid_mode=False` you have to be carefull when chosing `min_node_dist` because leves will fails if not all cities (and intersections) can be placed with at least `min_node_dist` between them.
 - `num_intersections` is the number of nodes that don't hold any trainstations. They are also the first priority that a city connects to. We use these to allow for sparse connections between cities.
