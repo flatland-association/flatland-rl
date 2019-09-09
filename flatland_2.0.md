@@ -1,4 +1,5 @@
-# Flatland 2.0 Introduction
+Flatland 2.0 Introduction
+=========================
 
 ## What's new?
 

@@ -1,6 +1,9 @@
-# Keeping track of major Flatland Changes
+Keeping track of major Flatland Changes
+=======================================
 
-## Changes since Flatland 0.3
+Changes since Flatland 0.3
+--------------------------
+
 ### Changes in stock predictors
 The stock `ShortestPathPredictorForRailEnv` now respects the different agent speeds and updates their prediction accordingly.
 
@@ -68,8 +71,8 @@ The duration of a malfunction is uniformly drawn from the intervall `[min_durati
 
 The baselines repository is not yet fully updated to handle multi-speed and stochastic events. Training needs to be modified to omitt all states inbetween the states where an agent can chose an action. Simple navigation training is already up to date. See [here](https://gitlab.aicrowd.com/flatland/baselines/blob/master/torch_training/training_navigation.py) for more details.
 
-## Changes since Flatland 0.2
-
+Changes since Flatland 0.2
+--------------------------
 Please list all major changes since the last version:
 
 - Refactoring of rendering code: CamelCase functions changed to snake_case

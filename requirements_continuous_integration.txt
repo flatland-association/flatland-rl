@@ -6,6 +6,7 @@ benchmarker>=4.0.1
 coverage>=4.5.1
 Sphinx>=1.8.1
 sphinx-rtd-theme>=0.4.3
+docutils>=0.15.2
 flake8>=3.7.7
 flake8-eradicate>=0.2.0
 twine>=1.12.1
@@ -15,3 +16,4 @@ jupyter-core>=4.5.0
 notebook>=5.7.8
 pytest-xvfb>=1.2.0
 git+https://github.com/who8mylunch/Jupyter_Canvas_Widget.git@bd151ae1509c50b5809944dd3294f58b7b069c86
+recommonmark>=0.6.0
