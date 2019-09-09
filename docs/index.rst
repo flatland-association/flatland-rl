@@ -9,15 +9,15 @@ Welcome to flatland's documentation!
    installation
    about_flatland
    gettingstarted
-   specifications/specifications.md
    intro_observationbuilder
+   specifications/specifications.md
    localevaluation
    modules
    FAQ
    contributing
    authors
-   ../changelog.md
-   ../flatland_2.0.md
+   changelog.md
+   flatland_2.0.md
 
 
 

@@ -67,10 +67,11 @@ coverage: ## check code coverage quickly with the default Python
 	$(BROWSER) htmlcov/index.html
 
 docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/flatland.rst
+	rm -f docs/flatland*.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ flatland
+	sphinx-apidoc --force -a -e -o docs/ flatland
 	$(MAKE) -C docs clean
+	cp *.md docs
 	$(MAKE) -C docs html
 	pydeps --no-config --noshow flatland -o docs/_build/html/flatland.svg
 	$(BROWSER) docs/_build/html/index.html
