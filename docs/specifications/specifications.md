@@ -1,7 +1,9 @@
-Flatland Environment Specifications
+Flatland Specs
 ==========================
 
-In a humand-readable language:
+What are **Flatland** specs about?
+---------------------------------
+In a humand-readable language, they provide
 * code base overview (hand-drawn concept)
 * key concepts (generators, envs) and how are they linked
 * link relevant code base
@@ -311,6 +313,23 @@ Missing values in present node are filled in with +inf (truncated).
 In case of the root node, the values are [0, 0, 0, 0, distance from agent to target, own malfunction, own speed]
 In case the target node is reached, the values are [0, 0, 0, 0, 0].
 
+
+## Predictors
+Predictors make predictions on future agents' moves based on the current state of the environment.
+They are decoupled from observation builders in order to be encapsulate the functionality and to make it re-usable.
+
+For instance, `TreeObsForRailEnv` optionally uses the predicted the predicted trajectories while exploring
+the branches of an agent's future moves to detect future conflicts.
+
+The general call structure is as follows:
+```
+RailEnv.step() 
+               -> ObservationBuilder.get_many() 
+                                                ->  self.predictor.get()
+                                                    self.get()
+                                                    self.get()
+                                                    ...
+```
 
 ## [Rendering](rendering)
 ## [Railway](railway)

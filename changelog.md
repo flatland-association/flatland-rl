@@ -1,5 +1,5 @@
-Keeping track of major Flatland Changes
-=======================================
+Changelog
+==========
 
 Changes since Flatland 0.3
 --------------------------
