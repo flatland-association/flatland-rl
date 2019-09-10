@@ -1,5 +1,5 @@
 =====
-Getting Started with custom observations
+Getting Started with custom observations and custom predictors
 =====
 
 Overview

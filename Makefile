@@ -69,7 +69,7 @@ coverage: ## check code coverage quickly with the default Python
 docs: ## generate Sphinx HTML documentation, including API docs
 	rm -f docs/flatland*.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc --force -a -e -o docs/ flatland
+	sphinx-apidoc --force -a -e -o docs/ flatland -H "Flatland Reference"
 	$(MAKE) -C docs clean
 	cp *.md docs
 	$(MAKE) -C docs html

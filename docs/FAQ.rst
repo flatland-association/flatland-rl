@@ -41,7 +41,8 @@ Frequently Asked Questions (FAQs)
     .. _importlib-resources: https://importlib-resources.readthedocs.io/en/latest/
 
     Renders the scene into a image (screenshot)
+
     .. code-block:: python
 
-    renderer.gl.save_image("filename.bmp")
+        renderer.gl.save_image("filename.bmp")
 
