@@ -80,8 +80,8 @@ def realistic_rail_generator(num_cities=5,
 
     def do_generate_city_locations(width, height, intern_city_size, intern_max_number_of_station_tracks):
 
-        X = int(np.floor(max(1, width - 2 * intern_max_number_of_station_tracks - 1) / intern_city_size))
-        Y = int(np.floor(max(1, height - 2 * intern_max_number_of_station_tracks - 1) / intern_city_size))
+        X = int(np.floor(max(1, height - 2 * intern_max_number_of_station_tracks - 1) / intern_city_size))
+        Y = int(np.floor(max(1, width - 2 * intern_max_number_of_station_tracks - 1) / intern_city_size))
 
         max_num_cities = min(num_cities, X * Y)
 
@@ -327,15 +327,15 @@ def realistic_rail_generator(num_cities=5,
 for itrials in range(100):
     print(itrials, "generate new city")
     np.random.seed(int(time.time()))
-    env = RailEnv(width=50,
-                  height=50,
+    env = RailEnv(width=100,
+                  height=30,
                   rail_generator=realistic_rail_generator(num_cities=1,
-                                                          city_size=30,
+                                                          city_size=20,
                                                           allowed_rotation_angles=[-90,0,90],
                                                           max_number_of_station_tracks=4,
                                                           nbr_of_switches_per_station_track=2,
                                                           max_number_of_connecting_tracks=10,
-                                                          do_random_connect_stations=False,
+                                                          do_random_connect_stations=True,
                                                           # Number of cities in map
                                                           seed=int(time.time())  # Random seed
                                                           ),
