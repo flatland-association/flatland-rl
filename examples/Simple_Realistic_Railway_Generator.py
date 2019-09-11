@@ -316,7 +316,7 @@ for itrials in range(100):
                   height=50,
                   rail_generator=realistic_rail_generator(num_cities=5,
                                                           city_size=10,
-                                                          allowed_rotation_angles=[-90,-60,-30,0,15,30,45,60,75,90],
+                                                          allowed_rotation_angles=[-90,0,90],
                                                           max_number_of_station_tracks=4,
                                                           max_number_of_connecting_tracks=10,
                                                           do_random_connect_stations=False,
