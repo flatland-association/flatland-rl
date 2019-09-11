@@ -331,11 +331,11 @@ for itrials in range(100):
                   height=20,
                   rail_generator=realistic_rail_generator(num_cities=10,
                                                           city_size=10,
-                                                          allowed_rotation_angles=[90],
+                                                          allowed_rotation_angles=[-90],
                                                           max_number_of_station_tracks=4,
                                                           nbr_of_switches_per_station_track=2,
                                                           max_number_of_connecting_tracks=10,
-                                                          do_random_connect_stations=True,
+                                                          do_random_connect_stations=False,
                                                           # Number of cities in map
                                                           seed=int(time.time())  # Random seed
                                                           ),
