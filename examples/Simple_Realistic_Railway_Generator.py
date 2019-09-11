@@ -159,6 +159,7 @@ def realistic_rail_generator(num_cities=5, city_size=10, allowed_rotation_angles
             e_nodes = end_nodes_added[idx_b]
 
             max_input_output = max(len(s_nodes), len(e_nodes))
+            max_input_output = min(inter_max_number_of_connecting_tracks,max_input_output)
 
             idx_s_nodes = np.random.choice(np.arange(len(s_nodes)), len(s_nodes), False)
             idx_e_nodes = np.random.choice(np.arange(len(e_nodes)), len(e_nodes), False)
