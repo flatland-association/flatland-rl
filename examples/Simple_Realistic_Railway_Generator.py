@@ -40,43 +40,48 @@ def realistic_rail_generator(num_cities=5,
         The matrix with the correct 16-bit bitmaps for each cell.
     """
 
-    def subtract_pos(nodeA, nodeB):
-        return (nodeA[0] - nodeB[0], nodeA[1] - nodeB[1])
+    class PositionOps:
+        def subtract_pos(nodeA, nodeB):
+            return (nodeA[0] - nodeB[0], nodeA[1] - nodeB[1])
 
-    def add_pos(nodeA, nodeB):
-        return (nodeA[0] + nodeB[0], nodeA[1] + nodeB[1])
+        def add_pos(nodeA, nodeB):
+            return (nodeA[0] + nodeB[0], nodeA[1] + nodeB[1])
 
-    def make_orthogonal_pos(node):
-        return (node[1], -node[0])
+        def make_orthogonal_pos(node):
+            return (node[1], -node[0])
 
-    def get_norm_pos(node):
-        return np.sqrt(node[0] * node[0] + node[1] * node[1])
+        def get_norm_pos(node):
+            return np.sqrt(node[0] * node[0] + node[1] * node[1])
 
-    def normalize_pos(node):
-        n = get_norm_pos(node)
-        if n > 0.0:
-            n = 1 / n
-        return scale_pos(node, n)
+        def normalize_pos(node):
+            n = PositionOps.get_norm_pos(node)
+            if n > 0.0:
+                n = 1 / n
+            return PositionOps.scale_pos(node, n)
 
-    def scale_pos(node, scalar):
-        return (node[0] * scalar, node[1] * scalar)
+        def scale_pos(node, scalar):
+            return (node[0] * scalar, node[1] * scalar)
 
-    def round_pos(node):
-        return (int(np.round(node[0])), int(np.round(node[1])))
+        def round_pos(node):
+            return (int(np.round(node[0])), int(np.round(node[1])))
 
-    def ceil_pos(node):
-        return (int(np.ceil(node[0])), int(np.ceil(node[1])))
+        def ceil_pos(node):
+            return (int(np.ceil(node[0])), int(np.ceil(node[1])))
 
-    def bound_pos(node, min_value, max_value):
-        return (max(min_value, min(max_value, node[0])), max(min_value, min(max_value, node[1])))
+        def bound_pos(node, min_value, max_value):
+            return (max(min_value, min(max_value, node[0])), max(min_value, min(max_value, node[1])))
 
-    def rotate_pos(node, rot_in_degree):
-        alpha = rot_in_degree / 180.0 * np.pi
-        x0 = node[0]
-        y0 = node[1]
-        x1 = x0 * np.cos(alpha) - y0 * np.sin(alpha)
-        y1 = x0 * np.sin(alpha) + y0 * np.cos(alpha)
-        return (x1, y1)
+        def rotate_pos(node, rot_in_degree):
+            alpha = rot_in_degree / 180.0 * np.pi
+            x0 = node[0]
+            y0 = node[1]
+            x1 = x0 * np.cos(alpha) - y0 * np.sin(alpha)
+            y1 = x0 * np.sin(alpha) + y0 * np.cos(alpha)
+            return (x1, y1)
+
+
+
+
 
     def do_generate_city_locations(width, height, intern_city_size, intern_max_number_of_station_tracks):
 
@@ -102,10 +107,10 @@ def realistic_rail_generator(num_cities=5,
         for i in range(len(generate_city_locations)):
             # station main orientation  (horizontal or vertical
             rot_angle = np.random.choice(allowed_rotation_angles)
-            add_pos_val = scale_pos(rotate_pos((1, 0), rot_angle), (max(1, (intern_city_size - 3) / 2)))
-            generate_city_locations[i][0] = add_pos(generate_city_locations[i][1], add_pos_val)
-            add_pos_val = scale_pos(rotate_pos((1, 0), 180 + rot_angle), (max(1, (intern_city_size - 3) / 2)))
-            generate_city_locations[i][1] = add_pos(generate_city_locations[i][1], add_pos_val)
+            add_pos_val = PositionOps.scale_pos(PositionOps.rotate_pos((1, 0), rot_angle), (max(1, (intern_city_size - 3) / 2)))
+            generate_city_locations[i][0] = PositionOps.add_pos(generate_city_locations[i][1], add_pos_val)
+            add_pos_val = PositionOps.scale_pos(PositionOps.rotate_pos((1, 0), 180 + rot_angle), (max(1, (intern_city_size - 3) / 2)))
+            generate_city_locations[i][1] = PositionOps.add_pos(generate_city_locations[i][1], add_pos_val)
         return generate_city_locations
 
     def create_stations_from_city_locations(rail_trans, rail_array, generate_city_locations,
@@ -126,10 +131,10 @@ def realistic_rail_generator(num_cities=5,
                 org_start_node = generate_city_locations[city_loop][0]
                 org_end_node = generate_city_locations[city_loop][1]
 
-                ortho_trans = make_orthogonal_pos(normalize_pos(subtract_pos(org_start_node, org_end_node)))
+                ortho_trans = PositionOps.make_orthogonal_pos(PositionOps.normalize_pos(PositionOps.subtract_pos(org_start_node, org_end_node)))
                 s = (ct - number_of_connecting_tracks / 2.0)
-                start_node = ceil_pos(add_pos(org_start_node, scale_pos(ortho_trans, s)))
-                end_node = ceil_pos(add_pos(org_end_node, scale_pos(ortho_trans, s)))
+                start_node = PositionOps.ceil_pos(PositionOps.add_pos(org_start_node, PositionOps.scale_pos(ortho_trans, s)))
+                end_node = PositionOps.ceil_pos(PositionOps.add_pos(org_end_node, PositionOps.scale_pos(ortho_trans, s)))
 
                 connection = connect_from_nodes(rail_trans, rail_array, start_node, end_node)
                 if len(connection) > 0:
@@ -173,7 +178,7 @@ def realistic_rail_generator(num_cities=5,
             b = []
             for yLoop in x:
                 for xLoop in x:
-                    v = get_norm_pos(subtract_pos(start_nodes_added[xLoop][0], end_nodes_added[yLoop][0]))
+                    v = PositionOps.get_norm_pos(PositionOps.subtract_pos(start_nodes_added[xLoop][0], end_nodes_added[yLoop][0]))
                     if v > 0:
                         v = np.inf
                     a[yLoop].append(v)
