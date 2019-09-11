@@ -10,7 +10,9 @@ from flatland.envs.schedule_generators import sparse_schedule_generator
 from flatland.utils.rendertools import RenderTool
 
 
-def realistic_rail_generator(num_cities=5, seed=0) -> RailGenerator:
+def realistic_rail_generator(num_cities=5, city_size=10, max_number_of_station_tracks=4,
+                             max_number_of_connecting_tracks=4,
+                             seed=0, print_out_info=True) -> RailGenerator:
     """
     This is a level generator which generates a realistic rail configurations
 
@@ -52,53 +54,49 @@ def realistic_rail_generator(num_cities=5, seed=0) -> RailGenerator:
     def bound_pos(node, min_value, max_value):
         return (max(min_value, min(max_value, node[0])), max(min_value, min(max_value, node[1])))
 
-    def generator(width, height, num_agents, num_resets=0) -> RailGeneratorProduct:
-        rail_trans = RailEnvTransitions()
-        grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
-        rail_array = grid_map.grid
-        rail_array.fill(0)
-        np.random.seed(seed + num_resets)
-        max_num_cities = num_cities
-        train_stations = [[] for i in range(max_num_cities)]
-        agent_start_targets_nodes = []
+    def do_generate_city_locations(width, height):
 
-        max_number_of_connecting_tracks = 4
-        city_size = 10
-        X = int(np.floor(max(1, width  - 2 * max_number_of_connecting_tracks - 1) / city_size))
-        Y = int(np.floor(max(1, height  - 2 * max_number_of_connecting_tracks - 1) / city_size))
+        X = int(np.floor(max(1, width - 2 * max_number_of_connecting_tracks - 1) / city_size))
+        Y = int(np.floor(max(1, height - 2 * max_number_of_connecting_tracks - 1) / city_size))
 
-        max_num_cities = min(max_num_cities, X * Y)
+        max_num_cities = min(num_cities, X * Y)
 
         cities_at = np.random.choice(X * Y, max_num_cities, False)
         cities_at = np.sort(cities_at)
-        print(X * Y,":",max_num_cities,":",cities_at)
+        if print_out_info:
+            print("max. nbr of cities with given configuration is:", max_num_cities)
 
         x = np.floor(cities_at / Y)
         y = cities_at - x * Y
-        xs = (x * city_size + max_number_of_connecting_tracks )
-        ys = (y * city_size + max_number_of_connecting_tracks )
+        xs = (x * city_size + max_number_of_connecting_tracks)
+        ys = (y * city_size + max_number_of_connecting_tracks)
 
         generate_city_locations = [[(int(xs[i]), int(ys[i])), (int(xs[i]), int(ys[i]))] for i in range(len(xs))]
-        print(generate_city_locations)
+        return generate_city_locations, max_num_cities
 
+    def do_orient_cities(generate_city_locations):
         for i in range(len(generate_city_locations)):
             # station main orientation  (horizontal or vertical
             add_pos_val = (city_size, 0)
             if np.random.choice(2) == 0:
                 add_pos_val = (0, city_size)
             generate_city_locations[i][1] = add_pos(generate_city_locations[i][1], add_pos_val)
+        return generate_city_locations
 
-        nodes_to_fix = []
-        for city_loop in range(max_num_cities):
+    def do_tracks_between_start_end_points(rail_trans, rail_array, generate_city_locations):
+        nodes_to_added = []
+        station_slots = [[] for i in range(len(generate_city_locations))]
+
+        for city_loop in range(len(generate_city_locations)):
             # Connect train station to the correct node
-            number_of_connecting_tracks = np.random.choice(max(0, max_number_of_connecting_tracks - 1)) + 1
+            number_of_connecting_tracks = np.random.choice(max(0, max_number_of_connecting_tracks)) + 1
 
             for ct in range(number_of_connecting_tracks):
                 for kLoop in range(2):
-                    org_start_node = generate_city_locations[int(city_loop)][kLoop]
+                    org_start_node = generate_city_locations[city_loop][kLoop]
 
-                    a = generate_city_locations[int(city_loop)][0]
-                    b = generate_city_locations[int(city_loop)][1]
+                    a = generate_city_locations[city_loop][0]
+                    b = generate_city_locations[city_loop][1]
                     org_end_node = scale_pos(add_pos(a, b), 0.5)
 
                     ortho_trans = make_orthogonal_pos(normalize_pos(subtract_pos(a, b)))
@@ -109,16 +107,39 @@ def realistic_rail_generator(num_cities=5, seed=0) -> RailGenerator:
 
                     connection = connect_from_nodes(rail_trans, rail_array, start_node, end_node)
                     if len(connection) > 0:
-                        nodes_to_fix.append(start_node)
-                        nodes_to_fix.append(end_node)
+                        nodes_to_added.append(start_node)
+                        nodes_to_added.append(end_node)
+                        # place in the center of path a station slot
+                        station_slots[city_loop].append(connection[int(np.floor(len(connection)/2))])
 
-                        # train_stations[city_loop].append(start_node)
-                        train_stations[city_loop].append(end_node)
+        return nodes_to_added, station_slots,
+
+    def generator(width, height, num_agents, num_resets=0) -> RailGeneratorProduct:
+        rail_trans = RailEnvTransitions()
+        grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
+        rail_array = grid_map.grid
+        rail_array.fill(0)
+        np.random.seed(seed + num_resets)
+
+        agent_start_targets_nodes = []
+        # generate city locations
+        generate_city_locations, max_num_cities = do_generate_city_locations(width, height)
+        # apply orientation to cities (horizontal, vertical)
+        generate_city_locations = do_orient_cities(generate_city_locations)
+        # generate city topology
+        nodes_to_added, station_slots = do_tracks_between_start_end_points(rail_trans,
+                                                                                    rail_array,
+                                                                                    generate_city_locations)
+
+        train_stations = [[] for i in range(max_num_cities)]
+        for i in range(max_num_cities):
+            for j in range(len(station_slots[i])):
+                train_stations[i].append(station_slots[i][j])
 
         # ----------------------------------------------------------------------------------
         # fix all transition at starting / ending points (mostly add a dead end, if missing)
-        for i in range(len(nodes_to_fix)):
-            grid_map.fix_transitions(nodes_to_fix[i])
+        for i in range(len(nodes_to_added)):
+            grid_map.fix_transitions(nodes_to_added[i])
 
         # ----------------------------------------------------------------------------------
         # Slot availability in node
