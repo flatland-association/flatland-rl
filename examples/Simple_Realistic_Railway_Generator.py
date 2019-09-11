@@ -327,11 +327,11 @@ def realistic_rail_generator(num_cities=5,
 for itrials in range(100):
     print(itrials, "generate new city")
     np.random.seed(int(time.time()))
-    env = RailEnv(width=100,
-                  height=30,
-                  rail_generator=realistic_rail_generator(num_cities=1,
-                                                          city_size=20,
-                                                          allowed_rotation_angles=[-90,0,90],
+    env = RailEnv(width=80,
+                  height=20,
+                  rail_generator=realistic_rail_generator(num_cities=10,
+                                                          city_size=10,
+                                                          allowed_rotation_angles=[90],
                                                           max_number_of_station_tracks=4,
                                                           nbr_of_switches_per_station_track=2,
                                                           max_number_of_connecting_tracks=10,
