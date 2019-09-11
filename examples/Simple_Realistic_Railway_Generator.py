@@ -17,6 +17,7 @@ def realistic_rail_generator(num_cities=5,
                              city_size=10,
                              allowed_rotation_angles=[0, 90],
                              max_number_of_station_tracks=4,
+                             nbr_of_switches_per_station_track=2,
                              max_number_of_connecting_tracks=4,
                              do_random_connect_stations=False,
                              seed=0,
@@ -28,6 +29,7 @@ def realistic_rail_generator(num_cities=5,
     :param city_size: Length of city measure in cells
     :param allowed_rotation_angles: Rotate the city (around center)
     :param max_number_of_station_tracks: max number of tracks per station
+    :param nbr_of_switches_per_station_track: number of switches per track (max)
     :param max_number_of_connecting_tracks: max number of connecting track between stations
     :param do_random_connect_stations : if false connect the stations along the grid (top,left -> down,right), else rand
     :param seed: Random Seed
@@ -107,7 +109,8 @@ def realistic_rail_generator(num_cities=5,
         return generate_city_locations
 
     def create_stations_from_city_locations(rail_trans, rail_array, generate_city_locations,
-                                            intern_max_number_of_station_tracks):
+                                            intern_max_number_of_station_tracks,
+                                            intern_nbr_of_switches_per_station_track):
         nodes_added = []
         start_nodes_added = [[] for i in range(len(generate_city_locations))]
         end_nodes_added = [[] for i in range(len(generate_city_locations))]
@@ -140,15 +143,16 @@ def realistic_rail_generator(num_cities=5,
                     station_slots[city_loop].append(connection[int(np.floor(len(connection) / 2))])
                     station_slots_cnt += 1
                     if len(connection) - 3 > 0:
-                        idxs = np.random.choice(len(connection) - 3, 1 + np.random.choice(len(connection) - 3), False)
+                        idxs = np.random.choice(len(connection) - 3, intern_nbr_of_switches_per_station_track, False)
                         for idx in idxs:
                             switch_slots[city_loop].append(connection[idx + 1])
 
         for city_loop in range(len(switch_slots)):
             data = switch_slots[city_loop]
+            data_idx = np.random.choice(np.arange(len(data)),len(data),False)
             for i in range(len(data) - 1):
-                start_node = data[i]
-                end_node = data[i + 1]
+                start_node = data[data_idx[i]]
+                end_node = data[data_idx[i + 1]]
                 connection = connect_from_nodes(rail_trans, rail_array, start_node, end_node)
                 if len(connection) > 0:
                     nodes_added.append(start_node)
@@ -237,6 +241,16 @@ def realistic_rail_generator(num_cities=5,
         if print_out_info:
             print("intern_max_number_of_station_tracks:", intern_max_number_of_station_tracks)
 
+
+        intern_nbr_of_switches_per_station_track = nbr_of_switches_per_station_track
+        if nbr_of_switches_per_station_track < 1:
+            warnings.warn("min intern_nbr_of_switches_per_station_track requried to be > 2!")
+            intern_nbr_of_switches_per_station_track = 2
+        if print_out_info:
+            print("intern_nbr_of_switches_per_station_track:", intern_nbr_of_switches_per_station_track)
+
+
+
         inter_max_number_of_connecting_tracks = max_number_of_connecting_tracks
         if max_number_of_connecting_tracks < 1:
             warnings.warn("min inter_max_number_of_connecting_tracks requried to be > 1!")
@@ -254,7 +268,8 @@ def realistic_rail_generator(num_cities=5,
         nodes_added, train_stations, s_nodes, e_nodes = \
             create_stations_from_city_locations(rail_trans, rail_array,
                                                 generate_city_locations,
-                                                intern_max_number_of_station_tracks)
+                                                intern_max_number_of_station_tracks,
+                                                intern_nbr_of_switches_per_station_track)
         # connect stations
         connect_stations(rail_trans, rail_array, s_nodes, e_nodes, nodes_added, inter_max_number_of_connecting_tracks,
                          do_random_connect_stations)
@@ -314,10 +329,11 @@ for itrials in range(100):
     np.random.seed(int(time.time()))
     env = RailEnv(width=50,
                   height=50,
-                  rail_generator=realistic_rail_generator(num_cities=5,
-                                                          city_size=10,
+                  rail_generator=realistic_rail_generator(num_cities=1,
+                                                          city_size=30,
                                                           allowed_rotation_angles=[-90,0,90],
                                                           max_number_of_station_tracks=4,
+                                                          nbr_of_switches_per_station_track=2,
                                                           max_number_of_connecting_tracks=10,
                                                           do_random_connect_stations=False,
                                                           # Number of cities in map
