@@ -15,36 +15,122 @@ from flatland.utils.rendertools import RenderTool
 
 class PositionOps:
     def subtract_pos(nodeA, nodeB):
+        """
+        vector operation : nodeA - nodeB
+
+        :param nodeA: tuple with coordinate (x,y) or 2d vector
+        :param nodeB: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        tuple with coordinate (x,y) or 2d vector
+        """
         return (nodeA[0] - nodeB[0], nodeA[1] - nodeB[1])
 
     def add_pos(nodeA, nodeB):
+        """
+        vector operation : nodeA + nodeB
+
+        :param nodeA: tuple with coordinate (x,y) or 2d vector
+        :param nodeB: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        tuple with coordinate (x,y) or 2d vector
+        """
         return (nodeA[0] + nodeB[0], nodeA[1] + nodeB[1])
 
     def make_orthogonal_pos(node):
+        """
+        vector operation : rotates the 2D vector +90°
+
+        :param node: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        tuple with coordinate (x,y) or 2d vector
+        """
         return (node[1], -node[0])
 
     def get_norm_pos(node):
+        """
+        calculates the euclidean norm of the 2d vector
+
+        :param node: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        tuple with coordinate (x,y) or 2d vector
+        """
         return np.sqrt(node[0] * node[0] + node[1] * node[1])
 
     def normalize_pos(node):
+        """
+        normalize the 2d vector = v/|v|
+
+        :param node: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        tuple with coordinate (x,y) or 2d vector
+        """
         n = PositionOps.get_norm_pos(node)
         if n > 0.0:
             n = 1 / n
         return PositionOps.scale_pos(node, n)
 
     def scale_pos(node, scalar):
+        """
+         scales the 2d vector = node * scale
+
+         :param node: tuple with coordinate (x,y) or 2d vector
+         :param scale: scalar to scale
+         :return:
+             -------
+         tuple with coordinate (x,y) or 2d vector
+         """
         return (node[0] * scalar, node[1] * scalar)
 
     def round_pos(node):
+        """
+         rounds the x and y coordinate and convert them to an integer values
+
+         :param node: tuple with coordinate (x,y) or 2d vector
+         :return:
+             -------
+         tuple with coordinate (x,y) or 2d vector
+         """
         return (int(np.round(node[0])), int(np.round(node[1])))
 
     def ceil_pos(node):
+        """
+         ceiling the x and y coordinate and convert them to an integer values
+
+         :param node: tuple with coordinate (x,y) or 2d vector
+         :return:
+             -------
+         tuple with coordinate (x,y) or 2d vector
+         """
         return (int(np.ceil(node[0])), int(np.ceil(node[1])))
 
     def bound_pos(node, min_value, max_value):
+        """
+         force the values x and y to be between min_value and max_value
+
+         :param node: tuple with coordinate (x,y) or 2d vector
+         :param min_value: scalar value
+         :param max_value: scalar value
+         :return:
+             -------
+         tuple with coordinate (x,y) or 2d vector
+         """
         return (max(min_value, min(max_value, node[0])), max(min_value, min(max_value, node[1])))
 
     def rotate_pos(node, rot_in_degree):
+        """
+         rotate the 2d vector with given angle in degree
+
+         :param node: tuple with coordinate (x,y) or 2d vector
+         :param rot_in_degree:  angle in degree
+         :return:
+             -------
+         tuple with coordinate (x,y) or 2d vector
+         """
         alpha = rot_in_degree / 180.0 * np.pi
         x0 = node[0]
         y0 = node[1]
