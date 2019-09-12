@@ -321,10 +321,11 @@ def realistic_rail_generator(num_cities=5,
         s_nodes = org_s_nodes.copy()
         e_nodes = org_e_nodes.copy()
 
-        for k in range(inter_max_number_of_connecting_tracks):
-            for city_loop in range(len(s_nodes)):
+
+        for city_loop in range(len(s_nodes)):
+            for k in range(inter_max_number_of_connecting_tracks):
                 sns = s_nodes[city_loop]
-                cl = 0
+                old_cl = -1
                 min_distance = np.inf
                 end_node = None
                 start_node = None
@@ -335,13 +336,14 @@ def realistic_rail_generator(num_cities=5,
                     for en in ens:
                         for sn in sns:
                             d = Vec2dOperations.get_norm_pos(Vec2dOperations.subtract_pos(en, sn))
-                            if d < min_distance:
+                            if d < min_distance and old_cl != city_loop_find_shortest:
                                 min_distance = d
                                 end_node = en
                                 start_node = sn
                                 cl = city_loop_find_shortest
 
                 if end_node is not None:
+                    old_cl = cl
                     tmp_trans_sn = rail_array[start_node]
                     tmp_trans_en = rail_array[end_node]
                     rail_array[start_node] = 0
