@@ -342,13 +342,14 @@ def realistic_rail_generator(num_cities=5,
                                 cl = city_loop_find_shortest
 
                 if end_node is not None:
-                    old_cl.append(cl)
+
                     tmp_trans_sn = rail_array[start_node]
                     tmp_trans_en = rail_array[end_node]
                     rail_array[start_node] = 0
                     rail_array[end_node] = 0
                     connection = connect_rail(rail_trans, rail_array, start_node, end_node)
                     if len(connection) > 0:
+                        old_cl.append(cl)
                         s_nodes[city_loop].remove(start_node)
                         e_nodes[cl].remove(end_node)
                         nodes_added.append(start_node)
@@ -356,6 +357,7 @@ def realistic_rail_generator(num_cities=5,
                     else:
                         rail_array[start_node] = tmp_trans_sn
                         rail_array[end_node] = tmp_trans_en
+
 
     def connect_random_stations(rail_trans, rail_array, start_nodes_added, end_nodes_added, nodes_added,
                                 inter_connect_max_nbr_of_shortes_city):
@@ -527,7 +529,7 @@ for itrials in range(100):
                   height=100,  # 20+np.random.choice(100),
                   rail_generator=realistic_rail_generator(num_cities=np.random.choice(10) + 2,
                                                           city_size=np.random.choice(10) + 10,
-                                                          allowed_rotation_angles=np.arange(0, 360, 45),
+                                                          allowed_rotation_angles=np.arange(0, 360, 90),
                                                           max_number_of_station_tracks=4,
                                                           nbr_of_switches_per_station_track=2,
                                                           connect_max_nbr_of_shortes_city=4,
