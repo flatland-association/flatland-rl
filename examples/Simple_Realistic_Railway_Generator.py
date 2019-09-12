@@ -198,7 +198,7 @@ def realistic_rail_generator(num_cities=5,
                              allowed_rotation_angles=[0, 90],
                              max_number_of_station_tracks=4,
                              nbr_of_switches_per_station_track=2,
-                             max_number_of_connecting_tracks=4,
+                             connect_max_nbr_of_shortes_city=4,
                              do_random_connect_stations=False,
                              seed=0,
                              print_out_info=True) -> RailGenerator:
@@ -210,7 +210,7 @@ def realistic_rail_generator(num_cities=5,
     :param allowed_rotation_angles: Rotate the city (around center)
     :param max_number_of_station_tracks: max number of tracks per station
     :param nbr_of_switches_per_station_track: number of switches per track (max)
-    :param max_number_of_connecting_tracks: max number of connecting track between stations
+    :param connect_max_nbr_of_shortes_city: max number of connecting track between stations
     :param do_random_connect_stations : if false connect the stations along the grid (top,left -> down,right), else rand
     :param seed: Random Seed
     :print_out_info : print debug info
@@ -316,14 +316,14 @@ def realistic_rail_generator(num_cities=5,
         return nodes_added
 
     def connect_stations(rail_trans, rail_array, org_s_nodes, org_e_nodes, nodes_added,
-                         inter_max_number_of_connecting_tracks):
+                         inter_connect_max_nbr_of_shortes_city):
 
         s_nodes = org_s_nodes.copy()
         e_nodes = org_e_nodes.copy()
 
         for city_loop in range(len(s_nodes)):
-            old_cl = -1
-            for k in range(inter_max_number_of_connecting_tracks):
+            old_cl = []
+            for k in range(inter_connect_max_nbr_of_shortes_city):
                 sns = s_nodes[city_loop]
                 min_distance = np.inf
                 end_node = None
@@ -335,14 +335,14 @@ def realistic_rail_generator(num_cities=5,
                     for en in ens:
                         for sn in sns:
                             d = Vec2dOperations.get_norm_pos(Vec2dOperations.subtract_pos(en, sn))
-                            if d < min_distance and old_cl != city_loop_find_shortest:
+                            if d < min_distance and not (city_loop_find_shortest in old_cl):
                                 min_distance = d
                                 end_node = en
                                 start_node = sn
                                 cl = city_loop_find_shortest
 
                 if end_node is not None:
-                    old_cl = cl
+                    old_cl.append(cl)
                     tmp_trans_sn = rail_array[start_node]
                     tmp_trans_en = rail_array[end_node]
                     rail_array[start_node] = 0
@@ -358,7 +358,7 @@ def realistic_rail_generator(num_cities=5,
                         rail_array[end_node] = tmp_trans_en
 
     def connect_random_stations(rail_trans, rail_array, start_nodes_added, end_nodes_added, nodes_added,
-                                inter_max_number_of_connecting_tracks):
+                                inter_connect_max_nbr_of_shortes_city):
         x = np.arange(len(start_nodes_added))
         random_city_idx = np.random.choice(x, len(x), False)
 
@@ -372,7 +372,7 @@ def realistic_rail_generator(num_cities=5,
             e_nodes = end_nodes_added[idx_b]
 
             max_input_output = max(len(s_nodes), len(e_nodes))
-            max_input_output = min(inter_max_number_of_connecting_tracks, max_input_output)
+            max_input_output = min(inter_connect_max_nbr_of_shortes_city, max_input_output)
 
             if do_random_connect_stations:
                 idx_s_nodes = np.random.choice(np.arange(len(s_nodes)), len(s_nodes), False)
@@ -389,10 +389,10 @@ def realistic_rail_generator(num_cities=5,
                                         np.random.choice(np.arange(len(idx_e_nodes)), max_input_output - len(
                                             idx_e_nodes)))
 
-            if len(idx_s_nodes) > inter_max_number_of_connecting_tracks:
-                idx_s_nodes = np.random.choice(idx_s_nodes, inter_max_number_of_connecting_tracks, False)
-            if len(idx_e_nodes) > inter_max_number_of_connecting_tracks:
-                idx_e_nodes = np.random.choice(idx_e_nodes, inter_max_number_of_connecting_tracks, False)
+            if len(idx_s_nodes) > inter_connect_max_nbr_of_shortes_city:
+                idx_s_nodes = np.random.choice(idx_s_nodes, inter_connect_max_nbr_of_shortes_city, False)
+            if len(idx_e_nodes) > inter_connect_max_nbr_of_shortes_city:
+                idx_e_nodes = np.random.choice(idx_e_nodes, inter_connect_max_nbr_of_shortes_city, False)
 
             for i in range(max_input_output):
                 start_node = s_nodes[idx_s_nodes[i]]
@@ -432,12 +432,12 @@ def realistic_rail_generator(num_cities=5,
         if print_out_info:
             print("intern_nbr_of_switches_per_station_track:", intern_nbr_of_switches_per_station_track)
 
-        inter_max_number_of_connecting_tracks = max_number_of_connecting_tracks
-        if max_number_of_connecting_tracks < 1:
-            warnings.warn("min inter_max_number_of_connecting_tracks requried to be > 1!")
-            inter_max_number_of_connecting_tracks = 1
+        inter_connect_max_nbr_of_shortes_city = connect_max_nbr_of_shortes_city
+        if connect_max_nbr_of_shortes_city < 1:
+            warnings.warn("min inter_connect_max_nbr_of_shortes_city requried to be > 1!")
+            inter_connect_max_nbr_of_shortes_city = 1
         if print_out_info:
-            print("inter_max_number_of_connecting_tracks:", inter_max_number_of_connecting_tracks)
+            print("inter_connect_max_nbr_of_shortes_city:", inter_connect_max_nbr_of_shortes_city)
 
         agent_start_targets_nodes = []
 
@@ -465,10 +465,10 @@ def realistic_rail_generator(num_cities=5,
         if True:
             if do_random_connect_stations:
                 connect_random_stations(rail_trans, rail_array, s_nodes, e_nodes, nodes_added,
-                                        inter_max_number_of_connecting_tracks)
+                                        inter_connect_max_nbr_of_shortes_city)
             else:
                 connect_stations(rail_trans, rail_array, s_nodes, e_nodes, nodes_added,
-                                 inter_max_number_of_connecting_tracks)
+                                 inter_connect_max_nbr_of_shortes_city)
 
         # ----------------------------------------------------------------------------------
         # fix all transition at starting / ending points (mostly add a dead end, if missing)
@@ -530,7 +530,7 @@ for itrials in range(100):
                                                           allowed_rotation_angles=np.arange(0, 360, 45),
                                                           max_number_of_station_tracks=4,
                                                           nbr_of_switches_per_station_track=2,
-                                                          max_number_of_connecting_tracks=4,
+                                                          connect_max_nbr_of_shortes_city=4,
                                                           do_random_connect_stations=False,
                                                           # Number of cities in map
                                                           seed=int(time.time())  # Random seed
