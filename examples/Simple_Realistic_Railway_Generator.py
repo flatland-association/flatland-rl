@@ -589,7 +589,8 @@ for itrials in range(100):
                                                           connect_max_nbr_of_shortes_city=np.random.choice(4)+2,
                                                           do_random_connect_stations=np.random.choice(1)==0,
                                                           # Number of cities in map
-                                                          seed=int(time.time())  # Random seed
+                                                          seed=int(time.time()),  # Random seed
+                                                          print_out_info=False
                                                           ),
                   schedule_generator=sparse_schedule_generator(),
                   number_of_agents=1000,
