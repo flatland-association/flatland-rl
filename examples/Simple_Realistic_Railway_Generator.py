@@ -262,8 +262,7 @@ def realistic_rail_generator(num_cities=5,
                     station_slots[city_loop].append(connection[int(np.floor(len(connection) / 2))])
                     nodes_added.append(start_node)
                     nodes_added.append(end_node)
-                    new_trans = rail_array[end_node] = 0
-
+        
         if print_out_info:
             print("max nbr of station slots with given configuration is:", station_slots_cnt)
 
