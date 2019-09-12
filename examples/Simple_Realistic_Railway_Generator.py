@@ -579,15 +579,15 @@ def realistic_rail_generator(num_cities=5,
 for itrials in range(100):
     print(itrials, "generate new city")
     np.random.seed(int(time.time()))
-    env = RailEnv(width=100,
-                  height=100,
+    env = RailEnv(width=40+np.random.choice(100),
+                  height=40+np.random.choice(100),
                   rail_generator=realistic_rail_generator(num_cities=2 + np.random.choice(10),
                                                           city_size=10 + np.random.choice(10),
-                                                          allowed_rotation_angles=[90],
-                                                          max_number_of_station_tracks=4,
-                                                          nbr_of_switches_per_station_track=2,
-                                                          connect_max_nbr_of_shortes_city=2,
-                                                          do_random_connect_stations=False,
+                                                          allowed_rotation_angles=[-90,-45,0,45,90],
+                                                          max_number_of_station_tracks=np.random.choice(4)+4,
+                                                          nbr_of_switches_per_station_track=np.random.choice(4)+2,
+                                                          connect_max_nbr_of_shortes_city=np.random.choice(4)+2,
+                                                          do_random_connect_stations=np.random.choice(1)==0,
                                                           # Number of cities in map
                                                           seed=int(time.time())  # Random seed
                                                           ),
