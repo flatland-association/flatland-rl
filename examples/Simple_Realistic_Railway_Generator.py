@@ -262,7 +262,7 @@ def realistic_rail_generator(num_cities=5,
                     station_slots[city_loop].append(connection[int(np.floor(len(connection) / 2))])
                     nodes_added.append(start_node)
                     nodes_added.append(end_node)
-        
+
         if print_out_info:
             print("max nbr of station slots with given configuration is:", station_slots_cnt)
 
@@ -441,15 +441,15 @@ def realistic_rail_generator(num_cities=5,
 for itrials in range(100):
     print(itrials, "generate new city")
     np.random.seed(int(time.time()))
-    env = RailEnv(width=120,
-                  height=120,
-                  rail_generator=realistic_rail_generator(num_cities=10,
-                                                          city_size=20,
-                                                          allowed_rotation_angles=[-90,0,90],
+    env = RailEnv(width=20+np.random.choice(100),
+                  height=20+np.random.choice(100),
+                  rail_generator=realistic_rail_generator(num_cities=2+np.random.choice(10),
+                                                          city_size=4+np.random.choice(20),
+                                                          allowed_rotation_angles=[-90,-30,0,30,90],
                                                           max_number_of_station_tracks=4,
                                                           nbr_of_switches_per_station_track=2,
-                                                          max_number_of_connecting_tracks=1,
-                                                          do_random_connect_stations=True,
+                                                          max_number_of_connecting_tracks=3,
+                                                          do_random_connect_stations=False,
                                                           # Number of cities in map
                                                           seed=int(time.time())  # Random seed
                                                           ),
