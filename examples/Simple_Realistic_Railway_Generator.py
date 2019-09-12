@@ -1,3 +1,4 @@
+import copy
 import os
 import time
 import warnings
@@ -315,56 +316,99 @@ def realistic_rail_generator(num_cities=5,
 
         return nodes_added
 
+    def calc_nbr_of_graphs(graph):
+        for i in range(len(graph)):
+            for j in range(len(graph)):
+                a = graph[i]
+                b = graph[j]
+                connected = False
+                if a[0] == b[0] or a[1] == b[0]:
+                    connected = True
+                if a[0] == b[1] or a[1] == b[1]:
+                    connected = True
+
+                if connected:
+                    a = [graph[i][0], graph[i][1], graph[i][2]]
+                    b = [graph[j][0], graph[j][1], graph[j][2]]
+                    graph[i] = (graph[i][0], graph[i][1], min(np.min(a), np.min(b)))
+                    graph[j] = (graph[j][0], graph[j][1], min(np.min(a), np.min(b)))
+                else:
+                    a = [graph[i][0], graph[i][1], graph[i][2]]
+                    graph[i] = (graph[i][0], graph[i][1], np.min(a))
+                    b = [graph[j][0], graph[j][1], graph[j][2]]
+                    graph[j] = (graph[j][0], graph[j][1], np.min(b))
+
+        graph_ids = []
+        for i in range(len(graph)):
+            graph_ids.append(graph[i][2])
+        if print_out_info:
+            print("************* NBR of graphs:", len(np.unique(graph_ids)))
+        return graph, np.unique(graph_ids).astype(int)
+
     def connect_stations(rail_trans, rail_array, org_s_nodes, org_e_nodes, nodes_added,
-                         inter_connect_max_nbr_of_shortes_city, start_to_end=True):
+                         inter_connect_max_nbr_of_shortes_city):
 
-        if start_to_end:
-            s_nodes = org_s_nodes.copy()
-            e_nodes = org_e_nodes.copy()
-        else:
-            e_nodes = org_s_nodes.copy()
-            s_nodes = org_e_nodes.copy()
+        graph = []
 
-        for city_loop in range(len(s_nodes)):
-            old_cl = []
-            for k in range(inter_connect_max_nbr_of_shortes_city):
+        s_nodes = copy.deepcopy(org_s_nodes)
+        e_nodes = copy.deepcopy(org_e_nodes)
+
+        for k in range(inter_connect_max_nbr_of_shortes_city):
+            for city_loop in range(len(s_nodes)):
                 sns = s_nodes[city_loop]
-                min_distance = np.inf
-                end_node = None
-                start_node = None
-                for city_loop_find_shortest in range(len(e_nodes)):
-                    if city_loop_find_shortest == city_loop:
-                        continue
-                    ens = e_nodes[city_loop_find_shortest]
-                    for en in ens:
-                        for sn in sns:
-                            d = Vec2dOperations.get_norm_pos(Vec2dOperations.subtract_pos(en, sn))
-                            if d < min_distance and not (city_loop_find_shortest in old_cl):
+                for start_node in sns:
+                    min_distance = np.inf
+                    end_node = None
+                    for city_loop_find_shortest in range(len(e_nodes)):
+                        if city_loop_find_shortest == city_loop:
+                            continue
+                        ens = e_nodes[city_loop_find_shortest]
+                        for en in ens:
+                            d = Vec2dOperations.get_norm_pos(Vec2dOperations.subtract_pos(en, start_node))
+                            if d < min_distance:
                                 min_distance = d
                                 end_node = en
-                                start_node = sn
                                 cl = city_loop_find_shortest
 
-                if end_node is not None:
+                    if end_node is not None:
+                        tmp_trans_sn = rail_array[start_node]
+                        tmp_trans_en = rail_array[end_node]
+                        rail_array[start_node] = 0
+                        rail_array[end_node] = 0
+                        connection = connect_rail(rail_trans, rail_array, start_node, end_node)
+                        if len(connection) > 0:
+                            s_nodes[city_loop].remove(start_node)
+                            e_nodes[cl].remove(end_node)
+                            a = (city_loop, cl, np.inf)
+                            if city_loop > cl:
+                                a = (cl, city_loop, np.inf)
+                            if not (a in graph):
+                                graph.append(a)
+                            nodes_added.append(start_node)
+                            nodes_added.append(end_node)
+                        else:
+                            rail_array[start_node] = tmp_trans_sn
+                            rail_array[end_node] = tmp_trans_en
 
-                    tmp_trans_sn = rail_array[start_node]
-                    tmp_trans_en = rail_array[end_node]
+        _, graphids = calc_nbr_of_graphs(graph)
+        if len(graphids) > 0:
+            for i in range(len(graphids) - 1):
+                connection = []
+                cnt = 0
+                while len(connection) == 0 and cnt < 100:
+                    s_nodes = copy.deepcopy(org_s_nodes)
+                    e_nodes = copy.deepcopy(org_e_nodes)
+                    start_nodes = s_nodes[graphids[i]]
+                    end_nodes = e_nodes[graphids[i + 1]]
+                    start_node = start_nodes[np.random.choice(len(start_nodes))]
+                    end_node = end_nodes[np.random.choice(len(end_nodes))]
                     rail_array[start_node] = 0
                     rail_array[end_node] = 0
                     connection = connect_rail(rail_trans, rail_array, start_node, end_node)
                     if len(connection) > 0:
-                        old_cl.append(cl)
-                        s_nodes[city_loop].remove(start_node)
-                        e_nodes[cl].remove(end_node)
                         nodes_added.append(start_node)
                         nodes_added.append(end_node)
-                    else:
-                        rail_array[start_node] = tmp_trans_sn
-                        rail_array[end_node] = tmp_trans_en
-
-        if start_to_end:
-            connect_stations(rail_trans, rail_array, org_s_nodes, org_e_nodes, nodes_added,
-                             inter_connect_max_nbr_of_shortes_city, start_to_end=False)
+                    cnt += 1
 
     def connect_random_stations(rail_trans, rail_array, start_nodes_added, end_nodes_added, nodes_added,
                                 inter_connect_max_nbr_of_shortes_city):
@@ -532,11 +576,11 @@ def realistic_rail_generator(num_cities=5,
 for itrials in range(100):
     print(itrials, "generate new city")
     np.random.seed(int(time.time()))
-    env = RailEnv(width=30+np.random.choice(100),
-                  height=30+np.random.choice(100),
-                  rail_generator=realistic_rail_generator(num_cities=np.random.choice(10) + 2,
-                                                          city_size=np.random.choice(10) + 10,
-                                                          allowed_rotation_angles=np.arange(0, 360, 90),
+    env = RailEnv(width=100,
+                  height=100,
+                  rail_generator=realistic_rail_generator(num_cities=2 + np.random.choice(10),
+                                                          city_size=10 + np.random.choice(10),
+                                                          allowed_rotation_angles=[90],
                                                           max_number_of_station_tracks=4,
                                                           nbr_of_switches_per_station_track=2,
                                                           connect_max_nbr_of_shortes_city=2,
