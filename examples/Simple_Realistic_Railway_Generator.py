@@ -306,7 +306,8 @@ def realistic_rail_generator(num_cities=5,
                 data = datas[data_loop]
                 data1 = datas[data_loop + 1]
                 if len(data) > 2 and len(data1) > 2:
-                    for i in np.random.choice(min(len(data1), len(data)) - 2, 2):
+                    for i in np.random.choice(min(len(data1), len(data)) - 2,
+                                              intern_nbr_of_switches_per_station_track):
                         add_rail(width, height, grid_map, data[i + 1], data1[i + 1], data1[i + 2], True)
                         nodes_added.append(data[i + 1])
                         nodes_added.append(data1[i + 1])
@@ -523,9 +524,9 @@ for itrials in range(100):
     np.random.seed(int(time.time()))
     env = RailEnv(width=100,  # 20+np.random.choice(100),
                   height=100,  # 20+np.random.choice(100),
-                  rail_generator=realistic_rail_generator(num_cities=100,
-                                                          city_size=20,
-                                                          allowed_rotation_angles=[-90, 0, 90],
+                  rail_generator=realistic_rail_generator(num_cities=np.random.choice(10)+2,
+                                                          city_size=np.random.choice(10)+10,
+                                                          allowed_rotation_angles=np.arange(0,360,45),
                                                           max_number_of_station_tracks=4,
                                                           nbr_of_switches_per_station_track=2,
                                                           max_number_of_connecting_tracks=4,
@@ -534,7 +535,7 @@ for itrials in range(100):
                                                           seed=int(time.time())  # Random seed
                                                           ),
                   schedule_generator=sparse_schedule_generator(),
-                  number_of_agents=89,
+                  number_of_agents=1000,
                   obs_builder_object=GlobalObsForRailEnv())
 
     # reset to initialize agents_static
