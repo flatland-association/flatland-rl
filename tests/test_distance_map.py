@@ -43,9 +43,8 @@ def test_walker():
 
     # reset to set agents from agents_static
     env.reset(False, False)
-    obs_builder: TreeObsForRailEnv = env.obs_builder
 
-    print(obs_builder.distance_map[(0, *[0, 1], 1)])
-    assert obs_builder.distance_map[(0, *[0, 1], 1)] == 3
-    print(obs_builder.distance_map[(0, *[0, 2], 3)])
-    assert obs_builder.distance_map[(0, *[0, 2], 1)] == 2
+    print(env.distance_map[(0, *[0, 1], 1)])
+    assert env.distance_map[(0, *[0, 1], 1)] == 3
+    print(env.distance_map[(0, *[0, 2], 3)])
+    assert env.distance_map[(0, *[0, 2], 1)] == 2

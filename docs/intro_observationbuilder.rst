@@ -63,7 +63,7 @@ cells and orientations to the target of each agent, i.e. a distance map for each
 
 In this example we exploit these distance maps by implementing an observation builder that shows the current shortest path for each agent as a one-hot observation vector of length 3, whose components represent the possible directions an agent can take (LEFT, FORWARD, RIGHT). All values of the observation vector are set to :code:`0` except for the shortest direction where it is set to :code:`1`.
 
-Using this observation with highly engineered features indicating the agent's shortest path, an agent can then learn to take the corresponding action at each time-step; or we could even hardcode the optimal policy. 
+Using this observation with highly engineered features indicating the agent's shortest path, an agent can then learn to take the corresponding action at each time-step; or we could even hardcode the optimal policy.
 Note that this simple strategy fails when multiple agents are present, as each agent would only attempt its greedy solution, which is not usually `Pareto-optimal <https://en.wikipedia.org/wiki/Pareto_efficiency>`_ in this context.
 
 .. _TreeObsForRailEnv: https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/observations.py#L14
@@ -71,7 +71,7 @@ Note that this simple strategy fails when multiple agents are present, as each a
 .. code-block:: python
 
     from flatland.envs.observations import TreeObsForRailEnv
-    
+
     class SingleAgentNavigationObs(TreeObsForRailEnv):
         """
         We derive our observation builder from TreeObsForRailEnv, to exploit the existing implementation to compute
@@ -84,7 +84,7 @@ Note that this simple strategy fails when multiple agents are present, as each a
         """
         def __init__(self):
             super().__init__(max_depth=0)
-            # We set max_depth=0 in because we only need to look at the current 
+            # We set max_depth=0 in because we only need to look at the current
             # position of the agent to decide what direction is shortest.
             self.observation_space = [3]
 
@@ -110,7 +110,7 @@ Note that this simple strategy fails when multiple agents are present, as each a
                 for direction in [(agent.direction + i) % 4 for i in range(-1, 2)]:
                     if possible_transitions[direction]:
                         new_position = self._new_position(agent.position, direction)
-                        min_distances.append(self.distance_map[handle, new_position[0], new_position[1], direction])
+                        min_distances.append(self.env.distance_map[handle, new_position[0], new_position[1], direction])
                     else:
                         min_distances.append(np.inf)
 
@@ -175,28 +175,28 @@ In contrast to the previous examples we also implement the :code:`def get_many(s
 .. _example: https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/custom_observation_example.py#L110
 
 .. code-block:: python
-    
+
     class ObservePredictions(TreeObsForRailEnv):
         """
         We use the provided ShortestPathPredictor to illustrate the usage of predictors in your custom observation.
-    
+
         We derive our observation builder from TreeObsForRailEnv, to exploit the existing implementation to compute
         the minimum distances from each grid node to each agent's target.
-    
+
         This is necessary so that we can pass the distance map to the ShortestPathPredictor
-    
+
         Here we also want to highlight how you can visualize your observation
         """
-    
+
         def __init__(self, predictor):
             super().__init__(max_depth=0)
             self.observation_space = [10]
             self.predictor = predictor
-    
+
         def reset(self):
             # Recompute the distance map, if the environment has changed.
             super().reset()
-    
+
         def get_many(self, handles=None):
             '''
             Because we do not want to call the predictor seperately for every agent we implement the get_many function
@@ -204,9 +204,9 @@ In contrast to the previous examples we also implement the :code:`def get_many(s
             :param handles:
             :return:
             '''
-    
-            self.predictions = self.predictor.get(custom_args={'distance_map': self.distance_map})
-    
+
+            self.predictions = self.predictor.get(custom_args={'distance_map': self.env.distance_map})
+
             self.predicted_pos = {}
             for t in range(len(self.predictions[0])):
                 pos_list = []
@@ -215,47 +215,47 @@ In contrast to the previous examples we also implement the :code:`def get_many(s
                 # We transform (x,y) coodrinates to a single integer number for simpler comparison
                 self.predicted_pos.update({t: coordinate_to_position(self.env.width, pos_list)})
             observations = {}
-    
+
             # Collect all the different observation for all the agents
             for h in handles:
                 observations[h] = self.get(h)
             return observations
-    
+
         def get(self, handle):
             '''
             Lets write a simple observation which just indicates whether or not the own predicted path
             overlaps with other predicted paths at any time. This is useless for the task of navigation but might
             help when looking for conflicts. A more complex implementation can be found in the TreeObsForRailEnv class
-    
+
             Each agent recieves an observation of length 10, where each element represents a prediction step and its value
             is:
              - 0 if no overlap is happening
              - 1 where n i the number of other paths crossing the predicted cell
-    
+
             :param handle: handeled as an index of an agent
             :return: Observation of handle
             '''
-    
+
             observation = np.zeros(10)
-    
+
             # We are going to track what cells where considered while building the obervation and make them accesible
             # For rendering
-    
+
             visited = set()
             for _idx in range(10):
                 # Check if any of the other prediction overlap with agents own predictions
                 x_coord = self.predictions[handle][_idx][1]
                 y_coord = self.predictions[handle][_idx][2]
-    
+
                 # We add every observed cell to the observation rendering
                 visited.add((x_coord, y_coord))
                 if self.predicted_pos[_idx][handle] in np.delete(self.predicted_pos[_idx], handle, 0):
                     # We detect if another agent is predicting to pass through the same cell at the same predicted time
                     observation[handle] = 1
-    
+
             # This variable will be access by the renderer to visualize the observation
             self.env.dev_obs_dict[handle] = visited
-    
+
             return observation
 
 We can then use this new observation builder and the renderer to visualize the observation of each agent.
@@ -265,23 +265,23 @@ We can then use this new observation builder and the renderer to visualize the o
 
     # Initiate the Predictor
     CustomPredictor = ShortestPathPredictorForRailEnv(10)
-    
+
     # Pass the Predictor to the observation builder
     CustomObsBuilder = ObservePredictions(CustomPredictor)
-    
+
     # Initiate Environment
     env = RailEnv(width=10,
                   height=10,
                   rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
                   number_of_agents=3,
                   obs_builder_object=CustomObsBuilder)
-    
+
     obs = env.reset()
     env_renderer = RenderTool(env, gl="PILSVG")
-    
+
     # We render the initial step and show the obsered cells as colored boxes
     env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
-    
+
     action_dict = {}
     for step in range(100):
         for a in range(env.get_num_agents()):
@@ -321,7 +321,7 @@ These two objects can be used for example to detect switches that are usable by 
 
     cell_transitions = self.env.rail.get_transitions(*position, direction)
     transition_bit = bin(self.env.rail.get_full_transitions(*position))
-    
+
     total_transitions = transition_bit.count("1")
     num_transitions = np.count_nonzero(cell_transitions)
 
@@ -357,7 +357,7 @@ Beyond the basic agent information we can also access more details about the age
 
 Similar to the speed data you can also access individual data about the malfunctions of an agent. All data is available through :code:`agent.malfunction_data` with:
 
-- Indication how long the agent is still malfunctioning :code:`'malfunction'` by an integer counting down at each time step. 0 means the agent is ok and can move. 
+- Indication how long the agent is still malfunctioning :code:`'malfunction'` by an integer counting down at each time step. 0 means the agent is ok and can move.
 - Possion rate at which malfunctions happen for this agent :code:`'malfunction_rate'`
 - Number of steps untill next malfunction will occur :code:`'next_malfunction'`
 - Number of malfunctions an agent have occured for this agent so far :code:`nr_malfunctions'`

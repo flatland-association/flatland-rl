@@ -129,7 +129,7 @@ def tests_rail_from_file():
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
     env.save(file_name)
-    dist_map_shape = np.shape(env.obs_builder.distance_map)
+    dist_map_shape = np.shape(env.distance_map)
     # initialize agents_static
     rails_initial = env.rail.grid
     agents_initial = env.agents
@@ -148,9 +148,9 @@ def tests_rail_from_file():
     assert agents_initial == agents_loaded
 
     # Check that distance map was not recomputed
-    assert env.obs_builder.distance_map_computed is False
-    assert np.shape(env.obs_builder.distance_map) == dist_map_shape
-    assert env.obs_builder.distance_map is not None
+    assert env.distance_map_computed is False
+    assert np.shape(env.distance_map) == dist_map_shape
+    assert env.distance_map is not None
 
     # Test to save and load file without distance map.
 
@@ -222,6 +222,6 @@ def tests_rail_from_file():
     assert agents_initial_2 == agents_loaded_4
 
     # Check that distance map was generated with correct shape
-    assert env4.obs_builder.distance_map_computed is True
-    assert env4.obs_builder.distance_map is not None
-    assert np.shape(env4.obs_builder.distance_map) == dist_map_shape
+    assert env4.distance_map_computed is True
+    assert env4.distance_map is not None
+    assert np.shape(env4.distance_map) == dist_map_shape

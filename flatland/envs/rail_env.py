@@ -5,6 +5,7 @@ Definition of the RailEnv environment.
 import warnings
 from enum import IntEnum
 from typing import List
+from collections import deque
 
 import msgpack
 import msgpack_numpy as m
@@ -143,6 +144,7 @@ class RailEnv(Environment):
         file_name: you can load a pickle file. from previously saved *.pkl file
 
         """
+        super().__init__()
 
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
@@ -233,7 +235,7 @@ class RailEnv(Environment):
         rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
         if optionals and 'distance_maps' in optionals:
-            self.obs_builder.distance_map = optionals['distance_maps']
+            self.distance_map = optionals['distance_maps']
 
         if regen_rail or self.rail is None:
             self.rail = rail
@@ -573,8 +575,8 @@ class RailEnv(Environment):
         # agents are always reset as not moving
         self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data["agents_static"]]
         self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]) for d in data["agents"]]
-        if hasattr(self.obs_builder, 'distance_map') and "distance_maps" in data.keys():
-            self.obs_builder.distance_map = data["distance_maps"]
+        if hasattr(self, 'distance_map') and "distance_maps" in data.keys():
+            self.distance_map = data["distance_maps"]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -588,8 +590,8 @@ class RailEnv(Environment):
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
         msgpack.packb(agent_static_data, use_bin_type=True)
-        if hasattr(self.obs_builder, 'distance_map'):
-            distance_map_data = self.obs_builder.distance_map
+        if hasattr(self, 'distance_map'):
+            distance_map_data = self.distance_map
             msgpack.packb(distance_map_data, use_bin_type=True)
             msg_data = {
                 "grid": grid_data,
@@ -605,8 +607,8 @@ class RailEnv(Environment):
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def save(self, filename):
-        if hasattr(self.obs_builder, 'distance_map'):
-            if len(self.obs_builder.distance_map) > 0:
+        if hasattr(self, 'distance_map') and self.distance_map is not None:
+            if len(self.distance_map) > 0:
                 with open(filename, "wb") as file_out:
                     file_out.write(self.get_full_state_dist_msg())
             else:
@@ -617,7 +619,7 @@ class RailEnv(Environment):
                 file_out.write(self.get_full_state_msg())
 
     def load(self, filename):
-        if hasattr(self.obs_builder, 'distance_map'):
+        if hasattr(self, 'distance_map'):
             with open(filename, "rb") as file_in:
                 load_data = file_in.read()
                 self.set_full_state_dist_msg(load_data)
@@ -633,3 +635,97 @@ class RailEnv(Environment):
         from importlib_resources import read_binary
         load_data = read_binary(package, resource)
         self.set_full_state_msg(load_data)
+
+    def compute_distance_map(self):
+        agents = self.agents
+        # For testing only --> To assert if a distance map need to be recomputed.
+        self.distance_map_computed = True
+        nb_agents = len(agents)
+        self.distance_map = np.inf * np.ones(shape=(nb_agents,
+                                                    self.height,
+                                                    self.width,
+                                                    4))
+        max_dist = np.zeros(nb_agents)
+        max_dist = [self._distance_map_walker(agent.target, i) for i, agent in enumerate(agents)]
+        # Update local lookup table for all agents' target locations
+        self.obs_builder.location_has_target = {tuple(agent.target): 1 for agent in agents}
+
+    def _distance_map_walker(self, position, target_nr):
+        """
+        Utility function to compute distance maps from each cell in the rail network (and each possible
+        orientation within it) to each agent's target cell.
+        """
+        # Returns max distance to target, from the farthest away node, while filling in distance_map
+        self.distance_map[target_nr, position[0], position[1], :] = 0
+
+        # Fill in the (up to) 4 neighboring nodes
+        # direction is the direction of movement, meaning that at least a possible orientation of an agent
+        # in cell (row,col) allows a movement in direction `direction'
+        nodes_queue = deque(self._get_and_update_neighbors(position, target_nr, 0, enforce_target_direction=-1))
+
+        # BFS from target `position' to all the reachable nodes in the grid
+        # Stop the search if the target position is re-visited, in any direction
+        visited = {(position[0], position[1], 0), (position[0], position[1], 1), (position[0], position[1], 2),
+                   (position[0], position[1], 3)}
+
+        max_distance = 0
+
+        while nodes_queue:
+            node = nodes_queue.popleft()
+
+            node_id = (node[0], node[1], node[2])
+
+            if node_id not in visited:
+                visited.add(node_id)
+
+                # From the list of possible neighbors that have at least a path to the current node, only keep those
+                # whose new orientation in the current cell would allow a transition to direction node[2]
+                valid_neighbors = self._get_and_update_neighbors((node[0], node[1]), target_nr, node[3], node[2])
+
+                for n in valid_neighbors:
+                    nodes_queue.append(n)
+
+                if len(valid_neighbors) > 0:
+                    max_distance = max(max_distance, node[3] + 1)
+
+        return max_distance
+
+    def _get_and_update_neighbors(self, position, target_nr, current_distance, enforce_target_direction=-1):
+        """
+        Utility function used by _distance_map_walker to perform a BFS walk over the rail, filling in the
+        minimum distances from each target cell.
+        """
+        neighbors = []
+
+        possible_directions = [0, 1, 2, 3]
+        if enforce_target_direction >= 0:
+            # The agent must land into the current cell with orientation `enforce_target_direction'.
+            # This is only possible if the agent has arrived from the cell in the opposite direction!
+            possible_directions = [(enforce_target_direction + 2) % 4]
+
+        for neigh_direction in possible_directions:
+            new_cell = self.obs_builder.new_position(position, neigh_direction)
+
+            if new_cell[0] >= 0 and new_cell[0] < self.height and new_cell[1] >= 0 and new_cell[1] < self.width:
+
+                desired_movement_from_new_cell = (neigh_direction + 2) % 4
+
+                # Check all possible transitions in new_cell
+                for agent_orientation in range(4):
+                    # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
+                    is_valid = self.rail.get_transition((new_cell[0], new_cell[1], agent_orientation),
+                                                            desired_movement_from_new_cell)
+
+                    if is_valid:
+                        """
+                        # TODO: check that it works with deadends! -- still bugged!
+                        movement = desired_movement_from_new_cell
+                        if isNextCellDeadEnd:
+                            movement = (desired_movement_from_new_cell+2) % 4
+                        """
+                        new_distance = min(self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation],
+                                           current_distance + 1)
+                        neighbors.append((new_cell[0], new_cell[1], agent_orientation, new_distance))
+                        self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation] = new_distance
+
+        return neighbors
