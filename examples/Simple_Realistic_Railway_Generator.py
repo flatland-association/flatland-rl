@@ -13,7 +13,7 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import RailGenerator, RailGeneratorProduct
 from flatland.envs.schedule_generators import sparse_schedule_generator
-from flatland.utils.rendertools import RenderTool
+from flatland.utils.rendertools import RenderTool,AgentRenderVariant
 
 
 class Vec2dOperations:
@@ -142,19 +142,19 @@ class Vec2dOperations:
         return (x1, y1)
 
 
-class Grid_Map_Op:
+class GripMapOp:
     def min_max_cut(min_v, max_v, v):
         return max(min_v, min(max_v, v))
 
     def add_rail(width, height, grid_map, pt_from, pt_via, pt_to, bAddRemove=True):
         gRCTrans = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])  # NESW in RC
 
-        lrcStroke = [[Grid_Map_Op.min_max_cut(0, height - 1, pt_from[0]),
-                      Grid_Map_Op.min_max_cut(0, width - 1, pt_from[1])],
-                     [Grid_Map_Op.min_max_cut(0, height - 1, pt_via[0]),
-                      Grid_Map_Op.min_max_cut(0, width - 1, pt_via[1])],
-                     [Grid_Map_Op.min_max_cut(0, height - 1, pt_to[0]),
-                      Grid_Map_Op.min_max_cut(0, width - 1, pt_to[1])]]
+        lrcStroke = [[GripMapOp.min_max_cut(0, height - 1, pt_from[0]),
+                      GripMapOp.min_max_cut(0, width - 1, pt_from[1])],
+                     [GripMapOp.min_max_cut(0, height - 1, pt_via[0]),
+                      GripMapOp.min_max_cut(0, width - 1, pt_via[1])],
+                     [GripMapOp.min_max_cut(0, height - 1, pt_to[0]),
+                      GripMapOp.min_max_cut(0, width - 1, pt_to[1])]]
 
         rc3Cells = np.array(lrcStroke[:3])  # the 3 cells
         rcMiddle = rc3Cells[1]  # the middle cell which we will update
@@ -309,7 +309,7 @@ def realistic_rail_generator(num_cities=5,
                 if len(data) > 2 and len(data1) > 2:
                     for i in np.random.choice(min(len(data1), len(data)) - 2,
                                               intern_nbr_of_switches_per_station_track):
-                        Grid_Map_Op.add_rail(width, height, grid_map, data[i + 1], data1[i + 1], data1[i + 2], True)
+                        GripMapOp.add_rail(width, height, grid_map, data[i + 1], data1[i + 1], data1[i + 2], True)
                         nodes_added.append(data[i + 1])
                         nodes_added.append(data1[i + 1])
                         nodes_added.append(data1[i + 2])
@@ -576,7 +576,7 @@ def realistic_rail_generator(num_cities=5,
     return generator
 
 
-for itrials in range(100):
+for itrials in range(1000):
     print(itrials, "generate new city")
     np.random.seed(int(time.time()))
     env = RailEnv(width=40 + np.random.choice(100),
@@ -593,11 +593,12 @@ for itrials in range(100):
                                                           print_out_info=False
                                                           ),
                   schedule_generator=sparse_schedule_generator(),
-                  number_of_agents=1000,
+                  number_of_agents=1+np.random.choice(10),
                   obs_builder_object=GlobalObsForRailEnv())
 
     # reset to initialize agents_static
-    env_renderer = RenderTool(env, gl="PILSVG", screen_width=1400, screen_height=1000)
+    env_renderer = RenderTool(env, gl="PILSVG", screen_width=1400, screen_height=1000,
+                              agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX)
     cnt = 0
     while cnt < 10:
         env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
