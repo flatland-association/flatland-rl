@@ -234,7 +234,9 @@ def realistic_rail_generator(num_cities=5,
                     end_nodes = e_nodes[graphids[i + 1]]
                     start_node = start_nodes[np.random.choice(len(start_nodes))]
                     end_node = end_nodes[np.random.choice(len(end_nodes))]
-                    # TODO : removing, what the hell is that
+                    # TODO : removing, what the hell is going on, why we have to set rail_array -> transition to zero
+                    # TODO : before we can call connect_rail. If we don't reset the transistion to zero -> no rail
+                    # TODO : will be generated.
                     rail_array[start_node] = 0
                     rail_array[end_node] = 0
                     connection = connect_rail(rail_trans, rail_array, start_node, end_node)
