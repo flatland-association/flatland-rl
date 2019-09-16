@@ -141,7 +141,7 @@ class ObservePredictions(TreeObsForRailEnv):
         :return:
         '''
 
-        self.predictions = self.predictor.get(custom_args={'distance_map': self.env.distance_map})
+        self.predictions = self.predictor.get()
 
         self.predicted_pos = {}
         for t in range(len(self.predictions[0])):

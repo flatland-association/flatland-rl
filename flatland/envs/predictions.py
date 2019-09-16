@@ -17,14 +17,12 @@ class DummyPredictorForRailEnv(PredictionBuilder):
     The prediction acts as if no other agent is in the environment and always takes the forward action.
     """
 
-    def get(self, custom_args=None, handle=None):
+    def get(self, handle=None):
         """
         Called whenever get_many in the observation build is called.
 
         Parameters
         -------
-        custom_args: dict
-            Not used in this dummy implementation.
         handle : int (optional)
             Handle of the agent for which to compute the observation vector.
 
@@ -90,15 +88,13 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
         # Initialize with depth 20
         self.max_depth = max_depth
 
-    def get(self, custom_args=None, handle=None):
+    def get(self, handle=None):
         """
         Called whenever get_many in the observation build is called.
         Requires distance_map to extract the shortest path.
 
         Parameters
         -------
-        custom_args: dict
-            - distance_map : dict
         handle : int (optional)
             Handle of the agent for which to compute the observation vector.
 
@@ -116,8 +112,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
         agents = self.env.agents
         if handle:
             agents = [self.env.agents[handle]]
-        assert custom_args is not None
-        distance_map = custom_args.get('distance_map')
+        distance_map = self.env.distance_map
         assert distance_map is not None
 
         prediction_dict = {}
