@@ -13,6 +13,7 @@ for entry in [entry for entry in importlib_resources.contents('examples') if
               and entry.endswith(".py")
               and '__init__' not in entry
               and 'demo.py' not in entry
+              and 'DELETE' not in entry
               ]:
     with path('examples', entry) as file_in:
         print("")
@@ -22,4 +23,6 @@ for entry in [entry for entry in importlib_resources.contents('examples') if
         print("Running {}".format(entry))
         print("*****************************************************************")
         with swap_attr(sys, "stdin", StringIO("q")):
-            runpy.run_path(file_in, run_name="__main__")
+            runpy.run_path(file_in, run_name="__main__", init_globals={
+                'argv': ['--no-sleep']
+            })
