@@ -17,6 +17,7 @@ from flatland.envs.schedule_generators import sparse_schedule_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
+# @TODO : remove (reuse existing code!!)
 class GripMapOp:
     def min_max_cut(min_v, max_v, v):
         return max(min_v, min(max_v, v))
