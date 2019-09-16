@@ -468,19 +468,19 @@ for itrials in range(1000):
     np.random.seed(0 * int(time.time()))
     env = RailEnv(width=40 + np.random.choice(100),
                   height=40 + np.random.choice(100),
-                  rail_generator=realistic_rail_generator(num_cities=2000 + np.random.choice(10),
+                  rail_generator=realistic_rail_generator(num_cities=2 + np.random.choice(10),
                                                           city_size=10 + np.random.choice(10),
                                                           allowed_rotation_angles=np.arange(-180, 180, 15),
                                                           max_number_of_station_tracks=np.random.choice(4) + 4,
                                                           nbr_of_switches_per_station_track=np.random.choice(4) + 2,
-                                                          connect_max_nbr_of_shortes_city=np.random.choice(4) + 2,
-                                                          do_random_connect_stations=np.random.choice(1) == 0,
+                                                          connect_max_nbr_of_shortes_city=2,
+                                                          do_random_connect_stations=False and np.random.choice(1) == 0,
                                                           # Number of cities in map
                                                           seed=int(time.time()),  # Random seed
                                                           print_out_info=False
                                                           ),
                   schedule_generator=sparse_schedule_generator(),
-                  number_of_agents=1,
+                  number_of_agents=100,
                   obs_builder_object=GlobalObsForRailEnv())
 
     # reset to initialize agents_static
@@ -497,5 +497,4 @@ for itrials in range(1000):
             "flatland_frame_{:04d}_{:04d}.png".format(itrials, 0)
         ))
 
-    input()
     env_renderer.close_window()
