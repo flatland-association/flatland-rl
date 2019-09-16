@@ -4,13 +4,14 @@ Definition of the RailEnv environment.
 # TODO:  _ this is a global method --> utils or remove later
 import warnings
 from enum import IntEnum
-from typing import List
+from typing import List, Set, NamedTuple
 
 import msgpack
 import msgpack_numpy as m
 import numpy as np
 
 from flatland.core.env import Environment
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
@@ -37,6 +38,11 @@ class RailEnvActions(IntEnum):
             3: 'R',
             4: 'S',
         }[a]
+
+
+RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])
+RailEnvNextAction = NamedTuple('RailEnvNextAction', [('action', RailEnvActions), ('next_position', RailEnvGridPos),
+                                                     ('next_direction', Grid4TransitionsEnum)])
 
 
 class RailEnv(Environment):
@@ -262,7 +268,18 @@ class RailEnv(Environment):
 
             agent.malfunction_data['malfunction'] = 0
 
-            self._agent_new_malfunction(i_agent, RailEnvActions.DO_NOTHING)
+            initial_malfunction = self._agent_new_malfunction(i_agent)
+            if initial_malfunction:
+                valid_actions = set(map(lambda x: x.action, self.get_valid_move_actions(agent)))
+                if RailEnvActions.MOVE_FORWARD in valid_actions:
+                    agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.MOVE_FORWARD
+                elif RailEnvActions.MOVE_LEFT in valid_actions:
+                    agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.MOVE_LEFT
+                elif RailEnvActions.MOVE_RIGHT in valid_actions:
+                    agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.MOVE_RIGHT
+                else:
+                    raise Exception(
+                        "Agent {} cannot move forward/left/right from initial position".format(agent.handle))
 
         self.num_resets += 1
         self._elapsed_steps = 0
@@ -277,7 +294,7 @@ class RailEnv(Environment):
         # Return the new observation vectors for each agent
         return self._get_observations()
 
-    def _agent_new_malfunction(self, i_agent, action) -> bool:
+    def _agent_new_malfunction(self, i_agent) -> bool:
         """
         Returns true if the agent enters into malfunction. (False, if not broken down or already broken down before).
         """
@@ -335,25 +352,25 @@ class RailEnv(Environment):
             agent.old_direction = agent.direction
             agent.old_position = agent.position
 
-            # No action has been supplied for this agent -> set DO_NOTHING as default
-            if i_agent not in action_dict_:
-                action = RailEnvActions.DO_NOTHING
-            else:
-                action = action_dict_[i_agent]
-
-            if action < 0 or action > len(RailEnvActions):
-                print('ERROR: illegal action=', action,
-                      'for agent with index=', i_agent,
-                      '"DO NOTHING" will be executed instead')
-                action = RailEnvActions.DO_NOTHING
-
             # Check if agent breaks at this step
-            new_malfunction = self._agent_new_malfunction(i_agent, action)
+            new_malfunction = self._agent_new_malfunction(i_agent)
 
             # Is the agent at the beginning of the cell? Then, it can take an action
             # Design choice (Erik+Christian):
             #  as long as we're broken down at the beginning of the cell, we can choose other actions!
             if agent.speed_data['position_fraction'] == 0.0:
+                # No action has been supplied for this agent -> set DO_NOTHING as default
+                if i_agent not in action_dict_:
+                    action = RailEnvActions.DO_NOTHING
+                else:
+                    action = action_dict_[i_agent]
+
+                if action < 0 or action > len(RailEnvActions):
+                    print('ERROR: illegal action=', action,
+                          'for agent with index=', i_agent,
+                          '"DO NOTHING" will be executed instead')
+                    action = RailEnvActions.DO_NOTHING
+
                 if action == RailEnvActions.DO_NOTHING and agent.moving:
                     # Keep moving
                     action = RailEnvActions.MOVE_FORWARD
@@ -370,12 +387,14 @@ class RailEnv(Environment):
                     self.rewards_dict[i_agent] += self.start_penalty
 
                 # Store the action
-                if agent.moving and action not in [RailEnvActions.DO_NOTHING, RailEnvActions.STOP_MOVING]:
+                if agent.moving:
+                    _action_stored = False
                     _, new_cell_valid, new_direction, new_position, transition_valid = \
                         self._check_action_on_agent(action, agent)
 
                     if all([new_cell_valid, transition_valid]):
                         agent.speed_data['transition_action_on_cellexit'] = action
+                        _action_stored = True
                     else:
                         # But, if the chosen invalid action was LEFT/RIGHT, and the agent is moving,
                         # try to keep moving forward!
@@ -385,19 +404,14 @@ class RailEnv(Environment):
 
                             if all([new_cell_valid, transition_valid]):
                                 agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.MOVE_FORWARD
-                            else:
-                                # If the agent cannot move due to an invalid transition, we set its state to not moving
-                                self.rewards_dict[i_agent] += self.invalid_action_penalty
-                                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
-                                self.rewards_dict[i_agent] += self.stop_penalty
-                                agent.moving = False
+                                _action_stored = True
 
-                        else:
-                            # If the agent cannot move due to an invalid transition, we set its state to not moving
-                            self.rewards_dict[i_agent] += self.invalid_action_penalty
-                            self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
-                            self.rewards_dict[i_agent] += self.stop_penalty
-                            agent.moving = False
+                    if not _action_stored:
+                        # If the agent cannot move due to an invalid transition, we set its state to not moving
+                        self.rewards_dict[i_agent] += self.invalid_action_penalty
+                        self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+                        self.rewards_dict[i_agent] += self.stop_penalty
+                        agent.moving = False
 
             # if we've just broken in this step, nothing else to do
             if new_malfunction:
@@ -410,7 +424,6 @@ class RailEnv(Environment):
                 if agent.malfunction_data['malfunction'] < 2:
                     agent.malfunction_data['malfunction'] -= 1
                     self.agents[i_agent].moving = True
-                    action = RailEnvActions.DO_NOTHING
 
                 else:
                     agent.malfunction_data['malfunction'] -= 1
@@ -438,6 +451,9 @@ class RailEnv(Environment):
                     cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
                         agent.speed_data['transition_action_on_cellexit'], agent)
 
+                    # N.B. validity of new_cell and transition should have been verified before the action was stored!
+                    assert new_cell_valid
+                    assert transition_valid
                     if cell_free:
                         agent.position = new_position
                         agent.direction = new_direction
@@ -531,6 +547,44 @@ class RailEnv(Environment):
                 new_direction = np.argmax(possible_transitions)
                 transition_valid = True
         return new_direction, transition_valid
+
+    def get_valid_move_actions(self, agent: EnvAgent) -> Set[RailEnvNextAction]:
+        valid_actions: Set[RailEnvNextAction] = set()
+        agent_position = agent.position
+        agent_direction = agent.direction
+        possible_transitions = self.rail.get_transitions(*agent_position, agent_direction)
+        num_transitions = np.count_nonzero(possible_transitions)
+
+        # Start from the current orientation, and see which transitions are available;
+        # organize them as [left, forward, right], relative to the current orientation
+        # If only one transition is possible, the forward branch is aligned with it.
+        if self.rail.is_dead_end(agent_position):
+            action = RailEnvActions.MOVE_FORWARD
+            exit_direction = (agent_direction + 2) % 4
+            if possible_transitions[exit_direction]:
+                new_position = get_new_position(agent_position, exit_direction)
+                valid_actions.add(RailEnvNextAction(action, new_position, exit_direction))
+        elif num_transitions == 1:
+            action = RailEnvActions.MOVE_FORWARD
+            for new_direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
+                if possible_transitions[new_direction]:
+                    new_position = get_new_position(agent_position, new_direction)
+                    valid_actions.add(RailEnvNextAction(action, new_position, new_direction))
+        else:
+            for new_direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
+                if possible_transitions[new_direction]:
+                    if new_direction == agent_direction:
+                        action = RailEnvActions.MOVE_FORWARD
+                    elif new_direction == (agent_direction + 1) % 4:
+                        action = RailEnvActions.MOVE_RIGHT
+                    elif new_direction == (agent_direction - 1) % 4:
+                        action = RailEnvActions.MOVE_LEFT
+                    else:
+                        raise Exception("Illegal state")
+
+                    new_position = get_new_position(agent_position, new_direction)
+                    valid_actions.add(RailEnvNextAction(action, new_position, new_direction))
+        return valid_actions
 
     def _get_observations(self):
         self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
