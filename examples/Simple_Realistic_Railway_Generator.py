@@ -181,23 +181,18 @@ def realistic_rail_generator(num_cities=5,
             datas = station_tracks[city_loop]
             if len(datas) > 1:
                 a = datas[0]
-                if len(a) > 2:
-                    j = 2
-                    start_node = a[j]
+                if len(a) > 0:
+                    start_node = a[np.random.choice(len(a) - 2) + 1]
                     b = []
                     for i in np.arange(1, len(datas)):
                         b = datas[i]
                         if len(b) > 2:
-                            end_node = b[j + 2]
-                            connection = connect_from_nodes(rail_trans, rail_array, start_node, end_node)
-                            if len(connection) > 0:
-                                nodes_added.append(start_node)
-                                nodes_added.append(end_node)
-                            if i % 2 == 0:
-                                j = j - 2
-                            else:
-                                j = j + 2
-                            start_node = end_node
+                            x = np.random.choice(len(b) - 2) + 1
+                            end_node = b[x]
+                            connection = connect_rail(rail_trans, rail_array, start_node, end_node)
+                            nodes_added.append(start_node)
+                            nodes_added.append(end_node)
+                            start_node = b[np.random.choice(len(b) - 2) + 1]
 
         return nodes_added
 
@@ -409,7 +404,7 @@ def realistic_rail_generator(num_cities=5,
         # ----------------------------------------------------------------------------------
         # connect stations
         # TODO remove true/false block
-        if False:
+        if True:
             if do_random_connect_stations:
                 connect_random_stations(rail_trans, rail_array, s_nodes, e_nodes, nodes_added,
                                         inter_connect_max_nbr_of_shortes_city)
@@ -473,9 +468,9 @@ for itrials in range(1000):
     np.random.seed(0 * int(time.time()))
     env = RailEnv(width=40 + np.random.choice(100),
                   height=40 + np.random.choice(100),
-                  rail_generator=realistic_rail_generator(num_cities=2 + np.random.choice(10),
+                  rail_generator=realistic_rail_generator(num_cities=2000 + np.random.choice(10),
                                                           city_size=10 + np.random.choice(10),
-                                                          allowed_rotation_angles=[-90, -45, 0, 45, 90],
+                                                          allowed_rotation_angles=np.arange(-180, 180, 15),
                                                           max_number_of_station_tracks=np.random.choice(4) + 4,
                                                           nbr_of_switches_per_station_track=np.random.choice(4) + 2,
                                                           connect_max_nbr_of_shortes_city=np.random.choice(4) + 2,
