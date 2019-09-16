@@ -704,7 +704,7 @@ class RailEnv(Environment):
             possible_directions = [(enforce_target_direction + 2) % 4]
 
         for neigh_direction in possible_directions:
-            new_cell = self.obs_builder.new_position(position, neigh_direction)
+            new_cell = get_new_position(position, neigh_direction)
 
             if new_cell[0] >= 0 and new_cell[0] < self.height and new_cell[1] >= 0 and new_cell[1] < self.width:
 

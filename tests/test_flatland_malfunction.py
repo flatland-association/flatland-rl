@@ -1,5 +1,6 @@
 import numpy as np
 
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
@@ -40,7 +41,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
             min_distances = []
             for direction in [(agent.direction + i) % 4 for i in range(-1, 2)]:
                 if possible_transitions[direction]:
-                    new_position = self.new_position(agent.position, direction)
+                    new_position = get_new_position(agent.position, direction)
                     min_distances.append(self.env.distance_map[handle, new_position[0], new_position[1], direction])
                 else:
                     min_distances.append(np.inf)
