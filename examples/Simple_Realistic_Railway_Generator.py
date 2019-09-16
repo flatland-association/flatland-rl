@@ -17,7 +17,7 @@ from flatland.envs.schedule_generators import sparse_schedule_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
-# @TODO : remove (reuse existing code!!)
+# TODO : remove (reuse existing code!!)
 class GripMapOp:
     def min_max_cut(min_v, max_v, v):
         return max(min_v, min(max_v, v))
@@ -234,6 +234,7 @@ def realistic_rail_generator(num_cities=5,
                     end_nodes = e_nodes[graphids[i + 1]]
                     start_node = start_nodes[np.random.choice(len(start_nodes))]
                     end_node = end_nodes[np.random.choice(len(end_nodes))]
+                    # TODO : removing, what the hell is that
                     rail_array[start_node] = 0
                     rail_array[end_node] = 0
                     connection = connect_rail(rail_trans, rail_array, start_node, end_node)
@@ -405,6 +406,7 @@ def realistic_rail_generator(num_cities=5,
 
         # ----------------------------------------------------------------------------------
         # fix all transition at starting / ending points (mostly add a dead end, if missing)
+        # TODO i would like to remove the fixing stuff.
         for i in range(len(nodes_added)):
             grid_map.fix_transitions(nodes_added[i])
 
