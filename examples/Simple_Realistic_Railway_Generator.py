@@ -6,6 +6,7 @@ import warnings
 import numpy as np
 
 from flatland.core.grid.grid4_utils import mirror
+from flatland.core.grid.grid_utils import Vec2dOperations as vec2d
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_from_nodes, connect_nodes, connect_rail
@@ -13,133 +14,7 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import RailGenerator, RailGeneratorProduct
 from flatland.envs.schedule_generators import sparse_schedule_generator
-from flatland.utils.rendertools import RenderTool,AgentRenderVariant
-
-
-class Vec2dOperations:
-    def subtract_pos(nodeA, nodeB):
-        """
-        vector operation : nodeA - nodeB
-
-        :param nodeA: tuple with coordinate (x,y) or 2d vector
-        :param nodeB: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
-        """
-        return (nodeA[0] - nodeB[0], nodeA[1] - nodeB[1])
-
-    def add_pos(nodeA, nodeB):
-        """
-        vector operation : nodeA + nodeB
-
-        :param nodeA: tuple with coordinate (x,y) or 2d vector
-        :param nodeB: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
-        """
-        return (nodeA[0] + nodeB[0], nodeA[1] + nodeB[1])
-
-    def make_orthogonal_pos(node):
-        """
-        vector operation : rotates the 2D vector +90°
-
-        :param node: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
-        """
-        return (node[1], -node[0])
-
-    def get_norm_pos(node):
-        """
-        calculates the euclidean norm of the 2d vector
-
-        :param node: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
-        """
-        return np.sqrt(node[0] * node[0] + node[1] * node[1])
-
-    def normalize_pos(node):
-        """
-        normalize the 2d vector = v/|v|
-
-        :param node: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
-        """
-        n = Vec2dOperations.get_norm_pos(node)
-        if n > 0.0:
-            n = 1 / n
-        return Vec2dOperations.scale_pos(node, n)
-
-    def scale_pos(node, scalar):
-        """
-         scales the 2d vector = node * scale
-
-         :param node: tuple with coordinate (x,y) or 2d vector
-         :param scale: scalar to scale
-         :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
-         """
-        return (node[0] * scalar, node[1] * scalar)
-
-    def round_pos(node):
-        """
-         rounds the x and y coordinate and convert them to an integer values
-
-         :param node: tuple with coordinate (x,y) or 2d vector
-         :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
-         """
-        return (int(np.round(node[0])), int(np.round(node[1])))
-
-    def ceil_pos(node):
-        """
-         ceiling the x and y coordinate and convert them to an integer values
-
-         :param node: tuple with coordinate (x,y) or 2d vector
-         :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
-         """
-        return (int(np.ceil(node[0])), int(np.ceil(node[1])))
-
-    def bound_pos(node, min_value, max_value):
-        """
-         force the values x and y to be between min_value and max_value
-
-         :param node: tuple with coordinate (x,y) or 2d vector
-         :param min_value: scalar value
-         :param max_value: scalar value
-         :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
-         """
-        return (max(min_value, min(max_value, node[0])), max(min_value, min(max_value, node[1])))
-
-    def rotate_pos(node, rot_in_degree):
-        """
-         rotate the 2d vector with given angle in degree
-
-         :param node: tuple with coordinate (x,y) or 2d vector
-         :param rot_in_degree:  angle in degree
-         :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
-         """
-        alpha = rot_in_degree / 180.0 * np.pi
-        x0 = node[0]
-        y0 = node[1]
-        x1 = x0 * np.cos(alpha) - y0 * np.sin(alpha)
-        y1 = x0 * np.sin(alpha) + y0 * np.cos(alpha)
-        return (x1, y1)
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
 class GripMapOp:
@@ -245,12 +120,12 @@ def realistic_rail_generator(num_cities=5,
         for i in range(len(generate_city_locations)):
             # station main orientation  (horizontal or vertical
             rot_angle = np.random.choice(allowed_rotation_angles)
-            add_pos_val = Vec2dOperations.scale_pos(Vec2dOperations.rotate_pos((1, 0), rot_angle),
+            add_pos_val = vec2d.scale_pos(vec2d.rotate_pos((1, 0), rot_angle),
                                                     (max(1, (intern_city_size - 3) / 2)))
-            generate_city_locations[i][0] = Vec2dOperations.add_pos(generate_city_locations[i][1], add_pos_val)
-            add_pos_val = Vec2dOperations.scale_pos(Vec2dOperations.rotate_pos((1, 0), 180 + rot_angle),
+            generate_city_locations[i][0] = vec2d.add_pos(generate_city_locations[i][1], add_pos_val)
+            add_pos_val = vec2d.scale_pos(vec2d.rotate_pos((1, 0), 180 + rot_angle),
                                                     (max(1, (intern_city_size - 3) / 2)))
-            generate_city_locations[i][1] = Vec2dOperations.add_pos(generate_city_locations[i][1], add_pos_val)
+            generate_city_locations[i][1] = vec2d.add_pos(generate_city_locations[i][1], add_pos_val)
         return generate_city_locations
 
     def create_stations_from_city_locations(rail_trans, rail_array, generate_city_locations,
@@ -271,13 +146,13 @@ def realistic_rail_generator(num_cities=5,
                 org_start_node = generate_city_locations[city_loop][0]
                 org_end_node = generate_city_locations[city_loop][1]
 
-                ortho_trans = Vec2dOperations.make_orthogonal_pos(
-                    Vec2dOperations.normalize_pos(Vec2dOperations.subtract_pos(org_start_node, org_end_node)))
+                ortho_trans = vec2d.make_orthogonal_pos(
+                    vec2d.normalize_pos(vec2d.subtract_pos(org_start_node, org_end_node)))
                 s = (ct - number_of_connecting_tracks / 2.0)
-                start_node = Vec2dOperations.ceil_pos(
-                    Vec2dOperations.add_pos(org_start_node, Vec2dOperations.scale_pos(ortho_trans, s)))
-                end_node = Vec2dOperations.ceil_pos(
-                    Vec2dOperations.add_pos(org_end_node, Vec2dOperations.scale_pos(ortho_trans, s)))
+                start_node = vec2d.ceil_pos(
+                    vec2d.add_pos(org_start_node, vec2d.scale_pos(ortho_trans, s)))
+                end_node = vec2d.ceil_pos(
+                    vec2d.add_pos(org_end_node, vec2d.scale_pos(ortho_trans, s)))
 
                 connection = connect_from_nodes(rail_trans, rail_array, start_node, end_node)
                 if len(connection) > 0:
@@ -385,7 +260,7 @@ def realistic_rail_generator(num_cities=5,
                             continue
                         ens = e_nodes[city_loop_find_shortest]
                         for en in ens:
-                            d = Vec2dOperations.get_norm_pos(Vec2dOperations.subtract_pos(en, start_node))
+                            d = vec2d.get_norm_pos(vec2d.subtract_pos(en, start_node))
                             if d < min_distance:
                                 min_distance = d
                                 end_node = en
@@ -513,8 +388,9 @@ def realistic_rail_generator(num_cities=5,
                                                 generate_city_locations,
                                                 intern_max_number_of_station_tracks)
         # build switches
-        create_switches_at_stations(width, height, grid_map, station_tracks, nodes_added,
-                                    intern_nbr_of_switches_per_station_track)
+        if True:
+            create_switches_at_stations(width, height, grid_map, station_tracks, nodes_added,
+                                        intern_nbr_of_switches_per_station_track)
 
         # ----------------------------------------------------------------------------------
         # connect stations
@@ -578,7 +454,7 @@ def realistic_rail_generator(num_cities=5,
 
 for itrials in range(1000):
     print(itrials, "generate new city")
-    np.random.seed(int(time.time()))
+    np.random.seed(0*int(time.time()))
     env = RailEnv(width=40 + np.random.choice(100),
                   height=40 + np.random.choice(100),
                   rail_generator=realistic_rail_generator(num_cities=2 + np.random.choice(10),
@@ -593,7 +469,7 @@ for itrials in range(1000):
                                                           print_out_info=False
                                                           ),
                   schedule_generator=sparse_schedule_generator(),
-                  number_of_agents=1+np.random.choice(10),
+                  number_of_agents=1 + np.random.choice(10),
                   obs_builder_object=GlobalObsForRailEnv())
 
     # reset to initialize agents_static
@@ -610,4 +486,5 @@ for itrials in range(1000):
             "flatland_frame_{:04d}_{:04d}.png".format(itrials, 0)
         ))
 
+    input()
     env_renderer.close_window()
