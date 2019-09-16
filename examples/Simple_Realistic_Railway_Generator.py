@@ -174,22 +174,26 @@ def realistic_rail_generator(num_cities=5,
 
         return nodes_added, station_slots, start_nodes_added, end_nodes_added, station_tracks
 
-    def create_switches_at_stations(width, height, grid_map, station_tracks, nodes_added,
+    def create_switches_at_stations(rail_trans, rail_array, width, height, grid_map, station_tracks, nodes_added,
                                     intern_nbr_of_switches_per_station_track):
-        # generate switch based on switch slot list and connect them
+
         for city_loop in range(len(station_tracks)):
             datas = station_tracks[city_loop]
-            for data_loop in range(len(datas) - 1):
-                data = datas[data_loop]
-                data1 = datas[data_loop + 1]
-                if len(data) > 2 and len(data1) > 2:
-                    for i in np.random.choice(min(len(data1), len(data)) - 2,
-                                              intern_nbr_of_switches_per_station_track):
-                        GripMapOp.add_rail(width, height, grid_map, data[i + 1], data1[i + 1], data1[i + 2], True)
-                        nodes_added.append(data[i + 1])
-                        nodes_added.append(data1[i + 1])
-                        nodes_added.append(data1[i + 2])
-
+            if len(datas)>1:
+                a = datas[0]
+                b = []
+                for i in range(len(datas)):
+                    tmp = datas[i]
+                    if len(tmp)>0:
+                        b = tmp
+                start_node = a[min(2,len(a))]
+                end_node = b[len(b)-1]
+                rail_array[start_node] = 0
+                rail_array[end_node] = 0
+                connection = connect_from_nodes(rail_trans, rail_array, start_node, end_node)
+                if len(connection) > 0:
+                    nodes_added.append(start_node)
+                    nodes_added.append(end_node)
         return nodes_added
 
     def calc_nbr_of_graphs(graph):
@@ -392,13 +396,15 @@ def realistic_rail_generator(num_cities=5,
                                                 generate_city_locations,
                                                 intern_max_number_of_station_tracks)
         # build switches
+        # TODO remove true/false block
         if True:
-            create_switches_at_stations(width, height, grid_map, station_tracks, nodes_added,
+            create_switches_at_stations(rail_trans, rail_array, width, height, grid_map, station_tracks, nodes_added,
                                         intern_nbr_of_switches_per_station_track)
 
         # ----------------------------------------------------------------------------------
         # connect stations
-        if True:
+        # TODO remove true/false block
+        if False:
             if do_random_connect_stations:
                 connect_random_stations(rail_trans, rail_array, s_nodes, e_nodes, nodes_added,
                                         inter_connect_max_nbr_of_shortes_city)
