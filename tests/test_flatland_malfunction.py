@@ -153,7 +153,6 @@ def test_malfunction_process_statistically():
     assert nb_malfunction > 150
 
 
-# TODO test DO_NOTHING!
 def test_initial_malfunction(rendering=True):
     random.seed(0)
     stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
@@ -240,7 +239,7 @@ def test_initial_malfunction(rendering=True):
         _assert(agent.direction, replay.direction, 'direction')
         _assert(agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
 
-        if replay.action:
+        if replay.action is not None:
             assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
             _, _, _, info_dict = env.step({0: replay.action})
 
