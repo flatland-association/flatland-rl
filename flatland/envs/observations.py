@@ -71,7 +71,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             self.max_prediction_depth = 0
             self.predicted_pos = {}
             self.predicted_dir = {}
-            self.predictions = self.predictor.get(custom_args={'distance_map': self.env.distance_map})
+            self.predictions = self.predictor.get()
             if self.predictions:
 
                 for t in range(len(self.predictions[0])):
