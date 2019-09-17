@@ -9,14 +9,14 @@ from flatland.core.transition_map import GridTransitionMap
 class AStarNode:
     """A node class for A* Pathfinding"""
 
-    def __init__(self, parent=None, pos=None):
-        self.parent = parent
-        self.pos = pos
-        self.g = 0
-        self.h = 0
-        self.f = 0
+    def __init__(self, parent: IntVector2D = None, pos: IntVector2D = None):
+        self.parent: IntVector2D = parent
+        self.pos: IntVector2D = pos
+        self.g: float = 0.0
+        self.h: float = 0.0
+        self.f: float = 0.0
 
-    def __eq__(self, other):
+    def __eq__(self, other: IntVector2D):
         return self.pos == other.pos
 
     def __hash__(self):
@@ -95,7 +95,7 @@ def a_star(rail_trans: RailEnvTransitions,
                 continue
 
             # create the f, g, and h values
-            child.g = current_node.g + 1
+            child.g = current_node.g + 1.0
             # this heuristic avoids diagonal paths
             child.h = Vec2d.get_manhattan_distance(child.pos, end_node.pos)
             child.f = child.g + child.h
