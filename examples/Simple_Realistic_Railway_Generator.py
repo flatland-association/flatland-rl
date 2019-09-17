@@ -476,10 +476,11 @@ for itrials in range(1000):
         env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
         cnt += 1
 
-    env_renderer.gl.save_image(
-        os.path.join(
-            "./../render_output/",
-            "flatland_frame_{:04d}_{:04d}.png".format(itrials, 0)
-        ))
+    if os.path.exists("./../render_output/"):
+        env_renderer.gl.save_image(
+            os.path.join(
+                "./../render_output/",
+                "flatland_frame_{:04d}_{:04d}.png".format(itrials, 0)
+            ))
 
     env_renderer.close_window()
