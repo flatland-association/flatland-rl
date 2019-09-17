@@ -162,7 +162,10 @@ def realistic_rail_generator(num_cities=5,
 
         return nodes_added
 
-    def calc_nbr_of_graphs(graph):
+    def create_graph_edge(from_city_index: int, to_city_index: int) -> (int, int, int):
+        return from_city_index, to_city_index, np.inf
+
+    def calc_nbr_of_graphs(graph: []) -> ([], []):
         for i in range(len(graph)):
             for j in range(len(graph)):
                 a = graph[i]
@@ -261,11 +264,12 @@ def realistic_rail_generator(num_cities=5,
                         if len(connection) > 0:
                             s_nodes[city_loop].remove(start_node)
                             e_nodes[cl].remove(end_node)
-                            a = (city_loop, cl, np.inf)
+
+                            edge = create_graph_edge(city_loop, cl)
                             if city_loop > cl:
-                                a = (cl, city_loop, np.inf)
-                            if not (a in city_edges):
-                                city_edges.append(a)
+                                edge = create_graph_edge(cl, city_loop)
+                            if not (edge in city_edges):
+                                city_edges.append(edge)
                             nodes_added.append(start_node)
                             nodes_added.append(end_node)
                         else:
