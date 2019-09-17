@@ -57,7 +57,7 @@ env = RailEnv(
 )
 ```
 
-You can see that you now need bot a `rail_generator` and a `schedule_generator` to generate a level. These need to work nicely together. The `rail_generator` will only generate the railway infrastructure and provide hints to the `schedule_generator` about where to place agents. The `schedule_generator` will then generate a schedule, meaning it places agents at different train stations and gives them tasks by providing individual targets.
+You can see that you now need both a `rail_generator` and a `schedule_generator` to generate a level. These need to work nicely together. The `rail_generator` will only generate the railway infrastructure and provide hints to the `schedule_generator` about where to place agents. The `schedule_generator` will then generate a schedule, meaning it places agents at different train stations and gives them tasks by providing individual targets.
 
 You can tune the following parameters in the `sparse_rail_generator`:
 
