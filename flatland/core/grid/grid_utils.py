@@ -11,6 +11,19 @@ IntVector2DArrayType = []
 class Vec2dOperations:
 
     @staticmethod
+    def is_equal(node_a: Vector2D, node_b: Vector2D) -> bool:
+        """
+        vector operation : node_a + node_b
+
+        :param node_a: tuple with coordinate (x,y) or 2d vector
+        :param node_b: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        check if node_a and nobe_b are equal
+        """
+        return node_a[0] == node_b[0] and node_a[1] == node_b[1]
+
+    @staticmethod
     def subtract(node_a: Vector2D, node_b: Vector2D) -> Vector2D:
         """
         vector operation : node_a - node_b

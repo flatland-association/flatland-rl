@@ -118,32 +118,32 @@ def test_adding_new_valid_transition():
     grid_map = GridTransitionMap(width=15, height=15, transitions=rail_trans)
 
     # adding straight
-    assert (grid_map.validate_new_transition(rail_trans, (4, 5), (5, 5), (6, 5), (10, 10)) is True)
+    assert (grid_map.validate_new_transition((4, 5), (5, 5), (6, 5), (10, 10)) is True)
 
     # adding valid right turn
-    assert (grid_map.validate_new_transition(rail_trans, (5, 4), (5, 5), (5, 6), (10, 10)) is True)
+    assert (grid_map.validate_new_transition((5, 4), (5, 5), (5, 6), (10, 10)) is True)
     # adding valid left turn
-    assert (grid_map.validate_new_transition(rail_trans, (5, 6), (5, 5), (5, 6), (10, 10)) is True)
+    assert (grid_map.validate_new_transition((5, 6), (5, 5), (5, 6), (10, 10)) is True)
 
     # adding invalid turn
     grid_map.grid[(5, 5)] = rail_trans.transitions[2]
-    assert (grid_map.validate_new_transition(rail_trans, (4, 5), (5, 5), (5, 6), (10, 10)) is False)
+    assert (grid_map.validate_new_transition((4, 5), (5, 5), (5, 6), (10, 10)) is False)
 
     # should create #4 -> valid
     grid_map.grid[(5, 5)] = rail_trans.transitions[3]
-    assert (grid_map.validate_new_transition(rail_trans, (4, 5), (5, 5), (5, 6), (10, 10)) is True)
+    assert (grid_map.validate_new_transition((4, 5), (5, 5), (5, 6), (10, 10)) is True)
 
     # adding invalid turn
     grid_map.grid[(5, 5)] = rail_trans.transitions[7]
-    assert (grid_map.validate_new_transition(rail_trans, (4, 5), (5, 5), (5, 6), (10, 10)) is False)
+    assert (grid_map.validate_new_transition((4, 5), (5, 5), (5, 6), (10, 10)) is False)
 
     # test path start condition
     grid_map.grid[(5, 5)] = rail_trans.transitions[0]
-    assert (grid_map.validate_new_transition(rail_trans, None, (5, 5), (5, 6), (10, 10)) is True)
+    assert (grid_map.validate_new_transition(None, (5, 5), (5, 6), (10, 10)) is True)
 
     # test path end condition
     grid_map.grid[(5, 5)] = rail_trans.transitions[0]
-    assert (grid_map.validate_new_transition(rail_trans, (5, 4), (5, 5), (6, 5), (6, 5)) is True)
+    assert (grid_map.validate_new_transition((5, 4), (5, 5), (6, 5), (6, 5)) is True)
 
 
 def test_valid_railenv_transitions():

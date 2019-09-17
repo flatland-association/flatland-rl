@@ -9,6 +9,7 @@ from numpy import array
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position, get_direction
 from flatland.core.grid.grid_utils import IntVector2DArrayType
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 
@@ -301,7 +302,7 @@ class GridTransitionMap(TransitionMap):
         self.height = new_height
         self.grid = new_grid
 
-    def is_dead_end(self, rcPos):
+    def is_dead_end(self, rcPos: IntVector2DArrayType):
         """
         Check if the cell is a dead-end.
 
@@ -321,7 +322,7 @@ class GridTransitionMap(TransitionMap):
             tmp = tmp >> 1
         return nbits == 1
 
-    def is_simple_turn(self, rcPos):
+    def is_simple_turn(self, rcPos: IntVector2DArrayType):
         """
         Check if the cell is a left/right simple turn
 
@@ -348,7 +349,7 @@ class GridTransitionMap(TransitionMap):
 
         return is_simple_turn(tmp)
 
-    def check_path_exists(self, start, direction, end):
+    def check_path_exists(self, start: IntVector2DArrayType, direction: int, end: IntVector2DArrayType):
         # print("_path_exists({},{},{}".format(start, direction, end))
         # BFS - Check if a path exists between the 2 nodes
 
@@ -358,7 +359,8 @@ class GridTransitionMap(TransitionMap):
             node = stack.pop()
             node_position = node[0]
             node_direction = node[1]
-            if node_position[0] == end[0] and node_position[1] == end[1]:
+
+            if Vec2d.is_equal(node_position, end):
                 return True
             if node not in visited:
                 visited.add(node)
@@ -371,7 +373,7 @@ class GridTransitionMap(TransitionMap):
 
         return False
 
-    def cell_neighbours_valid(self, rcPos, check_this_cell=False):
+    def cell_neighbours_valid(self, rcPos: IntVector2DArrayType, check_this_cell=False):
         """
         Check validity of cell at rcPos = tuple(row, column)
         Checks that:
@@ -423,7 +425,7 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
-    def fix_neighbours(self, rcPos, check_this_cell=False):
+    def fix_neighbours(self, rcPos: IntVector2DArrayType, check_this_cell=False):
         """
         Check validity of cell at rcPos = tuple(row, column)
         Checks that:
@@ -476,7 +478,7 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
-    def fix_transitions(self, rcPos):
+    def fix_transitions(self, rcPos: IntVector2DArrayType):
         """
         Fixes broken transitions
         """
@@ -541,9 +543,9 @@ class GridTransitionMap(TransitionMap):
             self.set_transitions((rcPos[0], rcPos[1]), transition)
         return True
 
-    def validate_new_transition(self, rail_trans: RailEnvTransitions,
-                                prev_pos: IntVector2DArrayType, current_pos: IntVector2DArrayType,
+    def validate_new_transition(self, prev_pos: IntVector2DArrayType, current_pos: IntVector2DArrayType,
                                 new_pos: IntVector2DArrayType, end_pos: IntVector2DArrayType):
+
         # start by getting direction used to get to current node
         # and direction from current node to possible child node
         new_dir = get_direction(current_pos, new_pos)
@@ -556,30 +558,30 @@ class GridTransitionMap(TransitionMap):
         if prev_pos is None:
             if new_trans == 0:
                 # need to flip direction because of how end points are defined
-                new_trans = rail_trans.set_transition(new_trans, mirror(current_dir), new_dir, 1)
+                new_trans = self.transitions.set_transition(new_trans, mirror(current_dir), new_dir, 1)
             else:
                 # check if matches existing layout
-                new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+                new_trans = self.transitions.set_transition(new_trans, current_dir, new_dir, 1)
         else:
             # set the forward path
-            new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+            new_trans = self.transitions.set_transition(new_trans, current_dir, new_dir, 1)
             # set the backwards path
-            new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
-        if new_pos == end_pos:
+            new_trans = self.transitions.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+        if Vec2d.is_equal(new_pos, end_pos):
             # need to validate end pos setup as well
             new_trans_e = self.grid[end_pos]
             if new_trans_e == 0:
                 # need to flip direction because of how end points are defined
-                new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, mirror(new_dir), 1)
+                new_trans_e = self.transitions.set_transition(new_trans_e, new_dir, mirror(new_dir), 1)
             else:
                 # check if matches existing layout
-                new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
+                new_trans_e = self.transitions.set_transition(new_trans_e, new_dir, new_dir, 1)
 
-            if not rail_trans.is_valid(new_trans_e):
+            if not self.transitions.is_valid(new_trans_e):
                 return False
 
         # is transition is valid?
-        return rail_trans.is_valid(new_trans)
+        return self.transitions.is_valid(new_trans)
 
 
 def mirror(dir):

@@ -1,4 +1,3 @@
-
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.grid.grid_utils import IntVector2DArrayType
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
@@ -75,13 +74,15 @@ def a_star(rail_trans: RailEnvTransitions,
         else:
             prev_pos = None
         for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-            node_pos = (current_node.pos[0] + new_pos[0], current_node.pos[1] + new_pos[1])
+            # update the "current" pos
+            node_pos = Vec2d.add(current_node.pos, new_pos)
+
+            # is node_pos inside the grid?
             if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
                 continue
 
             # validate positions
-            if not grid_map.validate_new_transition(rail_trans, prev_pos, current_node.pos, node_pos,
-                                           end_node.pos):
+            if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos, end_node.pos):
                 continue
 
             # create new node

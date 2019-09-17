@@ -1,6 +1,5 @@
 import copy
 import os
-import time
 import warnings
 
 import numpy as np
@@ -277,7 +276,6 @@ def realistic_rail_generator(num_cities=5,
 
                             grid_map.grid[start_node] = tmp_trans_sn
                             grid_map.grid[end_node] = tmp_trans_en
-
 
         connect_sub_graphs(rail_trans, grid_map, org_s_nodes, org_e_nodes, city_edges, nodes_added)
 
