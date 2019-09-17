@@ -27,6 +27,7 @@ def test_sparse_rail_generator():
     env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
     env_renderer.gl.save_image("./sparse_generator_false.png")
     # TODO test assertions!
+    env_renderer.close_window()
 
 
 def test_rail_env_action_required_info():
@@ -108,7 +109,7 @@ def test_rail_env_action_required_info():
 
         if done_always_action['__all__']:
             break
-
+    env_renderer.close_window()
 
 def test_rail_env_malfunction_speed_info():
     np.random.seed(0)
@@ -158,7 +159,7 @@ def test_rail_env_malfunction_speed_info():
 
         if done['__all__']:
             break
-
+    env_renderer.close_window()
 
 def test_sparse_generator_with_too_man_cities_does_not_break_down():
     np.random.seed(0)

@@ -45,14 +45,12 @@ def test_render_env(save_new_images=False):
     oEnv.rail.load_transition_map('env_data.tests', "test1.npy")
     oRT = rt.RenderTool(oEnv, gl="PILSVG")
     oRT.render_env(show=False)
-
     checkFrozenImage(oRT, "basic-env.npz", resave=save_new_images)
 
     oRT = rt.RenderTool(oEnv, gl="PIL")
     oRT.render_env()
     checkFrozenImage(oRT, "basic-env-PIL.npz", resave=save_new_images)
-
-
+    
 def main():
     if len(sys.argv) == 2 and sys.argv[1] == "save":
         test_render_env(save_new_images=True)
