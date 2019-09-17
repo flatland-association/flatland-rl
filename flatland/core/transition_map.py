@@ -7,7 +7,8 @@ from importlib_resources import path
 from numpy import array
 
 from flatland.core.grid.grid4 import Grid4Transitions
-from flatland.core.grid.grid4_utils import get_new_position
+from flatland.core.grid.grid4_utils import get_new_position, get_direction
+from flatland.core.grid.grid_utils import IntVector2DArrayType
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 
@@ -539,6 +540,46 @@ class GridTransitionMap(TransitionMap):
             transition = transitions.rotate_transition(double_slip, int(rotation * 90))
             self.set_transitions((rcPos[0], rcPos[1]), transition)
         return True
+
+    def validate_new_transition(self, rail_trans: RailEnvTransitions,
+                                prev_pos: IntVector2DArrayType, current_pos: IntVector2DArrayType,
+                                new_pos: IntVector2DArrayType, end_pos: IntVector2DArrayType):
+        # start by getting direction used to get to current node
+        # and direction from current node to possible child node
+        new_dir = get_direction(current_pos, new_pos)
+        if prev_pos is not None:
+            current_dir = get_direction(prev_pos, current_pos)
+        else:
+            current_dir = new_dir
+        # create new transition that would go to child
+        new_trans = self.grid[current_pos]
+        if prev_pos is None:
+            if new_trans == 0:
+                # need to flip direction because of how end points are defined
+                new_trans = rail_trans.set_transition(new_trans, mirror(current_dir), new_dir, 1)
+            else:
+                # check if matches existing layout
+                new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+        else:
+            # set the forward path
+            new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
+            # set the backwards path
+            new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
+        if new_pos == end_pos:
+            # need to validate end pos setup as well
+            new_trans_e = self.grid[end_pos]
+            if new_trans_e == 0:
+                # need to flip direction because of how end points are defined
+                new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, mirror(new_dir), 1)
+            else:
+                # check if matches existing layout
+                new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
+
+            if not rail_trans.is_valid(new_trans_e):
+                return False
+
+        # is transition is valid?
+        return rail_trans.is_valid(new_trans)
 
 
 def mirror(dir):

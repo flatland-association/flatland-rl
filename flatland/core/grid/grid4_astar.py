@@ -1,4 +1,4 @@
-from flatland.core.grid.grid4_utils import validate_new_transition
+
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.grid.grid_utils import IntVector2DArrayType
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
@@ -12,9 +12,9 @@ class AStarNode:
     def __init__(self, parent: IntVector2D = None, pos: IntVector2D = None):
         self.parent: IntVector2D = parent
         self.pos: IntVector2D = pos
-        self.g: float = 0.0
-        self.h: float = 0.0
-        self.f: float = 0.0
+        self.g = 0.0
+        self.h = 0.0
+        self.f = 0.0
 
     def __eq__(self, other: IntVector2D):
         return self.pos == other.pos
@@ -80,7 +80,7 @@ def a_star(rail_trans: RailEnvTransitions,
                 continue
 
             # validate positions
-            if not validate_new_transition(rail_trans, grid_map.grid, prev_pos, current_node.pos, node_pos,
+            if not grid_map.validate_new_transition(rail_trans, prev_pos, current_node.pos, node_pos,
                                            end_node.pos):
                 continue
 

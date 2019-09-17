@@ -451,7 +451,7 @@ def realistic_rail_generator(num_cities=5,
 if os.path.exists("./../render_output/"):
     for itrials in range(1000):
         print(itrials, "generate new city")
-        np.random.seed(0 * int(time.time()))
+        np.random.seed(itrials)
         env = RailEnv(width=40 + np.random.choice(100),
                       height=40 + np.random.choice(100),
                       rail_generator=realistic_rail_generator(num_cities=2 + np.random.choice(10),
@@ -462,7 +462,7 @@ if os.path.exists("./../render_output/"):
                                                               connect_max_nbr_of_shortes_city=2,
                                                               do_random_connect_stations=False,
                                                               # Number of cities in map
-                                                              seed=0*int(time.time()),  # Random seed
+                                                              seed=itrials,  # Random seed
                                                               print_out_info=True
                                                               ),
                       schedule_generator=sparse_schedule_generator(),
