@@ -1,5 +1,5 @@
 from collections import deque
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
@@ -13,8 +13,10 @@ class DistanceMap:
         self.env_height = env_height
         self.env_width = env_width
         self.distance_map = None
-        self.distance_map_computed = False
-        self.agents_previous_reset = None
+        self.agents_previous_computation = None
+        self.reset_was_called = False
+        self.agents: List[EnvAgent] = agents
+        self.rail: Optional[GridTransitionMap] = None
 
     """
     Set the distance map
@@ -26,31 +28,39 @@ class DistanceMap:
     Get the distance map
     """
     def get(self) -> np.ndarray:
+
+        if self.reset_was_called:
+            self.reset_was_called = False
+
+            nb_agents = len(self.agents)
+            compute_distance_map = True
+            if self.agents_previous_computation is not None and nb_agents == len(self.agents_previous_computation):
+                compute_distance_map = False
+                for i in range(nb_agents):
+                    if self.agents[i].target != self.agents_previous_computation[i].target:
+                        compute_distance_map = True
+            # Don't compute the distance map if it was loaded
+            if self.agents_previous_computation is None and self.distance_map is not None:
+                compute_distance_map = False
+
+            if compute_distance_map:
+                self._compute(self.agents, self.rail)
+
+        elif self.distance_map is None:
+            self._compute(self.agents, self.rail)
+
         return self.distance_map
 
     """
-    Compute the distance map
+    Reset the distance map
     """
-    def compute(self, agents: List[EnvAgent], rail: GridTransitionMap):
-
-        nb_agents = len(agents)
-        compute_distance_map = True
-        if self.agents_previous_reset is not None and nb_agents == len(self.agents_previous_reset):
-            compute_distance_map = False
-            for i in range(nb_agents):
-                if agents[i].target != self.agents_previous_reset[i].target:
-                    compute_distance_map = True
-        # Don't compute the distance map if it was loaded
-        if self.agents_previous_reset is None and self.distance_map is not None:
-            compute_distance_map = False
-
-        if compute_distance_map:
-            self._compute(agents, rail)
-
-        self.agents_previous_reset = agents
+    def reset(self, agents: List[EnvAgent], rail: GridTransitionMap):
+        self.reset_was_called = True
+        self.agents = agents
+        self.rail = rail
 
     def _compute(self, agents: List[EnvAgent], rail: GridTransitionMap):
-        self.distance_map_computed = True
+        self.agents_previous_computation = self.agents
         self.distance_map = np.inf * np.ones(shape=(len(agents),
                                                     self.env_height,
                                                     self.env_width,

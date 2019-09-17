@@ -148,7 +148,6 @@ def tests_rail_from_file():
     assert agents_initial == agents_loaded
 
     # Check that distance map was not recomputed
-    assert env.distance_map.distance_map_computed is False
     assert np.shape(env.distance_map.get()) == dist_map_shape
     assert env.distance_map.get() is not None
 
@@ -222,6 +221,5 @@ def tests_rail_from_file():
     assert agents_initial_2 == agents_loaded_4
 
     # Check that distance map was generated with correct shape
-    assert env4.distance_map.distance_map_computed is True
     assert env4.distance_map.get() is not None
     assert np.shape(env4.distance_map.get()) == dist_map_shape
