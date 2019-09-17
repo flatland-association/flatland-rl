@@ -4,7 +4,7 @@ Definition of the RailEnv environment.
 # TODO:  _ this is a global method --> utils or remove later
 import warnings
 from enum import IntEnum
-from typing import List, Set, NamedTuple
+from typing import List, Set, NamedTuple, Optional
 
 import msgpack
 import msgpack_numpy as m
@@ -18,6 +18,7 @@ from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
+from flatland.utils.ordered_set import OrderedSet
 
 m.patch()
 
@@ -153,7 +154,7 @@ class RailEnv(Environment):
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
         self.rail_generator = rail_generator
-        self.rail: GridTransitionMap = None
+        self.rail: Optional[GridTransitionMap] = None
         self.width = width
         self.height = height
 
@@ -549,7 +550,7 @@ class RailEnv(Environment):
         return new_direction, transition_valid
 
     def get_valid_move_actions(self, agent: EnvAgent) -> Set[RailEnvNextAction]:
-        valid_actions: Set[RailEnvNextAction] = set()
+        valid_actions: Set[RailEnvNextAction] = OrderedSet()
         agent_position = agent.position
         agent_direction = agent.direction
         possible_transitions = self.rail.get_transitions(*agent_position, agent_direction)

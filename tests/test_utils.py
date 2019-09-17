@@ -15,7 +15,7 @@ class Replay(object):
 
 
 @attrs
-class TestConfig(object):
+class ReplayConfig(object):
     replay = attrib(type=List[Replay])
     target = attrib()
     speed = attrib(type=float)

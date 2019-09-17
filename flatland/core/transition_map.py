@@ -10,6 +10,7 @@ from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
+from flatland.utils.ordered_set import OrderedSet
 
 
 class TransitionMap:
@@ -336,7 +337,7 @@ class GridTransitionMap(TransitionMap):
         tmp = self.get_full_transitions(rcPos[0], rcPos[1])
 
         def is_simple_turn(trans):
-            all_simple_turns = set()
+            all_simple_turns = OrderedSet()
             for trans in [int('0100000000000010', 2),  # Case 1b (8)  - simple turn right
                           int('0001001000000000', 2)  # Case 1c (9)  - simple turn left]:
                           ]:
@@ -351,7 +352,7 @@ class GridTransitionMap(TransitionMap):
         # print("_path_exists({},{},{}".format(start, direction, end))
         # BFS - Check if a path exists between the 2 nodes
 
-        visited = set()
+        visited = OrderedSet()
         stack = [(start, direction)]
         while stack:
             node = stack.pop()
