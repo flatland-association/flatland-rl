@@ -1,6 +1,7 @@
 from flatland.core.grid.grid4_utils import validate_new_transition
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.grid.grid_utils import IntVector2DArrayType
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 
@@ -29,8 +30,9 @@ class AStarNode:
             self.f = other.f
 
 
-def a_star(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D) -> \
-    (IntVector2DArrayType):
+def a_star(rail_trans: RailEnvTransitions,
+           grid_map: GridTransitionMap,
+           start: IntVector2D, end: IntVector2D) -> IntVector2DArrayType:
     """
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
@@ -94,10 +96,8 @@ def a_star(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: I
 
             # create the f, g, and h values
             child.g = current_node.g + 1
-            # this heuristic favors diagonal paths:
-            # child.h = ((child.pos[0] - end_node.pos[0]) ** 2) + ((child.pos[1] - end_node.pos[1]) ** 2) \#  noqa: E800
             # this heuristic avoids diagonal paths
-            child.h = abs(child.pos[0] - end_node.pos[0]) + abs(child.pos[1] - end_node.pos[1])
+            child.h = Vec2d.get_manhattan_distance(child.pos, end_node.pos)
             child.f = child.g + child.h
 
             # already in the open list?

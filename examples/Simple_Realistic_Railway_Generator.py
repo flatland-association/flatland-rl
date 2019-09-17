@@ -74,12 +74,12 @@ def realistic_rail_generator(num_cities=5,
         for i in range(len(generate_city_locations)):
             # station main orientation  (horizontal or vertical
             rot_angle = np.random.choice(rotation_angles_set)
-            add_pos_val = Vec2d.scale_pos(Vec2d.rotate_pos((1, 0), rot_angle),
+            add_pos_val = Vec2d.scale(Vec2d.rotate((1, 0), rot_angle),
                                           int(max(1.0, (intern_city_size - 3) / 2)))
-            generate_city_locations[i][0] = Vec2d.add_pos(generate_city_locations[i][1], add_pos_val)
-            add_pos_val = Vec2d.scale_pos(Vec2d.rotate_pos((1, 0), 180 + rot_angle),
+            generate_city_locations[i][0] = Vec2d.add(generate_city_locations[i][1], add_pos_val)
+            add_pos_val = Vec2d.scale(Vec2d.rotate((1, 0), 180 + rot_angle),
                                           int(max(1.0, (intern_city_size - 3) / 2)))
-            generate_city_locations[i][1] = Vec2d.add_pos(generate_city_locations[i][1], add_pos_val)
+            generate_city_locations[i][1] = Vec2d.add(generate_city_locations[i][1], add_pos_val)
         return generate_city_locations
 
     def create_stations_from_city_locations(rail_trans: RailEnvTransitions,
@@ -107,13 +107,13 @@ def realistic_rail_generator(num_cities=5,
                 org_start_node = generate_city_locations[city_loop][0]
                 org_end_node = generate_city_locations[city_loop][1]
 
-                ortho_trans = Vec2d.make_orthogonal_pos(
-                    Vec2d.normalize_pos(Vec2d.subtract_pos(org_start_node, org_end_node)))
+                ortho_trans = Vec2d.make_orthogonal(
+                    Vec2d.normalize(Vec2d.subtract(org_start_node, org_end_node)))
                 s = (ct - number_of_connecting_tracks / 2.0)
-                start_node = Vec2d.ceil_pos(
-                    Vec2d.add_pos(org_start_node, Vec2d.scale_pos(ortho_trans, s)))
-                end_node = Vec2d.ceil_pos(
-                    Vec2d.add_pos(org_end_node, Vec2d.scale_pos(ortho_trans, s)))
+                start_node = Vec2d.ceil(
+                    Vec2d.add(org_start_node, Vec2d.scale(ortho_trans, s)))
+                end_node = Vec2d.ceil(
+                    Vec2d.add(org_end_node, Vec2d.scale(ortho_trans, s)))
 
                 connection = connect_from_nodes(rail_trans, grid_map, start_node, end_node)
                 if len(connection) > 0:
@@ -248,7 +248,7 @@ def realistic_rail_generator(num_cities=5,
                             continue
                         ens = e_nodes[city_loop_find_shortest]
                         for en in ens:
-                            d = Vec2d.get_norm_pos(Vec2d.subtract_pos(en, start_node))
+                            d = Vec2d.get_euclidean_distance(start_node,en)
                             if d < min_distance:
                                 min_distance = d
                                 end_node = en

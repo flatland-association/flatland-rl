@@ -11,7 +11,7 @@ IntVector2DArrayType = []
 class Vec2dOperations:
 
     @staticmethod
-    def subtract_pos(node_a: Vector2D, node_b: Vector2D) -> Vector2D:
+    def subtract(node_a: Vector2D, node_b: Vector2D) -> Vector2D:
         """
         vector operation : node_a - node_b
 
@@ -24,7 +24,7 @@ class Vec2dOperations:
         return node_a[0] - node_b[0], node_a[1] - node_b[1]
 
     @staticmethod
-    def add_pos(node_a: Vector2D, node_b: Vector2D) -> Vector2D:
+    def add(node_a: Vector2D, node_b: Vector2D) -> Vector2D:
         """
         vector operation : node_a + node_b
 
@@ -37,7 +37,7 @@ class Vec2dOperations:
         return node_a[0] + node_b[0], node_a[1] + node_b[1]
 
     @staticmethod
-    def make_orthogonal_pos(node: Vector2D) -> Vector2D:
+    def make_orthogonal(node: Vector2D) -> Vector2D:
         """
         vector operation : rotates the 2D vector +90°
 
@@ -49,7 +49,7 @@ class Vec2dOperations:
         return node[1], -node[0]
 
     @staticmethod
-    def get_norm_pos(node: Vector2D) -> float:
+    def get_norm(node: Vector2D) -> float:
         """
         calculates the euclidean norm of the 2d vector
 
@@ -60,8 +60,45 @@ class Vec2dOperations:
         """
         return np.sqrt(node[0] * node[0] + node[1] * node[1])
 
+
     @staticmethod
-    def normalize_pos(node: Vector2D) -> Tuple[float, float]:
+    def get_manhattan_norm(node: Vector2D) -> float:
+        """
+        calculates the euclidean norm of the 2d vector
+
+        :param node: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        returns the manhatten norm
+        """
+        return abs(node[0] * node[0]) + abs(node[1] * node[1])
+
+    @staticmethod
+    def get_euclidean_distance(node_a: Vector2D,node_b: Vector2D) -> float:
+        """
+        calculates the euclidean norm of the 2d vector
+
+        :param node: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        returnss the manhatten distance
+        """
+        return Vec2dOperations.get_norm(Vec2dOperations.subtract(node_b,node_a))
+
+    @staticmethod
+    def get_manhattan_distance(node_a: Vector2D, node_b: Vector2D) -> float:
+        """
+        calculates the euclidean norm of the 2d vector
+
+        :param node: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        returnss the manhatten distance
+        """
+        return Vec2dOperations.get_manhattan_norm(Vec2dOperations.subtract(node_b, node_a))
+
+    @staticmethod
+    def normalize(node: Vector2D) -> Tuple[float, float]:
         """
         normalize the 2d vector = v/|v|
 
@@ -70,13 +107,13 @@ class Vec2dOperations:
             -------
         tuple with coordinate (x,y) or 2d vector
         """
-        n = Vec2dOperations.get_norm_pos(node)
+        n = Vec2dOperations.get_norm(node)
         if n > 0.0:
             n = 1 / n
-        return Vec2dOperations.scale_pos(node, n)
+        return Vec2dOperations.scale(node, n)
 
     @staticmethod
-    def scale_pos(node: Vector2D, scale: float) -> Vector2D:
+    def scale(node: Vector2D, scale: float) -> Vector2D:
         """
          scales the 2d vector = node * scale
 
@@ -89,7 +126,7 @@ class Vec2dOperations:
         return node[0] * scale, node[1] * scale
 
     @staticmethod
-    def round_pos(node: Vector2D) -> IntVector2D:
+    def round(node: Vector2D) -> IntVector2D:
         """
          rounds the x and y coordinate and convert them to an integer values
 
@@ -101,7 +138,7 @@ class Vec2dOperations:
         return int(np.round(node[0])), int(np.round(node[1]))
 
     @staticmethod
-    def ceil_pos(node: Vector2D) -> IntVector2D:
+    def ceil(node: Vector2D) -> IntVector2D:
         """
          ceiling the x and y coordinate and convert them to an integer values
 
@@ -113,7 +150,7 @@ class Vec2dOperations:
         return int(np.ceil(node[0])), int(np.ceil(node[1]))
 
     @staticmethod
-    def bound_pos(node: Vector2D, min_value: float, max_value: float) -> Vector2D:
+    def bound(node: Vector2D, min_value: float, max_value: float) -> Vector2D:
         """
          force the values x and y to be between min_value and max_value
 
@@ -127,7 +164,7 @@ class Vec2dOperations:
         return max(min_value, min(max_value, node[0])), max(min_value, min(max_value, node[1]))
 
     @staticmethod
-    def rotate_pos(node: Vector2D, rot_in_degree: float) -> Vector2D:
+    def rotate(node: Vector2D, rot_in_degree: float) -> Vector2D:
         """
          rotate the 2d vector with given angle in degree
 
