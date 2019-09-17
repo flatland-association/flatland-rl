@@ -121,7 +121,7 @@ def complex_rail_generator(nr_start_goal=1,
                 # we might as well give up at this point
                 break
 
-            new_path = connect_rail(rail_trans, rail_array, start, goal)
+            new_path = connect_rail(rail_trans, grid_map, start, goal)
             if len(new_path) >= 2:
                 nr_created += 1
                 start_goal.append([start, goal])
@@ -146,7 +146,7 @@ def complex_rail_generator(nr_start_goal=1,
                     break
             if not all_ok:
                 break
-            new_path = connect_rail(rail_trans, rail_array, start, goal)
+            new_path = connect_rail(rail_trans, grid_map, start, goal)
             if len(new_path) >= 2:
                 nr_created += 1
 
@@ -645,7 +645,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             for neighb in connected_neighb_idx:
                 if neighb not in node_stack:
                     node_stack.append(neighb)
-                connect_nodes(rail_trans, rail_array, node_positions[current_node], node_positions[neighb])
+                connect_nodes(rail_trans, grid_map, node_positions[current_node], node_positions[neighb])
             node_stack.pop(0)
 
         # Place train stations close to the node
@@ -688,7 +688,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                     train_stations[trainstation_node].append((station_x, station_y))
 
                 # Connect train station to the correct node
-                connection = connect_from_nodes(rail_trans, rail_array, node_positions[trainstation_node],
+                connection = connect_from_nodes(rail_trans, grid_map, node_positions[trainstation_node],
                                                 (station_x, station_y))
                 # Check if connection was made
                 if len(connection) == 0:
@@ -723,11 +723,11 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                     width - 2)
 
                 # Connect train station to the correct node
-                connect_nodes(rail_trans, rail_array, (intersect_x_1, intersect_y_1),
+                connect_nodes(rail_trans, grid_map, (intersect_x_1, intersect_y_1),
                               (intersect_x_2, intersect_y_2))
-                connect_nodes(rail_trans, rail_array, intersection_positions[intersection],
+                connect_nodes(rail_trans, grid_map, intersection_positions[intersection],
                               (intersect_x_1, intersect_y_1))
-                connect_nodes(rail_trans, rail_array, intersection_positions[intersection],
+                connect_nodes(rail_trans, grid_map, intersection_positions[intersection],
                               (intersect_x_2, intersect_y_2))
                 grid_map.fix_transitions((intersect_x_1, intersect_y_1))
                 grid_map.fix_transitions((intersect_x_2, intersect_y_2))
