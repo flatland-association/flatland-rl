@@ -4,6 +4,12 @@ Changelog
 Changes since Flatland 0.3
 --------------------------
 
+### Changes in `Environment`
+- moving of member variable `distance_map_computed` to new class `DistanceMap`
+
+### Changes in rail generator and `RailEnv`
+- renaming of `distance_maps` into `distance_map`
+
 ### Changes in stock predictors
 The stock `ShortestPathPredictorForRailEnv` now respects the different agent speeds and updates their prediction accordingly.
 
@@ -25,12 +31,12 @@ The stock `ShortestPathPredictorForRailEnv` now respects the different agent spe
 ### Changes in level generation
 
 
-- Separation of `schedule_generator` from `rail_generator`: 
+- Separation of `schedule_generator` from `rail_generator`:
   - Renaming of `flatland/envs/generators.py` to `flatland/envs/rail_generators.py`
   - `rail_generator` now only returns the grid and optionally hints (a python dictionary); the hints are currently use for distance_map and communication of start and goal position in complex rail generator.
   - `schedule_generator` takes a `GridTransitionMap` and the number of agents and optionally the `agents_hints` field of the hints dictionary.
-  - Inrodcution of types hints: 
-``` 
+  - Inrodcution of types hints:
+```
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Any]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
 AgentPosition = Tuple[int, int]

@@ -12,28 +12,44 @@ class DistanceMap:
     def __init__(self, agents: List[EnvAgent], env_height: int, env_width: int):
         self.env_height = env_height
         self.env_width = env_width
-        self.distance_map = np.inf * np.ones(shape=(len(agents),
-                                                    self.env_height,
-                                                    self.env_width,
-                                                    4))
+        self.distance_map = None
         self.distance_map_computed = False
+        self.agents_previous_reset = None
 
     """
     Set the distance map
     """
-    def set(self, distance_map: np.array):
+    def set(self, distance_map: np.ndarray):
         self.distance_map = distance_map
 
     """
     Get the distance map
     """
-    def get(self) -> np.array:
+    def get(self) -> np.ndarray:
         return self.distance_map
 
     """
     Compute the distance map
     """
     def compute(self, agents: List[EnvAgent], rail: GridTransitionMap):
+
+        nb_agents = len(agents)
+        compute_distance_map = True
+        if self.agents_previous_reset is not None and nb_agents == len(self.agents_previous_reset):
+            compute_distance_map = False
+            for i in range(nb_agents):
+                if agents[i].target != self.agents_previous_reset[i].target:
+                    compute_distance_map = True
+        # Don't compute the distance map if it was loaded
+        if self.agents_previous_reset is None and self.distance_map is not None:
+            compute_distance_map = False
+
+        if compute_distance_map:
+            self._compute(agents, rail)
+
+        self.agents_previous_reset = agents
+
+    def _compute(self, agents: List[EnvAgent], rail: GridTransitionMap):
         self.distance_map_computed = True
         self.distance_map = np.inf * np.ones(shape=(len(agents),
                                                     self.env_height,

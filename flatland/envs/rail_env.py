@@ -276,6 +276,7 @@ class RailEnv(Environment):
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
         self.observation_space = self.obs_builder.observation_space  # <-- change on reset?
+        self.distance_map.compute(self.agents, self.rail)
 
         # Return the new observation vectors for each agent
         return self._get_observations()
@@ -625,9 +626,3 @@ class RailEnv(Environment):
         from importlib_resources import read_binary
         load_data = read_binary(package, resource)
         self.set_full_state_msg(load_data)
-
-    def compute_distance_map(self):
-        self.distance_map.compute(self.agents, self.rail)
-        # Update local lookup table for all agents' target locations
-        self.obs_builder.location_has_target = {tuple(agent.target): 1 for agent in self.agents}
-
