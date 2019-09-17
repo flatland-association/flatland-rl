@@ -1,7 +1,7 @@
 Changelog
 ==========
 
-Changes since Flatland 0.3
+Changes since Flatland 2.0.0
 --------------------------
 
 ### Changes in `Environment`
@@ -10,6 +10,8 @@ Changes since Flatland 0.3
 ### Changes in rail generator and `RailEnv`
 - renaming of `distance_maps` into `distance_map`
 
+Changes since Flatland 1.0.0
+--------------------------
 ### Changes in stock predictors
 The stock `ShortestPathPredictorForRailEnv` now respects the different agent speeds and updates their prediction accordingly.
 
