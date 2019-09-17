@@ -147,13 +147,13 @@ def realistic_rail_generator(num_cities=5,
             for city_loop in range(len(station_tracks)):
                 k = k_loop + city_loop
                 datas = station_tracks[city_loop]
-                if len(datas) > 2:
+                if len(datas) > 1:
                     track = datas[0]
                     if len(track) > 0:
                         if k % 2 == 0:
-                            x = int(np.random.choice(int(len(track)-2))+1)
+                            x = int(np.random.choice(int(len(track)/2))+1)
                         else:
-                            x = len(track) - 1
+                            x = len(track) - int(np.random.choice(int(len(track)/2))+1)
                         start_node = track[x]
                         for i in np.arange(1, len(datas)):
                             track = datas[i]
@@ -172,9 +172,9 @@ def realistic_rail_generator(num_cities=5,
                                 if len(connection) == 0:
                                     if print_out_info:
                                         print("create_switches_at_stations : connect_rail -> no path found")
-                                        start_node = datas[i][0]
-                                        end_node = datas[i - 1][0]
-                                        connection = connect_rail(rail_trans, grid_map, start_node, end_node)
+                                    start_node = datas[i][0]
+                                    end_node = datas[i - 1][0]
+                                    connection = connect_rail(rail_trans, grid_map, start_node, end_node)
 
                                 nodes_added.append(start_node)
                                 nodes_added.append(end_node)
