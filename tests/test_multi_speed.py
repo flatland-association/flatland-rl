@@ -9,7 +9,7 @@ from flatland.envs.rail_generators import complex_rail_generator, rail_from_grid
 from flatland.envs.schedule_generators import complex_schedule_generator, random_schedule_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
-from test_utils import TestConfig, Replay
+from test_utils import ReplayConfig, Replay
 
 np.random.seed(1)
 
@@ -117,7 +117,7 @@ def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
 
-    test_config = TestConfig(
+    test_config = ReplayConfig(
         replay=[
             Replay(
                 position=(3, 9),  # east dead-end
@@ -248,7 +248,7 @@ def test_multispeed_actions_no_malfunction_blocking(rendering=True):
         renderer = RenderTool(env, gl="PILSVG")
 
     test_configs = [
-        TestConfig(
+        ReplayConfig(
             replay=[
                 Replay(
                     position=(3, 8),
@@ -316,7 +316,7 @@ def test_multispeed_actions_no_malfunction_blocking(rendering=True):
             ],
             target=(3, 0),  # west dead-end
             speed=1 / 3),
-        TestConfig(
+        ReplayConfig(
             replay=[
                 Replay(
                     position=(3, 9),  # east dead-end
@@ -456,7 +456,7 @@ def test_multispeed_actions_malfunction_no_blocking(rendering=True):
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
 
-    test_config = TestConfig(
+    test_config = ReplayConfig(
         replay=[
             Replay(
                 position=(3, 9),  # east dead-end

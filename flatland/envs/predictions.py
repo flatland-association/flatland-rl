@@ -7,6 +7,7 @@ import numpy as np
 from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.rail_env import RailEnvActions
+from flatland.utils.ordered_set import OrderedSet
 
 
 class DummyPredictorForRailEnv(PredictionBuilder):
@@ -130,7 +131,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
             prediction[0] = [0, *_agent_initial_position, _agent_initial_direction, 0]
             new_direction = _agent_initial_direction
             new_position = _agent_initial_position
-            visited = set()
+            visited = OrderedSet()
             for index in range(1, self.max_depth + 1):
                 # if we're at the target, stop moving...
                 if agent.position == agent.target:
