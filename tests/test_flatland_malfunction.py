@@ -126,6 +126,7 @@ def test_malfunction_process_statistically():
                        'min_duration': 3,
                        'max_duration': 3}
     np.random.seed(5)
+    random.seed(0)
 
     env = RailEnv(width=20,
                   height=20,
@@ -150,11 +151,13 @@ def test_malfunction_process_statistically():
 
     # check that generation of malfunctions works as expected
     # results are different in py36 and py37, therefore no exact test on nb_malfunction
-    assert nb_malfunction > 150
+    assert nb_malfunction == 149, "nb_malfunction={}".format(nb_malfunction)
 
 
 def test_initial_malfunction(rendering=True):
     random.seed(0)
+    np.random.seed(0)
+
     stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
                        'malfunction_rate': 70,  # Rate of malfunction occurence
                        'min_duration': 2,  # Minimal duration of malfunction
@@ -193,32 +196,32 @@ def test_initial_malfunction(rendering=True):
 
     replay_steps = [
         Replay(
-            position=(27, 5),
+            position=(28, 5),
             direction=Grid4TransitionsEnum.EAST,
             action=RailEnvActions.MOVE_FORWARD,
             malfunction=3
         ),
         Replay(
-            position=(27, 5),
+            position=(28, 5),
             direction=Grid4TransitionsEnum.EAST,
             action=RailEnvActions.MOVE_FORWARD,
             malfunction=2
         ),
         Replay(
-            position=(27, 5),
+            position=(28, 5),
             direction=Grid4TransitionsEnum.EAST,
             action=RailEnvActions.MOVE_FORWARD,
             malfunction=1
         ),
         Replay(
-            position=(27, 4),
+            position=(28, 4),
             direction=Grid4TransitionsEnum.WEST,
             action=RailEnvActions.MOVE_FORWARD,
             malfunction=0
         ),
         Replay(
-            position=(27, 3),
-            direction=Grid4TransitionsEnum.WEST,
+            position=(27, 4),
+            direction=Grid4TransitionsEnum.NORTH,
             action=RailEnvActions.MOVE_FORWARD,
             malfunction=0
         )
