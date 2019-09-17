@@ -124,8 +124,9 @@ def realistic_rail_generator(num_cities=5,
                     end_nodes_added[city_loop].append(end_node)
 
                     # place in the center of path a station slot
-                    station_slots[city_loop].append(connection[int(np.floor(len(connection) / 2))])
-                    station_slots_cnt += 1
+                    #station_slots[city_loop].append(connection[int(np.floor(len(connection) / 2))])
+                    station_slots[city_loop].extend(connection)
+                    station_slots_cnt += len(connection)
 
                     station_tracks[city_loop][track_id] = connection
                     track_id += 1
@@ -314,6 +315,8 @@ def realistic_rail_generator(num_cities=5,
                                 end_nodes_added: IntVector2DArrayType,
                                 nodes_added: IntVector2DArrayType,
                                 intern_connect_max_nbr_of_shortes_city: int):
+        if len(start_nodes_added) < 1:
+            return
         x = np.arange(len(start_nodes_added))
         random_city_idx = np.random.choice(x, len(x), False)
 
@@ -478,14 +481,14 @@ def realistic_rail_generator(num_cities=5,
 
 
 if os.path.exists("./../render_output/"):
-    for itrials in range(1000):
+    for itrials in np.arange(1,1000,1):
         print(itrials, "generate new city")
         np.random.seed(itrials)
-        env = RailEnv(width=20 + np.random.choice(100),
-                      height=20 + np.random.choice(100),
+        env = RailEnv(width=40 + np.random.choice(100),
+                      height=40 + np.random.choice(100),
                       rail_generator=realistic_rail_generator(num_cities=5 + np.random.choice(10),
-                                                              city_size=10 + np.random.choice(10),
-                                                              allowed_rotation_angles=np.arange(-180, 180, 30),
+                                                              city_size=10 + np.random.choice(5),
+                                                              allowed_rotation_angles=np.arange(0, 360, 90),
                                                               max_number_of_station_tracks=1 + np.random.choice(4),
                                                               nbr_of_switches_per_station_track=2 + np.random.choice(2),
                                                               connect_max_nbr_of_shortes_city=2 + np.random.choice(4),
@@ -495,7 +498,7 @@ if os.path.exists("./../render_output/"):
                                                               print_out_info=False
                                                               ),
                       schedule_generator=sparse_schedule_generator(),
-                      number_of_agents=0,
+                      number_of_agents=10000,
                       obs_builder_object=GlobalObsForRailEnv())
 
         # reset to initialize agents_static
