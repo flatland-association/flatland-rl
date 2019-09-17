@@ -419,7 +419,7 @@ def realistic_rail_generator(num_cities=5,
         # ----------------------------------------------------------------------------------
         # connect stations
         # TODO remove true/false block
-        if False:
+        if True:
             if do_random_connect_stations:
                 connect_random_stations(rail_trans, grid_map, s_nodes, e_nodes, nodes_added,
                                         intern_connect_max_nbr_of_shortes_city)
