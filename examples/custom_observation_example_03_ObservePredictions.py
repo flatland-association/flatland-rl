@@ -100,19 +100,18 @@ class ObservePredictions(TreeObsForRailEnv):
         return observation
 
 
-def main(argv):
+def main(args):
     try:
-        opts, args = getopt.getopt(argv, "", ["no-sleep", ""])
+        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", ""])
     except getopt.GetoptError as err:
         print(str(err))  # will print something like "option -a not recognized"
         sys.exit(2)
-    no_sleep = False
+    sleep_for_animation = True
     for o, a in opts:
-        if o in ("--no-sleep"):
-            no_sleep = True
+        if o in ("--sleep-for-animation"):
+            sleep_for_animation = bool(a)
         else:
             assert False, "unhandled option"
-
 
     # Initiate the Predictor
     custom_predictor = ShortestPathPredictorForRailEnv(10)
@@ -143,7 +142,7 @@ def main(argv):
         obs, all_rewards, done, _ = env.step(action_dict)
         print("Rewards: ", all_rewards, "  [done=", done, "]")
         env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
-        if not no_sleep:
+        if sleep_for_animation:
             time.sleep(0.5)
 
 

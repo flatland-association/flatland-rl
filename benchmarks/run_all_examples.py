@@ -24,5 +24,5 @@ for entry in [entry for entry in importlib_resources.contents('examples') if
         print("*****************************************************************")
         with swap_attr(sys, "stdin", StringIO("q")):
             runpy.run_path(file_in, run_name="__main__", init_globals={
-                'argv': ['--no-sleep']
+                'argv': ['--sleep-for-animation=False']
             })

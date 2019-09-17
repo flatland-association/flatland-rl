@@ -62,14 +62,14 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
 
 def main(args):
     try:
-        opts, args = getopt.getopt(args, "", ["no-sleep", ""])
+        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", ""])
     except getopt.GetoptError as err:
         print(str(err))  # will print something like "option -a not recognized"
         sys.exit(2)
-    no_sleep = False
+    sleep_for_animation = True
     for o, a in opts:
-        if o in ("--no-sleep"):
-            no_sleep = True
+        if o in ("--sleep-for-animation"):
+            sleep_for_animation = bool(a)
         else:
             assert False, "unhandled option"
 
@@ -89,7 +89,7 @@ def main(args):
         obs, all_rewards, done, _ = env.step({0: action})
         print("Rewards: ", all_rewards, "  [done=", done, "]")
         env_renderer.render_env(show=True, frames=True, show_observations=True)
-        if not no_sleep:
+        if sleep_for_animation:
             time.sleep(0.1)
         if done["__all__"]:
             break
