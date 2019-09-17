@@ -50,7 +50,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 if agents[i].target != self.agents_previous_reset[i].target:
                     compute_distance_map = True
         # Don't compute the distance map if it was loaded
-        if self.agents_previous_reset is None and self.env.distance_map is not None:
+        if self.agents_previous_reset is None and self.env.distance_map.get() is not None:
             self.location_has_target = {tuple(agent.target): 1 for agent in agents}
             compute_distance_map = False
 
@@ -167,7 +167,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         # Root node - current position
         # Here information about the agent itself is stored
-        observation = [0, 0, 0, 0, 0, 0, self.env.distance_map[(handle, *agent.position, agent.direction)], 0, 0,
+        observation = [0, 0, 0, 0, 0, 0, self.env.distance_map.get()[(handle, *agent.position, agent.direction)], 0, 0,
                        agent.malfunction_data['malfunction'], agent.speed_data['speed']]
 
         visited = set()
@@ -397,7 +397,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                            potential_conflict,
                            unusable_switch,
                            np.inf,
-                           self.env.distance_map[handle, position[0], position[1], direction],
+                           self.env.distance_map.get()[handle, position[0], position[1], direction],
                            other_agent_same_direction,
                            other_agent_opposite_direction,
                            malfunctioning_agent,
@@ -411,7 +411,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                            potential_conflict,
                            unusable_switch,
                            tot_dist,
-                           self.env.distance_map[handle, position[0], position[1], direction],
+                           self.env.distance_map.get()[handle, position[0], position[1], direction],
                            other_agent_same_direction,
                            other_agent_opposite_direction,
                            malfunctioning_agent,

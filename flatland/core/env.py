@@ -45,8 +45,6 @@ class Environment:
     def __init__(self):
         self.action_space = ()
         self.observation_space = ()
-        self.distance_map_computed = False
-        self.distance_map = None
         pass
 
     def reset(self):

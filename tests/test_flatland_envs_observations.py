@@ -63,7 +63,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
                     is_valid = obs_builder.env.rail.get_transition((neighbour[0], neighbour[1], agent_orientation),
                                                                    desired_movement_from_new_cell)
                     if is_valid:
-                        distance_to_target = obs_builder.env.distance_map[
+                        distance_to_target = obs_builder.env.distance_map.get()[
                             (agent.handle, *agent.position, exit_direction)]
                         print("agent {} at {} facing {} taking {} distance {}".format(agent.handle, agent.position,
                                                                                       agent.direction,

@@ -44,7 +44,7 @@ def test_walker():
     # reset to set agents from agents_static
     env.reset(False, False)
 
-    print(env.distance_map[(0, *[0, 1], 1)])
-    assert env.distance_map[(0, *[0, 1], 1)] == 3
-    print(env.distance_map[(0, *[0, 2], 3)])
-    assert env.distance_map[(0, *[0, 2], 1)] == 2
+    print(env.distance_map.get()[(0, *[0, 1], 1)])
+    assert env.distance_map.get()[(0, *[0, 1], 1)] == 3
+    print(env.distance_map.get()[(0, *[0, 2], 3)])
+    assert env.distance_map.get()[(0, *[0, 2], 1)] == 2

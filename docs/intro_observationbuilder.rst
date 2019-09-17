@@ -110,7 +110,7 @@ Note that this simple strategy fails when multiple agents are present, as each a
                 for direction in [(agent.direction + i) % 4 for i in range(-1, 2)]:
                     if possible_transitions[direction]:
                         new_position = self._new_position(agent.position, direction)
-                        min_distances.append(self.env.distance_map[handle, new_position[0], new_position[1], direction])
+                        min_distances.append(self.env.distance_map.get()[handle, new_position[0], new_position[1], direction])
                     else:
                         min_distances.append(np.inf)
 

@@ -148,7 +148,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                     for direction in range(4):
                         if cell_transitions[direction] == 1:
                             neighbour_cell = get_new_position(agent.position, direction)
-                            target_dist = distance_map[agent.handle, neighbour_cell[0], neighbour_cell[1], direction]
+                            target_dist = distance_map.get()[agent.handle, neighbour_cell[0], neighbour_cell[1], direction]
                             if target_dist < min_dist or no_dist_found:
                                 min_dist = target_dist
                                 new_direction = direction

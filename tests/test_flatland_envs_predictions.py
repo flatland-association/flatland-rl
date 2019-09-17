@@ -137,7 +137,7 @@ def test_shortest_path_predictor(rendering=False):
         input("Continue?")
 
     # compute the observations and predictions
-    distance_map = env.distance_map
+    distance_map = env.distance_map.get()
     assert distance_map[0, agent.position[0], agent.position[
         1], agent.direction] == 5.0, "found {} instead of {}".format(
         distance_map[agent.handle, agent.position[0], agent.position[1], agent.direction], 5.0)
