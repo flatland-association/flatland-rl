@@ -168,7 +168,6 @@ def realistic_rail_generator(num_cities=5,
                                         x = len(track) - 1
                                 end_node = track[x]
                                 connection = connect_rail(rail_trans, grid_map, start_node, end_node)
-                                print(start_node, end_node, "-->", connection)
                                 if len(connection) == 0:
                                     if print_out_info:
                                         print("create_switches_at_stations : connect_rail -> no path found")
@@ -482,8 +481,8 @@ if os.path.exists("./../render_output/"):
     for itrials in range(1000):
         print(itrials, "generate new city")
         np.random.seed(itrials)
-        env = RailEnv(width=40 + np.random.choice(100),
-                      height=40 + np.random.choice(100),
+        env = RailEnv(width=20 + np.random.choice(100),
+                      height=20 + np.random.choice(100),
                       rail_generator=realistic_rail_generator(num_cities=5 + np.random.choice(10),
                                                               city_size=10 + np.random.choice(10),
                                                               allowed_rotation_angles=np.arange(-180, 180, 30),
