@@ -451,40 +451,40 @@ def realistic_rail_generator(num_cities=5,
 
     return generator
 
+if os.path.exists("./../render_output/"):
+    for itrials in range(1000):
+        print(itrials, "generate new city")
+        np.random.seed(0 * int(time.time()))
+        env = RailEnv(width=40 + np.random.choice(100),
+                      height=40 + np.random.choice(100),
+                      rail_generator=realistic_rail_generator(num_cities=2 + np.random.choice(10),
+                                                              city_size=10 + np.random.choice(10),
+                                                              allowed_rotation_angles=np.arange(-180, 180, 15),
+                                                              max_number_of_station_tracks=np.random.choice(4) + 4,
+                                                              nbr_of_switches_per_station_track=np.random.choice(4) + 2,
+                                                              connect_max_nbr_of_shortes_city=2,
+                                                              do_random_connect_stations=np.random.choice(1) == 0,
+                                                              # Number of cities in map
+                                                              seed=int(time.time()),  # Random seed
+                                                              print_out_info=True
+                                                              ),
+                      schedule_generator=sparse_schedule_generator(),
+                      number_of_agents=100,
+                      obs_builder_object=GlobalObsForRailEnv())
 
-for itrials in range(1000):
-    print(itrials, "generate new city")
-    np.random.seed(0 * int(time.time()))
-    env = RailEnv(width=40 + np.random.choice(100),
-                  height=40 + np.random.choice(100),
-                  rail_generator=realistic_rail_generator(num_cities=2 + np.random.choice(10),
-                                                          city_size=10 + np.random.choice(10),
-                                                          allowed_rotation_angles=np.arange(-180, 180, 15),
-                                                          max_number_of_station_tracks=np.random.choice(4) + 4,
-                                                          nbr_of_switches_per_station_track=np.random.choice(4) + 2,
-                                                          connect_max_nbr_of_shortes_city=2,
-                                                          do_random_connect_stations=np.random.choice(1) == 0,
-                                                          # Number of cities in map
-                                                          seed=int(time.time()),  # Random seed
-                                                          print_out_info=True
-                                                          ),
-                  schedule_generator=sparse_schedule_generator(),
-                  number_of_agents=100,
-                  obs_builder_object=GlobalObsForRailEnv())
+        # reset to initialize agents_static
+        env_renderer = RenderTool(env, gl="PILSVG", screen_width=1400, screen_height=1000,
+                                  agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX)
+        cnt = 0
+        while cnt < 10:
+            env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
+            cnt += 1
 
-    # reset to initialize agents_static
-    env_renderer = RenderTool(env, gl="PILSVG", screen_width=1400, screen_height=1000,
-                              agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX)
-    cnt = 0
-    while cnt < 10:
-        env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-        cnt += 1
+        if os.path.exists("./../render_output/"):
+            env_renderer.gl.save_image(
+                os.path.join(
+                    "./../render_output/",
+                    "flatland_frame_{:04d}_{:04d}.png".format(itrials, 0)
+                ))
 
-    if os.path.exists("./../render_output/"):
-        env_renderer.gl.save_image(
-            os.path.join(
-                "./../render_output/",
-                "flatland_frame_{:04d}_{:04d}.png".format(itrials, 0)
-            ))
-
-    env_renderer.close_window()
+        env_renderer.close_window()
