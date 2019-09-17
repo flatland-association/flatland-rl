@@ -1,6 +1,5 @@
 import copy
 import os
-import time
 import warnings
 
 import numpy as np
@@ -103,6 +102,7 @@ def realistic_rail_generator(num_cities=5,
         for city_loop in range(len(generate_city_locations)):
             # Connect train station to the correct node
             number_of_connecting_tracks = np.random.choice(max(0, intern_max_number_of_station_tracks)) + 1
+            track_id = 0
             for ct in range(number_of_connecting_tracks):
                 org_start_node = generate_city_locations[city_loop][0]
                 org_end_node = generate_city_locations[city_loop][1]
@@ -127,7 +127,8 @@ def realistic_rail_generator(num_cities=5,
                     station_slots[city_loop].append(connection[int(np.floor(len(connection) / 2))])
                     station_slots_cnt += 1
 
-                    station_tracks[city_loop][ct] = connection
+                    station_tracks[city_loop][track_id] = connection
+                    track_id += 1
                 else:
                     if print_out_info:
                         print("create_stations_from_city_locations : connect_from_nodes -> no path found")
@@ -142,21 +143,21 @@ def realistic_rail_generator(num_cities=5,
                                     nodes_added: IntVector2DArrayType,
                                     intern_nbr_of_switches_per_station_track: int) -> IntVector2DArrayType:
 
-        for k in range(intern_nbr_of_switches_per_station_track):
+        for k_loop in range(intern_nbr_of_switches_per_station_track):
             for city_loop in range(len(station_tracks)):
+                k = k_loop + city_loop
                 datas = station_tracks[city_loop]
-                if len(datas) > 1:
+                if len(datas) > 2:
                     track = datas[0]
-                    if len(track) > 3:
+                    if len(track) > 0:
                         if k % 2 == 0:
-                            x = 1
+                            x = int(np.random.choice(int(len(track)-2))+1)
                         else:
-                            x = len(track) - 2
-
+                            x = len(track) - 1
                         start_node = track[x]
                         for i in np.arange(1, len(datas)):
                             track = datas[i]
-                            if len(track) > 3:
+                            if len(track) > 1:
                                 if k % 2 == 0:
                                     x = x + 2
                                     if len(track) <= x:
@@ -164,23 +165,19 @@ def realistic_rail_generator(num_cities=5,
                                 else:
                                     x = x - 2
                                     if x < 2:
-                                        x = len(track) - 2
+                                        x = len(track) - 1
                                 end_node = track[x]
                                 connection = connect_rail(rail_trans, grid_map, start_node, end_node)
                                 print(start_node, end_node, "-->", connection)
                                 if len(connection) == 0:
                                     if print_out_info:
                                         print("create_switches_at_stations : connect_rail -> no path found")
-                                        if len(datas[i-1])>0:
-                                            start_node = datas[i-1][0]
-                                        end_node = datas[i][0]
+                                        start_node = datas[i][0]
+                                        end_node = datas[i - 1][0]
                                         connection = connect_rail(rail_trans, grid_map, start_node, end_node)
-
 
                                 nodes_added.append(start_node)
                                 nodes_added.append(end_node)
-
-
 
                                 if k % 2 == 0:
                                     x = x + 2
@@ -489,7 +486,7 @@ if os.path.exists("./../render_output/"):
                       height=40 + np.random.choice(100),
                       rail_generator=realistic_rail_generator(num_cities=1000,
                                                               city_size=10 + np.random.choice(10),
-                                                              allowed_rotation_angles=np.arange(-180, 180, 15),
+                                                              allowed_rotation_angles=np.arange(-180, 180, 90),
                                                               max_number_of_station_tracks=1 + np.random.choice(4),
                                                               nbr_of_switches_per_station_track=2,
                                                               connect_max_nbr_of_shortes_city=2 + np.random.choice(4),
