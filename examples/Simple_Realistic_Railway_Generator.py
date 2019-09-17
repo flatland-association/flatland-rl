@@ -151,9 +151,9 @@ def realistic_rail_generator(num_cities=5,
                     track = datas[0]
                     if len(track) > 0:
                         if k % 2 == 0:
-                            x = int(np.random.choice(int(len(track)/2))+1)
+                            x = int(np.random.choice(int(len(track) / 2)) + 1)
                         else:
-                            x = len(track) - int(np.random.choice(int(len(track)/2))+1)
+                            x = len(track) - int(np.random.choice(int(len(track) / 2)) + 1)
                         start_node = track[x]
                         for i in np.arange(1, len(datas)):
                             track = datas[i]
@@ -174,7 +174,7 @@ def realistic_rail_generator(num_cities=5,
                                         print("create_switches_at_stations : connect_rail -> no path found")
                                     start_node = datas[i][0]
                                     end_node = datas[i - 1][0]
-                                    connection = connect_rail(rail_trans, grid_map, start_node, end_node)
+                                    connect_rail(rail_trans, grid_map, start_node, end_node)
 
                                 nodes_added.append(start_node)
                                 nodes_added.append(end_node)
@@ -484,16 +484,16 @@ if os.path.exists("./../render_output/"):
         np.random.seed(itrials)
         env = RailEnv(width=40 + np.random.choice(100),
                       height=40 + np.random.choice(100),
-                      rail_generator=realistic_rail_generator(num_cities=1000,
+                      rail_generator=realistic_rail_generator(num_cities=5 + np.random.choice(10),
                                                               city_size=10 + np.random.choice(10),
-                                                              allowed_rotation_angles=np.arange(-180, 180, 90),
+                                                              allowed_rotation_angles=np.arange(-180, 180, 30),
                                                               max_number_of_station_tracks=1 + np.random.choice(4),
-                                                              nbr_of_switches_per_station_track=2,
+                                                              nbr_of_switches_per_station_track=2 + np.random.choice(2),
                                                               connect_max_nbr_of_shortes_city=2 + np.random.choice(4),
-                                                              do_random_connect_stations=False,
+                                                              do_random_connect_stations=itrials % 2 == 0,
                                                               # Number of cities in map
                                                               seed=itrials,  # Random seed
-                                                              print_out_info=True
+                                                              print_out_info=False
                                                               ),
                       schedule_generator=sparse_schedule_generator(),
                       number_of_agents=0,
