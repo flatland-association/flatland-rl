@@ -115,6 +115,9 @@ def realistic_rail_generator(num_cities=5,
                     station_slots_cnt += 1
 
                     station_tracks[city_loop][ct] = connection
+                else:
+                    if print_out_info:
+                        print("create_stations_from_city_locations : connect_from_nodes -> no path found")
 
         if print_out_info:
             print("max nbr of station slots with given configuration is:", station_slots_cnt)
@@ -136,7 +139,8 @@ def realistic_rail_generator(num_cities=5,
                             end_node = b[x]
                             connection = connect_rail(rail_trans, rail_array, start_node, end_node)
                             if len(connection) == 0:
-                                print("create_switches_at_stations : connect_rail -> no path found")
+                                if print_out_info:
+                                    print("create_switches_at_stations : connect_rail -> no path found")
                             nodes_added.append(start_node)
                             nodes_added.append(end_node)
                             start_node = b[np.random.choice(len(b) - 2) + 1]
@@ -194,6 +198,10 @@ def realistic_rail_generator(num_cities=5,
                     if len(connection) > 0:
                         nodes_added.append(start_node)
                         nodes_added.append(end_node)
+                    else:
+                        if print_out_info:
+                            print("connect_sub_graphs : connect_rail -> no path found")
+
                     iteration_counter += 1
 
     def connect_stations(rail_trans, rail_array, org_s_nodes, org_e_nodes, nodes_added,
@@ -239,6 +247,9 @@ def realistic_rail_generator(num_cities=5,
                             nodes_added.append(start_node)
                             nodes_added.append(end_node)
                         else:
+                            if print_out_info:
+                                print("connect_stations : connect_rail -> no path found")
+
                             rail_array[start_node] = tmp_trans_sn
                             rail_array[end_node] = tmp_trans_en
 
@@ -290,6 +301,9 @@ def realistic_rail_generator(num_cities=5,
                 if len(connection) > 0:
                     nodes_added.append(start_node)
                     nodes_added.append(end_node)
+                else:
+                    if print_out_info:
+                        print("connect_random_stations : connect_nodes -> no path found")
 
     def generator(width, height, num_agents, num_resets=0) -> RailGeneratorProduct:
         rail_trans = RailEnvTransitions()
