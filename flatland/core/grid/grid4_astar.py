@@ -1,3 +1,6 @@
+import numpy as np
+from matplotlib import pyplot as plt
+
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.grid.grid_utils import IntVector2DArrayType
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
@@ -31,12 +34,16 @@ class AStarNode:
 
 def a_star(rail_trans: RailEnvTransitions,
            grid_map: GridTransitionMap,
-           start: IntVector2D, end: IntVector2D) -> IntVector2DArrayType:
+           start: IntVector2D, end: IntVector2D,
+           a_star_distance_function=Vec2d.get_manhattan_distance) -> IntVector2DArrayType:
     """
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
     """
     rail_shape = grid_map.grid.shape
+
+    tmp = np.zeros(rail_shape) - 10
+
     start_node = AStarNode(None, start)
     end_node = AStarNode(None, end)
     open_nodes = set()
@@ -64,6 +71,14 @@ def a_star(rail_trans: RailEnvTransitions,
             while current is not None:
                 path.append(current.pos)
                 current = current.parent
+
+            if False:
+                plt.ion()
+                plt.clf()
+                plt.imshow(tmp, interpolation='nearest')
+                plt.draw()
+                plt.pause(1e-17)
+
             # return reversed path
             return path[::-1]
 
@@ -73,6 +88,7 @@ def a_star(rail_trans: RailEnvTransitions,
             prev_pos = current_node.parent.pos
         else:
             prev_pos = None
+
         for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
             # update the "current" pos
             node_pos = Vec2d.add(current_node.pos, new_pos)
@@ -98,8 +114,10 @@ def a_star(rail_trans: RailEnvTransitions,
             # create the f, g, and h values
             child.g = current_node.g + 1.0
             # this heuristic avoids diagonal paths
-            child.h = Vec2d.get_manhattan_distance(child.pos, end_node.pos)
+            child.h = a_star_distance_function(child.pos, end_node.pos)
             child.f = child.g + child.h
+
+            tmp[child.pos[0]][child.pos[1]] = child.f
 
             # already in the open list?
             if child in open_nodes:
