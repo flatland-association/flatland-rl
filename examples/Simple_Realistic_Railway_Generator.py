@@ -75,10 +75,10 @@ def realistic_rail_generator(num_cities=5,
             # station main orientation  (horizontal or vertical
             rot_angle = np.random.choice(rotation_angles_set)
             add_pos_val = Vec2d.scale(Vec2d.rotate((1, 0), rot_angle),
-                                          int(max(1.0, (intern_city_size - 3) / 2)))
+                                      int(max(1.0, (intern_city_size - 3) / 2)))
             generate_city_locations[i][0] = Vec2d.add(generate_city_locations[i][1], add_pos_val)
             add_pos_val = Vec2d.scale(Vec2d.rotate((1, 0), 180 + rot_angle),
-                                          int(max(1.0, (intern_city_size - 3) / 2)))
+                                      int(max(1.0, (intern_city_size - 3) / 2)))
             generate_city_locations[i][1] = Vec2d.add(generate_city_locations[i][1], add_pos_val)
         return generate_city_locations
 
@@ -248,7 +248,7 @@ def realistic_rail_generator(num_cities=5,
                             continue
                         ens = e_nodes[city_loop_find_shortest]
                         for en in ens:
-                            d = Vec2d.get_euclidean_distance(start_node,en)
+                            d = Vec2d.get_euclidean_distance(start_node, en)
                             if d < min_distance:
                                 min_distance = d
                                 end_node = en
@@ -449,6 +449,7 @@ def realistic_rail_generator(num_cities=5,
         }}
 
     return generator
+
 
 if os.path.exists("./../render_output/"):
     for itrials in range(1000):
