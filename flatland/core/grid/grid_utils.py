@@ -5,6 +5,8 @@ import numpy as np
 Vector2D = Tuple[float, float]
 IntVector2D = Tuple[int, int]
 
+IntVector2DArrayType = []
+
 
 class Vec2dOperations:
 

@@ -1,7 +1,11 @@
 from flatland.core.grid.grid4_utils import validate_new_transition
+from flatland.core.grid.grid_utils import IntVector2D
+from flatland.core.grid.grid_utils import IntVector2DArrayType
+from flatland.core.grid.rail_env_grid import RailEnvTransitions
+from flatland.core.transition_map import GridTransitionMap
 
 
-class AStarNode():
+class AStarNode:
     """A node class for A* Pathfinding"""
 
     def __init__(self, parent=None, pos=None):
@@ -25,12 +29,13 @@ class AStarNode():
             self.f = other.f
 
 
-def a_star(rail_trans, rail_array, start, end):
+def a_star(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D) -> \
+    (IntVector2DArrayType):
     """
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
     """
-    rail_shape = rail_array.shape
+    rail_shape = grid_map.grid.shape
     start_node = AStarNode(None, start)
     end_node = AStarNode(None, end)
     open_nodes = set()
@@ -73,7 +78,8 @@ def a_star(rail_trans, rail_array, start, end):
                 continue
 
             # validate positions
-            if not validate_new_transition(rail_trans, rail_array, prev_pos, current_node.pos, node_pos, end_node.pos):
+            if not validate_new_transition(rail_trans, grid_map.grid, prev_pos, current_node.pos, node_pos,
+                                           end_node.pos):
                 continue
 
             # create new node

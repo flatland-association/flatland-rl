@@ -20,7 +20,7 @@ def connect_basic_operation(rail_trans: RailEnvTransitions, grid_map: GridTransi
     Creates a new path [start,end] in grid_map, based on rail_trans.
     """
     # in the worst case we will need to do a A* search, so we might as well set that up
-    path = a_star(rail_trans, grid_map.grid, start, end)
+    path = a_star(rail_trans, grid_map, start, end)
     if len(path) < 2:
         return []
     current_dir = get_direction(path[0], path[1])

@@ -5,7 +5,7 @@ import warnings
 
 import numpy as np
 
-from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d, IntVector2DArrayType
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_from_nodes, connect_nodes, connect_rail
@@ -15,7 +15,6 @@ from flatland.envs.rail_generators import RailGenerator, RailGeneratorProduct
 from flatland.envs.schedule_generators import sparse_schedule_generator
 from flatland.utils.rendertools import AgentRenderVariant, RenderTool
 
-IntVector2DArrayType = []
 FloatArrayType = []
 
 
