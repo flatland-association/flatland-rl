@@ -438,7 +438,7 @@ for itrials in range(1000):
                                                           do_random_connect_stations=False and np.random.choice(1) == 0,
                                                           # Number of cities in map
                                                           seed=int(time.time()),  # Random seed
-                                                          print_out_info=False
+                                                          print_out_info=True
                                                           ),
                   schedule_generator=sparse_schedule_generator(),
                   number_of_agents=100,
