@@ -36,8 +36,8 @@ class ObservationBuilder:
         in the `handles' list.
 
         Parameters
-        -------
-        handles : list of handles (optional)
+        ----------
+        handles : list of handles, optional
             List with the handles of the agents for which to compute the observation vector.
 
         Returns
@@ -57,8 +57,8 @@ class ObservationBuilder:
         for each agent independently (agent id `handle').
 
         Parameters
-        -------
-        handle : int (optional)
+        ----------
+        handle : int, optional
             Handle of the agent for which to compute the observation vector.
 
         Returns

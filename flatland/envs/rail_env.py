@@ -114,7 +114,7 @@ class RailEnv(Environment):
         Environment init.
 
         Parameters
-        -------
+        ----------
         rail_generator : function
             The rail_generator function is a function that takes the width,
             height and agents handles of a  rail environment, along with the number of times

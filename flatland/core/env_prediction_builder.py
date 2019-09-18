@@ -33,11 +33,11 @@ class PredictionBuilder:
         Called whenever get_many in the observation build is called.
 
         Parameters
-        -------
+        ----------
         custom_args: dict
             Implementation-dependent custom arguments, see the sub-classes.
 
-        handle : int (optional)
+        handle : int, optional
             Handle of the agent for which to compute the observation vector.
 
         Returns

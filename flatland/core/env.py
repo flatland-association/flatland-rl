@@ -66,7 +66,7 @@ class Environment:
         The returns are dicts mapping from agent_id strings to values.
 
         Parameters
-        -------
+        ----------
         action_dict : dict
             Dictionary of actions to execute, indexed by agent id.
 
