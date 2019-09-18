@@ -73,12 +73,15 @@ def city_generator(num_cities: int = 5,
             rot_angle = np.random.choice(rotation_angles_set)
             add_pos_val = Vec2d.scale(Vec2d.rotate((1, 0), rot_angle),
                                       int(max(1.0, (intern_city_size - 3) / 2)))
+            # noinspection PyTypeChecker
             generate_city_locations[i][0] = Vec2d.add(generate_city_locations[i][1], add_pos_val)
             add_pos_val = Vec2d.scale(Vec2d.rotate((1, 0), 180 + rot_angle),
                                       int(max(1.0, (intern_city_size - 3) / 2)))
+            # noinspection PyTypeChecker
             generate_city_locations[i][1] = Vec2d.add(generate_city_locations[i][1], add_pos_val)
         return generate_city_locations
 
+    # noinspection PyTypeChecker
     def create_stations_from_city_locations(rail_trans: RailEnvTransitions,
                                             grid_map: GridTransitionMap,
                                             generate_city_locations: IntVector2DArray,
@@ -138,6 +141,7 @@ def city_generator(num_cities: int = 5,
 
         return nodes_added, station_slots, start_nodes_added, end_nodes_added, station_tracks
 
+    # noinspection PyTypeChecker
     def create_switches_at_stations(rail_trans: RailEnvTransitions,
                                     grid_map: GridTransitionMap,
                                     station_tracks: IntVector2DArray,
@@ -149,6 +153,7 @@ def city_generator(num_cities: int = 5,
                 k = k_loop + city_loop
                 datas = station_tracks[city_loop]
                 if len(datas) > 1:
+
                     track = datas[0]
                     if len(track) > 0:
                         if k % 2 == 0:
@@ -256,6 +261,7 @@ def city_generator(num_cities: int = 5,
 
                     iteration_counter += 1
 
+    # noinspection PyTypeChecker
     def connect_stations(rail_trans: RailEnvTransitions,
                          grid_map: GridTransitionMap,
                          org_s_nodes: IntVector2DArray,
