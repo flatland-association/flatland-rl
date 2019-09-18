@@ -4,8 +4,8 @@ from typing import Sequence, Optional
 
 import numpy as np
 
-from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d, IntVector2DArray, IntVector2DDistance, \
-    IntVector2DArrayArray
+from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2DDistance, IntVector2DArrayArray
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_from_nodes, connect_nodes, connect_rail
