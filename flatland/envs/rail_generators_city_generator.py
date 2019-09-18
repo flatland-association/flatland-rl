@@ -416,8 +416,6 @@ def city_generator(num_cities: int = 5,
         if print_out_info:
             print("intern_connect_max_nbr_of_shortes_city:", intern_connect_max_nbr_of_shortes_city)
 
-        agent_start_targets_nodes = []
-
         # ----------------------------------------------------------------------------------
         # generate city locations
         generate_city_locations, max_num_cities = do_generate_city_locations(width, height, intern_city_size,
@@ -465,6 +463,7 @@ def city_generator(num_cities: int = 5,
             node_available_target.append(len(train_stations_slots[node_idx]))
 
         # Assign agents to slots
+        agent_start_targets_nodes = []
         for agent_idx in range(num_agents):
             avail_start_nodes = [idx for idx, val in enumerate(node_available_start) if val > 0]
             avail_target_nodes = [idx for idx, val in enumerate(node_available_target) if val > 0]
