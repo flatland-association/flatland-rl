@@ -1,24 +1,28 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
-from flatland.core.grid.grid_utils import IntVector2D
-from flatland.core.grid.grid_utils import IntVector2DArrayType
+from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance
+from flatland.core.grid.grid_utils import IntVector2DArray
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 
 
 class AStarNode:
     """A node class for A* Pathfinding"""
 
-    def __init__(self, parent: IntVector2D = None, pos: IntVector2D = None):
-        self.parent: IntVector2D = parent
+    def __init__(self, pos: IntVector2D, parent=None):
+        self.parent = parent
         self.pos: IntVector2D = pos
         self.g = 0.0
         self.h = 0.0
         self.f = 0.0
 
-    def __eq__(self, other: IntVector2D):
+    def __eq__(self, other):
+        """
+
+        Parameters
+        ----------
+        other : AStarNode
+        """
         return self.pos == other.pos
 
     def __hash__(self):
@@ -32,10 +36,9 @@ class AStarNode:
             self.f = other.f
 
 
-def a_star(rail_trans: RailEnvTransitions,
-           grid_map: GridTransitionMap,
+def a_star(grid_map: GridTransitionMap,
            start: IntVector2D, end: IntVector2D,
-           a_star_distance_function=Vec2d.get_manhattan_distance) -> IntVector2DArrayType:
+           a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
     """
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
@@ -44,8 +47,8 @@ def a_star(rail_trans: RailEnvTransitions,
 
     tmp = np.zeros(rail_shape) - 10
 
-    start_node = AStarNode(None, start)
-    end_node = AStarNode(None, end)
+    start_node = AStarNode(start, None)
+    end_node = AStarNode(end, None)
     open_nodes = set()
     closed_nodes = set()
     open_nodes.add(start_node)
@@ -72,13 +75,6 @@ def a_star(rail_trans: RailEnvTransitions,
                 path.append(current.pos)
                 current = current.parent
 
-            if False:
-                plt.ion()
-                plt.clf()
-                plt.imshow(tmp, interpolation='nearest')
-                plt.draw()
-                plt.pause(1e-17)
-
             # return reversed path
             return path[::-1]
 
@@ -91,7 +87,7 @@ def a_star(rail_trans: RailEnvTransitions,
 
         for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
             # update the "current" pos
-            node_pos = Vec2d.add(current_node.pos, new_pos)
+            node_pos: IntVector2D = Vec2d.add(current_node.pos, new_pos)
 
             # is node_pos inside the grid?
             if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
@@ -102,7 +98,7 @@ def a_star(rail_trans: RailEnvTransitions,
                 continue
 
             # create new node
-            new_node = AStarNode(current_node, node_pos)
+            new_node = AStarNode(node_pos, current_node)
             children.append(new_node)
 
         # loop through children

@@ -1,10 +1,12 @@
 import copy
 import os
 import warnings
+from typing import Sequence, Optional
 
 import numpy as np
 
-from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d, IntVector2DArrayType
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d, IntVector2DArray, IntVector2DDistance, \
+    IntVector2DArrayArray
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_from_nodes, connect_nodes, connect_rail
@@ -17,19 +19,19 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 FloatArrayType = []
 
 
-def realistic_rail_generator(num_cities=5,
-                             city_size=10,
-                             allowed_rotation_angles=None,
-                             max_number_of_station_tracks=4,
-                             nbr_of_switches_per_station_track=2,
-                             connect_max_nbr_of_shortes_city=4,
-                             do_random_connect_stations=False,
-                             seed=0,
-                             print_out_info=True) -> RailGenerator:
+def realistic_rail_generator(num_cities: int = 5,
+                             city_size: int = 10,
+                             allowed_rotation_angles: Optional[Sequence[float]] = None,
+                             max_number_of_station_tracks: int = 4,
+                             nbr_of_switches_per_station_track: int = 2,
+                             connect_max_nbr_of_shortes_city: int = 4,
+                             do_random_connect_stations: bool = False,
+                             a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
+                             seed: int = 0,
+                             print_out_info: bool = True) -> RailGenerator:
     """
     This is a level generator which generates a realistic rail configurations
 
-    :param print_out_info:
     :param num_cities: Number of city node
     :param city_size: Length of city measure in cells
     :param allowed_rotation_angles: Rotate the city (around center)
@@ -37,8 +39,9 @@ def realistic_rail_generator(num_cities=5,
     :param nbr_of_switches_per_station_track: number of switches per track (max)
     :param connect_max_nbr_of_shortes_city: max number of connecting track between stations
     :param do_random_connect_stations : if false connect the stations along the grid (top,left -> down,right), else rand
+    :param a_star_distance_function: Heuristic how the distance between two nodes get estimated in the "a-star" path
     :param seed: Random Seed
-    :print_out_info : print debug info
+    :param print_out_info: print debug info if True
     :return:
         -------
     numpy.ndarray of type numpy.uint16
@@ -48,7 +51,7 @@ def realistic_rail_generator(num_cities=5,
     def do_generate_city_locations(width: int,
                                    height: int,
                                    intern_city_size: int,
-                                   intern_max_number_of_station_tracks: int) -> (IntVector2DArrayType, int):
+                                   intern_max_number_of_station_tracks: int) -> (IntVector2DArray, int):
 
         X = int(np.floor(max(1, height - 2 * intern_max_number_of_station_tracks - 1) / intern_city_size))
         Y = int(np.floor(max(1, width - 2 * intern_max_number_of_station_tracks - 1) / intern_city_size))
@@ -68,7 +71,7 @@ def realistic_rail_generator(num_cities=5,
         generate_city_locations = [[(int(xs[i]), int(ys[i])), (int(xs[i]), int(ys[i]))] for i in range(len(xs))]
         return generate_city_locations, max_num_cities
 
-    def do_orient_cities(generate_city_locations: IntVector2DArrayType, intern_city_size: int,
+    def do_orient_cities(generate_city_locations: IntVector2DArrayArray, intern_city_size: int,
                          rotation_angles_set: FloatArrayType):
         for i in range(len(generate_city_locations)):
             # station main orientation  (horizontal or vertical
@@ -83,12 +86,12 @@ def realistic_rail_generator(num_cities=5,
 
     def create_stations_from_city_locations(rail_trans: RailEnvTransitions,
                                             grid_map: GridTransitionMap,
-                                            generate_city_locations: IntVector2DArrayType,
-                                            intern_max_number_of_station_tracks: int) -> (IntVector2DArrayType,
-                                                                                          IntVector2DArrayType,
-                                                                                          IntVector2DArrayType,
-                                                                                          IntVector2DArrayType,
-                                                                                          IntVector2DArrayType):
+                                            generate_city_locations: IntVector2DArray,
+                                            intern_max_number_of_station_tracks: int) -> (IntVector2DArray,
+                                                                                          IntVector2DArray,
+                                                                                          IntVector2DArray,
+                                                                                          IntVector2DArray,
+                                                                                          IntVector2DArray):
 
         nodes_added = []
         start_nodes_added = [[] for _ in range(len(generate_city_locations))]
@@ -115,7 +118,7 @@ def realistic_rail_generator(num_cities=5,
                 end_node = Vec2d.ceil(
                     Vec2d.add(org_end_node, Vec2d.scale(ortho_trans, s)))
 
-                connection = connect_from_nodes(rail_trans, grid_map, start_node, end_node)
+                connection = connect_from_nodes(rail_trans, grid_map, start_node, end_node, a_star_distance_function)
                 if len(connection) > 0:
                     nodes_added.append(start_node)
                     nodes_added.append(end_node)
@@ -142,9 +145,9 @@ def realistic_rail_generator(num_cities=5,
 
     def create_switches_at_stations(rail_trans: RailEnvTransitions,
                                     grid_map: GridTransitionMap,
-                                    station_tracks: IntVector2DArrayType,
-                                    nodes_added: IntVector2DArrayType,
-                                    intern_nbr_of_switches_per_station_track: int) -> IntVector2DArrayType:
+                                    station_tracks: IntVector2DArray,
+                                    nodes_added: IntVector2DArray,
+                                    intern_nbr_of_switches_per_station_track: int) -> IntVector2DArray:
 
         for k_loop in range(intern_nbr_of_switches_per_station_track):
             for city_loop in range(len(station_tracks)):
@@ -170,13 +173,14 @@ def realistic_rail_generator(num_cities=5,
                                     if x < 2:
                                         x = len(track) - 1
                                 end_node = track[x]
-                                connection = connect_rail(rail_trans, grid_map, start_node, end_node)
+                                connection = connect_rail(rail_trans, grid_map, start_node, end_node,
+                                                          a_star_distance_function)
                                 if len(connection) == 0:
                                     if print_out_info:
                                         print("create_switches_at_stations : connect_rail -> no path found")
                                     start_node = datas[i][0]
                                     end_node = datas[i - 1][0]
-                                    connect_rail(rail_trans, grid_map, start_node, end_node)
+                                    connect_rail(rail_trans, grid_map, start_node, end_node, a_star_distance_function)
 
                                 nodes_added.append(start_node)
                                 nodes_added.append(end_node)
@@ -226,10 +230,10 @@ def realistic_rail_generator(num_cities=5,
         return graph, np.unique(graph_ids).astype(int)
 
     def connect_sub_graphs(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                           org_s_nodes: IntVector2DArrayType,
-                           org_e_nodes: IntVector2DArrayType,
-                           city_edges: IntVector2DArrayType,
-                           nodes_added: IntVector2DArrayType):
+                           org_s_nodes: IntVector2DArray,
+                           org_e_nodes: IntVector2DArray,
+                           city_edges: IntVector2DArray,
+                           nodes_added: IntVector2DArray):
         _, graphids = calc_nbr_of_graphs(city_edges)
         if len(graphids) > 0:
             for i in range(len(graphids) - 1):
@@ -247,7 +251,7 @@ def realistic_rail_generator(num_cities=5,
                     # TODO : will be generated.
                     grid_map.grid[start_node] = 0
                     grid_map.grid[end_node] = 0
-                    connection = connect_rail(rail_trans, grid_map, start_node, end_node)
+                    connection = connect_rail(rail_trans, grid_map, start_node, end_node, a_star_distance_function)
                     if len(connection) > 0:
                         nodes_added.append(start_node)
                         nodes_added.append(end_node)
@@ -259,9 +263,9 @@ def realistic_rail_generator(num_cities=5,
 
     def connect_stations(rail_trans: RailEnvTransitions,
                          grid_map: GridTransitionMap,
-                         org_s_nodes: IntVector2DArrayType,
-                         org_e_nodes: IntVector2DArrayType,
-                         nodes_added: IntVector2DArrayType,
+                         org_s_nodes: IntVector2DArray,
+                         org_e_nodes: IntVector2DArray,
+                         nodes_added: IntVector2DArray,
                          intern_connect_max_nbr_of_shortes_city: int):
         city_edges = []
 
@@ -291,7 +295,7 @@ def realistic_rail_generator(num_cities=5,
                         tmp_trans_en = grid_map.grid[end_node]
                         grid_map.grid[start_node] = 0
                         grid_map.grid[end_node] = 0
-                        connection = connect_rail(rail_trans, grid_map, start_node, end_node)
+                        connection = connect_rail(rail_trans, grid_map, start_node, end_node, a_star_distance_function)
                         if len(connection) > 0:
                             s_nodes[city_loop].remove(start_node)
                             e_nodes[cl].remove(end_node)
@@ -313,9 +317,9 @@ def realistic_rail_generator(num_cities=5,
         connect_sub_graphs(rail_trans, grid_map, org_s_nodes, org_e_nodes, city_edges, nodes_added)
 
     def connect_random_stations(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                                start_nodes_added: IntVector2DArrayType,
-                                end_nodes_added: IntVector2DArrayType,
-                                nodes_added: IntVector2DArrayType,
+                                start_nodes_added: IntVector2DArray,
+                                end_nodes_added: IntVector2DArray,
+                                nodes_added: IntVector2DArray,
                                 intern_connect_max_nbr_of_shortes_city: int):
         if len(start_nodes_added) < 1:
             return
@@ -355,7 +359,7 @@ def realistic_rail_generator(num_cities=5,
                 end_node = e_nodes[idx_e_nodes[i]]
                 grid_map.grid[start_node] = 0
                 grid_map.grid[end_node] = 0
-                connection = connect_nodes(rail_trans, grid_map, start_node, end_node)
+                connection = connect_nodes(rail_trans, grid_map, start_node, end_node, a_star_distance_function)
                 if len(connection) > 0:
                     nodes_added.append(start_node)
                     nodes_added.append(end_node)
@@ -364,7 +368,7 @@ def realistic_rail_generator(num_cities=5,
                         print("connect_random_stations : connect_nodes -> no path found")
 
     def remove_switch_stations(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                               train_stations: IntVector2DArrayType):
+                               train_stations: IntVector2DArray):
         tmp_train_stations = copy.deepcopy(train_stations)
         for city_loop in range(len(train_stations)):
             for n in tmp_train_stations[city_loop]:
@@ -481,7 +485,7 @@ def realistic_rail_generator(num_cities=5,
                 if (tries + 1) % 10 == 0:
                     start_node = np.random.choice(avail_start_nodes)
                 if tries > 100:
-                    warnings.warn("Could not set trainstations, removing agent!")
+                    warnings.warn("Could not set train_stations, removing agent!")
                     found_agent_pair = False
                     break
             if found_agent_pair:
@@ -508,13 +512,13 @@ if os.path.exists("./../render_output/"):
                       height=40 + np.random.choice(100),
                       rail_generator=realistic_rail_generator(num_cities=5 + np.random.choice(10),
                                                               city_size=10 + np.random.choice(5),
-                                                              allowed_rotation_angles=np.arange(0, 360, 90),
-                                                              max_number_of_station_tracks=1 + np.random.choice(4),
+                                                              allowed_rotation_angles=np.arange(0, 360, 6),
+                                                              max_number_of_station_tracks=4 + np.random.choice(4),
                                                               nbr_of_switches_per_station_track=2 + np.random.choice(2),
                                                               connect_max_nbr_of_shortes_city=2 + np.random.choice(4),
                                                               do_random_connect_stations=itrials % 2 == 0,
-                                                              # Number of cities in map
-                                                              seed=itrials,  # Random seed
+                                                              a_star_distance_function=Vec2d.get_euclidean_distance,
+                                                              seed=itrials,
                                                               print_out_info=False
                                                               ),
                       schedule_generator=sparse_schedule_generator(),

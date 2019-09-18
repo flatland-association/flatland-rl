@@ -8,7 +8,7 @@ from numpy import array
 
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position, get_direction
-from flatland.core.grid.grid_utils import IntVector2DArrayType
+from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
@@ -302,7 +302,7 @@ class GridTransitionMap(TransitionMap):
         self.height = new_height
         self.grid = new_grid
 
-    def is_dead_end(self, rcPos: IntVector2DArrayType):
+    def is_dead_end(self, rcPos: IntVector2DArray):
         """
         Check if the cell is a dead-end.
 
@@ -322,7 +322,7 @@ class GridTransitionMap(TransitionMap):
             tmp = tmp >> 1
         return nbits == 1
 
-    def is_simple_turn(self, rcPos: IntVector2DArrayType):
+    def is_simple_turn(self, rcPos: IntVector2DArray):
         """
         Check if the cell is a left/right simple turn
 
@@ -349,7 +349,7 @@ class GridTransitionMap(TransitionMap):
 
         return is_simple_turn(tmp)
 
-    def check_path_exists(self, start: IntVector2DArrayType, direction: int, end: IntVector2DArrayType):
+    def check_path_exists(self, start: IntVector2DArray, direction: int, end: IntVector2DArray):
         # print("_path_exists({},{},{}".format(start, direction, end))
         # BFS - Check if a path exists between the 2 nodes
 
@@ -373,7 +373,7 @@ class GridTransitionMap(TransitionMap):
 
         return False
 
-    def cell_neighbours_valid(self, rcPos: IntVector2DArrayType, check_this_cell=False):
+    def cell_neighbours_valid(self, rcPos: IntVector2DArray, check_this_cell=False):
         """
         Check validity of cell at rcPos = tuple(row, column)
         Checks that:
@@ -425,7 +425,7 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
-    def fix_neighbours(self, rcPos: IntVector2DArrayType, check_this_cell=False):
+    def fix_neighbours(self, rcPos: IntVector2DArray, check_this_cell=False):
         """
         Check validity of cell at rcPos = tuple(row, column)
         Checks that:
@@ -478,7 +478,7 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
-    def fix_transitions(self, rcPos: IntVector2DArrayType):
+    def fix_transitions(self, rcPos: IntVector2DArray):
         """
         Fixes broken transitions
         """
@@ -543,8 +543,8 @@ class GridTransitionMap(TransitionMap):
             self.set_transitions((rcPos[0], rcPos[1]), transition)
         return True
 
-    def validate_new_transition(self, prev_pos: IntVector2DArrayType, current_pos: IntVector2DArrayType,
-                                new_pos: IntVector2DArrayType, end_pos: IntVector2DArrayType):
+    def validate_new_transition(self, prev_pos: IntVector2D, current_pos: IntVector2D,
+                                new_pos: IntVector2D, end_pos: IntVector2D):
 
         # start by getting direction used to get to current node
         # and direction from current node to possible child node

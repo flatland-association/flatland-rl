@@ -1,11 +1,17 @@
-from typing import Tuple
+from typing import Tuple, Callable, List
 
 import numpy as np
 
 Vector2D = Tuple[float, float]
 IntVector2D = Tuple[int, int]
 
-IntVector2DArrayType = []
+IntVector2DArray = List[IntVector2D]
+IntVector2DArrayArray = List[List[IntVector2D]]
+
+Vector2DArray = List[Vector2D]
+Vector2DArrayArray = List[List[Vector2D]]
+
+IntVector2DDistance = Callable[[IntVector2D, IntVector2D], float]
 
 
 class Vec2dOperations:
@@ -73,42 +79,30 @@ class Vec2dOperations:
         """
         return np.sqrt(node[0] * node[0] + node[1] * node[1])
 
-
     @staticmethod
-    def get_manhattan_norm(node: Vector2D) -> float:
+    def get_euclidean_distance(node_a: Vector2D, node_b: Vector2D) -> float:
         """
         calculates the euclidean norm of the 2d vector
 
         :param node: tuple with coordinate (x,y) or 2d vector
         :return:
             -------
-        returns the manhatten norm
+        returns the euclidean distance
         """
-        return abs(node[0] * node[0]) + abs(node[1] * node[1])
-
-    @staticmethod
-    def get_euclidean_distance(node_a: Vector2D,node_b: Vector2D) -> float:
-        """
-        calculates the euclidean norm of the 2d vector
-
-        :param node: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        returnss the manhatten distance
-        """
-        return Vec2dOperations.get_norm(Vec2dOperations.subtract(node_b,node_a))
+        return Vec2dOperations.get_norm(Vec2dOperations.subtract(node_b, node_a))
 
     @staticmethod
     def get_manhattan_distance(node_a: Vector2D, node_b: Vector2D) -> float:
         """
-        calculates the euclidean norm of the 2d vector
+        calculates the manhattan distance of the 2d vector
 
         :param node: tuple with coordinate (x,y) or 2d vector
         :return:
             -------
-        returnss the manhatten distance
+        returns the manhattan distance
         """
-        return Vec2dOperations.get_manhattan_norm(Vec2dOperations.subtract(node_b, node_a))
+        delta = (Vec2dOperations.subtract(node_b, node_a))
+        return np.abs(delta[0]) + np.abs(delta[1])
 
     @staticmethod
     def normalize(node: Vector2D) -> Tuple[float, float]:

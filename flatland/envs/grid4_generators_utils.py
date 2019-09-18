@@ -7,7 +7,8 @@ a GridTransitionMap object.
 
 from flatland.core.grid.grid4_astar import a_star
 from flatland.core.grid.grid4_utils import get_direction, mirror
-from flatland.core.grid.grid_utils import IntVector2D
+from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transition_map import GridTransitionMap, RailEnvTransitions
 
 
@@ -15,12 +16,13 @@ def connect_basic_operation(rail_trans: RailEnvTransitions, grid_map: GridTransi
                             start: IntVector2D,
                             end: IntVector2D,
                             flip_start_node_trans=False,
-                            flip_end_node_trans=False):
+                            flip_end_node_trans=False,
+                            a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance):
     """
     Creates a new path [start,end] in grid_map, based on rail_trans.
     """
     # in the worst case we will need to do a A* search, so we might as well set that up
-    path = a_star(rail_trans, grid_map, start, end)
+    path = a_star(grid_map, start, end, a_star_distance_function)
     if len(path) < 2:
         return []
     current_dir = get_direction(path[0], path[1])
@@ -67,18 +69,25 @@ def connect_basic_operation(rail_trans: RailEnvTransitions, grid_map: GridTransi
     return path
 
 
-def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D):
-    return connect_basic_operation(rail_trans, grid_map, start, end, True, True)
+def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
+                 start: IntVector2D, end: IntVector2D,
+                 a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance):
+    return connect_basic_operation(rail_trans, grid_map, start, end, True, True, a_star_distance_function)
 
 
-def connect_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D):
-    return connect_basic_operation(rail_trans, grid_map, start, end, False, False)
+def connect_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
+                  start: IntVector2D, end: IntVector2D,
+                  a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance):
+    return connect_basic_operation(rail_trans, grid_map, start, end, False, False, a_star_distance_function)
 
 
-def connect_from_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D,
-                       end: IntVector2D):
-    return connect_basic_operation(rail_trans, grid_map, start, end, False, True)
+def connect_from_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
+                       start: IntVector2D, end: IntVector2D,
+                       a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance):
+    return connect_basic_operation(rail_trans, grid_map, start, end, False, True, a_star_distance_function)
 
 
-def connect_to_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D):
-    return connect_basic_operation(rail_trans, grid_map, start, end, True, False)
+def connect_to_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
+                     start: IntVector2D, end: IntVector2D,
+                     a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance):
+    return connect_basic_operation(rail_trans, grid_map, start, end, True, False, a_star_distance_function)
