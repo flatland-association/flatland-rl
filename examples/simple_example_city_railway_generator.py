@@ -17,9 +17,12 @@ if os.path.exists("./../render_output/"):
         np.random.seed(itrials)
 
         # select distance function used in a-star path finding
-        dist_fun = Vec2d.get_euclidean_distance
-        if np.random.choice(1) == 0:
-            dist_fun = Vec2d.get_manhattan_distance
+        dist_fun = Vec2d.get_manhattan_distance
+        dfsel = itrials % 3
+        if dfsel == 1:
+            dist_fun = Vec2d.get_euclidean_distance
+        elif dfsel == 2:
+            dist_fun = Vec2d.get_chebyshev_distance
 
         # create RailEnv and use the city_generator to create a map
         env = RailEnv(width=40 + np.random.choice(100),

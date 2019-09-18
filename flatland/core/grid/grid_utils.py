@@ -71,6 +71,7 @@ class Vec2dOperations:
     def get_norm(node: Vector2D) -> float:
         """
         calculates the euclidean norm of the 2d vector
+        [see: https://lyfat.wordpress.com/2012/05/22/euclidean-vs-chebyshev-vs-manhattan-distance/]
 
         :param node: tuple with coordinate (x,y) or 2d vector
         :return:
@@ -95,6 +96,7 @@ class Vec2dOperations:
     def get_manhattan_distance(node_a: Vector2D, node_b: Vector2D) -> float:
         """
         calculates the manhattan distance of the 2d vector
+        [see: https://lyfat.wordpress.com/2012/05/22/euclidean-vs-chebyshev-vs-manhattan-distance/]
 
         :param node: tuple with coordinate (x,y) or 2d vector
         :return:
@@ -103,6 +105,20 @@ class Vec2dOperations:
         """
         delta = (Vec2dOperations.subtract(node_b, node_a))
         return np.abs(delta[0]) + np.abs(delta[1])
+
+    @staticmethod
+    def get_chebyshev_distance(node_a: Vector2D, node_b: Vector2D) -> float:
+        """
+        calculates the chebyshev norm of the 2d vector
+        [see: https://lyfat.wordpress.com/2012/05/22/euclidean-vs-chebyshev-vs-manhattan-distance/]
+
+        :param node: tuple with coordinate (x,y) or 2d vector
+        :return:
+            -------
+        returns the chebyshev distance
+        """
+        delta = (Vec2dOperations.subtract(node_b, node_a))
+        return max(np.abs(delta[0]), np.abs(delta[1]))
 
     @staticmethod
     def normalize(node: Vector2D) -> Tuple[float, float]:
