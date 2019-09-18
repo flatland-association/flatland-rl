@@ -61,7 +61,7 @@ class TransitionMap:
     def get_transition(self, cell_id, transition_index):
         """
         Return the status of whether an agent in cell `cell_id` can perform a
-        movement along transition `transition_index (e.g., the NESW direction
+        movement along transition `transition_index` (e.g., the NESW direction
         of movement, for agents on a grid).
 
         Parameters
@@ -205,7 +205,7 @@ class GridTransitionMap(TransitionMap):
     def get_transition(self, cell_id, transition_index):
         """
         Return the status of whether an agent in cell `cell_id` can perform a
-        movement along transition `transition_index (e.g., the NESW direction
+        movement along transition `transition_index` (e.g., the NESW direction
         of movement, for agents on a grid).
 
         Parameters
@@ -374,8 +374,7 @@ class GridTransitionMap(TransitionMap):
         """
         Check validity of cell at rcPos = tuple(row, column)
         Checks that:
-        - surrounding cells have inbound transitions for all the
-            outbound transitions of this cell.
+        - surrounding cells have inbound transitions for all the outbound transitions of this cell.
 
         These are NOT checked - see transition.is_valid:
         - all transitions have the mirror transitions (N->E <=> W->S)
@@ -426,8 +425,7 @@ class GridTransitionMap(TransitionMap):
         """
         Check validity of cell at rcPos = tuple(row, column)
         Checks that:
-        - surrounding cells have inbound transitions for all the
-            outbound transitions of this cell.
+        - surrounding cells have inbound transitions for all the outbound transitions of this cell.
 
         These are NOT checked - see transition.is_valid:
         - all transitions have the mirror transitions (N->E <=> W->S)

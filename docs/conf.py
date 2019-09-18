@@ -48,7 +48,6 @@ source_suffix = {
     '.md': 'markdown',
 }
 
-
 # The master toctree document.
 master_doc = 'index'
 
@@ -159,3 +158,6 @@ texinfo_documents = [
      'One line description of project.',
      'Miscellaneous'),
 ]
+
+# https://stackoverflow.com/questions/12206334/sphinx-autosummary-toctree-contains-reference-to-nonexisting-document-warnings
+numpydoc_show_class_members = False

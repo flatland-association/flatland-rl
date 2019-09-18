@@ -29,14 +29,14 @@ for file in glob.glob(r'./*.md'):
     print(file)
     shutil.copy(file, 'docs/')
 
-subprocess.call(['sphinx-apidoc', '--force', '-a', '-e', '-o', 'docs/', 'flatland', '-H', '"Flatland Reference"'])
+subprocess.call(['sphinx-apidoc', '--force', '-a', '-e', '-o', 'docs/', 'flatland', '-H', 'Flatland Reference'])
 
-os.environ["SPHINXPROJ"] = "flatland"
+os.environ["SPHINXPROJ"] = "Flatland"
 os.chdir('docs')
 subprocess.call(['python', '-msphinx', '-M', 'clean', '.', '_build'])
 # TODO fix sphinx warnings instead of suppressing them...
 subprocess.call(['python', '-msphinx', '-M', 'html', '.', '_build'])
-#subprocess.call(['python', '-msphinx', '-M', 'html', '.', '_build', '-Q'])
+# subprocess.call(['python', '-msphinx', '-M', 'html', '.', '_build', '-Q'])
 
 # we do not currrently use pydeps, commented out https://gitlab.aicrowd.com/flatland/flatland/issues/149
 # subprocess.call(['python', '-mpydeps', '../flatland', '-o', '_build/html/flatland.svg', '--no-config', '--noshow'])

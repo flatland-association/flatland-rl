@@ -115,22 +115,19 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
     return generator
 
 
-def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
+def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] = None) -> ScheduleGenerator:
     """
     Given a `rail` GridTransitionMap, return a random placement of agents (initial position, direction and target).
 
     Parameters
     ----------
-        rail : GridTransitionMap
-            The railway to place agents on.
-        num_agents : int
-            The number of agents to generate a speed for
-        speed_ratio_map : Mapping[float,float]
-            A map of speeds mappint to their ratio of appearance. The ratios must sum up to 1.
+        speed_ratio_map : Optional[Mapping[float, float]]
+            A map of speeds mapping to their ratio of appearance. The ratios must sum up to 1.
+
     Returns
     -------
         Tuple[List[Tuple[int,int]], List[Tuple[int,int]], List[Tuple[int,int]], List[float]]
-        initial positions, directions, targets speeds
+            initial positions, directions, targets speeds
     """
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:

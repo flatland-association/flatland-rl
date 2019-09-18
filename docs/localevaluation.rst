@@ -1,22 +1,21 @@
-=====
+================
 Local Evaluation
-=====
+================
 
 This document explains you how to locally evaluate your submissions before making 
 an official submission to the competition.
 
 Requirements
---------------
+------------
 
 * **flatland-rl** : We expect that you have `flatland-rl` installed by following the instructions in  :doc:`installation`.
 
 * **redis** : Additionally you will also need to have  `redis installed <https://redis.io/topics/quickstart>`_ and **should have it running in the background.**
 
 Test Data
---------------
+---------
 
-* **test env data** : You can `download and untar the test-env-data <https://www.aicrowd.com/challenges/flatland-challenge/dataset_files>`_, 
-at a location of your choice, lets say `/path/to/test-env-data/`. After untarring the folder, the folder structure should look something like : 
+* **test env data** : You can `download and untar the test-env-data <https://www.aicrowd.com/challenges/flatland-challenge/dataset_files>`, at a location of your choice, lets say `/path/to/test-env-data/`. After untarring the folder, the folder structure should look something like:
 
 
 .. code-block:: console
@@ -48,11 +47,10 @@ Evaluation Service
     flatland-evaluator --tests /path/to/test-env-data/
 
 RemoteClient
-------------------
+------------
 
-* **run client** : Some `sample submission code can be found in the starter-kit <https://github.com/AIcrowd/flatland-challenge-starter-kit/>`_, 
-but before you can run your code locally using `FlatlandRemoteClient`, you will have to set the `AICROWD_TESTS_FOLDER` environment variable to the location where you 
-previous untarred the folder with `the test-env-data`:
+* **run client** : Some `sample submission code can be found in the starter-kit <https://github.com/AIcrowd/flatland-challenge-starter-kit/>`_, but before you can run your code locally using `FlatlandRemoteClient`, you will have to set the `AICROWD_TESTS_FOLDER` environment variable to the location where you previous untarred the folder with `the test-env-data`:
+
 
 .. code-block:: console
 
@@ -64,3 +62,4 @@ previous untarred the folder with `the test-env-data`:
 
     # and then finally run your code
     python run.py
+

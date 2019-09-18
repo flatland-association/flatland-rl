@@ -263,13 +263,13 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
     """
     Dummy random level generator:
     - fill in cells at random in [width-2, height-2]
-    - keep filling cells in among the unfilled ones, such that all transitions
-      are legit;  if no cell can be filled in without violating some
-      transitions, pick one among those that can satisfy most transitions
-      (1,2,3 or 4), and delete (+mark to be re-filled) the cells that were
+    - keep filling cells in among the unfilled ones, such that all transitions\
+      are legit;  if no cell can be filled in without violating some\
+      transitions, pick one among those that can satisfy most transitions\
+      (1,2,3 or 4), and delete (+mark to be re-filled) the cells that were\
       incompatible.
-    - keep trying for a total number of insertions
-      (e.g., (W-2)*(H-2)*MAX_REPETITIONS ); if no solution is found, empty the
+    - keep trying for a total number of insertions\
+      (e.g., (W-2)*(H-2)*MAX_REPETITIONS ); if no solution is found, empty the\
       board and try again from scratch.
     - finally pad the border of the map with dead-ends to avoid border issues.
 

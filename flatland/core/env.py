@@ -15,6 +15,7 @@ class Environment:
 
     Agents are identified by agent ids (handles).
     Examples:
+
         >>> obs = env.reset()
         >>> print(obs)
         {
@@ -40,6 +41,7 @@ class Environment:
             "train_0": {},  # info for train_0
             "train_1": {},  # info for train_1
         }
+
     """
 
     def __init__(self):
@@ -51,7 +53,8 @@ class Environment:
         """
         Resets the env and returns observations from agents in the environment.
 
-        Returns:
+        Returns
+        -------
         obs : dict
             New observations for each agent.
         """

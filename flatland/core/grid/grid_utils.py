@@ -1,25 +1,27 @@
 import numpy as np
 
 
-def position_to_coordinate(depth, positions):
-    """Converts coordinates to positions:
-         [ (0,0) (0,1) ..  (0,w-1)
-           (1,0) (1,1)     (1,w-1)
-           ...
-           (d-1,0) (d-1,1)     (d-1,w-1)
-          ]
+def position_to_coordinate(depth: int, positions):
+    """Converts coordinates to positions::
+
+        [ (0,0) (0,1) ..  (0,w-1)
+          (1,0) (1,1)     (1,w-1)
+            ...
+          (d-1,0) (d-1,1)     (d-1,w-1)
+        ]
 
          -->
 
-         [ 0      d    ..  (w-1)*d
-           1      d+1
-           ...
-           d-1    2d-1     w*d-1
-         ]
+        [ 0      d    ..  (w-1)*d
+          1      d+1
+          ...
+          d-1    2d-1     w*d-1
+        ]
 
-    :param depth:
-    :param positions:
-    :return:
+    Parameters
+    ----------
+    depth : int
+    positions : List[Tuple[int,int]]
     """
     coords = ()
     for p in positions:
@@ -29,7 +31,8 @@ def position_to_coordinate(depth, positions):
 
 def coordinate_to_position(depth, coords):
     """
-    Converts positions to coordinates:
+    Converts positions to coordinates::
+
          [ 0      d    ..  (w-1)*d
            1      d+1
            ...

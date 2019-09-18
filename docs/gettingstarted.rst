@@ -1,9 +1,9 @@
-=====
+===============
 Getting Started
-=====
+===============
 
 Overview
---------------
+--------
 
 Following are three short tutorials to help new users get acquainted with how
 to create RailEnvs, how to train simple DQN agents on them, and how to customize
@@ -17,7 +17,7 @@ To use flatland in a project:
 
 
 Part 1 : Basic Usage
---------------
+--------------------
 
 The basic usage of RailEnv environments consists in creating a RailEnv object
 endowed with a rail generator, that generates new rail networks on each reset,
@@ -120,7 +120,7 @@ The complete code for this part of the Getting Started guide can be found in
 
 
 Part 2 : Training a Simple an Agent on Flatland
---------------
+-----------------------------------------------
 This is a brief tutorial on how to train an agent on Flatland.
 Here we use a simple random agent to illustrate the process on how to interact with the environment.
 The corresponding code can be found in examples/training_example.py and in the baselines repository
@@ -153,7 +153,7 @@ The difficulty of a railway network depends on the dimensions (`width` x `height
 By varying the number of start and goal connections (nr_start_goal) and the number of extra railway elements added (nr_extra)
 the number of alternative paths of each agents can be modified. The more possible paths an agent has to reach its target the easier the task becomes.
 Here we don't specify any observation builder but rather use the standard tree observation. If you would like to use a custom obervation please follow
- the instructions in the next tutorial.
+the instructions in the next tutorial.
 Feel free to vary these parameters to see how your own agent holds up on different setting. The evalutation set of railway configurations will
 cover the whole spectrum from easy to complex tasks.
 
@@ -188,7 +188,7 @@ The environment returns an array of new observations, reward dictionary for all 
 This information can be used to update the policy of your agent and if done['__all__'] == True the episode terminates.
 
 Part 3 : Customizing Observations and Level Generators
---------------
+------------------------------------------------------
 
 Example code for generating custom observations given a RailEnv and to generate
 random rail maps are available in examples/custom_observation_example.py and
@@ -257,6 +257,7 @@ random (but consistent) agents along with their targets and initial directions,
 given a rail map (GridTransitionMap object) and the desired number of agents:
 
 .. code-block:: python
+
     agents_position, agents_direction, agents_target = get_rnd_agents_pos_tgt_dir_on_rail(
         rail_map,
         num_agents)

@@ -2,10 +2,11 @@
 ObservationBuilder objects are objects that can be passed to environments designed for customizability.
 The ObservationBuilder-derived custom classes implement 2 functions, reset() and get() or get(handle).
 
-+ Reset() is called after each environment reset, to allow for pre-computing relevant data.
++ `reset()` is called after each environment reset, to allow for pre-computing relevant data.
 
-+ Get() is called whenever an observation has to be computed, potentially for each agent independently in
-case of multi-agent environments.
++ `get()` is called whenever an observation has to be computed, potentially for each agent independently in case of \
+multi-agent environments.
+
 """
 import numpy as np
 
