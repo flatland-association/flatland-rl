@@ -4,6 +4,7 @@
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -51,7 +52,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
         shortest_distance = np.inf
 
         for exit_direction in range(4):
-            neighbour = obs_builder._new_position(agent.position, exit_direction)
+            neighbour = get_new_position(agent.position, exit_direction)
 
             if neighbour[0] >= 0 and neighbour[0] < env.height and neighbour[1] >= 0 and neighbour[1] < env.width:
                 desired_movement_from_new_cell = (exit_direction + 2) % 4
@@ -62,7 +63,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
                     is_valid = obs_builder.env.rail.get_transition((neighbour[0], neighbour[1], agent_orientation),
                                                                    desired_movement_from_new_cell)
                     if is_valid:
-                        distance_to_target = obs_builder.distance_map[
+                        distance_to_target = obs_builder.env.distance_map.get()[
                             (agent.handle, *agent.position, exit_direction)]
                         print("agent {} at {} facing {} taking {} distance {}".format(agent.handle, agent.position,
                                                                                       agent.direction,

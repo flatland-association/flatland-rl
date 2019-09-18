@@ -226,10 +226,10 @@ def rail_from_file(filename) -> RailGenerator:
         grid = np.array(data[b"grid"])
         rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
         rail.grid = grid
-        if b"distance_maps" in data.keys():
-            distance_maps = data[b"distance_maps"]
-            if len(distance_maps) > 0:
-                return rail, {'distance_maps': distance_maps}
+        if b"distance_map" in data.keys():
+            distance_map = data[b"distance_map"]
+            if len(distance_map) > 0:
+                return rail, {'distance_map': distance_map}
         return [rail, None]
 
     return generator
