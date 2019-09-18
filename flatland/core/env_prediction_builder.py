@@ -28,7 +28,7 @@ class PredictionBuilder:
         """
         pass
 
-    def get(self, custom_args=None, handle=0):
+    def get(self, handle=0):
         """
         Called whenever get_many in the observation build is called.
 
