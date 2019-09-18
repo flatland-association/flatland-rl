@@ -580,8 +580,9 @@ def test_multispeed_actions_malfunction_no_blocking(rendering=True):
         _assert(agent.position, replay.position, 'position')
         _assert(agent.direction, replay.direction, 'direction')
 
-        if replay.malfunction:
-            agent.malfunction_data['malfunction'] = 2
+        if replay.malfunction > 0:
+            agent.malfunction_data['malfunction'] = replay.malfunction
+            agent.malfunction_data['moving_before_malfunction'] = agent.moving
 
         if replay.action is not None:
             assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
