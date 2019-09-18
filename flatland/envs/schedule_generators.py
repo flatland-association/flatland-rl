@@ -117,7 +117,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
 
 def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
     """
-    Given a `rail' GridTransitionMap, return a random placement of agents (initial position, direction and target).
+    Given a `rail` GridTransitionMap, return a random placement of agents (initial position, direction and target).
 
     Parameters
     ----------

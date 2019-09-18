@@ -12,7 +12,7 @@ class Transitions:
 
     Generic class that implements checks to control whether a
     certain transition is allowed (agent facing a direction
-    `orientation' and moving into direction `orientation')
+    `orientation' and moving into direction `orientation`)
     """
 
     def get_type(self):
@@ -21,7 +21,7 @@ class Transitions:
     def get_transitions(self, cell_transition, orientation):
         """
         Return a tuple of transitions available in a cell specified by
-        `cell_transition' for an agent facing direction `orientation'
+        `cell_transition' for an agent facing direction `orientation`
         (e.g., a tuple of size of the maximum number of transitions,
         with values 0 or 1, or potentially in between,
         for stochastic transitions).
@@ -45,9 +45,9 @@ class Transitions:
 
     def set_transitions(self, cell_transition, orientation, new_transitions):
         """
-        Return a `cell_transition' specification where the transitions
-        available for an agent facing direction `orientation' are replaced
-        with the tuple `new_transitions'. `new_orientations' must have
+        Return a `cell_transition` specification where the transitions
+        available for an agent facing direction `orientation` are replaced
+        with the tuple `new_transitions'. `new_orientations` must have
         one element for each possible transition.
 
         Parameters
@@ -65,8 +65,8 @@ class Transitions:
         -------
         [cell-content]
             An updated class-specific object that replaces the original
-            transitions validity of `cell_transition' with `new_transitions',
-            for the appropriate `orientation'.
+            transitions validity of `cell_transition' with `new_transitions`,
+            for the appropriate `orientation`.
 
         """
         raise NotImplementedError()
@@ -74,8 +74,8 @@ class Transitions:
     def get_transition(self, cell_transition, orientation, direction):
         """
         Return the status of whether an agent oriented in directions
-        `orientation' and inside a cell with transitions `cell_transition'
-        can move to the cell in direction `direction' relative
+        `orientation' and inside a cell with transitions `cell_transition`
+        can move to the cell in direction `direction` relative
         to the current cell.
 
         Parameters
@@ -101,11 +101,11 @@ class Transitions:
     def set_transition(self, cell_transition, orientation, direction,
                        new_transition):
         """
-        Return a `cell_transition' specification where the status of
-        whether an agent oriented in direction `orientation' and inside
-        a cell with transitions `cell_transition' can move to the cell
-        in direction `direction' relative to the current cell is set
-        to `new_transition'.
+        Return a `cell_transition` specification where the status of
+        whether an agent oriented in direction `orientation` and inside
+        a cell with transitions `cell_transition` can move to the cell
+        in direction `direction` relative to the current cell is set
+        to `new_transition`.
 
         Parameters
         ----------
@@ -125,8 +125,8 @@ class Transitions:
         -------
         [cell-content]
             An updated class-specific object that replaces the original
-            transitions validity of `cell_transition' with `new_transitions',
-            for the appropriate `orientation' to `direction'.
+            transitions validity of `cell_transition' with `new_transitions`,
+            for the appropriate `orientation' to `direction`.
 
         """
         raise NotImplementedError()

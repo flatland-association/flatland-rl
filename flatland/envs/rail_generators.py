@@ -250,7 +250,7 @@ def rail_from_grid_transition_map(rail_map) -> RailGenerator:
     Returns
     -------
     function
-        Generator function that always returns the given `rail_map' object.
+        Generator function that always returns the given `rail_map` object.
     """
 
     def generator(width: int, height: int, num_agents: int, num_resets: int = 0) -> RailGeneratorProduct:

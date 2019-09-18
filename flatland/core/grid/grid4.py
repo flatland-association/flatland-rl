@@ -24,9 +24,9 @@ class Grid4Transitions(Transitions):
     """
     Grid4Transitions class derived from Transitions.
 
-    Special case of `Transitions' over a 2D-grid (FlatLand).
+    Special case of `Transitions` over a 2D-grid (FlatLand).
     Transitions are possible to neighboring cells on the grid if allowed.
-    GridTransitions keeps track of valid transitions supplied as `transitions'
+    GridTransitions keeps track of valid transitions supplied as `transitions`
     list, each represented as a bitmap of 16 bits.
 
     Whether a transition is allowed or not depends on which direction an agent
@@ -67,8 +67,8 @@ class Grid4Transitions(Transitions):
         """
         Get the 4 possible transitions ((N,E,S,W), 4 elements tuple
         if no diagonal transitions allowed) available for an agent oriented
-        in direction `orientation' and inside a cell with
-        transitions `cell_transition'.
+        in direction `orientation` and inside a cell with
+        transitions `cell_transition`.
 
         Parameters
         ----------
@@ -90,9 +90,9 @@ class Grid4Transitions(Transitions):
         """
         Set the possible transitions (e.g., (N,E,S,W), 4 elements tuple
         if no diagonal transitions allowed) available for an agent
-        oriented in direction `orientation' and inside a cell with transitions
-        `cell_transition'. A new `cell_transition' is returned with
-        the specified bits replaced by `new_transitions'.
+        oriented in direction `orientation` and inside a cell with transitions
+        `cell_transition'. A new `cell_transition` is returned with
+        the specified bits replaced by `new_transitions`.
 
         Parameters
         ----------
@@ -107,8 +107,8 @@ class Grid4Transitions(Transitions):
         -------
         int
             An updated bitmap that replaces the original transitions validity
-            of `cell_transition' with `new_transitions', for the appropriate
-            `orientation'.
+            of `cell_transition' with `new_transitions`, for the appropriate
+            `orientation`.
 
         """
         mask = (1 << ((4 - orientation) * 4)) - (1 << ((3 - orientation) * 4))
@@ -127,8 +127,8 @@ class Grid4Transitions(Transitions):
     def get_transition(self, cell_transition, orientation, direction):
         """
         Get the transition bit (1 value) that determines whether an agent
-        oriented in direction `orientation' and inside a cell with transitions
-        `cell_transition' can move to the cell in direction `direction'
+        oriented in direction `orientation` and inside a cell with transitions
+        `cell_transition' can move to the cell in direction `direction`
         relative to the current cell.
 
         Parameters
@@ -151,8 +151,8 @@ class Grid4Transitions(Transitions):
     def set_transition(self, cell_transition, orientation, direction, new_transition, remove_deadends=False):
         """
         Set the transition bit (1 value) that determines whether an agent
-        oriented in direction `orientation' and inside a cell with transitions
-        `cell_transition' can move to the cell in direction `direction'
+        oriented in direction `orientation` and inside a cell with transitions
+        `cell_transition' can move to the cell in direction `direction`
         relative to the current cell.
 
         Parameters
@@ -171,8 +171,8 @@ class Grid4Transitions(Transitions):
         -------
         int
             An updated bitmap that replaces the original transitions validity
-            of `cell_transition' with `new_transitions', for the appropriate
-            `orientation'.
+            of `cell_transition' with `new_transitions`, for the appropriate
+            `orientation`.
 
         """
         if new_transition:
@@ -196,7 +196,7 @@ class Grid4Transitions(Transitions):
             16 bits used to encode the valid transitions for a cell.
         rotation : int
             Angle by which to clock-wise rotate the transition bits in
-            `cell_transition' by. I.e., rotation={0, 90, 180, 270} degrees.
+            `cell_transition` by. I.e., rotation={0, 90, 180, 270} degrees.
 
         Returns
         -------

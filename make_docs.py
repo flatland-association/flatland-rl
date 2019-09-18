@@ -19,7 +19,9 @@ def remove_exists(filename):
 
 
 # clean docs config and html files, and rebuild everything
-remove_exists('docs/flatland*.rst')
+# wildcards do not work under Windows
+for file in glob.glob(r'./docs/flatland*.rst'):
+    remove_exists(file)
 remove_exists('docs/modules.rst')
 
 # copy md files from root folder into docs folder

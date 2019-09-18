@@ -3,7 +3,7 @@ from flatland.core.grid.grid4 import Grid4Transitions
 
 class RailEnvTransitions(Grid4Transitions):
     """
-    Special case of `GridTransitions' over a 2D-grid, with a pre-defined set
+    Special case of `GridTransitions` over a 2D-grid, with a pre-defined set
     of transitions mimicking the types of real Swiss rail connections.
 
     --------------------------------------------------------------------------

@@ -560,7 +560,7 @@ class RenderTool(object):
                 position = agent.position
                 direction = agent.direction
                 for possible_directions in range(4):
-                    # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
+                    # Is a transition along movement `desired_movement_from_new_cell` to the current cell possible?
                     isValid = env.rail.get_transition((*agent.position, agent.direction), possible_directions)
                     if isValid:
                         direction = possible_directions

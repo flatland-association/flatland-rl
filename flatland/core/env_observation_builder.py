@@ -14,7 +14,7 @@ class ObservationBuilder:
     """
     ObservationBuilder base class.
 
-    Derived objects must implement and `observation_space' attribute as a tuple with the dimensions of the returned
+    Derived objects must implement and `observation_space` attribute as a tuple with the dimensions of the returned
     observations.
     """
 
@@ -32,8 +32,8 @@ class ObservationBuilder:
 
     def get_many(self, handles=[]):
         """
-        Called whenever an observation has to be computed for the `env' environment, for each agent with handle
-        in the `handles' list.
+        Called whenever an observation has to be computed for the `env` environment, for each agent with handle
+        in the `handles` list.
 
         Parameters
         ----------
@@ -44,7 +44,7 @@ class ObservationBuilder:
         -------
         function
             A dictionary of observation structures, specific to the corresponding environment, with handles from
-            `handles' as keys.
+            `handles` as keys.
         """
         observations = {}
         for h in handles:
@@ -53,8 +53,8 @@ class ObservationBuilder:
 
     def get(self, handle=0):
         """
-        Called whenever an observation has to be computed for the `env' environment, possibly
-        for each agent independently (agent id `handle').
+        Called whenever an observation has to be computed for the `env` environment, possibly
+        for each agent independently (agent id `handle`).
 
         Parameters
         ----------

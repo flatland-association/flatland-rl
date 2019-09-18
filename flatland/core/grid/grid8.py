@@ -20,9 +20,9 @@ class Grid8Transitions(Transitions):
     """
     Grid8Transitions class derived from Transitions.
 
-    Special case of `Transitions' over a 2D-grid (FlatLand).
+    Special case of `Transitions` over a 2D-grid (FlatLand).
     Transitions are possible to neighboring cells on the grid if allowed.
-    GridTransitions keeps track of valid transitions supplied as `transitions'
+    GridTransitions keeps track of valid transitions supplied as `transitions`
     list, each represented as a bitmap of 64 bits.
 
     0=North, 1=North-East, etc.
@@ -82,8 +82,8 @@ class Grid8Transitions(Transitions):
         -------
         int
             An updated bitmap that replaces the original transitions validity
-            of `cell_transition' with `new_transitions', for the appropriate
-            `orientation'.
+            of `cell_transition' with `new_transitions`, for the appropriate
+            `orientation`.
 
         """
         mask = (1 << ((8 - orientation) * 8)) - (1 << ((7 - orientation) * 8))
@@ -106,8 +106,8 @@ class Grid8Transitions(Transitions):
     def get_transition(self, cell_transition, orientation, direction):
         """
         Get the transition bit (1 value) that determines whether an agent
-        oriented in direction `orientation' and inside a cell with transitions
-        `cell_transition' can move to the cell in direction `direction'
+        oriented in direction `orientation` and inside a cell with transitions
+        `cell_transition' can move to the cell in direction `direction`
         relative to the current cell.
 
         Parameters
@@ -131,8 +131,8 @@ class Grid8Transitions(Transitions):
 
         """
         Set the transition bit (1 value) that determines whether an agent
-        oriented in direction `orientation' and inside a cell with transitions
-        `cell_transition' can move to the cell in direction `direction'
+        oriented in direction `orientation` and inside a cell with transitions
+        `cell_transition' can move to the cell in direction `direction`
         relative to the current cell.
 
         Parameters
@@ -150,8 +150,8 @@ class Grid8Transitions(Transitions):
         -------
         int
             An updated bitmap that replaces the original transitions validity
-            of `cell_transition' with `new_transitions', for the appropriate
-            `orientation'.
+            of `cell_transition' with `new_transitions`, for the appropriate
+            `orientation`.
 
         """
         if new_transition:
@@ -172,7 +172,7 @@ class Grid8Transitions(Transitions):
             64 bits used to encode the valid transitions for a cell.
         rotation : int
             Angle by which to clock-wise rotate the transition bits in
-            `cell_transition' by. I.e., rotation={0, 45, 90, 135, 180,
+            `cell_transition` by. I.e., rotation={0, 45, 90, 135, 180,
             225, 270, 315} degrees.
 
         Returns

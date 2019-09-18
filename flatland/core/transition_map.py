@@ -23,7 +23,7 @@ class TransitionMap:
     def get_transitions(self, cell_id):
         """
         Return a tuple of transitions available in a cell specified by
-        `cell_id' (e.g., a tuple of size of the maximum number of transitions,
+        `cell_id` (e.g., a tuple of size of the maximum number of transitions,
         with values 0 or 1, or potentially in between,
         for stochastic transitions).
 
@@ -43,8 +43,8 @@ class TransitionMap:
 
     def set_transitions(self, cell_id, new_transitions):
         """
-        Replaces the available transitions in cell `cell_id' with the tuple
-        `new_transitions'. `new_transitions' must have
+        Replaces the available transitions in cell `cell_id` with the tuple
+        `new_transitions'. `new_transitions` must have
         one element for each possible transition.
 
         Parameters
@@ -60,7 +60,7 @@ class TransitionMap:
 
     def get_transition(self, cell_id, transition_index):
         """
-        Return the status of whether an agent in cell `cell_id' can perform a
+        Return the status of whether an agent in cell `cell_id` can perform a
         movement along transition `transition_index (e.g., the NESW direction
         of movement, for agents on a grid).
 
@@ -85,8 +85,8 @@ class TransitionMap:
 
     def set_transition(self, cell_id, transition_index, new_transition):
         """
-        Replaces the validity of transition to `transition_index' in cell
-        `cell_id' with the new `new_transition'.
+        Replaces the validity of transition to `transition_index` in cell
+        `cell_id' with the new `new_transition`.
 
 
         Parameters
@@ -156,7 +156,7 @@ class GridTransitionMap(TransitionMap):
     def get_transitions(self, row, column, orientation):
         """
         Return a tuple of transitions available in a cell specified by
-        `cell_id' (e.g., a tuple of size of the maximum number of transitions,
+        `cell_id` (e.g., a tuple of size of the maximum number of transitions,
         with values 0 or 1, or potentially in between,
         for stochastic transitions).
 
@@ -178,8 +178,8 @@ class GridTransitionMap(TransitionMap):
 
     def set_transitions(self, cell_id, new_transitions):
         """
-        Replaces the available transitions in cell `cell_id' with the tuple
-        `new_transitions'. `new_transitions' must have
+        Replaces the available transitions in cell `cell_id` with the tuple
+        `new_transitions'. `new_transitions` must have
         one element for each possible transition.
 
         Parameters
@@ -204,7 +204,7 @@ class GridTransitionMap(TransitionMap):
 
     def get_transition(self, cell_id, transition_index):
         """
-        Return the status of whether an agent in cell `cell_id' can perform a
+        Return the status of whether an agent in cell `cell_id` can perform a
         movement along transition `transition_index (e.g., the NESW direction
         of movement, for agents on a grid).
 
@@ -232,8 +232,8 @@ class GridTransitionMap(TransitionMap):
 
     def set_transition(self, cell_id, transition_index, new_transition, remove_deadends=False):
         """
-        Replaces the validity of transition to `transition_index' in cell
-        `cell_id' with the new `new_transition'.
+        Replaces the validity of transition to `transition_index` in cell
+        `cell_id' with the new `new_transition`.
 
 
         Parameters
@@ -261,7 +261,7 @@ class GridTransitionMap(TransitionMap):
 
     def save_transition_map(self, filename):
         """
-        Save the transitions grid as `filename', in npy format.
+        Save the transitions grid as `filename`, in npy format.
 
         Parameters
         ----------
@@ -273,9 +273,9 @@ class GridTransitionMap(TransitionMap):
 
     def load_transition_map(self, package, resource):
         """
-        Load the transitions grid from `filename' (npy format).
+        Load the transitions grid from `filename` (npy format).
         The load function only updates the transitions grid, and possibly width and height, but the object has to be
-        initialized with the correct `transitions' object anyway.
+        initialized with the correct `transitions` object anyway.
 
         Parameters
         ----------
@@ -285,7 +285,7 @@ class GridTransitionMap(TransitionMap):
             Name of the file from which to load the transitions grid within the package.
         override_gridsize : bool
             If override_gridsize=True, the width and height of the GridTransitionMap object are replaced with the size
-            of the map loaded from `filename'. If override_gridsize=False, the transitions grid is either cropped (if
+            of the map loaded from `filename`. If override_gridsize=False, the transitions grid is either cropped (if
             the grid size is larger than (height,width) ) or padded with zeros (if the grid size is smaller than
             (height,width) )
 

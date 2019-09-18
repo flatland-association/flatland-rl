@@ -85,10 +85,10 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         # Fill in the (up to) 4 neighboring nodes
         # direction is the direction of movement, meaning that at least a possible orientation of an agent
-        # in cell (row,col) allows a movement in direction `direction'
+        # in cell (row,col) allows a movement in direction `direction`
         nodes_queue = deque(self._get_and_update_neighbors(position, target_nr, 0, enforce_target_direction=-1))
 
-        # BFS from target `position' to all the reachable nodes in the grid
+        # BFS from target `position` to all the reachable nodes in the grid
         # Stop the search if the target position is re-visited, in any direction
         visited = {(position[0], position[1], 0), (position[0], position[1], 1), (position[0], position[1], 2),
                    (position[0], position[1], 3)}
@@ -124,7 +124,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         possible_directions = [0, 1, 2, 3]
         if enforce_target_direction >= 0:
-            # The agent must land into the current cell with orientation `enforce_target_direction'.
+            # The agent must land into the current cell with orientation `enforce_target_direction`.
             # This is only possible if the agent has arrived from the cell in the opposite direction!
             possible_directions = [(enforce_target_direction + 2) % 4]
 
@@ -137,7 +137,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
                 # Check all possible transitions in new_cell
                 for agent_orientation in range(4):
-                    # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
+                    # Is a transition along movement `desired_movement_from_new_cell` to the current cell possible?
                     is_valid = self.env.rail.get_transition((new_cell[0], new_cell[1], agent_orientation),
                                                             desired_movement_from_new_cell)
 
@@ -170,8 +170,8 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     def get_many(self, handles=None):
         """
-        Called whenever an observation has to be computed for the `env' environment, for each agent with handle
-        in the `handles' list.
+        Called whenever an observation has to be computed for the `env` environment, for each agent with handle
+        in the `handles` list.
         """
 
         if handles is None:
@@ -199,7 +199,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     def get(self, handle):
         """
-        Computes the current observation for agent `handle' in env
+        Computes the current observation for agent `handle` in env
 
         The observation vector is composed of 4 sequential parts, corresponding to data from the up to 4 possible
         movements in a RailEnv (up to because only a subset of possible transitions are allowed in RailEnv).
@@ -460,7 +460,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                     last_is_dead_end = True
 
                 if not last_is_dead_end:
-                    # Keep walking through the tree along `direction'
+                    # Keep walking through the tree along `direction`
                     exploring = True
                     # convert one-hot encoding to 0,1,2,3
                     direction = np.argmax(cell_transitions)
@@ -479,7 +479,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 last_is_terminal = True
                 break
 
-        # `position' is either a terminal node or a switch
+        # `position` is either a terminal node or a switch
 
         # #############################
         # #############################
@@ -749,8 +749,8 @@ class LocalObsForRailEnv(ObservationBuilder):
 
     def get_many(self, handles=None):
         """
-        Called whenever an observation has to be computed for the `env' environment, for each agent with handle
-        in the `handles' list.
+        Called whenever an observation has to be computed for the `env` environment, for each agent with handle
+        in the `handles` list.
         """
 
         observations = {}
