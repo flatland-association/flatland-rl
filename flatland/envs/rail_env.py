@@ -15,6 +15,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
+from flatland.envs.distance_map import DistanceMap
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
@@ -150,6 +151,7 @@ class RailEnv(Environment):
         file_name: you can load a pickle file. from previously saved *.pkl file
 
         """
+        super().__init__()
 
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
@@ -176,6 +178,7 @@ class RailEnv(Environment):
         self.agents: List[EnvAgent] = [None] * number_of_agents  # live agents
         self.agents_static: List[EnvAgentStatic] = [None] * number_of_agents  # static agent information
         self.num_resets = 0
+        self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
         self.action_space = [1]
         self.observation_space = self.obs_builder.observation_space  # updated on resets?
@@ -239,8 +242,8 @@ class RailEnv(Environment):
         # TODO can we not put 'self.rail_generator(..)' into 'if regen_rail or self.rail is None' condition?
         rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
-        if optionals and 'distance_maps' in optionals:
-            self.obs_builder.distance_map = optionals['distance_maps']
+        if optionals and 'distance_map' in optionals:
+            self.distance_map.set(optionals['distance_map'])
 
         if regen_rail or self.rail is None:
             self.rail = rail
@@ -291,6 +294,7 @@ class RailEnv(Environment):
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
         self.observation_space = self.obs_builder.observation_space  # <-- change on reset?
+        self.distance_map.reset(self.agents, self.rail)
 
         # Return the new observation vectors for each agent
         return self._get_observations()
@@ -628,8 +632,8 @@ class RailEnv(Environment):
         # agents are always reset as not moving
         self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data["agents_static"]]
         self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]) for d in data["agents"]]
-        if hasattr(self.obs_builder, 'distance_map') and "distance_maps" in data.keys():
-            self.obs_builder.distance_map = data["distance_maps"]
+        if "distance_map" in data.keys():
+            self.distance_map.set(data["distance_map"])
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -643,25 +647,19 @@ class RailEnv(Environment):
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
         msgpack.packb(agent_static_data, use_bin_type=True)
-        if hasattr(self.obs_builder, 'distance_map'):
-            distance_map_data = self.obs_builder.distance_map
-            msgpack.packb(distance_map_data, use_bin_type=True)
-            msg_data = {
-                "grid": grid_data,
-                "agents_static": agent_static_data,
-                "agents": agent_data,
-                "distance_maps": distance_map_data}
-        else:
-            msg_data = {
-                "grid": grid_data,
-                "agents_static": agent_static_data,
-                "agents": agent_data}
+        distance_map_data = self.distance_map.get()
+        msgpack.packb(distance_map_data, use_bin_type=True)
+        msg_data = {
+            "grid": grid_data,
+            "agents_static": agent_static_data,
+            "agents": agent_data,
+            "distance_map": distance_map_data}
 
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def save(self, filename):
-        if hasattr(self.obs_builder, 'distance_map'):
-            if len(self.obs_builder.distance_map) > 0:
+        if self.distance_map.get() is not None:
+            if len(self.distance_map.get()) > 0:
                 with open(filename, "wb") as file_out:
                     file_out.write(self.get_full_state_dist_msg())
             else:
@@ -672,14 +670,9 @@ class RailEnv(Environment):
                 file_out.write(self.get_full_state_msg())
 
     def load(self, filename):
-        if hasattr(self.obs_builder, 'distance_map'):
-            with open(filename, "rb") as file_in:
-                load_data = file_in.read()
-                self.set_full_state_dist_msg(load_data)
-        else:
-            with open(filename, "rb") as file_in:
-                load_data = file_in.read()
-                self.set_full_state_msg(load_data)
+        with open(filename, "rb") as file_in:
+            load_data = file_in.read()
+            self.set_full_state_dist_msg(load_data)
 
     def load_pkl(self, pkl_data):
         self.set_full_state_msg(pkl_data)
