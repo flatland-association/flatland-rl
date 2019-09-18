@@ -1,5 +1,4 @@
 import os
-from typing import Sequence
 
 import numpy as np
 
@@ -10,12 +9,19 @@ from flatland.envs.rail_generators_city_generator import city_generator
 from flatland.envs.schedule_generators import city_schedule_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
-FloatArrayType = Sequence[float]
-
 if os.path.exists("./../render_output/"):
     for itrials in np.arange(1, 1000, 1):
         print(itrials, "generate new city")
+
+        # init seed
         np.random.seed(itrials)
+
+        # select distance function used in a-star path finding
+        dist_fun = Vec2d.get_euclidean_distance
+        if np.random.choice(1) == 0:
+            dist_fun = Vec2d.get_manhattan_distance
+
+        # create RailEnv and use the city_generator to create a map
         env = RailEnv(width=40 + np.random.choice(100),
                       height=40 + np.random.choice(100),
                       rail_generator=city_generator(num_cities=5 + np.random.choice(10),
@@ -25,7 +31,7 @@ if os.path.exists("./../render_output/"):
                                                     nbr_of_switches_per_station_track=2 + np.random.choice(2),
                                                     connect_max_nbr_of_shortes_city=2 + np.random.choice(4),
                                                     do_random_connect_stations=itrials % 2 == 0,
-                                                    a_star_distance_function=Vec2d.get_euclidean_distance,
+                                                    a_star_distance_function=dist_fun,
                                                     seed=itrials,
                                                     print_out_info=False
                                                     ),
@@ -36,11 +42,10 @@ if os.path.exists("./../render_output/"):
         # reset to initialize agents_static
         env_renderer = RenderTool(env, gl="PILSVG", screen_width=1400, screen_height=1000,
                                   agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX)
-        cnt = 0
-        while cnt < 10:
-            env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-            cnt += 1
 
+        env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
+
+        # store rendered file into render_output if the path exists
         if os.path.exists("./../render_output/"):
             env_renderer.gl.save_image(
                 os.path.join(
@@ -48,4 +53,5 @@ if os.path.exists("./../render_output/"):
                     "flatland_frame_{:04d}_{:04d}.png".format(itrials, 0)
                 ))
 
+        # close the renderer / window
         env_renderer.close_window()
