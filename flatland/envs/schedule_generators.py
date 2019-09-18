@@ -103,7 +103,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                 transitions = rail.get_transitions(start[0], start[1], orientation)
                 if any(transitions) > 0:
                     agents_direction.append(orientation)
-                    continue
+                    break
 
         if speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, speed_ratio_map)
