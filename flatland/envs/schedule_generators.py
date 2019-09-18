@@ -246,3 +246,8 @@ def schedule_from_file(filename) -> ScheduleGenerator:
         return agents_position, agents_direction, agents_target, agents_speed, agents_malfunction
 
     return generator
+
+
+# we can us the same schedule generator for city_rail_generator
+# in order to be able to change this transparently in the future, we use a different name.
+city_schedule_generator = sparse_schedule_generator
