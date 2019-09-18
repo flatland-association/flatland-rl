@@ -18,7 +18,7 @@ if os.path.exists("./../render_output/"):
 
         # select distance function used in a-star path finding
         dist_fun = Vec2d.get_manhattan_distance
-        dfsel = itrials % 3
+        dfsel = (itrials - 1) % 3
         if dfsel == 1:
             dist_fun = Vec2d.get_euclidean_distance
         elif dfsel == 2:
@@ -53,7 +53,7 @@ if os.path.exists("./../render_output/"):
             env_renderer.gl.save_image(
                 os.path.join(
                     "./../render_output/",
-                    "flatland_frame_{:04d}_{:04d}.png".format(itrials, 0)
+                    "flatland_frame_{:04d}.png".format(itrials)
                 ))
 
         # close the renderer / window
