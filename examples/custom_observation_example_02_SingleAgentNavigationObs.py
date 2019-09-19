@@ -5,12 +5,12 @@ import time
 
 import numpy as np
 
-from benchmarks.run_all_examples import str2bool
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.utils.misc import str2bool
 from flatland.utils.rendertools import RenderTool
 
 random.seed(100)

@@ -5,13 +5,13 @@ import time
 
 import numpy as np
 
-from benchmarks.run_all_examples import str2bool
 from flatland.core.grid.grid_utils import coordinate_to_position
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.utils.misc import str2bool
 from flatland.utils.ordered_set import OrderedSet
 from flatland.utils.rendertools import RenderTool
 
