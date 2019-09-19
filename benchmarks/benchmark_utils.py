@@ -12,7 +12,7 @@ def swap_attr(obj, attr, new_val):
             ...
 
         This will set obj.attr to 5 for the duration of the with: block,
-        restoring the old value at the end of the block. If `attr` doesn't
+        restoring the old value at the end of the block. If `attr` doesn`t
         exist on `obj`, it will be created and then deleted at the end of the
         block.
 

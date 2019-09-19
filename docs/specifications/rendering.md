@@ -4,8 +4,8 @@
 This doc specifies the software to meet the requirements in the Visualization requirements doc.
 
 ## References
-- [Visualization Requirements](Specifications/Visualization)
-- [Core Spec](Specifications/Core)
+- [Visualization Requirements](visualization)
+- [Core Spec](./core)
 
 ## Interfaces
 ### Interface with Environment Component

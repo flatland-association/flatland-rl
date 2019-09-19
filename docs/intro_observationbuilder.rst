@@ -1,9 +1,9 @@
-=====
+==============================================================
 Getting Started with custom observations and custom predictors
-=====
+==============================================================
 
 Overview
---------------
+--------
 
 One of the main objectives of the Flatland-Challenge_ is to find a suitable observation (relevant features for the problem at hand) to solve the task. Therefore **Flatland** was built with as much flexibility as possible when it comes to building your custom observations: observations in Flatland environments are fully customizable.
 Whenever an environment needs to compute new observations for each agent, it queries an object derived from the :code:`ObservationBuilder` base class, which takes the current state of the environment and returns the desired observation.
@@ -12,7 +12,7 @@ Whenever an environment needs to compute new observations for each agent, it que
 .. _Flatland-Challenge: https://www.aicrowd.com/challenges/flatland-challenge
 
 Example 1 : Simple (but useless) observation
---------------------------------------------------------
+--------------------------------------------
 In this first example we implement all the functions necessary for the observation builder to be valid and work with **Flatland**.
 Custom observation builder objects need to derive from the `flatland.core.env_observation_builder.ObservationBuilder`_
 base class and must implement two methods, :code:`reset(self)` and :code:`get(self, handle)`.
@@ -300,9 +300,9 @@ When building your custom observation builder, you might want to aggregate and d
 Transitions maps
 ~~~~~~~~~~~~~~~~
 
-The transition maps build the base for all movement in the environment. They contain all the information about allowed transitions for the agent at any given position. Because railway movement is limited to the railway tracks, these are important features for any controller that want to interact with the environment. All functionality and features of a transition map can be found here_
+The transition maps build the base for all movement in the environment. They contain all the information about allowed transitions for the agent at any given position. Because railway movement is limited to the railway tracks, these are important features for any controller that want to interact with the environment. All functionality and features of a transition map can be found here_.
 
-.. _here:https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/core/transition_map.py
+.. _here: https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/core/transition_map.py
 
 **Get Transitions for cell**
 
@@ -312,7 +312,7 @@ To access the possible transitions at any given cell there are different possibi
 
 2. When more detailed information about the cell in general is necessary you can also get the full transitions of a cell by calling :code:`transition_int = env.rail.get_full_transitions(*position)`. This will return an :code:`int16` for the cell representing the allowed transitions. To understand the transitions returned it is best to represent it as a binary number :code:`bin(transition_int)`, where the bits have to following meaning: :code:`NN NE NS NW EN EE ES EW SN SE SS SW WN WE WS WW`. For example the binary code :code:`1000 0000 0010 0000`, represents a straigt where an agent facing north can transition north and an agent facing south can transition south and no other transitions are possible. To get a better feeling what the binary representations of the elements look like go to this Link_
 
-.. _Link:https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/core/grid/rail_env_grid.py#L29
+.. _Link: https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/core/grid/rail_env_grid.py#L29
 
 
 These two objects can be used for example to detect switches that are usable by other agents but not the observing agent itself. This can be an important feature when actions have to be taken in order to avoid conflicts.
@@ -350,9 +350,11 @@ All the agent in the initiated environment can be found in the :code:`env.agents
 Beyond the basic agent information we can also access more details about the agents type by looking at speed data:
 
 - Agent max speed :code:`agent.speed_data["speed"]` wich defines the traveling speed when the agent is moving.
-- Agent position fraction :code:``agent.speed_data["position_fraction"]` which is a number between 0 and 1 and indicates when the move to the next cell will occur. Each speed of an agent is 1 or a smaller fraction. At each :code:`env.step()` the agent moves at its fractional speed forwards and only changes to the next cell when the cumulated fractions are :code:`agent.speed_data["position_fraction"] >= 1.`
-- Agent can move at different speed which can be set up by modifying the agent.speed_data within the schedule_generator. For example refer this Link_
-.. _Link:https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/schedule_generators.py#L59
+- Agent position fraction :code:`agent.speed_data["position_fraction"]` which is a number between 0 and 1 and indicates when the move to the next cell will occur. Each speed of an agent is 1 or a smaller fraction. At each :code:`env.step()` the agent moves at its fractional speed forwards and only changes to the next cell when the cumulated fractions are :code:`agent.speed_data["position_fraction"] >= 1.`
+- Agent can move at different speed which can be set up by modifying the agent.speed_data within the schedule_generator. For example refer this _Link_Schedule_Generators.
+
+.. _Link_Schedule_Generators: https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/schedule_generators.py#L59
+
 **Agent malfunction information**
 
 Similar to the speed data you can also access individual data about the malfunctions of an agent. All data is available through :code:`agent.malfunction_data` with:

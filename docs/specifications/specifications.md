@@ -11,7 +11,7 @@ In a humand-readable language, they provide
 ## Overview
 ![UML_flatland.png](img/UML_flatland.png)
 [Diagram Source](https://confluence.sbb.ch/x/pQfsSw)
-## [Core](core)
+
 
 
 ## Rail Generators and Schedule Generators
@@ -330,6 +330,3 @@ RailEnv.step()
                                                     self.get()
                                                     ...
 ```
-
-## [Rendering](rendering)
-## [Railway](railway)

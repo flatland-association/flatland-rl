@@ -6,9 +6,9 @@ import pprint
 import numpy as np
 
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import coordinate_to_position
+from flatland.utils.ordered_set import OrderedSet
 
 
 class TreeObsForRailEnv(ObservationBuilder):
@@ -45,8 +45,8 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     def get_many(self, handles=None):
         """
-        Called whenever an observation has to be computed for the `env' environment, for each agent with handle
-        in the `handles' list.
+        Called whenever an observation has to be computed for the `env` environment, for each agent with handle
+        in the `handles` list.
         """
 
         if handles is None:
@@ -74,15 +74,17 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     def get(self, handle):
         """
-        Computes the current observation for agent `handle' in env
+        Computes the current observation for agent `handle` in env
 
         The observation vector is composed of 4 sequential parts, corresponding to data from the up to 4 possible
         movements in a RailEnv (up to because only a subset of possible transitions are allowed in RailEnv).
         The possible movements are sorted relative to the current orientation of the agent, rather than NESW as for
-        the transitions. The order is:
+        the transitions. The order is::
+
             [data from 'left'] + [data from 'forward'] + [data from 'right'] + [data from 'back']
 
-        Each branch data is organized as:
+        Each branch data is organized as::
+
             [root node information] +
             [recursive branch data from 'left'] +
             [... from 'forward'] +
@@ -91,39 +93,50 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         Each node information is composed of 9 features:
 
-        #1: if own target lies on the explored branch the current distance from the agent in number of cells is stored.
+        #1:
+            if own target lies on the explored branch the current distance from the agent in number of cells is stored.
 
-        #2: if another agents target is detected the distance in number of cells from the agents current location
+        #2:
+            if another agents target is detected the distance in number of cells from the agents current location\
             is stored
 
-        #3: if another agent is detected the distance in number of cells from current agent position is stored.
+        #3:
+            if another agent is detected the distance in number of cells from current agent position is stored.
 
-        #4: possible conflict detected
-            tot_dist = Other agent predicts to pass along this cell at the same time as the agent, we store the
+        #4:
+            possible conflict detected
+            tot_dist = Other agent predicts to pass along this cell at the same time as the agent, we store the \
              distance in number of cells from current agent position
 
             0 = No other agent reserve the same cell at similar time
 
-        #5: if an not usable switch (for agent) is detected we store the distance.
+        #5:
+            if an not usable switch (for agent) is detected we store the distance.
 
-        #6: This feature stores the distance in number of cells to the next branching  (current node)
+        #6:
+            This feature stores the distance in number of cells to the next branching  (current node)
 
-        #7: minimum distance from node to the agent's target given the direction of the agent if this path is chosen
+        #7:
+            minimum distance from node to the agent's target given the direction of the agent if this path is chosen
 
-        #8: agent in the same direction
-            n = number of agents present same direction
+        #8:
+            agent in the same direction
+            n = number of agents present same direction \
                 (possible future use: number of other agents in the same direction in this branch)
             0 = no agent present same direction
 
-        #9: agent in the opposite direction
-            n = number of agents present other direction than myself (so conflict)
+        #9:
+            agent in the opposite direction
+            n = number of agents present other direction than myself (so conflict) \
                 (possible future use: number of other agents in other direction in this branch, ie. number of conflicts)
             0 = no agent present other direction than myself
 
-        #10: malfunctioning/blokcing agents
+        #10:
+            malfunctioning/blokcing agents
             n = number of time steps the oberved agent remains blocked
 
-        #11: slowest observed speed of an agent in same direction
+        #11:
+            slowest observed speed of an agent in same direction
             1 if no agent is observed
 
             min_fractional speed otherwise
@@ -154,7 +167,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         observation = [0, 0, 0, 0, 0, 0, self.env.distance_map.get()[(handle, *agent.position, agent.direction)], 0, 0,
                        agent.malfunction_data['malfunction'], agent.speed_data['speed']]
 
-        visited = set()
+        visited = OrderedSet()
 
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
@@ -170,7 +183,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 branch_observation, branch_visited = \
                     self._explore_branch(handle, new_cell, branch_direction, 1, 1)
                 observation = observation + branch_observation
-                visited = visited.union(branch_visited)
+                visited |= branch_visited
             else:
                 # add cells filled with infinity if no transition is possible
                 observation = observation + [-np.inf] * self._num_cells_to_fill_in(self.max_depth)
@@ -207,7 +220,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         last_is_terminal = False  # wrong cell OR cycle;  either way, we don't want the agent to land here
         last_is_target = False
 
-        visited = set()
+        visited = OrderedSet()
         agent = self.env.agents[handle]
         time_per_cell = np.reciprocal(agent.speed_data["speed"])
         own_target_encountered = np.inf
@@ -335,7 +348,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                     last_is_dead_end = True
 
                 if not last_is_dead_end:
-                    # Keep walking through the tree along `direction'
+                    # Keep walking through the tree along `direction`
                     exploring = True
                     # convert one-hot encoding to 0,1,2,3
                     direction = np.argmax(cell_transitions)
@@ -354,7 +367,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 last_is_terminal = True
                 break
 
-        # `position' is either a terminal node or a switch
+        # `position` is either a terminal node or a switch
 
         # #############################
         # #############################
@@ -420,7 +433,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                                           depth + 1)
                 observation = observation + branch_observation
                 if len(branch_visited) != 0:
-                    visited = visited.union(branch_visited)
+                    visited |= branch_visited
             elif last_is_switch and possible_transitions[branch_direction]:
                 new_cell = get_new_position(position, branch_direction)
                 branch_observation, branch_visited = self._explore_branch(handle,
@@ -430,7 +443,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                                           depth + 1)
                 observation = observation + branch_observation
                 if len(branch_visited) != 0:
-                    visited = visited.union(branch_visited)
+                    visited |= branch_visited
             else:
                 # no exploring possible, add just cells with infinity
                 observation = observation + [-np.inf] * self._num_cells_to_fill_in(self.max_depth - depth)
@@ -488,10 +501,10 @@ class GlobalObsForRailEnv(ObservationBuilder):
     Gives a global observation of the entire rail environment.
     The observation is composed of the following elements:
 
-        - transition map array with dimensions (env.height, env.width, 16),
+        - transition map array with dimensions (env.height, env.width, 16),\
           assuming 16 bits encoding of transitions.
 
-        - Two 2D arrays (map_height, map_width, 2) containing respectively the position of the given agent
+        - Two 2D arrays (map_height, map_width, 2) containing respectively the position of the given agent\
          target and the positions of the other agents targets.
 
         - A 3D array (map_height, map_width, 4) wtih
@@ -545,14 +558,14 @@ class LocalObsForRailEnv(ObservationBuilder):
     Gives a local observation of the rail environment around the agent.
     The observation is composed of the following elements:
 
-        - transition map array of the local environment around the given agent,
-          with dimensions (view_height,2*view_width+1, 16),
+        - transition map array of the local environment around the given agent, \
+          with dimensions (view_height,2*view_width+1, 16), \
           assuming 16 bits encoding of transitions.
 
-        - Two 2D arrays (view_height,2*view_width+1, 2) containing respectively,
+        - Two 2D arrays (view_height,2*view_width+1, 2) containing respectively, \
         if they are in the agent's vision range, its target position, the positions of the other targets.
 
-        - A 2D array (view_height,2*view_width+1, 4) containing the one hot encoding of directions
+        - A 2D array (view_height,2*view_width+1, 4) containing the one hot encoding of directions \
           of the other agents at their position coordinates, if they are in the agent's vision range.
 
         - A 4 elements array with one hot encoding of the direction.
@@ -560,6 +573,8 @@ class LocalObsForRailEnv(ObservationBuilder):
     Use the parameters view_width and view_height to define the rectangular view of the agent.
     The center parameters moves the agent along the height axis of this rectangle. If it is 0 the agent only has
     observation in front of it.
+
+    .. deprecated:: 2.0.0
     """
 
     def __init__(self, view_width, view_height, center):
@@ -624,8 +639,8 @@ class LocalObsForRailEnv(ObservationBuilder):
 
     def get_many(self, handles=None):
         """
-        Called whenever an observation has to be computed for the `env' environment, for each agent with handle
-        in the `handles' list.
+        Called whenever an observation has to be computed for the `env` environment, for each agent with handle
+        in the `handles` list.
         """
 
         observations = {}

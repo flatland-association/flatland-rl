@@ -1,7 +1,10 @@
 from itertools import starmap
+from typing import Tuple
 
 import numpy as np
 from attr import attrs, attrib, Factory
+
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 
 
 @attrs
@@ -11,10 +14,10 @@ class EnvAgentStatic(object):
         rather than where it is at the moment.
         The target should also be stored here.
     """
-    position = attrib()
-    direction = attrib()
-    target = attrib()
-    moving = attrib(default=False)
+    position = attrib(type=Tuple[int, int])
+    direction = attrib(type=Grid4TransitionsEnum)
+    target = attrib(type=Tuple[int, int])
+    moving = attrib(default=False, type=bool)
 
     # speed_data: speed is added to position_fraction on each moving step, until position_fraction>=1.0,
     # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
@@ -27,7 +30,8 @@ class EnvAgentStatic(object):
     # number of time the agent had to stop, since the last time it broke down
     malfunction_data = attrib(
         default=Factory(
-            lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0})))
+            lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0,
+                          'moving_before_malfunction': False})))
 
     @classmethod
     def from_lists(cls, positions, directions, targets, speeds=None, malfunction_rates=None):

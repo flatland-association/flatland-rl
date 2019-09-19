@@ -1,10 +1,16 @@
+import random
+
 import numpy as np
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import complex_rail_generator
-from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_generators import complex_rail_generator, sparse_rail_generator
+from flatland.envs.schedule_generators import complex_schedule_generator, sparse_schedule_generator
+from flatland.utils.rendertools import RenderTool
+from test_utils import Replay
 
 
 class SingleAgentNavigationObs(TreeObsForRailEnv):
@@ -42,7 +48,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
             for direction in [(agent.direction + i) % 4 for i in range(-1, 2)]:
                 if possible_transitions[direction]:
                     new_position = get_new_position(agent.position, direction)
-                    min_distances.append(self.env.distance_map.get()[handle, new_position[0], new_position[1], direction])
+                    min_distances.append(self.distance_map[handle, new_position[0], new_position[1], direction])
                 else:
                     min_distances.append(np.inf)
 
@@ -121,6 +127,7 @@ def test_malfunction_process_statistically():
                        'min_duration': 3,
                        'max_duration': 3}
     np.random.seed(5)
+    random.seed(0)
 
     env = RailEnv(width=20,
                   height=20,
@@ -144,5 +151,328 @@ def test_malfunction_process_statistically():
         env.step(action_dict)
 
     # check that generation of malfunctions works as expected
-    # results are different in py36 and py37, therefore no exact test on nb_malfunction
-    assert nb_malfunction > 150
+    assert nb_malfunction == 156, "nb_malfunction={}".format(nb_malfunction)
+
+
+def test_initial_malfunction(rendering=True):
+    random.seed(0)
+    np.random.seed(0)
+
+    stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
+                       'malfunction_rate': 70,  # Rate of malfunction occurence
+                       'min_duration': 2,  # Minimal duration of malfunction
+                       'max_duration': 5  # Max duration of malfunction
+                       }
+
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=sparse_rail_generator(num_cities=5,
+                                                       # Number of cities in map (where train stations are)
+                                                       num_intersections=4,
+                                                       # Number of intersections (no start / target)
+                                                       num_trainstations=25,  # Number of possible start/targets on map
+                                                       min_node_dist=6,  # Minimal distance of nodes
+                                                       node_radius=3,  # Proximity of stations to city center
+                                                       num_neighb=3,
+                                                       # Number of connections to other cities/intersections
+                                                       seed=215545,  # Random seed
+                                                       grid_mode=True,
+                                                       enhance_intersection=False
+                                                       ),
+                  schedule_generator=sparse_schedule_generator(speed_ration_map),
+                  number_of_agents=1,
+                  stochastic_data=stochastic_data,  # Malfunction data generator
+                  )
+
+    if rendering:
+        renderer = RenderTool(env)
+        renderer.render_env(show=True, frames=False, show_observations=False)
+    _action = dict()
+
+    replay_steps = [
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.MOVE_FORWARD,
+            malfunction=3
+        ),
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.MOVE_FORWARD,
+            malfunction=2
+        ),
+        # malfunction stops in the next step and we're still at the beginning of the cell
+        # --> if we take action MOVE_FORWARD, agent should restart and move to the next cell
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.MOVE_FORWARD,
+            malfunction=1
+        ),
+        Replay(
+            position=(28, 4),
+            direction=Grid4TransitionsEnum.WEST,
+            action=RailEnvActions.MOVE_FORWARD,
+            malfunction=0
+        ),
+        Replay(
+            position=(27, 4),
+            direction=Grid4TransitionsEnum.NORTH,
+            action=RailEnvActions.MOVE_FORWARD,
+            malfunction=0
+        )
+    ]
+
+    info_dict = {
+        'action_required': [True]
+    }
+
+    for i, replay in enumerate(replay_steps):
+
+        def _assert(actual, expected, msg):
+            assert actual == expected, "[{}] {}:  actual={}, expected={}".format(i, msg, actual, expected)
+
+        agent: EnvAgent = env.agents[0]
+
+        _assert(agent.position, replay.position, 'position')
+        _assert(agent.direction, replay.direction, 'direction')
+        _assert(agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
+
+        if replay.action is not None:
+            assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
+            _, _, _, info_dict = env.step({0: replay.action})
+
+        else:
+            assert info_dict['action_required'][0] == False, "[{}] expecting action_required={}".format(i, False)
+            _, _, _, info_dict = env.step({})
+
+        if rendering:
+            renderer.render_env(show=True, show_observations=True)
+
+
+def test_initial_malfunction_stop_moving(rendering=True):
+    random.seed(0)
+    np.random.seed(0)
+
+    stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
+                       'malfunction_rate': 70,  # Rate of malfunction occurence
+                       'min_duration': 2,  # Minimal duration of malfunction
+                       'max_duration': 5  # Max duration of malfunction
+                       }
+
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=sparse_rail_generator(num_cities=5,
+                                                       # Number of cities in map (where train stations are)
+                                                       num_intersections=4,
+                                                       # Number of intersections (no start / target)
+                                                       num_trainstations=25,  # Number of possible start/targets on map
+                                                       min_node_dist=6,  # Minimal distance of nodes
+                                                       node_radius=3,  # Proximity of stations to city center
+                                                       num_neighb=3,
+                                                       # Number of connections to other cities/intersections
+                                                       seed=215545,  # Random seed
+                                                       grid_mode=True,
+                                                       enhance_intersection=False
+                                                       ),
+                  schedule_generator=sparse_schedule_generator(speed_ration_map),
+                  number_of_agents=1,
+                  stochastic_data=stochastic_data,  # Malfunction data generator
+                  )
+
+    if rendering:
+        renderer = RenderTool(env)
+        renderer.render_env(show=True, frames=False, show_observations=False)
+    _action = dict()
+
+    replay_steps = [
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.DO_NOTHING,
+            malfunction=3
+        ),
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.DO_NOTHING,
+            malfunction=2
+        ),
+        # malfunction stops in the next step and we're still at the beginning of the cell
+        # --> if we take action DO_NOTHING, agent should restart without moving
+        #
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.STOP_MOVING,
+            malfunction=1
+        ),
+        # we have stopped and do nothing --> should stand still
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.DO_NOTHING,
+            malfunction=0
+        ),
+        # we start to move forward --> should go to next cell now
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.MOVE_FORWARD,
+            malfunction=0
+        ),
+        Replay(
+            position=(28, 4),
+            direction=Grid4TransitionsEnum.WEST,
+            action=RailEnvActions.MOVE_FORWARD,
+            malfunction=0
+        )
+    ]
+
+    info_dict = {
+        'action_required': [True]
+    }
+
+    for i, replay in enumerate(replay_steps):
+
+        def _assert(actual, expected, msg):
+            assert actual == expected, "[{}] {}:  actual={}, expected={}".format(i, msg, actual, expected)
+
+        agent: EnvAgent = env.agents[0]
+
+        _assert(agent.position, replay.position, 'position')
+        _assert(agent.direction, replay.direction, 'direction')
+        _assert(agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
+
+        if replay.action is not None:
+            assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
+            _, _, _, info_dict = env.step({0: replay.action})
+
+        else:
+            assert info_dict['action_required'][0] == False, "[{}] expecting action_required={}".format(i, False)
+            _, _, _, info_dict = env.step({})
+
+        if rendering:
+            renderer.render_env(show=True, show_observations=True)
+
+
+def test_initial_malfunction_do_nothing(rendering=True):
+    random.seed(0)
+    np.random.seed(0)
+
+    stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
+                       'malfunction_rate': 70,  # Rate of malfunction occurence
+                       'min_duration': 2,  # Minimal duration of malfunction
+                       'max_duration': 5  # Max duration of malfunction
+                       }
+
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=sparse_rail_generator(num_cities=5,
+                                                       # Number of cities in map (where train stations are)
+                                                       num_intersections=4,
+                                                       # Number of intersections (no start / target)
+                                                       num_trainstations=25,  # Number of possible start/targets on map
+                                                       min_node_dist=6,  # Minimal distance of nodes
+                                                       node_radius=3,  # Proximity of stations to city center
+                                                       num_neighb=3,
+                                                       # Number of connections to other cities/intersections
+                                                       seed=215545,  # Random seed
+                                                       grid_mode=True,
+                                                       enhance_intersection=False
+                                                       ),
+                  schedule_generator=sparse_schedule_generator(speed_ration_map),
+                  number_of_agents=1,
+                  stochastic_data=stochastic_data,  # Malfunction data generator
+                  )
+
+    if rendering:
+        renderer = RenderTool(env)
+        renderer.render_env(show=True, frames=False, show_observations=False)
+    _action = dict()
+
+    replay_steps = [
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.DO_NOTHING,
+            malfunction=3
+        ),
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.DO_NOTHING,
+            malfunction=2
+        ),
+        # malfunction stops in the next step and we're still at the beginning of the cell
+        # --> if we take action DO_NOTHING, agent should restart without moving
+        #
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.DO_NOTHING,
+            malfunction=1
+        ),
+        # we haven't started moving yet --> stay here
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.DO_NOTHING,
+            malfunction=0
+        ),
+        # we start to move forward --> should go to next cell now
+        Replay(
+            position=(28, 5),
+            direction=Grid4TransitionsEnum.EAST,
+            action=RailEnvActions.MOVE_FORWARD,
+            malfunction=0
+        ),
+        Replay(
+            position=(28, 4),
+            direction=Grid4TransitionsEnum.WEST,
+            action=RailEnvActions.MOVE_FORWARD,
+            malfunction=0
+        )
+    ]
+
+    info_dict = {
+        'action_required': [True]
+    }
+
+    for i, replay in enumerate(replay_steps):
+
+        def _assert(actual, expected, msg):
+            assert actual == expected, "[{}] {}:  actual={}, expected={}".format(i, msg, actual, expected)
+
+        agent: EnvAgent = env.agents[0]
+
+        _assert(agent.position, replay.position, 'position')
+        _assert(agent.direction, replay.direction, 'direction')
+        _assert(agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
+
+        if replay.action is not None:
+            assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
+            _, _, _, info_dict = env.step({0: replay.action})
+
+        else:
+            assert info_dict['action_required'][0] == False, "[{}] expecting action_required={}".format(i, False)
+            _, _, _, info_dict = env.step({})
+
+        if rendering:
+            renderer.render_env(show=True, show_observations=True)

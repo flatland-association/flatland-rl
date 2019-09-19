@@ -61,20 +61,10 @@ test-all: ## run tests on every Python version with tox
 	tox
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source flatland -m pytest
-	coverage report -m
-	coverage html
-	$(BROWSER) htmlcov/index.html
+	python make_coverage.py
 
 docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/flatland*.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc --force -a -e -o docs/ flatland -H "Flatland Reference"
-	$(MAKE) -C docs clean
-	cp *.md docs
-	$(MAKE) -C docs html
-	pydeps --no-config --noshow flatland -o docs/_build/html/flatland.svg
-	$(BROWSER) docs/_build/html/index.html
+	python make_docs.py
 
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
