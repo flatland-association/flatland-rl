@@ -8,33 +8,25 @@ from importlib_resources import path
 
 from benchmarks.benchmark_utils import swap_attr
 
+for entry in [entry for entry in importlib_resources.contents('examples') if
+              not pkg_resources.resource_isdir('examples', entry)
+              and entry.endswith(".py")
+              and '__init__' not in entry
+              and 'DELETE' not in entry
+              # TODO temporarily excluded simple_example_1.py since it hangs in ci - no idea why
+              and 'simple_example_1.py' not in entry
+              ]:
+    with path('examples', entry) as file_in:
+        print("")
+        print("")
 
-# https://stackoverflow.com/questions/715417/converting-from-a-string-to-boolean-in-python
-def str2bool(v):
-    return v.lower() in ("yes", "true", "t", "1")
-
-
-if __name__ == '__main__':
-
-    for entry in [entry for entry in importlib_resources.contents('examples') if
-                  not pkg_resources.resource_isdir('examples', entry)
-                  and entry.endswith(".py")
-                  and '__init__' not in entry
-                  and 'DELETE' not in entry
-                  # TODO temporarily excluded simple_example_1.py since it hangs in ci - no idea why
-                  and 'simple_example_1.py' not in entry
-                  ]:
-        with path('examples', entry) as file_in:
-            print("")
-            print("")
-
-            print("")
-            print("*****************************************************************")
-            print("Running {}".format(entry))
-            print("*****************************************************************")
-            with swap_attr(sys, "stdin", StringIO("q")):
-                runpy.run_path(file_in, run_name="__main__", init_globals={
-                    'argv': ['--sleep-for-animation=False']
-                })
-                print("runpy done.")
-            print("Done with {}".format(entry))
+        print("")
+        print("*****************************************************************")
+        print("Running {}".format(entry))
+        print("*****************************************************************")
+        with swap_attr(sys, "stdin", StringIO("q")):
+            runpy.run_path(file_in, run_name="__main__", init_globals={
+                'argv': ['--sleep-for-animation=False']
+            })
+            print("runpy done.")
+        print("Done with {}".format(entry))

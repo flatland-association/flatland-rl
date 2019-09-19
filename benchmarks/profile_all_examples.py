@@ -24,13 +24,12 @@ def profile(resource, entry):
             cProfile.run('my_func()', sort='time')
 
 
-if __name__ == '__main__':
-    for entry in [entry for entry in importlib_resources.contents('examples') if
-                  not pkg_resources.resource_isdir('examples', entry)
-                  and entry.endswith(".py")
-                  and '__init__' not in entry
-                  and 'DELETE' not in entry
-                  # TODO temporarily excluded simple_example_1.py since it hangs in ci - no idea why
-                  and 'simple_example_1.py' not in entry
-                  ]:
-        profile('examples', entry)
+for entry in [entry for entry in importlib_resources.contents('examples') if
+              not pkg_resources.resource_isdir('examples', entry)
+              and entry.endswith(".py")
+              and '__init__' not in entry
+              and 'DELETE' not in entry
+              # TODO temporarily excluded simple_example_1.py since it hangs in ci - no idea why
+              and 'simple_example_1.py' not in entry
+              ]:
+    profile('examples', entry)
