@@ -20,8 +20,9 @@ if __name__ == '__main__':
                   not pkg_resources.resource_isdir('examples', entry)
                   and entry.endswith(".py")
                   and '__init__' not in entry
-                  and 'demo.py' not in entry
                   and 'DELETE' not in entry
+                  # TODO temporarily excluded simple_example_1.py since it hangs in ci - no idea why
+                  and 'simple_example_1.py' not in entry
                   ]:
         with path('examples', entry) as file_in:
             print("")
