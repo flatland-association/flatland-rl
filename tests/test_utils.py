@@ -1,15 +1,16 @@
 """Test Utils."""
-from typing import List
+from typing import List, Tuple
 
 from attr import attrs, attrib
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.rail_env import RailEnvActions
 
 
 @attrs
 class Replay(object):
-    position = attrib()
-    direction = attrib()
+    position = attrib(type=Tuple[int, int])
+    direction = attrib(type=Grid4TransitionsEnum)
     action = attrib(type=RailEnvActions)
     malfunction = attrib(default=0, type=int)
 
@@ -17,5 +18,5 @@ class Replay(object):
 @attrs
 class ReplayConfig(object):
     replay = attrib(type=List[Replay])
-    target = attrib()
+    target = attrib(type=Tuple[int, int])
     speed = attrib(type=float)
