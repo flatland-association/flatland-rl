@@ -10,13 +10,13 @@ Welcome to flatland's documentation!
    about_flatland
    gettingstarted
    intro_observationbuilder
-   specifications/specifications.md
+   intro_observation_actions
+   specifications_index
    modules
    FAQ
    localevaluation
    contributing
-   changelog.md
-   flatland_2.0.md
+   changelog_index
    authors
 
 

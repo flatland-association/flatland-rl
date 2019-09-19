@@ -23,8 +23,10 @@ class DummyPredictorForRailEnv(PredictionBuilder):
         Called whenever get_many in the observation build is called.
 
         Parameters
-        -------
-        handle : int (optional)
+        ----------
+        custom_args: dict
+            Not used in this dummy implementation.
+        handle : int, optional
             Handle of the agent for which to compute the observation vector.
 
         Returns
@@ -95,8 +97,10 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
         Requires distance_map to extract the shortest path.
 
         Parameters
-        -------
-        handle : int (optional)
+        ----------
+        custom_args: dict
+            - distance_map : dict
+        handle : int, optional
             Handle of the agent for which to compute the observation vector.
 
         Returns

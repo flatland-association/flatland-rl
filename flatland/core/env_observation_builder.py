@@ -2,10 +2,11 @@
 ObservationBuilder objects are objects that can be passed to environments designed for customizability.
 The ObservationBuilder-derived custom classes implement 2 functions, reset() and get() or get(handle).
 
-+ Reset() is called after each environment reset, to allow for pre-computing relevant data.
++ `reset()` is called after each environment reset, to allow for pre-computing relevant data.
 
-+ Get() is called whenever an observation has to be computed, potentially for each agent independently in
-case of multi-agent environments.
++ `get()` is called whenever an observation has to be computed, potentially for each agent independently in case of \
+multi-agent environments.
+
 """
 import numpy as np
 
@@ -14,7 +15,7 @@ class ObservationBuilder:
     """
     ObservationBuilder base class.
 
-    Derived objects must implement and `observation_space' attribute as a tuple with the dimensions of the returned
+    Derived objects must implement and `observation_space` attribute as a tuple with the dimensions of the returned
     observations.
     """
 
@@ -32,19 +33,19 @@ class ObservationBuilder:
 
     def get_many(self, handles=[]):
         """
-        Called whenever an observation has to be computed for the `env' environment, for each agent with handle
-        in the `handles' list.
+        Called whenever an observation has to be computed for the `env` environment, for each agent with handle
+        in the `handles` list.
 
         Parameters
-        -------
-        handles : list of handles (optional)
+        ----------
+        handles : list of handles, optional
             List with the handles of the agents for which to compute the observation vector.
 
         Returns
         -------
         function
             A dictionary of observation structures, specific to the corresponding environment, with handles from
-            `handles' as keys.
+            `handles` as keys.
         """
         observations = {}
         for h in handles:
@@ -53,12 +54,12 @@ class ObservationBuilder:
 
     def get(self, handle=0):
         """
-        Called whenever an observation has to be computed for the `env' environment, possibly
-        for each agent independently (agent id `handle').
+        Called whenever an observation has to be computed for the `env` environment, possibly
+        for each agent independently (agent id `handle`).
 
         Parameters
-        -------
-        handle : int (optional)
+        ----------
+        handle : int, optional
             Handle of the agent for which to compute the observation vector.
 
         Returns

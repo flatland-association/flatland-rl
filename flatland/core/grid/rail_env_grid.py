@@ -4,10 +4,8 @@ from flatland.utils.ordered_set import OrderedSet
 
 class RailEnvTransitions(Grid4Transitions):
     """
-    Special case of `GridTransitions' over a 2D-grid, with a pre-defined set
+    Special case of `GridTransitions` over a 2D-grid, with a pre-defined set
     of transitions mimicking the types of real Swiss rail connections.
-
-    --------------------------------------------------------------------------
 
     As no diagonal transitions are allowed in the RailEnv environment, the
     possible transitions for RailEnv from a cell to its neighboring ones

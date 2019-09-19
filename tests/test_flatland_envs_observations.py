@@ -59,7 +59,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
 
                 # Check all possible transitions in new_cell
                 for agent_orientation in range(4):
-                    # Is a transition along movement `entry_direction' to the neighbour possible?
+                    # Is a transition along movement `entry_direction` to the neighbour possible?
                     is_valid = obs_builder.env.rail.get_transition((neighbour[0], neighbour[1], agent_orientation),
                                                                    desired_movement_from_new_cell)
                     if is_valid:
