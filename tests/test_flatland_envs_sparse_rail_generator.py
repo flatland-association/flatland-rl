@@ -27,14 +27,15 @@ def test_sparse_rail_generator():
                   obs_builder_object=GlobalObsForRailEnv())
 
     # approximative test (replace image comparison)
-    assert (np.sum(env.rail.grid) == 10746925)
+    assert (np.sum(env.rail.grid) == 12054975)
+    print(env.rail.grid)
     s0 = 0
     s1 = 0
     for a in range(env.get_num_agents()):
         s0 = Vec2d.get_manhattan_distance(env.agents[a].position, (0, 0))
         s1 = Vec2d.get_chebyshev_distance(env.agents[a].position, (0, 0))
-    assert s0 == 33
-    assert s1 == 31
+    assert s0 == 53, "actual={}".format(s0)
+    assert s1 == 36, "actual={}".format(s1)
 
 
 def test_sparse_rail_generator_deterministic():

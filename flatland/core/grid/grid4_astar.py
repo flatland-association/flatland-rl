@@ -4,6 +4,7 @@ from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance
 from flatland.core.grid.grid_utils import IntVector2DArray
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transition_map import GridTransitionMap
+from flatland.utils.ordered_set import OrderedSet
 
 
 class AStarNode:
@@ -49,8 +50,8 @@ def a_star(grid_map: GridTransitionMap,
 
     start_node = AStarNode(start, None)
     end_node = AStarNode(end, None)
-    open_nodes = set()
-    closed_nodes = set()
+    open_nodes = OrderedSet()
+    closed_nodes = OrderedSet()
     open_nodes.add(start_node)
 
     while len(open_nodes) > 0:

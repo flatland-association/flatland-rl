@@ -27,11 +27,11 @@ def test_city_generator():
                   obs_builder_object=GlobalObsForRailEnv())
 
     # approximative test (replace image comparison)
-    assert (np.sum(env.rail.grid) == 2718122)
+    assert np.sum(env.rail.grid) == 3642337
     s0 = 0
     s1 = 0
     for a in range(env.get_num_agents()):
         s0 = Vec2d.get_manhattan_distance(env.agents[a].position, (0, 0))
         s1 = Vec2d.get_chebyshev_distance(env.agents[a].position, (0, 0))
-    assert s0 == 49
-    assert s1 == 27
+    assert s0 == 58, "actual={}".format(s0)
+    assert s1 == 38, "actual={}".format(s1)
