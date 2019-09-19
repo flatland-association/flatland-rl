@@ -1,4 +1,5 @@
 import random
+from typing import Dict
 
 import numpy as np
 
@@ -52,7 +53,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
                     min_distances.append(np.inf)
 
             observation = [0, 0, 0]
-            observation[np.argmin(min_distances)] = 1
+            observation[np.argmin(min_distances)[0]] = 1
 
         return observation
 
@@ -81,7 +82,6 @@ def test_malfunction_process():
 
     agent_halts = 0
     total_down_time = 0
-    agent_malfunctioning = False
     agent_old_position = env.agents[0].position
     for step in range(100):
         actions = {}
@@ -140,12 +140,12 @@ def test_malfunction_process_statistically():
     env.reset()
     nb_malfunction = 0
     for step in range(100):
-        action_dict = {}
+        action_dict: Dict[int, RailEnvActions] = {}
         for agent in env.agents:
             if agent.malfunction_data['malfunction'] > 0:
                 nb_malfunction += 1
             # We randomly select an action
-            action_dict[agent.handle] = np.random.randint(4)
+            action_dict[agent.handle] = RailEnvActions(np.random.randint(4))
 
         env.step(action_dict)
 
@@ -329,7 +329,7 @@ def test_initial_malfunction_stop_moving():
     run_replay_config(env, [replay_config])
 
 
-def test_initial_malfunction_do_nothing(rendering=True):
+def test_initial_malfunction_do_nothing():
     random.seed(0)
     np.random.seed(0)
 
