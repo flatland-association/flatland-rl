@@ -29,7 +29,5 @@ for entry in [entry for entry in importlib_resources.contents('examples') if
               and entry.endswith(".py")
               and '__init__' not in entry
               and 'DELETE' not in entry
-              # TODO temporarily excluded simple_example_1.py since it hangs in ci - no idea why
-              and 'simple_example_1.py' not in entry
               ]:
     profile('examples', entry)
