@@ -1,5 +1,5 @@
 """Test Utils."""
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from attr import attrs, attrib
 
@@ -13,6 +13,7 @@ class Replay(object):
     direction = attrib(type=Grid4TransitionsEnum)
     action = attrib(type=RailEnvActions)
     malfunction = attrib(default=0, type=int)
+    penalty = attrib(default=None, type=Optional[float])
 
 
 @attrs
