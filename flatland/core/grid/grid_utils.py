@@ -1,17 +1,17 @@
-from typing import Tuple, Callable, List
+from typing import Tuple, Callable, List, Type
 
 import numpy as np
 
-Vector2D = Tuple[float, float]
-IntVector2D = Tuple[int, int]
+Vector2D: Type = Tuple[float, float]
+IntVector2D: Type = Tuple[int, int]
 
-IntVector2DArray = List[IntVector2D]
-IntVector2DArrayArray = List[List[IntVector2D]]
+IntVector2DArray: Type = List[IntVector2D]
+IntVector2DArrayArray: Type = List[List[IntVector2D]]
 
-Vector2DArray = List[Vector2D]
-Vector2DArrayArray = List[List[Vector2D]]
+Vector2DArray: Type = List[Vector2D]
+Vector2DArrayArray: Type = List[List[Vector2D]]
 
-IntVector2DDistance = Callable[[IntVector2D, IntVector2D], float]
+IntVector2DDistance: Type = Callable[[IntVector2D, IntVector2D], float]
 
 
 class Vec2dOperations:
@@ -85,10 +85,17 @@ class Vec2dOperations:
         """
         calculates the euclidean norm of the 2d vector
 
-        :param node: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        returns the euclidean distance
+        Parameters
+        ----------
+        node_a
+            tuple with coordinate (x,y) or 2d vector
+        node_b
+            tuple with coordinate (x,y) or 2d vector
+
+        Returns
+        -------
+        float
+            Euclidean distance
         """
         return Vec2dOperations.get_norm(Vec2dOperations.subtract(node_b, node_a))
 
@@ -98,10 +105,17 @@ class Vec2dOperations:
         calculates the manhattan distance of the 2d vector
         [see: https://lyfat.wordpress.com/2012/05/22/euclidean-vs-chebyshev-vs-manhattan-distance/]
 
-        :param node: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        returns the manhattan distance
+        Parameters
+        ----------
+        node_a
+            tuple with coordinate (x,y) or 2d vector
+        node_b
+            tuple with coordinate (x,y) or 2d vector
+
+        Returns
+        -------
+        float
+            Mahnhattan distance
         """
         delta = (Vec2dOperations.subtract(node_b, node_a))
         return np.abs(delta[0]) + np.abs(delta[1])
@@ -112,10 +126,17 @@ class Vec2dOperations:
         calculates the chebyshev norm of the 2d vector
         [see: https://lyfat.wordpress.com/2012/05/22/euclidean-vs-chebyshev-vs-manhattan-distance/]
 
-        :param node: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        returns the chebyshev distance
+        :Parameters
+        ----------
+        node_a
+            tuple with coordinate (x,y) or 2d vector
+        node_b
+            tuple with coordinate (x,y) or 2d vector
+
+        Returns
+        -------
+        float
+            the chebyshev distance
         """
         delta = (Vec2dOperations.subtract(node_b, node_a))
         return max(np.abs(delta[0]), np.abs(delta[1]))
@@ -217,7 +238,7 @@ class Vec2dOperations:
         return x1, y1
 
 
-def position_to_coordinate(depth: int, positions):
+def position_to_coordinate(depth: int, positions: List[int]):
     """Converts coordinates to positions::
 
         [ (0,0) (0,1) ..  (0,w-1)

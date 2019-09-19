@@ -92,8 +92,8 @@ def city_generator(num_cities: int = 5,
                                                                                           IntVector2DArray):
 
         nodes_added = []
-        start_nodes_added = [[] for _ in range(len(generate_city_locations))]
-        end_nodes_added = [[] for _ in range(len(generate_city_locations))]
+        start_nodes_added: IntVector2DArrayArray = [[] for _ in range(len(generate_city_locations))]
+        end_nodes_added: IntVector2DArrayArray = [[] for _ in range(len(generate_city_locations))]
         station_slots = [[] for _ in range(len(generate_city_locations))]
         station_tracks = [[[] for _ in range(intern_max_number_of_station_tracks)] for _ in range(len(
             generate_city_locations))]
@@ -230,8 +230,8 @@ def city_generator(num_cities: int = 5,
         return graph, np.unique(graph_ids).astype(int)
 
     def connect_sub_graphs(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                           org_s_nodes: IntVector2DArray,
-                           org_e_nodes: IntVector2DArray,
+                           org_s_nodes: IntVector2DArrayArray,
+                           org_e_nodes: IntVector2DArrayArray,
                            city_edges: IntVector2DArray,
                            nodes_added: IntVector2DArray):
         _, graphids = calc_nbr_of_graphs(city_edges)
@@ -261,17 +261,16 @@ def city_generator(num_cities: int = 5,
 
                     iteration_counter += 1
 
-    # noinspection PyTypeChecker
     def connect_stations(rail_trans: RailEnvTransitions,
                          grid_map: GridTransitionMap,
-                         org_s_nodes: IntVector2DArray,
-                         org_e_nodes: IntVector2DArray,
+                         org_s_nodes: IntVector2DArrayArray,
+                         org_e_nodes: IntVector2DArrayArray,
                          nodes_added: IntVector2DArray,
                          intern_connect_max_nbr_of_shortes_city: int):
         city_edges = []
 
-        s_nodes = copy.deepcopy(org_s_nodes)
-        e_nodes = copy.deepcopy(org_e_nodes)
+        s_nodes:IntVector2DArrayArray  = copy.deepcopy(org_s_nodes)
+        e_nodes:IntVector2DArrayArray = copy.deepcopy(org_e_nodes)
 
         for nbr_connected in range(intern_connect_max_nbr_of_shortes_city):
             for city_loop in range(len(s_nodes)):
