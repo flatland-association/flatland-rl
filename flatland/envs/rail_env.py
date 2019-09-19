@@ -344,8 +344,9 @@ class RailEnv(Environment):
         for i_agent in range(self.get_num_agents()):
             self.rewards_dict[i_agent] = 0
 
+        # If we're done, set reward and info_dict and step() is done.
         if self.dones["__all__"]:
-            self.rewards_dict = {i: r + self.global_reward for i, r in self.rewards_dict.items()}
+            self.rewards_dict = {i: self.global_reward for i in range(self.get_num_agents())}
             info_dict = {
                 'action_required': {i: False for i in range(self.get_num_agents())},
                 'malfunction': {i: 0 for i in range(self.get_num_agents())},
@@ -353,13 +354,14 @@ class RailEnv(Environment):
             }
             return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
+        # Perform step on all agents
         for i_agent in range(self.get_num_agents()):
             self._step_agent(i_agent, action_dict_)
 
-        # Check for end of episode + add global reward to all rewards!
-        if np.all([np.array_equal(agent2.position, agent2.target) for agent2 in self.agents]):
+        # Check for end of episode + set global reward to all rewards!
+        if np.all([np.array_equal(agent.position, agent.target) for agent in self.agents]):
             self.dones["__all__"] = True
-            self.rewards_dict = {i: 0 * r + self.global_reward for i, r in self.rewards_dict.items()}
+            self.rewards_dict = {i: self.global_reward for i in range(self.get_num_agents())}
 
         if (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps):
             self.dones["__all__"] = True
@@ -388,6 +390,7 @@ class RailEnv(Environment):
         - malfunction
         - action handling if at the beginning of cell
         - movement
+
         Parameters
         ----------
         i_agent : int
