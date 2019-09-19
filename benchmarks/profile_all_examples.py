@@ -24,10 +24,11 @@ def profile(resource, entry):
             cProfile.run('my_func()', sort='time')
 
 
-for entry in [entry for entry in importlib_resources.contents('examples') if
-              not pkg_resources.resource_isdir('examples', entry)
-              and entry.endswith(".py")
-              and '__init__' not in entry
-              and 'demo.py' not in entry
-              ]:
-    profile('examples', entry)
+if __name__ == '__main__':
+    for entry in [entry for entry in importlib_resources.contents('examples') if
+                  not pkg_resources.resource_isdir('examples', entry)
+                  and entry.endswith(".py")
+                  and '__init__' not in entry
+                  and 'demo.py' not in entry
+                  ]:
+        profile('examples', entry)

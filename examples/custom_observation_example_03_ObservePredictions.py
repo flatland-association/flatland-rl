@@ -5,6 +5,7 @@ import time
 
 import numpy as np
 
+from benchmarks.run_all_examples import str2bool
 from flatland.core.grid.grid_utils import coordinate_to_position
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -110,7 +111,7 @@ def main(args):
     sleep_for_animation = True
     for o, a in opts:
         if o in ("--sleep-for-animation"):
-            sleep_for_animation = bool(a)
+            sleep_for_animation = str2bool(a)
         else:
             assert False, "unhandled option"
 
