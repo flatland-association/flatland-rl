@@ -173,6 +173,18 @@ class Vec2dOperations:
         return int(np.ceil(node[0])), int(np.ceil(node[1]))
 
     @staticmethod
+    def floor(node: Vector2D) -> IntVector2D:
+        """
+         floor the x and y coordinate and convert them to an integer values
+
+         :param node: tuple with coordinate (x,y) or 2d vector
+         :return:
+             -------
+         tuple with coordinate (x,y) or 2d vector
+         """
+        return int(np.floor(node[0])), int(np.floor(node[1]))
+
+    @staticmethod
     def bound(node: Vector2D, min_value: float, max_value: float) -> Vector2D:
         """
          force the values x and y to be between min_value and max_value
