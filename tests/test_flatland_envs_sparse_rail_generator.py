@@ -1,5 +1,6 @@
 import numpy as np
 
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
@@ -22,12 +23,15 @@ def test_sparse_rail_generator():
                   schedule_generator=sparse_schedule_generator(),
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
-    # reset to initialize agents_static
-    env_renderer = RenderTool(env, gl="PILSVG", )
-    env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
-    env_renderer.gl.save_image("./sparse_generator_false.png")
-    # TODO test assertions!
-    env_renderer.close_window()
+
+    assert (np.sum(env.rail.grid) == 10746925)
+    s0 = 0
+    s1 = 0
+    for a in range(env.get_num_agents()):
+        s0 = Vec2d.get_manhattan_distance(env.agents[a].position, (0, 0))
+        s1 = Vec2d.get_chebyshev_distance(env.agents[a].position, (0, 0))
+    assert s0 == 33
+    assert s1 == 31
 
 
 def test_rail_env_action_required_info():
@@ -111,6 +115,7 @@ def test_rail_env_action_required_info():
             break
     env_renderer.close_window()
 
+
 def test_rail_env_malfunction_speed_info():
     np.random.seed(0)
     stochastic_data = {'prop_malfunction': 0.5,  # Percentage of defective agents
@@ -160,6 +165,7 @@ def test_rail_env_malfunction_speed_info():
         if done['__all__']:
             break
     env_renderer.close_window()
+
 
 def test_sparse_generator_with_too_man_cities_does_not_break_down():
     np.random.seed(0)
