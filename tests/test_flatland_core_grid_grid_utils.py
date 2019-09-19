@@ -71,7 +71,7 @@ def test_vec2d_norm():
     res_1 = Vec2d.get_norm(node_a)
     res_2 = Vec2d.get_norm(node_b)
     assert np.sqrt(1 * 1 + 2 * 2) == res_1
-    assert np.sqrt(1 * 1 + (-2) * -(2)) == res_2
+    assert np.sqrt(1 * 1 + (-2) * (-2)) == res_2
 
 
 def test_vec2d_normalize():
