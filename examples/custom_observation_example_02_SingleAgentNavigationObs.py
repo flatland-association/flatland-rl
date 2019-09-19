@@ -5,6 +5,7 @@ import time
 
 import numpy as np
 
+from benchmarks.run_all_examples import str2bool
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -51,7 +52,8 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
             for direction in [(agent.direction + i) % 4 for i in range(-1, 2)]:
                 if possible_transitions[direction]:
                     new_position = get_new_position(agent.position, direction)
-                    min_distances.append(self.env.distance_map.get()[handle, new_position[0], new_position[1], direction])
+                    min_distances.append(
+                        self.env.distance_map.get()[handle, new_position[0], new_position[1], direction])
                 else:
                     min_distances.append(np.inf)
 
@@ -70,7 +72,7 @@ def main(args):
     sleep_for_animation = True
     for o, a in opts:
         if o in ("--sleep-for-animation"):
-            sleep_for_animation = bool(a)
+            sleep_for_animation = str2bool(a)
         else:
             assert False, "unhandled option"
 
