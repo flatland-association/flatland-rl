@@ -26,6 +26,13 @@ class ReplayConfig(object):
     speed = attrib(type=float)
 
 
+# ensure that env is working correctly with start/stop/invalidaction penalty different from 0
+def set_penalties_for_replay(env: RailEnv):
+    env.step_penalty = 13
+    env.stop_penalty = 19
+    env.invalid_action_penalty = 29
+
+
 def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False):
     """
     Runs the replay configs and checks assertions.
@@ -54,6 +61,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
     info_dict = {
         'action_required': [True for _ in test_configs]
     }
+
     for step in range(len(test_configs[0].replay)):
         if step == 0:
             for a, test_config in enumerate(test_configs):

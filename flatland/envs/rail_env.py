@@ -360,8 +360,6 @@ class RailEnv(Environment):
 
         # Perform step on all agents
         for i_agent in range(self.get_num_agents()):
-            if self._elapsed_steps - 1 == 3 and i_agent == 0:
-                a = 5
             self._step_agent(i_agent, action_dict_.get(i_agent))
 
         # Check for end of episode + set global reward to all rewards!

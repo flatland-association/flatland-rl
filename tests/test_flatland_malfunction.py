@@ -9,7 +9,7 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import complex_rail_generator, sparse_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator, sparse_schedule_generator
-from test_utils import Replay, ReplayConfig, run_replay_config
+from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 
 class SingleAgentNavigationObs(TreeObsForRailEnv):
@@ -187,7 +187,7 @@ def test_initial_malfunction():
                   number_of_agents=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
-
+    set_penalties_for_replay(env)
     replay_config = ReplayConfig(
         replay=[
             Replay(
@@ -270,7 +270,7 @@ def test_initial_malfunction_stop_moving():
                   number_of_agents=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
-
+    set_penalties_for_replay(env)
     replay_config = ReplayConfig(
         replay=[
             Replay(
@@ -363,7 +363,7 @@ def test_initial_malfunction_do_nothing():
                   number_of_agents=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
-
+    set_penalties_for_replay(env)
     replay_config = ReplayConfig(
         replay=[Replay(
             position=(28, 5),

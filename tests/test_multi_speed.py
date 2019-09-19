@@ -6,9 +6,8 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import complex_rail_generator, rail_from_grid_transition_map
 from flatland.envs.schedule_generators import complex_schedule_generator, random_schedule_generator
-from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
-from test_utils import ReplayConfig, Replay, run_replay_config
+from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 
 np.random.seed(1)
 
@@ -106,9 +105,7 @@ def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
 
-    # env.start_penalty = 13
-    # env.stop_penalty = 19
-
+    set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
             Replay(
@@ -208,7 +205,7 @@ def test_multispeed_actions_no_malfunction_blocking(rendering=True):
                   number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
-
+    set_penalties_for_replay(env)
     test_configs = [
         ReplayConfig(
             replay=[
@@ -391,15 +388,7 @@ def test_multispeed_actions_malfunction_no_blocking(rendering=True):
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
 
-    # initialize agents_static
-    env.reset()
-
-    # reset to set agents from agents_static
-    env.reset(False, False)
-
-    if rendering:
-        renderer = RenderTool(env, gl="PILSVG")
-
+    set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
             Replay(
