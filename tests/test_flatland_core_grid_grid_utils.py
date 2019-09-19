@@ -2,8 +2,6 @@ import numpy as np
 
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 
-machine_epsilon = 10.0 * np.finfo(float).eps
-
 
 def test_vec2d_is_equal():
     node_a = (1, 2)
@@ -79,8 +77,8 @@ def test_vec2d_normalize():
     node_b = (1, -2)
     res_1 = Vec2d.normalize(node_a)
     res_2 = Vec2d.normalize(node_b)
-    assert (1.0 - Vec2d.get_norm(res_1)) < machine_epsilon
-    assert (1.0 - Vec2d.get_norm(res_2)) < machine_epsilon
+    assert np.isclose(1.0, Vec2d.get_norm(res_1))
+    assert np.isclose(1.0, Vec2d.get_norm(res_2))
 
 
 def test_vec2d_scale():
@@ -144,9 +142,9 @@ def test_vec2d_rotate():
     res_5 = (Vec2d.get_norm(Vec2d.subtract(res_5, (-2.2, 1.95))))
     res_6 = (Vec2d.get_norm(Vec2d.subtract(res_6, (-0.5887495373796556, -2.880255888325765))))
 
-    assert res_1 < machine_epsilon
-    assert res_2 < machine_epsilon
-    assert res_3 < machine_epsilon
-    assert res_4 < machine_epsilon
-    assert res_5 < machine_epsilon
-    assert res_6 < machine_epsilon
+    assert np.isclose(0, res_1)
+    assert np.isclose(0, res_2)
+    assert np.isclose(0, res_3)
+    assert np.isclose(0, res_4)
+    assert np.isclose(0, res_5)
+    assert np.isclose(0, res_6)

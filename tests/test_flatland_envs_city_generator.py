@@ -26,6 +26,7 @@ def test_city_generator():
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
 
+    # approximative test (replace image comparison)
     assert (np.sum(env.rail.grid) == 2718122)
     s0 = 0
     s1 = 0
