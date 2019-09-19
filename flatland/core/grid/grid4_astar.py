@@ -1,4 +1,5 @@
 from flatland.core.grid.grid4_utils import validate_new_transition
+from flatland.utils.ordered_set import OrderedSet
 
 
 class AStarNode():
@@ -33,12 +34,12 @@ def a_star(rail_trans, rail_array, start, end):
     rail_shape = rail_array.shape
     start_node = AStarNode(None, start)
     end_node = AStarNode(None, end)
-    open_nodes = set()
-    closed_nodes = set()
+    open_nodes = OrderedSet()
+    closed_nodes = OrderedSet()
     open_nodes.add(start_node)
 
     while len(open_nodes) > 0:
-        # get node with current shortest est. path (lowest f)
+        # get node with current shortest path (lowest f)
         current_node = None
         for item in open_nodes:
             if current_node is None:

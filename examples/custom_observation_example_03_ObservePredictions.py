@@ -11,6 +11,7 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.utils.ordered_set import OrderedSet
 from flatland.utils.rendertools import RenderTool
 
 random.seed(100)
@@ -82,7 +83,7 @@ class ObservePredictions(TreeObsForRailEnv):
         # We are going to track what cells where considered while building the obervation and make them accesible
         # For rendering
 
-        visited = set()
+        visited = OrderedSet()
         for _idx in range(10):
             # Check if any of the other prediction overlap with agents own predictions
             x_coord = self.predictions[handle][_idx][1]

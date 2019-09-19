@@ -9,6 +9,7 @@ from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import coordinate_to_position
+from flatland.utils.ordered_set import OrderedSet
 
 
 class TreeObsForRailEnv(ObservationBuilder):
@@ -154,7 +155,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         observation = [0, 0, 0, 0, 0, 0, self.env.distance_map.get()[(handle, *agent.position, agent.direction)], 0, 0,
                        agent.malfunction_data['malfunction'], agent.speed_data['speed']]
 
-        visited = set()
+        visited = OrderedSet()
 
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
@@ -170,7 +171,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 branch_observation, branch_visited = \
                     self._explore_branch(handle, new_cell, branch_direction, 1, 1)
                 observation = observation + branch_observation
-                visited = visited.union(branch_visited)
+                visited |= branch_visited
             else:
                 # add cells filled with infinity if no transition is possible
                 observation = observation + [-np.inf] * self._num_cells_to_fill_in(self.max_depth)
@@ -207,7 +208,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         last_is_terminal = False  # wrong cell OR cycle;  either way, we don't want the agent to land here
         last_is_target = False
 
-        visited = set()
+        visited = OrderedSet()
         agent = self.env.agents[handle]
         time_per_cell = np.reciprocal(agent.speed_data["speed"])
         own_target_encountered = np.inf
@@ -420,7 +421,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                                           depth + 1)
                 observation = observation + branch_observation
                 if len(branch_visited) != 0:
-                    visited = visited.union(branch_visited)
+                    visited |= branch_visited
             elif last_is_switch and possible_transitions[branch_direction]:
                 new_cell = get_new_position(position, branch_direction)
                 branch_observation, branch_visited = self._explore_branch(handle,
@@ -430,7 +431,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                                           depth + 1)
                 observation = observation + branch_observation
                 if len(branch_visited) != 0:
-                    visited = visited.union(branch_visited)
+                    visited |= branch_visited
             else:
                 # no exploring possible, add just cells with infinity
                 observation = observation + [-np.inf] * self._num_cells_to_fill_in(self.max_depth - depth)

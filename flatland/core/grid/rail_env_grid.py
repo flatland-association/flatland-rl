@@ -1,4 +1,5 @@
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.utils.ordered_set import OrderedSet
 
 
 class RailEnvTransitions(Grid4Transitions):
@@ -44,7 +45,7 @@ class RailEnvTransitions(Grid4Transitions):
         )
 
         # create this to make validation faster
-        self.transitions_all = set()
+        self.transitions_all = OrderedSet()
         for index, trans in enumerate(self.transitions):
             self.transitions_all.add(trans)
             if index in (2, 4, 6, 7, 8, 9, 10):

@@ -1,7 +1,4 @@
-from typing import List
-
 import numpy as np
-from attr import attrib, attrs
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
@@ -12,6 +9,7 @@ from flatland.envs.rail_generators import complex_rail_generator, rail_from_grid
 from flatland.envs.schedule_generators import complex_schedule_generator, random_schedule_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
+from test_utils import ReplayConfig, Replay
 
 np.random.seed(1)
 
@@ -97,21 +95,8 @@ def test_multi_speed_init():
                 old_pos[i_agent] = env.agents[i_agent].position
 
 
-@attrs
-class Replay(object):
-    position = attrib()
-    direction = attrib()
-    action = attrib(type=RailEnvActions)
-    malfunction = attrib(default=0, type=int)
-
-
-@attrs
-class TestConfig(object):
-    replay = attrib(type=List[Replay])
-    target = attrib()
-    speed = attrib(type=float)
-
-
+# TODO test penalties!
+# TODO test invalid actions!
 def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
     """Test that actions are correctly performed on cell exit for a single agent."""
     rail, rail_map = make_simple_rail()
@@ -132,7 +117,7 @@ def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
 
-    test_config = TestConfig(
+    test_config = ReplayConfig(
         replay=[
             Replay(
                 position=(3, 9),  # east dead-end
@@ -179,6 +164,7 @@ def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
                 direction=Grid4TransitionsEnum.SOUTH,
                 action=RailEnvActions.STOP_MOVING
             ),
+            #
             Replay(
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
@@ -205,7 +191,6 @@ def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
         speed=0.5
     )
 
-    # TODO test penalties!
     agentStatic: EnvAgentStatic = env.agents_static[0]
     info_dict = {
         'action_required': [True]
@@ -230,7 +215,7 @@ def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
         _assert(agent.position, replay.position, 'position')
         _assert(agent.direction, replay.direction, 'direction')
 
-        if replay.action:
+        if replay.action is not None:
             assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
             _, _, _, info_dict = env.step({0: replay.action})
 
@@ -263,7 +248,7 @@ def test_multispeed_actions_no_malfunction_blocking(rendering=True):
         renderer = RenderTool(env, gl="PILSVG")
 
     test_configs = [
-        TestConfig(
+        ReplayConfig(
             replay=[
                 Replay(
                     position=(3, 8),
@@ -331,7 +316,7 @@ def test_multispeed_actions_no_malfunction_blocking(rendering=True):
             ],
             target=(3, 0),  # west dead-end
             speed=1 / 3),
-        TestConfig(
+        ReplayConfig(
             replay=[
                 Replay(
                     position=(3, 9),  # east dead-end
@@ -438,13 +423,13 @@ def test_multispeed_actions_no_malfunction_blocking(rendering=True):
             _assert(a, agent.position, replay.position, 'position')
             _assert(a, agent.direction, replay.direction, 'direction')
 
-
-
-            if replay.action:
-                assert info_dict['action_required'][a] == True, "[{}] agent {} expecting action_required={}".format(step, a, True)
+            if replay.action is not None:
+                assert info_dict['action_required'][a] == True, "[{}] agent {} expecting action_required={}".format(
+                    step, a, True)
                 action_dict[a] = replay.action
             else:
-                assert info_dict['action_required'][a] == False, "[{}] agent {} expecting action_required={}".format(step, a, False)
+                assert info_dict['action_required'][a] == False, "[{}] agent {} expecting action_required={}".format(
+                    step, a, False)
         _, _, _, info_dict = env.step(action_dict)
 
         if rendering:
@@ -471,7 +456,7 @@ def test_multispeed_actions_malfunction_no_blocking(rendering=True):
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
 
-    test_config = TestConfig(
+    test_config = ReplayConfig(
         replay=[
             Replay(
                 position=(3, 9),  # east dead-end
@@ -493,7 +478,7 @@ def test_multispeed_actions_malfunction_no_blocking(rendering=True):
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
-                malfunction=2 # recovers in two steps from now!
+                malfunction=2  # recovers in two steps from now!
             ),
             # agent recovers in this step
             Replay(
@@ -515,7 +500,7 @@ def test_multispeed_actions_malfunction_no_blocking(rendering=True):
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_FORWARD,
-                malfunction=2 # recovers in two steps from now!
+                malfunction=2  # recovers in two steps from now!
             ),
             # agent recovers in this step; since we're at the beginning, we provide a different action although we're broken!
             Replay(
@@ -548,8 +533,19 @@ def test_multispeed_actions_malfunction_no_blocking(rendering=True):
                 direction=Grid4TransitionsEnum.SOUTH,
                 action=None
             ),
+            # DO_NOTHING keeps moving!
             Replay(
                 position=(5, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=RailEnvActions.DO_NOTHING
+            ),
+            Replay(
+                position=(5, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                action=None
+            ),
+            Replay(
+                position=(6, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
                 action=RailEnvActions.MOVE_FORWARD
             ),
@@ -584,10 +580,11 @@ def test_multispeed_actions_malfunction_no_blocking(rendering=True):
         _assert(agent.position, replay.position, 'position')
         _assert(agent.direction, replay.direction, 'direction')
 
-        if replay.malfunction:
-            agent.malfunction_data['malfunction'] = 2
+        if replay.malfunction > 0:
+            agent.malfunction_data['malfunction'] = replay.malfunction
+            agent.malfunction_data['moving_before_malfunction'] = agent.moving
 
-        if replay.action:
+        if replay.action is not None:
             assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
             _, _, _, info_dict = env.step({0: replay.action})
 
