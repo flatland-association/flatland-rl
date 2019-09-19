@@ -467,6 +467,7 @@ class RailEnv(Environment):
                             _action_stored = True
 
                 if not _action_stored:
+
                     # If the agent cannot move due to an invalid transition, we set its state to not moving
                     self.rewards_dict[i_agent] += self.invalid_action_penalty
                     self.rewards_dict[i_agent] += self.stop_penalty

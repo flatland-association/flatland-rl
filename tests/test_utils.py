@@ -1,6 +1,7 @@
 """Test Utils."""
 from typing import List, Tuple, Optional
 
+import numpy as np
 from attr import attrs, attrib
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
@@ -28,9 +29,10 @@ class ReplayConfig(object):
 
 # ensure that env is working correctly with start/stop/invalidaction penalty different from 0
 def set_penalties_for_replay(env: RailEnv):
-    env.step_penalty = 13
-    env.stop_penalty = 19
-    env.invalid_action_penalty = 29
+    env.step_penalty = -7
+    env.start_penalty = -13
+    env.stop_penalty = -19
+    env.invalid_action_penalty = -29
 
 
 def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False):
@@ -74,8 +76,9 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 agent.speed_data['speed'] = test_config.speed
 
         def _assert(a, actual, expected, msg):
-            assert actual == expected, "[{}] agent {} {}:  actual={}, expected={}".format(step, a, msg, actual,
-                                                                                          expected)
+            assert np.allclose(actual, expected), "[{}] agent {} {}:  actual={}, expected={}".format(step, a, msg,
+                                                                                                    actual,
+                                                                                                    expected)
 
         action_dict = {}
 
@@ -100,10 +103,11 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             _assert(a, agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
 
         _, rewards_dict, _, info_dict = env.step(action_dict)
+        if rendering:
+            renderer.render_env(show=True, show_observations=True)
 
         for a, test_config in enumerate(test_configs):
             replay = test_config.replay[step]
             _assert(a, rewards_dict[a], replay.reward, 'reward')
 
-    if rendering:
-        renderer.render_env(show=True, show_observations=True)
+

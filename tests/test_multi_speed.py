@@ -93,8 +93,7 @@ def test_multi_speed_init():
                 old_pos[i_agent] = env.agents[i_agent].position
 
 
-# TODO test invalid actions!
-def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
+def test_multispeed_actions_no_malfunction_no_blocking():
     """Test that actions are correctly performed on cell exit for a single agent."""
     rail, rail_map = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
@@ -195,7 +194,7 @@ def test_multispeed_actions_no_malfunction_no_blocking(rendering=True):
     run_replay_config(env, [test_config])
 
 
-def test_multispeed_actions_no_malfunction_blocking(rendering=True):
+def test_multispeed_actions_no_malfunction_blocking():
     """The second agent blocks the first because it is slower."""
     rail, rail_map = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
@@ -377,7 +376,7 @@ def test_multispeed_actions_no_malfunction_blocking(rendering=True):
     run_replay_config(env, test_configs)
 
 
-def test_multispeed_actions_malfunction_no_blocking(rendering=True):
+def test_multispeed_actions_malfunction_no_blocking():
     """Test on a single agent whether action on cell exit work correctly despite malfunction."""
     rail, rail_map = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
@@ -508,4 +507,87 @@ def test_multispeed_actions_malfunction_no_blocking(rendering=True):
         target=(3, 0),  # west dead-end
         speed=0.5
     )
+    run_replay_config(env, [test_config])
+
+
+# TODO invalid action penalty seems only given when forward is not possible - is this the intended behaviour?
+def test_multispeed_actions_no_malfunction_invalid_actions():
+    """Test that actions are correctly performed on cell exit for a single agent."""
+    rail, rail_map = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  )
+
+    set_penalties_for_replay(env)
+    test_config = ReplayConfig(
+        replay=[
+            Replay(
+                position=(3, 9),  # east dead-end
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.MOVE_LEFT,
+                reward=env.start_penalty + env.step_penalty * 0.5  # auto-correction left to forward without penalty!
+            ),
+            Replay(
+                position=(3, 9),
+                direction=Grid4TransitionsEnum.EAST,
+                action=None,
+                reward=env.step_penalty * 0.5  # running at speed 0.5
+            ),
+            Replay(
+                position=(3, 8),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD,
+                reward=env.step_penalty * 0.5  # running at speed 0.5
+            ),
+            Replay(
+                position=(3, 8),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None,
+                reward=env.step_penalty * 0.5  # running at speed 0.5
+            ),
+            Replay(
+                position=(3, 7),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD,
+                reward=env.step_penalty * 0.5  # running at speed 0.5
+            ),
+            Replay(
+                position=(3, 7),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None,
+                reward=env.step_penalty * 0.5  # running at speed 0.5
+            ),
+            Replay(
+                position=(3, 6),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_RIGHT,
+                reward=env.step_penalty * 0.5  # wrong action is corrected to forward without penalty!
+            ),
+            Replay(
+                position=(3, 6),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None,
+                reward=env.step_penalty * 0.5  # running at speed 0.5
+            ),
+            Replay(
+                position=(3, 5),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_RIGHT,
+                reward=env.step_penalty * 0.5  # wrong action is corrected to forward without penalty!
+            ), Replay(
+                position=(3, 5),
+                direction=Grid4TransitionsEnum.WEST,
+                action=None,
+                reward=env.step_penalty * 0.5  # running at speed 0.5
+            ),
+
+        ],
+        target=(3, 0),  # west dead-end
+        speed=0.5
+    )
+
     run_replay_config(env, [test_config])
