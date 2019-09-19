@@ -62,3 +62,13 @@ def test_vec2d_bound():
     res_2 = Vec2d.bound(node_b, 2, 2.2)
     assert res_1 == (-1, -1)
     assert res_2 == (2, 2.2)
+
+
+def test_vec2d_normalize():
+    node_a = (1, 2)
+    node_b = (4, 12)
+    res_1 = Vec2d.normalize(node_a)
+    res_2 = Vec2d.normalize(node_b)
+    eps = 0.000000000001
+    assert 1.0 - Vec2d.get_norm(res_1) < eps
+    assert 1.0 - Vec2d.get_norm(res_2) < eps
