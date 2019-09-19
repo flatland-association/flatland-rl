@@ -35,3 +35,5 @@ if __name__ == '__main__':
                 runpy.run_path(file_in, run_name="__main__", init_globals={
                     'argv': ['--sleep-for-animation=False']
                 })
+                print("runpy done.")
+            print("Done with {}".format(entry))
