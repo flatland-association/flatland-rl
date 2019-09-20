@@ -237,7 +237,8 @@ class RailEnv(Environment):
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
 
-        # TODO can we not put 'self.rail_generator(..)' into 'if regen_rail or self.rail is None' condition?
+        # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
+        #  can we not put 'self.rail_generator(..)' into 'if regen_rail or self.rail is None' condition?
         rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
         if optionals and 'distance_map' in optionals:
@@ -257,6 +258,9 @@ class RailEnv(Environment):
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
+
+            # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/185
+            #  why do we need static agents? could we it more elegantly?
             self.agents_static = EnvAgentStatic.from_lists(
                 *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints))
         self.restart_agents()
@@ -408,13 +412,14 @@ class RailEnv(Environment):
         # is the agent malfunctioning?
         malfunction = self._agent_malfunction(i_agent)
 
-        # if agent is broken, actions are ignored and agent does not move,
-        # the agent is not penalized in this step!
+        # if agent is broken, actions are ignored and agent does not move.
+        # full step penalty in this case
         if malfunction:
             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
             return
 
         # Is the agent at the beginning of the cell? Then, it can take an action.
+        # As long as the agent is malfunctioning or stopped at the beginning of the cell, different actions may be taken!
         if agent.speed_data['position_fraction'] == 0.0:
             # No action has been supplied for this agent -> set DO_NOTHING as default
             if action is None:
@@ -463,9 +468,9 @@ class RailEnv(Environment):
                             _action_stored = True
 
                 if not _action_stored:
+
                     # If the agent cannot move due to an invalid transition, we set its state to not moving
                     self.rewards_dict[i_agent] += self.invalid_action_penalty
-                    self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
                     self.rewards_dict[i_agent] += self.stop_penalty
                     agent.moving = False
 
@@ -498,6 +503,9 @@ class RailEnv(Environment):
                 agent.moving = False
             else:
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+        else:
+            # step penalty if not moving (stopped now or before)
+            self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
 
     def _check_action_on_agent(self, action: RailEnvActions, agent: EnvAgent):
         """

@@ -1,16 +1,15 @@
 import random
+from typing import Dict
 
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import complex_rail_generator, sparse_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator, sparse_schedule_generator
-from flatland.utils.rendertools import RenderTool
-from test_utils import Replay
+from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 
 class SingleAgentNavigationObs(TreeObsForRailEnv):
@@ -54,7 +53,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
                     min_distances.append(np.inf)
 
             observation = [0, 0, 0]
-            observation[np.argmin(min_distances)] = 1
+            observation[np.argmin(min_distances)[0]] = 1
 
         return observation
 
@@ -83,7 +82,6 @@ def test_malfunction_process():
 
     agent_halts = 0
     total_down_time = 0
-    agent_malfunctioning = False
     agent_old_position = env.agents[0].position
     for step in range(100):
         actions = {}
@@ -142,12 +140,12 @@ def test_malfunction_process_statistically():
     env.reset()
     nb_malfunction = 0
     for step in range(100):
-        action_dict = {}
+        action_dict: Dict[int, RailEnvActions] = {}
         for agent in env.agents:
             if agent.malfunction_data['malfunction'] > 0:
                 nb_malfunction += 1
             # We randomly select an action
-            action_dict[agent.handle] = np.random.randint(4)
+            action_dict[agent.handle] = RailEnvActions(np.random.randint(4))
 
         env.step(action_dict)
 
@@ -155,7 +153,7 @@ def test_malfunction_process_statistically():
     assert nb_malfunction == 156, "nb_malfunction={}".format(nb_malfunction)
 
 
-def test_initial_malfunction(rendering=True):
+def test_initial_malfunction():
     random.seed(0)
     np.random.seed(0)
 
@@ -189,75 +187,56 @@ def test_initial_malfunction(rendering=True):
                   number_of_agents=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
-
-    if rendering:
-        renderer = RenderTool(env)
-        renderer.render_env(show=True, frames=False, show_observations=False)
-    _action = dict()
-
-    replay_steps = [
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.MOVE_FORWARD,
-            malfunction=3
-        ),
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.MOVE_FORWARD,
-            malfunction=2
-        ),
-        # malfunction stops in the next step and we're still at the beginning of the cell
-        # --> if we take action MOVE_FORWARD, agent should restart and move to the next cell
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.MOVE_FORWARD,
-            malfunction=1
-        ),
-        Replay(
-            position=(28, 4),
-            direction=Grid4TransitionsEnum.WEST,
-            action=RailEnvActions.MOVE_FORWARD,
-            malfunction=0
-        ),
-        Replay(
-            position=(27, 4),
-            direction=Grid4TransitionsEnum.NORTH,
-            action=RailEnvActions.MOVE_FORWARD,
-            malfunction=0
-        )
-    ]
-
-    info_dict = {
-        'action_required': [True]
-    }
-
-    for i, replay in enumerate(replay_steps):
-
-        def _assert(actual, expected, msg):
-            assert actual == expected, "[{}] {}:  actual={}, expected={}".format(i, msg, actual, expected)
-
-        agent: EnvAgent = env.agents[0]
-
-        _assert(agent.position, replay.position, 'position')
-        _assert(agent.direction, replay.direction, 'direction')
-        _assert(agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
-
-        if replay.action is not None:
-            assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
-            _, _, _, info_dict = env.step({0: replay.action})
-
-        else:
-            assert info_dict['action_required'][0] == False, "[{}] expecting action_required={}".format(i, False)
-            _, _, _, info_dict = env.step({})
-
-        if rendering:
-            renderer.render_env(show=True, show_observations=True)
+    set_penalties_for_replay(env)
+    replay_config = ReplayConfig(
+        replay=[
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.MOVE_FORWARD,
+                set_malfunction=3,
+                malfunction=3,
+                reward=env.step_penalty  # full step penalty when malfunctioning
+            ),
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.MOVE_FORWARD,
+                malfunction=2,
+                reward=env.step_penalty  # full step penalty when malfunctioning
+            ),
+            # malfunction stops in the next step and we're still at the beginning of the cell
+            # --> if we take action MOVE_FORWARD, agent should restart and move to the next cell
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.MOVE_FORWARD,
+                malfunction=1,
+                reward=env.start_penalty + env.step_penalty * 1.0
+                # malfunctioning ends: starting and running at speed 1.0
+            ),
+            Replay(
+                position=(28, 4),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD,
+                malfunction=0,
+                reward=env.step_penalty * 1.0  # running at speed 1.0
+            ),
+            Replay(
+                position=(27, 4),
+                direction=Grid4TransitionsEnum.NORTH,
+                action=RailEnvActions.MOVE_FORWARD,
+                malfunction=0,
+                reward=env.step_penalty * 1.0  # running at speed 1.0
+            )
+        ],
+        speed=env.agents[0].speed_data['speed'],
+        target=env.agents[0].target
+    )
+    run_replay_config(env, [replay_config])
 
 
-def test_initial_malfunction_stop_moving(rendering=True):
+def test_initial_malfunction_stop_moving():
     random.seed(0)
     np.random.seed(0)
 
@@ -291,84 +270,66 @@ def test_initial_malfunction_stop_moving(rendering=True):
                   number_of_agents=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
+    set_penalties_for_replay(env)
+    replay_config = ReplayConfig(
+        replay=[
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.DO_NOTHING,
+                set_malfunction=3,
+                malfunction=3,
+                reward=env.step_penalty  # full step penalty when stopped
+            ),
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.DO_NOTHING,
+                malfunction=2,
+                reward=env.step_penalty  # full step penalty when stopped
+            ),
+            # malfunction stops in the next step and we're still at the beginning of the cell
+            # --> if we take action STOP_MOVING, agent should restart without moving
+            #
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.STOP_MOVING,
+                malfunction=1,
+                reward=env.step_penalty  # full step penalty while stopped
+            ),
+            # we have stopped and do nothing --> should stand still
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.DO_NOTHING,
+                malfunction=0,
+                reward=env.step_penalty  # full step penalty while stopped
+            ),
+            # we start to move forward --> should go to next cell now
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.MOVE_FORWARD,
+                malfunction=0,
+                reward=env.start_penalty + env.step_penalty * 1.0  # full step penalty while stopped
+            ),
+            Replay(
+                position=(28, 4),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD,
+                malfunction=0,
+                reward=env.step_penalty * 1.0  # full step penalty while stopped
+            )
+        ],
+        speed=env.agents[0].speed_data['speed'],
+        target=env.agents[0].target
+    )
 
-    if rendering:
-        renderer = RenderTool(env)
-        renderer.render_env(show=True, frames=False, show_observations=False)
-    _action = dict()
-
-    replay_steps = [
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.DO_NOTHING,
-            malfunction=3
-        ),
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.DO_NOTHING,
-            malfunction=2
-        ),
-        # malfunction stops in the next step and we're still at the beginning of the cell
-        # --> if we take action DO_NOTHING, agent should restart without moving
-        #
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.STOP_MOVING,
-            malfunction=1
-        ),
-        # we have stopped and do nothing --> should stand still
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.DO_NOTHING,
-            malfunction=0
-        ),
-        # we start to move forward --> should go to next cell now
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.MOVE_FORWARD,
-            malfunction=0
-        ),
-        Replay(
-            position=(28, 4),
-            direction=Grid4TransitionsEnum.WEST,
-            action=RailEnvActions.MOVE_FORWARD,
-            malfunction=0
-        )
-    ]
-
-    info_dict = {
-        'action_required': [True]
-    }
-
-    for i, replay in enumerate(replay_steps):
-
-        def _assert(actual, expected, msg):
-            assert actual == expected, "[{}] {}:  actual={}, expected={}".format(i, msg, actual, expected)
-
-        agent: EnvAgent = env.agents[0]
-
-        _assert(agent.position, replay.position, 'position')
-        _assert(agent.direction, replay.direction, 'direction')
-        _assert(agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
-
-        if replay.action is not None:
-            assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
-            _, _, _, info_dict = env.step({0: replay.action})
-
-        else:
-            assert info_dict['action_required'][0] == False, "[{}] expecting action_required={}".format(i, False)
-            _, _, _, info_dict = env.step({})
-
-        if rendering:
-            renderer.render_env(show=True, show_observations=True)
+    run_replay_config(env, [replay_config])
 
 
-def test_initial_malfunction_do_nothing(rendering=True):
+def test_initial_malfunction_do_nothing():
     random.seed(0)
     np.random.seed(0)
 
@@ -402,78 +363,59 @@ def test_initial_malfunction_do_nothing(rendering=True):
                   number_of_agents=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
-
-    if rendering:
-        renderer = RenderTool(env)
-        renderer.render_env(show=True, frames=False, show_observations=False)
-    _action = dict()
-
-    replay_steps = [
-        Replay(
+    set_penalties_for_replay(env)
+    replay_config = ReplayConfig(
+        replay=[Replay(
             position=(28, 5),
             direction=Grid4TransitionsEnum.EAST,
             action=RailEnvActions.DO_NOTHING,
-            malfunction=3
+            set_malfunction=3,
+            malfunction=3,
+            reward=env.step_penalty  # full step penalty while malfunctioning
         ),
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.DO_NOTHING,
-            malfunction=2
-        ),
-        # malfunction stops in the next step and we're still at the beginning of the cell
-        # --> if we take action DO_NOTHING, agent should restart without moving
-        #
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.DO_NOTHING,
-            malfunction=1
-        ),
-        # we haven't started moving yet --> stay here
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.DO_NOTHING,
-            malfunction=0
-        ),
-        # we start to move forward --> should go to next cell now
-        Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.MOVE_FORWARD,
-            malfunction=0
-        ),
-        Replay(
-            position=(28, 4),
-            direction=Grid4TransitionsEnum.WEST,
-            action=RailEnvActions.MOVE_FORWARD,
-            malfunction=0
-        )
-    ]
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.DO_NOTHING,
+                malfunction=2,
+                reward=env.step_penalty  # full step penalty while malfunctioning
+            ),
+            # malfunction stops in the next step and we're still at the beginning of the cell
+            # --> if we take action DO_NOTHING, agent should restart without moving
+            #
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.DO_NOTHING,
+                malfunction=1,
+                reward=env.step_penalty  # full step penalty while stopped
+            ),
+            # we haven't started moving yet --> stay here
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.DO_NOTHING,
+                malfunction=0,
+                reward=env.step_penalty  # full step penalty while stopped
+            ),
+            # we start to move forward --> should go to next cell now
+            Replay(
+                position=(28, 5),
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.MOVE_FORWARD,
+                malfunction=0,
+                reward=env.start_penalty + env.step_penalty * 1.0  # start penalty + step penalty for speed 1.0
+            ),
+            Replay(
+                position=(28, 4),
+                direction=Grid4TransitionsEnum.WEST,
+                action=RailEnvActions.MOVE_FORWARD,
+                malfunction=0,
+                reward=env.step_penalty * 1.0  # step penalty for speed 1.0
+            )
+        ],
+        speed=env.agents[0].speed_data['speed'],
+        target=env.agents[0].target
+    )
 
-    info_dict = {
-        'action_required': [True]
-    }
-
-    for i, replay in enumerate(replay_steps):
-
-        def _assert(actual, expected, msg):
-            assert actual == expected, "[{}] {}:  actual={}, expected={}".format(i, msg, actual, expected)
-
-        agent: EnvAgent = env.agents[0]
-
-        _assert(agent.position, replay.position, 'position')
-        _assert(agent.direction, replay.direction, 'direction')
-        _assert(agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
-
-        if replay.action is not None:
-            assert info_dict['action_required'][0] == True, "[{}] expecting action_required={}".format(i, True)
-            _, _, _, info_dict = env.step({0: replay.action})
-
-        else:
-            assert info_dict['action_required'][0] == False, "[{}] expecting action_required={}".format(i, False)
-            _, _, _, info_dict = env.step({})
-
-        if rendering:
-            renderer.render_env(show=True, show_observations=True)
+    run_replay_config(env, [replay_config])
