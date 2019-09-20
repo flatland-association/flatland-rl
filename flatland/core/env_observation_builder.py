@@ -8,7 +8,11 @@ The ObservationBuilder-derived custom classes implement 2 functions, reset() and
 multi-agent environments.
 
 """
+from typing import Optional, List
+
 import numpy as np
+
+from flatland.core.env import Environment
 
 
 class ObservationBuilder:
@@ -22,7 +26,7 @@ class ObservationBuilder:
     def __init__(self):
         self.observation_space = ()
 
-    def _set_env(self, env):
+    def _set_env(self, env: Environment):
         self.env = env
 
     def reset(self):
@@ -31,7 +35,7 @@ class ObservationBuilder:
         """
         raise NotImplementedError()
 
-    def get_many(self, handles=[]):
+    def get_many(self, handles: Optional[List[int]] = None):
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
@@ -48,11 +52,13 @@ class ObservationBuilder:
             `handles` as keys.
         """
         observations = {}
+        if handles is None:
+            handles = []
         for h in handles:
             observations[h] = self.get(h)
         return observations
 
-    def get(self, handle=0):
+    def get(self, handle: int = 0):
         """
         Called whenever an observation has to be computed for the `env` environment, possibly
         for each agent independently (agent id `handle`).
@@ -83,16 +89,16 @@ class DummyObservationBuilder(ObservationBuilder):
     """
 
     def __init__(self):
-        self.observation_space = ()
+        super().__init__()
 
-    def _set_env(self, env):
+    def _set_env(self, env: Environment):
         self.env = env
 
     def reset(self):
         pass
 
-    def get_many(self, handles=[]):
+    def get_many(self, handles: Optional[List[int]] = None):
         return True
 
-    def get(self, handle=0):
+    def get(self, handle: int = 0):
         return True
