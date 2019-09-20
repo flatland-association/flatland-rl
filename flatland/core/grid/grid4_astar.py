@@ -46,8 +46,6 @@ def a_star(grid_map: GridTransitionMap,
     """
     rail_shape = grid_map.grid.shape
 
-    tmp = np.zeros(rail_shape) - 10
-
     start_node = AStarNode(start, None)
     end_node = AStarNode(end, None)
     open_nodes = OrderedSet()
@@ -113,8 +111,6 @@ def a_star(grid_map: GridTransitionMap,
             # this heuristic avoids diagonal paths
             child.h = a_star_distance_function(child.pos, end_node.pos)
             child.f = child.g + child.h
-
-            tmp[child.pos[0]][child.pos[1]] = child.f
 
             # already in the open list?
             if child in open_nodes:
