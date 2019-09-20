@@ -21,7 +21,8 @@ def connect_basic_operation(
     flip_end_node_trans=False,
     a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
     """
-    Creates a new path [start,end] in `grid_map.grid`, based on rail_trans.
+    Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
+    returns the path created as a list of positions.
     """
     # in the worst case we will need to do a A* search, so we might as well set that up
     path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function)
