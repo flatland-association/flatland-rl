@@ -25,12 +25,12 @@ for entry in [entry for entry in importlib_resources.contents('examples') if
         print("*****************************************************************")
         print("Running {}".format(entry))
         print("*****************************************************************")
-#         with swap_attr(sys, "stdin", StringIO("q")):
-#             try:
-#                 runpy.run_path(file_in, run_name="__main__", init_globals={
-#                     'argv': ['--sleep-for-animation=False']
-#                 })
-#             except Exception as e:
-#                 print(e)
-#             print("runpy done.")
-#         print("Done with {}".format(entry))
+        with swap_attr(sys, "stdin", StringIO("q")):
+            try:
+                runpy.run_path(file_in, run_name="__main__", init_globals={
+                    'argv': ['--sleep-for-animation=False']
+                })
+            except Exception as e:
+                print(e)
+            print("runpy done.")
+        print("Done with {}".format(entry))
