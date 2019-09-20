@@ -35,9 +35,6 @@ class PredictionBuilder:
 
         Parameters
         ----------
-        custom_args: dict
-            Implementation-dependent custom arguments, see the sub-classes.
-
         handle : int, optional
             Handle of the agent for which to compute the observation vector.
 
