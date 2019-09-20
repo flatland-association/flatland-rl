@@ -11,7 +11,7 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 os.mkdir("./../render_output/")
 
-for itrials in np.arange(1, 1000, 1):
+for itrials in np.arange(1, 15, 1):
     print(itrials, "generate new city")
 
     # init seed
