@@ -8,6 +8,7 @@ If predictions are not required in every step or not for all agents, then
 + `get()` is called whenever an step has to be computed, potentially for each agent independently in \
 case of multi-agent environments.
 """
+from flatland.core.env import Environment
 
 
 class PredictionBuilder:
@@ -19,7 +20,7 @@ class PredictionBuilder:
     def __init__(self, max_depth: int = 20):
         self.max_depth = max_depth
 
-    def _set_env(self, env):
+    def _set_env(self, env: Environment):
         self.env = env
 
     def reset(self):
@@ -28,15 +29,12 @@ class PredictionBuilder:
         """
         pass
 
-    def get(self, handle=0):
+    def get(self, handle: int = 0):
         """
         Called whenever get_many in the observation build is called.
 
         Parameters
         ----------
-        custom_args: dict
-            Implementation-dependent custom arguments, see the sub-classes.
-
         handle : int, optional
             Handle of the agent for which to compute the observation vector.
 

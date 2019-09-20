@@ -17,12 +17,13 @@ class SimpleObs(ObservationBuilder):
     """
 
     def __init__(self):
+        super().__init__()
         self.observation_space = [5]
 
     def reset(self):
         return
 
-    def get(self, handle):
+    def get(self, handle: int = 0):
         observation = handle * np.ones((5,))
         return observation
 

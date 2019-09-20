@@ -2,10 +2,13 @@
 Collection of environment-specific ObservationBuilder.
 """
 import pprint
+from typing import Optional, List
 
 import numpy as np
 
+from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import coordinate_to_position
 from flatland.utils.ordered_set import OrderedSet
@@ -22,7 +25,7 @@ class TreeObsForRailEnv(ObservationBuilder):
     For details about the features in the tree observation see the get() function.
     """
 
-    def __init__(self, max_depth, predictor=None):
+    def __init__(self, max_depth: int, predictor: PredictionBuilder = None):
         super().__init__()
         self.max_depth = max_depth
         self.observation_dim = 11
@@ -43,7 +46,7 @@ class TreeObsForRailEnv(ObservationBuilder):
     def reset(self):
         self.location_has_target = {tuple(agent.target): 1 for agent in self.env.agents}
 
-    def get_many(self, handles=None):
+    def get_many(self, handles: Optional[List[int]] = None):
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
@@ -72,7 +75,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             observations[h] = self.get(h)
         return observations
 
-    def get(self, handle):
+    def get(self, handle: int = 0):
         """
         Computes the current observation for agent `handle` in env
 
@@ -487,7 +490,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 unfolded[label] = observation_tree
         return unfolded
 
-    def _set_env(self, env):
+    def _set_env(self, env: Environment):
         self.env = env
         if self.predictor:
             self.predictor._set_env(self.env)
@@ -518,7 +521,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
         self.observation_space = ()
         super(GlobalObsForRailEnv, self).__init__()
 
-    def _set_env(self, env):
+    def _set_env(self, env: Environment):
         super()._set_env(env)
 
         self.observation_space = [4, self.env.height, self.env.width]
@@ -531,7 +534,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i, j] = np.array(bitlist)
 
-    def get(self, handle):
+    def get(self, handle: int = 0):
         obs_targets = np.zeros((self.env.height, self.env.width, 2))
         obs_agents_state = np.zeros((self.env.height, self.env.width, 4))
         agents = self.env.agents
@@ -597,7 +600,7 @@ class LocalObsForRailEnv(ObservationBuilder):
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i, j] = np.array(bitlist)
 
-    def get(self, handle):
+    def get(self, handle: int = 0):
         agents = self.env.agents
         agent = agents[handle]
 
@@ -637,13 +640,15 @@ class LocalObsForRailEnv(ObservationBuilder):
         direction = np.identity(4)[agent.direction]
         return local_rail_obs, obs_map_state, obs_other_agents_state, direction
 
-    def get_many(self, handles=None):
+    def get_many(self, handles: Optional[List[int]] = None):
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
         """
 
         observations = {}
+        if handles is None:
+            handles = []
         for h in handles:
             observations[h] = self.get(h)
         return observations
