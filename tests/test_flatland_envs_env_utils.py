@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.grid_utils import position_to_coordinate, coordinate_to_position
 from flatland.core.grid.grid4_utils import get_direction
+from flatland.core.grid.grid_utils import position_to_coordinate, coordinate_to_position
 
 depth_to_test = 5
 positions_to_test = [0, 5, 1, 6, 20, 30]
@@ -31,4 +31,4 @@ def test_get_direction():
     assert get_direction((1, 0), (0, 0)) == Grid4TransitionsEnum.NORTH
     assert get_direction((1, 0), (0, 0)) == Grid4TransitionsEnum.NORTH
     with pytest.raises(Exception, match="Could not determine direction"):
-        get_direction((0, 0), (0, 0)) == Grid4TransitionsEnum.NORTH
+        get_direction((0, 0), (0, 0))
