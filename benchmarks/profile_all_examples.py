@@ -29,5 +29,6 @@ for entry in [entry for entry in importlib_resources.contents('examples') if
               and entry.endswith(".py")
               and '__init__' not in entry
               and 'demo.py' not in entry
+              and 'DELETE' not in entry
               ]:
     profile('examples', entry)

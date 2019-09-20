@@ -11,6 +11,7 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.utils.misc import str2bool
 from flatland.utils.ordered_set import OrderedSet
 from flatland.utils.rendertools import RenderTool
 
@@ -110,7 +111,7 @@ def main(args):
     sleep_for_animation = True
     for o, a in opts:
         if o in ("--sleep-for-animation"):
-            sleep_for_animation = bool(a)
+            sleep_for_animation = str2bool(a)
         else:
             assert False, "unhandled option"
 

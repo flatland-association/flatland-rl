@@ -37,9 +37,7 @@ for step in range(100):
     i = 0
     while i < len(cmds):
         if cmds[i] == 'q':
-            import sys
-
-            sys.exit()
+            break
         elif cmds[i] == 's':
             obs, all_rewards, done, _ = env.step(action_dict)
             action_dict = {}
@@ -50,5 +48,4 @@ for step in range(100):
             action_dict[agent_id] = action
             i = i + 1
         i += 1
-
-    env_renderer.render_env(show=True, frames=True)
+        env_renderer.render_env(show=True, frames=True)

@@ -8,6 +8,8 @@ from importlib_resources import path
 
 from benchmarks.benchmark_utils import swap_attr
 
+print("GRRRRRRRR run_all_examples.py")
+
 for entry in [entry for entry in importlib_resources.contents('examples') if
               not pkg_resources.resource_isdir('examples', entry)
               and entry.endswith(".py")
@@ -24,6 +26,11 @@ for entry in [entry for entry in importlib_resources.contents('examples') if
         print("Running {}".format(entry))
         print("*****************************************************************")
         with swap_attr(sys, "stdin", StringIO("q")):
-            runpy.run_path(file_in, run_name="__main__", init_globals={
-                'argv': ['--sleep-for-animation=False']
-            })
+            try:
+                runpy.run_path(file_in, run_name="__main__", init_globals={
+                    'argv': ['--sleep-for-animation=False']
+                })
+            except Exception as e:
+                print(e)
+            print("runpy done.")
+        print("Done with {}".format(entry))

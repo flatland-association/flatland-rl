@@ -1,18 +1,29 @@
-from flatland.core.grid.grid4_utils import validate_new_transition
+import numpy as np
+
+from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance
+from flatland.core.grid.grid_utils import IntVector2DArray
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
+from flatland.core.transition_map import GridTransitionMap
 from flatland.utils.ordered_set import OrderedSet
 
 
-class AStarNode():
+class AStarNode:
     """A node class for A* Pathfinding"""
 
-    def __init__(self, parent=None, pos=None):
+    def __init__(self, pos: IntVector2D, parent=None):
         self.parent = parent
-        self.pos = pos
-        self.g = 0
-        self.h = 0
-        self.f = 0
+        self.pos: IntVector2D = pos
+        self.g = 0.0
+        self.h = 0.0
+        self.f = 0.0
 
     def __eq__(self, other):
+        """
+
+        Parameters
+        ----------
+        other : AStarNode
+        """
         return self.pos == other.pos
 
     def __hash__(self):
@@ -26,20 +37,25 @@ class AStarNode():
             self.f = other.f
 
 
-def a_star(rail_trans, rail_array, start, end):
+def a_star(grid_map: GridTransitionMap,
+           start: IntVector2D, end: IntVector2D,
+           a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
     """
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
     """
-    rail_shape = rail_array.shape
-    start_node = AStarNode(None, start)
-    end_node = AStarNode(None, end)
+    rail_shape = grid_map.grid.shape
+
+    tmp = np.zeros(rail_shape) - 10
+
+    start_node = AStarNode(start, None)
+    end_node = AStarNode(end, None)
     open_nodes = OrderedSet()
     closed_nodes = OrderedSet()
     open_nodes.add(start_node)
 
     while len(open_nodes) > 0:
-        # get node with current shortest path (lowest f)
+        # get node with current shortest est. path (lowest f)
         current_node = None
         for item in open_nodes:
             if current_node is None:
@@ -59,6 +75,7 @@ def a_star(rail_trans, rail_array, start, end):
             while current is not None:
                 path.append(current.pos)
                 current = current.parent
+
             # return reversed path
             return path[::-1]
 
@@ -68,17 +85,21 @@ def a_star(rail_trans, rail_array, start, end):
             prev_pos = current_node.parent.pos
         else:
             prev_pos = None
+
         for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-            node_pos = (current_node.pos[0] + new_pos[0], current_node.pos[1] + new_pos[1])
+            # update the "current" pos
+            node_pos: IntVector2D = Vec2d.add(current_node.pos, new_pos)
+
+            # is node_pos inside the grid?
             if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
                 continue
 
             # validate positions
-            if not validate_new_transition(rail_trans, rail_array, prev_pos, current_node.pos, node_pos, end_node.pos):
+            if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos, end_node.pos):
                 continue
 
             # create new node
-            new_node = AStarNode(current_node, node_pos)
+            new_node = AStarNode(node_pos, current_node)
             children.append(new_node)
 
         # loop through children
@@ -88,12 +109,12 @@ def a_star(rail_trans, rail_array, start, end):
                 continue
 
             # create the f, g, and h values
-            child.g = current_node.g + 1
-            # this heuristic favors diagonal paths:
-            # child.h = ((child.pos[0] - end_node.pos[0]) ** 2) + ((child.pos[1] - end_node.pos[1]) ** 2) \#  noqa: E800
+            child.g = current_node.g + 1.0
             # this heuristic avoids diagonal paths
-            child.h = abs(child.pos[0] - end_node.pos[0]) + abs(child.pos[1] - end_node.pos[1])
+            child.h = a_star_distance_function(child.pos, end_node.pos)
             child.f = child.g + child.h
+
+            tmp[child.pos[0]][child.pos[1]] = child.f
 
             # already in the open list?
             if child in open_nodes:
