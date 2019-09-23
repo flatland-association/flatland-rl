@@ -105,8 +105,13 @@ Currently (as of **Flat**land 2.0), an agent keeps its speed over the whole epis
 
 Because the different speeds are implemented as fractions the agents ability to perform actions has been updated. 
 We **do not allow actions to change within the cell **. 
-This means that each agent can only chose an action to be taken when entering a cell. 
-This action is then executed when a step to the next cell is valid. For example
+This means that each agent can only chose an action to be taken when entering a cell (ie. positional fraction is 0). 
+There is some real railway specific considerations such as reserved blocks that are similar to this behavior. 
+But more importantly we disabled this to simplify the use of machine learning algorithms with the environment. 
+If we allow stop actions in the middle of cells. then the controller needs to make much more observations and not only at cell changes. 
+(Not set in stone and could be updated if the need arises).
+
+The chosen action is then executed when a step to the next cell is valid. For example
 
 - Agent enters switch and choses to deviate left. Agent fractional speed is 1/4 and thus the agent will take 4 time steps to complete its journey through the cell. On the 4th time step the agent will leave the cell deviating left as chosen at the entry of the cell.
     - All actions chosen by the agent during its travels within a cell are ignored
