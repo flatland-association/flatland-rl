@@ -2,7 +2,7 @@
 Collection of environment-specific ObservationBuilder.
 """
 import pprint
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, T, Tuple
 
 import numpy as np
 
@@ -640,7 +640,7 @@ class LocalObsForRailEnv(ObservationBuilder):
         direction = np.identity(4)[agent.direction]
         return local_rail_obs, obs_map_state, obs_other_agents_state, direction
 
-    def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, tuple]:
+    def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
