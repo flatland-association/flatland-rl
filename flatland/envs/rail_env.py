@@ -300,7 +300,7 @@ class RailEnv(Environment):
         agent = self.agents[i_agent]
 
         # Decrease counter for next event
-        if agent.malfunction_data['malfunction_rate'] > 0:
+        if agent.malfunction_data['malfunction_rate'] > 0 and agent.malfunction_data['next_malfunction'] > 0:
             agent.malfunction_data['next_malfunction'] -= 1
 
         # Only agents that have a positive rate for malfunctions and are not currently broken are considered
@@ -468,7 +468,6 @@ class RailEnv(Environment):
                             _action_stored = True
 
                 if not _action_stored:
-
                     # If the agent cannot move due to an invalid transition, we set its state to not moving
                     self.rewards_dict[i_agent] += self.invalid_action_penalty
                     self.rewards_dict[i_agent] += self.stop_penalty
