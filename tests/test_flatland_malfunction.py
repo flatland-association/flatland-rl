@@ -1,5 +1,5 @@
 import random
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 
@@ -31,7 +31,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
         # Recompute the distance map, if the environment has changed.
         super().reset()
 
-    def get(self, handle: int = 0):
+    def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 
         possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
