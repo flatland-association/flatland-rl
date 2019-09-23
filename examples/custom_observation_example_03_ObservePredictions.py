@@ -2,7 +2,7 @@ import getopt
 import random
 import sys
 import time
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import numpy as np
 
@@ -41,7 +41,7 @@ class ObservePredictions(TreeObsForRailEnv):
         # Recompute the distance map, if the environment has changed.
         super().reset()
 
-    def get_many(self, handles: Optional[List[int]] = None):
+    def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, np.ndarray]:
         '''
         Because we do not want to call the predictor seperately for every agent we implement the get_many function
         Here we can call the predictor just ones for all the agents and use the predictions to generate our observations
@@ -69,7 +69,7 @@ class ObservePredictions(TreeObsForRailEnv):
             observations[h] = self.get(h)
         return observations
 
-    def get(self, handle: int = 0):
+    def get(self, handle: int = 0) -> np.ndarray:
         '''
         Lets write a simple observation which just indicates whether or not the own predicted path
         overlaps with other predicted paths at any time. This is useless for the task of navigation but might
