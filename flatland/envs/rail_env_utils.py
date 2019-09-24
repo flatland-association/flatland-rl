@@ -83,22 +83,26 @@ def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
     return valid_actions
 
 
-def get_shorts_paths(distance_map: DistanceMap) -> Dict[int, List[RailEnvNextAction]]:
+def get_shortest_paths(distance_map: DistanceMap) -> Dict[int, List[RailEnvNextAction]]:
+    # TODO: do we need to support unreachable targets?
+    # TODO refactoring: unify with predictor (support agent.moving and max_depth)
     shortest_paths = dict()
     for a in distance_map.agents:
         position = a.position
         direction = a.direction
         shortest_paths[a.handle] = []
-
+        distance = math.inf
         while (position != a.target):
             next_actions = get_valid_move_actions_(direction, position, distance_map.rail)
-            best = math.inf
 
             best_next_action = None
             for next_action in next_actions:
-                if distance_map.get()[a.handle, position[0], position[1], direction] < best:
+                next_action_distance = distance_map.get()[a.handle, next_action.next_position[0], next_action.next_position[1], next_action.next_direction]
+                if next_action_distance < distance:
                     best_next_action = next_action
+                    distance = next_action_distance
             position = best_next_action.next_position
             direction = best_next_action.next_direction
             shortest_paths[a.handle].append(best_next_action)
+
     return shortest_paths

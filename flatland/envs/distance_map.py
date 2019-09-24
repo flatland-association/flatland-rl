@@ -18,19 +18,18 @@ class DistanceMap:
         self.agents: List[EnvAgent] = agents
         self.rail: Optional[GridTransitionMap] = None
 
-    """
-    Set the distance map
-    """
-
     def set(self, distance_map: np.ndarray):
+        """
+        Set the distance map
+        """
         self.distance_map = distance_map
 
-    """
-    Get the distance map
-    """
+
 
     def get(self) -> np.ndarray:
-
+        """
+        Get the distance map
+        """
         if self.reset_was_called:
             self.reset_was_called = False
 
@@ -53,11 +52,12 @@ class DistanceMap:
 
         return self.distance_map
 
-    """
-    Reset the distance map
-    """
+
 
     def reset(self, agents: List[EnvAgent], rail: GridTransitionMap):
+        """
+        Reset the distance map
+        """
         self.reset_was_called = True
         self.agents: List[EnvAgent] = agents
         self.rail = rail
