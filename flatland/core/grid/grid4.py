@@ -237,3 +237,6 @@ class Grid4Transitions(Transitions):
         """
         cell_transition &= cell_transition & (~self.maskDeadEnds) & 0xffff
         return cell_transition
+
+    def get_entry_directions(self, cell_transition):
+        return [(cell_transition >> ((3 - orientation) * 4)) & 15 > 0 for orientation in range(4)]
