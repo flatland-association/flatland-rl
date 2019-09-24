@@ -9,7 +9,7 @@ from flatland.envs.rail_generators_city_generator import city_generator
 from flatland.envs.schedule_generators import city_schedule_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
-os.mkdir("./../render_output/")
+# os.mkdir("./../render_output/")
 
 for itrials in np.arange(1, 15, 1):
     print(itrials, "generate new city")
