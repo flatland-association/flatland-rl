@@ -204,7 +204,7 @@ def rail_from_manual_specifications_generator(rail_spec):
     return generator
 
 
-def rail_from_file(filename) -> RailGenerator:
+def rail_from_file(filename, load_from_package=None) -> RailGenerator:
     """
     Utility to load pickle file
 
@@ -221,8 +221,12 @@ def rail_from_file(filename) -> RailGenerator:
 
     def generator(width, height, num_agents, num_resets):
         rail_env_transitions = RailEnvTransitions()
-        with open(filename, "rb") as file_in:
-            load_data = file_in.read()
+        if load_from_package is not None:
+            from importlib_resources import read_binary
+            load_data = read_binary(load_from_package, filename)
+        else:
+            with open(filename, "rb") as file_in:
+                load_data = file_in.read()
         data = msgpack.unpackb(load_data, use_list=False)
 
         grid = np.array(data[b"grid"])
