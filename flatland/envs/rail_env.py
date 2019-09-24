@@ -4,7 +4,7 @@ Definition of the RailEnv environment.
 # TODO:  _ this is a global method --> utils or remove later
 import warnings
 from enum import IntEnum
-from typing import List, Set, NamedTuple, Optional, Tuple, Dict
+from typing import List, NamedTuple, Optional, Tuple, Dict
 
 import msgpack
 import msgpack_numpy as m
@@ -20,7 +20,6 @@ from flatland.envs.distance_map import DistanceMap
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
-from flatland.utils.ordered_set import OrderedSet
 
 m.patch()
 
@@ -586,60 +585,6 @@ class RailEnv(Environment):
             new_direction = np.argmax(possible_transitions)
             transition_valid = True
         return new_direction, transition_valid
-
-    @staticmethod
-    def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
-                                agent_position: Tuple[int, int],
-                                rail: GridTransitionMap) -> Set[RailEnvNextAction]:
-        """
-        Get the valid move actions (forward, left, right) for an agent.
-
-        Parameters
-        ----------
-        agent_direction : Grid4TransitionsEnum
-        agent_position: Tuple[int,int]
-        rail : GridTransitionMap
-
-
-        Returns
-        -------
-        Set of `RailEnvNextAction` (tuples of (action,position,direction))
-            Possible move actions (forward,left,right) and the next position/direction they lead to.
-            It is not checked that the next cell is free.
-        """
-        valid_actions: Set[RailEnvNextAction] = OrderedSet()
-        possible_transitions = rail.get_transitions(*agent_position, agent_direction)
-        num_transitions = np.count_nonzero(possible_transitions)
-        # Start from the current orientation, and see which transitions are available;
-        # organize them as [left, forward, right], relative to the current orientation
-        # If only one transition is possible, the forward branch is aligned with it.
-        if rail.is_dead_end(agent_position):
-            action = RailEnvActions.MOVE_FORWARD
-            exit_direction = (agent_direction + 2) % 4
-            if possible_transitions[exit_direction]:
-                new_position = get_new_position(agent_position, exit_direction)
-                valid_actions.add(RailEnvNextAction(action, new_position, exit_direction))
-        elif num_transitions == 1:
-            action = RailEnvActions.MOVE_FORWARD
-            for new_direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
-                if possible_transitions[new_direction]:
-                    new_position = get_new_position(agent_position, new_direction)
-                    valid_actions.add(RailEnvNextAction(action, new_position, new_direction))
-        else:
-            for new_direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
-                if possible_transitions[new_direction]:
-                    if new_direction == agent_direction:
-                        action = RailEnvActions.MOVE_FORWARD
-                    elif new_direction == (agent_direction + 1) % 4:
-                        action = RailEnvActions.MOVE_RIGHT
-                    elif new_direction == (agent_direction - 1) % 4:
-                        action = RailEnvActions.MOVE_LEFT
-                    else:
-                        raise Exception("Illegal state")
-
-                    new_position = get_new_position(agent_position, new_direction)
-                    valid_actions.add(RailEnvNextAction(action, new_position, new_direction))
-        return valid_actions
 
     def _get_observations(self):
         self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))

@@ -21,12 +21,14 @@ class DistanceMap:
     """
     Set the distance map
     """
+
     def set(self, distance_map: np.ndarray):
         self.distance_map = distance_map
 
     """
     Get the distance map
     """
+
     def get(self) -> np.ndarray:
 
         if self.reset_was_called:
@@ -54,9 +56,10 @@ class DistanceMap:
     """
     Reset the distance map
     """
+
     def reset(self, agents: List[EnvAgent], rail: GridTransitionMap):
         self.reset_was_called = True
-        self.agents = agents
+        self.agents: List[EnvAgent] = agents
         self.rail = rail
         self.env_height = rail.height
         self.env_width = rail.width
@@ -110,7 +113,8 @@ class DistanceMap:
 
         return max_distance
 
-    def _get_and_update_neighbors(self, rail: GridTransitionMap, position, target_nr, current_distance, enforce_target_direction=-1):
+    def _get_and_update_neighbors(self, rail: GridTransitionMap, position, target_nr, current_distance,
+                                  enforce_target_direction=-1):
         """
         Utility function used by _distance_map_walker to perform a BFS walk over the rail, filling in the
         minimum distances from each target cell.
@@ -134,8 +138,7 @@ class DistanceMap:
                 for agent_orientation in range(4):
                     # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
                     is_valid = rail.get_transition((new_cell[0], new_cell[1], agent_orientation),
-                                                            desired_movement_from_new_cell)
-                    # is_valid = True
+                                                   desired_movement_from_new_cell)
 
                     if is_valid:
                         """
