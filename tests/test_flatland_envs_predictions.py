@@ -8,7 +8,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions, RailEnvNextAction
-from flatland.envs.rail_env_utils import get_shortest_paths
+from flatland.envs.rail_env_utils import get_shortest_paths, ShortestPathElement
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.rendertools import RenderTool
@@ -145,11 +145,18 @@ def test_shortest_path_predictor(rendering=False):
 
     paths = get_shortest_paths(env.distance_map)[0]
     assert paths == [
-        RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(4, 6), next_direction=0),
-        RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 6), next_direction=0),
-        RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 7), next_direction=1),
-        RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 8), next_direction=1),
-        RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 9), next_direction=1)]
+        ShortestPathElement((5, 6), 0, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(4, 6),
+                                                         next_direction=0)),
+        ShortestPathElement((4, 6), 0, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 6),
+                                                         next_direction=0)),
+        ShortestPathElement((3, 6), 0, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 7),
+                                                         next_direction=1)),
+        ShortestPathElement((3, 7), 1, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 8),
+                                                         next_direction=1)),
+        ShortestPathElement((3, 8), 1, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 9),
+                                                         next_direction=1)),
+        ShortestPathElement((3, 9), 1, RailEnvNextAction(action=RailEnvActions.DO_NOTHING, next_position=(3, 9),
+                                                         next_direction=1))]
 
     # extract the data
     predictions = env.obs_builder.predictions
