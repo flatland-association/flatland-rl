@@ -600,7 +600,6 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
 
         # Set up connection points
         connection_points = _generate_node_connection_points(node_positions, node_radius, max_nr_connection_points=4)
-        print(connection_points)
         # Start at some node
         current_node = np.random.randint(len(available_nodes_full))
         node_stack = [current_node]
@@ -654,7 +653,6 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                 for tmp_out_connection_point in connection_points[current_node]:
                     tmp_dist_to_node = distance_on_rail(tmp_out_connection_point, node_positions[neighb])
                     # Check if this connection node is on the city side facing the neighbour
-                    print("Current node", current_node, "Neigh", neighb, "Distance", tmp_dist_to_node, dist_from_center)
                     if tmp_dist_to_node < dist_from_center - 1:
                         min_connection_dist = np.inf
 
@@ -714,7 +712,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
 
                 # Connect train station to random nodes
 
-                rand_corner_nodes = np.random.choice(range(len(connection_points[trainstation_node])), 2, replace=False)
+                rand_corner_nodes = np.random.choice(range(len(connection_points[trainstation_node])), 3, replace=False)
                 for corner_node_idx in rand_corner_nodes:
                     connection = connect_nodes(rail_trans, grid_map,
                                                connection_points[trainstation_node][corner_node_idx],
@@ -776,7 +774,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         return grid_map, {'agents_hints': {
             'num_agents': num_agents,
             'agent_start_targets_nodes': agent_start_targets_nodes,
-            'train_stations': train_stations_slots
+            'train_stations': train_stations
         }}
 
     def _generate_node_positions_not_grid_mode(city_positions, height, intersection_positions, nb_nodes,
@@ -788,8 +786,8 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             tries = 0
 
             while to_close:
-                x_tmp = node_radius + np.random.randint(height - node_radius)
-                y_tmp = node_radius + np.random.randint(width - node_radius)
+                x_tmp = node_radius + np.random.randint(height - node_radius - 1)
+                y_tmp = node_radius + np.random.randint(width - node_radius - 1)
                 to_close = False
 
                 # Check distance to cities
@@ -841,7 +839,6 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             connection_per_direction = n_connection_points // 4
             connection_point_vector = [connection_per_direction, connection_per_direction, connection_per_direction,
                                        n_connection_points - 3 * connection_per_direction]
-            print(connection_point_vector)
             connection_points_coordinates = []
             for direction in range(4):
                 rnd_points = np.random.choice(np.arange(-node_size, node_size), size=connection_point_vector[direction],
