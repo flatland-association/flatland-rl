@@ -4,6 +4,7 @@ import pytest
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_direction
 from flatland.core.grid.grid_utils import position_to_coordinate, coordinate_to_position
+from flatland.envs.rail_env_utils import load_flatland_environment_from_file
 
 depth_to_test = 5
 positions_to_test = [0, 5, 1, 6, 20, 30]
@@ -32,3 +33,7 @@ def test_get_direction():
     assert get_direction((1, 0), (0, 0)) == Grid4TransitionsEnum.NORTH
     with pytest.raises(Exception, match="Could not determine direction"):
         get_direction((0, 0), (0, 0))
+
+
+def test_load():
+    load_flatland_environment_from_file('test_001.pkl', 'env_data.tests')

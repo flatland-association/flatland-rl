@@ -167,7 +167,8 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         # Root node - current position
         # Here information about the agent itself is stored
-        observation = [0, 0, 0, 0, 0, 0, self.env.distance_map.get()[(handle, *agent.position, agent.direction)], 0, 0,
+        distance_map = self.env.distance_map.get()
+        observation = [0, 0, 0, 0, 0, 0, distance_map[(handle, *agent.position, agent.direction)], 0, 0,
                        agent.malfunction_data['malfunction'], agent.speed_data['speed']]
 
         visited = OrderedSet()

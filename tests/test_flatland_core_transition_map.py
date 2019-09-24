@@ -168,7 +168,6 @@ def test_get_entry_directions():
     south_symmetrical_switch = cells[6]
     north_symmetrical_switch = transitions.rotate_transition(south_symmetrical_switch, 180)
 
-    # Simple turn not in the base transitions ?
     south_east_turn = int('0100000000000010', 2)
     south_west_turn = transitions.rotate_transition(south_east_turn, 90)
     north_east_turn = transitions.rotate_transition(south_east_turn, 270)

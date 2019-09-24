@@ -58,6 +58,8 @@ class DistanceMap:
         self.reset_was_called = True
         self.agents = agents
         self.rail = rail
+        self.env_height = rail.height
+        self.env_width = rail.width
 
     def _compute(self, agents: List[EnvAgent], rail: GridTransitionMap):
         self.agents_previous_computation = self.agents

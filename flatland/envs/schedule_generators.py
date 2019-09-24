@@ -205,7 +205,7 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
     return generator
 
 
-def schedule_from_file(filename) -> ScheduleGenerator:
+def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
     """
     Utility to load pickle file
 
@@ -220,8 +220,12 @@ def schedule_from_file(filename) -> ScheduleGenerator:
     """
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
-        with open(filename, "rb") as file_in:
-            load_data = file_in.read()
+        if load_from_package is not None:
+            from importlib_resources import read_binary
+            load_data = read_binary(load_from_package, filename)
+        else:
+            with open(filename, "rb") as file_in:
+                load_data = file_in.read()
         data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
 
         # agents are always reset as not moving
