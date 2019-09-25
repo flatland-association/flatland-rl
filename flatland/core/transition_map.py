@@ -422,6 +422,28 @@ class GridTransitionMap(TransitionMap):
                 continue
             else:
                 return False
+        # If the cell is empty but has incoming connections we return false
+        if binTrans < 1:
+            connected = 0
+
+            for iDirOut in np.arange(4):
+                gdRC = gDir2dRC[iDirOut]  # row,col increment
+                gPos2 = grcPos + gdRC  # next cell in that direction
+
+                # Check the adjacent cell is within bounds
+                # if not, then ignore it for the count of incoming connections
+                if np.any(gPos2 < 0):
+                    continue
+                if np.any(gPos2 >= grcMax):
+                    continue
+
+                # Get the transitions out of gPos2, using iDirOut as the inbound direction
+                # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
+
+                for orientation in range(4):
+                    connected += self.get_transition((gPos2[0], gPos2[1], orientation), mirror(iDirOut))
+            if connected > 0:
+                return False
 
         return True
 

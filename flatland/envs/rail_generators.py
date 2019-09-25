@@ -707,6 +707,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                                                connection_points[trainstation_node][corner_node_idx],
                                                (station_x, station_y))
                     if len(connection) != 0:
+
                         if (connection_points[trainstation_node][corner_node_idx],
                             trainstation_node) in boarder_connections:
                             boarder_connections.remove(
@@ -717,6 +718,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                     if len(train_stations[trainstation_node]) > 0:
                         train_stations[trainstation_node].pop(-1)
                 else:
+
                     built_num_trainstation += 1
         # Adjust the number of agents if you could not build enough trainstations
         if num_agents > built_num_trainstation:
@@ -749,14 +751,25 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                 boarder_connections.remove(tbd)
             print(boarder_connections)
         # Fix all nodes with illegal transition maps
-        flat_trainstation_list = [item for sublist in train_stations for item in sublist]
-        for cell_to_fix in flat_trainstation_list:
-            grid_map.fix_transitions(cell_to_fix)
+        empty_to_fix = []
+        rails_to_fix = []
+        for r in range(height):
+            for c in range(width):
+                rc_pos = (r, c)
+                check = grid_map.cell_neighbours_valid(rc_pos, True)
+                if not check:
+                    if grid_map.grid[rc_pos] == 0:
+                        empty_to_fix.append(rc_pos)
+                    else:
+                        rails_to_fix.append(rc_pos)
 
-        flat_list = [item for sublist in connection_points for item in sublist]
+        # Fix empty cells first to avoid cutting the network
+        for cell in empty_to_fix:
+            grid_map.fix_transitions(cell)
 
-        for cell_to_fix in flat_list:
-            grid_map.fix_transitions(cell_to_fix)
+        # Fix all other cells
+        for cell in rails_to_fix:
+            grid_map.fix_transitions(cell)
 
         # Generate start and target node directory for all agents.
         # Assure that start and target are not in the same node
