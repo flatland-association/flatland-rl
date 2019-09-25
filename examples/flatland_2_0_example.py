@@ -40,7 +40,8 @@ env = RailEnv(width=50,
                                                    num_neighb=3,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
                                                    grid_mode=True,
-                                                   enhance_intersection=False
+                                                   nr_inter_connections=1,
+                                                   max_nr_connection_points=8
                                                    ),
               schedule_generator=sparse_schedule_generator(),
               number_of_agents=50,

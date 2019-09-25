@@ -529,7 +529,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
 
 
 def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2, min_node_dist=20, node_radius=2,
-                          num_neighb=3, nr_inter_connections=2, grid_mode=False, enhance_intersection=False,
+                          num_neighb=3, nr_inter_connections=2, grid_mode=False, max_nr_connection_points=4,
                           seed=0) -> RailGenerator:
     """
     This is a level generator which generates complex sparse rail configurations
@@ -598,7 +598,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         available_nodes = np.arange(nb_nodes)
 
         # Set up connection points for all cities
-        connection_points = _generate_node_connection_points(node_positions, node_radius, max_nr_connection_points=8)
+        connection_points = _generate_node_connection_points(node_positions, node_radius, max_nr_connection_points)
 
         # Start at some node
         current_node = np.random.randint(len(available_nodes))
@@ -745,9 +745,9 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                     if len(conn) > 0:
                         to_be_deleted.append(disjunct_node)
 
-        for tbd in to_be_deleted:
-            boarder_connections.remove(tbd)
-        print(boarder_connections)
+            for tbd in to_be_deleted:
+                boarder_connections.remove(tbd)
+            print(boarder_connections)
         # Fix all nodes with illegal transition maps
         flat_trainstation_list = [item for sublist in train_stations for item in sublist]
         for cell_to_fix in flat_trainstation_list:
