@@ -743,8 +743,7 @@ def test_sparse_rail_generator_deterministic():
                                                        num_neighb=3,
                                                        # Number of connections to other cities/intersections
                                                        seed=215545,  # Random seed
-                                                       grid_mode=True,
-                                                       enhance_intersection=False
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,
