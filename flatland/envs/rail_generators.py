@@ -781,7 +781,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             node_available_target.append(len(train_stations[node_idx]))
 
         # Assign agents to slots
-        for agent_idx in range(nb_nodes):
+        for agent_idx in range(num_agents):
             avail_start_nodes = [idx for idx, val in enumerate(node_available_start) if val > 0]
             avail_target_nodes = [idx for idx, val in enumerate(node_available_target) if val > 0]
             start_node = np.random.choice(avail_start_nodes)

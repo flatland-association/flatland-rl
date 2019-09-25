@@ -68,6 +68,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
         agents_position = []
         agents_target = []
         agents_direction = []
+
         for agent_idx in range(num_agents):
             # Set target for agent
             current_target_node = agent_start_targets_nodes[agent_idx][1]
