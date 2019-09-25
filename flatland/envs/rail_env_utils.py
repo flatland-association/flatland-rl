@@ -24,7 +24,9 @@ def load_flatland_environment_from_file(file_name, load_from_package=None, obs_b
 
 
 def visualize_distance_map(distance_map: DistanceMap, agent_handle: int = 0):
-    assert agent_handle < distance_map.get().shape[0]
+    if agent_handle >= distance_map.get().shape[0]:
+        print("Error: agent_handle cannot be larger than actual number of agents")
+        return
     # take min value of all 4 directions
     min_distance_map = np.min(distance_map.get(), axis=3)
     plt.imshow(min_distance_map[agent_handle][:][:])
