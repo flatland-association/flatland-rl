@@ -667,8 +667,8 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                         if distance_on_rail(tmp_out_connection_point, neighb_connection_point) < center_distance:
                             i += 1
                             connect_nodes(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point)
-                            boarder_connections.add(tmp_out_connection_point)
-                            boarder_connections.add(neighb_connection_point)
+                            boarder_connections.add((tmp_out_connection_point, current_node))
+                            boarder_connections.add((neighb_connection_point, neighb))
 
             node_stack.pop(0)
 
@@ -722,10 +722,11 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                                                connection_points[trainstation_node][corner_node_idx],
                                                (station_x, station_y))
                     if len(connection) != 0:
-                        if connection_points[trainstation_node][corner_node_idx] in boarder_connections:
-                            boarder_connections.remove(connection_points[trainstation_node][corner_node_idx])
+                        if (connection_points[trainstation_node][corner_node_idx],
+                            trainstation_node) in boarder_connections:
+                            boarder_connections.remove(
+                                (connection_points[trainstation_node][corner_node_idx], trainstation_node))
 
-                grid_map.fix_transitions((station_x, station_y))
                 # Check if connection was made
                 if len(connection) == 0:
                     if len(train_stations[trainstation_node]) > 0:
@@ -737,8 +738,30 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             num_agents = built_num_trainstation
             warnings.warn("sparse_rail_generator: num_agents > nr_start_goal, changing num_agents")
 
+        # Connect all disjunct parts of the network
+
+        if len(boarder_connections) > 0:
+            to_be_deleted = []
+            for disjunct_node in boarder_connections:
+                print(disjunct_node)
+                conn = connect_nodes(rail_trans, grid_map,
+                                     disjunct_node[0],
+                                     train_stations[disjunct_node[1]][0])
+                if len(conn) > 0:
+                    to_be_deleted.append(disjunct_node)
+
+        for tbd in to_be_deleted:
+            boarder_connections.remove(tbd)
+        print(boarder_connections)
         # Fix all nodes with illegal transition maps
+        flat_trainstation_list = [item for sublist in train_stations for item in sublist]
+        for cell_to_fix in flat_trainstation_list:
+            grid_map.fix_transitions(cell_to_fix)
+
+        grid_map.fix_transitions((station_x, station_y))
+
         flat_list = [item for sublist in connection_points for item in sublist]
+
         for cell_to_fix in flat_list:
             grid_map.fix_transitions(cell_to_fix)
 
