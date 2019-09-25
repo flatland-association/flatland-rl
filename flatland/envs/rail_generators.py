@@ -743,12 +743,22 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         if len(boarder_connections) > 0:
             to_be_deleted = []
             for disjunct_node in boarder_connections:
-                print(disjunct_node)
-                conn = connect_nodes(rail_trans, grid_map,
-                                     disjunct_node[0],
-                                     train_stations[disjunct_node[1]][0])
+                if len(train_stations[disjunct_node[1]]) > 0:
+                    conn = connect_nodes(rail_trans, grid_map,
+                                         disjunct_node[0],
+                                         train_stations[disjunct_node[1]][-1])
+                else:
+                    conn = connect_nodes(rail_trans, grid_map,
+                                         disjunct_node[0],
+                                         node_positions[disjunct_node[1]])
                 if len(conn) > 0:
                     to_be_deleted.append(disjunct_node)
+                else:
+                    conn = connect_nodes(rail_trans, grid_map,
+                                         disjunct_node[0],
+                                         node_positions[disjunct_node[1]])
+                    if len(conn) > 0:
+                        to_be_deleted.append(disjunct_node)
 
         for tbd in to_be_deleted:
             boarder_connections.remove(tbd)
@@ -757,8 +767,6 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         flat_trainstation_list = [item for sublist in train_stations for item in sublist]
         for cell_to_fix in flat_trainstation_list:
             grid_map.fix_transitions(cell_to_fix)
-
-        grid_map.fix_transitions((station_x, station_y))
 
         flat_list = [item for sublist in connection_points for item in sublist]
 

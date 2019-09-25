@@ -34,7 +34,7 @@ env = RailEnv(width=50,
               height=50,
               rail_generator=sparse_rail_generator(num_cities=9,  # Number of cities in map (where train stations are)
                                                    num_intersections=0,  # Number of intersections (no start / target)
-                                                   num_trainstations=10,  # Number of possible start/targets on map
+                                                   num_trainstations=15,  # Number of possible start/targets on map
                                                    min_node_dist=3,  # Minimal distance of nodes
                                                    node_radius=4,  # Proximity of stations to city center
                                                    num_neighb=4,  # Number of connections to other cities/intersections
