@@ -45,7 +45,7 @@ def connect_basic_operation(
                     # need to flip direction because of how end points are defined
                     new_trans = rail_trans.set_transition(new_trans, mirror(current_dir), new_dir, 1)
                 else:
-                    new_trans = 0
+                    new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)  # 0
             else:
                 # into existing rail
                 new_trans = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)
@@ -65,7 +65,7 @@ def connect_basic_operation(
                 if flip_end_node_trans:
                     new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, mirror(new_dir), 1)
                 else:
-                    new_trans_e = 0
+                    new_trans_e = rail_trans.set_transition(new_trans, current_dir, new_dir, 1)  #0
             else:
                 # into existing rail
                 new_trans_e = rail_trans.set_transition(new_trans_e, new_dir, new_dir, 1)
