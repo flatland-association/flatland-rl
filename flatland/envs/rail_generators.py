@@ -654,7 +654,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                 for tmp_out_connection_point in connection_points[current_node]:
                     tmp_dist_to_node = distance_on_rail(tmp_out_connection_point, node_positions[neighb])
                     # Check if this connection node is on the city side facing the neighbour
-                    if tmp_dist_to_node < dist_from_center - 1:
+                    if tmp_dist_to_node < dist_from_center:
                         min_connection_dist = np.inf
 
                         # Find closes connection point
@@ -663,12 +663,10 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                             if tmp_dist < min_connection_dist:
                                 min_connection_dist = tmp_dist
                                 neighb_connection_point = tmp_in_connection_point
-                            center_distance = distance_on_rail(node_positions[current_node], tmp_in_connection_point)
-                        if distance_on_rail(tmp_out_connection_point, neighb_connection_point) < center_distance:
-                            i += 1
-                            connect_nodes(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point)
-                            boarder_connections.add((tmp_out_connection_point, current_node))
-                            boarder_connections.add((neighb_connection_point, neighb))
+                        i += 1
+                        connect_nodes(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point)
+                        boarder_connections.add((tmp_out_connection_point, current_node))
+                        boarder_connections.add((neighb_connection_point, neighb))
 
             node_stack.pop(0)
 
