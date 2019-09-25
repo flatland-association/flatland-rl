@@ -2,6 +2,7 @@ import random
 from typing import Dict
 
 import numpy as np
+from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
@@ -9,7 +10,6 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import complex_rail_generator, sparse_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator, sparse_schedule_generator
-from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 
 class SingleAgentNavigationObs(TreeObsForRailEnv):
@@ -180,8 +180,7 @@ def test_initial_malfunction():
                                                        num_neighb=3,
                                                        # Number of connections to other cities/intersections
                                                        seed=215545,  # Random seed
-                                                       grid_mode=True,
-                                                       enhance_intersection=False
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,
@@ -264,7 +263,6 @@ def test_initial_malfunction_stop_moving():
                                                        # Number of connections to other cities/intersections
                                                        seed=215545,  # Random seed
                                                        grid_mode=True,
-                                                       enhance_intersection=False
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,
@@ -357,7 +355,6 @@ def test_initial_malfunction_do_nothing():
                                                        # Number of connections to other cities/intersections
                                                        seed=215545,  # Random seed
                                                        grid_mode=True,
-                                                       enhance_intersection=False
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,
