@@ -604,26 +604,30 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         # Start at some node
         current_node = np.random.randint(len(available_nodes_full))
         node_stack = [current_node]
+        open_nodes = np.copy(available_nodes_full)
         allowed_connections = num_neighb
-        first_node = True
         i = 0
         boarder_connections = set()
-        while len(node_stack) > 0:
-            current_node = node_stack[0]
-            delete_idx = np.where(available_nodes_full == current_node)
-            available_nodes_full = np.delete(available_nodes_full, delete_idx, 0)
+        while len(open_nodes) > 0:
+            if len(node_stack) > 0:
+                current_node = node_stack[0]
+            else:
+                current_node = np.random.choice(open_nodes)
+                node_stack.append(current_node)
+            delete_idx = np.where(open_nodes == current_node)
+            open_nodes = np.delete(open_nodes, delete_idx, 0)
 
             # Priority city to intersection connections
             if current_node < _num_cities and len(available_intersections) > 0:
                 available_nodes = available_intersections
                 delete_idx = np.where(available_cities == current_node)
-                available_cities = np.delete(available_cities, delete_idx, 0)
+                # available_cities = np.delete(available_cities, delete_idx, 0)
 
             # Priority intersection to city connections
             elif current_node >= _num_cities and len(available_cities) > 0:
                 available_nodes = available_cities
                 delete_idx = np.where(available_intersections == current_node)
-                available_intersections = np.delete(available_intersections, delete_idx, 0)
+                # available_intersections = np.delete(available_intersections, delete_idx, 0)
 
             # If no options possible connect to whatever node is still available
             else:
@@ -637,18 +641,15 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
 
             # Set number of neighboring nodes
             if len(available_nodes) >= allowed_connections:
-                connected_neighb_idx = available_nodes[:allowed_connections]
+                connected_neighb_idx = available_nodes[1:allowed_connections + 1]
             else:
                 connected_neighb_idx = available_nodes
+
             print(current_node, connected_neighb_idx)
-            # Less connections for subsequent nodes
-            if first_node:
-                allowed_connections -= 1
-                first_node = False
 
             # Connect to the neighboring nodes
             for neighb in connected_neighb_idx:
-                if neighb not in node_stack:
+                if neighb not in node_stack and neighb in open_nodes:
                     node_stack.append(neighb)
 
                 dist_from_center = distance_on_rail(node_positions[current_node], node_positions[neighb])
@@ -824,8 +825,8 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
             tries = 0
 
             while to_close:
-                x_tmp = node_radius + np.random.randint(height - node_radius - 1)
-                y_tmp = node_radius + np.random.randint(width - node_radius - 1)
+                x_tmp = node_radius + np.random.randint(height - 2 * node_radius - 1)
+                y_tmp = node_radius + np.random.randint(width - 2 * node_radius - 1)
                 to_close = False
 
                 # Check distance to cities
