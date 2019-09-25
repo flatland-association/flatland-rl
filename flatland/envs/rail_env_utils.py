@@ -110,9 +110,9 @@ def get_shortest_paths(distance_map: DistanceMap) -> Dict[int, List[ShortestPath
 
             position = best_next_action.next_position
             direction = best_next_action.next_direction
-        if position == a.target:
-            shortest_paths[a.handle].append(
-                ShortestPathElement(position, direction,
-                                    RailEnvNextAction(RailEnvActions.DO_NOTHING, position, direction)))
 
-        return shortest_paths
+        shortest_paths[a.handle].append(
+            ShortestPathElement(position, direction,
+                                RailEnvNextAction(RailEnvActions.STOP_MOVING, position, direction)))
+
+    return shortest_paths

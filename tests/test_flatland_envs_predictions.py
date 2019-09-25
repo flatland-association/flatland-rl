@@ -155,7 +155,7 @@ def test_shortest_path_predictor(rendering=False):
                                                          next_direction=1)),
         ShortestPathElement((3, 8), 1, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 9),
                                                          next_direction=1)),
-        ShortestPathElement((3, 9), 1, RailEnvNextAction(action=RailEnvActions.DO_NOTHING, next_position=(3, 9),
+        ShortestPathElement((3, 9), 1, RailEnvNextAction(action=RailEnvActions.STOP_MOVING, next_position=(3, 9),
                                                          next_direction=1))]
 
     # extract the data
