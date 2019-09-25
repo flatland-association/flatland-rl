@@ -113,7 +113,7 @@ for step in range(500):
     # reward and whether their are done
     next_obs, all_rewards, done, _ = env.step(action_dict)
     env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-    time.sleep(50)
+    time.sleep(1)
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
