@@ -252,6 +252,7 @@ class RailEnv(Environment):
                     rc_pos = (r, c)
                     check = self.rail.cell_neighbours_valid(rc_pos, True)
                     if not check:
+                        self.rail.fix_transitions(rc_pos)
                         warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
 
         if replace_agents:

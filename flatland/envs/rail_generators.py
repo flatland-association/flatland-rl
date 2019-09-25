@@ -595,16 +595,15 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
 
         # Chose node connection
         # Set up list of available nodes to connect to
-        available_nodes_full = np.arange(nb_nodes)
-        available_cities = np.arange(_num_cities)
-        available_intersections = np.arange(_num_cities, nb_nodes)
+        available_nodes = np.arange(nb_nodes)
 
-        # Set up connection points
+        # Set up connection points for all cities
         connection_points = _generate_node_connection_points(node_positions, node_radius, max_nr_connection_points=8)
+
         # Start at some node
-        current_node = np.random.randint(len(available_nodes_full))
+        current_node = np.random.randint(len(available_nodes))
         node_stack = [current_node]
-        open_nodes = np.copy(available_nodes_full)
+        open_nodes = np.copy(available_nodes)
         allowed_connections = num_neighb
         i = 0
         boarder_connections = set()
@@ -616,22 +615,6 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                 node_stack.append(current_node)
             delete_idx = np.where(open_nodes == current_node)
             open_nodes = np.delete(open_nodes, delete_idx, 0)
-
-            # Priority city to intersection connections
-            if current_node < _num_cities and len(available_intersections) > 0:
-                available_nodes = available_intersections
-                delete_idx = np.where(available_cities == current_node)
-                # available_cities = np.delete(available_cities, delete_idx, 0)
-
-            # Priority intersection to city connections
-            elif current_node >= _num_cities and len(available_cities) > 0:
-                available_nodes = available_cities
-                delete_idx = np.where(available_intersections == current_node)
-                # available_intersections = np.delete(available_intersections, delete_idx, 0)
-
-            # If no options possible connect to whatever node is still available
-            else:
-                available_nodes = available_nodes_full
 
             # Sort available neighbors according to their distance.
             node_dist = []
@@ -764,6 +747,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
 
         for tbd in to_be_deleted:
             boarder_connections.remove(tbd)
+        print(boarder_connections)
         # Fix all nodes with illegal transition maps
         flat_trainstation_list = [item for sublist in train_stations for item in sublist]
         for cell_to_fix in flat_trainstation_list:
