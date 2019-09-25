@@ -604,7 +604,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
         # Start at some node
         current_node = np.random.randint(len(available_nodes_full))
         node_stack = [current_node]
-        allowed_connections = len(connection_points[current_node])
+        allowed_connections = num_neighb
         first_node = True
         i = 0
         boarder_connections = set()
@@ -640,7 +640,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                 connected_neighb_idx = available_nodes[:allowed_connections]
             else:
                 connected_neighb_idx = available_nodes
-
+            print(current_node, connected_neighb_idx)
             # Less connections for subsequent nodes
             if first_node:
                 allowed_connections -= 1
@@ -763,7 +763,6 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
 
         for tbd in to_be_deleted:
             boarder_connections.remove(tbd)
-        print(boarder_connections)
         # Fix all nodes with illegal transition maps
         flat_trainstation_list = [item for sublist in train_stations for item in sublist]
         for cell_to_fix in flat_trainstation_list:
@@ -888,7 +887,6 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
                 else:
                     connection_slots = np.arange(connection_point_vector[direction]) - int(
                         connection_point_vector[direction] / 2)
-                print(connection_slots)
                 for connection_idx in range(connection_point_vector[direction]):
                     if direction == 0:
                         connection_points_coordinates.append(
