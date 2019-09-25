@@ -240,9 +240,6 @@ class RailEnv(Environment):
         #  can we not put 'self.rail_generator(..)' into 'if regen_rail or self.rail is None' condition?
         rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
-        if optionals and 'distance_map' in optionals:
-            self.distance_map.set(optionals['distance_map'])
-
         if regen_rail or self.rail is None:
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
@@ -252,6 +249,11 @@ class RailEnv(Environment):
                     check = self.rail.cell_neighbours_valid(rc_pos, True)
                     if not check:
                         warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
+        # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
+        #  hacky: we must re-compute the distance map and not use the initial distance_map loaded from file by
+        #  rail_from_file!!!
+        elif optionals and 'distance_map' in optionals:
+            self.distance_map.set(optionals['distance_map'])
 
         if replace_agents:
             agents_hints = None
