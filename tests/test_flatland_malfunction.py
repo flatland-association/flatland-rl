@@ -53,7 +53,7 @@ class SingleAgentNavigationObs(TreeObsForRailEnv):
                     min_distances.append(np.inf)
 
             observation = [0, 0, 0]
-            observation[np.argmin(min_distances)[0]] = 1
+            observation[np.argmin(min_distances)] = 1
 
         return observation
 
