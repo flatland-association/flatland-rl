@@ -37,7 +37,7 @@ env = RailEnv(width=50,
                                                    num_trainstations=15,  # Number of possible start/targets on map
                                                    min_node_dist=3,  # Minimal distance of nodes
                                                    node_radius=4,  # Proximity of stations to city center
-                                                   num_neighb=4,  # Number of connections to other cities/intersections
+                                                   num_neighb=2,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
                                                    grid_mode=True,
                                                    enhance_intersection=False
