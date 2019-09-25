@@ -23,9 +23,9 @@ class Vec2dOperations:
 
         :param node_a: tuple with coordinate (x,y) or 2d vector
         :param node_b: tuple with coordinate (x,y) or 2d vector
+
         :return:
-            -------
-        check if node_a and nobe_b are equal
+            check if node_a and nobe_b are equal
         """
         return node_a[0] == node_b[0] and node_a[1] == node_b[1]
 
@@ -36,9 +36,9 @@ class Vec2dOperations:
 
         :param node_a: tuple with coordinate (x,y) or 2d vector
         :param node_b: tuple with coordinate (x,y) or 2d vector
+
         :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
+            tuple with coordinate (x,y) or 2d vector
         """
         return node_a[0] - node_b[0], node_a[1] - node_b[1]
 
@@ -49,6 +49,7 @@ class Vec2dOperations:
 
         :param node_a: tuple with coordinate (x,y) or 2d vector
         :param node_b: tuple with coordinate (x,y) or 2d vector
+
         :return:
             -------
         tuple with coordinate (x,y) or 2d vector
@@ -74,9 +75,9 @@ class Vec2dOperations:
         [see: https://lyfat.wordpress.com/2012/05/22/euclidean-vs-chebyshev-vs-manhattan-distance/]
 
         :param node: tuple with coordinate (x,y) or 2d vector
+
         :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
+            tuple with coordinate (x,y) or 2d vector
         """
         return np.sqrt(node[0] * node[0] + node[1] * node[1])
 
@@ -147,9 +148,8 @@ class Vec2dOperations:
         normalize the 2d vector = v/|v|
 
         :param node: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
+
+        :return: tuple with coordinate (x,y) or 2d vector
         """
         n = Vec2dOperations.get_norm(node)
         if n > 0.0:
@@ -163,9 +163,8 @@ class Vec2dOperations:
 
          :param node: tuple with coordinate (x,y) or 2d vector
          :param scale: scalar to scale
-         :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
+
+         :return: tuple with coordinate (x,y) or 2d vector
          """
         return node[0] * scale, node[1] * scale
 
@@ -175,9 +174,8 @@ class Vec2dOperations:
          rounds the x and y coordinate and convert them to an integer values
 
          :param node: tuple with coordinate (x,y) or 2d vector
-         :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
+
+         :return: tuple with coordinate (x,y) or 2d vector
          """
         return int(np.round(node[0])), int(np.round(node[1]))
 
@@ -187,9 +185,9 @@ class Vec2dOperations:
          ceiling the x and y coordinate and convert them to an integer values
 
          :param node: tuple with coordinate (x,y) or 2d vector
+
          :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
+            tuple with coordinate (x,y) or 2d vector
          """
         return int(np.ceil(node[0])), int(np.ceil(node[1]))
 
@@ -199,9 +197,9 @@ class Vec2dOperations:
          floor the x and y coordinate and convert them to an integer values
 
          :param node: tuple with coordinate (x,y) or 2d vector
+
          :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
+            tuple with coordinate (x,y) or 2d vector
          """
         return int(np.floor(node[0])), int(np.floor(node[1]))
 
@@ -213,9 +211,9 @@ class Vec2dOperations:
          :param node: tuple with coordinate (x,y) or 2d vector
          :param min_value: scalar value
          :param max_value: scalar value
+
          :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
+            tuple with coordinate (x,y) or 2d vector
          """
         return max(min_value, min(max_value, node[0])), max(min_value, min(max_value, node[1]))
 
@@ -226,9 +224,9 @@ class Vec2dOperations:
 
          :param node: tuple with coordinate (x,y) or 2d vector
          :param rot_in_degree:  angle in degree
+
          :return:
-             -------
-         tuple with coordinate (x,y) or 2d vector
+            tuple with coordinate (x,y) or 2d vector
          """
         alpha = rot_in_degree / 180.0 * np.pi
         x0 = node[0]

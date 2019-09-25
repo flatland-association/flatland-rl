@@ -1,14 +1,14 @@
-# Rendering Specifications
+## Rendering Specifications
 
-## Scope
+### Scope
 This doc specifies the software to meet the requirements in the Visualization requirements doc.
 
-## References
+### References
 - [Visualization Requirements](visualization)
 - [Core Spec](./core)
 
-## Interfaces
-### Interface with Environment Component
+### Interfaces
+#### Interface with Environment Component
 
 - Environment produces the Env Snapshot data structure (TBD)
 - Renderer reads the Env Snapshot
@@ -28,9 +28,9 @@ This doc specifies the software to meet the requirements in the Visualization re
     - Or, render frames without blocking environment
         - Render frames in separate process / thread
 
-#### Environment Snapshot
+##### Environment Snapshot
 
-### Data Structure
+#### Data Structure
 
 A definitions of the data structure is to be defined in Core requirements or Interfaces doc.
 
@@ -50,7 +50,7 @@ Top-level dictionary
         - Tree-based observation
             - TBD
 
-### Existing Tools / Libraries
+#### Existing Tools / Libraries
 1. Pygame
     1. Very easy to use. Like dead simple to add sprites etc. [Link](https://studywolf.wordpress.com/2015/03/06/arm-visualization-with pygame/)
     2. No inbuilt support for threads/processes. Does get faster if using pypy/pysco.
@@ -58,18 +58,18 @@ Top-level dictionary
     1. Somewhat simple, a little more verbose to use the different modules.
     2. Multi-threaded via QThread! Yay! (Doesn’t block main thread that does the real work), [Link](https://nikolak.com/pyqt-threading-tutorial/)
 
-#### How to structure the code
+##### How to structure the code
 
 1. Define draw functions/classes for each primitive
     1. Primitives: Agents (Trains), Railroad, Grass, Houses etc.
 2. Background. Initialize the background before starting the episode.
     1. Static objects in the scenes, directly draw those primitives once and cache.
 
-#### Proposed Interfaces
+##### Proposed Interfaces
 To-be-filled
 
-### Technical Graphics Considerations
+#### Technical Graphics Considerations
 
-#### Overlay dynamic primitives over the background at each time step.
+##### Overlay dynamic primitives over the background at each time step.
 
 No point trying to figure out changes. Need to explicitly draw every primitive anyways (that’s how these renders work).

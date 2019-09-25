@@ -33,7 +33,7 @@ We are currently working on improvements here and are **happy for any suggestion
 
 To build an environment you instantiate a `RailEnv` as follows:
 
-```
+```python
 # Initialize the generator
 rail_generator=sparse_rail_generator(
     num_cities=10,  # Number of cities in map
@@ -89,7 +89,7 @@ This is very common for railway networks where the initial plan usually needs to
 
 We implemted a poisson process to simulate delays by stopping agents at random times for random durations. The parameters necessary for the stochastic events can be provided when creating the environment.
 
-```
+```python
 # Use a the malfunction generator to break agents from time to time
 
 stochastic_data = {
@@ -108,7 +108,7 @@ The parameters are as follows:
 
 You can introduce stochasticity by simply creating the env as follows:
 
-```
+```python
 env = RailEnv(
     ...
     stochastic_data=stochastic_data,  # Malfunction data generator
@@ -116,7 +116,7 @@ env = RailEnv(
 )
 ```
 In your controller, you can check whether an agent is malfunctioning: 
-```
+```python
 obs, rew, done, info = env.step(actions) 
 ...
 action_dict = dict()
@@ -167,7 +167,7 @@ For the submission scoring you can assume that there will be no more than 5 spee
 Later versions of **Flat**land might have varying speeds during episodes. Therefore, we return the agent speeds. 
 Notice that we do not guarantee that the speed will be computed at each step, but if not costly we will return it at each step.
 In your controller, you can get the agents' speed from the `info` returned by `step`: 
-```
+```python
 obs, rew, done, info = env.step(actions) 
 ...
 for a in range(env.get_num_agents()):
@@ -187,7 +187,7 @@ This action is then executed when a step to the next cell is valid. For example
 - The environment checks if agent is allowed to move to next cell only at the time of the switch to the next cell
 
 In your controller, you can check whether an agent requires an action by checking `info`: 
-```
+```python
 obs, rew, done, info = env.step(actions) 
 ...
 action_dict = dict()
@@ -207,7 +207,7 @@ Usually, there is a third organisation, which ensures discrimination-free access
 However, in the **Flat**land challenge, we focus on the re-scheduling problem during live operations.
 
 Technically, 
-``` 
+```python
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Any]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
 
@@ -217,7 +217,7 @@ ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGe
 ```
 
 We can then produce `RailGenerator`s by currying:
-```
+```python
 def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2, min_node_dist=20, node_radius=2,
                           num_neighb=3, grid_mode=False, enhance_intersection=False, seed=0):
 
@@ -235,7 +235,7 @@ def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2
     return generator
 ```
 And, similarly, `ScheduleGenerator`s:
-```
+```python
 def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         # place agents:
@@ -254,7 +254,7 @@ For instance, the way the `sparse_rail_generator` generates the grid, it already
 Hence, `rail_generator` and `schedule_generator` have to match if `schedule_generator` presupposes some specific `agents_hints`.
 
 The environment's `reset` takes care of applying the two generators:
-```
+```python
     def __init__(self,
             ...
              rail_generator: RailGenerator = random_rail_generator(),
