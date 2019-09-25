@@ -15,7 +15,7 @@ from flatland.envs.schedule_generators import schedule_from_file
 from flatland.utils.ordered_set import OrderedSet
 
 WalkingElement = \
-    NamedTuple('Path_Element',
+    NamedTuple('WalkingElement',
                [('position', Tuple[int, int]), ('direction', int), ('next_action_element', RailEnvNextAction)])
 
 
