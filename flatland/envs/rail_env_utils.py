@@ -14,7 +14,7 @@ from flatland.envs.rail_generators import rail_from_file
 from flatland.envs.schedule_generators import schedule_from_file
 from flatland.utils.ordered_set import OrderedSet
 
-ShortestPathElement = \
+WalkingElement = \
     NamedTuple('Path_Element',
                [('position', Tuple[int, int]), ('direction', int), ('next_action_element', RailEnvNextAction)])
 
@@ -87,7 +87,7 @@ def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
     return valid_actions
 
 
-def get_shortest_paths(distance_map: DistanceMap) -> Dict[int, List[ShortestPathElement]]:
+def get_shortest_paths(distance_map: DistanceMap) -> Dict[int, List[WalkingElement]]:
     # TODO: do we need to support unreachable targets?
     # TODO refactoring: unify with predictor (support agent.moving and max_depth)
     shortest_paths = dict()
@@ -106,13 +106,13 @@ def get_shortest_paths(distance_map: DistanceMap) -> Dict[int, List[ShortestPath
                     best_next_action = next_action
                     distance = next_action_distance
 
-            shortest_paths[a.handle].append(ShortestPathElement(position, direction, best_next_action))
+            shortest_paths[a.handle].append(WalkingElement(position, direction, best_next_action))
 
             position = best_next_action.next_position
             direction = best_next_action.next_direction
 
         shortest_paths[a.handle].append(
-            ShortestPathElement(position, direction,
-                                RailEnvNextAction(RailEnvActions.STOP_MOVING, position, direction)))
+            WalkingElement(position, direction,
+                           RailEnvNextAction(RailEnvActions.STOP_MOVING, position, direction)))
 
     return shortest_paths
