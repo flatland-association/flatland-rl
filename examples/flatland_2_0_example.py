@@ -32,15 +32,15 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
 
 env = RailEnv(width=50,
               height=50,
-              rail_generator=sparse_rail_generator(num_cities=9,  # Number of cities in map (where train stations are)
+              rail_generator=sparse_rail_generator(num_cities=3,  # Number of cities in map (where train stations are)
                                                    num_trainstations=100,  # Number of possible start/targets on map
                                                    min_node_dist=10,  # Minimal distance of nodes
                                                    node_radius=4,  # Proximity of stations to city center
                                                    num_neighb=3,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
-                                                   grid_mode=True,
+                                                   grid_mode=False,
                                                    nr_parallel_tracks=2,
-                                                   connectin_points_per_side=2,
+                                                   connectin_points_per_side=100,
                                                    max_nr_connection_directions=3,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
