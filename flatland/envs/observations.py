@@ -491,10 +491,10 @@ class TreeObsForRailEnv(ObservationBuilder):
                 unfolded[label] = observation_tree
         return unfolded
 
-    def _set_env(self, env: Environment):
-        self.env = env
+    def set_env(self, env: Environment):
+        super().set_env(env)
         if self.predictor:
-            self.predictor._set_env(self.env)
+            self.predictor.set_env(self.env)
 
     def _reverse_dir(self, direction):
         return int((direction + 2) % 4)
@@ -522,9 +522,8 @@ class GlobalObsForRailEnv(ObservationBuilder):
         self.observation_space = ()
         super(GlobalObsForRailEnv, self).__init__()
 
-    def _set_env(self, env: Environment):
-        super()._set_env(env)
-
+    def set_env(self, env: Environment):
+        super().set_env(env)
         self.observation_space = [4, self.env.height, self.env.width]
 
     def reset(self):

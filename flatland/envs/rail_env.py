@@ -161,7 +161,7 @@ class RailEnv(Environment):
         self.rewards = [0] * number_of_agents
         self.done = False
         self.obs_builder = obs_builder_object
-        self.obs_builder._set_env(self)
+        self.obs_builder.set_env(self)
 
         self._max_episode_steps = max_episode_steps
         self._elapsed_steps = 0

@@ -6,8 +6,8 @@ from typing import List
 
 import numpy as np
 
+from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator
@@ -18,24 +18,20 @@ random.seed(100)
 np.random.seed(100)
 
 
-class SingleAgentNavigationObs(TreeObsForRailEnv):
+class SingleAgentNavigationObs(ObservationBuilder):
     """
-    We derive our bbservation builder from TreeObsForRailEnv, to exploit the existing implementation to compute
-    the minimum distances from each grid node to each agent's target.
-
-    We then build a representation vector with 3 binary components, indicating which of the 3 available directions
+    We build a representation vector with 3 binary components, indicating which of the 3 available directions
     for each agent (Left, Forward, Right) lead to the shortest path to its target.
     E.g., if taking the Left branch (if available) is the shortest route to the agent's target, the observation vector
     will be [1, 0, 0].
     """
 
     def __init__(self):
-        super().__init__(max_depth=0)
+        super().__init__()
         self.observation_space = [3]
 
     def reset(self):
-        # Recompute the distance map, if the environment has changed.
-        super().reset()
+        pass
 
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
