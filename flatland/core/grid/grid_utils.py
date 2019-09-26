@@ -50,9 +50,7 @@ class Vec2dOperations:
         :param node_a: tuple with coordinate (x,y) or 2d vector
         :param node_b: tuple with coordinate (x,y) or 2d vector
 
-        :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
+        :return: tuple with coordinate (x,y) or 2d vector
         """
         return node_a[0] + node_b[0], node_a[1] + node_b[1]
 
@@ -62,9 +60,8 @@ class Vec2dOperations:
         vector operation : rotates the 2D vector +90°
 
         :param node: tuple with coordinate (x,y) or 2d vector
-        :return:
-            -------
-        tuple with coordinate (x,y) or 2d vector
+
+        :return: tuple with coordinate (x,y) or 2d vector
         """
         return node[1], -node[0]
 
@@ -127,7 +124,7 @@ class Vec2dOperations:
         calculates the chebyshev norm of the 2d vector
         [see: https://lyfat.wordpress.com/2012/05/22/euclidean-vs-chebyshev-vs-manhattan-distance/]
 
-        :Parameters
+        Parameters
         ----------
         node_a
             tuple with coordinate (x,y) or 2d vector
@@ -145,7 +142,7 @@ class Vec2dOperations:
     @staticmethod
     def normalize(node: Vector2D) -> Tuple[float, float]:
         """
-        normalize the 2d vector = v/|v|
+        normalize the 2d vector = `v/|v|`
 
         :param node: tuple with coordinate (x,y) or 2d vector
 

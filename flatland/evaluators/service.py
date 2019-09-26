@@ -44,10 +44,9 @@ class FlatlandRemoteEvaluationService:
     """
     A remote evaluation service which exposes the following interfaces
     of a RailEnv :
-        - env_create
-        - env_step
-    and an additional `env_submit` to cater to score computation and 
-    on-episode-complete post processings.
+    - env_create
+    - env_step
+    and an additional `env_submit` to cater to score computation and on-episode-complete post processings.
 
     This service is designed to be used in conjunction with 
     `FlatlandRemoteClient` and both the srevice and client maintain a 
@@ -148,17 +147,17 @@ class FlatlandRemoteEvaluationService:
         for evaluation. The folder structure expected at the `test_env_folder`
         is similar to :
 
-        .
-        ├── Test_0
-        │   ├── Level_1.pkl
-        │   ├── .......
-        │   ├── .......
-        │   └── Level_99.pkl
-        └── Test_1
-            ├── Level_1.pkl
-            ├── .......
-            ├── .......
-            └── Level_99.pkl 
+            .
+            ├── Test_0
+            │   ├── Level_1.pkl
+            │   ├── .......
+            │   ├── .......
+            │   └── Level_99.pkl
+            └── Test_1
+                ├── Level_1.pkl
+                ├── .......
+                ├── .......
+                └── Level_99.pkl
         """
         env_paths = sorted(glob.glob(
             os.path.join(
@@ -291,9 +290,7 @@ class FlatlandRemoteEvaluationService:
     def handle_env_create(self, command):
         """
         Handles a ENV_CREATE command from the client
-        TODO:   
-            Add a high level summary of everything thats 
-            hapenning here.
+        TODO: Add a high level summary of everything thats happening here.
         """
         self.simulation_count += 1
         if self.simulation_count < len(self.env_file_paths):
@@ -374,9 +371,7 @@ class FlatlandRemoteEvaluationService:
     def handle_env_step(self, command):
         """
         Handles a ENV_STEP command from the client
-        TODO:   
-            Add a high level summary of everything thats 
-            hapenning here.
+        TODO: Add a high level summary of everything thats happening here.
         """
         _payload = command['payload']
 
@@ -449,9 +444,7 @@ class FlatlandRemoteEvaluationService:
     def handle_env_submit(self, command):
         """
         Handles a ENV_SUBMIT command from the client
-        TODO:   
-            Add a high level summary of everything thats 
-            hapenning here.
+        TODO: Add a high level summary of everything thats happening here.
         """
         _payload = command['payload']
 

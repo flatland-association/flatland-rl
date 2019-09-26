@@ -5,5 +5,5 @@ In a human-readable language, specifications provide
 - key concepts (generators, envs) and how are they linked
 - link relevant code base
 
-.. image:: specifications/img/UML_flatland.png
+![Overview](img/UML_flatland.png)
 `Diagram Source <https://confluence.sbb.ch/x/pQfsSw>`_
