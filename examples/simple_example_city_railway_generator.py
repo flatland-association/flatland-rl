@@ -52,7 +52,10 @@ for itrials in np.arange(1, 15, 1):
     # store rendered file into render_output if the path exists
     env_renderer.gl.save_image(
         os.path.join(
+<<<<<<< 188_refining_generator
             "./../render_output/",
+=======
+>>>>>>> local
             "flatland_frame_{:04d}.png".format(itrials)
         ))
 
