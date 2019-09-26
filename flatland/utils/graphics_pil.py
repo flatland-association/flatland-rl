@@ -174,7 +174,6 @@ class PILGL(GraphicsLayer):
         self.draws[layer].text(xyPixLeftTop, strText, font=self.font, fill=(0, 0, 0, 255))
 
     def text_rowcol(self, rcTopLeft, strText, layer=AGENT_LAYER):
-        print("Text:", "rc:", rcTopLeft, "text:", strText, "layer:", layer)
         xyPixLeftTop = tuple((array(rcTopLeft) * self.nPixCell)[[1, 0]])
         self.text(*xyPixLeftTop, strText, layer)
 
@@ -606,7 +605,6 @@ class PILSVG(PILGL):
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
 
         if show_debug:
-            print("Call text:")
             self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
 
     def set_cell_occupied(self, agent_idx, row, col):
