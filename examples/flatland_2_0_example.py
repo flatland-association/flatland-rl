@@ -39,7 +39,7 @@ env = RailEnv(width=50,
                                                    num_neighb=3,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
                                                    grid_mode=True,
-                                                   nr_parallel_tracks=2,
+                                                   nr_parallel_tracks=10,
                                                    connection_points_per_side=2,
                                                    max_nr_connection_directions=4,
                                                    ),

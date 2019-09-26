@@ -563,6 +563,9 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         rail_array = grid_map.grid
         rail_array.fill(0)
         np.random.seed(seed + num_resets)
+        tracks_between_cities = nr_parallel_tracks
+        if nr_parallel_tracks >= connection_points_per_side:
+            tracks_between_cities = connection_points_per_side
 
         # Generate a set of nodes for the sparse network
         # Try to connect cities to nodes first
@@ -602,7 +605,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                                                                               max_nr_connection_directions)
 
         # Connect the cities through the connection points
-        _connect_cities(node_positions, connection_points, connection_info, rail_trans, grid_map)
+        _connect_cities(node_positions, connection_points, connection_info, tracks_between_cities, rail_trans, grid_map)
 
         # Build inner cities
         train_stations, built_num_trainstation = _build_cities(node_positions, connection_points, rail_trans, grid_map)
@@ -616,7 +619,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         _fix_transitions(grid_map)
 
         # Generate start target paris
-        agent_start_targets_nodes = _generate_start_target_pairs(num_agents, nb_nodes, train_stations)
+        agent_start_targets_nodes, num_agents = _generate_start_target_pairs(num_agents, nb_nodes, train_stations)
 
         return grid_map, {'agents_hints': {
             'num_agents': num_agents,
@@ -727,7 +730,8 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
             connection_info.append(connections_per_direction)
         return connection_points, connection_info
 
-    def _connect_cities(node_positions, connection_points, connection_info, rail_trans, grid_map):
+    def _connect_cities(node_positions, connection_points, connection_info, tracks_between_cities, rail_trans,
+                        grid_map):
         """
         Function to connect the different cities through their connection points
         :param node_positions: Positions of city centers
@@ -754,7 +758,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                         tmp_dist_to_node = distance_on_rail(tmp_out_connection_point, node_positions[neighb_idx])
                         connection_distances.append(tmp_dist_to_node)
                     possible_connection_points = argsort(connection_distances)
-                    for sort_idx in possible_connection_points[:nr_parallel_tracks]:
+                    for sort_idx in possible_connection_points[:tracks_between_cities]:
                         # Find closest connection point
                         tmp_out_connection_point = connection_points[current_node][sort_idx]
                         min_connection_dist = np.inf
@@ -893,7 +897,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                 agent_start_targets_nodes.append((start_node, target_node))
             else:
                 num_agents -= 1
-        return agent_start_targets_nodes
+        return agent_start_targets_nodes, num_agents
 
     def _closest_neigh_in_direction(current_node, direction, node_positions):
         # Sort available neighbors according to their distance.
