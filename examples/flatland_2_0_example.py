@@ -32,16 +32,16 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
 
 env = RailEnv(width=50,
               height=50,
-              rail_generator=sparse_rail_generator(num_cities=3,  # Number of cities in map (where train stations are)
-                                                   num_trainstations=100,  # Number of possible start/targets on map
-                                                   min_node_dist=10,  # Minimal distance of nodes
+              rail_generator=sparse_rail_generator(num_cities=9,  # Number of cities in map (where train stations are)
+                                                   num_trainstations=50,  # Number of possible start/targets on map
+                                                   min_node_dist=30,  # Minimal distance of nodes
                                                    node_radius=4,  # Proximity of stations to city center
                                                    num_neighb=3,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
-                                                   grid_mode=False,
+                                                   grid_mode=True,
                                                    nr_parallel_tracks=2,
-                                                   connectin_points_per_side=100,
-                                                   max_nr_connection_directions=3,
+                                                   connection_points_per_side=2,
+                                                   max_nr_connection_directions=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
               number_of_agents=50,
@@ -114,7 +114,7 @@ for step in range(500):
     # reward and whether their are done
     next_obs, all_rewards, done, _ = env.step(action_dict)
     env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-    time.sleep(1)
+    time.sleep(10)
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
