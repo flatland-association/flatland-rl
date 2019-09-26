@@ -37,7 +37,8 @@ $ conda install -c conda-forge cairosvg pycairo
 $ conda install -c anaconda tk  
 ```
 
-### Stable release
+### Install Flatland
+#### Stable Release
 
 To install flatland, run this command in your terminal:
 
@@ -54,9 +55,9 @@ you through the process.
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
 
-### From sources
+#### From sources
 
-The sources for flatland can be downloaded from the `Gitlab repo`_.
+The sources for flatland can be downloaded from [gitlab](https://gitlab.aicrowd.com/flatland/flatland)
 
 You can clone the public repository:
 ```console
@@ -69,7 +70,14 @@ Once you have a copy of the source, you can install it with:
 $ python setup.py install
 ```
 
-.. _Gitlab repo: https://gitlab.aicrowd.com/flatland/flatland
+### Test installation
+
+Test that the installation works
+
+```console
+$ flatland-demo
+```
+
 
 
 ### Jupyter Canvas Widget

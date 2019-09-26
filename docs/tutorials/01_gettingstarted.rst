@@ -1,6 +1,5 @@
-===============
-Getting Started
-===============
+Getting Started Tutorial
+========================
 
 Overview
 --------
@@ -16,9 +15,8 @@ To use flatland in a project:
     import flatland
 
 
-Part 1 : Basic Usage
---------------------
-
+Simple Example 1 : Basic Usage
+------------------------------
 The basic usage of RailEnv environments consists in creating a RailEnv object
 endowed with a rail generator, that generates new rail networks on each reset,
 and an observation generator object, that is supplied with environment-specific
@@ -120,7 +118,8 @@ The complete code for this part of the Getting Started guide can be found in
 
 
 Part 2 : Training a Simple an Agent on Flatland
------------------------------------------------
+---------------------------------------------------------
+
 This is a brief tutorial on how to train an agent on Flatland.
 Here we use a simple random agent to illustrate the process on how to interact with the environment.
 The corresponding code can be found in examples/training_example.py and in the baselines repository
@@ -187,77 +186,4 @@ This dictionary is then passed to the environment which checks the validity of a
 The environment returns an array of new observations, reward dictionary for all agents as well as a flag for which agents are done.
 This information can be used to update the policy of your agent and if done['__all__'] == True the episode terminates.
 
-Part 3 : Customizing Observations and Level Generators
-------------------------------------------------------
-
-Example code for generating custom observations given a RailEnv and to generate
-random rail maps are available in examples/custom_observation_example.py and
-examples/custom_railmap_example.py .
-
-Custom observations can be produced by deriving a new object from the
-core.env_observation_builder.ObservationBuilder base class, for example as follows:
-
-.. code-block:: python
-
-    class CustomObs(ObservationBuilder):
-        def __init__(self):
-            self.observation_space = [5]
-
-        def reset(self):
-            return
-
-        def get(self, handle):
-            observation = handle*np.ones((5,))
-            return observation
-
-It is important that an observation_space is defined with a list of dimensions
-of the returned observation tensors. get() returns the observation for each agent,
-of handle 'handle'.
-
-A RailEnv environment can then be created as usual:
-
-.. code-block:: python
-
-    env = RailEnv(width=7,
-                  height=7,
-                  rail_generator=random_rail_generator(),
-                  number_of_agents=3,
-                  obs_builder_object=CustomObs())
-
-As for generating custom rail maps, the RailEnv class accepts a rail_generator
-argument that must be a function with arguments `width`, `height`, `num_agents`,
-and `num_resets=0`, and that has to return a GridTransitionMap object (the rail map),
-and three lists of tuples containing the (row,column) coordinates of each of
-num_agent agents, their initial orientation **(0=North, 1=East, 2=South, 3=West)**,
-and the position of their targets.
-
-For example, the following custom rail map generator returns an empty map of
-size (height, width), with no agents (regardless of num_agents):
-
-.. code-block:: python
-
-    def custom_rail_generator():
-        def generator(width, height, num_agents=0, num_resets=0):
-            rail_trans = RailEnvTransitions()
-            grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
-            rail_array = grid_map.grid
-            rail_array.fill(0)
-
-            agents_positions = []
-            agents_direction = []
-            agents_target = []
-
-            return grid_map, agents_positions, agents_direction, agents_target
-        return generator
-
-It is worth to note that helpful utilities to manage RailEnv environments and their
-related data structures are available in 'envs.env_utils'. In particular,
-envs.env_utils.get_rnd_agents_pos_tgt_dir_on_rail is fairly handy to fill in
-random (but consistent) agents along with their targets and initial directions,
-given a rail map (GridTransitionMap object) and the desired number of agents:
-
-.. code-block:: python
-
-    agents_position, agents_direction, agents_target = get_rnd_agents_pos_tgt_dir_on_rail(
-        rail_map,
-        num_agents)
+The full source code of this example can be found in `examples/training_example.py <https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/training_example.py>`_.

@@ -8,7 +8,6 @@ Welcome to flatland's documentation!
    :caption: Contents:
 
    01_readme
-   02_gettingstarted
    03_tutorials_toc
    04_specifications_toc
    05_apidoc
