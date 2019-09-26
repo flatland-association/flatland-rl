@@ -296,3 +296,25 @@ def coordinate_to_position(depth, coords):
 
 def distance_on_rail(pos1, pos2):
     return np.sqrt(np.power(pos1[0] - pos2[0], 2) + np.power(pos1[1] - pos2[1], 2))
+
+
+def closest_direction(pos1, pos2):
+    """
+    Returns the closest direction orientation of position 2 relative to position 1
+    :param pos1: position we are interested in
+    :param pos2: position we want to know it is facing
+    :return: direction NESW as int N:0 E:1 S:2 W:3
+    """
+    diff_vec = np.array((pos1[0] - pos2[0], pos1[1] - pos2[1]))
+    axis = np.argmax(np.power(diff_vec, 2))
+    direction = np.sign(diff_vec[axis])
+    if axis == 0:
+        if direction > 0:
+            return 2
+        else:
+            return 0
+    else:
+        if direction > 0:
+            return 3
+        else:
+            return 1

@@ -6,7 +6,7 @@ import msgpack
 import numpy as np
 
 from flatland.core.grid.grid4_utils import get_direction, mirror
-from flatland.core.grid.grid_utils import distance_on_rail
+from flatland.core.grid.grid_utils import distance_on_rail, closest_direction
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_rail, connect_nodes
@@ -871,10 +871,20 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                                          max_nr_connection_directions=2):
         connection_points = []
         for node_position in node_positions:
+
             connection_sides_idx = np.sort(
                 np.random.choice(np.arange(4), size=max_nr_connection_directions, replace=False))
-            connections_per_direction = np.zeros(4, dtype=int)
 
+            # Chose the directions where close cities are situated
+            neighb_dist = []
+            for neighb_node in node_positions:
+                neighb_dist.append(distance_on_rail(node_position, neighb_node))
+            closest_neighb_idx = argsort(neighb_dist)
+            connection_sides_idx = []
+            for idx in range(1, max_nr_connection_directions + 1):
+                connection_sides_idx.append(closest_direction(node_position, node_positions[closest_neighb_idx[idx]]))
+
+            connections_per_direction = np.zeros(4, dtype=int)
             # set the number of connection points for each direction
             for idx in connection_sides_idx:
                 connections_per_direction[idx] = max_nr_connection_points
