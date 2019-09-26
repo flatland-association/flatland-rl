@@ -742,14 +742,15 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         :return:
         """
         boarder_connections = set()
-        # Start at some node
         for current_node in np.arange(len(node_positions)):
             direction = 0
             for nbr_connection_points in connection_info[current_node]:
                 if nbr_connection_points > 0:
                     neighb_idx = _closest_neigh_in_direction(current_node, direction, node_positions)
-                    print(current_node, direction, neighb_idx, connection_info[current_node])
+                    print(current_node, node_positions[current_node], direction, neighb_idx,
+                          connection_info[current_node])
                 else:
+                    direction += 1
                     continue
 
                 if neighb_idx is not None:
@@ -771,6 +772,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                         boarder_connections.add((tmp_out_connection_point, current_node))
                         boarder_connections.add((neighb_connection_point, neighb_idx))
                 direction += 1
+        return boarder_connections
 
 
     def _build_cities(node_positions, connection_points, rail_trans, grid_map):
@@ -923,7 +925,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                     return neighb
 
             if direction == 3:
-                if node_positions[neighb][0] < node_positions[current_node][0] and distance_0 <= distance_1:
+                if node_positions[neighb][1] < node_positions[current_node][1] and distance_0 <= distance_1:
                     return neighb
         return None
 
