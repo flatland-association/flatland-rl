@@ -6,11 +6,13 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.agent_utils import EnvAgentStatic
-from flatland.envs.observations import GlobalObsForRailEnv
+from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
+from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator, complex_schedule_generator
+from flatland.utils.simple_rail import make_simple_rail
 
 """Tests for `flatland` package."""
 
@@ -212,3 +214,36 @@ def test_dead_end():
 
     rail_env.reset()
     rail_env.agents = [EnvAgent(position=(2, 0), direction=0, target=(4, 0), moving=False)]
+
+
+def test_get_entry_directions():
+    rail, rail_map = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  )
+
+    def _assert(position, expected):
+        actual = env.get_valid_directions_on_grid(*position)
+        assert actual == expected, "[{},{}] actual={}, expected={}".format(*position, actual, expected)
+
+    # north dead end
+    _assert((0, 3), [True, False, False, False])
+
+    # west dead end
+    _assert((3, 0), [False, False, False, True])
+
+    # switch
+    _assert((3, 3), [False, True, True, True])
+
+    # horizontal
+    _assert((3, 2), [False, True, False, True])
+
+    # vertical
+    _assert((2, 3), [True, False, True, False])
+
+    # nowhere
+    _assert((0, 0), [False, False, False, False])
