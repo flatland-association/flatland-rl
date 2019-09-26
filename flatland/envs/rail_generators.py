@@ -591,220 +591,28 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
 
         # reduce nb_nodes, _num_cities, _num_intersections if less were generated in not_grid_mode
         nb_nodes = len(node_positions)
-        _num_cities = len(city_positions)
-
-        # Chose node connection
-        # Set up list of available nodes to connect to
-        available_nodes = np.arange(nb_nodes)
 
         # Set up connection points for all cities
-        connection_points = _generate_node_connection_points(node_positions, node_radius, connectin_points_per_side,
-                                                             max_nr_connection_directions)
+        connection_points, connection_info = _generate_node_connection_points(node_positions, node_radius,
+                                                                              connectin_points_per_side,
+                                                                              max_nr_connection_directions)
 
-        # Start at some node
-        current_node = np.random.randint(len(available_nodes))
-        node_stack = [current_node]
-        open_nodes = np.copy(available_nodes)
-        allowed_connections = num_neighb
-        i = 0
-        boarder_connections = set()
-        while len(open_nodes) > 0:
-            if len(node_stack) > 0:
-                current_node = node_stack[0]
-            else:
-                current_node = np.random.choice(open_nodes)
-                node_stack.append(current_node)
-            delete_idx = np.where(open_nodes == current_node)
-            open_nodes = np.delete(open_nodes, delete_idx, 0)
+        # Connect the cities through the connection points
+        _connect_cities(node_positions, connection_points, connection_info, rail_trans, grid_map)
 
-            # Sort available neighbors according to their distance.
-            node_dist = []
-            for av_node in available_nodes:
-                node_dist.append(distance_on_rail(node_positions[current_node], node_positions[av_node]))
-            available_nodes = available_nodes[np.argsort(node_dist)]
+        # Build inner cities
+        train_stations, built_num_trainstation = _build_cities(node_positions, connection_points, rail_trans, grid_map)
 
-            # Set number of neighboring nodes
-            if len(available_nodes) >= allowed_connections:
-                connected_neighb_idx = available_nodes[1:allowed_connections + 1]
-            else:
-                connected_neighb_idx = available_nodes
-
-            # Connect to the neighboring nodes
-            for neighb in connected_neighb_idx:
-                if neighb not in node_stack and neighb in open_nodes:
-                    node_stack.append(neighb)
-
-                dist_from_center = distance_on_rail(node_positions[current_node], node_positions[neighb])
-                connection_distances = []
-                for tmp_out_connection_point in connection_points[current_node]:
-                    tmp_dist_to_node = distance_on_rail(tmp_out_connection_point, node_positions[neighb])
-                    connection_distances.append(tmp_dist_to_node)
-                possible_connection_points = argsort(connection_distances)
-                for sort_idx in possible_connection_points[:nr_parallel_tracks]:
-                    # Find closest connection point
-                    tmp_out_connection_point = connection_points[current_node][sort_idx]
-                    min_connection_dist = np.inf
-                    for tmp_in_connection_point in connection_points[neighb]:
-                        tmp_dist = distance_on_rail(tmp_out_connection_point, tmp_in_connection_point)
-                        if tmp_dist < min_connection_dist:
-                            min_connection_dist = tmp_dist
-                            neighb_connection_point = tmp_in_connection_point
-                    i += 1
-                    connect_nodes(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point)
-                    boarder_connections.add((tmp_out_connection_point, current_node))
-                    boarder_connections.add((neighb_connection_point, neighb))
-
-            node_stack.pop(0)
-
-        # Place train stations close to the node
-        # We currently place them uniformly distributed among all cities
-        built_num_trainstation = 0
-        train_stations = [[] for i in range(nb_nodes)]
-        if nb_nodes > 1:
-
-            for station in range(num_trainstations):
-                spot_found = True
-                reduced_node_radius = node_radius - 1
-                trainstation_node = int(station / num_trainstations * nb_nodes)
-
-                station_x = np.clip(
-                    node_positions[trainstation_node][0] + np.random.randint(-reduced_node_radius, reduced_node_radius),
-                    0,
-                    height - 1)
-                station_y = np.clip(
-                    node_positions[trainstation_node][1] + np.random.randint(-reduced_node_radius, reduced_node_radius),
-                    0,
-                    width - 1)
-                tries = 0
-                while (station_x, station_y) in train_stations[trainstation_node]:
-
-                    station_x = np.clip(
-                        node_positions[trainstation_node][0] + np.random.randint(-reduced_node_radius,
-                                                                                 reduced_node_radius),
-                        0,
-                        height - 1)
-                    station_y = np.clip(
-                        node_positions[trainstation_node][1] + np.random.randint(-reduced_node_radius,
-                                                                                 reduced_node_radius),
-                        0,
-                        width - 1)
-                    tries += 1
-                    if tries > 100:
-                        warnings.warn("Could not set trainstations, please change initial parameters!!!!")
-                        spot_found = False
-                        break
-
-                if spot_found:
-                    train_stations[trainstation_node].append((station_x, station_y))
-
-                # Connect train station to random nodes
-
-                rand_corner_nodes = np.random.choice(range(len(connection_points[trainstation_node])), 2, replace=False)
-
-                for corner_node_idx in rand_corner_nodes:
-                    connection = connect_nodes(rail_trans, grid_map,
-                                               connection_points[trainstation_node][corner_node_idx],
-                                               (station_x, station_y))
-                    if len(connection) != 0:
-                        if (connection_points[trainstation_node][corner_node_idx],
-                            trainstation_node) in boarder_connections:
-                            boarder_connections.remove(
-                                (connection_points[trainstation_node][corner_node_idx], trainstation_node))
-
-                # Check if connection was made
-                if len(connection) == 0:
-                    if len(train_stations[trainstation_node]) > 0:
-                        train_stations[trainstation_node].pop(-1)
-                else:
-
-                    built_num_trainstation += 1
         # Adjust the number of agents if you could not build enough trainstations
         if num_agents > built_num_trainstation:
             num_agents = built_num_trainstation
             warnings.warn("sparse_rail_generator: num_agents > nr_start_goal, changing num_agents")
 
-        # Connect all disjunct parts of the network
+        # Fix all transition elements
+        _fix_transitions(grid_map)
 
-        if len(boarder_connections) > 0:
-            to_be_deleted = []
-            for disjunct_node in boarder_connections:
-                if len(train_stations[disjunct_node[1]]) > 0:
-                    conn = connect_nodes(rail_trans, grid_map,
-                                         disjunct_node[0],
-                                         train_stations[disjunct_node[1]][-1])
-                else:
-                    conn = connect_nodes(rail_trans, grid_map,
-                                         disjunct_node[0],
-                                         node_positions[disjunct_node[1]])
-                if len(conn) > 0:
-                    to_be_deleted.append(disjunct_node)
-                else:
-                    conn = connect_nodes(rail_trans, grid_map,
-                                         disjunct_node[0],
-                                         node_positions[disjunct_node[1]])
-                    if len(conn) > 0:
-                        to_be_deleted.append(disjunct_node)
-
-            for tbd in to_be_deleted:
-                boarder_connections.remove(tbd)
-            print(boarder_connections)
-
-        # Fix all nodes with illegal transition maps
-        empty_to_fix = []
-        rails_to_fix = []
-        for r in range(height):
-            for c in range(width):
-                rc_pos = (r, c)
-                check = grid_map.cell_neighbours_valid(rc_pos, True)
-                if not check:
-                    if grid_map.grid[rc_pos] == 0:
-                        empty_to_fix.append(rc_pos)
-                    else:
-                        rails_to_fix.append(rc_pos)
-
-        # Fix empty cells first to avoid cutting the network
-        for cell in empty_to_fix:
-            grid_map.fix_transitions(cell)
-
-        # Fix all other cells
-        for cell in rails_to_fix:
-            grid_map.fix_transitions(cell)
-
-        # Generate start and target node directory for all agents.
-        # Assure that start and target are not in the same node
-        agent_start_targets_nodes = []
-
-        # Slot availability in node
-        node_available_start = []
-        node_available_target = []
-        for node_idx in range(nb_nodes):
-            node_available_start.append(len(train_stations[node_idx]))
-            node_available_target.append(len(train_stations[node_idx]))
-
-        # Assign agents to slots
-        for agent_idx in range(num_agents):
-            avail_start_nodes = [idx for idx, val in enumerate(node_available_start) if val > 0]
-            avail_target_nodes = [idx for idx, val in enumerate(node_available_target) if val > 0]
-            start_node = np.random.choice(avail_start_nodes)
-            target_node = np.random.choice(avail_target_nodes)
-            tries = 0
-            found_agent_pair = True
-            while target_node == start_node:
-                target_node = np.random.choice(avail_target_nodes)
-                tries += 1
-                # Test again with new start node if no pair is found (This code needs to be improved)
-                if (tries + 1) % 10 == 0:
-                    start_node = np.random.choice(avail_start_nodes)
-                if tries > 100:
-                    warnings.warn("Could not set trainstations, removing agent!")
-                    found_agent_pair = False
-                    break
-            if found_agent_pair:
-                node_available_start[start_node] -= 1
-                node_available_target[target_node] -= 1
-                agent_start_targets_nodes.append((start_node, target_node))
-            else:
-                num_agents -= 1
+        # Generate start target paris
+        agent_start_targets_nodes = _generate_start_target_pairs(num_agents, nb_nodes, train_stations)
 
         return grid_map, {'agents_hints': {
             'num_agents': num_agents,
@@ -870,6 +678,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
     def _generate_node_connection_points(node_positions, node_size, max_nr_connection_points=2,
                                          max_nr_connection_directions=2):
         connection_points = []
+        connection_info = []
         for node_position in node_positions:
 
             connection_sides_idx = np.sort(
@@ -880,23 +689,21 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
             for neighb_node in node_positions:
                 neighb_dist.append(distance_on_rail(node_position, neighb_node))
             closest_neighb_idx = argsort(neighb_dist)
+
+            # Store the directions to these neighbours
             connection_sides_idx = []
             for idx in range(1, max_nr_connection_directions + 1):
                 connection_sides_idx.append(closest_direction(node_position, node_positions[closest_neighb_idx[idx]]))
 
-            connections_per_direction = np.zeros(4, dtype=int)
             # set the number of connection points for each direction
+            connections_per_direction = np.zeros(4, dtype=int)
+
             for idx in connection_sides_idx:
                 connections_per_direction[idx] = max_nr_connection_points
             connection_points_coordinates = []
-            random_connection_slots = False
+
             for direction in range(4):
-                if random_connection_slots:
-                    connection_slots = np.random.choice(np.arange(-node_size, node_size),
-                                                        size=connections_per_direction[direction],
-                                                        replace=False)
-                else:
-                    connection_slots = np.arange(connections_per_direction[direction]) - int(
+                connection_slots = np.arange(connections_per_direction[direction]) - int(
                         connections_per_direction[direction] / 2)
                 for connection_idx in range(connections_per_direction[direction]):
                     if direction == 0:
@@ -913,8 +720,200 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                             (node_position[0] + connection_slots[connection_idx], node_position[1] - node_size))
 
             connection_points.append(connection_points_coordinates)
-        return connection_points
+            connection_info.append(connections_per_direction)
+        return connection_points, connection_info
 
+    def _connect_cities(node_positions, connection_points, connection_info, rail_trans, grid_map):
+        """
+        Function to connect the different cities through their connection points
+        :param node_positions: Positions of city centers
+        :param connection_points: Boarder connection points of cities
+        :param connection_info: Number of connection points per direction NESW
+        :param rail_trans: Transitions
+        :param grid_map: Grid map
+        :return:
+        """
+
+        # Start at some node
+        available_nodes = np.arange(len(node_positions))
+        current_node = np.random.randint(len(available_nodes))
+        node_stack = [current_node]
+        open_nodes = np.copy(available_nodes)
+        boarder_connections = set()
+        while len(open_nodes) > 0:
+            if len(node_stack) > 0:
+                current_node = node_stack[0]
+            else:
+                current_node = np.random.choice(open_nodes)
+                node_stack.append(current_node)
+            delete_idx = np.where(open_nodes == current_node)
+            open_nodes = np.delete(open_nodes, delete_idx, 0)
+
+            # Sort available neighbors according to their distance.
+            node_dist = []
+            for av_node in available_nodes:
+                node_dist.append(distance_on_rail(node_positions[current_node], node_positions[av_node]))
+            available_nodes = available_nodes[np.argsort(node_dist)]
+
+            # Set number of neighboring
+            allowed_connections = np.count_nonzero(connection_info[current_node])
+
+            if len(available_nodes) >= allowed_connections:
+                connected_neighb_idx = available_nodes[1:allowed_connections + 1]
+            else:
+                connected_neighb_idx = available_nodes
+
+            # Connect to the neighboring nodes
+            for neighb in connected_neighb_idx:
+                if neighb not in node_stack and neighb in open_nodes:
+                    node_stack.append(neighb)
+
+                dist_from_center = distance_on_rail(node_positions[current_node], node_positions[neighb])
+                connection_distances = []
+                for tmp_out_connection_point in connection_points[current_node]:
+                    tmp_dist_to_node = distance_on_rail(tmp_out_connection_point, node_positions[neighb])
+                    connection_distances.append(tmp_dist_to_node)
+                possible_connection_points = argsort(connection_distances)
+                for sort_idx in possible_connection_points[:nr_parallel_tracks]:
+                    # Find closest connection point
+                    tmp_out_connection_point = connection_points[current_node][sort_idx]
+                    min_connection_dist = np.inf
+                    for tmp_in_connection_point in connection_points[neighb]:
+                        tmp_dist = distance_on_rail(tmp_out_connection_point, tmp_in_connection_point)
+                        if tmp_dist < min_connection_dist:
+                            min_connection_dist = tmp_dist
+                            neighb_connection_point = tmp_in_connection_point
+                    connect_nodes(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point)
+                    boarder_connections.add((tmp_out_connection_point, current_node))
+                    boarder_connections.add((neighb_connection_point, neighb))
+
+            node_stack.pop(0)
+
+    def _build_cities(node_positions, connection_points, rail_trans, grid_map):
+        # Place train stations close to the node
+        # We currently place them uniformly distributed among all cities
+        built_num_trainstation = 0
+        nb_nodes = len(node_positions)
+        height, width = np.shape(grid_map.grid)
+        train_stations = [[] for i in range(nb_nodes)]
+        if nb_nodes > 1:
+
+            for station in range(num_trainstations):
+                spot_found = True
+                reduced_node_radius = node_radius - 1
+                trainstation_node = int(station / num_trainstations * nb_nodes)
+
+                station_x = np.clip(
+                    node_positions[trainstation_node][0] + np.random.randint(-reduced_node_radius, reduced_node_radius),
+                    0,
+                    height - 1)
+                station_y = np.clip(
+                    node_positions[trainstation_node][1] + np.random.randint(-reduced_node_radius, reduced_node_radius),
+                    0,
+                    width - 1)
+                tries = 0
+                while (station_x, station_y) in train_stations[trainstation_node]:
+
+                    station_x = np.clip(
+                        node_positions[trainstation_node][0] + np.random.randint(-reduced_node_radius,
+                                                                                 reduced_node_radius),
+                        0,
+                        height - 1)
+                    station_y = np.clip(
+                        node_positions[trainstation_node][1] + np.random.randint(-reduced_node_radius,
+                                                                                 reduced_node_radius),
+                        0,
+                        width - 1)
+                    tries += 1
+                    if tries > 100:
+                        warnings.warn("Could not set trainstations, please change initial parameters!!!!")
+                        spot_found = False
+                        break
+
+                if spot_found:
+                    train_stations[trainstation_node].append((station_x, station_y))
+
+                # Connect train station to random nodes
+
+                rand_corner_nodes = np.random.choice(range(len(connection_points[trainstation_node])), 2, replace=False)
+
+                for corner_node_idx in rand_corner_nodes:
+                    connection = connect_nodes(rail_trans, grid_map,
+                                               connection_points[trainstation_node][corner_node_idx],
+                                               (station_x, station_y))
+                # Check if connection was made
+                if len(connection) == 0:
+                    if len(train_stations[trainstation_node]) > 0:
+                        train_stations[trainstation_node].pop(-1)
+                else:
+
+                    built_num_trainstation += 1
+        return train_stations, built_num_trainstation
+
+    def _fix_transitions(grid_map):
+        """
+        Function to fix all transition elements in environment
+        """
+        # Fix all nodes with illegal transition maps
+        empty_to_fix = []
+        rails_to_fix = []
+        height, width = np.shape(grid_map.grid)
+        for r in range(height):
+            for c in range(width):
+                rc_pos = (r, c)
+                check = grid_map.cell_neighbours_valid(rc_pos, True)
+                if not check:
+                    if grid_map.grid[rc_pos] == 0:
+                        empty_to_fix.append(rc_pos)
+                    else:
+                        rails_to_fix.append(rc_pos)
+
+        # Fix empty cells first to avoid cutting the network
+        for cell in empty_to_fix:
+            grid_map.fix_transitions(cell)
+
+        # Fix all other cells
+        for cell in rails_to_fix:
+            grid_map.fix_transitions(cell)
+
+    def _generate_start_target_pairs(num_agents, nb_nodes, train_stations):
+
+        # Generate start and target node directory for all agents.
+        # Assure that start and target are not in the same node
+        agent_start_targets_nodes = []
+
+        # Slot availability in node
+        node_available_start = []
+        node_available_target = []
+        for node_idx in range(nb_nodes):
+            node_available_start.append(len(train_stations[node_idx]))
+            node_available_target.append(len(train_stations[node_idx]))
+
+        # Assign agents to slots
+        for agent_idx in range(num_agents):
+            avail_start_nodes = [idx for idx, val in enumerate(node_available_start) if val > 0]
+            avail_target_nodes = [idx for idx, val in enumerate(node_available_target) if val > 0]
+            start_node = np.random.choice(avail_start_nodes)
+            target_node = np.random.choice(avail_target_nodes)
+            tries = 0
+            found_agent_pair = True
+            while target_node == start_node:
+                target_node = np.random.choice(avail_target_nodes)
+                tries += 1
+                # Test again with new start node if no pair is found (This code needs to be improved)
+                if (tries + 1) % 10 == 0:
+                    start_node = np.random.choice(avail_start_nodes)
+                if tries > 100:
+                    warnings.warn("Could not set trainstations, removing agent!")
+                    found_agent_pair = False
+                    break
+            if found_agent_pair:
+                node_available_start[start_node] -= 1
+                node_available_target[target_node] -= 1
+                agent_start_targets_nodes.append((start_node, target_node))
+            else:
+                num_agents -= 1
+        return agent_start_targets_nodes
     def argsort(seq):
         # http://stackoverflow.com/questions/3071415/efficient-method-to-calculate-the-rank-vector-of-a-list-in-python
         return sorted(range(len(seq)), key=seq.__getitem__)

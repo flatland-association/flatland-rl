@@ -36,12 +36,12 @@ env = RailEnv(width=50,
                                                    num_trainstations=100,  # Number of possible start/targets on map
                                                    min_node_dist=10,  # Minimal distance of nodes
                                                    node_radius=4,  # Proximity of stations to city center
-                                                   num_neighb=2,  # Number of connections to other cities/intersections
+                                                   num_neighb=3,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
                                                    grid_mode=True,
                                                    nr_parallel_tracks=2,
-                                                   connectin_points_per_side=5,
-                                                   max_nr_connection_directions=2,
+                                                   connectin_points_per_side=2,
+                                                   max_nr_connection_directions=3,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
               number_of_agents=50,
