@@ -8,7 +8,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions, RailEnvNextAction
-from flatland.envs.rail_env_utils import get_shortest_paths, WalkingElement
+from flatland.envs.rail_env_shortest_paths import get_shortest_paths, WalkingElement
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.rendertools import RenderTool
@@ -236,12 +236,13 @@ def test_shortest_path_predictor(rendering=False):
         [20.],
     ])
 
+    assert np.array_equal(time_offsets, expected_time_offsets), \
+        "time_offsets {}, expected {}".format(time_offsets, expected_time_offsets)
+
     assert np.array_equal(positions, expected_positions), \
         "positions {}, expected {}".format(positions, expected_positions)
     assert np.array_equal(directions, expected_directions), \
         "directions {}, expected {}".format(directions, expected_directions)
-    assert np.array_equal(time_offsets, expected_time_offsets), \
-        "time_offsets {}, expected {}".format(time_offsets, expected_time_offsets)
 
 
 def test_shortest_path_predictor_conflicts(rendering=False):
