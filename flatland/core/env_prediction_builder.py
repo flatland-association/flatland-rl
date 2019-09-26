@@ -19,8 +19,9 @@ class PredictionBuilder:
 
     def __init__(self, max_depth: int = 20):
         self.max_depth = max_depth
+        self.env = None
 
-    def _set_env(self, env: Environment):
+    def set_env(self, env: Environment):
         self.env = env
 
     def reset(self):

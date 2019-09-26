@@ -1,5 +1,6 @@
 from flatland.core.grid.grid4 import Grid4Transitions, Grid4TransitionsEnum
 from flatland.core.grid.grid8 import Grid8Transitions, Grid8TransitionsEnum
+from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -158,3 +159,28 @@ def test_path_not_exists(rendering=False):
         renderer = RenderTool(env, gl="PILSVG")
         renderer.render_env(show=True, show_observations=False)
         input("Continue?")
+
+
+def test_get_entry_directions():
+    transitions = RailEnvTransitions()
+    cells = transitions.transition_list
+    vertical_line = cells[1]
+    south_symmetrical_switch = cells[6]
+    north_symmetrical_switch = transitions.rotate_transition(south_symmetrical_switch, 180)
+
+    south_east_turn = int('0100000000000010', 2)
+    south_west_turn = transitions.rotate_transition(south_east_turn, 90)
+    north_east_turn = transitions.rotate_transition(south_east_turn, 270)
+    north_west_turn = transitions.rotate_transition(south_east_turn, 180)
+
+    def _assert(transition, expected):
+        actual = transitions.get_entry_directions(transition)
+        assert actual == expected, "Found {}, expected {}.".format(actual, expected)
+
+    _assert(south_east_turn, [True, False, False, True])
+    _assert(south_west_turn, [True, True, False, False])
+    _assert(north_east_turn, [False, False, True, True])
+    _assert(north_west_turn, [False, True, True, False])
+    _assert(vertical_line, [True, False, True, False])
+    _assert(south_symmetrical_switch, [True, True, False, True])
+    _assert(north_symmetrical_switch, [False, True, True, True])

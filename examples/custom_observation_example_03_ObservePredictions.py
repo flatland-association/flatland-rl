@@ -2,12 +2,13 @@ import getopt
 import random
 import sys
 import time
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import numpy as np
 
+from flatland.core.env import Environment
+from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_utils import coordinate_to_position
-from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
@@ -20,28 +21,20 @@ random.seed(100)
 np.random.seed(100)
 
 
-class ObservePredictions(TreeObsForRailEnv):
+class ObservePredictions(ObservationBuilder):
     """
     We use the provided ShortestPathPredictor to illustrate the usage of predictors in your custom observation.
-
-    We derive our observation builder from TreeObsForRailEnv, to exploit the existing implementation to compute
-    the minimum distances from each grid node to each agent's target.
-
-    This is necessary so that we can pass the distance map to the ShortestPathPredictor
-
-    Here we also want to highlight how you can visualize your observation
     """
 
     def __init__(self, predictor):
-        super().__init__(max_depth=0)
+        super().__init__()
         self.observation_space = [10]
         self.predictor = predictor
 
     def reset(self):
-        # Recompute the distance map, if the environment has changed.
-        super().reset()
+        pass
 
-    def get_many(self, handles: Optional[List[int]] = None):
+    def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, np.ndarray]:
         '''
         Because we do not want to call the predictor seperately for every agent we implement the get_many function
         Here we can call the predictor just ones for all the agents and use the predictions to generate our observations
@@ -69,7 +62,7 @@ class ObservePredictions(TreeObsForRailEnv):
             observations[h] = self.get(h)
         return observations
 
-    def get(self, handle: int = 0):
+    def get(self, handle: int = 0) -> np.ndarray:
         '''
         Lets write a simple observation which just indicates whether or not the own predicted path
         overlaps with other predicted paths at any time. This is useless for the task of navigation but might
@@ -105,6 +98,11 @@ class ObservePredictions(TreeObsForRailEnv):
         self.env.dev_obs_dict[handle] = visited
 
         return observation
+
+    def set_env(self, env: Environment):
+        super().set_env(env)
+        if self.predictor:
+            self.predictor.set_env(self.env)
 
 
 def main(args):

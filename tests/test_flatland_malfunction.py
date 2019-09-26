@@ -1,37 +1,33 @@
 import random
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
+from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import complex_rail_generator, sparse_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator, sparse_schedule_generator
 
 
-class SingleAgentNavigationObs(TreeObsForRailEnv):
+class SingleAgentNavigationObs(ObservationBuilder):
     """
-    We derive our bbservation builder from TreeObsForRailEnv, to exploit the existing implementation to compute
-    the minimum distances from each grid node to each agent's target.
-
-    We then build a representation vector with 3 binary components, indicating which of the 3 available directions
+    We build a representation vector with 3 binary components, indicating which of the 3 available directions
     for each agent (Left, Forward, Right) lead to the shortest path to its target.
     E.g., if taking the Left branch (if available) is the shortest route to the agent's target, the observation vector
     will be [1, 0, 0].
     """
 
     def __init__(self):
-        super().__init__(max_depth=0)
+        super().__init__()
         self.observation_space = [3]
 
     def reset(self):
-        # Recompute the distance map, if the environment has changed.
-        super().reset()
+        pass
 
-    def get(self, handle: int = 0):
+    def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 
         possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
@@ -416,3 +412,44 @@ def test_initial_malfunction_do_nothing():
     )
 
     run_replay_config(env, [replay_config])
+
+
+def test_initial_nextmalfunction_not_below_zero():
+    random.seed(0)
+    np.random.seed(0)
+
+    stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
+                       'malfunction_rate': 0.5,  # Rate of malfunction occurence
+                       'min_duration': 5,  # Minimal duration of malfunction
+                       'max_duration': 5  # Max duration of malfunction
+                       }
+
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=sparse_rail_generator(num_cities=5,
+                                                       # Number of cities in map (where train stations are)
+                                                       num_intersections=4,
+                                                       # Number of intersections (no start / target)
+                                                       num_trainstations=25,  # Number of possible start/targets on map
+                                                       min_node_dist=6,  # Minimal distance of nodes
+                                                       node_radius=3,  # Proximity of stations to city center
+                                                       num_neighb=3,
+                                                       # Number of connections to other cities/intersections
+                                                       seed=215545,  # Random seed
+                                                       grid_mode=True,
+                                                       enhance_intersection=False
+                                                       ),
+                  schedule_generator=sparse_schedule_generator(speed_ration_map),
+                  number_of_agents=1,
+                  stochastic_data=stochastic_data,  # Malfunction data generator
+                  )
+    agent = env.agents[0]
+    env.step({})
+    # was next_malfunction was -1 befor the bugfix https://gitlab.aicrowd.com/flatland/flatland/issues/186
+    assert agent.malfunction_data['next_malfunction'] >= 0, \
+        "next_malfunction should be >=0, found {}".format(agent.malfunction_data['next_malfunction'])

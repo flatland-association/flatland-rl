@@ -25,8 +25,9 @@ class ObservationBuilder:
 
     def __init__(self):
         self.observation_space = ()
+        self.env = None
 
-    def _set_env(self, env: Environment):
+    def set_env(self, env: Environment):
         self.env = env
 
     def reset(self):
@@ -91,14 +92,11 @@ class DummyObservationBuilder(ObservationBuilder):
     def __init__(self):
         super().__init__()
 
-    def _set_env(self, env: Environment):
-        self.env = env
-
     def reset(self):
         pass
 
-    def get_many(self, handles: Optional[List[int]] = None):
+    def get_many(self, handles: Optional[List[int]] = None) -> bool:
         return True
 
-    def get(self, handle: int = 0):
+    def get(self, handle: int = 0) -> bool:
         return True

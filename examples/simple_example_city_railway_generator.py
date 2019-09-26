@@ -9,7 +9,9 @@ from flatland.envs.rail_generators_city_generator import city_generator
 from flatland.envs.schedule_generators import city_schedule_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
-# os.mkdir("./../render_output/")
+OUTPUT_DIR = "./../render_output/"
+if not os.path.exists(OUTPUT_DIR):
+    os.mkdir(OUTPUT_DIR)
 
 for itrials in np.arange(1, 15, 1):
     print(itrials, "generate new city")
@@ -52,10 +54,7 @@ for itrials in np.arange(1, 15, 1):
     # store rendered file into render_output if the path exists
     env_renderer.gl.save_image(
         os.path.join(
-<<<<<<< 188_refining_generator
-            "./../render_output/",
-=======
->>>>>>> local
+            OUTPUT_DIR,
             "flatland_frame_{:04d}.png".format(itrials)
         ))
 

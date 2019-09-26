@@ -23,7 +23,7 @@ class SimpleObs(ObservationBuilder):
     def reset(self):
         return
 
-    def get(self, handle: int = 0):
+    def get(self, handle: int = 0) -> np.ndarray:
         observation = handle * np.ones((5,))
         return observation
 
