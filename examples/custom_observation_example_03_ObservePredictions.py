@@ -99,10 +99,10 @@ class ObservePredictions(ObservationBuilder):
 
         return observation
 
-    def _set_env(self, env: Environment):
-        self.env = env
+    def set_env(self, env: Environment):
+        super().set_env(env)
         if self.predictor:
-            self.predictor._set_env(self.env)
+            self.predictor.set_env(self.env)
 
 
 def main(args):
