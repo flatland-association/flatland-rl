@@ -34,13 +34,11 @@ env = RailEnv(width=50,
               height=50,
               rail_generator=sparse_rail_generator(num_cities=9,  # Number of cities in map (where train stations are)
                                                    num_trainstations=50,  # Number of possible start/targets on map
-                                                   min_node_dist=30,  # Minimal distance of nodes
+                                                   min_node_dist=15,  # Minimal distance of nodes
                                                    node_radius=4,  # Proximity of stations to city center
-                                                   num_neighb=3,  # Number of connections to other cities/intersections
                                                    seed=15,  # Random seed
                                                    grid_mode=True,
-                                                   nr_parallel_tracks=1,
-                                                   connection_points_per_side=2,
+                                                   connection_points_per_side=3,
                                                    max_nr_connection_directions=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
