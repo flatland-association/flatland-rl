@@ -533,7 +533,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
 
 
 def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, node_radius=2,
-                          grid_mode=False, connection_points_per_side=4,
+                          grid_mode=False, max_connection_points_per_side=4,
                           max_nr_connection_directions=2,
                           seed=0) -> RailGenerator:
     """
@@ -598,7 +598,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
 
         # Set up connection points for all cities
         connection_points, connection_info = _generate_node_connection_points(node_positions, node_radius,
-                                                                              connection_points_per_side,
+                                                                              max_connection_points_per_side,
                                                                               max_nr_connection_directions)
 
         # Connect the cities through the connection points
@@ -821,7 +821,11 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
 
                 # Connect train station to random nodes
 
-                rand_corner_nodes = np.random.choice(range(len(connection_points[trainstation_node])), 2, replace=False)
+                if len(connection_points[trainstation_node]) > 1:
+                    rand_corner_nodes = np.random.choice(range(len(connection_points[trainstation_node])), 2,
+                                                         replace=False)
+                else:
+                    rand_corner_nodes = [0]
 
                 for corner_node_idx in rand_corner_nodes:
                     connection = connect_nodes(rail_trans, grid_map,

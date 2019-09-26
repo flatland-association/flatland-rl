@@ -37,8 +37,8 @@ env = RailEnv(width=50,
                                                    min_node_dist=15,  # Minimal distance of nodes
                                                    node_radius=4,  # Proximity of stations to city center
                                                    seed=15,  # Random seed
-                                                   grid_mode=True,
-                                                   connection_points_per_side=3,
+                                                   grid_mode=False,
+                                                   max_connection_points_per_side=2,
                                                    max_nr_connection_directions=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
