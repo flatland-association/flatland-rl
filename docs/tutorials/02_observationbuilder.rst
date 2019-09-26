@@ -1,6 +1,5 @@
-==============================================================
-Getting Started with custom observations and custom predictors
-==============================================================
+Custom observations and custom predictors Tutorial
+==================================================
 
 Overview
 --------

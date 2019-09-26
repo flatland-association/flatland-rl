@@ -1,14 +1,14 @@
-# Visualization
+## Visualization
 
 ![logo](https://drive.google.com/uc?export=view&id=1rstqMPJXFJd9iD46z1A5Rus-W0Ww6O8i)
 
 
-# Introduction & Scope
+### Introduction & Scope
 
 Broad requirements for human-viewable display of a single Flatland Environment.
 
 
-## Context
+#### Context
 
 Shows this software component in relation to some of the other components.  We name the component the "Renderer".  Multiple agents interact with a single Environment.  A renderer interacts with the environment, and displays on screen, and/or into movie or image files.
 
@@ -20,10 +20,10 @@ Shows this software component in relation to some of the other components.  We n
 ![drawing](https://docs.google.com/a/google.com/drawings/d/12345/export/png)
 
 
-# Requirements
+### Requirements
 
 
-## Primary Requirements
+#### Primary Requirements
 
 
 
@@ -39,7 +39,7 @@ Shows this software component in relation to some of the other components.  We n
     7. Should not drive the "main loop" of Inference or training 
 
 
-## Secondary / Optional Requirements 
+#### Secondary / Optional Requirements 
 
 
 
@@ -68,7 +68,7 @@ Shows this software component in relation to some of the other components.  We n
     15. Browser
 
 
-## Performance Metrics
+#### Performance Metrics
 
 Here are some performance metrics which the Renderer should meet.
 
@@ -78,7 +78,7 @@ Here are some performance metrics which the Renderer should meet.
    <td>
    </td>
    <td><p style="text-align: right">
-# Per second</p>
+### Per second</p>
 
    </td>
    <td><p style="text-align: right">
@@ -144,15 +144,15 @@ Prototype time (ms)</p>
 
 
 
-## Example Visualization
+#### Example Visualization
 
 
-# Reference Documents
+### Reference Documents
 
 Link to this doc: https://docs.google.com/document/d/1Y4Mw0Q6r8PEOvuOZMbxQX-pV2QKDuwbZJBvn18mo9UU/edit#
 
 
-## Core Specification
+#### Core Specification
 
 This specifies the system containing the environment and agents - this will be able to run independently of the renderer.
 
@@ -161,24 +161,24 @@ This specifies the system containing the environment and agents - this will be a
 The data structure which the renderer needs to read initially resides here.
 
 
-## Visualization Specification
+#### Visualization Specification
 
 This will specify the software which will meet the requirements documented here.
 
 [https://docs.google.com/document/d/1XYOe_aUIpl1h_RdHnreACvevwNHAZWT0XHDL0HsfzRY/edit#](https://docs.google.com/document/d/1XYOe_aUIpl1h_RdHnreACvevwNHAZWT0XHDL0HsfzRY/edit#)
 
 
-## Interface Specification
+#### Interface Specification
 
 This will specify the interfaces through which the different components communicate
 
 
-# Non-requirements - to be deleted below here.
+### Non-requirements - to be deleted below here.
 
 The below has been copied into the spec doc.    Comments may be lost.  I'm only preserving it to save the comments for a few days - they don't cut & paste into the other doc!
 
 
-## Interface with Environment Component
+#### Interface with Environment Component
 
 
 
@@ -201,7 +201,7 @@ The below has been copied into the spec doc.    Comments may be lost.  I'm only 
         *   Render frames in separate process / thread
 
 
-#### Environment Snapshot
+###### Environment Snapshot
 
 **Data Structure**
 
@@ -227,7 +227,7 @@ Top-level dictionary
             *   TBD
 
 
-## Investigation into Existing Tools / Libraries
+#### Investigation into Existing Tools / Libraries
 
 
 
@@ -252,9 +252,9 @@ Top-level dictionary
 To-be-filled
 
 
-## Technical Graphics Considerations
+#### Technical Graphics Considerations
 
 
-#### Overlay dynamic primitives over the background at each time step.
+###### Overlay dynamic primitives over the background at each time step.
 
 No point trying to figure out changes. Need to explicitly draw every primitive anyways (that's how these renders work).

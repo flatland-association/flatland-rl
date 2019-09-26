@@ -1,8 +1,9 @@
-include AUTHORS.rst
+include AUTHORS.md
 include CONTRIBUTING.rst
-include HISTORY.rst
+include changelog.md
 include LICENSE
-include README.rst
+include README.md
+
 include requirements_dev.txt
 include requirements_continuous_integration.txt
 
@@ -16,4 +17,4 @@ recursive-include tests *
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 
-recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif
+recursive-include docs *.rst *.md conf.py *.jpg *.png *.gif

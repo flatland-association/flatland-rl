@@ -696,10 +696,10 @@ class EditorModel(object):
 
     def click_agent(self, cell_row_col):
         """ The user has clicked on a cell -
-            - If there is an agent, select it
-                - If that agent was already selected, then deselect it
-            - If there is no agent selected, and no agent in the cell, create one
-            - If there is an agent selected, and no agent in the cell, move the selected agent to the cell
+            * If there is an agent, select it
+              * If that agent was already selected, then deselect it
+            * If there is no agent selected, and no agent in the cell, create one
+            * If there is an agent selected, and no agent in the cell, move the selected agent to the cell
         """
 
         # Has the user clicked on an existing agent?

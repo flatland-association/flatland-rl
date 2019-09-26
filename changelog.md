@@ -38,7 +38,8 @@ The stock `ShortestPathPredictorForRailEnv` now respects the different agent spe
   - `rail_generator` now only returns the grid and optionally hints (a python dictionary); the hints are currently use for distance_map and communication of start and goal position in complex rail generator.
   - `schedule_generator` takes a `GridTransitionMap` and the number of agents and optionally the `agents_hints` field of the hints dictionary.
   - Inrodcution of types hints:
-```
+
+```python
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Any]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
 AgentPosition = Tuple[int, int]
@@ -62,7 +63,7 @@ To set up multiple speeds you have to modify the `agent.speed_data` within your 
 Just like in real-worl transportation systems we introduced stochastic events to disturb normal traffic flow. Currently we implemented a malfunction process that stops agents at random time intervalls for a random time of duration.
 Currently the Flatland environment can be initiated with the following poisson process parameters:
 
-```
+```python
 # Use a the malfunction generator to break agents from time to time
 stochastic_data = {'prop_malfunction': 0.1,  # Percentage of defective agents
                    'malfunction_rate': 30,  # Rate of malfunction occurence

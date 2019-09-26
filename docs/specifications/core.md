@@ -1,5 +1,6 @@
-# Core Specifications
-## Environment Class Overview
+## Core Specifications
+
+### Environment Class Overview
 
 The Environment class contains all necessary functions for the interactions between the agents and the environment. The base Environment class is derived from rllib.env.MultiAgentEnv (https://github.com/ray-project/ray).
 
