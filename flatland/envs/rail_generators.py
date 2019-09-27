@@ -572,7 +572,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
         if grid_mode:
             node_positions, city_cells = _generate_node_positions_grid_mode(nb_nodes, height, width)
         else:
-            node_positions, city_cells = _generate_node_positions_not_grid_mode(nb_nodes, height, width)
+            node_positions, city_cells = _generate_random_node_positions(nb_nodes, height, width)
 
         # reduce nb_nodes, _num_cities, _num_intersections if less were generated in not_grid_mode
         nb_nodes = len(node_positions)
@@ -610,7 +610,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
             'train_stations': train_stations
         }}
 
-    def _generate_node_positions_not_grid_mode(nb_nodes, height, width):
+    def _generate_random_node_positions(nb_nodes, height, width):
 
         node_positions = []
         city_cells = []
