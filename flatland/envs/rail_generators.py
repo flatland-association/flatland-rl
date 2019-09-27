@@ -581,8 +581,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
         inner_connection_points, outer_connection_points, connection_info = _generate_node_connection_points(
             node_positions, node_radius, max_inter_city_rails_allowed,
             tracks_in_city)
-        print(inner_connection_points)
-        print(outer_connection_points)
+
         # Connect the cities through the connection points
         _connect_cities(node_positions, outer_connection_points, connection_info, city_cells, rail_trans, grid_map)
 
