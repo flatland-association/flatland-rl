@@ -384,14 +384,14 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Modify here to append new / different features for each visited cell!
 
         if last_is_target:
-            dist_to_next_branch = tot_dist,
-            dist_min_to_target = 0,
+            dist_to_next_branch = tot_dist
+            dist_min_to_target = 0
         elif last_is_terminal:
-            dist_to_next_branch = np.inf,
-            dist_min_to_target = self.env.distance_map.get()[handle, position[0], position[1], direction],
+            dist_to_next_branch = np.inf
+            dist_min_to_target = self.env.distance_map.get()[handle, position[0], position[1], direction]
         else:
-            dist_to_next_branch = tot_dist,
-            dist_min_to_target = self.env.distance_map.get()[handle, position[0], position[1], direction],
+            dist_to_next_branch = tot_dist
+            dist_min_to_target = self.env.distance_map.get()[handle, position[0], position[1], direction]
 
         node = TreeObsForRailEnv.Node(dist_own_target_encountered=own_target_encountered,
                                       dist_other_target_encountered=other_target_encountered,
