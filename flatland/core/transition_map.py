@@ -514,7 +514,7 @@ class GridTransitionMap(TransitionMap):
         simple_switch_west_south = transitions.rotate_transition(cells[2], 270)
         symmetrical = cells[6]
         double_slip = cells[5]
-        three_way_transitions = [simple_switch_east_south, simple_switch_west_south, symmetrical]
+        three_way_transitions = [simple_switch_east_south, simple_switch_west_south]
         # loop over available outbound directions (indices) for rcPos
         self.set_transitions(rcPos, 0)
 

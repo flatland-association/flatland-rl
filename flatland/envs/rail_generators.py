@@ -780,7 +780,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                                 city_boarder = _city_boarder(node_positions[current_city], node_radius)
                                 current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
                                 if target in outer_connection_points[current_city] and source in \
-                                    outer_connection_points[current_city]:
+                                    outer_connection_points[current_city] and len(through_path_cells[current_city]) < 1:
                                     through_path_cells[current_city].extend(current_track)
                         else:
                             continue
