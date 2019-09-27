@@ -37,11 +37,11 @@ env = RailEnv(width=50,
                                                    node_radius=4,  # Proximity of stations to city center
                                                    seed=0,  # Random seed
                                                    grid_mode=True,
-                                                   max_connection_points_per_side=2,
-                                                   max_nr_connection_directions=2
+                                                   max_inter_city_rails=2,
+                                                   tracks_in_city=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
-              number_of_agents=5,
+              number_of_agents=10,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=GlobalObsForRailEnv())
 
