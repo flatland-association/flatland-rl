@@ -98,10 +98,11 @@ def a_star(grid_map: GridTransitionMap,
             # create new node
             new_node = AStarNode(node_pos, current_node)
 
-            # Skip paths through forbidden regions.
+            # Skip paths through forbidden regions if they are provided
             if forbidden_cells is not None:
                 if node_pos in forbidden_cells and new_node != start_node and new_node != end_node:
                     continue
+
             children.append(new_node)
 
         # loop through children

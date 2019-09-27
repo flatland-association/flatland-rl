@@ -576,7 +576,6 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
             node_positions, city_cells = _generate_node_positions_grid_mode(nb_nodes, height, width)
         else:
             node_positions, city_cells = _generate_node_positions_not_grid_mode(nb_nodes, height, width)
-        print(city_cells)
 
         # reduce nb_nodes, _num_cities, _num_intersections if less were generated in not_grid_mode
         nb_nodes = len(node_positions)
