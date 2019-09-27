@@ -264,9 +264,10 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     # get the trees to test
     obs_builder: TreeObsForRailEnv = env.obs_builder
     pp = pprint.PrettyPrinter(indent=4)
-    tree_0 = obs_builder.unfold_observation_tree(observations[0])
-    tree_1 = obs_builder.unfold_observation_tree(observations[1])
-    pp.pprint(tree_0)
+    tree_0 = observations[0]
+    tree_1 = observations[1]
+    env.obs_builder.util_print_obs_subtree(tree_0)
+    env.obs_builder.util_print_obs_subtree(tree_1)
 
     # check the expectations
     expected_conflicts_0 = [('F', 'R')]
@@ -275,11 +276,18 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     _check_expected_conflicts(expected_conflicts_1, obs_builder, tree_1, "agent[1]: ")
 
 
-def _check_expected_conflicts(expected_conflicts, obs_builder, tree_0, prompt=''):
-    assert (tree_0[''][8] > 0) == (() in expected_conflicts), "{}[]".format(prompt)
+def _check_expected_conflicts(expected_conflicts, obs_builder, tree: TreeObsForRailEnv.Node, prompt=''):
+    assert (tree.num_agents_9 > 0) == (() in expected_conflicts), "{}[]".format(prompt)
     for a_1 in obs_builder.tree_explorted_actions_char:
-        conflict = tree_0[a_1][''][8]
-        assert (conflict > 0) == ((a_1) in expected_conflicts), "{}[{}]".format(prompt, a_1)
+        if tree.childs[a_1] == -np.inf:
+            assert False == ((a_1) in expected_conflicts), "{}[{}]".format(prompt, a_1)
+            continue
+        else:
+            conflict = tree.childs[a_1].num_agents_9
+            assert (conflict > 0) == ((a_1) in expected_conflicts), "{}[{}]".format(prompt, a_1)
         for a_2 in obs_builder.tree_explorted_actions_char:
-            conflict = tree_0[a_1][a_2][''][8]
-            assert (conflict > 0) == ((a_1, a_2) in expected_conflicts), "{}[{}][{}]".format(prompt, a_1, a_2)
+            if tree.childs[a_1].childs[a_2] == -np.inf:
+                assert False == ((a_1, a_2) in expected_conflicts), "{}[{}][{}]".format(prompt, a_1, a_2)
+            else:
+                conflict = tree.childs[a_1].childs[a_2].num_agents_9
+                assert (conflict > 0) == ((a_1, a_2) in expected_conflicts), "{}[{}][{}]".format(prompt, a_1, a_2)
