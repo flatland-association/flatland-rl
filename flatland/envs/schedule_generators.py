@@ -57,6 +57,7 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None) ->
 
 
 def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
+
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         train_stations = hints['train_stations']
         agent_start_targets_nodes = hints['agent_start_targets_nodes']
@@ -102,7 +103,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             # Orient the agent correctly
             for orientation in range(4):
                 transitions = rail.get_transitions(start[0], start[1], orientation)
-                if any(transitions) > 0:
+                if any(transitions) > 0 and rail.check_path_exists(start, orientation, target):
                     agents_direction.append(orientation)
                     break
 

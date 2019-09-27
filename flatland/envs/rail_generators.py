@@ -532,7 +532,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
     return generator
 
 
-def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, node_radius=2,
+def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                           grid_mode=False, max_connection_points_per_side=4,
                           max_nr_connection_directions=2,
                           seed=0) -> RailGenerator:
@@ -553,10 +553,6 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
     """
 
     def generator(width, height, num_agents, num_resets=0) -> RailGeneratorProduct:
-
-        if num_agents > num_trainstations:
-            num_agents = num_trainstations
-            warnings.warn("sparse_rail_generator: num_agents > nr_start_goal, changing num_agents")
 
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
@@ -592,8 +588,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         _build_inner_cities(node_positions, connection_points, rail_trans, grid_map)
 
         # Populate cities
-        train_stations, built_num_trainstation = _set_trainstation_positions(node_positions, city_cells,
-                                                                             num_trainstations, grid_map)
+        train_stations, built_num_trainstation = _set_trainstation_positions(node_positions, grid_map)
 
         # Adjust the number of agents if you could not build enough trainstations
         if num_agents > built_num_trainstation:
@@ -603,8 +598,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         # Fix all transition elements
         _fix_transitions(grid_map)
 
-        # Generate start target paris
-        print(train_stations)
+        # Generate start target pairs
         agent_start_targets_nodes, num_agents = _generate_start_target_pairs(num_agents, nb_nodes, train_stations)
 
         return grid_map, {'agents_hints': {
@@ -778,7 +772,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
 
         return
 
-    def _set_trainstation_positions(node_positions, city_cells, num_trainstations, grid_map):
+    def _set_trainstation_positions(node_positions, grid_map):
         """
 
         :param node_positions:
@@ -787,9 +781,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         """
         nb_nodes = len(node_positions)
         train_stations = [[] for i in range(nb_nodes)]
-        num_cities = len(node_positions)
         built_num_trainstations = 0
-        stations_per_city = int(num_trainstations / num_cities)
         for current_city in range(len(node_positions)):
             for possible_location in _city_cells(node_positions[current_city], node_radius - 1):
                 cell_type = grid_map.get_full_transitions(*possible_location)
@@ -917,7 +909,6 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         city_boarder = []
         for x in range(-radius, radius + 1):
             for y in range(-radius, radius + 1):
-                print(x, y, radius)
                 if abs(x) == radius or abs(y) == radius:
                     city_boarder.append((center[0] + x, center[1] + y))
         return city_boarder
