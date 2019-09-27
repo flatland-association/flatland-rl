@@ -701,13 +701,11 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
             # TODO: Change the way this code works! Check that we get sufficient direction.
             # TODO: Check if this works as expected
             while len(connection_sides_idx) < max_nr_connection_directions and idx < len(neighb_dist):
-                if closest_direction(node_position,
-                                     node_positions[closest_neighb_idx[idx]]) not in connection_sides_idx:
-                    connection_sides_idx.append(
-                        closest_direction(node_position, node_positions[closest_neighb_idx[idx]]))
-                    idx += 1
-                else:
-                    idx += 1
+                current_closest_direction = closest_direction(node_position, node_positions[closest_neighb_idx[idx]])
+                if current_closest_direction not in connection_sides_idx:
+                    connection_sides_idx.append(current_closest_direction)
+                idx += 1
+
 
             # set the number of connection points for each direction
             connections_per_direction = np.zeros(4, dtype=int)

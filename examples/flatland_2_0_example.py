@@ -39,7 +39,7 @@ env = RailEnv(width=50,
                                                    seed=15,  # Random seed
                                                    grid_mode=False,
                                                    max_connection_points_per_side=2,
-                                                   max_nr_connection_directions=4,
+                                                   max_nr_connection_directions=2,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
               number_of_agents=50,
