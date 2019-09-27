@@ -516,7 +516,6 @@ class GridTransitionMap(TransitionMap):
         double_slip = cells[5]
         three_way_transitions = [simple_switch_east_south, simple_switch_west_south]
         # loop over available outbound directions (indices) for rcPos
-        self.set_transitions(rcPos, 0)
 
         incoming_connections = np.zeros(4)
         for iDirOut in np.arange(4):
@@ -539,19 +538,28 @@ class GridTransitionMap(TransitionMap):
                 incoming_connections[iDirOut] = 1
 
         number_of_incoming = np.sum(incoming_connections)
-        # Only one incoming direction --> Straight line
+        # Only one incoming direction --> Straight line set deadend
         if number_of_incoming == 1:
-            for direction in range(4):
-                if incoming_connections[direction] > 0:
-                    self.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
+            if self.get_full_transitions(*rcPos) == 0:
+                self.set_transitions(rcPos, 0)
+            else:
+                self.set_transitions(rcPos, 0)
+
+                for direction in range(4):
+                    if incoming_connections[direction] > 0:
+                        self.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
         # Connect all incoming connections
         if number_of_incoming == 2:
+            self.set_transitions(rcPos, 0)
+
             connect_directions = np.argwhere(incoming_connections > 0)
             self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[1], 1)
             self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1])), connect_directions[0], 1)
 
         # Find feasible connection for three entries
         if number_of_incoming == 3:
+            self.set_transitions(rcPos, 0)
+
             transition = np.random.choice(three_way_transitions, 1)
             hole = np.argwhere(incoming_connections < 1)[0][0]
             transition = transitions.rotate_transition(transition, int(hole * 90))

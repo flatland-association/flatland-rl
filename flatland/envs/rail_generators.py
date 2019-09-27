@@ -659,8 +659,8 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
     def _generate_node_connection_points(node_positions, node_size, tracks_in_city=2):
         connection_points = []
         connection_info = []
-        if tracks_in_city > 2 * node_size + 1:
-            tracks_in_city = 2 * node_size + 1
+        if tracks_in_city > 2 * node_size - 1:
+            tracks_in_city = 2 * node_size - 1
 
         for node_position in node_positions:
 
@@ -811,32 +811,6 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                     train_stations[current_city].append(possible_location)
         return train_stations, built_num_trainstations
 
-    def _fix_transitions(grid_map):
-        """
-        Function to fix all transition elements in environment
-        """
-        # Fix all nodes with illegal transition maps
-        empty_to_fix = []
-        rails_to_fix = []
-        height, width = np.shape(grid_map.grid)
-        for r in range(height):
-            for c in range(width):
-                rc_pos = (r, c)
-                check = grid_map.cell_neighbours_valid(rc_pos, True)
-                if not check:
-                    if grid_map.grid[rc_pos] == 0:
-                        empty_to_fix.append(rc_pos)
-                    else:
-                        rails_to_fix.append(rc_pos)
-
-        # Fix empty cells first to avoid cutting the network
-        for cell in empty_to_fix:
-            grid_map.fix_transitions(cell)
-
-        # Fix all other cells
-        for cell in rails_to_fix:
-            grid_map.fix_transitions(cell)
-
     def _generate_start_target_pairs(num_agents, nb_nodes, train_stations):
 
         # Generate start and target node directory for all agents.
@@ -875,6 +849,32 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
             else:
                 num_agents -= 1
         return agent_start_targets_nodes, num_agents
+
+    def _fix_transitions(grid_map):
+        """
+        Function to fix all transition elements in environment
+        """
+        # Fix all nodes with illegal transition maps
+        empty_to_fix = []
+        rails_to_fix = []
+        height, width = np.shape(grid_map.grid)
+        for r in range(height):
+            for c in range(width):
+                rc_pos = (r, c)
+                check = grid_map.cell_neighbours_valid(rc_pos, True)
+                if not check:
+                    if grid_map.grid[rc_pos] == 0:
+                        empty_to_fix.append(rc_pos)
+                    else:
+                        rails_to_fix.append(rc_pos)
+
+        # Fix empty cells first to avoid cutting the network
+        for cell in empty_to_fix:
+            grid_map.fix_transitions(cell)
+
+        # Fix all other cells
+        for cell in rails_to_fix:
+            grid_map.fix_transitions(cell)
 
     def _closest_neigh_in_direction(current_node, direction, node_positions):
         # Sort available neighbors according to their distance.
