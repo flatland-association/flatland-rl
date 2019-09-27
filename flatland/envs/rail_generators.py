@@ -578,16 +578,17 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
         nb_nodes = len(node_positions)
 
         # Set up connection points for all cities
-        connection_points, connection_info = _generate_node_connection_points(node_positions, node_radius,
-                                                                              tracks_in_city)
-
+        inner_connection_points, outer_connection_points, connection_info = _generate_node_connection_points(
+            node_positions, node_radius, max_inter_city_rails_allowed,
+            tracks_in_city)
+        print(inner_connection_points)
+        print(outer_connection_points)
         # Connect the cities through the connection points
-        outer_connection_points = _connect_cities(node_positions, connection_points, connection_info, city_cells,
-                                                  max_inter_city_rails_allowed,
-                                                  rail_trans, grid_map)
+        _connect_cities(node_positions, outer_connection_points, connection_info, city_cells, rail_trans, grid_map)
 
         # Build inner cities
-        through_tracks = _build_inner_cities(node_positions, connection_points, outer_connection_points, rail_trans,
+        through_tracks = _build_inner_cities(node_positions, inner_connection_points, outer_connection_points,
+                                             rail_trans,
                                              grid_map)
 
         # Populate cities
@@ -658,8 +659,9 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
             city_cells.extend(_city_cells(node_positions[-1], node_radius))
         return node_positions, city_cells
 
-    def _generate_node_connection_points(node_positions, node_size, tracks_in_city=2):
-        connection_points = []
+    def _generate_node_connection_points(node_positions, node_size, max_inter_city_rails_allowed, tracks_in_city=2):
+        inner_connection_points = []
+        outer_connection_points = []
         connection_info = []
         if tracks_in_city > 2 * node_size - 1:
             tracks_in_city = 2 * node_size - 1
@@ -684,8 +686,10 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
             nr_of_connection_points = np.random.randint(2, tracks_in_city + 1)
             for idx in connection_sides_idx:
                 connections_per_direction[idx] = nr_of_connection_points
-            connection_points_coordinates = [[] for i in range(4)]
-
+            connection_points_coordinates_inner = [[] for i in range(4)]
+            connection_points_coordinates_outer = [[] for i in range(4)]
+            number_of_out_rails = np.random.randint(1, min(max_inter_city_rails_allowed, nr_of_connection_points) + 1)
+            start_idx = int((nr_of_connection_points - number_of_out_rails) / 2)
             for direction in range(4):
                 connection_slots = np.arange(connections_per_direction[direction]) - int(
                         connections_per_direction[direction] / 2)
@@ -702,12 +706,16 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                     if direction == 3:
                         tmp_coordinates = (
                         node_position[0] + connection_slots[connection_idx], node_position[1] - node_size)
-                    connection_points_coordinates[direction].append(tmp_coordinates)
-            connection_points.append(connection_points_coordinates)
-            connection_info.append(connections_per_direction)
-        return connection_points, connection_info
+                    connection_points_coordinates_inner[direction].append(tmp_coordinates)
+                    if connection_idx in range(start_idx, start_idx + number_of_out_rails + 1):
+                        connection_points_coordinates_outer[direction].append(tmp_coordinates)
 
-    def _connect_cities(node_positions, connection_points, connection_info, city_cells, max_inter_city_rails_allowed,
+            inner_connection_points.append(connection_points_coordinates_inner)
+            outer_connection_points.append(connection_points_coordinates_outer)
+            connection_info.append(connections_per_direction)
+        return inner_connection_points, outer_connection_points, connection_info
+
+    def _connect_cities(node_positions, connection_points, connection_info, city_cells,
                         rail_trans, grid_map):
         """
         Function to connect the different cities through their connection points
@@ -718,7 +726,6 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
         :param grid_map: Grid map
         :return:
         """
-        boarder_connections = [[] for i in range(len(node_positions))]
         for current_node in np.arange(len(node_positions)):
             direction = 0
             connected_to_city = []
@@ -741,9 +748,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                         neighb_idx = neighbours[i]
 
                 connected_to_city.append(neighb_idx)
-                number_of_out_rails = np.random.randint(1, max_inter_city_rails_allowed + 1)
-
-                for tmp_out_connection_point in connection_points[current_node][direction][:number_of_out_rails]:
+                for tmp_out_connection_point in connection_points[current_node][direction]:
                     # Find closest connection point
                     min_connection_dist = np.inf
                     all_neighb_connection_points = [item for sublist in connection_points[neighb_idx] for item in
@@ -756,12 +761,9 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                             neighb_connection_point = tmp_in_connection_point
                     connect_cities(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point,
                                    city_cells)
-                    if tmp_out_connection_point not in boarder_connections[current_node]:
-                        boarder_connections[current_node].append(tmp_out_connection_point)
-                    if neighb_connection_point not in boarder_connections[neighb_idx]:
-                        boarder_connections[neighb_idx].append(neighb_connection_point)
+
                 direction += 1
-        return boarder_connections
+        return
 
     def _build_inner_cities(node_positions, connection_points, outer_connection_points, rail_trans, grid_map):
         """
