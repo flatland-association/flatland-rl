@@ -18,7 +18,7 @@ base class and must implement two methods, :code:`reset(self)` and :code:`get(se
 
 .. _`flatland.core.env_observation_builder.ObservationBuilder` : https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/core/env_observation_builder.py#L13
 
-Below is a simple example that returns observation vectors of size :code:`observation_space = 5` featuring only the ID (handle) of the agent whose
+Below is a simple example that returns observation vectors of size 5 featuring only the ID (handle) of the agent whose
 observation vector is being computed:
 
 .. code-block:: python
@@ -28,14 +28,12 @@ observation vector is being computed:
         Simplest observation builder. The object returns observation vectors with 5 identical components,
         all equal to the ID of the respective agent.
         """
-        def __init__(self):
-            self.observation_space = [5]
 
         def reset(self):
             return
 
         def get(self, handle):
-            observation = handle * np.ones((self.observation_space[0],))
+            observation = handle * np.ones(5)
             return observation
 
 We can pass an instance of our custom observation builder :code:`SimpleObs` to the :code:`RailEnv` creator as follows:
@@ -85,7 +83,6 @@ Note that this simple strategy fails when multiple agents are present, as each a
             super().__init__(max_depth=0)
             # We set max_depth=0 in because we only need to look at the current
             # position of the agent to decide what direction is shortest.
-            self.observation_space = [3]
 
         def reset(self):
             # Recompute the distance map, if the environment has changed.
@@ -189,7 +186,6 @@ In contrast to the previous examples we also implement the :code:`def get_many(s
 
         def __init__(self, predictor):
             super().__init__(max_depth=0)
-            self.observation_space = [10]
             self.predictor = predictor
 
         def reset(self):

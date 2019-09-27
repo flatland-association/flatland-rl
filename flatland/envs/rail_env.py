@@ -178,7 +178,6 @@ class RailEnv(Environment):
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
         self.action_space = [1]
-        self.observation_space = self.obs_builder.observation_space  # updated on resets?
 
         # Stochastic train malfunctioning parameters
         if stochastic_data is not None:
@@ -288,7 +287,6 @@ class RailEnv(Environment):
 
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
-        self.observation_space = self.obs_builder.observation_space  # <-- change on reset?
         self.distance_map.reset(self.agents, self.rail)
 
         # Return the new observation vectors for each agent

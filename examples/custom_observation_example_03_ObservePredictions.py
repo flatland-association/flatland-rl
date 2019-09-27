@@ -28,7 +28,6 @@ class ObservePredictions(ObservationBuilder):
 
     def __init__(self, predictor):
         super().__init__()
-        self.observation_space = [10]
         self.predictor = predictor
 
     def reset(self):

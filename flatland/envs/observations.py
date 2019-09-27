@@ -42,13 +42,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         super().__init__()
         self.max_depth = max_depth
         self.observation_dim = 11
-        # Compute the size of the returned observation vector
-        size = 0
-        pow4 = 1
-        for i in range(self.max_depth + 1):
-            size += pow4
-            pow4 *= 4
-        self.observation_space = [size * self.observation_dim]
         self.location_has_agent = {}
         self.location_has_agent_direction = {}
         self.predictor = predictor
@@ -508,12 +501,10 @@ class GlobalObsForRailEnv(ObservationBuilder):
     """
 
     def __init__(self):
-        self.observation_space = ()
         super(GlobalObsForRailEnv, self).__init__()
 
     def set_env(self, env: Environment):
         super().set_env(env)
-        self.observation_space = [4, self.env.height, self.env.width]
 
     def reset(self):
         self.rail_obs = np.zeros((self.env.height, self.env.width, 16))
