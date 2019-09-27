@@ -37,7 +37,8 @@ class AStarNode:
 
 def a_star(grid_map: GridTransitionMap,
            start: IntVector2D, end: IntVector2D,
-           a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance, nice=True) -> IntVector2DArray:
+           a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance, nice=True,
+           forbidden_cells=None) -> IntVector2DArray:
     """
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
@@ -90,11 +91,15 @@ def a_star(grid_map: GridTransitionMap,
             if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
                 continue
 
+            # Skip paths through forbidden regions.
+            if forbidden_cells is not None:
+                if node_pos in forbidden_cells and node_pos != start_node and node_pos != end_node:
+                    continue
+
             # validate positions
             #
             if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos, end_node.pos) and nice:
                 continue
-
             # create new node
             new_node = AStarNode(node_pos, current_node)
             children.append(new_node)

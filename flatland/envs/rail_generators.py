@@ -9,7 +9,7 @@ from flatland.core.grid.grid4_utils import get_direction, mirror
 from flatland.core.grid.grid_utils import distance_on_rail, direction_to_point
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.grid4_generators_utils import connect_rail, connect_nodes
+from flatland.envs.grid4_generators_utils import connect_rail, connect_nodes, connect_cities
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -573,25 +573,9 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         node_positions: List[Any] = None
         nb_nodes = num_cities
         if grid_mode:
-            nodes_ratio = height / width
-            nodes_per_row = int(np.ceil(np.sqrt(nb_nodes * nodes_ratio)))
-            nodes_per_col = int(np.ceil(nb_nodes / nodes_per_row))
-            x_positions = np.linspace(node_radius, height - node_radius - 1, nodes_per_row, dtype=int)
-            y_positions = np.linspace(node_radius, width - node_radius - 1, nodes_per_col, dtype=int)
-            city_idx = np.random.choice(np.arange(nb_nodes), num_cities, False)
-
-            node_positions = _generate_node_positions_grid_mode(city_idx, city_positions, intersection_positions,
-                                                                nb_nodes,
-                                                                nodes_per_row, x_positions,
-                                                                y_positions)
-
-
-
+            node_positions, city_cells = _generate_node_positions_grid_mode(nb_nodes, height, width)
         else:
-
-            node_positions = _generate_node_positions_not_grid_mode(city_positions, height,
-                                                                    intersection_positions,
-                                                                    nb_nodes, width)
+            node_positions = _generate_node_positions_not_grid_mode(nb_nodes, height, width)
 
         # reduce nb_nodes, _num_cities, _num_intersections if less were generated in not_grid_mode
         nb_nodes = len(node_positions)
@@ -624,8 +608,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
             'train_stations': train_stations
         }}
 
-    def _generate_node_positions_not_grid_mode(city_positions, height, intersection_positions, nb_nodes,
-                                               width):
+    def _generate_node_positions_not_grid_mode(nb_nodes, height, width):
 
         node_positions = []
         for node_idx in range(nb_nodes):
@@ -637,22 +620,14 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                 y_tmp = node_radius + np.random.randint(width - 2 * node_radius - 1)
                 to_close = False
 
-                # Check distance to cities
-                for node_pos in city_positions:
-                    if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
-                        to_close = True
-
-                # Check distance to intersections
-                for node_pos in intersection_positions:
+                # Check distance to nodes
+                for node_pos in node_positions:
                     if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
                         to_close = True
 
                 if not to_close:
                     node_positions.append((x_tmp, y_tmp))
-                    if node_idx < num_cities:
-                        city_positions.append((x_tmp, y_tmp))
-                    else:
-                        intersection_positions.append((x_tmp, y_tmp))
+
                 tries += 1
                 if tries > 100:
                     warnings.warn(
@@ -661,23 +636,21 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                             tries, nb_nodes))
                     break
 
-        node_positions = city_positions + intersection_positions
         return node_positions
 
-    def _generate_node_positions_grid_mode(city_idx, city_positions, intersection_positions, nb_nodes,
-                                           nodes_per_row, x_positions, y_positions):
-
+    def _generate_node_positions_grid_mode(nb_nodes, height, width):
+        nodes_ratio = height / width
+        nodes_per_row = int(np.ceil(np.sqrt(nb_nodes * nodes_ratio)))
+        nodes_per_col = int(np.ceil(nb_nodes / nodes_per_row))
+        x_positions = np.linspace(node_radius, height - node_radius - 1, nodes_per_row, dtype=int)
+        y_positions = np.linspace(node_radius, width - node_radius - 1, nodes_per_col, dtype=int)
+        node_positions = []
+        forbidden_cells = []
         for node_idx in range(nb_nodes):
-
             x_tmp = x_positions[node_idx % nodes_per_row]
             y_tmp = y_positions[node_idx // nodes_per_row]
-            if node_idx in city_idx:
-                city_positions.append((x_tmp, y_tmp))
-
-            else:
-                intersection_positions.append((x_tmp, y_tmp))
-        node_positions = city_positions + intersection_positions
-        return node_positions
+            node_positions.append((x_tmp, y_tmp))
+        return node_positions, forbidden_cells
 
     def _generate_node_connection_points(node_positions, node_size, max_nr_connection_points=2,
                                          max_nr_connection_directions=2):
@@ -698,8 +671,6 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
             # Store the directions to these neighbours
             connection_sides_idx = []
             idx = 1
-            # TODO: Change the way this code works! Check that we get sufficient direction.
-            # TODO: Check if this works as expected
             while len(connection_sides_idx) < max_nr_connection_directions and idx < len(neighb_dist):
                 current_closest_direction = direction_to_point(node_position, node_positions[closest_neighb_idx[idx]])
                 print(node_position)
@@ -707,12 +678,11 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                     connection_sides_idx.append(current_closest_direction)
                 idx += 1
 
-
             # set the number of connection points for each direction
             connections_per_direction = np.zeros(4, dtype=int)
 
             for idx in connection_sides_idx:
-                nr_of_connection_points = max_nr_connection_points  # np.random.randint(1, max_nr_connection_points + 1)
+                nr_of_connection_points = np.random.randint(1, max_nr_connection_points + 1)
 
                 connections_per_direction[idx] = nr_of_connection_points
             connection_points_coordinates = []
@@ -775,7 +745,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                             if tmp_dist < min_connection_dist:
                                 min_connection_dist = tmp_dist
                                 neighb_connection_point = tmp_in_connection_point
-                        connect_nodes(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point)
+                        connect_cities(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point, None)
                         boarder_connections.add((tmp_out_connection_point, current_node))
                         boarder_connections.add((neighb_connection_point, neighb_idx))
                 direction += 1
@@ -943,5 +913,19 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
     def argsort(seq):
         # http://stackoverflow.com/questions/3071415/efficient-method-to-calculate-the-rank-vector-of-a-list-in-python
         return sorted(range(len(seq)), key=seq.__getitem__)
+
+    def _city_cells(center, radius):
+        """
+        Function to return all cells within a city
+        :param center: center coordinates of city
+        :param radius: radius of city (it is a square)
+        :return: returns flat list of all cell coordinates in the city
+        """
+        city_cells = []
+        for x in range(-radius, radius):
+            for y in range(-radius, radius):
+                city_cells.append(center[0] + x, center[1] + y)
+
+        return city_cells
 
     return generator

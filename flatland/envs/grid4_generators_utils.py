@@ -20,13 +20,15 @@ def connect_basic_operation(
     flip_start_node_trans=False,
     flip_end_node_trans=False,
     nice=True,
-    a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
+    a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
+    forbidden_cells=None
+) -> IntVector2DArray:
     """
     Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
     returns the path created as a list of positions.
     """
     # in the worst case we will need to do a A* search, so we might as well set that up
-    path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, nice)
+    path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, nice, forbidden_cells)
     if len(path) < 2:
         print("No path found", path)
         return []
@@ -86,6 +88,12 @@ def connect_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
                   a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
     return connect_basic_operation(rail_trans, grid_map, start, end, False, False, False, a_star_distance_function)
 
+
+def connect_cities(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
+                   start: IntVector2D, end: IntVector2D, forbidden_cells,
+                   a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
+    return connect_basic_operation(rail_trans, grid_map, start, end, False, False, False, a_star_distance_function,
+                                   forbidden_cells)
 
 def connect_from_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
                        start: IntVector2D, end: IntVector2D,
