@@ -91,17 +91,17 @@ def a_star(grid_map: GridTransitionMap,
             if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
                 continue
 
-            # Skip paths through forbidden regions.
-            if forbidden_cells is not None:
-                if node_pos in forbidden_cells and node_pos != start_node and node_pos != end_node:
-                    continue
-
             # validate positions
             #
             if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos, end_node.pos) and nice:
                 continue
             # create new node
             new_node = AStarNode(node_pos, current_node)
+
+            # Skip paths through forbidden regions.
+            if forbidden_cells is not None:
+                if node_pos in forbidden_cells and new_node != start_node and new_node != end_node:
+                    continue
             children.append(new_node)
 
         # loop through children

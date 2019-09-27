@@ -575,7 +575,8 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         if grid_mode:
             node_positions, city_cells = _generate_node_positions_grid_mode(nb_nodes, height, width)
         else:
-            node_positions = _generate_node_positions_not_grid_mode(nb_nodes, height, width)
+            node_positions, city_cells = _generate_node_positions_not_grid_mode(nb_nodes, height, width)
+        print(city_cells)
 
         # reduce nb_nodes, _num_cities, _num_intersections if less were generated in not_grid_mode
         nb_nodes = len(node_positions)
@@ -586,7 +587,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                                                                               max_nr_connection_directions)
 
         # Connect the cities through the connection points
-        _connect_cities(node_positions, connection_points, connection_info, rail_trans, grid_map)
+        _connect_cities(node_positions, connection_points, connection_info, city_cells, rail_trans, grid_map)
 
         # Build inner cities
         train_stations, built_num_trainstation = _build_cities(node_positions, connection_points, rail_trans, grid_map)
@@ -611,6 +612,8 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
     def _generate_node_positions_not_grid_mode(nb_nodes, height, width):
 
         node_positions = []
+        city_cells = []
+
         for node_idx in range(nb_nodes):
             to_close = True
             tries = 0
@@ -627,6 +630,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
 
                 if not to_close:
                     node_positions.append((x_tmp, y_tmp))
+                    city_cells.extend(_city_cells(node_positions[-1], node_radius))
 
                 tries += 1
                 if tries > 100:
@@ -636,7 +640,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                             tries, nb_nodes))
                     break
 
-        return node_positions
+        return node_positions, city_cells
 
     def _generate_node_positions_grid_mode(nb_nodes, height, width):
         nodes_ratio = height / width
@@ -645,12 +649,13 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         x_positions = np.linspace(node_radius, height - node_radius - 1, nodes_per_row, dtype=int)
         y_positions = np.linspace(node_radius, width - node_radius - 1, nodes_per_col, dtype=int)
         node_positions = []
-        forbidden_cells = []
+        city_cells = []
         for node_idx in range(nb_nodes):
             x_tmp = x_positions[node_idx % nodes_per_row]
             y_tmp = y_positions[node_idx // nodes_per_row]
             node_positions.append((x_tmp, y_tmp))
-        return node_positions, forbidden_cells
+            city_cells.extend(_city_cells(node_positions[-1], node_radius))
+        return node_positions, city_cells
 
     def _generate_node_connection_points(node_positions, node_size, max_nr_connection_points=2,
                                          max_nr_connection_directions=2):
@@ -673,7 +678,6 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
             idx = 1
             while len(connection_sides_idx) < max_nr_connection_directions and idx < len(neighb_dist):
                 current_closest_direction = direction_to_point(node_position, node_positions[closest_neighb_idx[idx]])
-                print(node_position)
                 if current_closest_direction not in connection_sides_idx:
                     connection_sides_idx.append(current_closest_direction)
                 idx += 1
@@ -708,7 +712,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
             connection_info.append(connections_per_direction)
         return connection_points, connection_info
 
-    def _connect_cities(node_positions, connection_points, connection_info, rail_trans, grid_map):
+    def _connect_cities(node_positions, connection_points, connection_info, city_cells, rail_trans, grid_map):
         """
         Function to connect the different cities through their connection points
         :param node_positions: Positions of city centers
@@ -724,8 +728,6 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
             for nbr_connection_points in connection_info[current_node]:
                 if nbr_connection_points > 0:
                     neighb_idx = _closest_neigh_in_direction(current_node, direction, node_positions)
-                    print(current_node, node_positions[current_node], direction, neighb_idx,
-                          connection_info[current_node], connection_points[current_node])
                 else:
                     direction += 1
                     continue
@@ -745,7 +747,8 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
                             if tmp_dist < min_connection_dist:
                                 min_connection_dist = tmp_dist
                                 neighb_connection_point = tmp_in_connection_point
-                        connect_cities(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point, None)
+                        connect_cities(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point,
+                                       city_cells)
                         boarder_connections.add((tmp_out_connection_point, current_node))
                         boarder_connections.add((neighb_connection_point, neighb_idx))
                 direction += 1
@@ -924,7 +927,7 @@ def sparse_rail_generator(num_cities=5, num_trainstations=2, min_node_dist=20, n
         city_cells = []
         for x in range(-radius, radius):
             for y in range(-radius, radius):
-                city_cells.append(center[0] + x, center[1] + y)
+                city_cells.append((center[0] + x, center[1] + y))
 
         return city_cells
 
