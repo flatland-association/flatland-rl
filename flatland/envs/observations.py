@@ -58,7 +58,7 @@ class TreeObsForRailEnv(ObservationBuilder):
     def reset(self):
         self.location_has_target = {tuple(agent.target): 1 for agent in self.env.agents}
 
-    def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, List[int]]:
+    def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, Node]:
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
@@ -87,7 +87,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             observations[h] = self.get(h)
         return observations
 
-    def get(self, handle: int = 0) -> List[int]:
+    def get(self, handle: int = 0) -> Node:
         """
         Computes the current observation for agent `handle` in env
 
