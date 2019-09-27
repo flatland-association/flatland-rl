@@ -7,7 +7,8 @@ import numpy as np
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
-from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env import RailEnv, RailEnvActions, RailEnvNextAction
+from flatland.envs.rail_env_shortest_paths import get_shortest_paths, WalkingElement
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.rendertools import RenderTool
@@ -142,6 +143,21 @@ def test_shortest_path_predictor(rendering=False):
         1], agent.direction] == 5.0, "found {} instead of {}".format(
         distance_map[agent.handle, agent.position[0], agent.position[1], agent.direction], 5.0)
 
+    paths = get_shortest_paths(env.distance_map)[0]
+    assert paths == [
+        WalkingElement((5, 6), 0, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(4, 6),
+                                                    next_direction=0)),
+        WalkingElement((4, 6), 0, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 6),
+                                                    next_direction=0)),
+        WalkingElement((3, 6), 0, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 7),
+                                                    next_direction=1)),
+        WalkingElement((3, 7), 1, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 8),
+                                                    next_direction=1)),
+        WalkingElement((3, 8), 1, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 9),
+                                                    next_direction=1)),
+        WalkingElement((3, 9), 1, RailEnvNextAction(action=RailEnvActions.STOP_MOVING, next_position=(3, 9),
+                                                    next_direction=1))]
+
     # extract the data
     predictions = env.obs_builder.predictions
     positions = np.array(list(map(lambda prediction: [*prediction[1:3]], predictions[0])))
@@ -220,12 +236,13 @@ def test_shortest_path_predictor(rendering=False):
         [20.],
     ])
 
+    assert np.array_equal(time_offsets, expected_time_offsets), \
+        "time_offsets {}, expected {}".format(time_offsets, expected_time_offsets)
+
     assert np.array_equal(positions, expected_positions), \
         "positions {}, expected {}".format(positions, expected_positions)
     assert np.array_equal(directions, expected_directions), \
         "directions {}, expected {}".format(directions, expected_directions)
-    assert np.array_equal(time_offsets, expected_time_offsets), \
-        "time_offsets {}, expected {}".format(time_offsets, expected_time_offsets)
 
 
 def test_shortest_path_predictor_conflicts(rendering=False):

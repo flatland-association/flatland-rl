@@ -5,8 +5,9 @@ Collection of environment-specific PredictionBuilder.
 import numpy as np
 
 from flatland.core.env_prediction_builder import PredictionBuilder
-from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env import RailEnvActions
+from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.utils.ordered_set import OrderedSet
 
 
@@ -59,7 +60,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
 
                     continue
                 for action in action_priorities:
-                    cell_isFree, new_cell_isValid, new_direction, new_position, transition_isValid = \
+                    cell_is_free, new_cell_isValid, new_direction, new_position, transition_isValid = \
                         self.env._check_action_on_agent(action, agent)
                     if all([new_cell_isValid, transition_isValid]):
                         # move and change direction to face the new_direction that was
@@ -92,6 +93,9 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
         """
         Called whenever get_many in the observation build is called.
         Requires distance_map to extract the shortest path.
+        Does not take into account future positions of other agents!
+
+        If there is no shortest path, the agent just stands still and stops moving.
 
         Parameters
         ----------
@@ -106,14 +110,15 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
             - position axis 0
             - position axis 1
             - direction
-            - action taken to come here
+            - action taken to come here (not implemented yet)
             The prediction at 0 is the current position, direction etc.
         """
         agents = self.env.agents
         if handle:
             agents = [self.env.agents[handle]]
-        distance_map = self.env.distance_map
-        assert distance_map is not None
+        distance_map: DistanceMap = self.env.distance_map
+
+        shortest_paths = get_shortest_paths(distance_map, max_depth=self.max_depth)
 
         prediction_dict = {}
         for agent in agents:
@@ -123,52 +128,35 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
             times_per_cell = int(np.reciprocal(agent_speed))
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
             prediction[0] = [0, *_agent_initial_position, _agent_initial_direction, 0]
+
+            shortest_path = shortest_paths[agent.handle]
+
+            # if there is a shortest path, remove the initial position
+            if shortest_path:
+                shortest_path = shortest_path[1:]
+
             new_direction = _agent_initial_direction
             new_position = _agent_initial_position
             visited = OrderedSet()
             for index in range(1, self.max_depth + 1):
-                # if we're at the target, stop moving...
-                if agent.position == agent.target:
-                    prediction[index] = [index, *agent.target, agent.direction, RailEnvActions.STOP_MOVING]
-                    visited.add((agent.position[0], agent.position[1], agent.direction))
+                # if we're at the target or not moving, stop moving until max_depth is reached
+                if new_position == agent.target or not agent.moving or not shortest_path:
+                    prediction[index] = [index, *new_position, new_direction, RailEnvActions.STOP_MOVING]
+                    visited.add((*new_position, agent.direction))
                     continue
-                if not agent.moving:
-                    prediction[index] = [index, *agent.position, agent.direction, RailEnvActions.STOP_MOVING]
-                    visited.add((agent.position[0], agent.position[1], agent.direction))
-                    continue
-                # Take shortest possible path
-                cell_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
 
-                if np.sum(cell_transitions) == 1 and index % times_per_cell == 0:
-                    new_direction = np.argmax(cell_transitions)
-                    new_position = get_new_position(agent.position, new_direction)
-                elif np.sum(cell_transitions) > 1 and index % times_per_cell == 0:
-                    min_dist = np.inf
-                    no_dist_found = True
-                    for direction in range(4):
-                        if cell_transitions[direction] == 1:
-                            neighbour_cell = get_new_position(agent.position, direction)
-                            target_dist = distance_map.get()[agent.handle, neighbour_cell[0], neighbour_cell[1], direction]
-                            if target_dist < min_dist or no_dist_found:
-                                min_dist = target_dist
-                                new_direction = direction
-                                no_dist_found = False
-                    new_position = get_new_position(agent.position, new_direction)
-                elif index % times_per_cell == 0:
-                    raise Exception("No transition possible {}".format(cell_transitions))
+                if index % times_per_cell == 0:
+                    new_position = shortest_path[0].position
+                    new_direction = shortest_path[0].direction
 
-                # update the agent's position and direction
-                agent.position = new_position
-                agent.direction = new_direction
+                    shortest_path = shortest_path[1:]
 
                 # prediction is ready
                 prediction[index] = [index, *new_position, new_direction, 0]
-                visited.add((new_position[0], new_position[1], new_direction))
+                visited.add((*new_position, new_direction))
+
+            # TODO: very bady side effects for visualization only: hand the dev_pred_dict back instead of setting on env!
             self.env.dev_pred_dict[agent.handle] = visited
             prediction_dict[agent.handle] = prediction
-
-            # cleanup: reset initial position
-            agent.position = _agent_initial_position
-            agent.direction = _agent_initial_direction
 
         return prediction_dict

@@ -37,10 +37,10 @@ def city_generator(num_cities: int = 5,
     :param a_star_distance_function: Heuristic how the distance between two nodes get estimated in the "a-star" path
     :param seed: Random Seed
     :param print_out_info: print debug info if True
-    :return:
-        -------
-    numpy.ndarray of type numpy.uint16
-        The matrix with the correct 16-bit bitmaps for each cell.
+
+    :return: The matrix with the correct 16-bit bitmaps for each cell.
+    :rtype: numpy.ndarray of type numpy.uint16
+
     """
 
     def do_generate_city_locations(width: int,
@@ -269,8 +269,8 @@ def city_generator(num_cities: int = 5,
                          intern_connect_max_nbr_of_shortes_city: int):
         city_edges = []
 
-        s_nodes:IntVector2DArrayArray  = copy.deepcopy(org_s_nodes)
-        e_nodes:IntVector2DArrayArray = copy.deepcopy(org_e_nodes)
+        s_nodes: IntVector2DArrayArray = copy.deepcopy(org_s_nodes)
+        e_nodes: IntVector2DArrayArray = copy.deepcopy(org_e_nodes)
 
         for nbr_connected in range(intern_connect_max_nbr_of_shortes_city):
             for city_loop in range(len(s_nodes)):
