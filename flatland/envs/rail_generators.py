@@ -558,7 +558,9 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
         rail_array = grid_map.grid
         rail_array.fill(0)
         np.random.seed(seed + num_resets)
-
+        max_inter_city_rails_allowed = max_inter_city_rails
+        if max_inter_city_rails_allowed > tracks_in_city:
+            max_inter_city_rails_allowed = tracks_in_city
         # Generate a set of nodes for the sparse network
         # Try to connect cities to nodes first
         city_positions = []
@@ -581,7 +583,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
 
         # Connect the cities through the connection points
         outer_connection_points = _connect_cities(node_positions, connection_points, connection_info, city_cells,
-                                                  max_inter_city_rails,
+                                                  max_inter_city_rails_allowed,
                                                   rail_trans, grid_map)
 
         # Build inner cities
@@ -705,7 +707,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
             connection_info.append(connections_per_direction)
         return connection_points, connection_info
 
-    def _connect_cities(node_positions, connection_points, connection_info, city_cells, max_inter_city_rails,
+    def _connect_cities(node_positions, connection_points, connection_info, city_cells, max_inter_city_rails_allowed,
                         rail_trans, grid_map):
         """
         Function to connect the different cities through their connection points
@@ -739,7 +741,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                         neighb_idx = neighbours[i]
 
                 connected_to_city.append(neighb_idx)
-                number_of_out_rails = np.random.randint(1, max_inter_city_rails + 1)
+                number_of_out_rails = np.random.randint(1, max_inter_city_rails_allowed + 1)
 
                 for tmp_out_connection_point in connection_points[current_node][direction][:number_of_out_rails]:
                     # Find closest connection point
