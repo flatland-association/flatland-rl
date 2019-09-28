@@ -33,7 +33,7 @@ env = RailEnv(width=50,
               rail_generator=sparse_rail_generator(num_cities=9,  # Number of cities in map (where train stations are)
                                                    min_node_dist=12,  # Minimal distance of nodes
                                                    node_radius=4,  # Proximity of stations to city center
-                                                   seed=0,  # Random seed
+                                                   seed=12,  # Random seed
                                                    grid_mode=False,
                                                    max_inter_city_rails=2,
                                                    tracks_in_city=5,
