@@ -736,11 +736,11 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                     direction += 1
                     continue
 
-                # If no closest neighbour was found look for the next one clock wise to avoid connecting to previous node
-                tmp_direction = (direction + 1) % 4
+                # If no closest neighbour was found look at the neighbouring connections
+                tmp_direction = (direction - 1) % 4
                 while neighb_idx is None:
                     neighb_idx = neighbours[tmp_direction]
-                    tmp_direction = (tmp_direction - 1) % 4
+                    tmp_direction = (tmp_direction + 1) % 4
 
                 connected_to_city.append(neighb_idx)
                 for tmp_out_connection_point in connection_points[current_node][direction]:
