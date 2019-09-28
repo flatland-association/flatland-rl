@@ -533,7 +533,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
 
 
 def sparse_rail_generator(num_cities=5, node_radius=2,
-                          grid_mode=False, max_inter_city_rails=4, tracks_in_city=4,
+                          grid_mode=False, max_inter_city_rails=4, max_tracks_in_city=4,
                           seed=0) -> RailGenerator:
     """
     This is a level generator which generates complex sparse rail configurations
@@ -559,8 +559,8 @@ def sparse_rail_generator(num_cities=5, node_radius=2,
         rail_array.fill(0)
         np.random.seed(seed + num_resets)
         max_inter_city_rails_allowed = max_inter_city_rails
-        if max_inter_city_rails_allowed > tracks_in_city:
-            max_inter_city_rails_allowed = tracks_in_city
+        if max_inter_city_rails_allowed > max_tracks_in_city:
+            max_inter_city_rails_allowed = max_tracks_in_city
         # Generate a set of nodes for the sparse network
         # Try to connect cities to nodes first
         city_positions = []
@@ -580,7 +580,7 @@ def sparse_rail_generator(num_cities=5, node_radius=2,
         # Set up connection points for all cities
         inner_connection_points, outer_connection_points, connection_info = _generate_node_connection_points(
             node_positions, node_radius, max_inter_city_rails_allowed,
-            tracks_in_city)
+            max_tracks_in_city)
 
         # Connect the cities through the connection points
         _connect_cities(node_positions, outer_connection_points, connection_info, city_cells, rail_trans, grid_map)
@@ -760,14 +760,15 @@ def sparse_rail_generator(num_cities=5, node_radius=2,
                 direction += 1
         return
 
-    def _build_inner_cities(node_positions, connection_points, outer_connection_points, rail_trans, grid_map):
+    def _build_inner_cities(node_positions, inner_connection_points, outer_connection_points, rail_trans, grid_map):
         """
         Builds inner city tracks. This current version connects all incoming connections to all outgoing connections
-        :param node_positions:
-        :param connection_points:
+        :param node_positions: Positions of the cities
+        :param inner_connection_points: Points on city boarder that are used to generate inner city track
+        :param outer_connection_points: Points where the city is connected to neighboring cities
         :param rail_trans:
         :param grid_map:
-        :return:
+        :return: Returns the cells of the through path which cannot be occupied by trainstations
         """
         through_path_cells = [[] for i in range(len(node_positions))]
         for current_city in range(len(node_positions)):
@@ -775,10 +776,10 @@ def sparse_rail_generator(num_cities=5, node_radius=2,
                                            sublist]
 
             for boarder in range(4):
-                for source in connection_points[current_city][boarder]:
+                for source in inner_connection_points[current_city][boarder]:
                     for other_boarder in range(4):
-                        if boarder != other_boarder and len(connection_points[current_city][other_boarder]) > 0:
-                            for target in connection_points[current_city][other_boarder]:
+                        if boarder != other_boarder and len(inner_connection_points[current_city][other_boarder]) > 0:
+                            for target in inner_connection_points[current_city][other_boarder]:
                                 city_boarder = _city_boarder(node_positions[current_city], node_radius)
                                 current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
                                 if target in all_outer_connection_points and source in \
