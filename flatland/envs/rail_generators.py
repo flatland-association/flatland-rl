@@ -551,7 +551,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
         rail_array = grid_map.grid
         rail_array.fill(0)
         np.random.seed(seed + num_resets)
-        node_radius = int(np.ceil(max_tracks_in_city / 2))
+        node_radius = int(np.ceil(max_tracks_in_city / 2)) + 2
         max_inter_city_rails_allowed = max_inter_city_rails
         if max_inter_city_rails_allowed > max_tracks_in_city:
             max_inter_city_rails_allowed = max_tracks_in_city
@@ -616,8 +616,8 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
             tries = 0
 
             while to_close:
-                x_tmp = node_radius + 1 + np.random.randint(height - 2 * node_radius)
-                y_tmp = node_radius + 1 + np.random.randint(width - 2 * node_radius)
+                x_tmp = node_radius + 1 + np.random.randint(height - 2 * node_radius - 1)
+                y_tmp = node_radius + 1 + np.random.randint(width - 2 * node_radius - 1)
                 to_close = False
                 # Check distance to nodes
                 for node_pos in node_positions:
@@ -806,6 +806,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                 if 1 <= nbits <= 2:
                     built_num_trainstations += 1
                     train_stations[current_city].append(possible_location)
+        print(built_num_trainstations)
         return train_stations, built_num_trainstations
 
     def _generate_start_target_pairs(num_agents, nb_nodes, train_stations):
