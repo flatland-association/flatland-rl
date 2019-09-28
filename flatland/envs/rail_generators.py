@@ -532,7 +532,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
     return generator
 
 
-def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
+def sparse_rail_generator(num_cities=5, node_radius=2,
                           grid_mode=False, max_inter_city_rails=4, tracks_in_city=4,
                           seed=0) -> RailGenerator:
     """
@@ -620,13 +620,12 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
             tries = 0
 
             while to_close:
-                x_tmp = node_radius + 1 + np.random.randint(height - 2 * node_radius - 1)
-                y_tmp = node_radius + 1 + np.random.randint(width - 2 * node_radius - 1)
+                x_tmp = node_radius + 1 + np.random.randint(height - 2 * node_radius)
+                y_tmp = node_radius + 1 + np.random.randint(width - 2 * node_radius)
                 to_close = False
-
                 # Check distance to nodes
                 for node_pos in node_positions:
-                    if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
+                    if _city_overlap((x_tmp, y_tmp), node_pos, 2 * node_radius + 2):
                         to_close = True
 
                 if not to_close:
@@ -634,7 +633,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                     city_cells.extend(_city_cells(node_positions[-1], node_radius))
 
                 tries += 1
-                if tries > 100:
+                if tries > 1000:
                     warnings.warn(
                         "Could not only set {} nodes after {} tries, although {} of nodes required to be generated!".format(
                             len(node_positions),
@@ -670,7 +669,7 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
             # Chose the directions where close cities are situated
             neighb_dist = []
             for neighb_node in node_positions:
-                neighb_dist.append(distance_on_rail(node_position, neighb_node))
+                neighb_dist.append(distance_on_rail(node_position, neighb_node, metric="Manhattan"))
             closest_neighb_idx = argsort(neighb_dist)
 
             # Store the directions to these neighbours and orient city to face closest neighbour
@@ -750,7 +749,8 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                                                     sublist]
 
                     for tmp_in_connection_point in all_neighb_connection_points:
-                        tmp_dist = distance_on_rail(tmp_out_connection_point, tmp_in_connection_point)
+                        tmp_dist = distance_on_rail(tmp_out_connection_point, tmp_in_connection_point,
+                                                    metric="Manhattan")
                         if tmp_dist < min_connection_dist:
                             min_connection_dist = tmp_dist
                             neighb_connection_point = tmp_in_connection_point
@@ -888,7 +888,8 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
         node_dist = []
         closest_neighb = [None for i in range(4)]
         for av_node in range(len(node_positions)):
-            node_dist.append(distance_on_rail(node_positions[current_node], node_positions[av_node]))
+            node_dist.append(
+                distance_on_rail(node_positions[current_node], node_positions[av_node], metric="Manhattan"))
         sorted_neighbours = np.argsort(node_dist)
         direction_set = 0
         for neighb in sorted_neighbours[1:]:
@@ -927,5 +928,8 @@ def sparse_rail_generator(num_cities=5, min_node_dist=20, node_radius=2,
                 if abs(x) == radius or abs(y) == radius:
                     city_boarder.append((center[0] + x, center[1] + y))
         return city_boarder
+
+    def _city_overlap(center_1, center_2, radius):
+        return (np.abs(center_1[0] - center_2[0]) < radius and np.abs(center_1[1] - center_2[1]) < radius)
 
     return generator
