@@ -801,7 +801,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                 if track_id % 2 == 0:
                     source = inner_connection_points[current_city][boarder][track_id]
                     target = inner_connection_points[current_city][opposite_boarder][track_id]
-                    current_track = connect_straigt_line(rail_trans, grid_map, source, target)
+                    current_track = connect_straigt_line(rail_trans, grid_map, source, target, False)
                     if target in all_outer_connection_points and source in \
                         all_outer_connection_points and len(through_path_cells[current_city]) < 1:
                         through_path_cells[current_city].extend(current_track)
@@ -809,7 +809,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                     source = inner_connection_points[current_city][opposite_boarder][track_id]
                     target = inner_connection_points[current_city][boarder][track_id]
 
-                    current_track = connect_straigt_line(rail_trans, grid_map, source, target)
+                    current_track = connect_straigt_line(rail_trans, grid_map, source, target, False)
                     if target in all_outer_connection_points and source in \
                         all_outer_connection_points and len(through_path_cells[current_city]) < 1:
                         through_path_cells[current_city].extend(current_track)
