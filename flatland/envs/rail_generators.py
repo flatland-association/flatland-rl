@@ -545,7 +545,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
     :param seed: Random seed to initiate rail
     :return: generator
     """
-    G = nx.Graph()
+    G = nx.DiGraph()
 
     def generator(width, height, num_agents, num_resets=0) -> RailGeneratorProduct:
 
@@ -605,10 +605,10 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
         print("City build time", time.time() - city_build_time)
         # Populate cities
         train_station_time = time.time()
-        train_stations, track_numbers, built_num_trainstation = _set_trainstation_positions(node_positions,
-                                                                                            city_orientations,
-                                                                                            through_tracks,
-                                                                                            node_radius, grid_map)
+        train_stations, built_num_trainstation = _set_trainstation_positions(node_positions,
+                                                                             city_orientations,
+                                                                             through_tracks,
+                                                                             node_radius, grid_map)
         print("Trainstation placing time", time.time() - train_station_time)
 
         # Adjust the number of agents if you could not build enough trainstations
@@ -629,8 +629,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
             'num_agents': num_agents,
             'agent_start_targets_nodes': agent_start_targets_nodes,
             'train_stations': train_stations,
-            'city_orientations': city_orientations,
-            'track_numbers': track_numbers
+            'city_orientations': city_orientations
         }}
 
     def _generate_random_node_positions(nb_nodes, node_radius, height, width):
@@ -763,7 +762,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                 tmp_direction = (direction - 1) % 4
                 while neighb_idx is None:
                     neighb_idx = neighbours[tmp_direction]
-                    tmp_direction = (tmp_direction + 1) % 4
+                    tmp_direction = (direction + 1) % 4
 
                 connected_to_city.append(neighb_idx)
                 for tmp_out_connection_point in connection_points[current_node][direction]:
@@ -780,7 +779,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                             neighb_connection_point = tmp_in_connection_point
                     new_line = connect_cities(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point,
                                               city_cells)
-                    G.add_edge(current_node, neighb_idx)
+                    G.add_edge(current_node, neighb_idx, direction=direction, length=len(new_line))
                     all_paths.extend(new_line)
                 direction += 1
 
@@ -847,7 +846,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
         """
         nb_nodes = len(node_positions)
         train_stations = [[] for i in range(nb_nodes)]
-        train_station_orientations = [[] for i in range(nb_nodes)]
+
         built_num_trainstations = 0
         for current_city in range(len(node_positions)):
             for possible_location in _city_cells(node_positions[current_city], node_radius - 1):
@@ -862,9 +861,9 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                     built_num_trainstations += 1
                     track_nbr = _track_number(node_positions[current_city], city_orientations[current_city],
                                               possible_location)
-                    train_stations[current_city].append(possible_location)
-                    train_station_orientations[current_city].append(track_nbr)
-        return train_stations, train_station_orientations, built_num_trainstations
+                    train_stations[current_city].append((possible_location, track_nbr))
+
+        return train_stations, built_num_trainstations
 
     def _generate_start_target_pairs(num_agents, nb_nodes, train_stations):
         """
@@ -912,8 +911,10 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
             if found_agent_pair:
                 node_available_start[start_node] -= 1
                 node_available_target[target_node] -= 1
-                agent_start_targets_nodes.append((start_node, target_node))
-                print(agent_idx, "has connection", nx.astar_path(G, start_node, target_node))
+                shortest_path = nx.astar_path(G, start_node, target_node, weight='length')
+                start_orientation = nx.get_edge_attributes(G, "direction")[(shortest_path[0], shortest_path[1])]
+                agent_start_targets_nodes.append((start_node, target_node, start_orientation))
+
             else:
                 num_agents -= 1
         return agent_start_targets_nodes, num_agents

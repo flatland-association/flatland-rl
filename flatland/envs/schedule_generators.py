@@ -63,7 +63,6 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
         agent_start_targets_nodes = hints['agent_start_targets_nodes']
         max_num_agents = hints['num_agents']
         city_orientations = hints['city_orientations']
-        track_numbers = hints['track_numbers']
         if num_agents > max_num_agents:
             num_agents = max_num_agents
             warnings.warn("Too many agents! Changes number of agents.")
@@ -77,43 +76,31 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             current_target_node = agent_start_targets_nodes[agent_idx][1]
             target_station_idx = np.random.randint(len(train_stations[current_target_node]))
             target = train_stations[current_target_node][target_station_idx]
-            tries = 0
-            while (target[0], target[1]) in agents_target:
-                target_station_idx = np.random.randint(len(train_stations[current_target_node]))
-                target = train_stations[current_target_node][target_station_idx]
-                tries += 1
-                if tries > 100:
-                    warnings.warn("Could not set target position, removing an agent")
-                    break
-            agents_target.append((target[0], target[1]))
+            train_stations[current_target_node].pop(target_station_idx)
+            agents_target.append((target[0][0], target[0][1]))
 
-            # Set start for agent
+            # Set start for agent and corresponding orientation
             current_start_node = agent_start_targets_nodes[agent_idx][0]
-            start_station_idx = np.random.randint(len(train_stations[current_start_node]))
-            start = train_stations[current_start_node][start_station_idx]
-            current_track_nbr = track_numbers[current_start_node][start_station_idx]
-            tries = 0
-            while (start[0], start[1]) in agents_position:
-                tries += 1
-                if tries > 100:
-                    warnings.warn("Could not set start position, please change initial parameters!!!!")
-                    break
-                start_station_idx = np.random.randint(len(train_stations[current_start_node]))
-                start = train_stations[current_start_node][start_station_idx]
-                current_track_nbr = track_numbers[current_start_node][start_station_idx]
+            agent_start_orientation = agent_start_targets_nodes[agent_idx][2]
 
-            agents_position.append((start[0], start[1]))
-
-            # Orient the agent correctly
-            if current_track_nbr % 2 != 0:
-                current_orientation = city_orientations[current_start_node]
-                agents_direction.append(current_orientation)
+            # Place the agent on the corresponding track
+            if city_orientations[current_start_node] == agent_start_orientation:
+                track_to_use = 0
             else:
-                current_orientation = (city_orientations[current_start_node] + 2) % 2
-                agents_direction.append(current_orientation)
+                track_to_use = 1
 
-            if not rail.check_path_exists(start, current_orientation, target):
-                print("No path")
+            for i in range(len(train_stations[current_start_node])):
+                if train_stations[current_start_node][i][1] == track_to_use:
+                    start_station_idx = i
+                    break
+
+            start = train_stations[current_start_node][start_station_idx]
+            train_stations[current_start_node].pop(start_station_idx)
+
+            agents_position.append((start[0][0], start[0][1]))
+            agents_direction.append(agent_start_orientation)
+            # Orient the agent correctly
+
 
         if speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, speed_ratio_map)
