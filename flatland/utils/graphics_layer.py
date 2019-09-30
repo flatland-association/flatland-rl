@@ -65,7 +65,7 @@ class GraphicsLayer(object):
     def get_cmap(self, *args, **kwargs):
         return plt.get_cmap(*args, **kwargs)
 
-    def set_rail_at(self, row, col, binTrans, iTarget=None, isSelected=False, rail_grid=None):
+    def set_rail_at(self, row, col, binTrans, iTarget=None, isSelected=False, rail_grid=None, num_agents=None):
         """ Set the rail at cell (row, col) to have transitions binTrans.
             The target argument can contain the index of the agent to indicate
             that agent's target is at that cell, so that a station can be

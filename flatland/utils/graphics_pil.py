@@ -499,7 +499,7 @@ class PILSVG(PILGL):
                                           False)[0]
         self.draw_image_row_col(colored_rail, (row, col), layer=PILGL.PREDICTION_PATH_LAYER)
 
-    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None,
+    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None, num_agents=None,
                     show_debug=True):
 
         if binary_trans in self.pil_rail:
@@ -511,8 +511,12 @@ class PILSVG(PILGL):
                 if show_debug:
                     self.text_rowcol((row + 0.8, col + 0.0), strText=str(target), layer=PILGL.TARGET_LAYER)
 
+            city_size = 1
+            if num_agents is not None:
+                city_size = max(1,np.log(1+num_agents))
+
             if binary_trans == 0:
-                if self.background_grid[col][row] <= 4 + ((col * row + col) % 10):
+                if self.background_grid[col][row] <= 4 + np.ceil(((col * row + col) % 10)/city_size):
                     a = int(self.background_grid[col][row])
                     a = a % len(self.dBuildings)
                     if (col + row + col * row) % 13 > 11:
