@@ -783,23 +783,33 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
 
             # This part only works if we have keep same number of connection points for both directions
             # Also only works with two connection direction at each city
-            for boarder in range(4):
-                opposite_boarder = (boarder + 2) % 4
-                for track_id in range(len(inner_connection_points[current_city][boarder])):
-                    if track_id % 2 == 0:
-                        source = inner_connection_points[current_city][boarder][track_id]
-                        for target in inner_connection_points[current_city][opposite_boarder]:
-                            current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
-                            if target in all_outer_connection_points and source in \
-                                all_outer_connection_points and len(through_path_cells[current_city]) < 1:
-                                through_path_cells[current_city].extend(current_track)
-                    else:
-                        source = inner_connection_points[current_city][opposite_boarder][track_id]
-                        for target in inner_connection_points[current_city][boarder]:
-                            current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
-                            if target in all_outer_connection_points and source in \
-                                all_outer_connection_points and len(through_path_cells[current_city]) < 1:
-                                through_path_cells[current_city].extend(current_track)
+            for i in range(4):
+                if len(inner_connection_points[current_city][i]) > 0:
+                    boarder = i
+                    break
+
+            opposite_boarder = (boarder + 2) % 4
+            boarder_one = inner_connection_points[current_city][boarder]
+            boarder_two = inner_connection_points[current_city][opposite_boarder]
+            connect_cities(rail_trans, grid_map, boarder_one[0], boarder_one[-1])
+            connect_cities(rail_trans, grid_map, boarder_two[0], boarder_two[-1])
+
+            for track_id in range(len(inner_connection_points[current_city][boarder])):
+                if track_id % 2 == 0:
+                    source = inner_connection_points[current_city][boarder][track_id]
+                    target = inner_connection_points[current_city][opposite_boarder][track_id]
+                    current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
+                    if target in all_outer_connection_points and source in \
+                        all_outer_connection_points and len(through_path_cells[current_city]) < 1:
+                        through_path_cells[current_city].extend(current_track)
+                else:
+                    source = inner_connection_points[current_city][opposite_boarder][track_id]
+                    target = inner_connection_points[current_city][boarder][track_id]
+
+                    current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
+                    if target in all_outer_connection_points and source in \
+                        all_outer_connection_points and len(through_path_cells[current_city]) < 1:
+                        through_path_cells[current_city].extend(current_track)
 
         return through_path_cells
 
