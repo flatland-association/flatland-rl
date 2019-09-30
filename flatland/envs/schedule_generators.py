@@ -106,10 +106,14 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
 
             # Orient the agent correctly
             if current_track_nbr % 2 != 0:
-                agents_direction.append(city_orientations[current_start_node])
+                current_orientation = city_orientations[current_start_node]
+                agents_direction.append(current_orientation)
             else:
-                agents_direction.append((city_orientations[current_start_node] + 2) % 2)
+                current_orientation = (city_orientations[current_start_node] + 2) % 2
+                agents_direction.append(current_orientation)
 
+            if not rail.check_path_exists(start, current_orientation, target):
+                print("No path")
 
         if speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, speed_ratio_map)
