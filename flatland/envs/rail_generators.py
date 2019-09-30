@@ -792,6 +792,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                     break
 
             opposite_boarder = (boarder + 2) % 4
+            track_direction = opposite_boarder
             boarder_one = inner_connection_points[current_city][boarder]
             boarder_two = inner_connection_points[current_city][opposite_boarder]
 
