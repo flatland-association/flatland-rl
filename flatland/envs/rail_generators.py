@@ -632,7 +632,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                 to_close = False
                 # Check distance to nodes
                 for node_pos in node_positions:
-                    if _city_overlap((x_tmp, y_tmp), node_pos, 2 * node_radius + 2):
+                    if _city_overlap((x_tmp, y_tmp), node_pos, 2 * (node_radius + 1) + 1):
                         to_close = True
 
                 if not to_close:
