@@ -62,6 +62,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
         train_stations = hints['train_stations']
         agent_start_targets_nodes = hints['agent_start_targets_nodes']
         max_num_agents = hints['num_agents']
+        city_orientations = hints['city_orientations']
+        track_numbers = hints['track_numbers']
         if num_agents > max_num_agents:
             num_agents = max_num_agents
             warnings.warn("Too many agents! Changes number of agents.")
@@ -89,6 +91,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             current_start_node = agent_start_targets_nodes[agent_idx][0]
             start_station_idx = np.random.randint(len(train_stations[current_start_node]))
             start = train_stations[current_start_node][start_station_idx]
+            current_track_nbr = track_numbers[current_start_node][start_station_idx]
             tries = 0
             while (start[0], start[1]) in agents_position:
                 tries += 1
@@ -97,15 +100,16 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                     break
                 start_station_idx = np.random.randint(len(train_stations[current_start_node]))
                 start = train_stations[current_start_node][start_station_idx]
+                current_track_nbr = track_numbers[current_start_node][start_station_idx]
 
             agents_position.append((start[0], start[1]))
 
             # Orient the agent correctly
-            for orientation in range(4):
-                transitions = rail.get_transitions(start[0], start[1], orientation)
-                if any(transitions) > 0 and rail.check_path_exists(start, orientation, target):
-                    agents_direction.append(orientation)
-                    break
+            if current_track_nbr % 2 != 0:
+                agents_direction.append(city_orientations[current_start_node])
+            else:
+                agents_direction.append((city_orientations[current_start_node] + 2) % 2)
+
 
         if speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, speed_ratio_map)

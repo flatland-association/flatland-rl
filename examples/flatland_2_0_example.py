@@ -1,5 +1,3 @@
-import time
-
 import numpy as np
 
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
@@ -39,7 +37,7 @@ env = RailEnv(width=50,
                                                    max_tracks_in_city=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
-              number_of_agents=10,
+              number_of_agents=50,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=GlobalObsForRailEnv())
 
@@ -113,7 +111,6 @@ for step in range(500):
     # reward and whether their are done
     next_obs, all_rewards, done, _ = env.step(action_dict)
     env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-    time.sleep(100)
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
