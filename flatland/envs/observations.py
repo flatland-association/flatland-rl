@@ -28,6 +28,9 @@ class TreeObsForRailEnv(ObservationBuilder):
                                           'num_agents_malfunctioning '
                                           'speed_min_fractional '
                                           'childs')
+
+    tree_explorted_actions_char = ['L', 'F', 'R', 'B']
+
     """
     TreeObsForRailEnv object.
 
@@ -46,7 +49,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.location_has_agent_direction = {}
         self.predictor = predictor
         self.location_has_target = None
-        self.tree_explorted_actions_char = ['L', 'F', 'R', 'B']
 
     def reset(self):
         self.location_has_target = {tuple(agent.target): 1 for agent in self.env.agents}
