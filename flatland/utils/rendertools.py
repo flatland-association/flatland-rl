@@ -529,7 +529,8 @@ class RenderTool(object):
                         is_selected = False
 
                     self.gl.set_rail_at(r, c, transitions, target=target, is_selected=is_selected,
-                                        rail_grid=env.rail.grid, show_debug=self.show_debug)
+                                        rail_grid=env.rail.grid, num_agents=env.get_num_agents(),
+                                        show_debug=self.show_debug)
 
             self.gl.build_background_map(targets)
 
