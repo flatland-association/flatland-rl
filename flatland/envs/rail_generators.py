@@ -616,8 +616,8 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
             tries = 0
 
             while to_close:
-                x_tmp = node_radius + 1 + np.random.randint(height - 2 * node_radius - 1)
-                y_tmp = node_radius + 1 + np.random.randint(width - 2 * node_radius - 1)
+                x_tmp = node_radius + 1 + np.random.randint(height - 2 * (node_radius - 1))
+                y_tmp = node_radius + 1 + np.random.randint(width - 2 * (node_radius - 1))
                 to_close = False
                 # Check distance to nodes
                 for node_pos in node_positions:
@@ -770,19 +770,22 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                                            sublist]
             city_boarder = _city_boarder(node_positions[current_city], node_radius)
 
-            random_boarders = np.random.choice(np.arange(4), 4, False)
-            # TODO: Only look at the relevant boarders (Only two at the moment)
-            for boarder in random_boarders:
-                for source in inner_connection_points[current_city][boarder]:
-                    for other_boarder in random_boarders:
-                        if boarder != other_boarder and len(inner_connection_points[current_city][other_boarder]) > 0:
-                            for target in inner_connection_points[current_city][other_boarder]:
-                                current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
-                                if target in all_outer_connection_points and source in \
-                                    all_outer_connection_points and len(through_path_cells[current_city]) < 1:
-                                    through_path_cells[current_city].extend(current_track)
-                        else:
-                            continue
+            # This part only works if we have keep same number of connection points for both directions
+            # Also only works with two connection direction at each city
+            for boarder in range(4):
+                opposite_boarder = (boarder + 2) % 4
+                for track_id in range(len(inner_connection_points[current_city][boarder])):
+                    if track_id % 2 == 0:
+                        source = inner_connection_points[current_city][boarder][track_id]
+                        for target in inner_connection_points[current_city][opposite_boarder]:
+                            current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
+                            if target in all_outer_connection_points and source in \
+                                all_outer_connection_points and len(through_path_cells[current_city]) < 1:
+                                through_path_cells[current_city].extend(current_track)
+                    else:
+                        source = inner_connection_points[current_city][opposite_boarder][track_id]
+                        for target in inner_connection_points[current_city][boarder]:
+                            current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
 
         return through_path_cells
 
