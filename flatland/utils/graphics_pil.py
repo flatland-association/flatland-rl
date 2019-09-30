@@ -357,9 +357,9 @@ class PILSVG(PILGL):
         ]
 
         scenery_files_d3 = [
-            "Scenery-Bergwelt_A_Teil_3_rechts.svg",
+            "Scenery-Bergwelt_A_Teil_1_links.svg",
             "Scenery-Bergwelt_A_Teil_2_mitte.svg",
-            "Scenery-Bergwelt_A_Teil_1_links.svg"
+            "Scenery-Bergwelt_A_Teil_3_rechts.svg"
         ]
 
         img_back_ground = self.pil_from_svg_file('svg', "Background_Light_green.svg")
@@ -524,9 +524,29 @@ class PILSVG(PILGL):
                 elif (self.background_grid[col][row] > 4) or ((col ** 3 + row ** 2 + col * row) % 10 == 0):
                     a = int(self.background_grid[col][row]) - 4
                     a2 = (a + (col + row + col * row + col ** 3 + row ** 4))
-                    if a2 % 17 > 11:
+                    if a2 % 64 > 11:
                         a = a2
-                    pil_track = self.scenery[a % len(self.scenery)]
+                    a_l = a % len(self.scenery)
+                    pil_track = self.scenery[a_l]
+                    if rail_grid is not None:
+                        if a2 % 11 > 3:
+                            if a_l == len(self.scenery) - 1:
+                                # mountain
+                                if col > 1 and row % 7 == 1:
+                                    if rail_grid[row, col - 1] == 0:
+                                        self.draw_image_row_col(self.scenery_d2[0], (row, col - 1),
+                                                                layer=PILGL.RAIL_LAYER)
+                                        pil_track = self.scenery_d2[1]
+                        if a2 % 11 > 3:
+                            if a_l == len(self.scenery) - 1:
+                                # mountain
+                                if col > 2 and row % 5 == 0 and not (row % 7 == 1):
+                                    if rail_grid[row, col - 2] == 0 and rail_grid[row, col - 1] == 0:
+                                        self.draw_image_row_col(self.scenery_d3[0], (row, col - 2),
+                                                                layer=PILGL.RAIL_LAYER)
+                                        self.draw_image_row_col(self.scenery_d3[1], (row, col - 1),
+                                                                layer=PILGL.RAIL_LAYER)
+                                        pil_track = self.scenery_d3[2]
 
             self.draw_image_row_col(pil_track, (row, col), layer=PILGL.RAIL_LAYER)
         else:
