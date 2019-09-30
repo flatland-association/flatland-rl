@@ -513,7 +513,7 @@ class PILSVG(PILGL):
 
             city_size = 1
             if num_agents is not None:
-                city_size = max(1,np.log(1+num_agents))
+                city_size = max(1,np.log(1+num_agents)/1.5)
 
             if binary_trans == 0:
                 if self.background_grid[col][row] <= 4 + np.ceil(((col * row + col) % 10)/city_size):
