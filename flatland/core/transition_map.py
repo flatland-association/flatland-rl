@@ -14,7 +14,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 from flatland.utils.ordered_set import OrderedSet
 
-
+# TODO are these general classes or for grid4 only?
 class TransitionMap:
     """
     Base TransitionMap class.

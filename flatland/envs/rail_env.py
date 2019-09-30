@@ -12,7 +12,7 @@ import numpy as np
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
@@ -592,6 +592,9 @@ class RailEnv(Environment):
     def _get_observations(self):
         self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
         return self.obs_dict
+
+    def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
+        return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row,col))
 
     def get_full_state_msg(self):
         grid_data = self.rail.grid.tolist()

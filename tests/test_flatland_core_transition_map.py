@@ -174,7 +174,7 @@ def test_get_entry_directions():
     north_west_turn = transitions.rotate_transition(south_east_turn, 180)
 
     def _assert(transition, expected):
-        actual = transitions.get_entry_directions(transition)
+        actual = Grid4Transitions.get_entry_directions(transition)
         assert actual == expected, "Found {}, expected {}.".format(actual, expected)
 
     _assert(south_east_turn, [True, False, False, True])
