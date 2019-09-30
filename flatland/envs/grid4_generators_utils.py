@@ -90,7 +90,7 @@ def connect_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
 
 
 def connect_cities(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                   start: IntVector2D, end: IntVector2D, forbidden_cells,
+                   start: IntVector2D, end: IntVector2D, forbidden_cells=None,
                    a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
     return connect_basic_operation(rail_trans, grid_map, start, end, False, False, False, a_star_distance_function,
                                    forbidden_cells)
