@@ -512,7 +512,7 @@ class PILSVG(PILGL):
                     self.text_rowcol((row + 0.8, col + 0.0), strText=str(target), layer=PILGL.TARGET_LAYER)
 
             if binary_trans == 0:
-                if self.background_grid[col][row] <= 4:
+                if self.background_grid[col][row] <= 4 + ((col * row + col) % 10):
                     a = int(self.background_grid[col][row])
                     a = a % len(self.dBuildings)
                     if (col + row + col * row) % 13 > 11:
@@ -521,7 +521,9 @@ class PILSVG(PILGL):
                         if (col + row + col * row) % 3 == 0:
                             a = (a + (col + row + col * row)) % len(self.dBuildings)
                         pil_track = self.dBuildings[a]
-                elif (self.background_grid[col][row] > 4) or ((col ** 3 + row ** 2 + col * row) % 10 == 0):
+                elif (self.background_grid[col][row] > 5 + ((col * row + col) % 3)) or (
+                    (col ** 3 + row ** 2 + col * row) %
+                    10 == 0):
                     a = int(self.background_grid[col][row]) - 4
                     a2 = (a + (col + row + col * row + col ** 3 + row ** 4))
                     if a2 % 64 > 11:
@@ -537,10 +539,10 @@ class PILSVG(PILGL):
                                         self.draw_image_row_col(self.scenery_d2[0], (row, col - 1),
                                                                 layer=PILGL.RAIL_LAYER)
                                         pil_track = self.scenery_d2[1]
-                        if a2 % 11 > 3:
+                        else:
                             if a_l == len(self.scenery) - 1:
                                 # mountain
-                                if col > 2 and row % 5 == 0 and not (row % 7 == 1):
+                                if col > 2 and not (row % 7 == 1):
                                     if rail_grid[row, col - 2] == 0 and rail_grid[row, col - 1] == 0:
                                         self.draw_image_row_col(self.scenery_d3[0], (row, col - 2),
                                                                 layer=PILGL.RAIL_LAYER)
