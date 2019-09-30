@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Type
+from typing import Type, List
 
 import numpy as np
 
@@ -238,5 +238,6 @@ class Grid4Transitions(Transitions):
         cell_transition &= cell_transition & (~self.maskDeadEnds) & 0xffff
         return cell_transition
 
-    def get_entry_directions(self, cell_transition):
+    @staticmethod
+    def get_entry_directions(cell_transition) -> List[int]:
         return [(cell_transition >> ((3 - orientation) * 4)) & 15 > 0 for orientation in range(4)]
