@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
@@ -30,14 +32,14 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
 
 env = RailEnv(width=50,
               height=50,
-              rail_generator=sparse_rail_generator(num_cities=20,  # Number of cities in map (where train stations are)
+              rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map (where train stations are)
                                                    seed=1,  # Random seed
                                                    grid_mode=False,
                                                    max_inter_city_rails=2,
                                                    max_tracks_in_city=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
-              number_of_agents=50,
+              number_of_agents=10,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=GlobalObsForRailEnv())
 
@@ -111,6 +113,7 @@ for step in range(500):
     # reward and whether their are done
     next_obs, all_rewards, done, _ = env.step(action_dict)
     env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
+    time.sleep(100)
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
