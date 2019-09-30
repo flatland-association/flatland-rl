@@ -10,7 +10,7 @@ from flatland.core.grid.grid4_utils import get_direction, mirror
 from flatland.core.grid.grid_utils import distance_on_rail, direction_to_point
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.grid4_generators_utils import connect_rail, connect_cities
+from flatland.envs.grid4_generators_utils import connect_rail, connect_cities, connect_straigt_line
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -552,7 +552,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
         rail_array = grid_map.grid
         rail_array.fill(0)
         np.random.seed(seed + num_resets)
-        node_radius = int(np.ceil((max_tracks_in_city + 2) / 2.0)) + 2
+        node_radius = int(np.ceil((max_tracks_in_city + 2) / 2.0)) + 1
         max_inter_city_rails_allowed = max_inter_city_rails
         if max_inter_city_rails_allowed > max_tracks_in_city:
             max_inter_city_rails_allowed = max_tracks_in_city
@@ -604,7 +604,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
 
         # Fix all transition elements
         grid_fix_time = time.time()
-        _fix_transitions(grid_map)
+        _fix_transitions(city_cells, grid_map)
         print("Grid fix time", time.time() - grid_fix_time)
 
         # Generate start target pairs
@@ -791,14 +791,17 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
             opposite_boarder = (boarder + 2) % 4
             boarder_one = inner_connection_points[current_city][boarder]
             boarder_two = inner_connection_points[current_city][opposite_boarder]
-            connect_cities(rail_trans, grid_map, boarder_one[0], boarder_one[-1])
-            connect_cities(rail_trans, grid_map, boarder_two[0], boarder_two[-1])
 
+            # Connect the ends of the tracks
+            connect_straigt_line(rail_trans, grid_map, boarder_one[0], boarder_one[-1], False)
+            connect_straigt_line(rail_trans, grid_map, boarder_two[0], boarder_two[-1], False)
+
+            # Connect parallel tracks
             for track_id in range(len(inner_connection_points[current_city][boarder])):
                 if track_id % 2 == 0:
                     source = inner_connection_points[current_city][boarder][track_id]
                     target = inner_connection_points[current_city][opposite_boarder][track_id]
-                    current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
+                    current_track = connect_straigt_line(rail_trans, grid_map, source, target)
                     if target in all_outer_connection_points and source in \
                         all_outer_connection_points and len(through_path_cells[current_city]) < 1:
                         through_path_cells[current_city].extend(current_track)
@@ -806,7 +809,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                     source = inner_connection_points[current_city][opposite_boarder][track_id]
                     target = inner_connection_points[current_city][boarder][track_id]
 
-                    current_track = connect_cities(rail_trans, grid_map, source, target, city_boarder)
+                    current_track = connect_straigt_line(rail_trans, grid_map, source, target)
                     if target in all_outer_connection_points and source in \
                         all_outer_connection_points and len(through_path_cells[current_city]) < 1:
                         through_path_cells[current_city].extend(current_track)
@@ -888,23 +891,22 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                 num_agents -= 1
         return agent_start_targets_nodes, num_agents
 
-    def _fix_transitions(grid_map):
+    def _fix_transitions(city_cells, grid_map):
         """
         Function to fix all transition elements in environment
         """
         # Fix all nodes with illegal transition maps
         empty_to_fix = []
         rails_to_fix = []
-        height, width = np.shape(grid_map.grid)
-        for r in range(height):
-            for c in range(width):
-                rc_pos = (r, c)
-                check = grid_map.cell_neighbours_valid(rc_pos, True)
-                if not check:
-                    if grid_map.grid[rc_pos] == 0:
-                        empty_to_fix.append(rc_pos)
-                    else:
-                        rails_to_fix.append(rc_pos)
+        for cell in city_cells:
+            check = grid_map.cell_neighbours_valid(cell, True)
+            if grid_map.grid[cell] == int('1000010000100001', 2):
+                grid_map.fix_transitions(cell)
+            if not check:
+                if grid_map.grid[cell] == 0:
+                    empty_to_fix.append(cell)
+                else:
+                    rails_to_fix.append(cell)
 
         # Fix empty cells first to avoid cutting the network
         for cell in empty_to_fix:

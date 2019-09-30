@@ -5,6 +5,8 @@ Generator functions are functions that take width, height and num_resets as argu
 a GridTransitionMap object.
 """
 
+import numpy as np
+
 from flatland.core.grid.grid4_astar import a_star
 from flatland.core.grid.grid4_utils import get_direction, mirror
 from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance, IntVector2DArray
@@ -77,6 +79,39 @@ def connect_basic_operation(
     return path
 
 
+def connect_line(rail_trans, grid_map, start, end, openend=False):
+    # Set start cell
+    current_cell = start
+    path = [current_cell]
+    new_trans = grid_map.grid[current_cell]
+    direction = (np.clip(end[0] - start[0], -1, 1), np.clip(end[1] - start[1], -1, 1))
+    if direction[0] == 0:
+        if direction[1] > 0:
+            direction_int = 1
+        else:
+            direction_int = 3
+    else:
+        if direction[0] > 0:
+            direction_int = 2
+        else:
+            direction_int = 0
+    new_trans = rail_trans.set_transition(new_trans, direction_int, direction_int, 1)
+    new_trans = rail_trans.set_transition(new_trans, mirror(direction_int), mirror(direction_int), 1)
+    grid_map.grid[current_cell] = new_trans
+    if openend:
+        grid_map.grid[current_cell] = 0
+    # Set path
+    while current_cell != end:
+        current_cell = tuple(map(lambda x, y: x + y, current_cell, direction))
+        new_trans = grid_map.grid[current_cell]
+        new_trans = rail_trans.set_transition(new_trans, direction_int, direction_int, 1)
+        new_trans = rail_trans.set_transition(new_trans, mirror(direction_int), mirror(direction_int), 1)
+        grid_map.grid[current_cell] = new_trans
+        if current_cell == end and openend:
+            grid_map.grid[current_cell] = 0
+        path.append(current_cell)
+    return path
+
 def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
                  start: IntVector2D, end: IntVector2D,
                  a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
@@ -106,3 +141,8 @@ def connect_to_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap
                      start: IntVector2D, end: IntVector2D,
                      a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
     return connect_basic_operation(rail_trans, grid_map, start, end, True, False, a_star_distance_function)
+
+
+def connect_straigt_line(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D,
+                         end: IntVector2D, openend=False) -> IntVector2DArray:
+    return connect_line(rail_trans, grid_map, start, end, openend)
