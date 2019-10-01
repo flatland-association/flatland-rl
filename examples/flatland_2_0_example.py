@@ -37,7 +37,7 @@ env = RailEnv(width=50,
                                                    max_tracks_in_city=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
-              number_of_agents=200,
+              number_of_agents=10,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=GlobalObsForRailEnv(),
               remove_agents_at_target=True
