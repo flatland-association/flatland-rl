@@ -783,9 +783,9 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
 
                         all_paths.extend(new_line)
 
-                    else:
-                        # TODO why can this happen?
-                        warnings.warn("all neighbours are NONE!")
+                else:
+                    # TODO why can this happen?
+                    warnings.warn("all neighbours are NONE!")
 
                 direction += 1
 
