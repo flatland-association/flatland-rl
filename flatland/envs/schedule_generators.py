@@ -1,4 +1,5 @@
 """Schedule generators (railway undertaking, "EVU")."""
+import random
 import warnings
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
@@ -74,11 +75,13 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             # Set target for agent
             start_city = agent_start_targets_nodes[agent_idx][0]
             target_city = agent_start_targets_nodes[agent_idx][1]
+            start = random.choice(train_stations[start_city])
+            target = random.choice(train_stations[target_city])
+            while start[1] % 2 != 0:
+                start = random.choice(train_stations[start_city])
+            while target[1] % 2 != 1:
+                target = random.choice(train_stations[start_city])
 
-            start_city_idx = np.random.randint(len(train_stations[start_city]))
-            start = train_stations[start_city][start_city_idx]
-            target_station_idx = np.random.randint(len(train_stations[target_city]))
-            target = train_stations[target_city][target_station_idx]
             agent_orientation = (agent_start_targets_nodes[agent_idx][2] + 2 * start[1]) % 4
             if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                 agent_orientation = (agent_orientation + 2) % 4
