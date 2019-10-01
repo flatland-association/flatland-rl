@@ -946,7 +946,6 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
 
             if direction_set == 4:
                 return closest_neighb
-        print(closest_neighb)
         return closest_neighb
 
     def argsort(seq):
