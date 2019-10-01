@@ -508,14 +508,14 @@ class GlobalObsForRailEnv(ObservationBuilder):
         - transition map array with dimensions (env.height, env.width, 16),\
           assuming 16 bits encoding of transitions.
 
+        - A 3D array (map_height, map_width, 4) with
+            - first channel containing the agents position and direction
+            - second channel containing the other agents positions and diretion
+            - third channel containing agent/other agent malfunctions
+            - fourth channel containing agent/other agent fractional speeds
+
         - Two 2D arrays (map_height, map_width, 2) containing respectively the position of the given agent\
          target and the positions of the other agents targets.
-
-        - A 3D array (map_height, map_width, 4) wtih
-            - first channel containing the agents position and direction
-            - second channel containing the other agents positions and diretions
-            - third channel containing agent malfunctions
-            - fourth channel containing agent fractional speeds
     """
 
     def __init__(self):
@@ -535,22 +535,21 @@ class GlobalObsForRailEnv(ObservationBuilder):
                 self.rail_obs[i, j] = np.array(bitlist)
 
     def get(self, handle: int = 0) -> (np.ndarray, np.ndarray, np.ndarray):
-        obs_targets = np.zeros((self.env.height, self.env.width, 2))
-        obs_agents_state = np.zeros((self.env.height, self.env.width, 4))
-        agents = self.env.agents
-        agent = agents[handle]
 
-        agent_pos = agents[handle].position
-        obs_agents_state[agent_pos][0] = agents[handle].direction
+        obs_targets = np.zeros((self.env.height, self.env.width, 2))
+        obs_agents_state = np.zeros((self.env.height, self.env.width, 4)) - 1
+
+        agent = self.env.agents[handle]
+        obs_agents_state[agent.position][0] = agent.direction
         obs_targets[agent.target][0] = 1
 
-        for i in range(len(agents)):
-            if i != handle:  # TODO: handle used as index...?
-                agent2 = agents[i]
-                obs_agents_state[agent2.position][1] = agent2.direction
-                obs_targets[agent2.target][1] = 1
-            obs_agents_state[agents[i].position][2] = agents[i].malfunction_data['malfunction']
-            obs_agents_state[agents[i].position][3] = agents[i].speed_data['speed']
+        for i in range(len(self.env.agents)):
+            other_agent = self.env.agents[i]
+            if i != handle:
+                obs_agents_state[other_agent.position][1] = other_agent.direction
+                obs_targets[other_agent.target][1] = 1
+            obs_agents_state[other_agent.position][2] = other_agent.malfunction_data['malfunction']
+            obs_agents_state[other_agent.position][3] = other_agent.speed_data['speed']
 
         return self.rail_obs, obs_agents_state, obs_targets
 
