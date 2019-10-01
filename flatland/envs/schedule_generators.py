@@ -89,10 +89,17 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                 track_to_use = 0
             else:
                 track_to_use = 1
+
             for i in range(len(start_slots[current_start_node])):
                 if start_slots[current_start_node][i][1] == track_to_use:
                     start_station_idx = i
                     break
+                else:
+                    start_station_idx = None
+
+            if start_station_idx is None:
+                warnings.warn("No slot available with required start orientation")
+                continue
             start = start_slots[current_start_node][start_station_idx]
             start_slots[current_start_node].pop(start_station_idx)
 

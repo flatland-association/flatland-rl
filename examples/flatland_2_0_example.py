@@ -91,7 +91,7 @@ action_dict = dict()
 print("Start episode...")
 # Reset environment and get initial observations for all agents
 obs = env.reset()
-
+print(env.get_num_agents(), )
 # Reset the rendering sytem
 env_renderer.reset()
 
