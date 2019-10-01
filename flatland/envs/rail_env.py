@@ -24,6 +24,7 @@ from flatland.envs.schedule_generators import random_schedule_generator, Schedul
 
 m.patch()
 
+DEPOT_POSITION = (-10, -10)
 
 class RailEnvActions(IntEnum):
     DO_NOTHING = 0  # implies change of direction in a dead-end!
@@ -503,8 +504,8 @@ class RailEnv(Environment):
                 self.dones[i_agent] = True
                 agent.moving = False
                 # TODO: Moving agents to arbitrary position
-                agent.position = (i_agent, 0)
-                agent.target = (i_agent, 0)
+                agent.position = DEPOT_POSITION
+                agent.target = DEPOT_POSITION
             else:
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
         else:
