@@ -753,7 +753,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                         tmp_direction = (out_direction - 1) % 4
                     while neighb_idx is None:
                         neighb_idx = neighbours[tmp_direction]
-                        tmp_direction = (out_direction + 1) % 4
+                        tmp_direction = (tmp_direction + 1) % 4
                     min_connection_dist = np.inf
                     for dir in range(4):
                         current_points = connection_points[neighb_idx][dir]
@@ -946,7 +946,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
 
             if direction_set == 4:
                 return closest_neighb
-
+        print(closest_neighb)
         return closest_neighb
 
     def argsort(seq):
