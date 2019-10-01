@@ -657,7 +657,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                             len(node_positions),
                             tries, nb_nodes))
                     break
-        G.add_node(node_idx)
+            G.add_node(node_idx)
         return node_positions, city_cells
 
     def _generate_node_positions_grid_mode(nb_nodes, node_radius, height, width):
@@ -783,9 +783,9 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
 
                         all_paths.extend(new_line)
 
-                    else:
-                        # TODO why can this happen?
-                        warnings.warn("all neighbours are NONE!")
+                else:
+                    # TODO why can this happen?
+                    warnings.warn("all neighbours are NONE!")
 
                 direction += 1
 
