@@ -362,6 +362,10 @@ class PILSVG(PILGL):
             "Scenery-Bergwelt_A_Teil_3_rechts.svg"
         ]
 
+        scenery_files_water = [
+            "Scenery_Water.svg"
+        ]
+
         img_back_ground = self.pil_from_svg_file('svg', "Background_Light_green.svg")
 
         self.scenery = []
@@ -381,6 +385,13 @@ class PILSVG(PILGL):
             img = self.pil_from_svg_file('svg', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery_d3.append(img)
+
+        self.scenery_water = []
+        for file in scenery_files_water:
+            img = self.pil_from_svg_file('svg', file)
+            img = Image.alpha_composite(img_back_ground, img)
+            self.scenery_water.append(img)
+
 
     def load_rail(self):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
@@ -513,10 +524,10 @@ class PILSVG(PILGL):
 
             city_size = 1
             if num_agents is not None:
-                city_size = max(1,np.log(1+num_agents)/1.5)
+                city_size = max(1, np.log(1 + num_agents) / 1.5)
 
             if binary_trans == 0:
-                if self.background_grid[col][row] <= 4 + np.ceil(((col * row + col) % 10)/city_size):
+                if self.background_grid[col][row] <= 4 + np.ceil(((col * row + col) % 10) / city_size):
                     a = int(self.background_grid[col][row])
                     a = a % len(self.dBuildings)
                     if (col + row + col * row) % 13 > 11:
@@ -533,7 +544,10 @@ class PILSVG(PILGL):
                     if a2 % 64 > 11:
                         a = a2
                     a_l = a % len(self.scenery)
-                    pil_track = self.scenery[a_l]
+                    if a2 % 50 == 49:
+                        pil_track = self.scenery_water[0]
+                    else:
+                        pil_track = self.scenery[a_l]
                     if rail_grid is not None:
                         if a2 % 11 > 3:
                             if a_l == len(self.scenery) - 1:
