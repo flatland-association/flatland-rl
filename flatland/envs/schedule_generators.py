@@ -73,7 +73,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
         for agent_idx in range(num_agents):
             # Set target for agent
             start_city = agent_start_targets_nodes[agent_idx][0]
-            target_city = agent_start_targets_nodes[agent_idx][0]
+            target_city = agent_start_targets_nodes[agent_idx][1]
             agent_orientation = (agent_start_targets_nodes[agent_idx][2] + np.random.choice([0, 2])) % 4
             start_city_idx = np.random.randint(len(train_stations[start_city]))
             start = train_stations[start_city][start_city_idx]
