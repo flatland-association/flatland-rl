@@ -557,8 +557,6 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
 
         # Graph to be able to create correct start/end pairs for schedule
 
-
-
         node_radius = int(np.ceil((max_tracks_in_city + 2) / 2.0)) + 1
         if 3 > max_tracks_in_city:
             rail_in_city = 3
@@ -709,20 +707,20 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
             start_idx = int((nr_of_connection_points - number_of_out_rails) / 2)
             for direction in range(4):
                 connection_slots = np.arange(connections_per_direction[direction]) - int(
-                        connections_per_direction[direction] / 2)
+                    connections_per_direction[direction] / 2)
                 for connection_idx in range(connections_per_direction[direction]):
                     if direction == 0:
                         tmp_coordinates = (
-                        node_position[0] - node_size, node_position[1] + connection_slots[connection_idx])
+                            node_position[0] - node_size, node_position[1] + connection_slots[connection_idx])
                     if direction == 1:
                         tmp_coordinates = (
-                        node_position[0] + connection_slots[connection_idx], node_position[1] + node_size)
+                            node_position[0] + connection_slots[connection_idx], node_position[1] + node_size)
                     if direction == 2:
                         tmp_coordinates = (
-                        node_position[0] + node_size, node_position[1] + connection_slots[connection_idx])
+                            node_position[0] + node_size, node_position[1] + connection_slots[connection_idx])
                     if direction == 3:
                         tmp_coordinates = (
-                        node_position[0] + connection_slots[connection_idx], node_position[1] - node_size)
+                            node_position[0] + connection_slots[connection_idx], node_position[1] - node_size)
                     connection_points_coordinates_inner[direction].append(tmp_coordinates)
                     if connection_idx in range(start_idx, start_idx + number_of_out_rails + 1):
                         connection_points_coordinates_outer[direction].append(tmp_coordinates)
@@ -758,29 +756,37 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
 
                 # If no closest neighbour was found look at the neighbouring connections
                 tmp_direction = (direction - 1) % 4
-                while neighb_idx is None:
-                    neighb_idx = neighbours[tmp_direction]
-                    tmp_direction = (direction + 1) % 4
+                filtered_neighbours = list(filter(None, neighbours))
+                if len(filtered_neighbours) > 0:
+                    while neighb_idx is None:
+                        neighb_idx = filtered_neighbours[tmp_direction % len(filtered_neighbours)]
+                        tmp_direction = (direction + 1) % 4
 
-                connected_to_city.append(neighb_idx)
-                for tmp_out_connection_point in connection_points[current_node][direction]:
-                    # Find closest connection point
-                    min_connection_dist = np.inf
-                    for dir in range(4):
-                        current_points = connection_points[neighb_idx][dir]
-                        for tmp_in_connection_point in current_points:
-                            tmp_dist = distance_on_rail(tmp_out_connection_point, tmp_in_connection_point,
-                                                    metric="Manhattan")
-                            if tmp_dist < min_connection_dist:
-                                min_connection_dist = tmp_dist
-                                neighb_connection_point = tmp_in_connection_point
-                                neighbour_direction = dir
-                    new_line = connect_cities(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point,
-                                              city_cells)
-                    G.add_edge(current_node, neighb_idx, direction=direction, length=len(new_line))
-                    G.add_edge(neighb_idx, current_node, direction=neighbour_direction, length=len(new_line))
+                    connected_to_city.append(neighb_idx)
+                    for tmp_out_connection_point in connection_points[current_node][direction]:
+                        # Find closest connection point
+                        min_connection_dist = np.inf
+                        for dir in range(4):
+                            current_points = connection_points[neighb_idx][dir]
+                            for tmp_in_connection_point in current_points:
+                                tmp_dist = distance_on_rail(tmp_out_connection_point, tmp_in_connection_point,
+                                                            metric="Manhattan")
+                                if tmp_dist < min_connection_dist:
+                                    min_connection_dist = tmp_dist
+                                    neighb_connection_point = tmp_in_connection_point
+                                    neighbour_direction = dir
+                        new_line = connect_cities(rail_trans, grid_map, tmp_out_connection_point,
+                                                  neighb_connection_point,
+                                                  city_cells)
+                        G.add_edge(current_node, neighb_idx, direction=direction, length=len(new_line))
+                        G.add_edge(neighb_idx, current_node, direction=neighbour_direction, length=len(new_line))
 
-                    all_paths.extend(new_line)
+                        all_paths.extend(new_line)
+
+                    else:
+                        # TODO why can this happen?
+                        warnings.warn("all neighbours are NONE!")
+
                 direction += 1
 
         return all_paths
@@ -1007,4 +1013,5 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                 return np.abs(city_position[0] - position[0]) % 2
             else:
                 return (np.abs(city_position[0] - position[0]) + 1) % 2
+
     return generator
