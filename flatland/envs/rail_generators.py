@@ -606,11 +606,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
         print("City build time", time.time() - city_build_time)
         # Populate cities
         train_station_time = time.time()
-        train_stations, built_num_trainstation = _set_trainstation_positions(node_positions,
-                                                                             city_orientations,
-                                                                             through_tracks,
-                                                                             free_tracks,
-                                                                             node_radius, grid_map)
+        train_stations, built_num_trainstation = _set_trainstation_positions(node_positions, free_tracks, grid_map)
         print("Trainstation placing time", time.time() - train_station_time)
 
         # Adjust the number of agents if you could not build enough trainstations
@@ -834,8 +830,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                     free_tracks[current_city].append(current_track)
         return through_path_cells, free_tracks
 
-    def _set_trainstation_positions(node_positions, city_orientations, through_tracks, free_tracks, node_radius,
-                                    grid_map):
+    def _set_trainstation_positions(node_positions, free_tracks, grid_map):
         """
 
         :param node_positions:
