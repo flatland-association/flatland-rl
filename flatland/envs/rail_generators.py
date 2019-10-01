@@ -692,7 +692,10 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
             # Store the directions to these neighbours and orient city to face closest neighbour
             connection_sides_idx = []
             idx = 1
-            current_closest_direction = direction_to_point(node_position, node_positions[closest_neighb_idx[idx]])
+            if grid_mode:
+                current_closest_direction = np.random.randint(4)
+            else:
+                current_closest_direction = direction_to_point(node_position, node_positions[closest_neighb_idx[idx]])
             connection_sides_idx.append(current_closest_direction)
             connection_sides_idx.append((current_closest_direction + 2) % 4)
             city_orientations.append(current_closest_direction)
