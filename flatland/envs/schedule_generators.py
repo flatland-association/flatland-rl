@@ -83,7 +83,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                 agent_orientation = (agent_orientation + 2) % 4
             if not (rail.check_path_exists(start[0], agent_orientation, target[0])):
-                print("Infeasible")
+                warnings.warn("Infeasible")
             agents_position.append((start[0][0], start[0][1]))
             agents_target.append((target[0][0], target[0][1]))
 
