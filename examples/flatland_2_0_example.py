@@ -39,7 +39,12 @@ env = RailEnv(width=50,
               schedule_generator=sparse_schedule_generator(),
               number_of_agents=20,
               stochastic_data=stochastic_data,  # Malfunction data generator
-              obs_builder_object=GlobalObsForRailEnv())
+              obs_builder_object=GlobalObsForRailEnv(),
+              remove_agents_at_target=True
+              )
+
+RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
+
 
 env_renderer = RenderTool(env, gl="PILSVG",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,

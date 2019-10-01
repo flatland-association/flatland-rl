@@ -111,7 +111,7 @@ class RailEnv(Environment):
 
     # Where the agent will be placed to when the reach their target destination
     # (Remove the agents to free the cell)
-    DEPOT_POSITION = (-10, -10)
+    DEPOT_POSITION = lambda agent, agent_handle : (-10, -10)
 
     def __init__(self,
                  width,
@@ -514,8 +514,8 @@ class RailEnv(Environment):
                 agent.moving = False
 
                 if self.remove_agents_at_target:
-                    agent.position = RailEnv.DEPOT_POSITION
-                    agent.target = RailEnv.DEPOT_POSITION
+                    agent.position = RailEnv.DEPOT_POSITION(agent,i_agent)
+                    agent.target = RailEnv.DEPOT_POSITION(agent,i_agent)
             else:
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
         else:

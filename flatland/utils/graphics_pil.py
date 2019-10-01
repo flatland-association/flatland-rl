@@ -368,6 +368,8 @@ class PILSVG(PILGL):
 
         img_back_ground = self.pil_from_svg_file('svg', "Background_Light_green.svg")
 
+        self.scenery_background_white = self.pil_from_svg_file('svg', "Background_white.svg")
+
         self.scenery = []
         for file in scenery_files:
             img = self.pil_from_svg_file('svg', file)
@@ -391,7 +393,6 @@ class PILSVG(PILGL):
             img = self.pil_from_svg_file('svg', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery_water.append(img)
-
 
     def load_rail(self):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
@@ -630,7 +631,8 @@ class PILSVG(PILGL):
                 for color_idx, pil_zug_3 in enumerate(pils):
                     self.pil_zug[(in_direction_2, out_direction_2, color_idx)] = pils[color_idx]
 
-    def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected, show_debug=False):
+    def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected,
+                     rail_grid=None, show_debug=False):
         delta_dir = (out_direction - in_direction) % 4
         color_idx = agent_idx % self.n_agent_colors
         # when flipping direction at a dead end, use the "out_direction" direction.
@@ -638,12 +640,14 @@ class PILSVG(PILGL):
             in_direction = out_direction
         pil_zug = self.pil_zug[(in_direction % 4, out_direction % 4, color_idx)]
         self.draw_image_row_col(pil_zug, (row, col), layer=PILGL.AGENT_LAYER)
+        if rail_grid is not None: 
+            if rail_grid[row,col] == 0.0:
+                self.draw_image_row_col(self.scenery_background_white, (row, col), layer=PILGL.RAIL_LAYER)
 
         if is_selected:
             bg_svg = self.pil_from_svg_file("svg", "Selected_Agent.svg")
             self.clear_layer(PILGL.SELECTED_AGENT_LAYER, 0)
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
-
         if show_debug:
             self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
 
