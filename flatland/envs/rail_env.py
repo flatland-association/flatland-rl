@@ -109,8 +109,8 @@ class RailEnv(Environment):
     stop_penalty = 0  # penalty for stopping a moving agent
     start_penalty = 0  # penalty for starting a stopped agent
 
-    # Where the agent will be placed to when the reach their target destination
-    # (Remove the agents to free the cell)
+    # Where the agent is placed when he reached his destination(target)
+    # remove_agents_at_target must be set to true in the RailEnv(...)
     DEPOT_POSITION = lambda agent, agent_handle : (-10, -10)
 
     def __init__(self,
