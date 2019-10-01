@@ -13,7 +13,7 @@ np.random.seed(1)
 # Training on simple small tasks is the best way to get familiar with the environment
 
 # Use a the malfunction generator to break agents from time to time
-stochastic_data = {'prop_malfunction': 0.,  # Percentage of defective agents
+stochastic_data = {'prop_malfunction': 0.3,  # Percentage of defective agents
                    'malfunction_rate': 30,  # Rate of malfunction occurence
                    'min_duration': 3,  # Minimal duration of malfunction
                    'max_duration': 20  # Max duration of malfunction
@@ -23,10 +23,10 @@ stochastic_data = {'prop_malfunction': 0.,  # Percentage of defective agents
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 
 # Different agent types (trains) with different speeds.
-speed_ration_map = {1.: 1.,  # Fast passenger train
-                    1. / 2.: 0.,  # Fast freight train
-                    1. / 3.: 0.,  # Slow commuter train
-                    1. / 4.: 0.}  # Slow freight train
+speed_ration_map = {1.: 0.25,  # Fast passenger train
+                    1. / 2.: 0.25,  # Fast freight train
+                    1. / 3.: 0.25,  # Slow commuter train
+                    1. / 4.: 0.25}  # Slow freight train
 
 env = RailEnv(width=50,
               height=50,
@@ -36,14 +36,14 @@ env = RailEnv(width=50,
                                                    max_inter_city_rails=2,
                                                    max_tracks_in_city=4,
                                                    ),
-              schedule_generator=sparse_schedule_generator(),
+              schedule_generator=sparse_schedule_generator(speed_ration_map),
               number_of_agents=50,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=GlobalObsForRailEnv(),
               remove_agents_at_target=True
               )
 
-RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
+# RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
 
 
 env_renderer = RenderTool(env, gl="PILSVG",
