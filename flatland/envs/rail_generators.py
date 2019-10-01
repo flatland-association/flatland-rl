@@ -604,13 +604,10 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
         print("City build time", time.time() - city_build_time)
         # Populate cities
         train_station_time = time.time()
-        train_stations, built_num_trainstation = _set_trainstation_positions(node_positions, free_tracks, grid_map)
+        train_stations, built_num_trainstation = _set_trainstation_positions(node_positions, node_radius, free_tracks,
+                                                                             grid_map)
         print("Trainstation placing time", time.time() - train_station_time)
 
-        # Adjust the number of agents if you could not build enough trainstations
-        if num_agents > built_num_trainstation:
-            num_agents = built_num_trainstation
-            warnings.warn("sparse_rail_generator: num_agents > nr_start_goal, changing num_agents")
 
         # Fix all transition elements
         grid_fix_time = time.time()
@@ -822,7 +819,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                     free_tracks[current_city].append(current_track)
         return through_path_cells, free_tracks
 
-    def _set_trainstation_positions(node_positions, free_tracks, grid_map):
+    def _set_trainstation_positions(node_positions, node_radius, free_tracks, grid_map):
         """
 
         :param node_positions:
@@ -836,20 +833,8 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
         built_num_trainstations = 0
         for current_city in range(len(node_positions)):
             for track_nbr in range(len(free_tracks[current_city])):
-                for possible_location in free_tracks[current_city][track_nbr]:
-                    # Only build trainstation on non diverging elements
-                    cell_type = grid_map.get_full_transitions(*possible_location)
-                    nbits = 0
-                    while cell_type > 0:
-                        nbits += (cell_type & 1)
-                        cell_type = cell_type >> 1
-                    if 1 <= nbits <= 2:
-                        built_num_trainstations += 1
-                        if track_nbr % 2 == 0:
-                            left += 1
-                        else:
-                            right += 1
-                        train_stations[current_city].append((possible_location, track_nbr))
+                possible_location = free_tracks[current_city][track_nbr][node_radius]
+                train_stations[current_city].append((possible_location, track_nbr))
         return train_stations, built_num_trainstations
 
     def _generate_start_target_pairs(num_agents, nb_nodes, train_stations):
@@ -881,29 +866,10 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
             p_avail_start = [float(i) / sum_start for i in np.array(node_available_start)[avail_start_nodes]]
             p_avail_target = [float(i) / sum_target for i in np.array(node_available_target)[avail_target_nodes]]
 
-            start_node = np.random.choice(avail_start_nodes, p=p_avail_start)
-            target_node = np.random.choice(avail_target_nodes, p=p_avail_target)
-            tries = 0
-            found_agent_pair = True
-            while target_node == start_node:
-                target_node = np.random.choice(avail_target_nodes)
-                tries += 1
-                # Test again with new start node if no pair is found (This code needs to be improved)
-                if (tries + 1) % 10 == 0:
-                    start_node = np.random.choice(avail_start_nodes)
-                if tries > 100:
-                    warnings.warn("Could not set trainstations, removing agent!")
-                    found_agent_pair = False
-                    break
-            if found_agent_pair:
-                node_available_start[start_node] -= 1
-                node_available_target[target_node] -= 1
-                shortest_path = nx.astar_path(G, start_node, target_node, weight='length')
-                start_orientation = nx.get_edge_attributes(G, "direction")[(shortest_path[0], shortest_path[1])]
-                agent_start_targets_nodes.append((start_node, target_node, start_orientation))
-
-            else:
-                num_agents -= 1
+            start_target_tuple = np.random.choice(avail_start_nodes, p=p_avail_start, size=2, replace=False)
+            start_node = start_target_tuple[0]
+            target_node = start_target_tuple[1]
+            agent_start_targets_nodes.append((start_node, target_node, 0))
         return agent_start_targets_nodes, num_agents
 
     def _fix_transitions(city_cells, inter_city_lines, grid_map):
