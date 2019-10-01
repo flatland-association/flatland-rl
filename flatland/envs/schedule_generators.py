@@ -88,7 +88,6 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
                 track_to_use = 0
             else:
                 track_to_use = 1
-
             for i in range(len(train_stations[current_start_node])):
                 if train_stations[current_start_node][i][1] == track_to_use:
                     start_station_idx = i
