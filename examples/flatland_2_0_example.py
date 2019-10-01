@@ -13,7 +13,7 @@ np.random.seed(1)
 # Training on simple small tasks is the best way to get familiar with the environment
 
 # Use a the malfunction generator to break agents from time to time
-stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
+stochastic_data = {'prop_malfunction': 0.,  # Percentage of defective agents
                    'malfunction_rate': 30,  # Rate of malfunction occurence
                    'min_duration': 3,  # Minimal duration of malfunction
                    'max_duration': 20  # Max duration of malfunction
@@ -23,21 +23,21 @@ stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 
 # Different agent types (trains) with different speeds.
-speed_ration_map = {1.: 0.25,  # Fast passenger train
-                    1. / 2.: 0.25,  # Fast freight train
-                    1. / 3.: 0.25,  # Slow commuter train
-                    1. / 4.: 0.25}  # Slow freight train
+speed_ration_map = {1.: 1.,  # Fast passenger train
+                    1. / 2.: 0.,  # Fast freight train
+                    1. / 3.: 0.,  # Slow commuter train
+                    1. / 4.: 0.}  # Slow freight train
 
 env = RailEnv(width=50,
               height=50,
               rail_generator=sparse_rail_generator(num_cities=12,  # Number of cities in map (where train stations are)
-                                                   seed=1,  # Random seed
-                                                   grid_mode=True,
+                                                   seed=10,  # Random seed
+                                                   grid_mode=False,
                                                    max_inter_city_rails=2,
                                                    max_tracks_in_city=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(),
-              number_of_agents=10,
+              number_of_agents=20,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=GlobalObsForRailEnv())
 
@@ -61,7 +61,7 @@ class RandomAgent:
         :param state: input is the observation of the agent
         :return: returns an action
         """
-        return np.random.choice(np.arange(self.action_size))
+        return 2  # np.random.choice(np.arange(self.action_size))
 
     def step(self, memories):
         """

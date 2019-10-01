@@ -14,6 +14,7 @@ from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.core.grid.grid_utils import Vec2dOperations
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
 from flatland.envs.distance_map import DistanceMap
@@ -369,7 +370,6 @@ class RailEnv(Environment):
         if np.all([np.array_equal(agent.position, agent.target) for agent in self.agents]):
             self.dones["__all__"] = True
             self.rewards_dict = {i: self.global_reward for i in range(self.get_num_agents())}
-
         if (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps):
             self.dones["__all__"] = True
             for k in self.dones.keys():
@@ -502,12 +502,14 @@ class RailEnv(Environment):
             if np.equal(agent.position, agent.target).all():
                 self.dones[i_agent] = True
                 agent.moving = False
+                # TODO: Moving agents to arbitrary position
+                agent.position = (i_agent, 0)
+                agent.target = (i_agent, 0)
             else:
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
         else:
             # step penalty if not moving (stopped now or before)
             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
-
     def _check_action_on_agent(self, action: RailEnvActions, agent: EnvAgent):
         """
 
@@ -546,7 +548,15 @@ class RailEnv(Environment):
 
         # Check the new position is not the same as any of the existing agent positions
         # (including itself, for simplicity, since it is moving)
-        cell_free = not np.any(np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
+        # TODO: Revert to earlier version
+        cell_free = True
+        for agent2 in self.agents:
+            if Vec2dOperations.is_equal(new_position, agent2.position) and not Vec2dOperations.is_equal(agent2.target,
+                                                                                                        agent2.position):
+                cell_free = False
+                break
+
+
         return cell_free, new_cell_valid, new_direction, new_position, transition_valid
 
     def check_action(self, agent: EnvAgent, action: RailEnvActions):

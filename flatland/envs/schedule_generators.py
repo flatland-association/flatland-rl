@@ -107,6 +107,9 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             agents_direction.append(agent_start_orientation)
             # Orient the agent correctly
 
+        for agent_idx in range(1, len(agents_position)):
+            agents_position[agent_idx] = agents_position[0]
+            agents_direction[agent_idx] = (agents_direction[0] + np.random.choice([0, 2])) % 4
 
         if speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, speed_ratio_map)

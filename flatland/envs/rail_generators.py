@@ -561,7 +561,7 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
         if 3 > max_tracks_in_city:
             rail_in_city = 3
         else:
-            rail_in_city = 3
+            rail_in_city = max_tracks_in_city
         max_inter_city_rails_allowed = max_inter_city_rails
         if max_inter_city_rails_allowed > rail_in_city:
             max_inter_city_rails_allowed = rail_in_city
