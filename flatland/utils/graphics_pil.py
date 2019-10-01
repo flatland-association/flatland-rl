@@ -640,7 +640,7 @@ class PILSVG(PILGL):
             in_direction = out_direction
         pil_zug = self.pil_zug[(in_direction % 4, out_direction % 4, color_idx)]
         self.draw_image_row_col(pil_zug, (row, col), layer=PILGL.AGENT_LAYER)
-        if rail_grid is not None: 
+        if rail_grid is not None:
             if rail_grid[row,col] == 0.0:
                 self.draw_image_row_col(self.scenery_background_white, (row, col), layer=PILGL.RAIL_LAYER)
 
