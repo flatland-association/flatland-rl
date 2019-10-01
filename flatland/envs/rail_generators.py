@@ -863,7 +863,6 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                         else:
                             right += 1
                         train_stations[current_city].append((possible_location, track_nbr))
-        print(left, right)
         return train_stations, built_num_trainstations
 
     def _generate_start_target_pairs(num_agents, nb_nodes, train_stations):
