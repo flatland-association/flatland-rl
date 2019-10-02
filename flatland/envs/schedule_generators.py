@@ -80,7 +80,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             while start[1] % 2 != 0:
                 start = random.choice(train_stations[start_city])
             while target[1] % 2 != 1:
-                target = random.choice(train_stations[start_city])
+                target = random.choice(train_stations[target_city])
 
             agent_orientation = (agent_start_targets_nodes[agent_idx][2] + 2 * start[1]) % 4
             if not rail.check_path_exists(start[0], agent_orientation, target[0]):
