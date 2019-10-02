@@ -8,6 +8,9 @@ from PIL import Image, ImageDraw, ImageTk, ImageFont
 from numpy import array
 from pkg_resources import resource_string as resource_bytes
 
+from flatland.core.grid.grid_utils import Vec2dOperations
+from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.grid4_generators_utils import connect_nodes
 from flatland.utils.graphics_layer import GraphicsLayer
 
 
@@ -109,7 +112,11 @@ class PILGL(GraphicsLayer):
                     rebuild = True
 
         if rebuild:
+            # rebuild background_grid to control the visualisation of buildings, trees, mountains, lakes and river
             self.background_grid = np.zeros(shape=(self.width, self.height))
+
+
+            # build base distance map (distance to targets)
             for x in range(self.width):
                 for y in range(self.height):
                     distance = int(np.ceil(np.sqrt(self.width ** 2.0 + self.height ** 2.0)))
@@ -641,7 +648,7 @@ class PILSVG(PILGL):
         pil_zug = self.pil_zug[(in_direction % 4, out_direction % 4, color_idx)]
         self.draw_image_row_col(pil_zug, (row, col), layer=PILGL.AGENT_LAYER)
         if rail_grid is not None:
-            if rail_grid[row,col] == 0.0:
+            if rail_grid[row, col] == 0.0:
                 self.draw_image_row_col(self.scenery_background_white, (row, col), layer=PILGL.RAIL_LAYER)
 
         if is_selected:
