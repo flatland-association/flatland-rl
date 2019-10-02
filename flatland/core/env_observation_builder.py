@@ -18,13 +18,9 @@ from flatland.core.env import Environment
 class ObservationBuilder:
     """
     ObservationBuilder base class.
-
-    Derived objects must implement and `observation_space` attribute as a tuple with the dimensions of the returned
-    observations.
     """
 
     def __init__(self):
-        self.observation_space = ()
         self.env = None
 
     def set_env(self, env: Environment):
