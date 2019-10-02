@@ -370,10 +370,7 @@ class PILSVG(PILGL):
         ]
 
         scenery_files_water = [
-            "Scenery_Water.svg",
-            "Scenery_Water_left.svg",
-            "Scenery_Water_center.svg",
-            "Scenery_Water_right.svg"
+            "Scenery_Water.svg"
         ]
 
         img_back_ground = self.pil_from_svg_file('svg', "Background_Light_green.svg")
