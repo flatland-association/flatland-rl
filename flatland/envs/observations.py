@@ -160,7 +160,12 @@ class TreeObsForRailEnv(ObservationBuilder):
         """
 
         # Update local lookup table for all agents' positions
-        self.location_has_agent = {tuple(agent.position): 1 for agent in self.env.agents}
+        self.location_has_agent = dict()
+        for agent in self.env.agents:
+            if tuple(agent.position) in self.location_has_agent:
+                self.location_has_agent[tuple(agent.position)] = self.location_has_agent[tuple(agent.position)] + 1
+            else:
+                self.location_has_agent[tuple(agent.position)] = 1
         # TODO: Update this to handle number of agents at same location
         self.location_has_agent_direction = {tuple(agent.position): agent.direction for agent in self.env.agents}
         self.location_has_agent_speed = {tuple(agent.position): agent.speed_data['speed'] for agent in self.env.agents}
