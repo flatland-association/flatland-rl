@@ -1,8 +1,8 @@
 """
 Collection of environment-specific ObservationBuilder.
 """
-import pprint
-from typing import Optional, List, Dict, T, Tuple
+import collections
+from typing import Optional, List, Dict, Tuple
 
 import numpy as np
 
@@ -15,6 +15,22 @@ from flatland.utils.ordered_set import OrderedSet
 
 
 class TreeObsForRailEnv(ObservationBuilder):
+
+    Node = collections.namedtuple('Node', 'dist_own_target_encountered '
+                                          'dist_other_target_encountered '
+                                          'dist_other_agent_encountered '
+                                          'dist_potential_conflict '
+                                          'dist_unusable_switch '
+                                          'dist_to_next_branch '
+                                          'dist_min_to_target '
+                                          'num_agents_same_direction '
+                                          'num_agents_opposite_direction '
+                                          'num_agents_malfunctioning '
+                                          'speed_min_fractional '
+                                          'childs')
+
+    tree_explorted_actions_char = ['L', 'F', 'R', 'B']
+
     """
     TreeObsForRailEnv object.
 
@@ -29,24 +45,15 @@ class TreeObsForRailEnv(ObservationBuilder):
         super().__init__()
         self.max_depth = max_depth
         self.observation_dim = 11
-        # Compute the size of the returned observation vector
-        size = 0
-        pow4 = 1
-        for i in range(self.max_depth + 1):
-            size += pow4
-            pow4 *= 4
-        self.observation_space = [size * self.observation_dim]
         self.location_has_agent = {}
         self.location_has_agent_direction = {}
         self.predictor = predictor
         self.location_has_target = None
-        self.tree_explored_actions = [1, 2, 3, 0]
-        self.tree_explorted_actions_char = ['L', 'F', 'R', 'B']
 
     def reset(self):
         self.location_has_target = {tuple(agent.target): 1 for agent in self.env.agents}
 
-    def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, List[int]]:
+    def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, Node]:
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
@@ -75,7 +82,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             observations[h] = self.get(h)
         return observations
 
-    def get(self, handle: int = 0) -> List[int]:
+    def get(self, handle: int = 0) -> Node:
         """
         Computes the current observation for agent `handle` in env
 
@@ -165,11 +172,18 @@ class TreeObsForRailEnv(ObservationBuilder):
         possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
-        # Root node - current position
         # Here information about the agent itself is stored
         distance_map = self.env.distance_map.get()
-        observation = [0, 0, 0, 0, 0, 0, distance_map[(handle, *agent.position, agent.direction)], 0, 0,
-                       agent.malfunction_data['malfunction'], agent.speed_data['speed']]
+
+        root_node_observation = TreeObsForRailEnv.Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
+                                                       dist_other_agent_encountered=0, dist_potential_conflict=0,
+                                                       dist_unusable_switch=0, dist_to_next_branch=0,
+                                                       dist_min_to_target=distance_map[(handle, *agent.position,
+                                                                                        agent.direction)],
+                                                       num_agents_same_direction=0, num_agents_opposite_direction=0,
+                                                       num_agents_malfunctioning=agent.malfunction_data['malfunction'],
+                                                       speed_min_fractional=agent.speed_data['speed'],
+                                                       childs={})
 
         visited = OrderedSet()
 
@@ -181,28 +195,22 @@ class TreeObsForRailEnv(ObservationBuilder):
         if num_transitions == 1:
             orientation = np.argmax(possible_transitions)
 
-        for branch_direction in [(orientation + i) % 4 for i in range(-1, 3)]:
+        for i, branch_direction in enumerate([(orientation + i) % 4 for i in range(-1, 3)]):
+
             if possible_transitions[branch_direction]:
                 new_cell = get_new_position(agent.position, branch_direction)
+
                 branch_observation, branch_visited = \
                     self._explore_branch(handle, new_cell, branch_direction, 1, 1)
-                observation = observation + branch_observation
+                root_node_observation.childs[self.tree_explorted_actions_char[i]] = branch_observation
+
                 visited |= branch_visited
             else:
                 # add cells filled with infinity if no transition is possible
-                observation = observation + [-np.inf] * self._num_cells_to_fill_in(self.max_depth)
+                root_node_observation.childs[self.tree_explorted_actions_char[i]] = -np.inf
         self.env.dev_obs_dict[handle] = visited
 
-        return observation
-
-    def _num_cells_to_fill_in(self, remaining_depth):
-        """Computes the length of observation vector: sum_{i=0,depth-1} 2^i * observation_dim."""
-        num_observations = 0
-        pow4 = 1
-        for i in range(remaining_depth):
-            num_observations += pow4
-            pow4 *= 4
-        return num_observations * self.observation_dim
+        return root_node_observation
 
     def _explore_branch(self, handle, position, direction, tot_dist, depth):
         """
@@ -378,53 +386,35 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Modify here to append new / different features for each visited cell!
 
         if last_is_target:
-            observation = [own_target_encountered,
-                           other_target_encountered,
-                           other_agent_encountered,
-                           potential_conflict,
-                           unusable_switch,
-                           tot_dist,
-                           0,
-                           other_agent_same_direction,
-                           other_agent_opposite_direction,
-                           malfunctioning_agent,
-                           min_fractional_speed
-                           ]
-
+            dist_to_next_branch = tot_dist
+            dist_min_to_target = 0
         elif last_is_terminal:
-            observation = [own_target_encountered,
-                           other_target_encountered,
-                           other_agent_encountered,
-                           potential_conflict,
-                           unusable_switch,
-                           np.inf,
-                           self.env.distance_map.get()[handle, position[0], position[1], direction],
-                           other_agent_same_direction,
-                           other_agent_opposite_direction,
-                           malfunctioning_agent,
-                           min_fractional_speed
-                           ]
-
+            dist_to_next_branch = np.inf
+            dist_min_to_target = self.env.distance_map.get()[handle, position[0], position[1], direction]
         else:
-            observation = [own_target_encountered,
-                           other_target_encountered,
-                           other_agent_encountered,
-                           potential_conflict,
-                           unusable_switch,
-                           tot_dist,
-                           self.env.distance_map.get()[handle, position[0], position[1], direction],
-                           other_agent_same_direction,
-                           other_agent_opposite_direction,
-                           malfunctioning_agent,
-                           min_fractional_speed
-                           ]
+            dist_to_next_branch = tot_dist
+            dist_min_to_target = self.env.distance_map.get()[handle, position[0], position[1], direction]
+
+        node = TreeObsForRailEnv.Node(dist_own_target_encountered=own_target_encountered,
+                                      dist_other_target_encountered=other_target_encountered,
+                                      dist_other_agent_encountered=other_agent_encountered,
+                                      dist_potential_conflict=potential_conflict,
+                                      dist_unusable_switch=unusable_switch,
+                                      dist_to_next_branch=dist_to_next_branch,
+                                      dist_min_to_target=dist_min_to_target,
+                                      num_agents_same_direction=other_agent_same_direction,
+                                      num_agents_opposite_direction=other_agent_opposite_direction,
+                                      num_agents_malfunctioning=malfunctioning_agent,
+                                      speed_min_fractional=min_fractional_speed,
+                                      childs={})
+
         # #############################
         # #############################
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # Get the possible transitions
         possible_transitions = self.env.rail.get_transitions(*position, direction)
-        for branch_direction in [(direction + 4 + i) % 4 for i in range(-1, 3)]:
+        for i, branch_direction in enumerate([(direction + 4 + i) % 4 for i in range(-1, 3)]):
             if last_is_dead_end and self.env.rail.get_transition((*position, direction),
                                                                  (branch_direction + 2) % 4):
                 # Swap forward and back in case of dead-end, so that an agent can learn that going forward takes
@@ -435,7 +425,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                                           (branch_direction + 2) % 4,
                                                                           tot_dist + 1,
                                                                           depth + 1)
-                observation = observation + branch_observation
+                node.childs[self.tree_explorted_actions_char[i]] = branch_observation
                 if len(branch_visited) != 0:
                     visited |= branch_visited
             elif last_is_switch and possible_transitions[branch_direction]:
@@ -445,51 +435,45 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                                           branch_direction,
                                                                           tot_dist + 1,
                                                                           depth + 1)
-                observation = observation + branch_observation
+                node.childs[self.tree_explorted_actions_char[i]] = branch_observation
                 if len(branch_visited) != 0:
                     visited |= branch_visited
             else:
                 # no exploring possible, add just cells with infinity
-                observation = observation + [-np.inf] * self._num_cells_to_fill_in(self.max_depth - depth)
+                node.childs[self.tree_explorted_actions_char[i]] = -np.inf
 
-        return observation, visited
+        if depth == self.max_depth:
+            node.childs.clear()
+        return node, visited
 
-    def util_print_obs_subtree(self, tree):
+    def util_print_obs_subtree(self, tree: Node):
         """
-        Utility function to pretty-print tree observations returned by this object.
+        Utility function to print tree observations returned by this object.
         """
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(self.unfold_observation_tree(tree))
+        self.print_node_features(tree, "root", "")
+        for direction in self.tree_explorted_actions_char:
+            self.print_subtree(tree.childs[direction], direction, "\t")
 
-    def unfold_observation_tree(self, tree, current_depth=0, actions_for_display=True):
-        """
-        Utility function to pretty-print tree observations returned by this object.
-        """
-        if len(tree) < self.observation_dim:
+    @staticmethod
+    def print_node_features(node: Node, label, indent):
+        print(indent, "Direction ", label, ": ", node.dist_own_target_encountered, ", ",
+              node.dist_other_target_encountered, ", ", node.dist_other_agent_encountered, ", ",
+              node.dist_potential_conflict, ", ", node.dist_unusable_switch, ", ", node.dist_to_next_branch, ", ",
+              node.dist_min_to_target, ", ", node.num_agents_same_direction, ", ", node.num_agents_opposite_direction,
+              ", ", node.num_agents_malfunctioning, ", ", node.speed_min_fractional)
+
+    def print_subtree(self, node, label, indent):
+        if node == -np.inf or not node:
+            print(indent, "Direction ", label, ": -np.inf")
             return
 
-        depth = 0
-        tmp = len(tree) / self.observation_dim - 1
-        pow4 = 4
-        while tmp > 0:
-            tmp -= pow4
-            depth += 1
-            pow4 *= 4
+        self.print_node_features(node, label, indent)
 
-        unfolded = {}
-        unfolded[''] = tree[0:self.observation_dim]
-        child_size = (len(tree) - self.observation_dim) // 4
-        for child in range(4):
-            child_tree = tree[(self.observation_dim + child * child_size):
-                              (self.observation_dim + (child + 1) * child_size)]
-            observation_tree = self.unfold_observation_tree(child_tree, current_depth=current_depth + 1)
-            if observation_tree is not None:
-                if actions_for_display:
-                    label = self.tree_explorted_actions_char[child]
-                else:
-                    label = self.tree_explored_actions[child]
-                unfolded[label] = observation_tree
-        return unfolded
+        if not node.childs:
+            return
+
+        for direction in self.tree_explorted_actions_char:
+            self.print_subtree(node.childs[direction], direction, indent + "\t")
 
     def set_env(self, env: Environment):
         super().set_env(env)
@@ -519,12 +503,10 @@ class GlobalObsForRailEnv(ObservationBuilder):
     """
 
     def __init__(self):
-        self.observation_space = ()
         super(GlobalObsForRailEnv, self).__init__()
 
     def set_env(self, env: Environment):
         super().set_env(env)
-        self.observation_space = [4, self.env.height, self.env.width]
 
     def reset(self):
         self.rail_obs = np.zeros((self.env.height, self.env.width, 16))

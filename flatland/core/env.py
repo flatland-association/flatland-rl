@@ -11,7 +11,6 @@ class Environment:
 
     Derived environments should implement the following attributes:
         action_space: tuple with the dimensions of the actions to be passed to the step method
-        observation_space: tuple with the dimensions of the observations returned by reset and step
 
     Agents are identified by agent ids (handles).
     Examples:
@@ -46,7 +45,6 @@ class Environment:
 
     def __init__(self):
         self.action_space = ()
-        self.observation_space = ()
         pass
 
     def reset(self):

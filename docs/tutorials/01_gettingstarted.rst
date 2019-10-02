@@ -160,7 +160,7 @@ Once we are set with the environment we can load our preferred agent from either
 
 .. code-block:: python
 
-    agent = RandomAgent(env.action_space, env.observation_space)
+    agent = RandomAgent(state_size, action_size)
 
 We start every trial by resetting the environment
 
