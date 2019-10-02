@@ -547,6 +547,8 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
     """
     G = nx.DiGraph()
 
+    DEBUG_PRINT_TIMING = False
+
     def generator(width, height, num_agents, num_resets=0) -> RailGeneratorProduct:
 
         rail_trans = RailEnvTransitions()
@@ -581,19 +583,22 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
 
         # reduce nb_nodes, _num_cities, _num_intersections if less were generated in not_grid_mode
         nb_nodes = len(node_positions)
-        print("City position time", time.time() - node_time_start, "Seconds")
+        if DEBUG_PRINT_TIMING:
+            print("City position time", time.time() - node_time_start, "Seconds")
         # Set up connection points for all cities
         node_connection_time = time.time()
         inner_connection_points, outer_connection_points, connection_info, city_orientations = _generate_node_connection_points(
             node_positions, node_radius, max_inter_city_rails_allowed,
             rail_in_city)
-        print("Connection points", time.time() - node_connection_time)
+        if DEBUG_PRINT_TIMING:
+            print("Connection points", time.time() - node_connection_time)
 
         # Connect the cities through the connection points
         city_connection_time = time.time()
         inter_city_lines = _connect_cities(node_positions, outer_connection_points, connection_info, city_cells,
                                            rail_trans, grid_map)
-        print("City connection time", time.time() - city_connection_time)
+        if DEBUG_PRINT_TIMING:
+            print("City connection time", time.time() - city_connection_time)
         # Build inner cities
         city_build_time = time.time()
         through_tracks, free_tracks = _build_inner_cities(node_positions, inner_connection_points,
@@ -601,24 +606,29 @@ def sparse_rail_generator(num_cities=5, grid_mode=False, max_inter_city_rails=4,
                                                           node_radius,
                                                           rail_trans,
                                                           grid_map)
-        print("City build time", time.time() - city_build_time)
+        if DEBUG_PRINT_TIMING:
+            print("City build time", time.time() - city_build_time)
         # Populate cities
         train_station_time = time.time()
         train_stations, built_num_trainstation = _set_trainstation_positions(node_positions, node_radius, free_tracks,
                                                                              grid_map)
-        print("Trainstation placing time", time.time() - train_station_time)
+        if DEBUG_PRINT_TIMING:
+            print("Trainstation placing time", time.time() - train_station_time)
 
 
         # Fix all transition elements
         grid_fix_time = time.time()
         _fix_transitions(city_cells, inter_city_lines, grid_map)
-        print("Grid fix time", time.time() - grid_fix_time)
+        if DEBUG_PRINT_TIMING:
+            print("Grid fix time", time.time() - grid_fix_time)
 
         # Generate start target pairs
         schedule_time = time.time()
         agent_start_targets_nodes, num_agents = _generate_start_target_pairs(num_agents, nb_nodes, train_stations,
                                                                              city_orientations)
-        print("Schedule time", time.time() - schedule_time)
+        if DEBUG_PRINT_TIMING:
+            print("Schedule time", time.time() - schedule_time)
+
         return grid_map, {'agents_hints': {
             'num_agents': num_agents,
             'agent_start_targets_nodes': agent_start_targets_nodes,
