@@ -539,8 +539,6 @@ class GlobalObsForRailEnv(ObservationBuilder):
 
         obs_targets = np.zeros((self.env.height, self.env.width, 2))
         obs_agents_state = np.zeros((self.env.height, self.env.width, 5)) - 1
-        obs_agents_state[0] -= 1  # Set all values to -1 to avoid confusion with orientation
-        obs_agents_state[1] -= 1  # Set all values to -1 to avoid confusion with orientation
         agent = self.env.agents[handle]
         obs_agents_state[agent.position][0] = agent.direction
         obs_targets[agent.target][0] = 1
