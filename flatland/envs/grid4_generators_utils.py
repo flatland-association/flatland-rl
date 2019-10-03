@@ -136,7 +136,8 @@ def connect_straigt_line(rail_trans, grid_map, start, end, openend=False):
 
 def quick_path(grid_map, start, end, forbidden_cells=[], openend=False):
     """
-
+    Quick path connecting algorithm with simple heuristic to allways follow largest value of vector towards target.
+    When obstacle is encountereed second direction of vector is chosen.
     """
     # Helper function to make legal steps
     (height, width) = np.shape(grid_map.grid)
