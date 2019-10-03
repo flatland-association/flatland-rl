@@ -2,6 +2,8 @@ from typing import Tuple, Callable, List, Type
 
 import numpy as np
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
+
 Vector2D: Type = Tuple[float, float]
 IntVector2D: Type = Tuple[int, int]
 
@@ -296,7 +298,7 @@ def distance_on_rail(pos1, pos2, metric="Euclidean"):
         return np.abs(pos1[0] - pos2[0]) + np.abs(pos1[1] - pos2[1])
 
 
-def direction_to_point(pos1, pos2):
+def direction_to_city(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
     """
     Returns the closest direction orientation of position 2 relative to position 1
     :param pos1: position we are interested in
@@ -308,11 +310,11 @@ def direction_to_point(pos1, pos2):
     direction = np.sign(diff_vec[axis])
     if axis == 0:
         if direction > 0:
-            return 0
+            return Grid4TransitionsEnum.NORTH
         else:
-            return 2
+            return Grid4TransitionsEnum.SOUTH
     else:
         if direction > 0:
-            return 3
+            return Grid4TransitionsEnum.WEST
         else:
-            return 1
+            return Grid4TransitionsEnum.EAST
