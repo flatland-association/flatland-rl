@@ -161,13 +161,20 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         # Update local lookup table for all agents' positions
         self.location_has_agent = dict()
+        self.location_has_agent_direction = dict()
         for agent in self.env.agents:
             if tuple(agent.position) in self.location_has_agent:
                 self.location_has_agent[tuple(agent.position)] = self.location_has_agent[tuple(agent.position)] + 1
             else:
                 self.location_has_agent[tuple(agent.position)] = 1
-        # TODO: Update this to handle number of agents at same location
-        self.location_has_agent_direction = {tuple(agent.position): agent.direction for agent in self.env.agents}
+
+            if (agent.position, agent.direction) in self.location_has_agent_direction:
+                self.location_has_agent_direction[(agent.position, agent.direction)] = \
+                self.location_has_agent_direction[(agent.position, agent.direction)] + 1
+            else:
+                self.location_has_agent_direction[(agent.position, agent.direction)] = 1
+
+
         self.location_has_agent_speed = {tuple(agent.position): agent.speed_data['speed'] for agent in self.env.agents}
         self.location_has_agent_malfunction = {tuple(agent.position): agent.malfunction_data['malfunction'] for agent in
                                                self.env.agents}
@@ -264,20 +271,28 @@ class TreeObsForRailEnv(ObservationBuilder):
                 if self.location_has_agent_malfunction[position] > malfunctioning_agent:
                     malfunctioning_agent = self.location_has_agent_malfunction[position]
 
-                if self.location_has_agent_direction[position] == direction:
+                if (agent.position, agent.direction) in self.location_has_agent_direction:
                     # Cummulate the number of agents on branch with same direction
-                    other_agent_same_direction += 1
+                    other_agent_same_direction += self.location_has_agent_direction[(agent.position, agent.direction)]
 
                     # Check fractional speed of agents
                     current_fractional_speed = self.location_has_agent_speed[position]
                     if current_fractional_speed < min_fractional_speed:
                         min_fractional_speed = current_fractional_speed
 
-                if self.location_has_agent_direction[position] != direction:
-                    # Cummulate the number of agents on branch with other direction
-                    other_agent_opposite_direction += 1
+                    # Other direction agents
+                    # TODO: This does not work as expected yet
+                    other_agent_opposite_direction += self.location_has_agent[position] - \
+                                                      self.location_has_agent_direction[
+                                                          (agent.position, agent.direction)]
+                else:
+                    # If no agent in the same direction was found all agents in that position are other direction
+                    other_agent_opposite_direction += self.location_has_agent[position]
+                    print("went in here")
+                if other_agent_opposite_direction > 0:
+                    print("Other agents", other_agent_opposite_direction)
 
-            # Check number of possible transitions for agent and total number of transitions in cell (type)
+                # Check number of possible transitions for agent and total number of transitions in cell (type)
             cell_transitions = self.env.rail.get_transitions(*position, direction)
             transition_bit = bin(self.env.rail.get_full_transitions(*position))
             total_transitions = transition_bit.count("1")
