@@ -19,10 +19,10 @@ def connect_rail(
     grid_map: GridTransitionMap,
     start: IntVector2D,
     end: IntVector2D,
+    a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
     flip_start_node_trans=False,
     flip_end_node_trans=False,
     nice=True,
-    a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
     forbidden_cells=None
 ) -> IntVector2DArray:
     """

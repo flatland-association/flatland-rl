@@ -7,6 +7,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_direction, mirror
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.grid.grid_utils import distance_on_rail, direction_to_city, IntVector2DArray, IntVector2D, \
     Vec2dOperations
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
@@ -125,7 +126,8 @@ def complex_rail_generator(nr_start_goal=1,
                 # we might as well give up at this point
                 break
 
-            new_path = connect_rail(rail_trans, grid_map, start, goal, flip_start_node_trans=True,
+            new_path = connect_rail(rail_trans, grid_map, start, goal, Vec2d.get_chebyshev_distance,
+                                    flip_start_node_trans=True,
                                     flip_end_node_trans=True, nice=True,
                                     forbidden_cells=None)
             if len(new_path) >= 2:
@@ -152,7 +154,8 @@ def complex_rail_generator(nr_start_goal=1,
                     break
             if not all_ok:
                 break
-            new_path = connect_rail(rail_trans, grid_map, start, goal, flip_start_node_trans=True,
+            new_path = connect_rail(rail_trans, grid_map, start, goal, Vec2d.get_chebyshev_distance,
+                                    flip_start_node_trans=True,
                                     flip_end_node_trans=True, nice=True,
                                     forbidden_cells=None)
 
