@@ -2,7 +2,6 @@ import random
 from typing import Dict, List
 
 import numpy as np
-from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
@@ -10,6 +9,7 @@ from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import complex_rail_generator, sparse_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator, sparse_schedule_generator
+from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 
 class SingleAgentNavigationObs(ObservationBuilder):
@@ -166,15 +166,8 @@ def test_initial_malfunction():
     env = RailEnv(width=25,
                   height=30,
                   rail_generator=sparse_rail_generator(max_num_cities=5,
-                                                       # Number of cities in map (where train stations are)
-                                                       num_intersections=4,
-                                                       # Number of intersections (no start / target)
-                                                       num_trainstations=25,  # Number of possible start/targets on map
-                                                       min_node_dist=6,  # Minimal distance of nodes
-                                                       node_radius=3,  # Proximity of stations to city center
-                                                       num_neighb=3,
-                                                       # Number of connections to other cities/intersections
-                                                       seed=215545,  # Random seed
+                                                       max_rails_between_cities=3,
+                                                       seed=215545,
                                                        grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
@@ -248,16 +241,9 @@ def test_initial_malfunction_stop_moving():
     env = RailEnv(width=25,
                   height=30,
                   rail_generator=sparse_rail_generator(max_num_cities=5,
-                                                       # Number of cities in map (where train stations are)
-                                                       num_intersections=4,
-                                                       # Number of intersections (no start / target)
-                                                       num_trainstations=25,  # Number of possible start/targets on map
-                                                       min_node_dist=6,  # Minimal distance of nodes
-                                                       node_radius=3,  # Proximity of stations to city center
-                                                       num_neighb=3,
-                                                       # Number of connections to other cities/intersections
-                                                       seed=215545,  # Random seed
-                                                       grid_mode=True,
+                                                       max_rails_between_cities=3,
+                                                       seed=215545,
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,
@@ -340,16 +326,9 @@ def test_initial_malfunction_do_nothing():
     env = RailEnv(width=25,
                   height=30,
                   rail_generator=sparse_rail_generator(max_num_cities=5,
-                                                       # Number of cities in map (where train stations are)
-                                                       num_intersections=4,
-                                                       # Number of intersections (no start / target)
-                                                       num_trainstations=25,  # Number of possible start/targets on map
-                                                       min_node_dist=6,  # Minimal distance of nodes
-                                                       node_radius=3,  # Proximity of stations to city center
-                                                       num_neighb=3,
-                                                       # Number of connections to other cities/intersections
-                                                       seed=215545,  # Random seed
-                                                       grid_mode=True,
+                                                       max_rails_between_cities=3,
+                                                       seed=215545,
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,
@@ -431,17 +410,9 @@ def test_initial_nextmalfunction_not_below_zero():
     env = RailEnv(width=25,
                   height=30,
                   rail_generator=sparse_rail_generator(max_num_cities=5,
-                                                       # Number of cities in map (where train stations are)
-                                                       num_intersections=4,
-                                                       # Number of intersections (no start / target)
-                                                       num_trainstations=25,  # Number of possible start/targets on map
-                                                       min_node_dist=6,  # Minimal distance of nodes
-                                                       node_radius=3,  # Proximity of stations to city center
-                                                       num_neighb=3,
-                                                       # Number of connections to other cities/intersections
-                                                       seed=215545,  # Random seed
-                                                       grid_mode=True,
-                                                       enhance_intersection=False
+                                                       max_rails_between_cities=3,
+                                                       seed=215545,
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,

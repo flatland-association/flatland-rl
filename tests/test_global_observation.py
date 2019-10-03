@@ -24,17 +24,9 @@ def test_get_global_observation():
     env = RailEnv(width=50,
                   height=50,
                   rail_generator=sparse_rail_generator(max_num_cities=25,
-                                                       # Number of cities in map (where train stations are)
-                                                       num_intersections=10,
-                                                       # Number of intersections (no start / target)
-                                                       num_trainstations=50,  # Number of possible start/targets on map
-                                                       min_node_dist=3,  # Minimal distance of nodes
-                                                       node_radius=4,  # Proximity of stations to city center
-                                                       num_neighb=4,
-                                                       # Number of connections to other cities/intersections
-                                                       seed=15,  # Random seed
-                                                       grid_mode=True,
-                                                       enhance_intersection=False
+                                                       max_rails_between_cities=4,
+                                                       seed=15,
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=number_of_agents, stochastic_data=stochastic_data,  # Malfunction data generator
@@ -61,4 +53,3 @@ def test_get_global_observation():
         assert obs_agents_state_1 == (number_of_agents - 1)
         assert obs_agents_state_2 == number_of_agents
         assert obs_agents_state_3 == number_of_agents
-

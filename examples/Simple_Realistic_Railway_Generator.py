@@ -194,7 +194,7 @@ class Grid_Map_Op:
                                     mirror(liTrans[0]), bAddRemove, remove_deadends=not bDeadend)
 
 
-def realistic_rail_generator(num_cities=5,
+def realistic_rail_generator(max_num_cities=5,
                              city_size=10,
                              allowed_rotation_angles=[0, 90],
                              max_number_of_station_tracks=4,
@@ -206,7 +206,7 @@ def realistic_rail_generator(num_cities=5,
     """
     This is a level generator which generates a realistic rail configurations
 
-    :param num_cities: Number of city node
+    :param max_num_cities: Number of city node
     :param city_size: Length of city measure in cells
     :param allowed_rotation_angles: Rotate the city (around center)
     :param max_number_of_station_tracks: max number of tracks per station
@@ -226,7 +226,7 @@ def realistic_rail_generator(num_cities=5,
         X = int(np.floor(max(1, height - 2 * intern_max_number_of_station_tracks - 1) / intern_city_size))
         Y = int(np.floor(max(1, width - 2 * intern_max_number_of_station_tracks - 1) / intern_city_size))
 
-        max_num_cities = min(num_cities, X * Y)
+        max_num_cities = min(max_num_cities, X * Y)
 
         cities_at = np.random.choice(X * Y, max_num_cities, False)
         cities_at = np.sort(cities_at)
@@ -581,7 +581,7 @@ for itrials in range(100):
     np.random.seed(int(time.time()))
     env = RailEnv(width=40 + np.random.choice(100),
                   height=40 + np.random.choice(100),
-                  rail_generator=realistic_rail_generator(num_cities=2 + np.random.choice(10),
+                  rail_generator=realistic_rail_generator(max_num_cities=2 + np.random.choice(10),
                                                           city_size=10 + np.random.choice(10),
                                                           allowed_rotation_angles=[-90, -45, 0, 45, 90],
                                                           max_number_of_station_tracks=np.random.choice(4) + 4,
