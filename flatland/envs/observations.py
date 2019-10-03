@@ -280,7 +280,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                         min_fractional_speed = current_fractional_speed
 
                     # Other direction agents
-                    # TODO: This does not work as expected yet
+                    # TODO: Test that this behavior is as expected
                     other_agent_opposite_direction += self.location_has_agent[position] - \
                                                       self.location_has_agent_direction[
                                                           (position, direction)]
