@@ -298,7 +298,7 @@ def distance_on_rail(pos1, pos2, metric="Euclidean"):
         return np.abs(pos1[0] - pos2[0]) + np.abs(pos1[1] - pos2[1])
 
 
-def direction_to_city(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
+def direction_to_point(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
     """
     Returns the closest direction orientation of position 2 relative to position 1
     :param pos1: position we are interested in

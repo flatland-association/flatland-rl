@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from flatland.envs.observations import TreeObsForRailEnv
@@ -28,9 +30,10 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
                     1. / 3.: 0.25,  # Slow commuter train
                     1. / 4.: 0.25}  # Slow freight train
 
-env = RailEnv(width=40,
-              height=40,
-              rail_generator=sparse_rail_generator(max_num_cities=8,  # Number of cities in map (where train stations are)
+env = RailEnv(width=100,
+              height=100,
+              rail_generator=sparse_rail_generator(max_num_cities=20,
+                                                   # Number of cities in map (where train stations are)
                                                    seed=1,  # Random seed
                                                    grid_mode=False,
                                                    max_rails_between_cities=2,
@@ -95,7 +98,10 @@ action_dict = dict()
 
 print("Start episode...")
 # Reset environment and get initial observations for all agents
+start_reset = time.time()
 obs = env.reset()
+end_reset = time.time()
+print(end_reset - start_reset)
 print(env.get_num_agents(), )
 # Reset the rendering sytem
 env_renderer.reset()

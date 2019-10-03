@@ -8,7 +8,7 @@ import numpy as np
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_direction, mirror
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
-from flatland.core.grid.grid_utils import distance_on_rail, direction_to_city, IntVector2DArray, IntVector2D, \
+from flatland.core.grid.grid_utils import distance_on_rail, direction_to_point, IntVector2DArray, IntVector2D, \
     Vec2dOperations
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
@@ -670,7 +670,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             if grid_mode:
                 current_closest_direction = np.random.randint(4)
             else:
-                current_closest_direction = direction_to_city(city_position, city_positions[closest_neighb_idx[idx]])
+                current_closest_direction = direction_to_point(city_position, city_positions[closest_neighb_idx[idx]])
             connection_sides_idx.append(current_closest_direction)
             connection_sides_idx.append((current_closest_direction + 2) % 4)
             city_orientations.append(current_closest_direction)
@@ -876,7 +876,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         sorted_neighbours = np.argsort(city_distances)
         direction_set = 0
         for neighbour in sorted_neighbours[1:]:
-            direction_to_neighbour = direction_to_city(city_positions[current_city_idx], city_positions[neighbour])
+            direction_to_neighbour = direction_to_point(city_positions[current_city_idx], city_positions[neighbour])
             if closest_neighbour[direction_to_neighbour] == None:
                 closest_neighbour[direction_to_neighbour] = neighbour
                 direction_set += 1
