@@ -174,7 +174,6 @@ class TreeObsForRailEnv(ObservationBuilder):
             else:
                 self.location_has_agent_direction[(agent.position, agent.direction)] = 1
 
-
         self.location_has_agent_speed = {tuple(agent.position): agent.speed_data['speed'] for agent in self.env.agents}
         self.location_has_agent_malfunction = {tuple(agent.position): agent.malfunction_data['malfunction'] for agent in
                                                self.env.agents}
@@ -271,9 +270,9 @@ class TreeObsForRailEnv(ObservationBuilder):
                 if self.location_has_agent_malfunction[position] > malfunctioning_agent:
                     malfunctioning_agent = self.location_has_agent_malfunction[position]
 
-                if (agent.position, agent.direction) in self.location_has_agent_direction:
+                if (position, direction) in self.location_has_agent_direction:
                     # Cummulate the number of agents on branch with same direction
-                    other_agent_same_direction += self.location_has_agent_direction[(agent.position, agent.direction)]
+                    other_agent_same_direction += self.location_has_agent_direction[(position, direction)]
 
                     # Check fractional speed of agents
                     current_fractional_speed = self.location_has_agent_speed[position]
@@ -284,13 +283,11 @@ class TreeObsForRailEnv(ObservationBuilder):
                     # TODO: This does not work as expected yet
                     other_agent_opposite_direction += self.location_has_agent[position] - \
                                                       self.location_has_agent_direction[
-                                                          (agent.position, agent.direction)]
+                                                          (position, direction)]
+
                 else:
                     # If no agent in the same direction was found all agents in that position are other direction
                     other_agent_opposite_direction += self.location_has_agent[position]
-                    print("went in here")
-                if other_agent_opposite_direction > 0:
-                    print("Other agents", other_agent_opposite_direction)
 
                 # Check number of possible transitions for agent and total number of transitions in cell (type)
             cell_transitions = self.env.rail.get_transitions(*position, direction)
