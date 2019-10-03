@@ -73,7 +73,8 @@ class GraphicsLayer(object):
         """
         pass
 
-    def set_agent_at(self, iAgent, row, col, iDirIn, iDirOut, isSelected=False,rail_grid=None,show_debug=False):
+    def set_agent_at(self, iAgent, row, col, iDirIn, iDirOut, isSelected=False,rail_grid=None,show_debug=False,
+                     clear_debug_text=True):
         pass
 
     def set_cell_occupied(self, iAgent, row, col):

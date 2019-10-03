@@ -639,7 +639,7 @@ class PILSVG(PILGL):
                     self.pil_zug[(in_direction_2, out_direction_2, color_idx)] = pils[color_idx]
 
     def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected,
-                     rail_grid=None, show_debug=False):
+                     rail_grid=None, show_debug=False,clear_debug_text=True):
         delta_dir = (out_direction - in_direction) % 4
         color_idx = agent_idx % self.n_agent_colors
         # when flipping direction at a dead end, use the "out_direction" direction.
@@ -656,7 +656,10 @@ class PILSVG(PILGL):
             self.clear_layer(PILGL.SELECTED_AGENT_LAYER, 0)
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
         if show_debug:
-            self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
+            if not clear_debug_text:
+                self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx), layer=PILGL.SELECTED_AGENT_LAYER)
+            else:
+                self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
 
     def set_cell_occupied(self, agent_idx, row, col):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]
