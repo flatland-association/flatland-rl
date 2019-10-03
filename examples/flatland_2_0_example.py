@@ -1,6 +1,6 @@
 import numpy as np
 
-from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
@@ -28,18 +28,18 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
                     1. / 3.: 0.25,  # Slow commuter train
                     1. / 4.: 0.25}  # Slow freight train
 
-env = RailEnv(width=75,
-              height=75,
-              rail_generator=sparse_rail_generator(num_cities=15,  # Number of cities in map (where train stations are)
+env = RailEnv(width=40,
+              height=40,
+              rail_generator=sparse_rail_generator(num_cities=8,  # Number of cities in map (where train stations are)
                                                    seed=1,  # Random seed
                                                    grid_mode=False,
                                                    max_inter_city_rails=2,
-                                                   max_tracks_in_city=8,
+                                                   max_tracks_in_city=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=200,
+              number_of_agents=20,
               stochastic_data=stochastic_data,  # Malfunction data generator
-              obs_builder_object=GlobalObsForRailEnv(),
+              obs_builder_object=TreeObservation,
               remove_agents_at_target=True
               )
 

@@ -28,7 +28,6 @@ class SingleAgentNavigationObs(ObservationBuilder):
 
     def __init__(self):
         super().__init__()
-        self.observation_space = [3]
 
     def reset(self):
         pass

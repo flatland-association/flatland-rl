@@ -18,7 +18,6 @@ class SimpleObs(ObservationBuilder):
 
     def __init__(self):
         super().__init__()
-        self.observation_space = [5]
 
     def reset(self):
         return
