@@ -11,6 +11,7 @@ def test_build_railway_infrastructure():
     grid_map.grid.fill(0)
     np.random.seed(0)
 
+    # Make connection with dead-ends on both sides
     start_point = (2, 2)
     end_point = (8, 8)
     connection_001 = connect_rail(rail_trans, grid_map, start_point, end_point,
@@ -19,6 +20,7 @@ def test_build_railway_infrastructure():
     connection_001_expected = [(2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 8), (3, 8), (4, 8), (5, 8), (6, 8),
                                (7, 8), (8, 8)]
 
+    # Make connection with open ends on both sides
     start_point = (1, 3)
     end_point = (1, 7)
     connection_002 = connect_rail(rail_trans, grid_map, start_point, end_point,
@@ -26,6 +28,7 @@ def test_build_railway_infrastructure():
                                   respect_transition_validity=True, forbidden_cells=None)
     connection_002_expected = [(1, 3), (1, 4), (1, 5), (1, 6), (1, 7)]
 
+    # Make connection with open end at beginning and dead end on end
     start_point = (6, 2)
     end_point = (6, 5)
     connection_003 = connect_rail(rail_trans, grid_map, start_point, end_point,
@@ -33,6 +36,7 @@ def test_build_railway_infrastructure():
                                   respect_transition_validity=True, forbidden_cells=None)
     connection_003_expected = [(6, 2), (6, 3), (6, 4), (6, 5)]
 
+    # Make connection with dead end on start and opend end
     start_point = (7, 5)
     end_point = (8, 9)
     connection_004 = connect_rail(rail_trans, grid_map, start_point, end_point,
