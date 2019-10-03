@@ -660,17 +660,17 @@ class PILSVG(PILGL):
                 dr = 0.2
                 dc = 0.2
                 if in_direction == 0:
-                    dr = 0.4
+                    dr = 0.8
                     dc = 0.0
                 if in_direction == 1:
                     dr = 0.0
-                    dc = 0.4
+                    dc = 0.8
                 if in_direction == 2:
-                    dr = 0.2
-                    dc = 0.4
-                if in_direction == 3:
                     dr = 0.4
-                    dc = 0.2
+                    dc = 0.8
+                if in_direction == 3:
+                    dr = 0.8
+                    dc = 0.4
 
                 self.text_rowcol((row + dr, col + dc,), str(agent_idx), layer=PILGL.SELECTED_AGENT_LAYER)
             else:
