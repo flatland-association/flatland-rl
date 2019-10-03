@@ -21,16 +21,16 @@ def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, st
     """
         Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
     returns the path created as a list of positions.
-    :param rail_trans:
-    :param grid_map:
-    :param start:
-    :param end:
-    :param flip_start_node_trans:
-    :param flip_end_node_trans:
-    :param respect_transition_validity:
-    :param a_star_distance_function:
-    :param forbidden_cells:
-    :return:
+    :param rail_trans: basic rail transition object
+    :param grid_map: grid map
+    :param start: start position of rail
+    :param end: end position of rail
+    :param flip_start_node_trans: make valid start position by adding dead-end, empty start if False
+    :param flip_end_node_trans: make valid end position by adding dead-end, empty end if False
+    :param respect_transition_validity: Only draw rail maps if legal rail elements can be use, False, draw line without respecting rail transitions.
+    :param a_star_distance_function: Define what distance function a-star should use
+    :param forbidden_cells: cells to avoid when drawing rail. Rail cannot go through this list of cells
+    :return: List of cells in the path
     """
 
     # in the worst case we will need to do a A* search, so we might as well set that up
