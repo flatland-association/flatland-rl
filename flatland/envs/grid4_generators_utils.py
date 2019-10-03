@@ -80,7 +80,21 @@ def connect_basic_operation(
 
 
 def connect_line(rail_trans, grid_map, start, end, openend=False):
-    # Set start cell
+    """
+    Generates a straight rail line from start cell to end cell.
+    Diagonal lines are not allowed
+    :param rail_trans:
+    :param grid_map:
+    :param start: Cell coordinates for start of line
+    :param end: Cell coordinates for end of line
+    :param openend: If True then the transition at start and end is set to 0: An empty cell
+    :return: A list of all cells in the path
+    """
+
+    # Assert that a straight line is possible
+    if not (start[0] == end[0] or start[1] == end[1]):
+        print("No line possible")
+        return []
     current_cell = start
     path = [current_cell]
     new_trans = grid_map.grid[current_cell]
