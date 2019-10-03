@@ -1,7 +1,6 @@
 """Rail generators (infrastructure manager, "Infrastrukturbetreiber")."""
-import time
 import warnings
-from typing import Callable, Tuple, Optional, Dict, List, Any
+from typing import Callable, Tuple, Optional, Dict, List
 
 import msgpack
 import numpy as np
@@ -593,7 +592,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         return grid_map, {'agents_hints': {
             'num_agents': num_agents,
-            'agent_start_targets_nodes': agent_start_targets_cities,
+            'agent_start_targets_cities': agent_start_targets_cities,
             'train_stations': train_stations,
             'city_orientations': city_orientations
         }}

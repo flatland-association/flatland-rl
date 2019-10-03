@@ -61,7 +61,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         train_stations = hints['train_stations']
-        agent_start_targets_nodes = hints['agent_start_targets_nodes']
+        agent_start_targets_cities = hints['agent_start_targets_cities']
         max_num_agents = hints['num_agents']
         city_orientations = hints['city_orientations']
         if num_agents > max_num_agents:
@@ -73,8 +73,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
         agents_direction = []
         for agent_idx in range(num_agents):
             # Set target for agent
-            start_city = agent_start_targets_nodes[agent_idx][0]
-            target_city = agent_start_targets_nodes[agent_idx][1]
+            start_city = agent_start_targets_cities[agent_idx][0]
+            target_city = agent_start_targets_cities[agent_idx][1]
             start = random.choice(train_stations[start_city])
             target = random.choice(train_stations[target_city])
             while start[1] % 2 != 0:
@@ -82,7 +82,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             while target[1] % 2 != 1:
                 target = random.choice(train_stations[target_city])
 
-            agent_orientation = (agent_start_targets_nodes[agent_idx][2] + 2 * start[1]) % 4
+            agent_orientation = (agent_start_targets_cities[agent_idx][2] + 2 * start[1]) % 4
             if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                 agent_orientation = (agent_orientation + 2) % 4
             if not (rail.check_path_exists(start[0], agent_orientation, target[0])):
