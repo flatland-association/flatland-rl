@@ -14,7 +14,7 @@ from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transition_map import GridTransitionMap, RailEnvTransitions
 
 
-def connect_basic_operation(
+def connect_rail(
     rail_trans: RailEnvTransitions,
     grid_map: GridTransitionMap,
     start: IntVector2D,
@@ -26,9 +26,20 @@ def connect_basic_operation(
     forbidden_cells=None
 ) -> IntVector2DArray:
     """
-    Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
+        Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
     returns the path created as a list of positions.
+    :param rail_trans:
+    :param grid_map:
+    :param start:
+    :param end:
+    :param flip_start_node_trans:
+    :param flip_end_node_trans:
+    :param nice:
+    :param a_star_distance_function:
+    :param forbidden_cells:
+    :return:
     """
+
     # in the worst case we will need to do a A* search, so we might as well set that up
     path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, nice, forbidden_cells)
     if len(path) < 2:
@@ -79,7 +90,7 @@ def connect_basic_operation(
     return path
 
 
-def connect_line(rail_trans, grid_map, start, end, openend=False):
+def connect_straigt_line(rail_trans, grid_map, start, end, openend=False):
     """
     Generates a straight rail line from start cell to end cell.
     Diagonal lines are not allowed
@@ -126,47 +137,3 @@ def connect_line(rail_trans, grid_map, start, end, openend=False):
         path.append(current_cell)
     return path
 
-def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                 start: IntVector2D, end: IntVector2D,
-                 a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
-    """
-
-    :param rail_trans:
-    :param grid_map:
-    :param start:
-    :param end:
-    :param a_star_distance_function:
-    :return:
-    """
-    return connect_basic_operation(rail_trans, grid_map, start, end, True, True, True, a_star_distance_function)
-
-
-def connect_cities(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                   start: IntVector2D, end: IntVector2D,
-                   a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
-                   forbidden_cells=None) -> IntVector2DArray:
-    """
-
-    :param rail_trans:
-    :param grid_map:
-    :param start:
-    :param end:
-    :param forbidden_cells:
-    :param a_star_distance_function:
-    :return:
-    """
-    return connect_basic_operation(rail_trans, grid_map, start, end, False, False, False, a_star_distance_function,
-                                   forbidden_cells)
-
-def connect_straigt_line(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D,
-                         end: IntVector2D, openend=False) -> IntVector2DArray:
-    """
-
-    :param rail_trans:
-    :param grid_map:
-    :param start:
-    :param end:
-    :param openend:
-    :return:
-    """
-    return connect_line(rail_trans, grid_map, start, end, openend)
