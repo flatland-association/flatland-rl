@@ -14,17 +14,10 @@ from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transition_map import GridTransitionMap, RailEnvTransitions
 
 
-def connect_rail(
-    rail_trans: RailEnvTransitions,
-    grid_map: GridTransitionMap,
-    start: IntVector2D,
-    end: IntVector2D,
-    a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
-    flip_start_node_trans=False,
-    flip_end_node_trans=False,
-    nice=True,
-    forbidden_cells=None
-) -> IntVector2DArray:
+def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
+                 a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
+                 flip_start_node_trans=False, flip_end_node_trans=False, respect_transition_validity=True,
+                 forbidden_cells=None) -> IntVector2DArray:
     """
         Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
     returns the path created as a list of positions.
@@ -34,14 +27,15 @@ def connect_rail(
     :param end:
     :param flip_start_node_trans:
     :param flip_end_node_trans:
-    :param nice:
+    :param respect_transition_validity:
     :param a_star_distance_function:
     :param forbidden_cells:
     :return:
     """
 
     # in the worst case we will need to do a A* search, so we might as well set that up
-    path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, nice, forbidden_cells)
+    path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, respect_transition_validity,
+                                    forbidden_cells)
     if len(path) < 2:
         print("No path found", path)
         return []

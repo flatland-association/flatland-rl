@@ -127,9 +127,8 @@ def complex_rail_generator(nr_start_goal=1,
                 break
 
             new_path = connect_rail(rail_trans, grid_map, start, goal, Vec2d.get_chebyshev_distance,
-                                    flip_start_node_trans=True,
-                                    flip_end_node_trans=True, nice=True,
-                                    forbidden_cells=None)
+                                    flip_start_node_trans=True, flip_end_node_trans=True,
+                                    respect_transition_validity=True, forbidden_cells=None)
             if len(new_path) >= 2:
                 nr_created += 1
                 start_goal.append([start, goal])
@@ -155,9 +154,8 @@ def complex_rail_generator(nr_start_goal=1,
             if not all_ok:
                 break
             new_path = connect_rail(rail_trans, grid_map, start, goal, Vec2d.get_chebyshev_distance,
-                                    flip_start_node_trans=True,
-                                    flip_end_node_trans=True, nice=True,
-                                    forbidden_cells=None)
+                                    flip_start_node_trans=True, flip_end_node_trans=True,
+                                    respect_transition_validity=True, forbidden_cells=None)
 
             if len(new_path) >= 2:
                 nr_created += 1
@@ -743,10 +741,9 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                                 min_connection_dist = tmp_dist
                                 neighb_connection_point = tmp_in_connection_point
                                 neighbour_direction = dir
-                    new_line = connect_rail(rail_trans, grid_map, tmp_out_connection_point,
-                                            neighb_connection_point, flip_start_node_trans=False,
-                                            flip_end_node_trans=False, nice=True,
-                                            forbidden_cells=city_cells)
+                    new_line = connect_rail(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point,
+                                            flip_start_node_trans=False, flip_end_node_trans=False,
+                                            respect_transition_validity=False, forbidden_cells=city_cells)
                     all_paths.extend(new_line)
 
         return all_paths
