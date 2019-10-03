@@ -23,7 +23,7 @@ def test_get_global_observation():
 
     env = RailEnv(width=50,
                   height=50,
-                  rail_generator=sparse_rail_generator(num_cities=25,
+                  rail_generator=sparse_rail_generator(max_num_cities=25,
                                                        # Number of cities in map (where train stations are)
                                                        num_intersections=10,
                                                        # Number of intersections (no start / target)

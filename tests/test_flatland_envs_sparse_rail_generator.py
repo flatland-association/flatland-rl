@@ -13,7 +13,7 @@ from flatland.utils.rendertools import RenderTool
 def test_sparse_rail_generator():
     env = RailEnv(width=50,
                   height=50,
-                  rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
+                  rail_generator=sparse_rail_generator(max_num_cities=10,  # Number of cities in map
                                                        num_intersections=10,  # Number of interesections in map
                                                        num_trainstations=50,  # Number of possible start/targets on map
                                                        min_node_dist=6,  # Minimal distance of nodes
@@ -733,7 +733,7 @@ def test_sparse_rail_generator_deterministic():
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=sparse_rail_generator(num_cities=5,
+                  rail_generator=sparse_rail_generator(max_num_cities=5,
                                                        # Number of cities in map (where train stations are)
                                                        num_intersections=4,
                                                        # Number of intersections (no start / target)
@@ -1509,7 +1509,7 @@ def test_rail_env_action_required_info():
                         1. / 4.: 0.25}  # Slow freight train
     env_always_action = RailEnv(width=50,
                                 height=50,
-                                rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
+                                rail_generator=sparse_rail_generator(max_num_cities=10,  # Number of cities in map
                                                                      num_intersections=10,
                                                                      # Number of interesections in map
                                                                      num_trainstations=50,
@@ -1528,7 +1528,7 @@ def test_rail_env_action_required_info():
     np.random.seed(0)
     env_only_if_action_required = RailEnv(width=50,
                                           height=50,
-                                          rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
+                                          rail_generator=sparse_rail_generator(max_num_cities=10,  # Number of cities in map
                                                                                num_intersections=10,
                                                                                # Number of interesections in map
                                                                                num_trainstations=50,
@@ -1592,7 +1592,7 @@ def test_rail_env_malfunction_speed_info():
                        }
     env = RailEnv(width=50,
                   height=50,
-                  rail_generator=sparse_rail_generator(num_cities=10,  # Number of cities in map
+                  rail_generator=sparse_rail_generator(max_num_cities=10,  # Number of cities in map
                                                        num_intersections=10,
                                                        # Number of interesections in map
                                                        num_trainstations=50,
@@ -1640,7 +1640,7 @@ def test_sparse_generator_with_too_man_cities_does_not_break_down():
     RailEnv(width=50,
             height=50,
             rail_generator=sparse_rail_generator(
-                num_cities=100,  # Number of cities in map
+                max_num_cities=100,  # Number of cities in map
                 num_intersections=10,  # Number of interesections in map
                 num_trainstations=50,  # Number of possible start/targets on map
                 min_node_dist=6,  # Minimal distance of nodes

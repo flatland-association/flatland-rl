@@ -165,7 +165,7 @@ def test_initial_malfunction():
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=sparse_rail_generator(num_cities=5,
+                  rail_generator=sparse_rail_generator(max_num_cities=5,
                                                        # Number of cities in map (where train stations are)
                                                        num_intersections=4,
                                                        # Number of intersections (no start / target)
@@ -247,7 +247,7 @@ def test_initial_malfunction_stop_moving():
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=sparse_rail_generator(num_cities=5,
+                  rail_generator=sparse_rail_generator(max_num_cities=5,
                                                        # Number of cities in map (where train stations are)
                                                        num_intersections=4,
                                                        # Number of intersections (no start / target)
@@ -339,7 +339,7 @@ def test_initial_malfunction_do_nothing():
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=sparse_rail_generator(num_cities=5,
+                  rail_generator=sparse_rail_generator(max_num_cities=5,
                                                        # Number of cities in map (where train stations are)
                                                        num_intersections=4,
                                                        # Number of intersections (no start / target)
@@ -430,7 +430,7 @@ def test_initial_nextmalfunction_not_below_zero():
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=sparse_rail_generator(num_cities=5,
+                  rail_generator=sparse_rail_generator(max_num_cities=5,
                                                        # Number of cities in map (where train stations are)
                                                        num_intersections=4,
                                                        # Number of intersections (no start / target)
