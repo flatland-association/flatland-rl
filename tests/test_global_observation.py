@@ -23,15 +23,14 @@ def test_get_global_observation():
 
     env = RailEnv(width=50,
                   height=50,
-                  rail_generator=sparse_rail_generator(max_num_cities=25,
+                  rail_generator=sparse_rail_generator(max_num_cities=6,
                                                        max_rails_between_cities=4,
                                                        seed=15,
-                                                       grid_mode=True
+                                                       grid_mode=False
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=number_of_agents, stochastic_data=stochastic_data,  # Malfunction data generator
                   obs_builder_object=GlobalObsForRailEnv())
-
     obs, all_rewards, done, _ = env.step({0: 0})
 
     for i in range(len(env.agents)):
