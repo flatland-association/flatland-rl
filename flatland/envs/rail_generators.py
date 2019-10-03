@@ -737,7 +737,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                                 neighbour_direction = dir
                     new_line = connect_cities(rail_trans, grid_map, tmp_out_connection_point,
                                               neighb_connection_point,
-                                              city_cells)
+                                              forbidden_cells=city_cells)
                     all_paths.extend(new_line)
 
         return all_paths

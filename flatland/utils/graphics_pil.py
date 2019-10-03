@@ -8,9 +8,6 @@ from PIL import Image, ImageDraw, ImageTk, ImageFont
 from numpy import array
 from pkg_resources import resource_string as resource_bytes
 
-from flatland.core.grid.grid_utils import Vec2dOperations
-from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.grid4_generators_utils import connect_nodes
 from flatland.utils.graphics_layer import GraphicsLayer
 
 
