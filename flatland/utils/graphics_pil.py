@@ -657,7 +657,22 @@ class PILSVG(PILGL):
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
         if show_debug:
             if not clear_debug_text:
-                self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx), layer=PILGL.SELECTED_AGENT_LAYER)
+                dr = 0.2
+                dc = 0.2
+                if in_direction == 0:
+                    dr = 0.4
+                    dc = 0.0
+                if in_direction == 1:
+                    dr = 0.0
+                    dc = 0.4
+                if in_direction == 2:
+                    dr = 0.2
+                    dc = 0.4
+                if in_direction == 3:
+                    dr = 0.4
+                    dc = 0.2
+
+                self.text_rowcol((row + dr, col + dc,), str(agent_idx), layer=PILGL.SELECTED_AGENT_LAYER)
             else:
                 self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
 
