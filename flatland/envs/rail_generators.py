@@ -566,7 +566,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         else:
             city_positions, city_cells = _generate_random_city_positions(max_num_cities, city_radius, width, height)
 
-        # reduce num_cities, _num_cities, _num_intersections if less were generated in not_grid_mode
+        # reduce num_cities if less were generated in random mode
         num_cities = len(city_positions)
         if DEBUG_PRINT_TIMING:
             print("City position time", time.time() - node_time_start, "Seconds")
@@ -622,10 +622,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         }}
 
     def _generate_random_city_positions(num_cities: int, city_radius: int, width: int, height: int) -> (List[Tuple[int, int]], List[Tuple[int, int]]):
-
-        node_positions = []
-        city_cells = []
-
+        node_positions: List[Tuple[int, int]] = []
+        city_cells: List[Tuple[int, int]] = []
         for node_idx in range(num_cities):
             to_close = True
             tries = 0
@@ -636,7 +634,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                 to_close = False
                 # Check distance to nodes
                 for node_pos in node_positions:
-                    if _city_overlap((x_tmp, y_tmp), node_pos, 2 * (city_radius + 1) + 1):
+                    if _are_cities_overlapping((x_tmp, y_tmp), node_pos, 2 * (city_radius + 1) + 1):
                         to_close = True
 
                 if not to_close:
@@ -909,7 +907,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         # http://stackoverflow.com/questions/3071415/efficient-method-to-calculate-the-rank-vector-of-a-list-in-python
         return sorted(range(len(seq)), key=seq.__getitem__)
 
-    def _get_cells_in_city(center: Tuple[int], radius: int) -> List[Tuple[int, int]]:
+    def _get_cells_in_city(center: Tuple[int, int], radius: int) -> List[Tuple[int, int]]:
         """
         Function to return all cells within a city
         :param center: center coordinates of city
@@ -922,7 +920,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         y_values = np.tile(y_range, len(x_range))
         return list(zip(x_values, y_values))
 
-    def _city_overlap(center_1, center_2, radius):
+    def _are_cities_overlapping(center_1, center_2, radius):
         return np.abs(center_1[0] - center_2[0]) < radius and np.abs(center_1[1] - center_2[1]) < radius
 
     def _track_number(city_position, city_orientation, position):
