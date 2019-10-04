@@ -98,12 +98,10 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
         elif agent.status == RailAgentStatus.ACTIVE:
             position = agent.position
         elif agent.status == RailAgentStatus.DONE:
-            if agent.position is not None:
-                position = agent.target
-            else:
-                shortest_paths[agent.handle] = None
-                return
-        # todo is this correct? current position?
+            position = agent.target
+        else:
+            shortest_paths[agent.handle] = None
+            return
         direction = agent.direction
         shortest_paths[agent.handle] = []
         distance = math.inf

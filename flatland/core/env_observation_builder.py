@@ -52,8 +52,7 @@ class ObservationBuilder:
         if handles is None:
             handles = []
         for h in handles:
-            if self.env.is_active_handle(h):
-                observations[h] = self.get(h)
+            observations[h] = self.get(h)
         return observations
 
     def get(self, handle: int = 0):

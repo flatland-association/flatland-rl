@@ -525,9 +525,6 @@ class RailEnv(Environment):
             # step penalty if not moving (stopped now or before)
             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
 
-    def is_active_handle(self, h):
-        return self.agents[h].status == RailAgentStatus.ACTIVE
-
     def _check_action_on_agent(self, action: RailEnvActions, agent: EnvAgent):
         """
 

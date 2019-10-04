@@ -91,17 +91,3 @@ class Environment:
         function.
         """
         raise NotImplementedError()
-
-    def is_active_handle(self,h):
-        """
-        Is the agent active and thus observable?
-
-        Parameters
-        ----------
-        h: int agent handle
-
-        Returns
-        -------
-
-        """
-        return True

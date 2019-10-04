@@ -67,12 +67,12 @@ class TreeObsForRailEnv(ObservationBuilder):
             self.predicted_dir = {}
             self.predictions = self.predictor.get()
             if self.predictions:
-
+                # TODO hacky hacky: `range(len(self.predictions[0]))` does not seem safe!!
                 for t in range(len(self.predictions[0])):
                     pos_list = []
                     dir_list = []
                     for a in handles:
-                        if self.env.agents[a].status != RailAgentStatus.ACTIVE:
+                        if self.predictions[a] is None:
                             continue
                         pos_list.append(self.predictions[a][t][1:3])
                         dir_list.append(self.predictions[a][t][3])
@@ -164,21 +164,41 @@ class TreeObsForRailEnv(ObservationBuilder):
         """
 
         # Update local lookup table for all agents' positions
-        self.location_has_agent = {tuple(agent.position): 1 for agent in self.env.agents}
+        # ignore other agents not in the grid (only status active and done)
+        self.location_has_agent = {tuple(agent.position): 1 for agent in self.env.agents if
+                                   agent.status in [RailAgentStatus.ACTIVE, RailAgentStatus.DONE]}
         self.location_has_agent_ready_to_depart = {}
         for agent in self.env.agents:
             if agent.status == RailAgentStatus.READY_TO_DEPART:
-                self.location_has_agent_ready_to_depart = \
+                self.location_has_agent_ready_to_depart[tuple(agent.initial_position)] = \
                     self.location_has_agent_ready_to_depart.get(tuple(agent.initial_position), 0) + 1
-        self.location_has_agent_direction = {tuple(agent.position): agent.direction for agent in self.env.agents}
-        self.location_has_agent_speed = {tuple(agent.position): agent.speed_data['speed'] for agent in self.env.agents}
-        self.location_has_agent_malfunction = {tuple(agent.position): agent.malfunction_data['malfunction'] for agent in
-                                               self.env.agents}
+        self.location_has_agent_direction = {
+            tuple(agent.position): agent.direction
+            for agent in self.env.agents if agent.status in [RailAgentStatus.ACTIVE, RailAgentStatus.DONE]
+        }
+        self.location_has_agent_speed = {
+            tuple(agent.position): agent.speed_data['speed']
+            for agent in self.env.agents if agent.status in [RailAgentStatus.ACTIVE, RailAgentStatus.DONE]
+        }
+        self.location_has_agent_malfunction = {
+            tuple(agent.position): agent.malfunction_data['malfunction']
+            for agent in self.env.agents if agent.status in [RailAgentStatus.ACTIVE, RailAgentStatus.DONE]
+        }
 
         if handle > len(self.env.agents):
             print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
         agent = self.env.agents[handle]  # TODO: handle being treated as index
-        possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
+
+        if agent.status == RailAgentStatus.READY_TO_DEPART:
+            _agent_initial_position = agent.initial_position
+        elif agent.status == RailAgentStatus.ACTIVE:
+            _agent_initial_position = agent.position
+        elif agent.status == RailAgentStatus.DONE:
+            _agent_initial_position = agent.target
+        else:
+            return None
+
+        possible_transitions = self.env.rail.get_transitions(*_agent_initial_position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
         # Here information about the agent itself is stored
@@ -187,8 +207,9 @@ class TreeObsForRailEnv(ObservationBuilder):
         root_node_observation = TreeObsForRailEnv.Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
                                                        dist_other_agent_encountered=0, dist_potential_conflict=0,
                                                        dist_unusable_switch=0, dist_to_next_branch=0,
-                                                       dist_min_to_target=distance_map[(handle, *agent.position,
-                                                                                        agent.direction)],
+                                                       dist_min_to_target=distance_map[
+                                                           (handle, *_agent_initial_position,
+                                                            agent.direction)],
                                                        num_agents_same_direction=0, num_agents_opposite_direction=0,
                                                        num_agents_malfunctioning=agent.malfunction_data['malfunction'],
                                                        speed_min_fractional=agent.speed_data['speed'],
@@ -208,7 +229,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         for i, branch_direction in enumerate([(orientation + i) % 4 for i in range(-1, 3)]):
 
             if possible_transitions[branch_direction]:
-                new_cell = get_new_position(agent.position, branch_direction)
+                new_cell = get_new_position(_agent_initial_position, branch_direction)
 
                 branch_observation, branch_visited = \
                     self._explore_branch(handle, new_cell, branch_direction, 1, 1)
@@ -534,15 +555,27 @@ class GlobalObsForRailEnv(ObservationBuilder):
 
     def get(self, handle: int = 0) -> (np.ndarray, np.ndarray, np.ndarray):
 
+        agent = self.env.agents[handle]
+        if agent.status == RailAgentStatus.READY_TO_DEPART:
+            _agent_initial_position = agent.initial_position
+        elif agent.status == RailAgentStatus.ACTIVE:
+            _agent_initial_position = agent.position
+        elif agent.status == RailAgentStatus.DONE:
+            _agent_initial_position = agent.target
+        else:
+            return None
+
         obs_targets = np.zeros((self.env.height, self.env.width, 2))
         obs_agents_state = np.zeros((self.env.height, self.env.width, 5)) - 1
 
-        agent = self.env.agents[handle]
-        obs_agents_state[agent.position][0] = agent.direction
+        obs_agents_state[_agent_initial_position][0] = agent.direction
         obs_targets[agent.target][0] = 1
 
         for i in range(len(self.env.agents)):
             other_agent: EnvAgent = self.env.agents[i]
+            # ignore other_agent if it is not in the grid
+            if other_agent.position is None:
+                continue
             if i != handle:
                 obs_agents_state[other_agent.position][1] = other_agent.direction
                 obs_targets[other_agent.target][1] = 1

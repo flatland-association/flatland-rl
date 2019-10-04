@@ -126,9 +126,17 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
 
         prediction_dict = {}
         for agent in agents:
-            if agent.status != RailAgentStatus.ACTIVE:
+
+            if agent.status == RailAgentStatus.READY_TO_DEPART:
+                _agent_initial_position = agent.initial_position
+            elif agent.status == RailAgentStatus.ACTIVE:
+                _agent_initial_position = agent.position
+            elif agent.status == RailAgentStatus.DONE:
+                    _agent_initial_position = agent.target
+            else:
+                prediction_dict[agent.handle] = None
                 continue
-            _agent_initial_position = agent.position
+
             _agent_initial_direction = agent.direction
             agent_speed = agent.speed_data["speed"]
             times_per_cell = int(np.reciprocal(agent_speed))
