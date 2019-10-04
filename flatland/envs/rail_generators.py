@@ -700,7 +700,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                         tmp_coordinates = (
                             city_position[0] + connection_slots[connection_idx], city_position[1] - city_radius)
                     connection_points_coordinates_inner[direction].append(tmp_coordinates)
-                    if connection_idx in range(start_idx, start_idx + number_of_out_rails):
+                    if connection_idx in range(start_idx, start_idx + number_of_out_rails + 1):
                         connection_points_coordinates_outer[direction].append(tmp_coordinates)
 
             inner_connection_points.append(connection_points_coordinates_inner)
