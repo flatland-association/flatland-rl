@@ -676,7 +676,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             city_orientations.append(current_closest_direction)
             # set the number of tracks within a city, at least 2 tracks per city
             connections_per_direction = np.zeros(4, dtype=int)
-            nr_of_connection_points = np.random.randint(3, rails_in_city + 1)
+            nr_of_connection_points = np.random.randint(2, rails_in_city + 1)
             for idx in connection_sides_idx:
                 connections_per_direction[idx] = nr_of_connection_points
             connection_points_coordinates_inner: List[List[IntVector2D]] = [[] for i in range(4)]
