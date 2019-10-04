@@ -189,15 +189,15 @@ class TreeObsForRailEnv(ObservationBuilder):
         agent = self.env.agents[handle]  # TODO: handle being treated as index
 
         if agent.status == RailAgentStatus.READY_TO_DEPART:
-            _agent_initial_position = agent.initial_position
+            agent_virtual_position = agent.initial_position
         elif agent.status == RailAgentStatus.ACTIVE:
-            _agent_initial_position = agent.position
+            agent_virtual_position = agent.position
         elif agent.status == RailAgentStatus.DONE:
-            _agent_initial_position = agent.target
+            agent_virtual_position = agent.target
         else:
             return None
 
-        possible_transitions = self.env.rail.get_transitions(*_agent_initial_position, agent.direction)
+        possible_transitions = self.env.rail.get_transitions(*agent_virtual_position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
         # Here information about the agent itself is stored
@@ -207,7 +207,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                        dist_other_agent_encountered=0, dist_potential_conflict=0,
                                                        dist_unusable_switch=0, dist_to_next_branch=0,
                                                        dist_min_to_target=distance_map[
-                                                           (handle, *_agent_initial_position,
+                                                           (handle, *agent_virtual_position,
                                                             agent.direction)],
                                                        num_agents_same_direction=0, num_agents_opposite_direction=0,
                                                        num_agents_malfunctioning=agent.malfunction_data['malfunction'],
@@ -228,7 +228,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         for i, branch_direction in enumerate([(orientation + i) % 4 for i in range(-1, 3)]):
 
             if possible_transitions[branch_direction]:
-                new_cell = get_new_position(_agent_initial_position, branch_direction)
+                new_cell = get_new_position(agent_virtual_position, branch_direction)
 
                 branch_observation, branch_visited = \
                     self._explore_branch(handle, new_cell, branch_direction, 1, 1)
@@ -562,11 +562,11 @@ class GlobalObsForRailEnv(ObservationBuilder):
 
         agent = self.env.agents[handle]
         if agent.status == RailAgentStatus.READY_TO_DEPART:
-            _agent_initial_position = agent.initial_position
+            agent_virtual_position = agent.initial_position
         elif agent.status == RailAgentStatus.ACTIVE:
-            _agent_initial_position = agent.position
+            agent_virtual_position = agent.position
         elif agent.status == RailAgentStatus.DONE:
-            _agent_initial_position = agent.target
+            agent_virtual_position = agent.target
         else:
             return None
 
@@ -578,7 +578,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
             for c in range(self.env.width):
                 obs_agents_state[(r, c)][4] = 0
 
-        obs_agents_state[_agent_initial_position][0] = agent.direction
+        obs_agents_state[agent_virtual_position][0] = agent.direction
         obs_targets[agent.target][0] = 1
 
         for i in range(len(self.env.agents)):
