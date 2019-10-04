@@ -67,8 +67,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             self.predicted_dir = {}
             self.predictions = self.predictor.get()
             if self.predictions:
-                # TODO hacky hacky: `range(len(self.predictions[0]))` does not seem safe!!
-                for t in range(len(self.predictions[0])):
+                for t in range(self.predictor.max_depth+1):
                     pos_list = []
                     dir_list = []
                     for a in handles:

@@ -108,10 +108,6 @@ class RailEnv(Environment):
     stop_penalty = 0  # penalty for stopping a moving agent
     start_penalty = 0  # penalty for starting a stopped agent
 
-    # Where the agent is placed when he reached his destination(target)
-    # remove_agents_at_target must be set to true in the RailEnv(...)
-    DEPOT_POSITION = lambda agent, agent_handle: (-10, -10)
-
     def __init__(self,
                  width,
                  height,
@@ -386,7 +382,7 @@ class RailEnv(Environment):
             self._step_agent(i_agent, action_dict_.get(i_agent))
 
         # Check for end of episode + set global reward to all rewards!
-        if np.all([np.array_equal(agent.position, agent.target) for agent in self.agents]):
+        if np.all([agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED] for agent in self.agents]):
             self.dones["__all__"] = True
             self.rewards_dict = {i: self.global_reward for i in range(self.get_num_agents())}
         if (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps):
@@ -398,7 +394,7 @@ class RailEnv(Environment):
         info_dict = {
             'action_required': {
                 i: (agent.status == RailAgentStatus.READY_TO_DEPART or (
-                        agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0))
+                    agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0))
                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
@@ -423,7 +419,7 @@ class RailEnv(Environment):
 
         """
         agent = self.agents[i_agent]
-        if agent.status == RailAgentStatus.DONE:  # this agent has already completed...
+        if agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED]:  # this agent has already completed...
             return
 
         # agent gets active by a MOVE_* action and if c
@@ -532,8 +528,8 @@ class RailEnv(Environment):
                 agent.moving = False
 
                 if self.remove_agents_at_target:
-                    agent.position = RailEnv.DEPOT_POSITION(agent, i_agent)
-                    agent.target = RailEnv.DEPOT_POSITION(agent, i_agent)
+                    agent.position = None
+                    agent.status = RailAgentStatus.DONE_REMOVED
             else:
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
         else:
