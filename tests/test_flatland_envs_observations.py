@@ -29,6 +29,9 @@ def test_global_obs():
 
     global_obs = env.reset()
 
+    # we have to take step for the agent to enter the grid.
+    global_obs, _, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD})
+
     assert (global_obs[0][0].shape == rail_map.shape + (16,))
 
     rail_map_recons = np.zeros_like(rail_map)

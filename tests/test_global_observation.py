@@ -1,7 +1,7 @@
 import numpy as np
 
 from flatland.envs.observations import GlobalObsForRailEnv
-from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.schedule_generators import sparse_schedule_generator
 
@@ -40,7 +40,7 @@ def test_get_global_observation():
                   number_of_agents=number_of_agents, stochastic_data=stochastic_data,  # Malfunction data generator
                   obs_builder_object=GlobalObsForRailEnv())
 
-    obs, all_rewards, done, _ = env.step({0: 0})
+    obs, all_rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in range(number_of_agents)})
 
     for i in range(len(env.agents)):
         obs_agents_state = obs[i][1]

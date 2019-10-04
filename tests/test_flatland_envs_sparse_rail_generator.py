@@ -3,6 +3,7 @@ import random
 import numpy as np
 
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
+from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
@@ -1548,6 +1549,11 @@ def test_rail_env_action_required_info():
                                           number_of_agents=10,
                                           obs_builder_object=GlobalObsForRailEnv())
     env_renderer = RenderTool(env_always_action, gl="PILSVG", )
+
+    for agent in env_always_action.agents:
+        agent.status=RailAgentStatus.ACTIVE
+    for agent in env_only_if_action_required.agents:
+        agent.status=RailAgentStatus.ACTIVE
 
     for step in range(100):
         print("step {}".format(step))

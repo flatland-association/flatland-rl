@@ -75,12 +75,15 @@ def test_malfunction_process():
 
     # Check that a initial duration for malfunction was assigned
     assert env.agents[0].malfunction_data['next_malfunction'] > 0
+    for agent in env.agents:
+        agent.status = RailAgentStatus.ACTIVE
 
     agent_halts = 0
     total_down_time = 0
     agent_old_position = env.agents[0].position
     for step in range(100):
         actions = {}
+
         for i in range(len(obs)):
             actions[i] = np.argmax(obs[i]) + 1
 
@@ -105,7 +108,8 @@ def test_malfunction_process():
         total_down_time += env.agents[0].malfunction_data['malfunction']
 
     # Check that the appropriate number of malfunctions is achieved
-    assert env.agents[0].malfunction_data['nr_malfunctions'] == 21
+    assert env.agents[0].malfunction_data['nr_malfunctions'] == 21, "Actual {}".format(
+        env.agents[0].malfunction_data['nr_malfunctions'])
 
     # Check that 20 stops where performed
     assert agent_halts == 20

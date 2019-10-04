@@ -24,7 +24,7 @@ class ObservationBuilder:
         self.env = None
 
     def set_env(self, env: Environment):
-        self.env = env
+        self.env: Environment = env
 
     def reset(self):
         """
@@ -52,7 +52,8 @@ class ObservationBuilder:
         if handles is None:
             handles = []
         for h in handles:
-            observations[h] = self.get(h)
+            if self.env.is_active_handle(h):
+                observations[h] = self.get(h)
         return observations
 
     def get(self, handle: int = 0):
