@@ -9,8 +9,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_astar import a_star
-from flatland.core.grid.grid4_utils import get_direction, mirror, get_new_position, directions_of_vector, \
-    direction_to_point
+from flatland.core.grid.grid4_utils import get_direction, mirror, direction_to_point
 from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance, IntVector2DArray
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transition_map import GridTransitionMap, RailEnvTransitions
@@ -38,7 +37,6 @@ def connect_rail_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D, en
 
     path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, respect_transition_validity,
                                     forbidden_cells)
-    # path:  IntVector2DArray = quick_path(grid_map, start, end, forbidden_cells=forbidden_cells)
     if len(path) < 2:
         print("No path found", path)
         return []
@@ -126,62 +124,5 @@ def connect_straight_line_in_grid_map(grid_map: GridTransitionMap, start: IntVec
         transition = rail_trans.set_transition(transition, direction, direction, 1)
         transition = rail_trans.set_transition(transition, mirror(direction), mirror(direction), 1)
         grid_map.grid[cell] = transition
-
-    return path
-
-
-def quick_path(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
-               forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
-    """
-    Quick path connecting algorithm with simple heuristic to always follow largest value of vector towards target.
-    When obstacle is encountered second direction of vector is chosen.
-    """
-    (height, width) = np.shape(grid_map.grid)
-
-    def _next_legal_step(position, old_direction, target):
-        if old_direction is not None:
-            mirror_direction = Grid4TransitionsEnum(mirror(old_direction))
-        else:
-            mirror_direction = 4
-
-        closest_direction, second_closest_direction = directions_of_vector(current_cell, target)
-
-        if closest_direction == mirror_direction:
-            closest_direction = second_closest_direction
-
-        next_position = get_new_position(position, closest_direction)
-        direction_tries = 1
-
-        # Necessary to overcome city boarder
-        if next_position == target:
-            return next_position, closest_direction
-
-        while (not np.array_equal(next_position, np.clip(next_position, [0, 0], [height - 1, width - 1])) or
-               (forbidden_cells is not None and next_position in forbidden_cells)):
-
-            if direction_tries > 1:
-                closest_direction = (closest_direction + 1) % 4
-                if closest_direction == mirror_direction:
-                    closest_direction = (closest_direction + 1) % 4
-                if direction_tries > 3:
-                    return None, None
-            else:
-                closest_direction = second_closest_direction
-                if closest_direction == mirror_direction:
-                    closest_direction = (closest_direction + 1) % 4
-
-            next_position = get_new_position(position, closest_direction)
-            direction_tries += 1
-        return next_position, closest_direction
-
-    current_cell = start
-    path = [current_cell]
-    current_direction = None
-
-    while current_cell != end:
-        current_cell, current_direction = _next_legal_step(current_cell, current_direction, end)
-
-        if current_cell is not None:
-            path.append(current_cell)
 
     return path
