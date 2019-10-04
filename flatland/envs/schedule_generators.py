@@ -235,7 +235,7 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
             agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3]) for d in data["agents_static"]]
 
         # setup with loaded data
-        agents_position = [a.position for a in agents_static]
+        agents_position = [a.initial_position for a in agents_static]
         agents_direction = [a.direction for a in agents_static]
         agents_target = [a.target for a in agents_static]
         if len(data['agents_static'][0]) > 5:

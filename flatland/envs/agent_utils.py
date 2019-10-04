@@ -1,6 +1,6 @@
 from enum import IntEnum
 from itertools import starmap
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 from attr import attrs, attrib, Factory
@@ -9,9 +9,10 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 
 
 class RailAgentStatus(IntEnum):
-    READY_TO_DEPART = 0
-    ACTIVE = 1
-    DONE = 2
+    READY_TO_DEPART = 0  # -> observation
+    ACTIVE = 1  # -> observation
+    DONE = 2  # -> observation
+    DONE_REMOVED = 3  # -> no observation
 
 
 @attrs
@@ -21,11 +22,10 @@ class EnvAgentStatic(object):
         rather than where it is at the moment.
         The target should also be stored here.
     """
-    position = attrib(type=Tuple[int, int])
+    initial_position = attrib(type=Tuple[int, int])
     direction = attrib(type=Grid4TransitionsEnum)
     target = attrib(type=Tuple[int, int])
     moving = attrib(default=False, type=bool)
-    # position = attrib(default=None,type=Optional[Tuple[int, int]])
 
     # speed_data: speed is added to position_fraction on each moving step, until position_fraction>=1.0,
     # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
@@ -42,6 +42,7 @@ class EnvAgentStatic(object):
                           'moving_before_malfunction': False})))
 
     status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
+    position = attrib(default=None, type=Optional[Tuple[int, int]])
 
     @classmethod
     def from_lists(cls, positions, directions, targets, speeds=None, malfunction_rates=None):
@@ -75,7 +76,7 @@ class EnvAgentStatic(object):
 
         # I can't find an expression which works on both tuples, lists and ndarrays
         # which converts them all to a list of native python ints.
-        lPos = self.position
+        lPos = self.initial_position
         if type(lPos) is np.ndarray:
             lPos = lPos.tolist()
 

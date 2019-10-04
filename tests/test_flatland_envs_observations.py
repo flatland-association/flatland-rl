@@ -5,7 +5,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
@@ -112,12 +112,14 @@ def test_reward_function_conflict(rendering=False):
     agent.direction = 0  # north
     agent.target = (3, 9)  # east dead-end
     agent.moving = True
+    agent.status = RailAgentStatus.ACTIVE
 
     agent = env.agents_static[1]
     agent.position = (3, 8)  # east dead-end
     agent.direction = 3  # west
     agent.target = (6, 6)  # south dead-end
     agent.moving = True
+    agent.status = RailAgentStatus.ACTIVE
 
     # reset to set agents from agents_static
     env.reset(False, False)
@@ -187,16 +189,20 @@ def test_reward_function_waiting(rendering=False):
 
     # set the initial position
     agent = env.agents_static[0]
+    agent.initial_position = (3, 8)  # east dead-end
     agent.position = (3, 8)  # east dead-end
     agent.direction = 3  # west
     agent.target = (3, 1)  # west dead-end
     agent.moving = True
+    agent.status = RailAgentStatus.ACTIVE
 
     agent = env.agents_static[1]
+    agent.initial_position = (5, 6)  # south dead-end
     agent.position = (5, 6)  # south dead-end
     agent.direction = 0  # north
     agent.target = (3, 8)  # east dead-end
     agent.moving = True
+    agent.status = RailAgentStatus.ACTIVE
 
     # reset to set agents from agents_static
     env.reset(False, False)

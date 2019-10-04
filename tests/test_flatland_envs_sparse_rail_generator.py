@@ -3,7 +3,6 @@ import random
 import numpy as np
 
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
-from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
@@ -26,6 +25,7 @@ def test_sparse_rail_generator():
                   schedule_generator=sparse_schedule_generator(),
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
+    env.reset(False, False, True)
     expected_grid_map = np.zeros((50, 50), dtype=env.rail.transitions.get_type())
     expected_grid_map[1][33] = 8192
     expected_grid_map[2][33] = 32800
@@ -1550,10 +1550,8 @@ def test_rail_env_action_required_info():
                                           obs_builder_object=GlobalObsForRailEnv())
     env_renderer = RenderTool(env_always_action, gl="PILSVG", )
 
-    for agent in env_always_action.agents:
-        agent.status=RailAgentStatus.ACTIVE
-    for agent in env_only_if_action_required.agents:
-        agent.status=RailAgentStatus.ACTIVE
+    env_always_action.reset(False, False, True)
+    env_only_if_action_required.reset(False, False, True)
 
     for step in range(100):
         print("step {}".format(step))
@@ -1616,6 +1614,7 @@ def test_rail_env_malfunction_speed_info():
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv(),
                   stochastic_data=stochastic_data)
+    env.reset(False, False, True)
 
     env_renderer = RenderTool(env, gl="PILSVG", )
     for step in range(100):

@@ -71,7 +71,7 @@ def test_malfunction_process():
                   obs_builder_object=SingleAgentNavigationObs(),
                   stochastic_data=stochastic_data)
 
-    obs = env.reset()
+    obs = env.reset(False, False, True)
 
     # Check that a initial duration for malfunction was assigned
     assert env.agents[0].malfunction_data['next_malfunction'] > 0
@@ -125,8 +125,6 @@ def test_malfunction_process_statistically():
                        'malfunction_rate': 2,
                        'min_duration': 3,
                        'max_duration': 3}
-    np.random.seed(5)
-    random.seed(0)
 
     env = RailEnv(width=20,
                   height=20,
@@ -136,8 +134,9 @@ def test_malfunction_process_statistically():
                   number_of_agents=2,
                   obs_builder_object=SingleAgentNavigationObs(),
                   stochastic_data=stochastic_data)
-
-    env.reset()
+    np.random.seed(5)
+    random.seed(0)
+    env.reset(False, False, True)
     nb_malfunction = 0
     for step in range(100):
         action_dict: Dict[int, RailEnvActions] = {}
@@ -154,9 +153,6 @@ def test_malfunction_process_statistically():
 
 
 def test_initial_malfunction():
-    random.seed(0)
-    np.random.seed(0)
-
     stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
                        'malfunction_rate': 70,  # Rate of malfunction occurence
                        'min_duration': 2,  # Minimal duration of malfunction
@@ -167,7 +163,8 @@ def test_initial_malfunction():
                         1. / 2.: 0.,  # Fast freight train
                         1. / 3.: 0.,  # Slow commuter train
                         1. / 4.: 0.}  # Slow freight train
-
+    np.random.seed(5)
+    random.seed(0)
     env = RailEnv(width=25,
                   height=30,
                   rail_generator=sparse_rail_generator(num_cities=5,
@@ -231,15 +228,15 @@ def test_initial_malfunction():
             )
         ],
         speed=env.agents[0].speed_data['speed'],
-        target=env.agents[0].target
+        target=env.agents[0].target,
+        initial_position=(28, 5),
+        initial_direction=Grid4TransitionsEnum.EAST,
     )
+
     run_replay_config(env, [replay_config])
 
 
 def test_initial_malfunction_stop_moving():
-    random.seed(0)
-    np.random.seed(0)
-
     stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
                        'malfunction_rate': 70,  # Rate of malfunction occurence
                        'min_duration': 2,  # Minimal duration of malfunction
@@ -274,7 +271,7 @@ def test_initial_malfunction_stop_moving():
     replay_config = ReplayConfig(
         replay=[
             Replay(
-                position=(28, 5),
+                position=None,
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 set_malfunction=3,
@@ -329,10 +326,11 @@ def test_initial_malfunction_stop_moving():
             )
         ],
         speed=env.agents[0].speed_data['speed'],
-        target=env.agents[0].target
+        target=env.agents[0].target,
+        initial_position=(28, 5),
+        initial_direction=Grid4TransitionsEnum.EAST,
     )
-
-    run_replay_config(env, [replay_config])
+    run_replay_config(env, [replay_config], activate_agents=False)
 
 
 def test_initial_malfunction_do_nothing():
@@ -371,15 +369,16 @@ def test_initial_malfunction_do_nothing():
                   )
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
-        replay=[Replay(
-            position=(28, 5),
-            direction=Grid4TransitionsEnum.EAST,
-            action=RailEnvActions.MOVE_FORWARD,
-            set_malfunction=3,
-            malfunction=3,
-            reward=env.step_penalty,  # full step penalty while malfunctioning
-            status=RailAgentStatus.READY_TO_DEPART
-        ),
+        replay=[
+            Replay(
+                position=None,
+                direction=Grid4TransitionsEnum.EAST,
+                action=RailEnvActions.MOVE_FORWARD,
+                set_malfunction=3,
+                malfunction=3,
+                reward=env.step_penalty,  # full step penalty while malfunctioning
+                status=RailAgentStatus.READY_TO_DEPART
+            ),
             Replay(
                 position=(28, 5),
                 direction=Grid4TransitionsEnum.EAST,
@@ -427,10 +426,12 @@ def test_initial_malfunction_do_nothing():
             )
         ],
         speed=env.agents[0].speed_data['speed'],
-        target=env.agents[0].target
+        target=env.agents[0].target,
+        initial_position=(28, 5),
+        initial_direction=Grid4TransitionsEnum.EAST,
     )
 
-    run_replay_config(env, [replay_config])
+    run_replay_config(env, [replay_config], activate_agents=False)
 
 
 def test_initial_nextmalfunction_not_below_zero():

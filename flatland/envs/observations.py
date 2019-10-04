@@ -72,14 +72,16 @@ class TreeObsForRailEnv(ObservationBuilder):
                     pos_list = []
                     dir_list = []
                     for a in handles:
+                        if self.env.agents[a].status != RailAgentStatus.ACTIVE:
+                            continue
                         pos_list.append(self.predictions[a][t][1:3])
                         dir_list.append(self.predictions[a][t][3])
                     self.predicted_pos.update({t: coordinate_to_position(self.env.width, pos_list)})
                     self.predicted_dir.update({t: dir_list})
                 self.max_prediction_depth = len(self.predicted_pos)
-        observations = {}
-        for h in handles:
-            observations[h] = self.get(h)
+
+        observations = super().get_many(handles)
+
         return observations
 
     def get(self, handle: int = 0) -> Node:
@@ -628,12 +630,7 @@ class LocalObsForRailEnv(ObservationBuilder):
         in the `handles` list.
         """
 
-        observations = {}
-        if handles is None:
-            handles = []
-        for h in handles:
-            observations[h] = self.get(h)
-        return observations
+        return super().get_many(handles)
 
     def field_of_view(self, position, direction, state=None):
         # Compute the local field of view for an agent in the environment

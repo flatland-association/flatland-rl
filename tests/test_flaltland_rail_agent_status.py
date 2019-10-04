@@ -28,46 +28,48 @@ def test_initial_status():
     test_config = ReplayConfig(
         replay=[
             Replay(
-                position=(3, 9),  # east dead-end
+                position=None,  # not entered grid yet
                 direction=Grid4TransitionsEnum.EAST,
+                status=RailAgentStatus.READY_TO_DEPART,
                 action=RailEnvActions.DO_NOTHING,
                 reward=0,
-                status=RailAgentStatus.READY_TO_DEPART
+
             ),
             Replay(
-                position=(3, 9),  # east dead-end
+                position=None,  # not entered grid yet before step
                 direction=Grid4TransitionsEnum.EAST,
+                status=RailAgentStatus.READY_TO_DEPART,
                 action=RailEnvActions.MOVE_LEFT,
                 reward=env.start_penalty + env.step_penalty * 0.5,  # auto-correction left to forward without penalty!
-                status=RailAgentStatus.READY_TO_DEPART
             ),
             Replay(
                 position=(3, 9),
                 direction=Grid4TransitionsEnum.EAST,
+                status=RailAgentStatus.ACTIVE,
                 action=None,
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
-                status=RailAgentStatus.ACTIVE
             ),
             Replay(
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
+                status=RailAgentStatus.ACTIVE,
                 action=RailEnvActions.MOVE_FORWARD,
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
-                status=RailAgentStatus.ACTIVE
             ),
             Replay(
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
+                status=RailAgentStatus.ACTIVE,
                 action=None,
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
-                status=RailAgentStatus.ACTIVE
             ),
             Replay(
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
+                status=RailAgentStatus.ACTIVE,
                 action=RailEnvActions.MOVE_FORWARD,
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
-                status=RailAgentStatus.ACTIVE
+
             ),
             Replay(
                 position=(3, 7),
@@ -93,7 +95,7 @@ def test_initial_status():
             Replay(
                 position=(3, 5),
                 direction=Grid4TransitionsEnum.WEST,
-                action=RailEnvActions.MOVE_FORWARD,
+                action=None,
                 reward=env.global_reward,  # already done
                 status=RailAgentStatus.DONE
             ),
@@ -113,8 +115,10 @@ def test_initial_status():
             )
 
         ],
+        initial_position=(3, 9),  # east dead-end
+        initial_direction=Grid4TransitionsEnum.EAST,
         target=(3, 5),
         speed=0.5
     )
 
-    run_replay_config(env, [test_config])
+    run_replay_config(env, [test_config], activate_agents=False)
