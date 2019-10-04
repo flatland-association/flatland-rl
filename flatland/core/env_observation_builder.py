@@ -24,7 +24,7 @@ class ObservationBuilder:
         self.env = None
 
     def set_env(self, env: Environment):
-        self.env = env
+        self.env: Environment = env
 
     def reset(self):
         """

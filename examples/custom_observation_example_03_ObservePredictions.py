@@ -54,11 +54,9 @@ class ObservePredictions(ObservationBuilder):
                 pos_list.append(self.predictions[a][t][1:3])
             # We transform (x,y) coodrinates to a single integer number for simpler comparison
             self.predicted_pos.update({t: coordinate_to_position(self.env.width, pos_list)})
-        observations = {}
 
-        # Collect all the different observation for all the agents
-        for h in handles:
-            observations[h] = self.get(h)
+        observations = super().get_many(handles)
+
         return observations
 
     def get(self, handle: int = 0) -> np.ndarray:

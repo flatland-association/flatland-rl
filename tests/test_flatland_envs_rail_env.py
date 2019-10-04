@@ -85,7 +85,7 @@ def test_rail_environment_single_agent():
                        obs_builder_object=GlobalObsForRailEnv())
 
     for _ in range(200):
-        _ = rail_env.reset()
+        _ = rail_env.reset(False, False, True)
 
         # We do not care about target for the moment
         agent = rail_env.agents[0]
@@ -130,9 +130,6 @@ def test_rail_environment_single_agent():
                 done = dones['__all__']
 
 
-test_rail_environment_single_agent()
-
-
 def test_dead_end():
     transitions = RailEnvTransitions()
 
@@ -164,32 +161,12 @@ def test_dead_end():
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
-    def check_consistency(rail_env):
-        # We run step to check that trains do not move anymore
-        # after being done.
-        # TODO: GIACOMO: this is deprecated and should be updated; thenew behavior is that agents keep moving
-        # until they are manually stopped.
-        for i in range(7):
-            prev_pos = rail_env.agents[0].position
-
-            # The train cannot turn, so we check that when it tries,
-            # it stays where it is.
-            _ = rail_env.step({0: 1})
-            _ = rail_env.step({0: 3})
-            assert (rail_env.agents[0].position == prev_pos)
-            _, _, dones, _ = rail_env.step({0: 2})
-
-            if i < 5:
-                assert (not dones[0] and not dones['__all__'])
-            else:
-                assert (dones[0] and dones['__all__'])
-
     # We try the configuration in the 4 directions:
     rail_env.reset()
-    rail_env.agents = [EnvAgent(position=(0, 2), direction=1, target=(0, 0), moving=False)]
+    rail_env.agents = [EnvAgent(initial_position=(0, 2), direction=1, target=(0, 0), moving=False)]
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(position=(0, 2), direction=3, target=(0, 4), moving=False)]
+    rail_env.agents = [EnvAgent(initial_position=(0, 2), direction=3, target=(0, 4), moving=False)]
 
     # In the vertical configuration:
     rail_map = np.array(
@@ -210,10 +187,12 @@ def test_dead_end():
                        obs_builder_object=GlobalObsForRailEnv())
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(position=(2, 0), direction=2, target=(0, 0), moving=False)]
+    rail_env.agents = [EnvAgent(initial_position=(2, 0), direction=2, target=(0, 0), moving=False)]
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(position=(2, 0), direction=0, target=(4, 0), moving=False)]
+    rail_env.agents = [EnvAgent(initial_position=(2, 0), direction=0, target=(4, 0), moving=False)]
+
+    # TODO make assertions
 
 
 def test_get_entry_directions():
