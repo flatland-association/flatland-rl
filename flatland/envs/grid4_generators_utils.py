@@ -16,10 +16,11 @@ from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transition_map import GridTransitionMap, RailEnvTransitions
 
 
-def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
-                 a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
-                 flip_start_node_trans: bool = False, flip_end_node_trans: bool = False,
-                 respect_transition_validity: bool = True, forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
+def connect_rail_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
+                             rail_trans: RailEnvTransitions,
+                             a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
+                             flip_start_node_trans: bool = False, flip_end_node_trans: bool = False,
+                             respect_transition_validity: bool = True, forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
     """
         Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
     returns the path created as a list of positions.
@@ -35,13 +36,13 @@ def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, st
     :return: List of cells in the path
     """
 
-    # in the worst case we will need to do a A* search, so we might as well set that up
     path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, respect_transition_validity,
                                     forbidden_cells)
     # path:  IntVector2DArray = quick_path(grid_map, start, end, forbidden_cells=forbidden_cells)
     if len(path) < 2:
         print("No path found", path)
         return []
+
     current_dir = get_direction(path[0], path[1])
     end_pos = path[-1]
     for index in range(len(path) - 1):
@@ -68,7 +69,6 @@ def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, st
             new_trans = rail_trans.set_transition(new_trans, mirror(new_dir), mirror(current_dir), 1)
         grid_map.grid[current_pos] = new_trans
 
-
         if new_pos == end_pos:
             # setup end pos setup
             new_trans_e = grid_map.grid[end_pos]
@@ -87,8 +87,8 @@ def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, st
     return path
 
 
-def connect_straight_line(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap, start: IntVector2D,
-                          end: IntVector2D) -> IntVector2DArray:
+def connect_straight_line_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D,
+                                      end: IntVector2D, rail_trans: RailEnvTransitions) -> IntVector2DArray:
     """
     Generates a straight rail line from start cell to end cell.
     Diagonal lines are not allowed
@@ -133,10 +133,9 @@ def connect_straight_line(rail_trans: RailEnvTransitions, grid_map: GridTransiti
 def quick_path(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
                forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
     """
-    Quick path connecting algorithm with simple heuristic to allways follow largest value of vector towards target.
-    When obstacle is encountereed second direction of vector is chosen.
+    Quick path connecting algorithm with simple heuristic to always follow largest value of vector towards target.
+    When obstacle is encountered second direction of vector is chosen.
     """
-    # Helper function to make legal steps
     (height, width) = np.shape(grid_map.grid)
 
     def _next_legal_step(position, old_direction, target):
@@ -180,7 +179,6 @@ def quick_path(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D
     current_direction = None
 
     while current_cell != end:
-        # Make legal step towards the target
         current_cell, current_direction = _next_legal_step(current_cell, current_direction, end)
 
         if current_cell is not None:

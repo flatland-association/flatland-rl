@@ -61,12 +61,6 @@ def direction_to_point(pos1: IntVector2D, pos2: IntVector2D) -> Grid4Transitions
 
 
 def directions_of_vector(pos1: IntVector2D, pos2: IntVector2D) -> (Grid4TransitionsEnum, Grid4TransitionsEnum):
-    """
-    Returns the closest direction orientation of position 2 relative to position 1
-    :param pos1: position we are interested in
-    :param pos2: position we want to know it is facing
-    :return: direction NESW as int N:0 E:1 S:2 W:3
-    """
     diff_vec = np.array((pos1[0] - pos2[0], pos1[1] - pos2[1]))
     axis = np.argmax(np.power(diff_vec, 2))
     direction = np.sign(diff_vec)

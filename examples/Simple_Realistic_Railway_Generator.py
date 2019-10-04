@@ -8,7 +8,7 @@ import numpy as np
 from flatland.core.grid.grid4_utils import mirror
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.grid4_generators_utils import connect_from_nodes, connect_nodes, connect_rail
+from flatland.envs.grid4_generators_utils import connect_from_nodes, connect_nodes, connect_rail_in_grid_map
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import RailGenerator, RailGeneratorProduct
@@ -360,7 +360,7 @@ def realistic_rail_generator(max_num_cities=5,
                     end_node = end_nodes[np.random.choice(len(end_nodes))]
                     rail_array[start_node] = 0
                     rail_array[end_node] = 0
-                    connection = connect_rail(rail_trans, rail_array, start_node, end_node)
+                    connection = connect_rail_in_grid_map(rail_array, start_node, end_node, rail_trans)
                     if len(connection) > 0:
                         nodes_added.append(start_node)
                         nodes_added.append(end_node)
@@ -396,7 +396,7 @@ def realistic_rail_generator(max_num_cities=5,
                         tmp_trans_en = rail_array[end_node]
                         rail_array[start_node] = 0
                         rail_array[end_node] = 0
-                        connection = connect_rail(rail_trans, rail_array, start_node, end_node)
+                        connection = connect_rail_in_grid_map(rail_array, start_node, end_node, rail_trans)
                         if len(connection) > 0:
                             s_nodes[city_loop].remove(start_node)
                             e_nodes[cl].remove(end_node)

@@ -12,7 +12,7 @@ from flatland.core.grid.grid_utils import distance_on_rail, IntVector2DArray, In
     Vec2dOperations
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.grid4_generators_utils import connect_rail, connect_straight_line
+from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -126,9 +126,9 @@ def complex_rail_generator(nr_start_goal=1,
                 # we might as well give up at this point
                 break
 
-            new_path = connect_rail(rail_trans, grid_map, start, goal, Vec2d.get_chebyshev_distance,
-                                    flip_start_node_trans=True, flip_end_node_trans=True,
-                                    respect_transition_validity=True, forbidden_cells=None)
+            new_path = connect_rail_in_grid_map(grid_map, start, goal, rail_trans, Vec2d.get_chebyshev_distance,
+                                                flip_start_node_trans=True, flip_end_node_trans=True,
+                                                respect_transition_validity=True, forbidden_cells=None)
             if len(new_path) >= 2:
                 nr_created += 1
                 start_goal.append([start, goal])
@@ -153,9 +153,9 @@ def complex_rail_generator(nr_start_goal=1,
                     break
             if not all_ok:
                 break
-            new_path = connect_rail(rail_trans, grid_map, start, goal, Vec2d.get_chebyshev_distance,
-                                    flip_start_node_trans=True, flip_end_node_trans=True,
-                                    respect_transition_validity=True, forbidden_cells=None)
+            new_path = connect_rail_in_grid_map(grid_map, start, goal, rail_trans, Vec2d.get_chebyshev_distance,
+                                                flip_start_node_trans=True, flip_end_node_trans=True,
+                                                respect_transition_validity=True, forbidden_cells=None)
 
             if len(new_path) >= 2:
                 nr_created += 1
@@ -720,33 +720,49 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         """
         all_paths: List[IntVector2DArray] = []
 
+        grid4_directions = [Grid4TransitionsEnum.NORTH, Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.SOUTH,
+                            Grid4TransitionsEnum.WEST]
+
         for current_city_idx in np.arange(len(city_positions)):
-            neighbours = _closest_neighbour_in_direction(current_city_idx, city_positions)
-            for out_direction in range(4):
-                for tmp_out_connection_point in connection_points[current_city_idx][out_direction]:
-                    # This only needs to be checked when entering this loop
-                    neighb_idx = neighbours[out_direction]
-                    if neighb_idx is None:
-                        tmp_direction = (out_direction - 1) % 4
-                    while neighb_idx is None:
-                        neighb_idx = neighbours[tmp_direction]
-                        tmp_direction = (tmp_direction + 1) % 4
+            closest_neighbours = _closest_neighbour_in_grid4_directions(current_city_idx, city_positions)
+            for out_direction in grid4_directions:
+
+                neighbour_idx = get_closest_neighbour_for_direction(closest_neighbours, out_direction)
+
+                for city_out_connection_point in connection_points[current_city_idx][out_direction]:
+
                     min_connection_dist = np.inf
-                    for dir in range(4):
-                        current_points = connection_points[neighb_idx][dir]
+                    for direction in grid4_directions:
+                        current_points = connection_points[neighbour_idx][direction]
                         for tmp_in_connection_point in current_points:
-                            tmp_dist = Vec2dOperations.get_manhattan_distance(tmp_out_connection_point,
+                            tmp_dist = Vec2dOperations.get_manhattan_distance(city_out_connection_point,
                                                                               tmp_in_connection_point)
                             if tmp_dist < min_connection_dist:
                                 min_connection_dist = tmp_dist
-                                neighb_connection_point = tmp_in_connection_point
-                                neighbour_direction = dir
-                    new_line = connect_rail(rail_trans, grid_map, tmp_out_connection_point, neighb_connection_point,
-                                            flip_start_node_trans=False, flip_end_node_trans=False,
-                                            respect_transition_validity=False, forbidden_cells=city_cells)
+                                neighbour_connection_point = tmp_in_connection_point
+
+                    new_line = connect_rail_in_grid_map(grid_map, city_out_connection_point, neighbour_connection_point,
+                                                        rail_trans, flip_start_node_trans=False,
+                                                        flip_end_node_trans=False, respect_transition_validity=False,
+                                                        forbidden_cells=city_cells)
                     all_paths.extend(new_line)
 
         return all_paths
+
+    def get_closest_neighbour_for_direction(closest_neighbours, out_direction):
+        neighbour_idx = closest_neighbours[out_direction]
+        if neighbour_idx is not None:
+            return neighbour_idx
+
+        neighbour_idx = closest_neighbours[(out_direction - 1) % 4] # counter-clockwise
+        if neighbour_idx is not None:
+            return neighbour_idx
+
+        neighbour_idx = closest_neighbours[(out_direction + 1) % 4]  # clockwise
+        if neighbour_idx is not None:
+            return neighbour_idx
+
+        return closest_neighbours[(out_direction + 2) % 4]  # clockwise
 
     def _build_inner_cities(city_positions: IntVector2DArray, inner_connection_points: List[List[List[IntVector2D]]],
                             outer_connection_points: List[List[List[IntVector2D]]], rail_trans: RailEnvTransitions,
@@ -777,14 +793,14 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             boarder_two = inner_connection_points[current_city][opposite_boarder]
 
             # Connect the ends of the tracks
-            connect_straight_line(rail_trans, grid_map, boarder_one[0], boarder_one[-1])
-            connect_straight_line(rail_trans, grid_map, boarder_two[0], boarder_two[-1])
+            connect_straight_line_in_grid_map(grid_map, boarder_one[0], boarder_one[-1], rail_trans)
+            connect_straight_line_in_grid_map(grid_map, boarder_two[0], boarder_two[-1], rail_trans)
 
             # Connect parallel tracks
             for track_id in range(len(inner_connection_points[current_city][boarder])):
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
-                current_track = connect_straight_line(rail_trans, grid_map, source, target)
+                current_track = connect_straight_line_in_grid_map(grid_map, source, target, rail_trans)
                 if target in all_outer_connection_points and source in all_outer_connection_points and len(through_path_cells[current_city]) < 1:
                     through_path_cells[current_city].extend(current_track)
                 else:
@@ -853,7 +869,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         for cell in range(rails_to_fix_cnt):
             grid_map.fix_transitions((rails_to_fix[2 * cell], rails_to_fix[2 * cell + 1]))
 
-    def _closest_neighbour_in_direction(current_city_idx: int, city_positions: IntVector2DArray) -> List[int]:
+    def _closest_neighbour_in_grid4_directions(current_city_idx: int, city_positions: IntVector2DArray) -> List[int]:
         """
         Returns indices of closest neighbour in every direction NESW
         :param current_city_idx: Index of city in city_positions list
@@ -862,18 +878,21 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         """
         city_distances = []
         closest_neighbour: List[int] = [None for i in range(4)]
+
+        # compute distance to all other cities
         for city_idx in range(len(city_positions)):
             city_distances.append(Vec2dOperations.get_manhattan_distance(city_positions[current_city_idx], city_positions[city_idx]))
         sorted_neighbours = np.argsort(city_distances)
-        direction_set = 0
-        for neighbour in sorted_neighbours[1:]:
-            direction_to_neighbour = direction_to_point(city_positions[current_city_idx], city_positions[neighbour])
-            if closest_neighbour[direction_to_neighbour] == None:
-                closest_neighbour[direction_to_neighbour] = neighbour
-                direction_set += 1
 
-            if direction_set == 4:
+        for neighbour in sorted_neighbours[1:]: # do not include city itself
+            direction_to_neighbour = direction_to_point(city_positions[current_city_idx], city_positions[neighbour])
+            if closest_neighbour[direction_to_neighbour] is None:
+                closest_neighbour[direction_to_neighbour] = neighbour
+
+            # early return once all 4 directions have a closest neighbour
+            if None not in closest_neighbour:
                 return closest_neighbour
+
         return closest_neighbour
 
     def argsort(seq):
