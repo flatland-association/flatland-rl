@@ -296,25 +296,3 @@ def distance_on_rail(pos1, pos2, metric="Euclidean"):
         return np.sqrt(np.power(pos1[0] - pos2[0], 2) + np.power(pos1[1] - pos2[1], 2))
     if metric == "Manhattan":
         return np.abs(pos1[0] - pos2[0]) + np.abs(pos1[1] - pos2[1])
-
-
-def direction_to_point(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
-    """
-    Returns the closest direction orientation of position 2 relative to position 1
-    :param pos1: position we are interested in
-    :param pos2: position we want to know it is facing
-    :return: direction NESW as int N:0 E:1 S:2 W:3
-    """
-    diff_vec = np.array((pos1[0] - pos2[0], pos1[1] - pos2[1]))
-    axis = np.argmax(np.power(diff_vec, 2))
-    direction = np.sign(diff_vec[axis])
-    if axis == 0:
-        if direction > 0:
-            return Grid4TransitionsEnum.NORTH
-        else:
-            return Grid4TransitionsEnum.SOUTH
-    else:
-        if direction > 0:
-            return Grid4TransitionsEnum.WEST
-        else:
-            return Grid4TransitionsEnum.EAST

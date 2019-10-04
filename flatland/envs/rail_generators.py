@@ -6,13 +6,13 @@ import msgpack
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.grid4_utils import get_direction, mirror
+from flatland.core.grid.grid4_utils import get_direction, mirror, direction_to_point
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
-from flatland.core.grid.grid_utils import distance_on_rail, direction_to_point, IntVector2DArray, IntVector2D, \
+from flatland.core.grid.grid_utils import distance_on_rail, IntVector2DArray, IntVector2D, \
     Vec2dOperations
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.grid4_generators_utils import connect_rail, connect_straigt_line
+from flatland.envs.grid4_generators_utils import connect_rail, connect_straight_line
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -777,14 +777,14 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             boarder_two = inner_connection_points[current_city][opposite_boarder]
 
             # Connect the ends of the tracks
-            connect_straigt_line(rail_trans, grid_map, boarder_one[0], boarder_one[-1], False)
-            connect_straigt_line(rail_trans, grid_map, boarder_two[0], boarder_two[-1], False)
+            connect_straight_line(rail_trans, grid_map, boarder_one[0], boarder_one[-1])
+            connect_straight_line(rail_trans, grid_map, boarder_two[0], boarder_two[-1])
 
             # Connect parallel tracks
             for track_id in range(len(inner_connection_points[current_city][boarder])):
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
-                current_track = connect_straigt_line(rail_trans, grid_map, source, target, False)
+                current_track = connect_straight_line(rail_trans, grid_map, source, target)
                 if target in all_outer_connection_points and source in all_outer_connection_points and len(through_path_cells[current_city]) < 1:
                     through_path_cells[current_city].extend(current_track)
                 else:
