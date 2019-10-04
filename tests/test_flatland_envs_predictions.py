@@ -303,14 +303,14 @@ def test_shortest_path_predictor_conflicts(rendering=False):
 
 def _check_expected_conflicts(expected_conflicts, obs_builder, tree: TreeObsForRailEnv.Node, prompt=''):
     assert (tree.num_agents_opposite_direction > 0) == (() in expected_conflicts), "{}[]".format(prompt)
-    for a_1 in obs_builder.tree_explorted_actions_char:
+    for a_1 in obs_builder.tree_explored_actions_char:
         if tree.childs[a_1] == -np.inf:
             assert False == ((a_1) in expected_conflicts), "{}[{}]".format(prompt, a_1)
             continue
         else:
             conflict = tree.childs[a_1].num_agents_opposite_direction
             assert (conflict > 0) == ((a_1) in expected_conflicts), "{}[{}]".format(prompt, a_1)
-        for a_2 in obs_builder.tree_explorted_actions_char:
+        for a_2 in obs_builder.tree_explored_actions_char:
             if tree.childs[a_1].childs[a_2] == -np.inf:
                 assert False == ((a_1, a_2) in expected_conflicts), "{}[{}][{}]".format(prompt, a_1, a_2)
             else:
