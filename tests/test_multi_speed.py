@@ -63,7 +63,8 @@ def test_multi_speed_init():
 
     # Set all the different speeds
     # Reset environment and get initial observations for all agents
-    env.reset()
+    env.reset(False, False, True)
+
     # Here you can also further enhance the provided observation by means of normalization
     # See training navigation example in the baseline repository
     old_pos = []
@@ -188,7 +189,9 @@ def test_multispeed_actions_no_malfunction_no_blocking():
             ),
         ],
         target=(3, 0),  # west dead-end
-        speed=0.5
+        speed=0.5,
+        initial_position=(3, 9),  # east dead-end
+        initial_direction=Grid4TransitionsEnum.EAST,
     )
 
     run_replay_config(env, [test_config])
@@ -285,7 +288,10 @@ def test_multispeed_actions_no_malfunction_blocking():
                 )
             ],
             target=(3, 0),  # west dead-end
-            speed=1 / 3),
+            speed=1 / 3,
+            initial_position=(3, 8),
+            initial_direction=Grid4TransitionsEnum.WEST,
+        ),
         ReplayConfig(
             replay=[
                 Replay(
@@ -369,7 +375,9 @@ def test_multispeed_actions_no_malfunction_blocking():
                 ),
             ],
             target=(3, 0),  # west dead-end
-            speed=0.5
+            speed=0.5,
+            initial_position=(3, 9),  # east dead-end
+            initial_direction=Grid4TransitionsEnum.EAST,
         )
 
     ]
@@ -505,7 +513,9 @@ def test_multispeed_actions_malfunction_no_blocking():
 
         ],
         target=(3, 0),  # west dead-end
-        speed=0.5
+        speed=0.5,
+        initial_position=(3, 9),  # east dead-end
+        initial_direction=Grid4TransitionsEnum.EAST,
     )
     run_replay_config(env, [test_config])
 
@@ -587,7 +597,9 @@ def test_multispeed_actions_no_malfunction_invalid_actions():
 
         ],
         target=(3, 0),  # west dead-end
-        speed=0.5
+        speed=0.5,
+        initial_position=(3, 9),  # east dead-end
+        initial_direction=Grid4TransitionsEnum.EAST,
     )
 
     run_replay_config(env, [test_config])

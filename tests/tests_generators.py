@@ -102,6 +102,7 @@ def test_rail_from_grid_transition_map():
                   schedule_generator=random_schedule_generator(),
                   number_of_agents=n_agents
                   )
+    env.reset(False, False, True)
     nr_rail_elements = np.count_nonzero(env.rail.grid)
 
     # Check if the number of non-empty rail cells is ok

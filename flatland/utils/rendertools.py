@@ -147,6 +147,9 @@ class RenderTool(object):
         Plot a simple agent.
         Assumes a working graphics layer context (cf a MPL figure).
         """
+        if position_row_col is None:
+            return
+
         rt = self.__class__
 
         direction_row_col = rt.transitions_row_col[direction]  # agent direction in RC
@@ -537,7 +540,7 @@ class RenderTool(object):
 
         for agent_idx, agent in enumerate(self.env.agents):
 
-            if agent is None:
+            if agent is None or agent.position is None:
                 continue
 
             if self.agent_render_variant == AgentRenderVariant.BOX_ONLY:

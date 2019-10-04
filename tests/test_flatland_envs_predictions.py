@@ -5,6 +5,7 @@ import pprint
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions, RailEnvNextAction
@@ -31,12 +32,13 @@ def test_dummy_predictor(rendering=False):
     env.reset()
 
     # set initial position and direction for testing...
-    env.agents_static[0].position = (5, 6)
+    env.agents_static[0].initial_position = (5, 6)
     env.agents_static[0].direction = 0
     env.agents_static[0].target = (3, 0)
 
     # reset to set agents from agents_static
     env.reset(False, False)
+    env.set_agent_active(0)
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
@@ -124,10 +126,12 @@ def test_shortest_path_predictor(rendering=False):
 
     # set the initial position
     agent = env.agents_static[0]
+    agent.initial_position = (5, 6)  # south dead-end
     agent.position = (5, 6)  # south dead-end
     agent.direction = 0  # north
     agent.target = (3, 9)  # east dead-end
     agent.moving = True
+    agent.status = RailAgentStatus.ACTIVE
 
     # reset to set agents from agents_static
     env.reset(False, False)
@@ -139,9 +143,9 @@ def test_shortest_path_predictor(rendering=False):
 
     # compute the observations and predictions
     distance_map = env.distance_map.get()
-    assert distance_map[0, agent.position[0], agent.position[
-        1], agent.direction] == 5.0, "found {} instead of {}".format(
-        distance_map[agent.handle, agent.position[0], agent.position[1], agent.direction], 5.0)
+    assert distance_map[0, agent.initial_position[0], agent.initial_position[1], agent.direction] == 5.0, \
+        "found {} instead of {}".format(
+            distance_map[agent.handle, agent.initial_position[0], agent.position[1], agent.direction], 5.0)
 
     paths = get_shortest_paths(env.distance_map)[0]
     assert paths == [
@@ -259,19 +263,23 @@ def test_shortest_path_predictor_conflicts(rendering=False):
 
     # set the initial position
     agent = env.agents_static[0]
+    agent.initial_position = (5, 6)  # south dead-end
     agent.position = (5, 6)  # south dead-end
     agent.direction = 0  # north
     agent.target = (3, 9)  # east dead-end
     agent.moving = True
+    agent.status = RailAgentStatus.ACTIVE
 
     agent = env.agents_static[1]
+    agent.initial_position = (3, 8)  # east dead-end
     agent.position = (3, 8)  # east dead-end
     agent.direction = 3  # west
     agent.target = (6, 6)  # south dead-end
     agent.moving = True
+    agent.status = RailAgentStatus.ACTIVE
 
     # reset to set agents from agents_static
-    observations = env.reset(False, False)
+    observations = env.reset(False, False, True)
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
@@ -295,14 +303,14 @@ def test_shortest_path_predictor_conflicts(rendering=False):
 
 def _check_expected_conflicts(expected_conflicts, obs_builder, tree: TreeObsForRailEnv.Node, prompt=''):
     assert (tree.num_agents_opposite_direction > 0) == (() in expected_conflicts), "{}[]".format(prompt)
-    for a_1 in obs_builder.tree_explorted_actions_char:
+    for a_1 in obs_builder.tree_explored_actions_char:
         if tree.childs[a_1] == -np.inf:
             assert False == ((a_1) in expected_conflicts), "{}[{}]".format(prompt, a_1)
             continue
         else:
             conflict = tree.childs[a_1].num_agents_opposite_direction
             assert (conflict > 0) == ((a_1) in expected_conflicts), "{}[{}]".format(prompt, a_1)
-        for a_2 in obs_builder.tree_explorted_actions_char:
+        for a_2 in obs_builder.tree_explored_actions_char:
             if tree.childs[a_1].childs[a_2] == -np.inf:
                 assert False == ((a_1, a_2) in expected_conflicts), "{}[{}][{}]".format(prompt, a_1, a_2)
             else:

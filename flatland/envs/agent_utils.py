@@ -1,10 +1,18 @@
+from enum import IntEnum
 from itertools import starmap
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 from attr import attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+
+
+class RailAgentStatus(IntEnum):
+    READY_TO_DEPART = 0  # not in grid yet (position is None) -> prediction as if it were at initial position
+    ACTIVE = 1  # in grid (position is not None), not done -> prediction is remaining path
+    DONE = 2  # in grid (position is not None), but done -> prediction is stay at target forever
+    DONE_REMOVED = 3  # removed from grid (position is None) -> prediction is None
 
 
 @attrs
@@ -14,7 +22,7 @@ class EnvAgentStatic(object):
         rather than where it is at the moment.
         The target should also be stored here.
     """
-    position = attrib(type=Tuple[int, int])
+    initial_position = attrib(type=Tuple[int, int])
     direction = attrib(type=Grid4TransitionsEnum)
     target = attrib(type=Tuple[int, int])
     moving = attrib(default=False, type=bool)
@@ -32,6 +40,9 @@ class EnvAgentStatic(object):
         default=Factory(
             lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0,
                           'moving_before_malfunction': False})))
+
+    status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
+    position = attrib(default=None, type=Optional[Tuple[int, int]])
 
     @classmethod
     def from_lists(cls, positions, directions, targets, speeds=None, malfunction_rates=None):
@@ -65,7 +76,7 @@ class EnvAgentStatic(object):
 
         # I can't find an expression which works on both tuples, lists and ndarrays
         # which converts them all to a list of native python ints.
-        lPos = self.position
+        lPos = self.initial_position
         if type(lPos) is np.ndarray:
             lPos = lPos.tolist()
 

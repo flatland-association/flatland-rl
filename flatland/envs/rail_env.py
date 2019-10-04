@@ -16,7 +16,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import Vec2dOperations
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent
+from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
@@ -235,12 +235,18 @@ class RailEnv(Environment):
         self.agents_static.append(agent_static)
         return len(self.agents_static) - 1
 
+    def set_agent_active(self, handle: int):
+        agent = self.agents[handle]
+        if agent.status == RailAgentStatus.READY_TO_DEPART and self.cell_free(agent.initial_position):
+            agent.status = RailAgentStatus.ACTIVE
+            agent.position = agent.initial_position
+
     def restart_agents(self):
         """ Reset the agents to their starting positions defined in agents_static
         """
         self.agents = EnvAgent.list_from_static(self.agents_static)
 
-    def reset(self, regen_rail=True, replace_agents=True):
+    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False):
         """ if regen_rail then regenerate the rails.
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
@@ -277,8 +283,13 @@ class RailEnv(Environment):
                 *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints))
         self.restart_agents()
 
-        for i_agent in range(self.get_num_agents()):
-            agent = self.agents[i_agent]
+        if activate_agents:
+            for i_agent in range(self.get_num_agents()):
+                self.set_agent_active(i_agent)
+
+        for i_agent, agent in enumerate(self.agents):
+            if agent.status != RailAgentStatus.ACTIVE:
+                continue
 
             # A proportion of agent in the environment will receive a positive malfunction rate
             if np.random.random() < self.proportion_malfunctioning_trains:
@@ -366,7 +377,8 @@ class RailEnv(Environment):
             info_dict = {
                 'action_required': {i: False for i in range(self.get_num_agents())},
                 'malfunction': {i: 0 for i in range(self.get_num_agents())},
-                'speed': {i: 0 for i in range(self.get_num_agents())}
+                'speed': {i: 0 for i in range(self.get_num_agents())},
+                'status': {i: agent.status for i, agent in enumerate(self.agents)}
             }
             return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
@@ -380,21 +392,19 @@ class RailEnv(Environment):
             self.rewards_dict = {i: self.global_reward for i in range(self.get_num_agents())}
         if (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps):
             self.dones["__all__"] = True
-            for k in self.dones.keys():
-                self.dones[k] = True
-
-        action_required_agents = {
-            i: self.agents[i].speed_data['position_fraction'] == 0.0 for i in range(self.get_num_agents())
-        }
-        malfunction_agents = {
-            i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
-        }
-        speed_agents = {i: self.agents[i].speed_data['speed'] for i in range(self.get_num_agents())}
+            for i in range(self.get_num_agents()):
+                self.agents[i].status = RailAgentStatus.DONE
+                self.dones[i] = True
 
         info_dict = {
-            'action_required': action_required_agents,
-            'malfunction': malfunction_agents,
-            'speed': speed_agents
+            'action_required': {
+                i: (agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0)
+                for i, agent in enumerate(self.agents)},
+            'malfunction': {
+                i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
+            },
+            'speed': {i: self.agents[i].speed_data['speed'] for i in range(self.get_num_agents())},
+            'status': {i: agent.status for i, agent in enumerate(self.agents)}
         }
 
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
@@ -412,10 +422,19 @@ class RailEnv(Environment):
         action_dict_ : Dict[int,RailEnvActions]
 
         """
-        if self.dones[i_agent]:  # this agent has already completed...
+        agent = self.agents[i_agent]
+        if agent.status == RailAgentStatus.DONE:  # this agent has already completed...
             return
 
-        agent = self.agents[i_agent]
+        # agent gets active by a MOVE_* action and if c
+        if agent.status == RailAgentStatus.READY_TO_DEPART:
+            if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT,
+                          RailEnvActions.MOVE_FORWARD] and self.cell_free(agent.initial_position):
+                agent.status = RailAgentStatus.ACTIVE
+                agent.position = agent.initial_position
+            else:
+                return
+
         agent.old_direction = agent.direction
         agent.old_position = agent.position
 
@@ -508,6 +527,7 @@ class RailEnv(Environment):
 
             # has the agent reached its target?
             if np.equal(agent.position, agent.target).all():
+                agent.status = RailAgentStatus.DONE
                 self.dones[i_agent] = True
                 agent.moving = False
 
@@ -558,8 +578,14 @@ class RailEnv(Environment):
 
         # Check the new position is not the same as any of the existing agent positions
         # (including itself, for simplicity, since it is moving)
-        cell_free = not np.any(np.equal(new_position, [agent2.position for agent2 in self.agents]).all(1))
+        cell_free = self.cell_free(new_position)
         return cell_free, new_cell_valid, new_direction, new_position, transition_valid
+
+    def cell_free(self, position):
+
+        agent_positions = [agent.position for agent in self.agents if agent.position is not None]
+        ret = len(agent_positions) == 0 or not np.any(np.equal(position, agent_positions).all(1))
+        return ret
 
     def check_action(self, agent: EnvAgent, action: RailEnvActions):
         """
