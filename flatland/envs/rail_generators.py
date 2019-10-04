@@ -572,7 +572,6 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         # reduce num_cities if less were generated in random mode
         num_cities = len(city_positions)
-
         # Set up connection points for all cities
         inner_connection_points, outer_connection_points, connection_info, city_orientations = _generate_city_connection_points(
             city_positions, city_radius, rails_between_cities,
@@ -581,17 +580,17 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         # Connect the cities through the connection points
         inter_city_lines = _connect_cities(city_positions, outer_connection_points, city_cells,
                                            rail_trans, grid_map)
+
         # Build inner cities
-        through_tracks, free_rails = _build_inner_cities(city_positions, inner_connection_points,
-                                                         outer_connection_points,
-                                                         rail_trans,
-                                                         grid_map)
+        free_rails = _build_inner_cities(city_positions, inner_connection_points,
+                                         outer_connection_points,
+                                         rail_trans,
+                                         grid_map)
+
         # Populate cities
         train_stations = _set_trainstation_positions(city_positions, city_radius, free_rails)
-
         # Fix all transition elements
         _fix_transitions(city_cells, inter_city_lines, grid_map)
-
         # Generate start target pairs
         agent_start_targets_cities = _generate_start_target_pairs(num_agents, num_cities, train_stations,
                                                                               city_orientations)
@@ -684,7 +683,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             number_of_out_rails = np.random.randint(1, min(rails_between_cities, nr_of_connection_points) + 1)
             start_idx = int((nr_of_connection_points - number_of_out_rails) / 2)
             for direction in range(4):
-                connection_slots = nr_of_connection_points - start_idx
+                connection_slots = np.arange(nr_of_connection_points) - start_idx
                 for connection_idx in range(connections_per_direction[direction]):
                     if direction == 0:
                         tmp_coordinates = (
@@ -800,11 +799,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
                 current_track = connect_straight_line_in_grid_map(grid_map, source, target, rail_trans)
-                if target in all_outer_connection_points and source in all_outer_connection_points and len(through_path_cells[current_city]) < 1:
-                    through_path_cells[current_city].extend(current_track)
-                else:
-                    free_rails[current_city].append(current_track)
-        return through_path_cells, free_rails
+                free_rails[current_city].append(current_track)
+        return free_rails
 
     def _set_trainstation_positions(city_positions: IntVector2DArray, city_radius: int,
                                     free_rails: List[List[List[IntVector2D]]]) -> List[List[Tuple[IntVector2D, int]]]:
@@ -812,7 +808,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         train_stations = [[] for i in range(num_cities)]
         for current_city in range(len(city_positions)):
             for track_nbr in range(len(free_rails[current_city])):
-                possible_location = free_rails[current_city][track_nbr][city_radius]
+                possible_location = free_rails[current_city][track_nbr][
+                    int(len(free_rails[current_city][track_nbr]) / 2)]
                 train_stations[current_city].append((possible_location, track_nbr))
         return train_stations
 

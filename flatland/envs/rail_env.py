@@ -206,7 +206,6 @@ class RailEnv(Environment):
         # Uniform distribution parameters for malfunction duration
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
-
         # Rest environment
         self.reset()
         self.num_resets = 0  # yes, set it to zero again!
@@ -276,6 +275,7 @@ class RailEnv(Environment):
             #  why do we need static agents? could we it more elegantly?
             self.agents_static = EnvAgentStatic.from_lists(
                 *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints))
+
         self.restart_agents()
 
         if activate_agents:

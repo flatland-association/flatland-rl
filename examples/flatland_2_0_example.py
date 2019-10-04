@@ -32,7 +32,7 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
 
 env = RailEnv(width=50,
               height=50,
-              rail_generator=sparse_rail_generator(max_num_cities=10,
+              rail_generator=sparse_rail_generator(max_num_cities=4,
                                                    # Number of cities in map (where train stations are)
                                                    seed=1,  # Random seed
                                                    grid_mode=False,
@@ -40,14 +40,13 @@ env = RailEnv(width=50,
                                                    max_rails_in_city=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=20,
+              number_of_agents=10,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=TreeObservation,
               remove_agents_at_target=True
               )
 
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
-
 
 env_renderer = RenderTool(env, gl="PILSVG",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
