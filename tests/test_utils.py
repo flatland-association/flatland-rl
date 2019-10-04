@@ -5,7 +5,7 @@ import numpy as np
 from attr import attrs, attrib
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.rail_env import RailEnvActions, RailEnv
 from flatland.utils.rendertools import RenderTool
 
@@ -18,6 +18,7 @@ class Replay(object):
     malfunction = attrib(default=0, type=int)
     set_malfunction = attrib(default=None, type=Optional[int])
     reward = attrib(default=None, type=Optional[float])
+    status = attrib(default=None, type=Optional[RailAgentStatus])
 
 
 @attrs
@@ -47,9 +48,11 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
     - position, direction before step are verified
     - optionally, set_malfunction is applied
     - malfunction is verified
+    - status is verified (optionally)
 
     *After each step*
     - reward is verified after step
+
 
     Parameters
     ----------
@@ -77,8 +80,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
         def _assert(a, actual, expected, msg):
             assert np.allclose(actual, expected), "[{}] agent {} {}:  actual={}, expected={}".format(step, a, msg,
-                                                                                                    actual,
-                                                                                                    expected)
+                                                                                                     actual,
+                                                                                                     expected)
 
         action_dict = {}
 
@@ -88,6 +91,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
             _assert(a, agent.position, replay.position, 'position')
             _assert(a, agent.direction, replay.direction, 'direction')
+            if replay.status is not None:
+                _assert(a, agent.status, replay.status, 'status')
 
             if replay.action is not None:
                 assert info_dict['action_required'][a] == True, "[{}] agent {} expecting action_required={}".format(
@@ -109,5 +114,3 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         for a, test_config in enumerate(test_configs):
             replay = test_config.replay[step]
             _assert(a, rewards_dict[a], replay.reward, 'reward')
-
-

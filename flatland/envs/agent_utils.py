@@ -1,3 +1,4 @@
+from enum import IntEnum
 from itertools import starmap
 from typing import Tuple
 
@@ -5,6 +6,12 @@ import numpy as np
 from attr import attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+
+
+class RailAgentStatus(IntEnum):
+    READY_TO_DEPART = 0
+    ACTIVE = 1
+    DONE = 2
 
 
 @attrs
@@ -18,6 +25,7 @@ class EnvAgentStatic(object):
     direction = attrib(type=Grid4TransitionsEnum)
     target = attrib(type=Tuple[int, int])
     moving = attrib(default=False, type=bool)
+    # position = attrib(default=None,type=Optional[Tuple[int, int]])
 
     # speed_data: speed is added to position_fraction on each moving step, until position_fraction>=1.0,
     # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
@@ -32,6 +40,8 @@ class EnvAgentStatic(object):
         default=Factory(
             lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0,
                           'moving_before_malfunction': False})))
+
+    status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
 
     @classmethod
     def from_lists(cls, positions, directions, targets, speeds=None, malfunction_rates=None):
