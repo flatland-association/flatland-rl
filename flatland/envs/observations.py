@@ -574,11 +574,16 @@ class GlobalObsForRailEnv(ObservationBuilder):
         obs_targets = np.zeros((self.env.height, self.env.width, 2))
         obs_agents_state = np.zeros((self.env.height, self.env.width, 5)) - 1
 
+        # TODO can we do this more elegantly?
+        for r in range(self.env.height):
+            for c in range(self.env.width):
+                obs_agents_state[(r, c)][4] = 0
+
         obs_agents_state[_agent_initial_position][0] = agent.direction
         obs_targets[agent.target][0] = 1
 
         for i in range(len(self.env.agents)):
-            other_agent:EnvAgent = self.env.agents[i]
+            other_agent: EnvAgent = self.env.agents[i]
 
             # ignore other agents not in the grid any more
             if other_agent.status == RailAgentStatus.DONE_REMOVED:
@@ -586,12 +591,16 @@ class GlobalObsForRailEnv(ObservationBuilder):
 
             obs_targets[other_agent.target][1] = 1
 
-            # third to fifth channel only if different agent and in the grid
-            if i != handle and other_agent.position is not None:
-                obs_agents_state[other_agent.position][1] = other_agent.direction
+            # second to fourth channel only if in the grid
+            if other_agent.position is not None:
+                # second channel only for other agents
+                if i != handle:
+                    obs_agents_state[other_agent.position][1] = other_agent.direction
                 obs_agents_state[other_agent.position][2] = other_agent.malfunction_data['malfunction']
                 obs_agents_state[other_agent.position][3] = other_agent.speed_data['speed']
-
+            # fifth channel: all ready to depart on this position
+            if other_agent.status == RailAgentStatus.READY_TO_DEPART:
+                obs_agents_state[other_agent.initial_position][4] += 1
         return self.rail_obs, obs_agents_state, obs_targets
 
 
