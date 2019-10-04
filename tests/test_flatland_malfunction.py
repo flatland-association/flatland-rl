@@ -145,7 +145,7 @@ def test_malfunction_process_statistically():
         env.step(action_dict)
 
     # check that generation of malfunctions works as expected
-    assert nb_malfunction == 156, "nb_malfunction={}".format(nb_malfunction)
+    assert nb_malfunction == 128, "nb_malfunction={}".format(nb_malfunction)
 
 
 def test_initial_malfunction():
@@ -203,14 +203,14 @@ def test_initial_malfunction():
                 # malfunctioning ends: starting and running at speed 1.0
             ),
             Replay(
-                position=(28, 4),
-                direction=Grid4TransitionsEnum.WEST,
+                position=(28, 6),
+                direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.step_penalty * 1.0  # running at speed 1.0
             ),
             Replay(
-                position=(27, 4),
+                position=(27, 6),
                 direction=Grid4TransitionsEnum.NORTH,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
@@ -294,8 +294,8 @@ def test_initial_malfunction_stop_moving():
                 reward=env.start_penalty + env.step_penalty * 1.0  # full step penalty while stopped
             ),
             Replay(
-                position=(28, 4),
-                direction=Grid4TransitionsEnum.WEST,
+                position=(28, 6),
+                direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.step_penalty * 1.0  # full step penalty while stopped
@@ -378,8 +378,8 @@ def test_initial_malfunction_do_nothing():
                 reward=env.start_penalty + env.step_penalty * 1.0  # start penalty + step penalty for speed 1.0
             ),
             Replay(
-                position=(28, 4),
-                direction=Grid4TransitionsEnum.WEST,
+                position=(28, 6),
+                direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.step_penalty * 1.0  # step penalty for speed 1.0
