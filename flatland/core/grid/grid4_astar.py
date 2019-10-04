@@ -35,10 +35,24 @@ class AStarNode:
             self.f = other.f
 
 
-def a_star(grid_map: GridTransitionMap,
-           start: IntVector2D, end: IntVector2D,
-           a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance, nice=True,
-           forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
+def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
+           a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
+           respect_transition_validity=True, forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
+    """
+
+    :param grid_map: Grid Map where the path is found in
+    :param start: Start positions as (row,column)
+    :param end:  End position as (row,column)
+    :param a_star_distance_function: Define the distance function to use as heuristc:
+            -get_euclidean_distance
+            -get_manhattan_distance
+            -get_chebyshev_distance
+    :param respect_transition_validity: Whether or not a-star respect allowed transitions on the grid map.
+            - True: Respects the validity of transition. This generates valid paths, of no path if it cannot be found
+            - False: This always finds a path, but the path might be illegal and thus needs to be fixed afterwards
+    :param forbidden_cells: List of cells where the path cannot pass through. Used to avoid certain areas of Grid map
+    :return: IF a path is found a ordered list of al cells in path is returned
+    """
     """
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
@@ -93,7 +107,8 @@ def a_star(grid_map: GridTransitionMap,
 
             # validate positions
             #
-            if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos, end_node.pos) and nice:
+            if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos,
+                                                    end_node.pos) and respect_transition_validity:
                 continue
             # create new node
             new_node = AStarNode(node_pos, current_node)
