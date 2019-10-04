@@ -557,7 +557,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
-
+        cell_vector_field = np.zeros(shape=(height, width), dtype=int) - 1
         city_radius = int(np.ceil((max_rails_in_city + 2) / 2.0)) + 1
 
         min_nr_rails_in_city = 3
@@ -857,17 +857,17 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         rails_to_fix_cnt = 0
         cells_to_fix = city_cells + inter_city_lines
         for cell in cells_to_fix:
-            check = grid_map.cell_neighbours_valid(cell, True)
+            cell_valid = grid_map.cell_neighbours_valid(cell, True)
             if grid_map.grid[cell] == int('1000010000100001', 2):
                 grid_map.fix_transitions(cell)
-            if not check:
+            if not cell_valid:
                 rails_to_fix[2 * rails_to_fix_cnt] = cell[0]
                 rails_to_fix[2 * rails_to_fix_cnt + 1] = cell[1]
                 rails_to_fix_cnt += 1
 
         # Fix all other cells
         for cell in range(rails_to_fix_cnt):
-            grid_map.fix_transitions((rails_to_fix[2 * cell], rails_to_fix[2 * cell + 1]))
+            grid_map.fix_transitions((rails_to_fix[2 * cell], rails_to_fix[2 * cell + 1]), )
 
     def _closest_neighbour_in_grid4_directions(current_city_idx: int, city_positions: IntVector2DArray) -> List[int]:
         """

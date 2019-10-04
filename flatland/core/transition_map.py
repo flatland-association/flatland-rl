@@ -14,6 +14,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 from flatland.utils.ordered_set import OrderedSet
 
+
 # TODO are these general classes or for grid4 only?
 class TransitionMap:
     """
@@ -499,7 +500,7 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
-    def fix_transitions(self, rcPos: IntVector2DArray):
+    def fix_transitions(self, rcPos: IntVector2DArray, direction: IntVector2D = -1):
         """
         Fixes broken transitions
         """
@@ -559,9 +560,17 @@ class GridTransitionMap(TransitionMap):
         # Find feasible connection for three entries
         if number_of_incoming == 3:
             self.set_transitions(rcPos, 0)
-
-            transition = np.random.choice(three_way_transitions, 1)
             hole = np.argwhere(incoming_connections < 1)[0][0]
+            if direction > 0:
+                switch_type_idx = (direction - hole + 3) % 4
+                if switch_type_idx == 2:
+                    transition = simple_switch_west_south
+                if switch_type_idx == 0:
+                    transition = simple_switch_east_south
+                else:
+                    transition = np.random.choice(three_way_transitions, 1)
+            else:
+                transition = np.random.choice(three_way_transitions, 1)
             transition = transitions.rotate_transition(transition, int(hole * 90))
             self.set_transitions((rcPos[0], rcPos[1]), transition)
 
