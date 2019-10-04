@@ -25,6 +25,7 @@ def test_get_shortest_paths_unreachable():
     # set the initial position
     agent = env.agents_static[0]
     agent.position = (3, 1)  # west dead-end
+    agent.initial_position = (3, 1)  # west dead-end
     agent.direction = Grid4TransitionsEnum.WEST
     agent.target = (3, 9)  # east dead-end
     agent.moving = True

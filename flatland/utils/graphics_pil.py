@@ -109,7 +109,11 @@ class PILGL(GraphicsLayer):
                     rebuild = True
 
         if rebuild:
+            # rebuild background_grid to control the visualisation of buildings, trees, mountains, lakes and river
             self.background_grid = np.zeros(shape=(self.width, self.height))
+
+
+            # build base distance map (distance to targets)
             for x in range(self.width):
                 for y in range(self.height):
                     distance = int(np.ceil(np.sqrt(self.width ** 2.0 + self.height ** 2.0)))
@@ -357,12 +361,18 @@ class PILSVG(PILGL):
         ]
 
         scenery_files_d3 = [
-            "Scenery-Bergwelt_A_Teil_3_rechts.svg",
+            "Scenery-Bergwelt_A_Teil_1_links.svg",
             "Scenery-Bergwelt_A_Teil_2_mitte.svg",
-            "Scenery-Bergwelt_A_Teil_1_links.svg"
+            "Scenery-Bergwelt_A_Teil_3_rechts.svg"
+        ]
+
+        scenery_files_water = [
+            "Scenery_Water.svg"
         ]
 
         img_back_ground = self.pil_from_svg_file('svg', "Background_Light_green.svg")
+
+        self.scenery_background_white = self.pil_from_svg_file('svg', "Background_white.svg")
 
         self.scenery = []
         for file in scenery_files:
@@ -381,6 +391,12 @@ class PILSVG(PILGL):
             img = self.pil_from_svg_file('svg', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery_d3.append(img)
+
+        self.scenery_water = []
+        for file in scenery_files_water:
+            img = self.pil_from_svg_file('svg', file)
+            img = Image.alpha_composite(img_back_ground, img)
+            self.scenery_water.append(img)
 
     def load_rail(self):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
@@ -499,7 +515,7 @@ class PILSVG(PILGL):
                                           False)[0]
         self.draw_image_row_col(colored_rail, (row, col), layer=PILGL.PREDICTION_PATH_LAYER)
 
-    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None,
+    def set_rail_at(self, row, col, binary_trans, target=None, is_selected=False, rail_grid=None, num_agents=None,
                     show_debug=True):
 
         if binary_trans in self.pil_rail:
@@ -511,8 +527,12 @@ class PILSVG(PILGL):
                 if show_debug:
                     self.text_rowcol((row + 0.8, col + 0.0), strText=str(target), layer=PILGL.TARGET_LAYER)
 
+            city_size = 1
+            if num_agents is not None:
+                city_size = max(1, np.log(1 + num_agents) / 2.5)
+
             if binary_trans == 0:
-                if self.background_grid[col][row] <= 4:
+                if self.background_grid[col][row] <= 4 + np.ceil(((col * row + col) % 10) / city_size):
                     a = int(self.background_grid[col][row])
                     a = a % len(self.dBuildings)
                     if (col + row + col * row) % 13 > 11:
@@ -521,12 +541,37 @@ class PILSVG(PILGL):
                         if (col + row + col * row) % 3 == 0:
                             a = (a + (col + row + col * row)) % len(self.dBuildings)
                         pil_track = self.dBuildings[a]
-                elif (self.background_grid[col][row] > 4) or ((col ** 3 + row ** 2 + col * row) % 10 == 0):
+                elif (self.background_grid[col][row] > 5 + ((col * row + col) % 3)) or (
+                    (col ** 3 + row ** 2 + col * row) %
+                    10 == 0):
                     a = int(self.background_grid[col][row]) - 4
                     a2 = (a + (col + row + col * row + col ** 3 + row ** 4))
-                    if a2 % 17 > 11:
+                    if a2 % 64 > 11:
                         a = a2
-                    pil_track = self.scenery[a % len(self.scenery)]
+                    a_l = a % len(self.scenery)
+                    if a2 % 50 == 49:
+                        pil_track = self.scenery_water[0]
+                    else:
+                        pil_track = self.scenery[a_l]
+                    if rail_grid is not None:
+                        if a2 % 11 > 3:
+                            if a_l == len(self.scenery) - 1:
+                                # mountain
+                                if col > 1 and row % 7 == 1:
+                                    if rail_grid[row, col - 1] == 0:
+                                        self.draw_image_row_col(self.scenery_d2[0], (row, col - 1),
+                                                                layer=PILGL.RAIL_LAYER)
+                                        pil_track = self.scenery_d2[1]
+                        else:
+                            if a_l == len(self.scenery) - 1:
+                                # mountain
+                                if col > 2 and not (row % 7 == 1):
+                                    if rail_grid[row, col - 2] == 0 and rail_grid[row, col - 1] == 0:
+                                        self.draw_image_row_col(self.scenery_d3[0], (row, col - 2),
+                                                                layer=PILGL.RAIL_LAYER)
+                                        self.draw_image_row_col(self.scenery_d3[1], (row, col - 1),
+                                                                layer=PILGL.RAIL_LAYER)
+                                        pil_track = self.scenery_d3[2]
 
             self.draw_image_row_col(pil_track, (row, col), layer=PILGL.RAIL_LAYER)
         else:
@@ -590,7 +635,8 @@ class PILSVG(PILGL):
                 for color_idx, pil_zug_3 in enumerate(pils):
                     self.pil_zug[(in_direction_2, out_direction_2, color_idx)] = pils[color_idx]
 
-    def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected, show_debug=False):
+    def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected,
+                     rail_grid=None, show_debug=False,clear_debug_text=True):
         delta_dir = (out_direction - in_direction) % 4
         color_idx = agent_idx % self.n_agent_colors
         # when flipping direction at a dead end, use the "out_direction" direction.
@@ -598,14 +644,34 @@ class PILSVG(PILGL):
             in_direction = out_direction
         pil_zug = self.pil_zug[(in_direction % 4, out_direction % 4, color_idx)]
         self.draw_image_row_col(pil_zug, (row, col), layer=PILGL.AGENT_LAYER)
+        if rail_grid is not None:
+            if rail_grid[row, col] == 0.0:
+                self.draw_image_row_col(self.scenery_background_white, (row, col), layer=PILGL.RAIL_LAYER)
 
         if is_selected:
             bg_svg = self.pil_from_svg_file("svg", "Selected_Agent.svg")
             self.clear_layer(PILGL.SELECTED_AGENT_LAYER, 0)
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
-
         if show_debug:
-            self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
+            if not clear_debug_text:
+                dr = 0.2
+                dc = 0.2
+                if in_direction == 0:
+                    dr = 0.8
+                    dc = 0.0
+                if in_direction == 1:
+                    dr = 0.0
+                    dc = 0.8
+                if in_direction == 2:
+                    dr = 0.4
+                    dc = 0.8
+                if in_direction == 3:
+                    dr = 0.8
+                    dc = 0.4
+
+                self.text_rowcol((row + dr, col + dc,), str(agent_idx), layer=PILGL.SELECTED_AGENT_LAYER)
+            else:
+                self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
 
     def set_cell_occupied(self, agent_idx, row, col):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]

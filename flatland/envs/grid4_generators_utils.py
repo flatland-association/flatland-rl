@@ -5,29 +5,41 @@ Generator functions are functions that take width, height and num_resets as argu
 a GridTransitionMap object.
 """
 
+import numpy as np
+
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_astar import a_star
-from flatland.core.grid.grid4_utils import get_direction, mirror
+from flatland.core.grid.grid4_utils import get_direction, mirror, direction_to_point
 from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance, IntVector2DArray
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transition_map import GridTransitionMap, RailEnvTransitions
 
 
-def connect_basic_operation(
-    rail_trans: RailEnvTransitions,
-    grid_map: GridTransitionMap,
-    start: IntVector2D,
-    end: IntVector2D,
-    flip_start_node_trans=False,
-    flip_end_node_trans=False,
-    a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
+def connect_rail_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
+                             rail_trans: RailEnvTransitions,
+                             a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
+                             flip_start_node_trans: bool = False, flip_end_node_trans: bool = False,
+                             respect_transition_validity: bool = True, forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
     """
-    Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
+        Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
     returns the path created as a list of positions.
+    :param rail_trans: basic rail transition object
+    :param grid_map: grid map
+    :param start: start position of rail
+    :param end: end position of rail
+    :param flip_start_node_trans: make valid start position by adding dead-end, empty start if False
+    :param flip_end_node_trans: make valid end position by adding dead-end, empty end if False
+    :param respect_transition_validity: Only draw rail maps if legal rail elements can be use, False, draw line without respecting rail transitions.
+    :param a_star_distance_function: Define what distance function a-star should use
+    :param forbidden_cells: cells to avoid when drawing rail. Rail cannot go through this list of cells
+    :return: List of cells in the path
     """
-    # in the worst case we will need to do a A* search, so we might as well set that up
-    path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function)
+
+    path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, respect_transition_validity,
+                                    forbidden_cells)
     if len(path) < 2:
         return []
+
     current_dir = get_direction(path[0], path[1])
     end_pos = path[-1]
     for index in range(len(path) - 1):
@@ -72,26 +84,44 @@ def connect_basic_operation(
     return path
 
 
-def connect_rail(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                 start: IntVector2D, end: IntVector2D,
-                 a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
-    return connect_basic_operation(rail_trans, grid_map, start, end, True, True, a_star_distance_function)
+def connect_straight_line_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D,
+                                      end: IntVector2D, rail_trans: RailEnvTransitions) -> IntVector2DArray:
+    """
+    Generates a straight rail line from start cell to end cell.
+    Diagonal lines are not allowed
+    :param rail_trans:
+    :param grid_map:
+    :param start: Cell coordinates for start of line
+    :param end: Cell coordinates for end of line
+    :return: A list of all cells in the path
+    """
 
+    if not (start[0] == end[0] or start[1] == end[1]):
+        print("No straight line possible!")
+        return []
 
-def connect_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                  start: IntVector2D, end: IntVector2D,
-                  a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
-    return connect_basic_operation(rail_trans, grid_map, start, end, False, False, a_star_distance_function)
+    direction = direction_to_point(start, end)
 
+    if direction is Grid4TransitionsEnum.NORTH or direction is Grid4TransitionsEnum.SOUTH:
+        start_row = min(start[0], end[0])
+        end_row = max(start[0], end[0]) + 1
+        rows = np.arange(start_row, end_row)
+        length = np.abs(end[0] - start[0]) + 1
+        cols = np.repeat(start[1], length)
 
-def connect_from_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                       start: IntVector2D, end: IntVector2D,
-                       a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance
-                       ) -> IntVector2DArray:
-    return connect_basic_operation(rail_trans, grid_map, start, end, False, True, a_star_distance_function)
+    else:   # Grid4TransitionsEnum.EAST or Grid4TransitionsEnum.WEST
+        start_col = min(start[1], end[1])
+        end_col = max(start[1], end[1]) + 1
+        cols = np.arange(start_col, end_col)
+        length = np.abs(end[1] - start[1]) + 1
+        rows = np.repeat(start[0], length)
 
+    path = list(zip(rows, cols))
 
-def connect_to_nodes(rail_trans: RailEnvTransitions, grid_map: GridTransitionMap,
-                     start: IntVector2D, end: IntVector2D,
-                     a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance) -> IntVector2DArray:
-    return connect_basic_operation(rail_trans, grid_map, start, end, True, False, a_star_distance_function)
+    for cell in path:
+        transition = grid_map.grid[cell]
+        transition = rail_trans.set_transition(transition, direction, direction, 1)
+        transition = rail_trans.set_transition(transition, mirror(direction), mirror(direction), 1)
+        grid_map.grid[cell] = transition
+
+    return path

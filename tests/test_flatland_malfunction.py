@@ -31,15 +31,15 @@ class SingleAgentNavigationObs(ObservationBuilder):
         agent = self.env.agents[handle]
 
         if agent.status == RailAgentStatus.READY_TO_DEPART:
-            _agent_initial_position = agent.initial_position
+            agent_virtual_position = agent.initial_position
         elif agent.status == RailAgentStatus.ACTIVE:
-            _agent_initial_position = agent.position
+            agent_virtual_position = agent.position
         elif agent.status == RailAgentStatus.DONE:
-            _agent_initial_position = agent.target
+            agent_virtual_position = agent.target
         else:
             return None
 
-        possible_transitions = self.env.rail.get_transitions(*_agent_initial_position, agent.direction)
+        possible_transitions = self.env.rail.get_transitions(*agent_virtual_position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
         # Start from the current orientation, and see which transitions are available;
@@ -51,14 +51,14 @@ class SingleAgentNavigationObs(ObservationBuilder):
             min_distances = []
             for direction in [(agent.direction + i) % 4 for i in range(-1, 2)]:
                 if possible_transitions[direction]:
-                    new_position = get_new_position(_agent_initial_position, direction)
+                    new_position = get_new_position(agent_virtual_position, direction)
                     min_distances.append(
                         self.env.distance_map.get()[handle, new_position[0], new_position[1], direction])
                 else:
                     min_distances.append(np.inf)
 
             observation = [0, 0, 0]
-            observation[np.argmin(min_distances)[0]] = 1
+            observation[np.argmin(min_distances)] = 1
 
         return observation
 
@@ -158,7 +158,7 @@ def test_malfunction_process_statistically():
         env.step(action_dict)
 
     # check that generation of malfunctions works as expected
-    assert nb_malfunction == 156, "nb_malfunction={}".format(nb_malfunction)
+    assert nb_malfunction == 128, "nb_malfunction={}".format(nb_malfunction)
 
 
 def test_initial_malfunction():
@@ -176,18 +176,10 @@ def test_initial_malfunction():
     random.seed(0)
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=sparse_rail_generator(num_cities=5,
-                                                       # Number of cities in map (where train stations are)
-                                                       num_intersections=4,
-                                                       # Number of intersections (no start / target)
-                                                       num_trainstations=25,  # Number of possible start/targets on map
-                                                       min_node_dist=6,  # Minimal distance of nodes
-                                                       node_radius=3,  # Proximity of stations to city center
-                                                       num_neighb=3,
-                                                       # Number of connections to other cities/intersections
-                                                       seed=215545,  # Random seed
-                                                       grid_mode=True,
-                                                       enhance_intersection=False
+                  rail_generator=sparse_rail_generator(max_num_cities=5,
+                                                       max_rails_between_cities=3,
+                                                       seed=215545,
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,
@@ -222,14 +214,14 @@ def test_initial_malfunction():
                 # malfunctioning ends: starting and running at speed 1.0
             ),
             Replay(
-                position=(28, 4),
-                direction=Grid4TransitionsEnum.WEST,
+                position=(28, 6),
+                direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.step_penalty * 1.0  # running at speed 1.0
             ),
             Replay(
-                position=(27, 4),
+                position=(27, 6),
                 direction=Grid4TransitionsEnum.NORTH,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
@@ -259,18 +251,10 @@ def test_initial_malfunction_stop_moving():
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=sparse_rail_generator(num_cities=5,
-                                                       # Number of cities in map (where train stations are)
-                                                       num_intersections=4,
-                                                       # Number of intersections (no start / target)
-                                                       num_trainstations=25,  # Number of possible start/targets on map
-                                                       min_node_dist=6,  # Minimal distance of nodes
-                                                       node_radius=3,  # Proximity of stations to city center
-                                                       num_neighb=3,
-                                                       # Number of connections to other cities/intersections
-                                                       seed=215545,  # Random seed
-                                                       grid_mode=True,
-                                                       enhance_intersection=False
+                  rail_generator=sparse_rail_generator(max_num_cities=5,
+                                                       max_rails_between_cities=3,
+                                                       seed=215545,
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,
@@ -326,8 +310,8 @@ def test_initial_malfunction_stop_moving():
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
-                position=(28, 4),
-                direction=Grid4TransitionsEnum.WEST,
+                position=(28, 6),
+                direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.step_penalty * 1.0,  # full step penalty while stopped
@@ -359,18 +343,10 @@ def test_initial_malfunction_do_nothing():
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=sparse_rail_generator(num_cities=5,
-                                                       # Number of cities in map (where train stations are)
-                                                       num_intersections=4,
-                                                       # Number of intersections (no start / target)
-                                                       num_trainstations=25,  # Number of possible start/targets on map
-                                                       min_node_dist=6,  # Minimal distance of nodes
-                                                       node_radius=3,  # Proximity of stations to city center
-                                                       num_neighb=3,
-                                                       # Number of connections to other cities/intersections
-                                                       seed=215545,  # Random seed
-                                                       grid_mode=True,
-                                                       enhance_intersection=False
+                  rail_generator=sparse_rail_generator(max_num_cities=5,
+                                                       max_rails_between_cities=3,
+                                                       seed=215545,
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,
@@ -426,8 +402,8 @@ def test_initial_malfunction_do_nothing():
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
-                position=(28, 4),
-                direction=Grid4TransitionsEnum.WEST,
+                position=(28, 6),
+                direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.step_penalty * 1.0,  # step penalty for speed 1.0
@@ -460,18 +436,10 @@ def test_initial_nextmalfunction_not_below_zero():
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=sparse_rail_generator(num_cities=5,
-                                                       # Number of cities in map (where train stations are)
-                                                       num_intersections=4,
-                                                       # Number of intersections (no start / target)
-                                                       num_trainstations=25,  # Number of possible start/targets on map
-                                                       min_node_dist=6,  # Minimal distance of nodes
-                                                       node_radius=3,  # Proximity of stations to city center
-                                                       num_neighb=3,
-                                                       # Number of connections to other cities/intersections
-                                                       seed=215545,  # Random seed
-                                                       grid_mode=True,
-                                                       enhance_intersection=False
+                  rail_generator=sparse_rail_generator(max_num_cities=5,
+                                                       max_rails_between_cities=3,
+                                                       seed=215545,
+                                                       grid_mode=True
                                                        ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map),
                   number_of_agents=1,

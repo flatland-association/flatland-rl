@@ -14,6 +14,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 from flatland.utils.ordered_set import OrderedSet
 
+
 # TODO are these general classes or for grid4 only?
 class TransitionMap:
     """
@@ -422,6 +423,28 @@ class GridTransitionMap(TransitionMap):
                 continue
             else:
                 return False
+        # If the cell is empty but has incoming connections we return false
+        if binTrans < 1:
+            connected = 0
+
+            for iDirOut in np.arange(4):
+                gdRC = gDir2dRC[iDirOut]  # row,col increment
+                gPos2 = grcPos + gdRC  # next cell in that direction
+
+                # Check the adjacent cell is within bounds
+                # if not, then ignore it for the count of incoming connections
+                if np.any(gPos2 < 0):
+                    continue
+                if np.any(gPos2 >= grcMax):
+                    continue
+
+                # Get the transitions out of gPos2, using iDirOut as the inbound direction
+                # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
+
+                for orientation in range(4):
+                    connected += self.get_transition((gPos2[0], gPos2[1], orientation), mirror(iDirOut))
+            if connected > 0:
+                return False
 
         return True
 
@@ -477,7 +500,7 @@ class GridTransitionMap(TransitionMap):
 
         return True
 
-    def fix_transitions(self, rcPos: IntVector2DArray):
+    def fix_transitions(self, rcPos: IntVector2DArray, direction: IntVector2D = -1):
         """
         Fixes broken transitions
         """
@@ -492,9 +515,8 @@ class GridTransitionMap(TransitionMap):
         simple_switch_west_south = transitions.rotate_transition(cells[2], 270)
         symmetrical = cells[6]
         double_slip = cells[5]
-        three_way_transitions = [simple_switch_east_south, simple_switch_west_south, symmetrical]
+        three_way_transitions = [simple_switch_east_south, simple_switch_west_south]
         # loop over available outbound directions (indices) for rcPos
-        self.set_transitions(rcPos, 0)
 
         incoming_connections = np.zeros(4)
         for iDirOut in np.arange(4):
@@ -517,21 +539,38 @@ class GridTransitionMap(TransitionMap):
                 incoming_connections[iDirOut] = 1
 
         number_of_incoming = np.sum(incoming_connections)
-        # Only one incoming direction --> Straight line
+        # Only one incoming direction --> Straight line set deadend
         if number_of_incoming == 1:
-            for direction in range(4):
-                if incoming_connections[direction] > 0:
-                    self.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
+            if self.get_full_transitions(*rcPos) == 0:
+                self.set_transitions(rcPos, 0)
+            else:
+                self.set_transitions(rcPos, 0)
+
+                for direction in range(4):
+                    if incoming_connections[direction] > 0:
+                        self.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
         # Connect all incoming connections
         if number_of_incoming == 2:
+            self.set_transitions(rcPos, 0)
+
             connect_directions = np.argwhere(incoming_connections > 0)
             self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[1], 1)
             self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1])), connect_directions[0], 1)
 
         # Find feasible connection for three entries
         if number_of_incoming == 3:
-            transition = np.random.choice(three_way_transitions, 1)
+            self.set_transitions(rcPos, 0)
             hole = np.argwhere(incoming_connections < 1)[0][0]
+            if direction > 0:
+                switch_type_idx = (direction - hole + 3) % 4
+                if switch_type_idx == 2:
+                    transition = simple_switch_west_south
+                if switch_type_idx == 0:
+                    transition = simple_switch_east_south
+                else:
+                    transition = np.random.choice(three_way_transitions, 1)
+            else:
+                transition = np.random.choice(three_way_transitions, 1)
             transition = transitions.rotate_transition(transition, int(hole * 90))
             self.set_transitions((rcPos[0], rcPos[1]), transition)
 

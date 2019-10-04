@@ -2,6 +2,8 @@ from typing import Tuple, Callable, List, Type
 
 import numpy as np
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
+
 Vector2D: Type = Tuple[float, float]
 IntVector2D: Type = Tuple[int, int]
 
@@ -289,5 +291,8 @@ def coordinate_to_position(depth, coords):
     return position
 
 
-def distance_on_rail(pos1, pos2):
-    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+def distance_on_rail(pos1, pos2, metric="Euclidean"):
+    if metric == "Euclidean":
+        return np.sqrt(np.power(pos1[0] - pos2[0], 2) + np.power(pos1[1] - pos2[1], 2))
+    if metric == "Manhattan":
+        return np.abs(pos1[0] - pos2[0]) + np.abs(pos1[1] - pos2[1])

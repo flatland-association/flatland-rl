@@ -116,7 +116,8 @@ class RailEnv(Environment):
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = TreeObsForRailEnv(max_depth=2),
                  max_episode_steps=None,
-                 stochastic_data=None
+                 stochastic_data=None,
+                 remove_agents_at_target=False
                  ):
         """
         Environment init.
@@ -147,6 +148,9 @@ class RailEnv(Environment):
             ObservationBuilder-derived object that takes builds observation
             vectors for each agent.
         max_episode_steps : int or None
+        remove_agents_at_target : bool
+            If remove_agents_at_target is set to true then the agents will be removed by placing to
+            RailEnv.DEPOT_POSITION when the agent has reach it's target position.
         """
         super().__init__()
 
@@ -156,6 +160,8 @@ class RailEnv(Environment):
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
         self.height = height
+
+        self.remove_agents_at_target = remove_agents_at_target
 
         self.rewards = [0] * number_of_agents
         self.done = False
@@ -253,6 +259,7 @@ class RailEnv(Environment):
                     rc_pos = (r, c)
                     check = self.rail.cell_neighbours_valid(rc_pos, True)
                     if not check:
+                        print(self.rail.grid[rc_pos])
                         warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
         # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
         #  hacky: we must re-compute the distance map and not use the initial distance_map loaded from file by
@@ -375,10 +382,9 @@ class RailEnv(Environment):
             self._step_agent(i_agent, action_dict_.get(i_agent))
 
         # Check for end of episode + set global reward to all rewards!
-        if np.all([np.array_equal(agent.position, agent.target) for agent in self.agents]):
+        if np.all([agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED] for agent in self.agents]):
             self.dones["__all__"] = True
             self.rewards_dict = {i: self.global_reward for i in range(self.get_num_agents())}
-
         if (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps):
             self.dones["__all__"] = True
             for i in range(self.get_num_agents()):
@@ -387,7 +393,8 @@ class RailEnv(Environment):
 
         info_dict = {
             'action_required': {
-                i: (agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0)
+                i: (agent.status == RailAgentStatus.READY_TO_DEPART or (
+                    agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0))
                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
@@ -412,7 +419,7 @@ class RailEnv(Environment):
 
         """
         agent = self.agents[i_agent]
-        if agent.status == RailAgentStatus.DONE:  # this agent has already completed...
+        if agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED]:  # this agent has already completed...
             return
 
         # agent gets active by a MOVE_* action and if c
@@ -519,6 +526,10 @@ class RailEnv(Environment):
                 agent.status = RailAgentStatus.DONE
                 self.dones[i_agent] = True
                 agent.moving = False
+
+                if self.remove_agents_at_target:
+                    agent.position = None
+                    agent.status = RailAgentStatus.DONE_REMOVED
             else:
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
         else:

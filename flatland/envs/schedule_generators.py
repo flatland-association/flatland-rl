@@ -1,4 +1,5 @@
 """Schedule generators (railway undertaking, "EVU")."""
+import random
 import warnings
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
@@ -57,10 +58,12 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None) ->
 
 
 def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
+
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
         train_stations = hints['train_stations']
-        agent_start_targets_nodes = hints['agent_start_targets_nodes']
+        agent_start_targets_cities = hints['agent_start_targets_cities']
         max_num_agents = hints['num_agents']
+        city_orientations = hints['city_orientations']
         if num_agents > max_num_agents:
             num_agents = max_num_agents
             warnings.warn("Too many agents! Changes number of agents.")
@@ -70,40 +73,25 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
         agents_direction = []
         for agent_idx in range(num_agents):
             # Set target for agent
-            current_target_node = agent_start_targets_nodes[agent_idx][1]
-            target_station_idx = np.random.randint(len(train_stations[current_target_node]))
-            target = train_stations[current_target_node][target_station_idx]
-            tries = 0
-            while (target[0], target[1]) in agents_target:
-                target_station_idx = np.random.randint(len(train_stations[current_target_node]))
-                target = train_stations[current_target_node][target_station_idx]
-                tries += 1
-                if tries > 100:
-                    warnings.warn("Could not set target position, removing an agent")
-                    break
-            agents_target.append((target[0], target[1]))
+            start_city = agent_start_targets_cities[agent_idx][0]
+            target_city = agent_start_targets_cities[agent_idx][1]
+            start = random.choice(train_stations[start_city])
+            target = random.choice(train_stations[target_city])
+            while start[1] % 2 != 0:
+                start = random.choice(train_stations[start_city])
+            while target[1] % 2 != 1:
+                target = random.choice(train_stations[target_city])
 
-            # Set start for agent
-            current_start_node = agent_start_targets_nodes[agent_idx][0]
-            start_station_idx = np.random.randint(len(train_stations[current_start_node]))
-            start = train_stations[current_start_node][start_station_idx]
-            tries = 0
-            while (start[0], start[1]) in agents_position:
-                tries += 1
-                if tries > 100:
-                    warnings.warn("Could not set start position, please change initial parameters!!!!")
-                    break
-                start_station_idx = np.random.randint(len(train_stations[current_start_node]))
-                start = train_stations[current_start_node][start_station_idx]
+            agent_orientation = (agent_start_targets_cities[agent_idx][2] + 2 * start[1]) % 4
+            if not rail.check_path_exists(start[0], agent_orientation, target[0]):
+                agent_orientation = (agent_orientation + 2) % 4
+            if not (rail.check_path_exists(start[0], agent_orientation, target[0])):
+                warnings.warn("Infeasible")
+            agents_position.append((start[0][0], start[0][1]))
+            agents_target.append((target[0][0], target[0][1]))
 
-            agents_position.append((start[0], start[1]))
-
+            agents_direction.append(agent_orientation)
             # Orient the agent correctly
-            for orientation in range(4):
-                transitions = rail.get_transitions(start[0], start[1], orientation)
-                if any(transitions) > 0:
-                    agents_direction.append(orientation)
-                    break
 
         if speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, speed_ratio_map)
@@ -248,7 +236,3 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
 
     return generator
 
-
-# we can us the same schedule generator for city_rail_generator
-# in order to be able to change this transparently in the future, we use a different name.
-city_schedule_generator = sparse_schedule_generator

@@ -1,15 +1,18 @@
 """Rail generators (infrastructure manager, "Infrastrukturbetreiber")."""
 import warnings
-from typing import Callable, Tuple, Optional, Dict, List, Any
+from typing import Callable, Tuple, Optional, Dict, List
 
 import msgpack
 import numpy as np
 
-from flatland.core.grid.grid4_utils import get_direction, mirror
-from flatland.core.grid.grid_utils import distance_on_rail
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.grid.grid4_utils import get_direction, mirror, direction_to_point
+from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
+from flatland.core.grid.grid_utils import distance_on_rail, IntVector2DArray, IntVector2D, \
+    Vec2dOperations
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.grid4_generators_utils import connect_rail, connect_nodes, connect_from_nodes
+from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -123,7 +126,9 @@ def complex_rail_generator(nr_start_goal=1,
                 # we might as well give up at this point
                 break
 
-            new_path = connect_rail(rail_trans, grid_map, start, goal)
+            new_path = connect_rail_in_grid_map(grid_map, start, goal, rail_trans, Vec2d.get_chebyshev_distance,
+                                                flip_start_node_trans=True, flip_end_node_trans=True,
+                                                respect_transition_validity=True, forbidden_cells=None)
             if len(new_path) >= 2:
                 nr_created += 1
                 start_goal.append([start, goal])
@@ -148,7 +153,10 @@ def complex_rail_generator(nr_start_goal=1,
                     break
             if not all_ok:
                 break
-            new_path = connect_rail(rail_trans, grid_map, start, goal)
+            new_path = connect_rail_in_grid_map(grid_map, start, goal, rail_trans, Vec2d.get_chebyshev_distance,
+                                                flip_start_node_trans=True, flip_end_node_trans=True,
+                                                respect_transition_validity=True, forbidden_cells=None)
+
             if len(new_path) >= 2:
                 nr_created += 1
 
@@ -532,307 +540,385 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
     return generator
 
 
-def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2, min_node_dist=20, node_radius=2,
-                          num_neighb=3, grid_mode=False, enhance_intersection=False, seed=0) -> RailGenerator:
+def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_rails_between_cities: int = 4,
+                          max_rails_in_city: int = 4, seed: int = 0) -> RailGenerator:
     """
-    This is a level generator which generates complex sparse rail configurations
-
-    :param num_cities: Number of city node (can hold trainstations)
-    :type num_cities: int
-    :param num_intersections: Number of intersection that city nodes can connect to
-    :param num_trainstations: Total number of trainstations in env
-    :param min_node_dist: Minimal distance between nodes
-    :param node_radius: Proximity of trainstations to center of city node
-    :param num_neighb: Number of neighbouring nodes each node connects to
-    :param grid_mode: True -> NOdes evenly distirbuted in env, False-> Random distribution of nodes
-    :param enhance_intersection: True -> Extra rail elements added at intersections
-    :param seed: Random Seed
-    :return: numpy.ndarray of type numpy.uint16 -- The matrix with the correct 16-bit bitmaps for each cell.
+    Generates railway networks with cities and inner city rails
+    :param max_num_cities: Number of city centers in the map
+    :param grid_mode: arrange cities in a grid or randomly
+    :param max_rails_between_cities: Maximum number of connecting rails going out from a city
+    :param max_rails_in_city: maximum number of internal rails
+    :param seed: Random seed to initiate rail
+    :return: generator
     """
 
-    def generator(width, height, num_agents, num_resets=0) -> RailGeneratorProduct:
-
-        if num_agents > num_trainstations:
-            num_agents = num_trainstations
-            warnings.warn("sparse_rail_generator: num_agents > nr_start_goal, changing num_agents")
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0) -> RailGeneratorProduct:
+        np.random.seed(seed + num_resets)
 
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
-        rail_array = grid_map.grid
-        rail_array.fill(0)
-        np.random.seed(seed + num_resets)
+        cell_vector_field = np.zeros(shape=(height, width), dtype=int) - 1
+        city_radius = int(np.ceil((max_rails_in_city + 2) / 2.0)) + 1
 
-        # Generate a set of nodes for the sparse network
-        # Try to connect cities to nodes first
-        city_positions = []
-        intersection_positions = []
+        min_nr_rails_in_city = 3
+        rails_in_city = min_nr_rails_in_city if max_rails_in_city < min_nr_rails_in_city else max_rails_in_city
+        rails_between_cities = rails_in_city if max_rails_between_cities > rails_in_city else max_rails_between_cities
 
-        # Evenly distribute cities and intersections
-        node_positions: List[Any] = None
-        nb_nodes = num_cities + num_intersections
+        # Evenly distribute cities
         if grid_mode:
-            nodes_ratio = height / width
-            nodes_per_row = int(np.ceil(np.sqrt(nb_nodes * nodes_ratio)))
-            nodes_per_col = int(np.ceil(nb_nodes / nodes_per_row))
-            x_positions = np.linspace(node_radius, height - node_radius, nodes_per_row, dtype=int)
-            y_positions = np.linspace(node_radius, width - node_radius, nodes_per_col, dtype=int)
-            city_idx = np.random.choice(np.arange(nb_nodes), num_cities, False)
-
-            node_positions = _generate_node_positions_grid_mode(city_idx, city_positions, intersection_positions,
-                                                                nb_nodes,
-                                                                nodes_per_row, x_positions,
-                                                                y_positions)
-
-
-
+            city_positions, city_cells = _generate_evenly_distr_city_positions(max_num_cities, city_radius, width, height)
         else:
+            city_positions, city_cells = _generate_random_city_positions(max_num_cities, city_radius, width, height)
 
-            node_positions = _generate_node_positions_not_grid_mode(city_positions, height,
-                                                                    intersection_positions,
-                                                                    nb_nodes, width)
+        # reduce num_cities if less were generated in random mode
+        num_cities = len(city_positions)
 
-        # reduce nb_nodes, _num_cities, _num_intersections if less were generated in not_grid_mode
-        nb_nodes = len(node_positions)
-        _num_cities = len(city_positions)
-        _num_intersections = len(intersection_positions)
+        # Set up connection points for all cities
+        inner_connection_points, outer_connection_points, connection_info, city_orientations = _generate_city_connection_points(
+            city_positions, city_radius, rails_between_cities,
+            rails_in_city)
 
-        # Chose node connection
-        # Set up list of available nodes to connect to
-        available_nodes_full = np.arange(nb_nodes)
-        available_cities = np.arange(_num_cities)
-        available_intersections = np.arange(_num_cities, nb_nodes)
+        # Connect the cities through the connection points
+        inter_city_lines = _connect_cities(city_positions, outer_connection_points, city_cells,
+                                           rail_trans, grid_map)
+        # Build inner cities
+        through_tracks, free_rails = _build_inner_cities(city_positions, inner_connection_points,
+                                                         outer_connection_points,
+                                                         rail_trans,
+                                                         grid_map)
+        # Populate cities
+        train_stations = _set_trainstation_positions(city_positions, city_radius, free_rails)
 
-        # Start at some node
-        current_node = np.random.randint(len(available_nodes_full))
-        node_stack = [current_node]
-        allowed_connections = num_neighb
-        first_node = True
-        while len(node_stack) > 0:
-            current_node = node_stack[0]
-            delete_idx = np.where(available_nodes_full == current_node)
-            available_nodes_full = np.delete(available_nodes_full, delete_idx, 0)
+        # Fix all transition elements
+        _fix_transitions(city_cells, inter_city_lines, grid_map)
 
-            # Priority city to intersection connections
-            if current_node < _num_cities and len(available_intersections) > 0:
-                available_nodes = available_intersections
-                delete_idx = np.where(available_cities == current_node)
-                available_cities = np.delete(available_cities, delete_idx, 0)
-
-            # Priority intersection to city connections
-            elif current_node >= _num_cities and len(available_cities) > 0:
-                available_nodes = available_cities
-                delete_idx = np.where(available_intersections == current_node)
-                available_intersections = np.delete(available_intersections, delete_idx, 0)
-
-            # If no options possible connect to whatever node is still available
-            else:
-                available_nodes = available_nodes_full
-
-            # Sort available neighbors according to their distance.
-            node_dist = []
-            for av_node in available_nodes:
-                node_dist.append(distance_on_rail(node_positions[current_node], node_positions[av_node]))
-            available_nodes = available_nodes[np.argsort(node_dist)]
-
-            # Set number of neighboring nodes
-            if len(available_nodes) >= allowed_connections:
-                connected_neighb_idx = available_nodes[:allowed_connections]
-            else:
-                connected_neighb_idx = available_nodes
-
-            # Less connections for subsequent nodes
-            if first_node:
-                allowed_connections -= 1
-                first_node = False
-
-            # Connect to the neighboring nodes
-            for neighb in connected_neighb_idx:
-                if neighb not in node_stack:
-                    node_stack.append(neighb)
-                connect_nodes(rail_trans, grid_map, node_positions[current_node], node_positions[neighb])
-            node_stack.pop(0)
-
-        # Place train stations close to the node
-        # We currently place them uniformly distributed among all cities
-        built_num_trainstation = 0
-        train_stations = [[] for i in range(_num_cities)]
-
-        if _num_cities > 1:
-
-            for station in range(num_trainstations):
-                spot_found = True
-                trainstation_node = int(station / num_trainstations * _num_cities)
-
-                station_x = np.clip(node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
-                                    0,
-                                    height - 1)
-                station_y = np.clip(node_positions[trainstation_node][1] + np.random.randint(-node_radius, node_radius),
-                                    0,
-                                    width - 1)
-                tries = 0
-                while (station_x, station_y) in train_stations[trainstation_node] \
-                    or (station_x, station_y) == node_positions[trainstation_node] \
-                    or rail_array[(station_x, station_y)] != 0:  # noqa: E125
-
-                    station_x = np.clip(
-                        node_positions[trainstation_node][0] + np.random.randint(-node_radius, node_radius),
-                        0,
-                        height - 1)
-                    station_y = np.clip(
-                        node_positions[trainstation_node][1] + np.random.randint(-node_radius, node_radius),
-                        0,
-                        width - 1)
-                    tries += 1
-                    if tries > 100:
-                        warnings.warn("Could not set trainstations, please change initial parameters!!!!")
-                        spot_found = False
-                        break
-
-                if spot_found:
-                    train_stations[trainstation_node].append((station_x, station_y))
-
-                # Connect train station to the correct node
-                connection = connect_from_nodes(rail_trans, grid_map, node_positions[trainstation_node],
-                                                (station_x, station_y))
-                # Check if connection was made
-                if len(connection) == 0:
-                    if len(train_stations[trainstation_node]) > 0:
-                        train_stations[trainstation_node].pop(-1)
-                else:
-                    built_num_trainstation += 1
-
-        # Adjust the number of agents if you could not build enough trainstations
-        if num_agents > built_num_trainstation:
-            num_agents = built_num_trainstation
-            warnings.warn("sparse_rail_generator: num_agents > nr_start_goal, changing num_agents")
-
-        # Place passing lanes at intersections
-        # We currently place them uniformly distirbuted among all cities
-        if enhance_intersection:
-
-            for intersection in range(_num_intersections):
-                intersect_x_1 = np.clip(intersection_positions[intersection][0] + np.random.randint(1, 3),
-                                        1,
-                                        height - 2)
-                intersect_y_1 = np.clip(intersection_positions[intersection][1] + np.random.randint(-3, 3),
-                                        2,
-                                        width - 2)
-                intersect_x_2 = np.clip(
-                    intersection_positions[intersection][0] + np.random.randint(-3, -1),
-                    1,
-                    height - 2)
-                intersect_y_2 = np.clip(
-                    intersection_positions[intersection][1] + np.random.randint(-3, 3),
-                    1,
-                    width - 2)
-
-                # Connect train station to the correct node
-                connect_nodes(rail_trans, grid_map, (intersect_x_1, intersect_y_1),
-                              (intersect_x_2, intersect_y_2))
-                connect_nodes(rail_trans, grid_map, intersection_positions[intersection],
-                              (intersect_x_1, intersect_y_1))
-                connect_nodes(rail_trans, grid_map, intersection_positions[intersection],
-                              (intersect_x_2, intersect_y_2))
-                grid_map.fix_transitions((intersect_x_1, intersect_y_1))
-                grid_map.fix_transitions((intersect_x_2, intersect_y_2))
-
-        # Fix all nodes with illegal transition maps
-        for current_node in node_positions:
-            grid_map.fix_transitions(current_node)
-
-        # Generate start and target node directory for all agents.
-        # Assure that start and target are not in the same node
-        agent_start_targets_nodes = []
-
-        # Slot availability in node
-        node_available_start = []
-        node_available_target = []
-        for node_idx in range(_num_cities):
-            node_available_start.append(len(train_stations[node_idx]))
-            node_available_target.append(len(train_stations[node_idx]))
-
-        # Assign agents to slots
-        for agent_idx in range(num_agents):
-            avail_start_nodes = [idx for idx, val in enumerate(node_available_start) if val > 0]
-            avail_target_nodes = [idx for idx, val in enumerate(node_available_target) if val > 0]
-            start_node = np.random.choice(avail_start_nodes)
-            target_node = np.random.choice(avail_target_nodes)
-            tries = 0
-            found_agent_pair = True
-            while target_node == start_node:
-                target_node = np.random.choice(avail_target_nodes)
-                tries += 1
-                # Test again with new start node if no pair is found (This code needs to be improved)
-                if (tries + 1) % 10 == 0:
-                    start_node = np.random.choice(avail_start_nodes)
-                if tries > 100:
-                    warnings.warn("Could not set trainstations, removing agent!")
-                    found_agent_pair = False
-                    break
-            if found_agent_pair:
-                node_available_start[start_node] -= 1
-                node_available_target[target_node] -= 1
-                agent_start_targets_nodes.append((start_node, target_node))
-            else:
-                num_agents -= 1
+        # Generate start target pairs
+        agent_start_targets_cities = _generate_start_target_pairs(num_agents, num_cities, train_stations,
+                                                                              city_orientations)
 
         return grid_map, {'agents_hints': {
             'num_agents': num_agents,
-            'agent_start_targets_nodes': agent_start_targets_nodes,
-            'train_stations': train_stations
+            'agent_start_targets_cities': agent_start_targets_cities,
+            'train_stations': train_stations,
+            'city_orientations': city_orientations
         }}
 
-    def _generate_node_positions_not_grid_mode(city_positions, height, intersection_positions, nb_nodes,
-                                               width):
-
-        node_positions = []
-        for node_idx in range(nb_nodes):
-            to_close = True
+    def _generate_random_city_positions(num_cities: int, city_radius: int, width: int, height: int) -> (IntVector2DArray, IntVector2DArray):
+        city_positions: IntVector2DArray = []
+        city_cells: IntVector2DArray = []
+        for city_idx in range(num_cities):
+            too_close = True
             tries = 0
 
-            while to_close:
-                x_tmp = node_radius + np.random.randint(height - node_radius)
-                y_tmp = node_radius + np.random.randint(width - node_radius)
-                to_close = False
-
+            while too_close:
+                row = city_radius + 1 + np.random.randint(height - 2 * (city_radius + 1))
+                col = city_radius + 1 + np.random.randint(width - 2 * (city_radius + 1))
+                too_close = False
                 # Check distance to cities
-                for node_pos in city_positions:
-                    if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
-                        to_close = True
+                for city_pos in city_positions:
+                    if _are_cities_overlapping((row, col), city_pos, 2 * (city_radius + 1) + 1):
+                        too_close = True
 
-                # Check distance to intersections
-                for node_pos in intersection_positions:
-                    if distance_on_rail((x_tmp, y_tmp), node_pos) < min_node_dist:
-                        to_close = True
+                if not too_close:
+                    city_positions.append((row, col))
+                    city_cells.extend(_get_cells_in_city(city_positions[-1], city_radius))
 
-                if not to_close:
-                    node_positions.append((x_tmp, y_tmp))
-                    if node_idx < num_cities:
-                        city_positions.append((x_tmp, y_tmp))
-                    else:
-                        intersection_positions.append((x_tmp, y_tmp))
                 tries += 1
-                if tries > 100:
+                if tries > 200:
                     warnings.warn(
-                        "Could not only set {} nodes after {} tries, although {} of nodes required to be generated!".format(
-                            len(node_positions),
-                            tries, nb_nodes))
+                        "Could not only set {} cities after {} tries, although {} of cities required to be generated!".format(
+                            len(city_positions),
+                            tries, num_cities))
+                    break
+        return city_positions, city_cells
+
+    def _generate_evenly_distr_city_positions(num_cities: int, city_radius: int, width: int, height: int) -> (IntVector2DArray, IntVector2DArray):
+        aspect_ratio = height / width
+        cities_per_row = int(np.ceil(np.sqrt(num_cities * aspect_ratio)))
+        cities_per_col = int(np.ceil(num_cities / cities_per_row))
+        row_positions = np.linspace(city_radius + 1, height - city_radius - 2, cities_per_row, dtype=int)
+        col_positions = np.linspace(city_radius + 1, width - city_radius - 2, cities_per_col, dtype=int)
+        city_positions = []
+        city_cells = []
+        for city_idx in range(num_cities):
+            row = row_positions[city_idx % cities_per_row]
+            col = col_positions[city_idx // cities_per_row]
+            city_positions.append((row, col))
+            city_cells.extend(_get_cells_in_city(city_positions[-1], city_radius))
+        return city_positions, city_cells
+
+    def _generate_city_connection_points(city_positions: IntVector2DArray, city_radius: int, rails_between_cities: int,
+                                         rails_in_city: int = 2) -> (List[List[List[IntVector2D]]],
+                                                                     List[List[List[IntVector2D]]],
+                                                                     List[np.ndarray],
+                                                                     List[Grid4TransitionsEnum]):
+        inner_connection_points: List[List[List[IntVector2D]]] = []
+        outer_connection_points: List[List[List[IntVector2D]]] = []
+        connection_info: List[np.ndarray] = []
+        city_orientations: List[Grid4TransitionsEnum] = []
+        for city_position in city_positions:
+
+            # Chose the directions where close cities are situated
+            neighb_dist = []
+            for neighbour_city in city_positions:
+                neighb_dist.append(Vec2dOperations.get_manhattan_distance(city_position, neighbour_city))
+            closest_neighb_idx = argsort(neighb_dist)
+
+            # Store the directions to these neighbours and orient city to face closest neighbour
+            connection_sides_idx = []
+            idx = 1
+            if grid_mode:
+                current_closest_direction = np.random.randint(4)
+            else:
+                current_closest_direction = direction_to_point(city_position, city_positions[closest_neighb_idx[idx]])
+            connection_sides_idx.append(current_closest_direction)
+            connection_sides_idx.append((current_closest_direction + 2) % 4)
+            city_orientations.append(current_closest_direction)
+            # set the number of tracks within a city, at least 2 tracks per city
+            connections_per_direction = np.zeros(4, dtype=int)
+            nr_of_connection_points = np.random.randint(3, rails_in_city + 1)
+            for idx in connection_sides_idx:
+                connections_per_direction[idx] = nr_of_connection_points
+            connection_points_coordinates_inner: List[List[IntVector2D]] = [[] for i in range(4)]
+            connection_points_coordinates_outer: List[List[IntVector2D]] = [[] for i in range(4)]
+            number_of_out_rails = np.random.randint(1, min(rails_between_cities, nr_of_connection_points) + 1)
+            start_idx = int((nr_of_connection_points - number_of_out_rails) / 2)
+            for direction in range(4):
+                connection_slots = np.arange(connections_per_direction[direction]) - int(
+                    connections_per_direction[direction] / 2)
+                for connection_idx in range(connections_per_direction[direction]):
+                    if direction == 0:
+                        tmp_coordinates = (
+                            city_position[0] - city_radius, city_position[1] + connection_slots[connection_idx])
+                    if direction == 1:
+                        tmp_coordinates = (
+                            city_position[0] + connection_slots[connection_idx], city_position[1] + city_radius)
+                    if direction == 2:
+                        tmp_coordinates = (
+                            city_position[0] + city_radius, city_position[1] + connection_slots[connection_idx])
+                    if direction == 3:
+                        tmp_coordinates = (
+                            city_position[0] + connection_slots[connection_idx], city_position[1] - city_radius)
+                    connection_points_coordinates_inner[direction].append(tmp_coordinates)
+                    if connection_idx in range(start_idx, start_idx + number_of_out_rails + 1):
+                        connection_points_coordinates_outer[direction].append(tmp_coordinates)
+
+            inner_connection_points.append(connection_points_coordinates_inner)
+            outer_connection_points.append(connection_points_coordinates_outer)
+            connection_info.append(connections_per_direction)
+        return inner_connection_points, outer_connection_points, connection_info, city_orientations
+
+    def _connect_cities(city_positions: IntVector2DArray, connection_points: List[List[List[IntVector2D]]], city_cells: IntVector2DArray,
+                        rail_trans: RailEnvTransitions, grid_map: GridTransitionMap) -> List[IntVector2DArray]:
+        """
+        Function to connect the different cities through their connection points
+        :param city_positions: Positions of city centers
+        :param connection_points: Boarder connection points of cities
+        :param rail_trans: Transitions
+        :param grid_map: Grid map
+        :return:
+        """
+        all_paths: List[IntVector2DArray] = []
+
+        grid4_directions = [Grid4TransitionsEnum.NORTH, Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.SOUTH,
+                            Grid4TransitionsEnum.WEST]
+
+        for current_city_idx in np.arange(len(city_positions)):
+            closest_neighbours = _closest_neighbour_in_grid4_directions(current_city_idx, city_positions)
+            for out_direction in grid4_directions:
+
+                neighbour_idx = get_closest_neighbour_for_direction(closest_neighbours, out_direction)
+
+                for city_out_connection_point in connection_points[current_city_idx][out_direction]:
+
+                    min_connection_dist = np.inf
+                    for direction in grid4_directions:
+                        current_points = connection_points[neighbour_idx][direction]
+                        for tmp_in_connection_point in current_points:
+                            tmp_dist = Vec2dOperations.get_manhattan_distance(city_out_connection_point,
+                                                                              tmp_in_connection_point)
+                            if tmp_dist < min_connection_dist:
+                                min_connection_dist = tmp_dist
+                                neighbour_connection_point = tmp_in_connection_point
+
+                    new_line = connect_rail_in_grid_map(grid_map, city_out_connection_point, neighbour_connection_point,
+                                                        rail_trans, flip_start_node_trans=False,
+                                                        flip_end_node_trans=False, respect_transition_validity=False,
+                                                        forbidden_cells=city_cells)
+                    all_paths.extend(new_line)
+
+        return all_paths
+
+    def get_closest_neighbour_for_direction(closest_neighbours, out_direction):
+        neighbour_idx = closest_neighbours[out_direction]
+        if neighbour_idx is not None:
+            return neighbour_idx
+
+        neighbour_idx = closest_neighbours[(out_direction - 1) % 4] # counter-clockwise
+        if neighbour_idx is not None:
+            return neighbour_idx
+
+        neighbour_idx = closest_neighbours[(out_direction + 1) % 4]  # clockwise
+        if neighbour_idx is not None:
+            return neighbour_idx
+
+        return closest_neighbours[(out_direction + 2) % 4]  # clockwise
+
+    def _build_inner_cities(city_positions: IntVector2DArray, inner_connection_points: List[List[List[IntVector2D]]],
+                            outer_connection_points: List[List[List[IntVector2D]]], rail_trans: RailEnvTransitions,
+                            grid_map: GridTransitionMap) -> (List[IntVector2DArray], List[List[List[IntVector2D]]]):
+        """
+        Builds inner city tracks. This current version connects all incoming connections to all outgoing connections
+        :param city_positions: Positions of the cities
+        :param inner_connection_points: Points on city boarder that are used to generate inner city track
+        :param outer_connection_points: Points where the city is connected to neighboring cities
+        :param rail_trans:
+        :param grid_map:
+        :return: Returns the cells of the through path which cannot be occupied by trainstations
+        """
+        through_path_cells: List[IntVector2DArray] = [[] for i in range(len(city_positions))]
+        free_rails: List[List[List[IntVector2D]]] = [[] for i in range(len(city_positions))]
+        for current_city in range(len(city_positions)):
+            all_outer_connection_points = [item for sublist in outer_connection_points[current_city] for item in
+                                           sublist]
+            # This part only works if we have keep same number of connection points for both directions
+            # Also only works with two connection direction at each city
+            for i in range(4):
+                if len(inner_connection_points[current_city][i]) > 0:
+                    boarder = i
                     break
 
-        node_positions = city_positions + intersection_positions
-        return node_positions
+            opposite_boarder = (boarder + 2) % 4
+            boarder_one = inner_connection_points[current_city][boarder]
+            boarder_two = inner_connection_points[current_city][opposite_boarder]
 
-    def _generate_node_positions_grid_mode(city_idx, city_positions, intersection_positions, nb_nodes,
-                                           nodes_per_row, x_positions, y_positions):
-        for node_idx in range(nb_nodes):
+            # Connect the ends of the tracks
+            connect_straight_line_in_grid_map(grid_map, boarder_one[0], boarder_one[-1], rail_trans)
+            connect_straight_line_in_grid_map(grid_map, boarder_two[0], boarder_two[-1], rail_trans)
 
-            x_tmp = x_positions[node_idx % nodes_per_row]
-            y_tmp = y_positions[node_idx // nodes_per_row]
-            if node_idx in city_idx:
-                city_positions.append((x_tmp, y_tmp))
-            else:
-                intersection_positions.append((x_tmp, y_tmp))
-        node_positions = city_positions + intersection_positions
-        return node_positions
+            # Connect parallel tracks
+            for track_id in range(len(inner_connection_points[current_city][boarder])):
+                source = inner_connection_points[current_city][boarder][track_id]
+                target = inner_connection_points[current_city][opposite_boarder][track_id]
+                current_track = connect_straight_line_in_grid_map(grid_map, source, target, rail_trans)
+                if target in all_outer_connection_points and source in all_outer_connection_points and len(through_path_cells[current_city]) < 1:
+                    through_path_cells[current_city].extend(current_track)
+                else:
+                    free_rails[current_city].append(current_track)
+        return through_path_cells, free_rails
+
+    def _set_trainstation_positions(city_positions: IntVector2DArray, city_radius: int,
+                                    free_rails: List[List[List[IntVector2D]]]) -> List[List[Tuple[IntVector2D, int]]]:
+        num_cities = len(city_positions)
+        train_stations = [[] for i in range(num_cities)]
+        for current_city in range(len(city_positions)):
+            for track_nbr in range(len(free_rails[current_city])):
+                possible_location = free_rails[current_city][track_nbr][city_radius]
+                train_stations[current_city].append((possible_location, track_nbr))
+        return train_stations
+
+    def _generate_start_target_pairs(num_agents: int, num_cities: int,
+                                     train_stations: List[List[Tuple[IntVector2D, int]]],
+                                     city_orientation: List[Grid4TransitionsEnum]) -> List[Tuple[int, int,
+                                                                                                 Grid4TransitionsEnum]]:
+        # Generate start and target city directory for all agents.
+        # Assure that start and target are not in the same city
+        agent_start_targets_cities = []
+
+        # Slot availability in city
+        city_available_start = []
+        city_available_target = []
+        for city_idx in range(num_cities):
+            city_available_start.append(len(train_stations[city_idx]))
+            city_available_target.append(len(train_stations[city_idx]))
+
+        # Assign agents to slots
+        for agent_idx in range(num_agents):
+            avail_start_cities = [idx for idx, val in enumerate(city_available_start) if val > 0]
+            avail_target_cities = [idx for idx, val in enumerate(city_available_target) if val > 0]
+            # Set probability to choose start and stop from trainstations
+            sum_start = sum(np.array(city_available_start)[avail_start_cities])
+            sum_target = sum(np.array(city_available_target)[avail_target_cities])
+            p_avail_start = [float(i) / sum_start for i in np.array(city_available_start)[avail_start_cities]]
+
+            start_target_tuple = np.random.choice(avail_start_cities, p=p_avail_start, size=2, replace=False)
+            start_city = start_target_tuple[0]
+            target_city = start_target_tuple[1]
+            agent_start_targets_cities.append((start_city, target_city, city_orientation[start_city]))
+        return agent_start_targets_cities
+
+    def _fix_transitions(city_cells: IntVector2DArray, inter_city_lines: List[IntVector2DArray],
+                         grid_map: GridTransitionMap):
+        """
+        Function to fix all transition elements in environment
+        """
+        # Fix all cities with illegal transition maps
+        rails_to_fix = np.zeros(2 * grid_map.height * grid_map.width * 2, dtype='int')
+        rails_to_fix_cnt = 0
+        cells_to_fix = city_cells + inter_city_lines
+        for cell in cells_to_fix:
+            cell_valid = grid_map.cell_neighbours_valid(cell, True)
+            if grid_map.grid[cell] == int('1000010000100001', 2):
+                grid_map.fix_transitions(cell)
+            if not cell_valid:
+                rails_to_fix[2 * rails_to_fix_cnt] = cell[0]
+                rails_to_fix[2 * rails_to_fix_cnt + 1] = cell[1]
+                rails_to_fix_cnt += 1
+
+        # Fix all other cells
+        for cell in range(rails_to_fix_cnt):
+            grid_map.fix_transitions((rails_to_fix[2 * cell], rails_to_fix[2 * cell + 1]), )
+
+    def _closest_neighbour_in_grid4_directions(current_city_idx: int, city_positions: IntVector2DArray) -> List[int]:
+        """
+        Returns indices of closest neighbour in every direction NESW
+        :param current_city_idx: Index of city in city_positions list
+        :param city_positions: list of all points being considered
+        :return: list of index of closest neighbour in all directions
+        """
+        city_distances = []
+        closest_neighbour: List[int] = [None for i in range(4)]
+
+        # compute distance to all other cities
+        for city_idx in range(len(city_positions)):
+            city_distances.append(Vec2dOperations.get_manhattan_distance(city_positions[current_city_idx], city_positions[city_idx]))
+        sorted_neighbours = np.argsort(city_distances)
+
+        for neighbour in sorted_neighbours[1:]: # do not include city itself
+            direction_to_neighbour = direction_to_point(city_positions[current_city_idx], city_positions[neighbour])
+            if closest_neighbour[direction_to_neighbour] is None:
+                closest_neighbour[direction_to_neighbour] = neighbour
+
+            # early return once all 4 directions have a closest neighbour
+            if None not in closest_neighbour:
+                return closest_neighbour
+
+        return closest_neighbour
+
+    def argsort(seq):
+        # http://stackoverflow.com/questions/3071415/efficient-method-to-calculate-the-rank-vector-of-a-list-in-python
+        return sorted(range(len(seq)), key=seq.__getitem__)
+
+    def _get_cells_in_city(center: IntVector2D, radius: int) -> IntVector2DArray:
+        """
+
+        Parameters
+        ----------
+        center center coordinates of city
+        radius radius of city (it is a square)
+
+        Returns
+        -------
+        flat list of all cell coordinates in the city
+
+        """
+        x_range = np.arange(center[0] - radius, center[0] + radius + 1)
+        y_range = np.arange(center[1] - radius, center[1] + radius + 1)
+        x_values = np.repeat(x_range, len(y_range))
+        y_values = np.tile(y_range, len(x_range))
+        return list(zip(x_values, y_values))
+
+    def _are_cities_overlapping(center_1, center_2, radius):
+        return np.abs(center_1[0] - center_2[0]) < radius and np.abs(center_1[1] - center_2[1]) < radius
 
     return generator
