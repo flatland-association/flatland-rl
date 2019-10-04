@@ -38,7 +38,6 @@ def connect_rail_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D, en
     path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, respect_transition_validity,
                                     forbidden_cells)
     if len(path) < 2:
-        print("No path found", path)
         return []
 
     current_dir = get_direction(path[0], path[1])

@@ -14,7 +14,6 @@ from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.grid.grid_utils import Vec2dOperations
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
@@ -111,7 +110,7 @@ class RailEnv(Environment):
 
     # Where the agent is placed when he reached his destination(target)
     # remove_agents_at_target must be set to true in the RailEnv(...)
-    DEPOT_POSITION = lambda agent, agent_handle : (-10, -10)
+    DEPOT_POSITION = lambda agent, agent_handle: (-10, -10)
 
     def __init__(self,
                  width,
@@ -398,7 +397,8 @@ class RailEnv(Environment):
 
         info_dict = {
             'action_required': {
-                i: (agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0)
+                i: (agent.status == RailAgentStatus.READY_TO_DEPART or (
+                        agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0))
                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
@@ -532,8 +532,8 @@ class RailEnv(Environment):
                 agent.moving = False
 
                 if self.remove_agents_at_target:
-                    agent.position = RailEnv.DEPOT_POSITION(agent,i_agent)
-                    agent.target = RailEnv.DEPOT_POSITION(agent,i_agent)
+                    agent.position = RailEnv.DEPOT_POSITION(agent, i_agent)
+                    agent.target = RailEnv.DEPOT_POSITION(agent, i_agent)
             else:
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
         else:
