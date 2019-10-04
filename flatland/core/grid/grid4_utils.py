@@ -60,7 +60,7 @@ def direction_to_point(pos1: IntVector2D, pos2: IntVector2D) -> Grid4Transitions
             return Grid4TransitionsEnum.EAST
 
 
-def directions_of_vector(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
+def directions_of_vector(pos1: IntVector2D, pos2: IntVector2D) -> (Grid4TransitionsEnum, Grid4TransitionsEnum):
     """
     Returns the closest direction orientation of position 2 relative to position 1
     :param pos1: position we are interested in

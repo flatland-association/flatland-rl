@@ -38,7 +38,7 @@ class AStarNode:
 def a_star(grid_map: GridTransitionMap,
            start: IntVector2D, end: IntVector2D,
            a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance, nice=True,
-           forbidden_cells=None) -> IntVector2DArray:
+           forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
     """
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.

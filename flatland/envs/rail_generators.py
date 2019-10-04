@@ -587,13 +587,13 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                                                          rail_trans,
                                                          grid_map)
         # Populate cities
-        train_stations, built_num_trainstation = _set_trainstation_positions(city_positions, city_radius, free_rails)
+        train_stations = _set_trainstation_positions(city_positions, city_radius, free_rails)
 
         # Fix all transition elements
         _fix_transitions(city_cells, inter_city_lines, grid_map)
 
         # Generate start target pairs
-        agent_start_targets_cities, num_agents = _generate_start_target_pairs(num_agents, num_cities, train_stations,
+        agent_start_targets_cities = _generate_start_target_pairs(num_agents, num_cities, train_stations,
                                                                               city_orientations)
 
         return grid_map, {'agents_hints': {
@@ -708,8 +708,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             connection_info.append(connections_per_direction)
         return inner_connection_points, outer_connection_points, connection_info, city_orientations
 
-    def _connect_cities(city_positions: IntVector2DArray, connection_points, city_cells: IntVector2DArray,
-                        rail_trans, grid_map: GridTransitionMap):
+    def _connect_cities(city_positions: IntVector2DArray, connection_points: List[List[List[IntVector2D]]], city_cells: IntVector2DArray,
+                        rail_trans: RailEnvTransitions, grid_map: GridTransitionMap) -> List[IntVector2DArray]:
         """
         Function to connect the different cities through their connection points
         :param city_positions: Positions of city centers
@@ -718,7 +718,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         :param grid_map: Grid map
         :return:
         """
-        all_paths = []
+        all_paths: List[IntVector2DArray] = []
 
         for current_city_idx in np.arange(len(city_positions)):
             neighbours = _closest_neighbour_in_direction(current_city_idx, city_positions)
@@ -748,8 +748,9 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         return all_paths
 
-    def _build_inner_cities(city_positions, inner_connection_points, outer_connection_points, rail_trans,
-                            grid_map: GridTransitionMap):
+    def _build_inner_cities(city_positions: IntVector2DArray, inner_connection_points: List[List[List[IntVector2D]]],
+                            outer_connection_points: List[List[List[IntVector2D]]], rail_trans: RailEnvTransitions,
+                            grid_map: GridTransitionMap) -> (List[IntVector2DArray], List[List[List[IntVector2D]]]):
         """
         Builds inner city tracks. This current version connects all incoming connections to all outgoing connections
         :param city_positions: Positions of the cities
@@ -759,8 +760,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         :param grid_map:
         :return: Returns the cells of the through path which cannot be occupied by trainstations
         """
-        through_path_cells = [[] for i in range(len(city_positions))]
-        free_tracks = [[] for i in range(len(city_positions))]
+        through_path_cells: List[IntVector2DArray] = [[] for i in range(len(city_positions))]
+        free_rails: List[List[List[IntVector2D]]] = [[] for i in range(len(city_positions))]
         for current_city in range(len(city_positions)):
             all_outer_connection_points = [item for sublist in outer_connection_points[current_city] for item in
                                            sublist]
@@ -784,37 +785,26 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
                 current_track = connect_straigt_line(rail_trans, grid_map, source, target, False)
-                if target in all_outer_connection_points and source in \
-                    all_outer_connection_points and len(through_path_cells[current_city]) < 1:
+                if target in all_outer_connection_points and source in all_outer_connection_points and len(through_path_cells[current_city]) < 1:
                     through_path_cells[current_city].extend(current_track)
                 else:
-                    free_tracks[current_city].append(current_track)
-        return through_path_cells, free_tracks
+                    free_rails[current_city].append(current_track)
+        return through_path_cells, free_rails
 
-    def _set_trainstation_positions(city_positions: IntVector2DArray, city_radius: int, free_rails):
-        """
-
-        :param city_positions:
-        :param num_trainstations:
-        :return:
-        """
+    def _set_trainstation_positions(city_positions: IntVector2DArray, city_radius: int,
+                                    free_rails: List[List[List[IntVector2D]]]) -> List[List[Tuple[IntVector2D, int]]]:
         num_cities = len(city_positions)
         train_stations = [[] for i in range(num_cities)]
-        built_num_trainstations = 0
         for current_city in range(len(city_positions)):
             for track_nbr in range(len(free_rails[current_city])):
                 possible_location = free_rails[current_city][track_nbr][city_radius]
                 train_stations[current_city].append((possible_location, track_nbr))
-        return train_stations, built_num_trainstations
+        return train_stations
 
-    def _generate_start_target_pairs(num_agents, num_cities, train_stations, city_orientation):
-        """
-        Fill the trainstation positions with targets and goals
-        :param num_agents:
-        :param num_cities:
-        :param train_stations:
-        :return:
-        """
+    def _generate_start_target_pairs(num_agents: int, num_cities: int,
+                                     train_stations: List[List[Tuple[IntVector2D, int]]],
+                                     city_orientation: List[Grid4TransitionsEnum]) -> List[Tuple[int, int,
+                                                                                                 Grid4TransitionsEnum]]:
         # Generate start and target city directory for all agents.
         # Assure that start and target are not in the same city
         agent_start_targets_cities = []
@@ -839,9 +829,10 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             start_city = start_target_tuple[0]
             target_city = start_target_tuple[1]
             agent_start_targets_cities.append((start_city, target_city, city_orientation[start_city]))
-        return agent_start_targets_cities, num_agents
+        return agent_start_targets_cities
 
-    def _fix_transitions(city_cells, inter_city_lines, grid_map: GridTransitionMap):
+    def _fix_transitions(city_cells: IntVector2DArray, inter_city_lines: List[IntVector2DArray],
+                         grid_map: GridTransitionMap):
         """
         Function to fix all transition elements in environment
         """
