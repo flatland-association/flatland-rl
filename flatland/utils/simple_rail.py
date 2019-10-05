@@ -56,6 +56,7 @@ def make_disconnected_simple_rail() -> Tuple[GridTransitionMap, np.array]:
     #                |
     #                |
     #                |
+
     transitions = RailEnvTransitions()
     cells = transitions.transition_list
     empty = cells[0]
