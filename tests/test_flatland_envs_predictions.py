@@ -279,7 +279,7 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     agent.status = RailAgentStatus.ACTIVE
 
     # reset to set agents from agents_static
-    observations = env.reset(False, False, True)
+    observations, info = env.reset(False, False, True)
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
