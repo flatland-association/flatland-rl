@@ -571,6 +571,17 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         # reduce num_cities if less were generated in random mode
         num_cities = len(city_positions)
+
+        # Try with evenly distributed cities
+        if num_cities < 2:
+            city_positions, city_cells = _generate_evenly_distr_city_positions(max_num_cities, city_radius, width,
+                                                                               height)
+        num_cities = len(city_positions)
+
+        # Fail
+        if num_cities < 2:
+            warnings.warn("Initial parameters cannot generate valid railway")
+            return
         # Set up connection points for all cities
         inner_connection_points, outer_connection_points, connection_info, city_orientations = _generate_city_connection_points(
             city_positions, city_radius, rails_between_cities,
