@@ -558,7 +558,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         city_radius = int(np.ceil((max_rails_in_city + 2) / 2.0)) + 1
-        vector_field = np.zeros(shape=(width, height)) - 1.
+        vector_field = np.zeros(shape=(height, width)) - 1.
 
         min_nr_rails_in_city = 3
         rails_in_city = min_nr_rails_in_city if max_rails_in_city < min_nr_rails_in_city else max_rails_in_city
