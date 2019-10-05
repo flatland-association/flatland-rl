@@ -166,7 +166,7 @@ We start every trial by resetting the environment
 
 .. code-block:: python
 
-    obs = env.reset()
+    obs, info = env.reset()
 
 Which provides the initial observation for all agents (obs = array of all observations).
 In order for the environment to step forward in time we need a dictionar of actions for all active agents.

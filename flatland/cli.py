@@ -33,7 +33,7 @@ def demo(args=None):
     env_renderer = RenderTool(env)
 
     while True:
-        obs = env.reset()
+        obs, info = env.reset()
         _done = False
         # Run a single episode here
         step = 0

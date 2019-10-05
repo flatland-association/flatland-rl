@@ -98,7 +98,7 @@ action_dict = dict()
 print("Start episode...")
 # Reset environment and get initial observations for all agents
 start_reset = time.time()
-obs = env.reset()
+obs, info = env.reset()
 end_reset = time.time()
 print(end_reset - start_reset)
 print(env.get_num_agents(), )

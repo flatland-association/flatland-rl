@@ -15,7 +15,7 @@ class Environment:
     Agents are identified by agent ids (handles).
     Examples:
 
-        >>> obs = env.reset()
+        >>> obs, info = env.reset()
         >>> print(obs)
         {
             "train_0": [2.4, 1.6],
