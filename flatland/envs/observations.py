@@ -162,6 +162,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         In case the target node is reached, the values are [0, 0, 0, 0, 0].
         """
 
+
         # Update local lookup table for all agents' positions
         # ignore other agents not in the grid (only status active and done)
         self.location_has_agent = {tuple(agent.position): 1 for agent in self.env.agents if
