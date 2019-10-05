@@ -67,7 +67,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             self.predicted_dir = {}
             self.predictions = self.predictor.get()
             if self.predictions:
-                for t in range(self.predictor.max_depth+1):
+                for t in range(self.predictor.max_depth + 1):
                     pos_list = []
                     dir_list = []
                     for a in handles:
@@ -161,7 +161,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         In case of the root node, the values are [0, 0, 0, 0, distance from agent to target, own malfunction, own speed]
         In case the target node is reached, the values are [0, 0, 0, 0, 0].
         """
-
 
         # Update local lookup table for all agents' positions
         # ignore other agents not in the grid (only status active and done)

@@ -19,7 +19,8 @@ def connect_rail_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D, en
                              rail_trans: RailEnvTransitions,
                              a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
                              flip_start_node_trans: bool = False, flip_end_node_trans: bool = False,
-                             respect_transition_validity: bool = True, forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
+                             respect_transition_validity: bool = True,
+                             forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
     """
         Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
     returns the path created as a list of positions.
@@ -109,7 +110,7 @@ def connect_straight_line_in_grid_map(grid_map: GridTransitionMap, start: IntVec
         length = np.abs(end[0] - start[0]) + 1
         cols = np.repeat(start[1], length)
 
-    else:   # Grid4TransitionsEnum.EAST or Grid4TransitionsEnum.WEST
+    else:  # Grid4TransitionsEnum.EAST or Grid4TransitionsEnum.WEST
         start_col = min(start[1], end[1])
         end_col = max(start[1], end[1]) + 1
         cols = np.arange(start_col, end_col)
