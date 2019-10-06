@@ -822,22 +822,24 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
                 current_track = connect_straight_line_in_grid_map(grid_map, source, target, rail_trans)
-
+                free_rails[current_city].append(current_track)
             for track_id in range(nr_of_connection_points):
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
+
+                # Connect parallel tracks with each other
                 fix_inner_nodes(
                     grid_map, source, rail_trans)
                 fix_inner_nodes(
                     grid_map, target, rail_trans)
+
+                # Connect outer tracks to inner tracks
                 if start_idx <= track_id < start_idx + number_of_out_rails:
                     source_outer = outer_connection_points[current_city][boarder][track_id - start_idx]
                     target_outer = outer_connection_points[current_city][opposite_boarder][track_id - start_idx]
                     connect_straight_line_in_grid_map(grid_map, source, source_outer, rail_trans)
                     connect_straight_line_in_grid_map(grid_map, target, target_outer, rail_trans)
 
-
-                free_rails[current_city].append(current_track)
         return free_rails
 
     def _set_trainstation_positions(city_positions: IntVector2DArray, city_radius: int,
