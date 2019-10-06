@@ -158,7 +158,7 @@ def test_malfunction_process_statistically():
         env.step(action_dict)
 
     # check that generation of malfunctions works as expected
-    assert nb_malfunction == 152, "nb_malfunction={}".format(nb_malfunction)
+    assert nb_malfunction == 128, "nb_malfunction={}".format(nb_malfunction)
 
 
 def test_initial_malfunction():
