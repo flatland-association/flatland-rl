@@ -9,7 +9,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_astar import a_star
-from flatland.core.grid.grid4_utils import get_direction, mirror, direction_to_point
+from flatland.core.grid.grid4_utils import get_direction, mirror, direction_to_point, get_new_position
 from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance, IntVector2DArray
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transition_map import GridTransitionMap, RailEnvTransitions
@@ -126,3 +126,33 @@ def connect_straight_line_in_grid_map(grid_map: GridTransitionMap, start: IntVec
         grid_map.grid[cell] = transition
 
     return path
+
+
+def fix_inner_nodes(grid_map: GridTransitionMap, inner_node_pos: IntVector2D, rail_trans: RailEnvTransitions):
+    """
+    Fix inner city nodes
+    :param grid_map:
+    :param start:
+    :param rail_trans:
+    :return:
+    """
+    corner_directions = []
+    for direction in range(4):
+        tmp_pos = get_new_position(inner_node_pos, direction)
+        if grid_map.grid[tmp_pos] > 0:
+            corner_directions.append(direction)
+    if len(corner_directions) == 2:
+        transition = 0
+        transition = rail_trans.set_transition(transition, mirror(corner_directions[0]), corner_directions[1], 1)
+        transition = rail_trans.set_transition(transition, mirror(corner_directions[1]), corner_directions[0], 1)
+        grid_map.grid[inner_node_pos] = transition
+        tmp_pos = get_new_position(inner_node_pos, corner_directions[0])
+        transition = grid_map.grid[tmp_pos]
+        transition = rail_trans.set_transition(transition, corner_directions[0], mirror(corner_directions[0]), 1)
+        grid_map.grid[tmp_pos] = transition
+        tmp_pos = get_new_position(inner_node_pos, corner_directions[1])
+        transition = grid_map.grid[tmp_pos]
+        transition = rail_trans.set_transition(transition, corner_directions[1], mirror(corner_directions[1]),
+                                               1)
+        grid_map.grid[tmp_pos] = transition
+    return

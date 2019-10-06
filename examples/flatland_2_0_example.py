@@ -36,7 +36,7 @@ env = RailEnv(width=50,
                                                    # Number of cities in map (where train stations are)
                                                    seed=1,  # Random seed
                                                    grid_mode=False,
-                                                   max_rails_between_cities=2,
+                                                   max_rails_between_cities=3,
                                                    max_rails_in_city=6,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
