@@ -30,8 +30,8 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
                     1. / 3.: 0.25,  # Slow commuter train
                     1. / 4.: 0.25}  # Slow freight train
 
-env = RailEnv(width=100,
-              height=100,
+env = RailEnv(width=50,
+              height=50,
               rail_generator=sparse_rail_generator(max_num_cities=20,
                                                    # Number of cities in map (where train stations are)
                                                    seed=1,  # Random seed
@@ -40,7 +40,7 @@ env = RailEnv(width=100,
                                                    max_rails_in_city=8,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=100,
+              number_of_agents=50,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=TreeObservation,
               remove_agents_at_target=True
