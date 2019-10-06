@@ -37,7 +37,7 @@ env = RailEnv(width=50,
                                                    seed=1,  # Random seed
                                                    grid_mode=False,
                                                    max_rails_between_cities=3,
-                                                   max_rails_in_city=6,
+                                                   max_rails_in_city=2,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
               number_of_agents=10,
