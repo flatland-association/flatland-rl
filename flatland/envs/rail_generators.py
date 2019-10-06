@@ -648,13 +648,16 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
     def _generate_evenly_distr_city_positions(num_cities: int, city_radius: int, width: int, height: int,
                                               vector_field) -> (IntVector2DArray, IntVector2DArray):
         aspect_ratio = height / width
-        cities_per_row = int(np.ceil(np.sqrt(num_cities * aspect_ratio)))
-        cities_per_col = int(np.ceil(num_cities / cities_per_row))
-        row_positions = np.linspace(city_radius + 1, height - city_radius - 2, cities_per_row, dtype=int)
-        col_positions = np.linspace(city_radius + 1, width - city_radius - 2, cities_per_col, dtype=int)
+        cities_per_row = min(int(np.ceil(np.sqrt(num_cities * aspect_ratio))),
+                             int((height - 2 * (city_radius + 1)) / (2 * city_radius + 1)))
+        cities_per_col = min(int(np.ceil(num_cities / cities_per_row)),
+                             int((width - 2 * (city_radius + 1)) / (2 * city_radius + 1)))
+        num_build_cities = min(num_cities, cities_per_col * cities_per_row)
+        row_positions = np.linspace(city_radius + 1, height - 2 * (city_radius + 1), cities_per_row, dtype=int)
+        col_positions = np.linspace(city_radius + 1, width - 2 * (city_radius + 1), cities_per_col, dtype=int)
         city_positions = []
         city_cells = []
-        for city_idx in range(num_cities):
+        for city_idx in range(num_build_cities):
             row = row_positions[city_idx % cities_per_row]
             col = col_positions[city_idx // cities_per_row]
             city_positions.append((row, col))
