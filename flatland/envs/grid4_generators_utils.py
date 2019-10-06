@@ -130,9 +130,9 @@ def connect_straight_line_in_grid_map(grid_map: GridTransitionMap, start: IntVec
 
 def fix_inner_nodes(grid_map: GridTransitionMap, inner_node_pos: IntVector2D, rail_trans: RailEnvTransitions):
     """
-    Fix inner city nodes
+    Fix inner city nodes by connecting it to its neighbouring parallel track
     :param grid_map:
-    :param start:
+    :param inner_node_pos: inner city node to fix
     :param rail_trans:
     :return:
     """
