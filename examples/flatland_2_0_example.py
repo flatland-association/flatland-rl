@@ -30,9 +30,9 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
                     1. / 3.: 0.25,  # Slow commuter train
                     1. / 4.: 0.25}  # Slow freight train
 
-env = RailEnv(width=75,
-              height=75,
-              rail_generator=sparse_rail_generator(max_num_cities=50,
+env = RailEnv(width=30,
+              height=30,
+              rail_generator=sparse_rail_generator(max_num_cities=4,
                                                    # Number of cities in map (where train stations are)
                                                    seed=1,  # Random seed
                                                    grid_mode=True,
