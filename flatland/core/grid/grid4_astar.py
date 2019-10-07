@@ -1,3 +1,5 @@
+import numpy as np
+
 from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance
 from flatland.core.grid.grid_utils import IntVector2DArray
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
@@ -36,10 +38,11 @@ class AStarNode:
 
 
 def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
-           a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
+           a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance, avoid_rails=False,
            respect_transition_validity=True, forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
     """
 
+    :param avoid_rails:
     :param grid_map: Grid Map where the path is found in
     :param start: Start positions as (row,column)
     :param end:  End position as (row,column)
@@ -129,7 +132,10 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
             # create the f, g, and h values
             child.g = current_node.g + 1.0
             # this heuristic avoids diagonal paths
-            child.h = a_star_distance_function(child.pos, end_node.pos)
+            if avoid_rails:
+                child.h = a_star_distance_function(child.pos, end_node.pos) + np.clip(grid_map.grid[child.pos], 0, 1)
+            else:
+                child.h = a_star_distance_function(child.pos, end_node.pos)
             child.f = child.g + child.h
 
             # already in the open list?

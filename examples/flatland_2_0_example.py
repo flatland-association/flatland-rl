@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
@@ -32,17 +32,17 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
 
 env = RailEnv(width=100,
               height=100,
-              rail_generator=sparse_rail_generator(max_num_cities=20,
+              rail_generator=sparse_rail_generator(max_num_cities=30,
                                                    # Number of cities in map (where train stations are)
-                                                   seed=1,  # Random seed
+                                                   seed=14,  # Random seed
                                                    grid_mode=False,
-                                                   max_rails_between_cities=5,
-                                                   max_rails_in_city=8,
+                                                   max_rails_between_cities=2,
+                                                   max_rails_in_city=6,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=50,
+              number_of_agents=100,
               stochastic_data=stochastic_data,  # Malfunction data generator
-              obs_builder_object=TreeObservation,
+              obs_builder_object=GlobalObsForRailEnv(),
               remove_agents_at_target=True
               )
 
@@ -51,8 +51,8 @@ env = RailEnv(width=100,
 env_renderer = RenderTool(env, gl="PILSVG",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
                           show_debug=True,
-                          screen_height=800,
-                          screen_width=800)
+                          screen_height=1000,
+                          screen_width=1000)
 
 
 # Import your own Agent or use RLlib to train agents on Flatland

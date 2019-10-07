@@ -26,540 +26,474 @@ def test_sparse_rail_generator():
                   )
     env.reset(False, False, True)
     # for r in range(env.height):
-    #     for c in range (env.width):
-    #         if env.rail.grid[r][c] > 0:
-    #             print("expected_grid_map[{}][{}] = {}".format(r,c,env.rail.grid[r][c]))
+    #    for c in range (env.width):
+    #        if env.rail.grid[r][c] > 0:
+    #            print("expected_grid_map[{}][{}] = {}".format(r,c,env.rail.grid[r][c]))
     expected_grid_map = np.zeros((50, 50), dtype=env.rail.transitions.get_type())
-    expected_grid_map[4][32] = 16386
-    expected_grid_map[4][33] = 1025
-    expected_grid_map[4][34] = 1025
-    expected_grid_map[4][35] = 1025
-    expected_grid_map[4][36] = 1025
-    expected_grid_map[4][37] = 1025
-    expected_grid_map[4][38] = 1025
-    expected_grid_map[4][39] = 1025
-    expected_grid_map[4][40] = 1025
-    expected_grid_map[4][41] = 1025
-    expected_grid_map[4][42] = 1025
-    expected_grid_map[4][43] = 5633
-    expected_grid_map[4][44] = 5633
-    expected_grid_map[4][45] = 4608
-    expected_grid_map[5][32] = 32800
-    expected_grid_map[5][43] = 32872
-    expected_grid_map[5][44] = 38505
-    expected_grid_map[5][45] = 37408
-    expected_grid_map[6][32] = 32800
-    expected_grid_map[6][43] = 32800
-    expected_grid_map[6][44] = 32800
-    expected_grid_map[6][45] = 32800
-    expected_grid_map[7][32] = 32800
-    expected_grid_map[7][43] = 32800
-    expected_grid_map[7][44] = 32800
-    expected_grid_map[7][45] = 32800
-    expected_grid_map[8][32] = 32800
-    expected_grid_map[8][43] = 32800
-    expected_grid_map[8][44] = 32800
-    expected_grid_map[9][32] = 32800
+    expected_grid_map[7][14] = 1025
+    expected_grid_map[7][15] = 1025
+    expected_grid_map[7][16] = 1025
+    expected_grid_map[7][17] = 1025
+    expected_grid_map[7][18] = 1025
+    expected_grid_map[7][19] = 1025
+    expected_grid_map[7][20] = 1025
+    expected_grid_map[7][21] = 1025
+    expected_grid_map[7][22] = 17411
+    expected_grid_map[7][23] = 1025
+    expected_grid_map[7][24] = 1025
+    expected_grid_map[7][25] = 1025
+    expected_grid_map[7][26] = 5633
+    expected_grid_map[7][27] = 1025
+    expected_grid_map[7][28] = 1025
+    expected_grid_map[7][29] = 1025
+    expected_grid_map[7][30] = 1025
+    expected_grid_map[7][31] = 1025
+    expected_grid_map[7][32] = 1025
+    expected_grid_map[7][33] = 1025
+    expected_grid_map[7][34] = 1025
+    expected_grid_map[7][35] = 1025
+    expected_grid_map[7][36] = 1025
+    expected_grid_map[7][37] = 1025
+    expected_grid_map[7][38] = 1025
+    expected_grid_map[7][39] = 1025
+    expected_grid_map[7][40] = 1025
+    expected_grid_map[7][41] = 1025
+    expected_grid_map[7][42] = 4608
+    expected_grid_map[8][13] = 32800
+    expected_grid_map[8][14] = 16386
+    expected_grid_map[8][15] = 1025
+    expected_grid_map[8][16] = 1025
+    expected_grid_map[8][17] = 1025
+    expected_grid_map[8][18] = 1025
+    expected_grid_map[8][19] = 1025
+    expected_grid_map[8][20] = 5633
+    expected_grid_map[8][21] = 1025
+    expected_grid_map[8][22] = 3089
+    expected_grid_map[8][23] = 1025
+    expected_grid_map[8][24] = 1025
+    expected_grid_map[8][25] = 1025
+    expected_grid_map[8][26] = 1097
+    expected_grid_map[8][27] = 1025
+    expected_grid_map[8][28] = 17411
+    expected_grid_map[8][29] = 1025
+    expected_grid_map[8][30] = 17411
+    expected_grid_map[8][31] = 1025
+    expected_grid_map[8][32] = 1025
+    expected_grid_map[8][33] = 1025
+    expected_grid_map[8][34] = 1025
+    expected_grid_map[8][35] = 1025
+    expected_grid_map[8][36] = 17411
+    expected_grid_map[8][37] = 1025
+    expected_grid_map[8][38] = 1025
+    expected_grid_map[8][39] = 1025
+    expected_grid_map[8][40] = 1025
+    expected_grid_map[8][41] = 1025
+    expected_grid_map[8][42] = 38433
+    expected_grid_map[8][43] = 5633
+    expected_grid_map[8][44] = 4608
+    expected_grid_map[9][1] = 16386
+    expected_grid_map[9][2] = 1025
+    expected_grid_map[9][3] = 5633
+    expected_grid_map[9][4] = 17411
+    expected_grid_map[9][5] = 1025
+    expected_grid_map[9][6] = 1025
+    expected_grid_map[9][7] = 1025
+    expected_grid_map[9][8] = 1025
+    expected_grid_map[9][9] = 1025
+    expected_grid_map[9][10] = 5633
+    expected_grid_map[9][11] = 17411
+    expected_grid_map[9][12] = 1025
+    expected_grid_map[9][13] = 3089
+    expected_grid_map[9][14] = 3089
+    expected_grid_map[9][15] = 1025
+    expected_grid_map[9][16] = 1025
+    expected_grid_map[9][17] = 1025
+    expected_grid_map[9][18] = 17411
+    expected_grid_map[9][19] = 1025
+    expected_grid_map[9][20] = 1097
+    expected_grid_map[9][21] = 1025
+    expected_grid_map[9][22] = 5633
+    expected_grid_map[9][23] = 1025
+    expected_grid_map[9][24] = 1025
+    expected_grid_map[9][25] = 1025
+    expected_grid_map[9][26] = 17411
+    expected_grid_map[9][27] = 1025
+    expected_grid_map[9][28] = 3089
+    expected_grid_map[9][29] = 1025
+    expected_grid_map[9][30] = 3089
+    expected_grid_map[9][31] = 1025
+    expected_grid_map[9][32] = 1025
+    expected_grid_map[9][33] = 1025
+    expected_grid_map[9][34] = 1025
+    expected_grid_map[9][35] = 1025
+    expected_grid_map[9][36] = 2064
+    expected_grid_map[9][42] = 32800
     expected_grid_map[9][43] = 32800
     expected_grid_map[9][44] = 32800
-    expected_grid_map[9][45] = 32800
-    expected_grid_map[10][18] = 16386
-    expected_grid_map[10][19] = 1025
-    expected_grid_map[10][20] = 1025
-    expected_grid_map[10][21] = 1025
-    expected_grid_map[10][22] = 1025
-    expected_grid_map[10][23] = 17411
+    expected_grid_map[10][1] = 49186
+    expected_grid_map[10][2] = 1025
+    expected_grid_map[10][3] = 1097
+    expected_grid_map[10][4] = 3089
+    expected_grid_map[10][5] = 1025
+    expected_grid_map[10][6] = 1025
+    expected_grid_map[10][7] = 1025
+    expected_grid_map[10][8] = 1025
+    expected_grid_map[10][9] = 1025
+    expected_grid_map[10][10] = 1097
+    expected_grid_map[10][11] = 3089
+    expected_grid_map[10][12] = 1025
+    expected_grid_map[10][13] = 5633
+    expected_grid_map[10][14] = 5633
+    expected_grid_map[10][15] = 1025
+    expected_grid_map[10][16] = 1025
+    expected_grid_map[10][17] = 1025
+    expected_grid_map[10][18] = 2064
+    expected_grid_map[10][22] = 72
+    expected_grid_map[10][23] = 1025
     expected_grid_map[10][24] = 1025
     expected_grid_map[10][25] = 1025
-    expected_grid_map[10][26] = 1025
-    expected_grid_map[10][27] = 1025
-    expected_grid_map[10][28] = 1025
-    expected_grid_map[10][29] = 1025
-    expected_grid_map[10][30] = 1025
-    expected_grid_map[10][31] = 5633
-    expected_grid_map[10][32] = 1025
-    expected_grid_map[10][33] = 1025
-    expected_grid_map[10][34] = 1025
-    expected_grid_map[10][35] = 1025
-    expected_grid_map[10][36] = 1025
-    expected_grid_map[10][37] = 1025
-    expected_grid_map[10][38] = 4608
-    expected_grid_map[10][41] = 32800
-    expected_grid_map[10][42] = 32800
-    expected_grid_map[10][43] = 32800
+    expected_grid_map[10][26] = 2064
+    expected_grid_map[10][42] = 32872
+    expected_grid_map[10][43] = 37408
     expected_grid_map[10][44] = 32800
-    expected_grid_map[10][45] = 32800
-
-    expected_grid_map[11][18] = 49186
-    expected_grid_map[11][19] = 1025
-    expected_grid_map[11][20] = 1025
-    expected_grid_map[11][21] = 1025
-    expected_grid_map[11][22] = 17411
-    expected_grid_map[11][23] = 1097
-    expected_grid_map[11][24] = 1025
-    expected_grid_map[11][25] = 1025
-    expected_grid_map[11][26] = 1025
-    expected_grid_map[11][27] = 1025
-    expected_grid_map[11][28] = 1025
-    expected_grid_map[11][29] = 1025
-    expected_grid_map[11][30] = 1025
-    expected_grid_map[11][31] = 3089
-    expected_grid_map[11][32] = 1025
-    expected_grid_map[11][33] = 1025
-    expected_grid_map[11][34] = 1025
-    expected_grid_map[11][35] = 1025
-    expected_grid_map[11][36] = 1025
-    expected_grid_map[11][37] = 1025
-    expected_grid_map[11][38] = 37408
-    expected_grid_map[11][41] = 32800
-    expected_grid_map[11][42] = 32800
-    expected_grid_map[11][43] = 32800
+    expected_grid_map[11][1] = 32800
+    expected_grid_map[11][13] = 32800
+    expected_grid_map[11][14] = 32800
+    expected_grid_map[11][42] = 49186
+    expected_grid_map[11][43] = 34864
     expected_grid_map[11][44] = 32800
-    expected_grid_map[12][18] = 32800
-    expected_grid_map[12][22] = 32800
-    expected_grid_map[12][38] = 32800
-    expected_grid_map[12][41] = 32800
+    expected_grid_map[12][1] = 32800
+    expected_grid_map[12][13] = 32800
+    expected_grid_map[12][14] = 32800
     expected_grid_map[12][42] = 32800
-    expected_grid_map[12][43] = 32800
-    expected_grid_map[12][44] = 32800
-    expected_grid_map[13][6] = 16386
-    expected_grid_map[13][7] = 1025
-    expected_grid_map[13][8] = 1025
-    expected_grid_map[13][9] = 17411
-    expected_grid_map[13][10] = 1025
-    expected_grid_map[13][11] = 1025
-    expected_grid_map[13][12] = 1025
-    expected_grid_map[13][13] = 1025
-    expected_grid_map[13][14] = 1025
-    expected_grid_map[13][15] = 1025
-    expected_grid_map[13][16] = 1025
-    expected_grid_map[13][17] = 17411
-    expected_grid_map[13][18] = 3089
-    expected_grid_map[13][19] = 1025
-    expected_grid_map[13][20] = 1025
-    expected_grid_map[13][21] = 1025
-    expected_grid_map[13][22] = 34864
-    expected_grid_map[13][38] = 32800
-    expected_grid_map[13][41] = 72
-    expected_grid_map[13][42] = 38505
-    expected_grid_map[13][43] = 52275
-    expected_grid_map[13][44] = 34864
-    expected_grid_map[14][6] = 49186
-    expected_grid_map[14][7] = 1025
-    expected_grid_map[14][8] = 1025
-    expected_grid_map[14][9] = 38505
-    expected_grid_map[14][10] = 1025
-    expected_grid_map[14][11] = 1025
-    expected_grid_map[14][12] = 1025
-    expected_grid_map[14][13] = 1025
-    expected_grid_map[14][14] = 1025
-    expected_grid_map[14][15] = 1025
-    expected_grid_map[14][16] = 1025
-    expected_grid_map[14][17] = 52275
-    expected_grid_map[14][18] = 1025
-    expected_grid_map[14][19] = 1025
-    expected_grid_map[14][20] = 1025
-    expected_grid_map[14][21] = 1025
-    expected_grid_map[14][22] = 34864
-    expected_grid_map[14][38] = 72
-    expected_grid_map[14][39] = 1025
-    expected_grid_map[14][40] = 1025
-    expected_grid_map[14][41] = 1025
-    expected_grid_map[14][42] = 2136
-    expected_grid_map[14][43] = 37408
+    expected_grid_map[12][43] = 32872
+    expected_grid_map[12][44] = 37408
+    expected_grid_map[13][1] = 32800
+    expected_grid_map[13][13] = 32800
+    expected_grid_map[13][14] = 32800
+    expected_grid_map[13][42] = 32800
+    expected_grid_map[13][43] = 32800
+    expected_grid_map[13][44] = 32800
+    expected_grid_map[14][1] = 32800
+    expected_grid_map[14][13] = 32800
+    expected_grid_map[14][14] = 32800
+    expected_grid_map[14][42] = 32800
+    expected_grid_map[14][43] = 32800
     expected_grid_map[14][44] = 32800
-    expected_grid_map[15][6] = 49186
+    expected_grid_map[15][1] = 32872
+    expected_grid_map[15][2] = 1025
+    expected_grid_map[15][3] = 1025
+    expected_grid_map[15][4] = 1025
+    expected_grid_map[15][5] = 1025
+    expected_grid_map[15][6] = 1025
     expected_grid_map[15][7] = 1025
-    expected_grid_map[15][8] = 17411
-    expected_grid_map[15][9] = 1097
+    expected_grid_map[15][8] = 1025
+    expected_grid_map[15][9] = 1025
     expected_grid_map[15][10] = 1025
     expected_grid_map[15][11] = 1025
-    expected_grid_map[15][12] = 1025
-    expected_grid_map[15][13] = 1025
-    expected_grid_map[15][14] = 1025
+    expected_grid_map[15][12] = 4608
+    expected_grid_map[15][13] = 32800
+    expected_grid_map[15][14] = 72
     expected_grid_map[15][15] = 1025
-    expected_grid_map[15][16] = 1025
-    expected_grid_map[15][17] = 3089
-    expected_grid_map[15][18] = 1025
-    expected_grid_map[15][19] = 1025
-    expected_grid_map[15][20] = 1025
-    expected_grid_map[15][21] = 1025
-    expected_grid_map[15][22] = 38505
-    expected_grid_map[15][23] = 4608
+    expected_grid_map[15][16] = 4608
+    expected_grid_map[15][42] = 32800
     expected_grid_map[15][43] = 32800
     expected_grid_map[15][44] = 32800
-    expected_grid_map[16][6] = 32800
-    expected_grid_map[16][8] = 32800
-    expected_grid_map[16][22] = 32800
-    expected_grid_map[16][23] = 32800
-    expected_grid_map[16][43] = 32800
-    expected_grid_map[16][44] = 32800
-    expected_grid_map[17][6] = 32800
-    expected_grid_map[17][8] = 32800
-    expected_grid_map[17][22] = 32800
-    expected_grid_map[17][23] = 32800
-    expected_grid_map[17][43] = 32800
+    expected_grid_map[16][1] = 72
+    expected_grid_map[16][2] = 1025
+    expected_grid_map[16][3] = 1025
+    expected_grid_map[16][4] = 1025
+    expected_grid_map[16][5] = 1025
+    expected_grid_map[16][6] = 1025
+    expected_grid_map[16][7] = 1025
+    expected_grid_map[16][8] = 1025
+    expected_grid_map[16][9] = 1025
+    expected_grid_map[16][10] = 1025
+    expected_grid_map[16][11] = 1025
+    expected_grid_map[16][12] = 1097
+    expected_grid_map[16][13] = 1097
+    expected_grid_map[16][14] = 1025
+    expected_grid_map[16][15] = 4608
+    expected_grid_map[16][16] = 32800
+    expected_grid_map[16][42] = 32800
+    expected_grid_map[16][43] = 49186
+    expected_grid_map[16][44] = 34864
+    expected_grid_map[17][15] = 32800
+    expected_grid_map[17][16] = 32800
+    expected_grid_map[17][42] = 32872
+    expected_grid_map[17][43] = 37408
     expected_grid_map[17][44] = 32800
-    expected_grid_map[18][6] = 32800
-    expected_grid_map[18][8] = 32800
-    expected_grid_map[18][22] = 32800
-    expected_grid_map[18][23] = 32800
-    expected_grid_map[18][43] = 32800
-    expected_grid_map[18][44] = 32872
-    expected_grid_map[18][45] = 4608
-    expected_grid_map[19][6] = 32800
-    expected_grid_map[19][8] = 32800
-    expected_grid_map[19][22] = 32800
-    expected_grid_map[19][23] = 32800
-    expected_grid_map[19][42] = 16386
-    expected_grid_map[19][43] = 52275
-    expected_grid_map[19][44] = 38505
-    expected_grid_map[19][45] = 34864
-    expected_grid_map[20][4] = 16386
-    expected_grid_map[20][5] = 17411
-    expected_grid_map[20][6] = 50211
-    expected_grid_map[20][7] = 1025
-    expected_grid_map[20][8] = 2064
-    expected_grid_map[20][22] = 32800
-    expected_grid_map[20][23] = 32800
+    expected_grid_map[18][15] = 32872
+    expected_grid_map[18][16] = 37408
+    expected_grid_map[18][42] = 49186
+    expected_grid_map[18][43] = 34864
+    expected_grid_map[18][44] = 32800
+    expected_grid_map[19][15] = 49186
+    expected_grid_map[19][16] = 34864
+    expected_grid_map[19][42] = 32800
+    expected_grid_map[19][43] = 32800
+    expected_grid_map[19][44] = 32800
+    expected_grid_map[20][14] = 16386
+    expected_grid_map[20][15] = 34864
+    expected_grid_map[20][16] = 32872
+    expected_grid_map[20][17] = 4608
     expected_grid_map[20][42] = 32800
     expected_grid_map[20][43] = 32800
     expected_grid_map[20][44] = 32800
-    expected_grid_map[20][45] = 32800
-    expected_grid_map[21][3] = 16386
-    expected_grid_map[21][4] = 38505
-    expected_grid_map[21][5] = 52275
-    expected_grid_map[21][6] = 37408
-    expected_grid_map[21][22] = 32800
-    expected_grid_map[21][23] = 32800
+    expected_grid_map[21][14] = 32800
+    expected_grid_map[21][15] = 32800
+    expected_grid_map[21][16] = 32800
+    expected_grid_map[21][17] = 32800
     expected_grid_map[21][42] = 32800
     expected_grid_map[21][43] = 32800
     expected_grid_map[21][44] = 32800
-    expected_grid_map[21][45] = 32800
-    expected_grid_map[22][3] = 32800
-    expected_grid_map[22][4] = 32800
-    expected_grid_map[22][5] = 32800
-    expected_grid_map[22][6] = 32800
-    expected_grid_map[22][21] = 16386
-    expected_grid_map[22][22] = 34864
-    expected_grid_map[22][23] = 32872
-    expected_grid_map[22][24] = 4608
+    expected_grid_map[22][14] = 32800
+    expected_grid_map[22][15] = 32800
+    expected_grid_map[22][16] = 32800
+    expected_grid_map[22][17] = 32800
     expected_grid_map[22][42] = 32800
     expected_grid_map[22][43] = 32800
     expected_grid_map[22][44] = 32800
-    expected_grid_map[22][45] = 32800
-    expected_grid_map[23][3] = 32800
-    expected_grid_map[23][4] = 32800
-    expected_grid_map[23][5] = 32800
-    expected_grid_map[23][6] = 32800
-    expected_grid_map[23][21] = 32872
-    expected_grid_map[23][22] = 38505
-    expected_grid_map[23][23] = 38505
-    expected_grid_map[23][24] = 37408
+    expected_grid_map[23][14] = 32800
+    expected_grid_map[23][15] = 32800
+    expected_grid_map[23][16] = 32800
+    expected_grid_map[23][17] = 32800
     expected_grid_map[23][42] = 32800
     expected_grid_map[23][43] = 32800
     expected_grid_map[23][44] = 32800
-    expected_grid_map[23][45] = 32800
-    expected_grid_map[24][3] = 32800
-    expected_grid_map[24][4] = 32800
-    expected_grid_map[24][5] = 32800
-    expected_grid_map[24][6] = 32800
-    expected_grid_map[24][21] = 32800
-    expected_grid_map[24][22] = 32800
-    expected_grid_map[24][23] = 32800
-    expected_grid_map[24][24] = 32800
+    expected_grid_map[24][14] = 72
+    expected_grid_map[24][15] = 37408
+    expected_grid_map[24][16] = 49186
+    expected_grid_map[24][17] = 2064
     expected_grid_map[24][42] = 32800
     expected_grid_map[24][43] = 32800
     expected_grid_map[24][44] = 32800
-    expected_grid_map[24][45] = 32800
-    expected_grid_map[25][3] = 32800
-    expected_grid_map[25][4] = 32800
-    expected_grid_map[25][5] = 32800
-    expected_grid_map[25][6] = 32800
-    expected_grid_map[25][21] = 32800
-    expected_grid_map[25][22] = 32800
-    expected_grid_map[25][23] = 32800
-    expected_grid_map[25][24] = 32800
+    expected_grid_map[25][15] = 32872
+    expected_grid_map[25][16] = 37408
     expected_grid_map[25][42] = 32800
     expected_grid_map[25][43] = 32800
     expected_grid_map[25][44] = 32800
-    expected_grid_map[25][45] = 32800
-    expected_grid_map[26][3] = 32800
-    expected_grid_map[26][4] = 32800
-    expected_grid_map[26][5] = 32800
-    expected_grid_map[26][6] = 32800
-    expected_grid_map[26][21] = 32800
-    expected_grid_map[26][22] = 32800
-    expected_grid_map[26][23] = 32800
-    expected_grid_map[26][24] = 32800
+    expected_grid_map[26][15] = 49186
+    expected_grid_map[26][16] = 34864
     expected_grid_map[26][42] = 32800
     expected_grid_map[26][43] = 32800
     expected_grid_map[26][44] = 32800
-    expected_grid_map[26][45] = 32800
-    expected_grid_map[27][3] = 32800
-    expected_grid_map[27][4] = 32800
-    expected_grid_map[27][5] = 32800
-    expected_grid_map[27][6] = 32800
-    expected_grid_map[27][21] = 32800
-    expected_grid_map[27][22] = 32800
-    expected_grid_map[27][23] = 32800
-    expected_grid_map[27][24] = 32800
-    expected_grid_map[27][42] = 72
-    expected_grid_map[27][43] = 52275
-    expected_grid_map[27][44] = 38505
-    expected_grid_map[27][45] = 34864
-    expected_grid_map[28][3] = 32800
-    expected_grid_map[28][4] = 32800
-    expected_grid_map[28][5] = 32800
-    expected_grid_map[28][6] = 32800
-    expected_grid_map[28][21] = 32800
-    expected_grid_map[28][22] = 32800
-    expected_grid_map[28][23] = 32800
-    expected_grid_map[28][24] = 32800
-    expected_grid_map[28][40] = 16386
-    expected_grid_map[28][41] = 1025
-    expected_grid_map[28][42] = 1025
-    expected_grid_map[28][43] = 2064
-    expected_grid_map[28][44] = 72
-    expected_grid_map[28][45] = 33897
-    expected_grid_map[28][46] = 1025
-    expected_grid_map[28][47] = 1025
-    expected_grid_map[28][48] = 4608
-    expected_grid_map[29][3] = 72
-    expected_grid_map[29][4] = 52275
-    expected_grid_map[29][5] = 52275
-    expected_grid_map[29][6] = 37408
-    expected_grid_map[29][21] = 32800
-    expected_grid_map[29][22] = 32800
-    expected_grid_map[29][23] = 32800
-    expected_grid_map[29][24] = 32800
-    expected_grid_map[29][40] = 32800
-    expected_grid_map[29][45] = 32800
-    expected_grid_map[29][48] = 32800
-    expected_grid_map[30][4] = 72
-    expected_grid_map[30][5] = 1097
-    expected_grid_map[30][6] = 37408
-    expected_grid_map[30][21] = 32800
-    expected_grid_map[30][22] = 32800
-    expected_grid_map[30][23] = 32800
-    expected_grid_map[30][24] = 32800
-    expected_grid_map[30][40] = 32800
-    expected_grid_map[30][45] = 32800
-    expected_grid_map[30][48] = 32800
-    expected_grid_map[31][6] = 32872
-    expected_grid_map[31][7] = 5633
-    expected_grid_map[31][8] = 4608
-    expected_grid_map[31][21] = 49186
-    expected_grid_map[31][22] = 52275
-    expected_grid_map[31][23] = 38505
-    expected_grid_map[31][24] = 34864
-    expected_grid_map[31][40] = 32800
-    expected_grid_map[31][45] = 32800
-    expected_grid_map[31][48] = 32800
-    expected_grid_map[32][6] = 32872
-    expected_grid_map[32][7] = 52275
-    expected_grid_map[32][8] = 37408
-    expected_grid_map[32][21] = 72
-    expected_grid_map[32][22] = 1097
-    expected_grid_map[32][23] = 37408
-    expected_grid_map[32][24] = 32800
-    expected_grid_map[32][40] = 32800
-    expected_grid_map[32][45] = 32800
-    expected_grid_map[32][48] = 32800
-    expected_grid_map[33][6] = 32800
-    expected_grid_map[33][7] = 32800
-    expected_grid_map[33][8] = 32800
-    expected_grid_map[33][23] = 32800
-    expected_grid_map[33][24] = 32800
-    expected_grid_map[33][40] = 32800
-    expected_grid_map[33][45] = 32800
-    expected_grid_map[33][48] = 32800
-    expected_grid_map[34][6] = 32800
-    expected_grid_map[34][7] = 32800
-    expected_grid_map[34][8] = 32800
-    expected_grid_map[34][23] = 32800
-    expected_grid_map[34][24] = 32800
-    expected_grid_map[34][40] = 32800
-    expected_grid_map[34][45] = 32800
-    expected_grid_map[34][48] = 32800
-    expected_grid_map[35][6] = 32800
-    expected_grid_map[35][7] = 32800
-    expected_grid_map[35][8] = 32800
-    expected_grid_map[35][23] = 72
-    expected_grid_map[35][24] = 37408
-    expected_grid_map[35][40] = 32800
-    expected_grid_map[35][45] = 32800
-    expected_grid_map[35][48] = 32800
-    expected_grid_map[36][6] = 32800
-    expected_grid_map[36][7] = 32800
-    expected_grid_map[36][8] = 32800
-    expected_grid_map[36][24] = 32800
-    expected_grid_map[36][39] = 16386
-    expected_grid_map[36][40] = 2064
-    expected_grid_map[36][45] = 72
-    expected_grid_map[36][46] = 1025
-    expected_grid_map[36][47] = 1025
-    expected_grid_map[36][48] = 1097
-    expected_grid_map[36][49] = 4608
-    expected_grid_map[37][6] = 32800
-    expected_grid_map[37][7] = 32800
-    expected_grid_map[37][8] = 32800
-    expected_grid_map[37][24] = 32800
-    expected_grid_map[37][39] = 32800
-    expected_grid_map[37][49] = 32800
-    expected_grid_map[38][6] = 32800
-    expected_grid_map[38][7] = 32800
-    expected_grid_map[38][8] = 32800
-    expected_grid_map[38][12] = 16386
-    expected_grid_map[38][13] = 1025
-    expected_grid_map[38][14] = 1025
-    expected_grid_map[38][15] = 5633
-    expected_grid_map[38][16] = 1025
-    expected_grid_map[38][17] = 1025
-    expected_grid_map[38][18] = 1025
-    expected_grid_map[38][19] = 1025
-    expected_grid_map[38][20] = 1025
-    expected_grid_map[38][21] = 1025
-    expected_grid_map[38][22] = 1025
-    expected_grid_map[38][23] = 17411
-    expected_grid_map[38][24] = 3089
-    expected_grid_map[38][25] = 1025
-    expected_grid_map[38][26] = 1025
-    expected_grid_map[38][27] = 4608
-    expected_grid_map[38][39] = 32800
-    expected_grid_map[38][49] = 32800
-    expected_grid_map[39][6] = 32800
-    expected_grid_map[39][7] = 32800
-    expected_grid_map[39][8] = 32800
-    expected_grid_map[39][12] = 49186
-    expected_grid_map[39][13] = 1025
-    expected_grid_map[39][14] = 1025
-    expected_grid_map[39][15] = 52275
-    expected_grid_map[39][16] = 1025
-    expected_grid_map[39][17] = 1025
-    expected_grid_map[39][18] = 1025
-    expected_grid_map[39][19] = 1025
-    expected_grid_map[39][20] = 1025
-    expected_grid_map[39][21] = 1025
-    expected_grid_map[39][22] = 1025
-    expected_grid_map[39][23] = 52275
-    expected_grid_map[39][24] = 1025
-    expected_grid_map[39][25] = 1025
-    expected_grid_map[39][26] = 1025
-    expected_grid_map[39][27] = 37408
-    expected_grid_map[39][39] = 32800
-    expected_grid_map[39][49] = 32800
-    expected_grid_map[40][6] = 32872
-    expected_grid_map[40][7] = 38505
-    expected_grid_map[40][8] = 37408
-    expected_grid_map[40][12] = 49186
-    expected_grid_map[40][13] = 1025
-    expected_grid_map[40][14] = 17411
-    expected_grid_map[40][15] = 52275
-    expected_grid_map[40][16] = 1025
-    expected_grid_map[40][17] = 1025
-    expected_grid_map[40][18] = 1025
-    expected_grid_map[40][19] = 1025
-    expected_grid_map[40][20] = 1025
-    expected_grid_map[40][21] = 1025
-    expected_grid_map[40][22] = 1025
-    expected_grid_map[40][23] = 38505
-    expected_grid_map[40][24] = 1025
-    expected_grid_map[40][25] = 1025
-    expected_grid_map[40][26] = 1025
-    expected_grid_map[40][27] = 1097
-    expected_grid_map[40][28] = 17411
-    expected_grid_map[40][29] = 1025
-    expected_grid_map[40][30] = 1025
-    expected_grid_map[40][31] = 1025
-    expected_grid_map[40][32] = 1025
-    expected_grid_map[40][33] = 1025
-    expected_grid_map[40][34] = 1025
-    expected_grid_map[40][35] = 1025
-    expected_grid_map[40][36] = 17411
-    expected_grid_map[40][37] = 1025
-    expected_grid_map[40][38] = 1025
-    expected_grid_map[40][39] = 1097
-    expected_grid_map[40][40] = 5633
-    expected_grid_map[40][41] = 1025
-    expected_grid_map[40][42] = 1025
-    expected_grid_map[40][43] = 1025
-    expected_grid_map[40][44] = 1025
-    expected_grid_map[40][45] = 1025
-    expected_grid_map[40][46] = 1025
-    expected_grid_map[40][47] = 1025
-    expected_grid_map[40][48] = 5633
-    expected_grid_map[40][49] = 34864
-    expected_grid_map[41][6] = 72
-    expected_grid_map[41][7] = 1097
-    expected_grid_map[41][8] = 1097
-    expected_grid_map[41][9] = 1025
-    expected_grid_map[41][10] = 1025
-    expected_grid_map[41][11] = 1025
-    expected_grid_map[41][12] = 3089
+    expected_grid_map[27][15] = 32800
+    expected_grid_map[27][16] = 32800
+    expected_grid_map[27][42] = 32800
+    expected_grid_map[27][43] = 32800
+    expected_grid_map[27][44] = 32800
+    expected_grid_map[28][13] = 16386
+    expected_grid_map[28][14] = 17411
+    expected_grid_map[28][15] = 34864
+    expected_grid_map[28][16] = 32800
+    expected_grid_map[28][42] = 32800
+    expected_grid_map[28][43] = 32800
+    expected_grid_map[28][44] = 32800
+    expected_grid_map[29][13] = 32800
+    expected_grid_map[29][14] = 32800
+    expected_grid_map[29][15] = 32800
+    expected_grid_map[29][16] = 32800
+    expected_grid_map[29][42] = 32800
+    expected_grid_map[29][43] = 32800
+    expected_grid_map[29][44] = 32800
+    expected_grid_map[30][13] = 32800
+    expected_grid_map[30][14] = 32800
+    expected_grid_map[30][15] = 32800
+    expected_grid_map[30][16] = 32800
+    expected_grid_map[30][42] = 32800
+    expected_grid_map[30][43] = 32800
+    expected_grid_map[30][44] = 32800
+    expected_grid_map[31][13] = 32800
+    expected_grid_map[31][14] = 32800
+    expected_grid_map[31][15] = 32800
+    expected_grid_map[31][16] = 32800
+    expected_grid_map[31][42] = 32800
+    expected_grid_map[31][43] = 32800
+    expected_grid_map[31][44] = 32800
+    expected_grid_map[32][13] = 32800
+    expected_grid_map[32][14] = 32800
+    expected_grid_map[32][15] = 32800
+    expected_grid_map[32][16] = 32800
+    expected_grid_map[32][33] = 16386
+    expected_grid_map[32][34] = 1025
+    expected_grid_map[32][35] = 1025
+    expected_grid_map[32][36] = 1025
+    expected_grid_map[32][37] = 1025
+    expected_grid_map[32][38] = 1025
+    expected_grid_map[32][39] = 4608
+    expected_grid_map[32][42] = 32800
+    expected_grid_map[32][43] = 32800
+    expected_grid_map[32][44] = 32800
+    expected_grid_map[33][12] = 16386
+    expected_grid_map[33][13] = 2064
+    expected_grid_map[33][14] = 32800
+    expected_grid_map[33][15] = 32800
+    expected_grid_map[33][16] = 32800
+    expected_grid_map[33][26] = 16386
+    expected_grid_map[33][27] = 1025
+    expected_grid_map[33][28] = 1025
+    expected_grid_map[33][29] = 17411
+    expected_grid_map[33][30] = 17411
+    expected_grid_map[33][31] = 1025
+    expected_grid_map[33][32] = 1025
+    expected_grid_map[33][33] = 3089
+    expected_grid_map[33][34] = 5633
+    expected_grid_map[33][35] = 1025
+    expected_grid_map[33][36] = 1025
+    expected_grid_map[33][37] = 1025
+    expected_grid_map[33][38] = 17411
+    expected_grid_map[33][39] = 1097
+    expected_grid_map[33][40] = 1025
+    expected_grid_map[33][41] = 1025
+    expected_grid_map[33][42] = 3089
+    expected_grid_map[33][43] = 3089
+    expected_grid_map[33][44] = 2064
+    expected_grid_map[34][12] = 32800
+    expected_grid_map[34][13] = 16386
+    expected_grid_map[34][14] = 2064
+    expected_grid_map[34][15] = 32800
+    expected_grid_map[34][16] = 32800
+    expected_grid_map[34][26] = 32800
+    expected_grid_map[34][29] = 32800
+    expected_grid_map[34][30] = 32800
+    expected_grid_map[34][34] = 72
+    expected_grid_map[34][35] = 1025
+    expected_grid_map[34][36] = 1025
+    expected_grid_map[34][37] = 1025
+    expected_grid_map[34][38] = 2064
+    expected_grid_map[35][0] = 16386
+    expected_grid_map[35][1] = 1025
+    expected_grid_map[35][2] = 1025
+    expected_grid_map[35][3] = 1025
+    expected_grid_map[35][4] = 1025
+    expected_grid_map[35][5] = 1025
+    expected_grid_map[35][6] = 1025
+    expected_grid_map[35][7] = 1025
+    expected_grid_map[35][8] = 1025
+    expected_grid_map[35][9] = 1025
+    expected_grid_map[35][10] = 1025
+    expected_grid_map[35][11] = 1025
+    expected_grid_map[35][12] = 2064
+    expected_grid_map[35][13] = 32800
+    expected_grid_map[35][14] = 16386
+    expected_grid_map[35][15] = 3089
+    expected_grid_map[35][16] = 2064
+    expected_grid_map[35][26] = 32800
+    expected_grid_map[35][29] = 32800
+    expected_grid_map[35][30] = 32800
+    expected_grid_map[36][0] = 49186
+    expected_grid_map[36][1] = 1025
+    expected_grid_map[36][2] = 1025
+    expected_grid_map[36][3] = 1025
+    expected_grid_map[36][4] = 1025
+    expected_grid_map[36][5] = 1025
+    expected_grid_map[36][6] = 1025
+    expected_grid_map[36][7] = 1025
+    expected_grid_map[36][8] = 1025
+    expected_grid_map[36][9] = 1025
+    expected_grid_map[36][10] = 1025
+    expected_grid_map[36][11] = 1025
+    expected_grid_map[36][12] = 1025
+    expected_grid_map[36][13] = 2064
+    expected_grid_map[36][14] = 32800
+    expected_grid_map[36][26] = 32800
+    expected_grid_map[36][29] = 32800
+    expected_grid_map[36][30] = 32800
+    expected_grid_map[37][0] = 32800
+    expected_grid_map[37][14] = 32800
+    expected_grid_map[37][26] = 32800
+    expected_grid_map[37][29] = 32800
+    expected_grid_map[37][30] = 32800
+    expected_grid_map[38][0] = 32800
+    expected_grid_map[38][14] = 32800
+    expected_grid_map[38][26] = 32800
+    expected_grid_map[38][29] = 32800
+    expected_grid_map[38][30] = 32800
+    expected_grid_map[39][0] = 32800
+    expected_grid_map[39][14] = 32800
+    expected_grid_map[39][26] = 32800
+    expected_grid_map[39][29] = 32800
+    expected_grid_map[39][30] = 32800
+    expected_grid_map[40][0] = 32800
+    expected_grid_map[40][14] = 32800
+    expected_grid_map[40][26] = 49186
+    expected_grid_map[40][27] = 1025
+    expected_grid_map[40][28] = 1025
+    expected_grid_map[40][29] = 2064
+    expected_grid_map[40][30] = 32800
+    expected_grid_map[41][0] = 32800
+    expected_grid_map[41][4] = 16386
+    expected_grid_map[41][5] = 1025
+    expected_grid_map[41][6] = 1025
+    expected_grid_map[41][7] = 1025
+    expected_grid_map[41][8] = 4608
+    expected_grid_map[41][12] = 16386
     expected_grid_map[41][13] = 1025
-    expected_grid_map[41][14] = 3089
-    expected_grid_map[41][15] = 3089
-    expected_grid_map[41][16] = 1025
-    expected_grid_map[41][17] = 1025
+    expected_grid_map[41][14] = 1097
+    expected_grid_map[41][15] = 1025
+    expected_grid_map[41][16] = 5633
+    expected_grid_map[41][17] = 17411
     expected_grid_map[41][18] = 1025
     expected_grid_map[41][19] = 1025
     expected_grid_map[41][20] = 1025
     expected_grid_map[41][21] = 1025
     expected_grid_map[41][22] = 1025
-    expected_grid_map[41][23] = 3089
-    expected_grid_map[41][24] = 5633
+    expected_grid_map[41][23] = 5633
+    expected_grid_map[41][24] = 17411
     expected_grid_map[41][25] = 1025
-    expected_grid_map[41][26] = 1025
+    expected_grid_map[41][26] = 35889
     expected_grid_map[41][27] = 1025
-    expected_grid_map[41][28] = 38505
+    expected_grid_map[41][28] = 1025
     expected_grid_map[41][29] = 1025
-    expected_grid_map[41][30] = 1025
-    expected_grid_map[41][31] = 1025
-    expected_grid_map[41][32] = 1025
-    expected_grid_map[41][33] = 1025
-    expected_grid_map[41][34] = 1025
-    expected_grid_map[41][35] = 1025
-    expected_grid_map[41][36] = 52275
-    expected_grid_map[41][37] = 1025
-    expected_grid_map[41][38] = 1025
-    expected_grid_map[41][39] = 1025
-    expected_grid_map[41][40] = 38505
-    expected_grid_map[41][41] = 1025
-    expected_grid_map[41][42] = 1025
-    expected_grid_map[41][43] = 1025
-    expected_grid_map[41][44] = 1025
-    expected_grid_map[41][45] = 1025
-    expected_grid_map[41][46] = 1025
-    expected_grid_map[41][47] = 1025
-    expected_grid_map[41][48] = 52275
-    expected_grid_map[41][49] = 34864
-    expected_grid_map[42][24] = 72
+    expected_grid_map[41][30] = 2064
+    expected_grid_map[42][0] = 32872
+    expected_grid_map[42][1] = 1025
+    expected_grid_map[42][2] = 5633
+    expected_grid_map[42][3] = 17411
+    expected_grid_map[42][4] = 3089
+    expected_grid_map[42][5] = 1025
+    expected_grid_map[42][6] = 1025
+    expected_grid_map[42][7] = 1025
+    expected_grid_map[42][8] = 1097
+    expected_grid_map[42][9] = 5633
+    expected_grid_map[42][10] = 17411
+    expected_grid_map[42][11] = 1025
+    expected_grid_map[42][12] = 3089
+    expected_grid_map[42][13] = 1025
+    expected_grid_map[42][14] = 17411
+    expected_grid_map[42][15] = 1025
+    expected_grid_map[42][16] = 1097
+    expected_grid_map[42][17] = 3089
+    expected_grid_map[42][18] = 1025
+    expected_grid_map[42][19] = 1025
+    expected_grid_map[42][20] = 1025
+    expected_grid_map[42][21] = 1025
+    expected_grid_map[42][22] = 1025
+    expected_grid_map[42][23] = 1097
+    expected_grid_map[42][24] = 3089
     expected_grid_map[42][25] = 1025
-    expected_grid_map[42][26] = 1025
-    expected_grid_map[42][27] = 1025
-    expected_grid_map[42][28] = 1097
-    expected_grid_map[42][29] = 1025
-    expected_grid_map[42][30] = 1025
-    expected_grid_map[42][31] = 1025
-    expected_grid_map[42][32] = 1025
-    expected_grid_map[42][33] = 1025
-    expected_grid_map[42][34] = 1025
-    expected_grid_map[42][35] = 1025
-    expected_grid_map[42][36] = 1097
-    expected_grid_map[42][37] = 1025
-    expected_grid_map[42][38] = 1025
-    expected_grid_map[42][39] = 1025
-    expected_grid_map[42][40] = 3089
-    expected_grid_map[42][41] = 1025
-    expected_grid_map[42][42] = 1025
-    expected_grid_map[42][43] = 1025
-    expected_grid_map[42][44] = 1025
-    expected_grid_map[42][45] = 1025
-    expected_grid_map[42][46] = 1025
-    expected_grid_map[42][47] = 1025
-    expected_grid_map[42][48] = 1097
-    expected_grid_map[42][49] = 2064
+    expected_grid_map[42][26] = 2064
+    expected_grid_map[43][0] = 72
+    expected_grid_map[43][1] = 1025
+    expected_grid_map[43][2] = 1097
+    expected_grid_map[43][3] = 3089
+    expected_grid_map[43][4] = 5633
+    expected_grid_map[43][5] = 1025
+    expected_grid_map[43][6] = 1025
+    expected_grid_map[43][7] = 1025
+    expected_grid_map[43][8] = 17411
+    expected_grid_map[43][9] = 1097
+    expected_grid_map[43][10] = 3089
+    expected_grid_map[43][11] = 1025
+    expected_grid_map[43][12] = 1025
+    expected_grid_map[43][13] = 1025
+    expected_grid_map[43][14] = 2064
+    expected_grid_map[44][4] = 72
+    expected_grid_map[44][5] = 1025
+    expected_grid_map[44][6] = 1025
+    expected_grid_map[44][7] = 1025
+    expected_grid_map[44][8] = 2064
 
     # Attention, once we have fixed the generator this needs to be changed!!!!
     expected_grid_map = env.rail.grid
@@ -570,7 +504,7 @@ def test_sparse_rail_generator():
     for a in range(env.get_num_agents()):
         s0 = Vec2d.get_manhattan_distance(env.agents[a].initial_position, (0, 0))
         s1 = Vec2d.get_chebyshev_distance(env.agents[a].initial_position, (0, 0))
-    assert s0 == 31, "actual={}".format(s0)
+    assert s0 == 33, "actual={}".format(s0)
     assert s1 == 24, "actual={}".format(s1)
 
 
@@ -601,11 +535,12 @@ def test_sparse_rail_generator_deterministic():
                   number_of_agents=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
-    for r in range(env.height):
-        for c in range(env.width):
-            print("assert env.rail.get_full_transitions({}, {}) == {}, \"[{}][{}]\"".format(r, c,
-                                                                                            env.rail.get_full_transitions(
-                                                                                                r, c), r, c))
+    # for r in range(env.height):
+    #    for c in range(env.width):
+    #        print("assert env.rail.get_full_transitions({}, {}) == {}, \"[{}][{}]\"".format(r, c,
+    #                                                                                        env.rail.get_full_transitions(
+    #                                                                                            r, c), r, c))
+
     assert env.rail.get_full_transitions(0, 1) == 0, "[0][1]"
     assert env.rail.get_full_transitions(0, 2) == 0, "[0][2]"
     assert env.rail.get_full_transitions(0, 3) == 0, "[0][3]"
@@ -739,15 +674,15 @@ def test_sparse_rail_generator_deterministic():
     assert env.rail.get_full_transitions(5, 6) == 0, "[5][6]"
     assert env.rail.get_full_transitions(5, 7) == 0, "[5][7]"
     assert env.rail.get_full_transitions(5, 8) == 0, "[5][8]"
-    assert env.rail.get_full_transitions(5, 9) == 16386, "[5][9]"
-    assert env.rail.get_full_transitions(5, 10) == 1025, "[5][10]"
-    assert env.rail.get_full_transitions(5, 11) == 1025, "[5][11]"
+    assert env.rail.get_full_transitions(5, 9) == 0, "[5][9]"
+    assert env.rail.get_full_transitions(5, 10) == 0, "[5][10]"
+    assert env.rail.get_full_transitions(5, 11) == 16386, "[5][11]"
     assert env.rail.get_full_transitions(5, 12) == 1025, "[5][12]"
     assert env.rail.get_full_transitions(5, 13) == 1025, "[5][13]"
     assert env.rail.get_full_transitions(5, 14) == 1025, "[5][14]"
-    assert env.rail.get_full_transitions(5, 15) == 1025, "[5][15]"
-    assert env.rail.get_full_transitions(5, 16) == 1025, "[5][16]"
-    assert env.rail.get_full_transitions(5, 17) == 4608, "[5][17]"
+    assert env.rail.get_full_transitions(5, 15) == 4608, "[5][15]"
+    assert env.rail.get_full_transitions(5, 16) == 0, "[5][16]"
+    assert env.rail.get_full_transitions(5, 17) == 0, "[5][17]"
     assert env.rail.get_full_transitions(5, 18) == 0, "[5][18]"
     assert env.rail.get_full_transitions(5, 19) == 0, "[5][19]"
     assert env.rail.get_full_transitions(5, 20) == 0, "[5][20]"
@@ -757,22 +692,22 @@ def test_sparse_rail_generator_deterministic():
     assert env.rail.get_full_transitions(5, 24) == 0, "[5][24]"
     assert env.rail.get_full_transitions(6, 0) == 16386, "[6][0]"
     assert env.rail.get_full_transitions(6, 1) == 1025, "[6][1]"
-    assert env.rail.get_full_transitions(6, 2) == 1025, "[6][2]"
-    assert env.rail.get_full_transitions(6, 3) == 5633, "[6][3]"
+    assert env.rail.get_full_transitions(6, 2) == 5633, "[6][2]"
+    assert env.rail.get_full_transitions(6, 3) == 17411, "[6][3]"
     assert env.rail.get_full_transitions(6, 4) == 1025, "[6][4]"
     assert env.rail.get_full_transitions(6, 5) == 1025, "[6][5]"
     assert env.rail.get_full_transitions(6, 6) == 1025, "[6][6]"
     assert env.rail.get_full_transitions(6, 7) == 1025, "[6][7]"
     assert env.rail.get_full_transitions(6, 8) == 1025, "[6][8]"
-    assert env.rail.get_full_transitions(6, 9) == 52275, "[6][9]"
-    assert env.rail.get_full_transitions(6, 10) == 1025, "[6][10]"
-    assert env.rail.get_full_transitions(6, 11) == 1025, "[6][11]"
+    assert env.rail.get_full_transitions(6, 9) == 5633, "[6][9]"
+    assert env.rail.get_full_transitions(6, 10) == 5633, "[6][10]"
+    assert env.rail.get_full_transitions(6, 11) == 3089, "[6][11]"
     assert env.rail.get_full_transitions(6, 12) == 1025, "[6][12]"
     assert env.rail.get_full_transitions(6, 13) == 1025, "[6][13]"
     assert env.rail.get_full_transitions(6, 14) == 1025, "[6][14]"
-    assert env.rail.get_full_transitions(6, 15) == 1025, "[6][15]"
-    assert env.rail.get_full_transitions(6, 16) == 17411, "[6][16]"
-    assert env.rail.get_full_transitions(6, 17) == 1097, "[6][17]"
+    assert env.rail.get_full_transitions(6, 15) == 1097, "[6][15]"
+    assert env.rail.get_full_transitions(6, 16) == 5633, "[6][16]"
+    assert env.rail.get_full_transitions(6, 17) == 17411, "[6][17]"
     assert env.rail.get_full_transitions(6, 18) == 1025, "[6][18]"
     assert env.rail.get_full_transitions(6, 19) == 4608, "[6][19]"
     assert env.rail.get_full_transitions(6, 20) == 0, "[6][20]"
@@ -782,22 +717,22 @@ def test_sparse_rail_generator_deterministic():
     assert env.rail.get_full_transitions(6, 24) == 0, "[6][24]"
     assert env.rail.get_full_transitions(7, 0) == 32800, "[7][0]"
     assert env.rail.get_full_transitions(7, 1) == 0, "[7][1]"
-    assert env.rail.get_full_transitions(7, 2) == 0, "[7][2]"
-    assert env.rail.get_full_transitions(7, 3) == 72, "[7][3]"
+    assert env.rail.get_full_transitions(7, 2) == 72, "[7][2]"
+    assert env.rail.get_full_transitions(7, 3) == 3089, "[7][3]"
     assert env.rail.get_full_transitions(7, 4) == 1025, "[7][4]"
     assert env.rail.get_full_transitions(7, 5) == 1025, "[7][5]"
     assert env.rail.get_full_transitions(7, 6) == 1025, "[7][6]"
     assert env.rail.get_full_transitions(7, 7) == 1025, "[7][7]"
     assert env.rail.get_full_transitions(7, 8) == 1025, "[7][8]"
-    assert env.rail.get_full_transitions(7, 9) == 2064, "[7][9]"
-    assert env.rail.get_full_transitions(7, 10) == 4, "[7][10]"
+    assert env.rail.get_full_transitions(7, 9) == 3089, "[7][9]"
+    assert env.rail.get_full_transitions(7, 10) == 3089, "[7][10]"
     assert env.rail.get_full_transitions(7, 11) == 5633, "[7][11]"
     assert env.rail.get_full_transitions(7, 12) == 1025, "[7][12]"
     assert env.rail.get_full_transitions(7, 13) == 1025, "[7][13]"
     assert env.rail.get_full_transitions(7, 14) == 1025, "[7][14]"
     assert env.rail.get_full_transitions(7, 15) == 17411, "[7][15]"
-    assert env.rail.get_full_transitions(7, 16) == 2064, "[7][16]"
-    assert env.rail.get_full_transitions(7, 17) == 0, "[7][17]"
+    assert env.rail.get_full_transitions(7, 16) == 1097, "[7][16]"
+    assert env.rail.get_full_transitions(7, 17) == 2064, "[7][17]"
     assert env.rail.get_full_transitions(7, 18) == 0, "[7][18]"
     assert env.rail.get_full_transitions(7, 19) == 32800, "[7][19]"
     assert env.rail.get_full_transitions(7, 20) == 0, "[7][20]"
@@ -1057,22 +992,22 @@ def test_sparse_rail_generator_deterministic():
     assert env.rail.get_full_transitions(17, 24) == 0, "[17][24]"
     assert env.rail.get_full_transitions(18, 0) == 72, "[18][0]"
     assert env.rail.get_full_transitions(18, 1) == 1025, "[18][1]"
-    assert env.rail.get_full_transitions(18, 2) == 1025, "[18][2]"
-    assert env.rail.get_full_transitions(18, 3) == 5633, "[18][3]"
+    assert env.rail.get_full_transitions(18, 2) == 5633, "[18][2]"
+    assert env.rail.get_full_transitions(18, 3) == 17411, "[18][3]"
     assert env.rail.get_full_transitions(18, 4) == 1025, "[18][4]"
     assert env.rail.get_full_transitions(18, 5) == 1025, "[18][5]"
     assert env.rail.get_full_transitions(18, 6) == 1025, "[18][6]"
     assert env.rail.get_full_transitions(18, 7) == 1025, "[18][7]"
     assert env.rail.get_full_transitions(18, 8) == 1025, "[18][8]"
     assert env.rail.get_full_transitions(18, 9) == 5633, "[18][9]"
-    assert env.rail.get_full_transitions(18, 10) == 1025, "[18][10]"
+    assert env.rail.get_full_transitions(18, 10) == 5633, "[18][10]"
     assert env.rail.get_full_transitions(18, 11) == 1025, "[18][11]"
     assert env.rail.get_full_transitions(18, 12) == 1025, "[18][12]"
     assert env.rail.get_full_transitions(18, 13) == 1025, "[18][13]"
     assert env.rail.get_full_transitions(18, 14) == 1025, "[18][14]"
     assert env.rail.get_full_transitions(18, 15) == 1025, "[18][15]"
-    assert env.rail.get_full_transitions(18, 16) == 17411, "[18][16]"
-    assert env.rail.get_full_transitions(18, 17) == 1025, "[18][17]"
+    assert env.rail.get_full_transitions(18, 16) == 5633, "[18][16]"
+    assert env.rail.get_full_transitions(18, 17) == 17411, "[18][17]"
     assert env.rail.get_full_transitions(18, 18) == 1025, "[18][18]"
     assert env.rail.get_full_transitions(18, 19) == 34864, "[18][19]"
     assert env.rail.get_full_transitions(18, 20) == 0, "[18][20]"
@@ -1082,22 +1017,22 @@ def test_sparse_rail_generator_deterministic():
     assert env.rail.get_full_transitions(18, 24) == 0, "[18][24]"
     assert env.rail.get_full_transitions(19, 0) == 0, "[19][0]"
     assert env.rail.get_full_transitions(19, 1) == 0, "[19][1]"
-    assert env.rail.get_full_transitions(19, 2) == 0, "[19][2]"
-    assert env.rail.get_full_transitions(19, 3) == 72, "[19][3]"
+    assert env.rail.get_full_transitions(19, 2) == 72, "[19][2]"
+    assert env.rail.get_full_transitions(19, 3) == 3089, "[19][3]"
     assert env.rail.get_full_transitions(19, 4) == 1025, "[19][4]"
     assert env.rail.get_full_transitions(19, 5) == 1025, "[19][5]"
     assert env.rail.get_full_transitions(19, 6) == 1025, "[19][6]"
     assert env.rail.get_full_transitions(19, 7) == 1025, "[19][7]"
     assert env.rail.get_full_transitions(19, 8) == 1025, "[19][8]"
     assert env.rail.get_full_transitions(19, 9) == 3089, "[19][9]"
-    assert env.rail.get_full_transitions(19, 10) == 1025, "[19][10]"
+    assert env.rail.get_full_transitions(19, 10) == 3089, "[19][10]"
     assert env.rail.get_full_transitions(19, 11) == 1025, "[19][11]"
     assert env.rail.get_full_transitions(19, 12) == 1025, "[19][12]"
     assert env.rail.get_full_transitions(19, 13) == 1025, "[19][13]"
     assert env.rail.get_full_transitions(19, 14) == 1025, "[19][14]"
     assert env.rail.get_full_transitions(19, 15) == 1025, "[19][15]"
-    assert env.rail.get_full_transitions(19, 16) == 3089, "[19][16]"
-    assert env.rail.get_full_transitions(19, 17) == 1025, "[19][17]"
+    assert env.rail.get_full_transitions(19, 16) == 1097, "[19][16]"
+    assert env.rail.get_full_transitions(19, 17) == 3089, "[19][17]"
     assert env.rail.get_full_transitions(19, 18) == 1025, "[19][18]"
     assert env.rail.get_full_transitions(19, 19) == 2064, "[19][19]"
     assert env.rail.get_full_transitions(19, 20) == 0, "[19][20]"
@@ -1355,7 +1290,6 @@ def test_sparse_rail_generator_deterministic():
     assert env.rail.get_full_transitions(29, 22) == 0, "[29][22]"
     assert env.rail.get_full_transitions(29, 23) == 0, "[29][23]"
     assert env.rail.get_full_transitions(29, 24) == 0, "[29][24]"
-
 def test_rail_env_action_required_info():
     np.random.seed(0)
     random.seed(0)
