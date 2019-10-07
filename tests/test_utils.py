@@ -62,9 +62,10 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
     Parameters
     ----------
-    env
-    test_configs
-    rendering
+    activate_agents: should the agents directly be activated when the environment is initially setup by `reset()`?
+    env: the environment; is `reset()` to set the agents' intial position, direction, target and speed
+    test_configs: the `ReplayConfig`s, one for each agent
+    rendering: should be rendered during replay?
     """
     if rendering:
         renderer = RenderTool(env)
