@@ -43,17 +43,21 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
     Runs the replay configs and checks assertions.
 
     *Initially*
-    - the position, direction, target and speed of the initial step are taken to initialize the agents
+    - The `initial_position`, `initial_direction`, `target` and `speed` are taken from the `ReplayConfig` to initialize the agents.
 
     *Before each step*
-    - action must only be provided if action_required from previous step (initally all True)
-    - position, direction before step are verified
-    - optionally, set_malfunction is applied
-    - malfunction is verified
-    - status is verified (optionally)
+    - `position` is verfified
+    - `direction` is verified
+    - `status` is verified (optionally, only if not `None` in `Replay`)
+    - `set_malfunction` is applied (optionally, only if not `None` in `Replay`)
+    - `malfunction` is verified
+    - `action` must only be provided if action_required from previous step (initally all True)
+
+    *Step*
+    - performed with the given `action`
 
     *After each step*
-    - reward is verified after step
+    - `reward` is verified after step
 
 
     Parameters
