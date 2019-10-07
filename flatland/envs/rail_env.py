@@ -283,8 +283,8 @@ class RailEnv(Environment):
                 self.set_agent_active(i_agent)
 
         for i_agent, agent in enumerate(self.agents):
-            if agent.status != RailAgentStatus.ACTIVE:
-                continue
+            # if agent.status != RailAgentStatus.ACTIVE:
+            #    continue
 
             # A proportion of agent in the environment will receive a positive malfunction rate
             if np.random.random() < self.proportion_malfunctioning_trains:
