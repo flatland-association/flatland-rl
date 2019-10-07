@@ -898,12 +898,6 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         cells_to_fix = city_cells + inter_city_lines
         for cell in cells_to_fix:
             cell_valid = grid_map.cell_neighbours_valid(cell, True)
-            # cell_valid = grid_map.transitions.is_valid(cell)
-            # if grid_map.grid[cell] == int('1000010000100001', 2):
-            #    grid_map.fix_transitions(cell)
-            # if bin(grid_map.grid[cell]).count("1") == 4:
-            #    cell_valid = False
-            #    print("fixing cell", cell, vector_field[cell])
             if not cell_valid:
                 rails_to_fix[3 * rails_to_fix_cnt] = cell[0]
                 rails_to_fix[3 * rails_to_fix_cnt + 1] = cell[1]

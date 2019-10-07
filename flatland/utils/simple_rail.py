@@ -75,7 +75,7 @@ def make_disconnected_simple_rail() -> Tuple[GridTransitionMap, np.array]:
         [[empty] * 3 + [vertical_straight] + [empty] * 6] * 2 +
         [[dead_end_from_east] + [horizontal_straight] * 2 +
          [simple_switch_east_west_north] +
-         [dead_end_from_west]  + [dead_end_from_east] + [simple_switch_east_west_south] +
+         [dead_end_from_west] + [dead_end_from_east] + [simple_switch_east_west_south] +
          [horizontal_straight] * 2 + [dead_end_from_west]] +
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
@@ -83,7 +83,6 @@ def make_disconnected_simple_rail() -> Tuple[GridTransitionMap, np.array]:
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     return rail, rail_map
-
 
 
 def make_simple_rail2() -> Tuple[GridTransitionMap, np.array]:
