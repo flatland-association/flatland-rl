@@ -1,4 +1,5 @@
 import numpy as np
+from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import RailAgentStatus
@@ -8,7 +9,6 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.simple_rail import make_simple_rail
-from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 
 np.random.seed(1)
 
@@ -32,7 +32,7 @@ def test_initial_status():
                 direction=Grid4TransitionsEnum.EAST,
                 status=RailAgentStatus.READY_TO_DEPART,
                 action=RailEnvActions.DO_NOTHING,
-                reward=0,
+                reward=env.step_penalty * 0.5,
 
             ),
             Replay(
@@ -143,7 +143,7 @@ def test_status_done_remove():
                 direction=Grid4TransitionsEnum.EAST,
                 status=RailAgentStatus.READY_TO_DEPART,
                 action=RailEnvActions.DO_NOTHING,
-                reward=0,
+                reward=env.step_penalty * 0.5,
 
             ),
             Replay(

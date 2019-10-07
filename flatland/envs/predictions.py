@@ -132,9 +132,13 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
             elif agent.status == RailAgentStatus.ACTIVE:
                 agent_virtual_position = agent.position
             elif agent.status == RailAgentStatus.DONE:
-                    agent_virtual_position = agent.target
+                agent_virtual_position = agent.target
             else:
-                prediction_dict[agent.handle] = None
+
+                prediction = np.zeros(shape=(self.max_depth + 1, 5))
+                for i in range(self.max_depth):
+                    prediction[i] = [i, None, None, None, None]
+                prediction_dict[agent.handle] = prediction
                 continue
 
             agent_virtual_direction = agent.direction

@@ -206,7 +206,6 @@ class RailEnv(Environment):
         # Uniform distribution parameters for malfunction duration
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
-
         # Rest environment
         self.reset()
         self.num_resets = 0  # yes, set it to zero again!
@@ -276,6 +275,7 @@ class RailEnv(Environment):
             #  why do we need static agents? could we it more elegantly?
             self.agents_static = EnvAgentStatic.from_lists(
                 *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints))
+
         self.restart_agents()
 
         if activate_agents:
@@ -307,8 +307,19 @@ class RailEnv(Environment):
         self.obs_builder.reset()
         self.distance_map.reset(self.agents, self.rail)
 
+        info_dict = {
+            'action_required': {
+                i: (agent.status == RailAgentStatus.READY_TO_DEPART or (
+                    agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0))
+                for i, agent in enumerate(self.agents)},
+            'malfunction': {
+                i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
+            },
+            'speed': {i: self.agents[i].speed_data['speed'] for i in range(self.get_num_agents())},
+            'status': {i: agent.status for i, agent in enumerate(self.agents)}
+        }
         # Return the new observation vectors for each agent
-        return self._get_observations()
+        return self._get_observations(), info_dict
 
     def _agent_malfunction(self, i_agent) -> bool:
         """
@@ -429,6 +440,8 @@ class RailEnv(Environment):
                 agent.status = RailAgentStatus.ACTIVE
                 agent.position = agent.initial_position
             else:
+                # TODO: Here we need to check for the departure time in future releases with full schedules
+                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
                 return
 
         agent.old_direction = agent.direction

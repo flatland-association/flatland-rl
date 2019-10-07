@@ -72,21 +72,23 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
         agents_target = []
         agents_direction = []
         for agent_idx in range(num_agents):
+
             # Set target for agent
             start_city = agent_start_targets_cities[agent_idx][0]
             target_city = agent_start_targets_cities[agent_idx][1]
             start = random.choice(train_stations[start_city])
             target = random.choice(train_stations[target_city])
+
             while start[1] % 2 != 0:
                 start = random.choice(train_stations[start_city])
             while target[1] % 2 != 1:
                 target = random.choice(train_stations[target_city])
-
             agent_orientation = (agent_start_targets_cities[agent_idx][2] + 2 * start[1]) % 4
             if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                 agent_orientation = (agent_orientation + 2) % 4
             if not (rail.check_path_exists(start[0], agent_orientation, target[0])):
-                warnings.warn("Infeasible")
+                warnings.warn("Infeasible task for agent {}".format(agent_idx))
+
             agents_position.append((start[0][0], start[0][1]))
             agents_target.append((target[0][0], target[0][1]))
 

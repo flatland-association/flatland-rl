@@ -39,7 +39,7 @@ def run_benchmark():
     for trials in range(1, n_trials + 1):
 
         # Reset environment
-        obs = env.reset()
+        obs, info = env.reset()
 
         for a in range(env.get_num_agents()):
             norm = max(1, max_lt(obs[a], np.inf))

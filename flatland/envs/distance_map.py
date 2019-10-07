@@ -31,7 +31,6 @@ class DistanceMap:
         if self.reset_was_called:
             self.reset_was_called = False
 
-            nb_agents = len(self.agents)
             compute_distance_map = True
             # Don't compute the distance map if it was loaded
             if self.agents_previous_computation is None and self.distance_map is not None:

@@ -70,7 +70,7 @@ print("Starting Training...")
 for trials in range(1, n_trials + 1):
 
     # Reset environment and get initial observations for all agents
-    obs = env.reset()
+    obs, info = env.reset()
     for idx in range(env.get_num_agents()):
         tmp_agent = env.agents[idx]
         tmp_agent.speed_data["speed"] = 1 / (idx + 1)

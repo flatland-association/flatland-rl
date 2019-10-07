@@ -561,11 +561,11 @@ class GridTransitionMap(TransitionMap):
         if number_of_incoming == 3:
             self.set_transitions(rcPos, 0)
             hole = np.argwhere(incoming_connections < 1)[0][0]
-            if direction > 0:
+            if direction >= 0:
                 switch_type_idx = (direction - hole + 3) % 4
-                if switch_type_idx == 2:
-                    transition = simple_switch_west_south
                 if switch_type_idx == 0:
+                    transition = simple_switch_west_south
+                elif switch_type_idx == 2:
                     transition = simple_switch_east_south
                 else:
                     transition = np.random.choice(three_way_transitions, 1)

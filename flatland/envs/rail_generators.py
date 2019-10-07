@@ -12,7 +12,8 @@ from flatland.core.grid.grid_utils import distance_on_rail, IntVector2DArray, In
     Vec2dOperations
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map
+from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
+    fix_inner_nodes
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -557,8 +558,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
-        cell_vector_field = np.zeros(shape=(height, width), dtype=int) - 1
-        city_radius = int(np.ceil((max_rails_in_city + 2) / 2.0)) + 1
+        city_radius = int(np.ceil((max_rails_in_city + 2) / 2.0)) + 2
+        vector_field = np.zeros(shape=(height, width)) - 1.
 
         min_nr_rails_in_city = 3
         rails_in_city = min_nr_rails_in_city if max_rails_in_city < min_nr_rails_in_city else max_rails_in_city
@@ -566,13 +567,25 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         # Evenly distribute cities
         if grid_mode:
-            city_positions, city_cells = _generate_evenly_distr_city_positions(max_num_cities, city_radius, width, height)
+            city_positions, city_cells = _generate_evenly_distr_city_positions(max_num_cities, city_radius, width,
+                                                                               height, vector_field)
         else:
-            city_positions, city_cells = _generate_random_city_positions(max_num_cities, city_radius, width, height)
+            city_positions, city_cells = _generate_random_city_positions(max_num_cities, city_radius, width, height,
+                                                                         vector_field)
 
         # reduce num_cities if less were generated in random mode
         num_cities = len(city_positions)
 
+        # Try with evenly distributed cities
+        if num_cities < 2:
+            city_positions, city_cells = _generate_evenly_distr_city_positions(max_num_cities, city_radius, width,
+                                                                               height, vector_field)
+        num_cities = len(city_positions)
+
+        # Fail
+        if num_cities < 2:
+            warnings.warn("Initial parameters cannot generate valid railway")
+            return
         # Set up connection points for all cities
         inner_connection_points, outer_connection_points, connection_info, city_orientations = _generate_city_connection_points(
             city_positions, city_radius, rails_between_cities,
@@ -581,21 +594,20 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         # Connect the cities through the connection points
         inter_city_lines = _connect_cities(city_positions, outer_connection_points, city_cells,
                                            rail_trans, grid_map)
+
         # Build inner cities
-        through_tracks, free_rails = _build_inner_cities(city_positions, inner_connection_points,
-                                                         outer_connection_points,
-                                                         rail_trans,
-                                                         grid_map)
+        free_rails = _build_inner_cities(city_positions, inner_connection_points,
+                                         outer_connection_points,
+                                         rail_trans,
+                                         grid_map)
+
         # Populate cities
         train_stations = _set_trainstation_positions(city_positions, city_radius, free_rails)
-
         # Fix all transition elements
-        _fix_transitions(city_cells, inter_city_lines, grid_map)
-
+        _fix_transitions(city_cells, inter_city_lines, grid_map, vector_field)
         # Generate start target pairs
         agent_start_targets_cities = _generate_start_target_pairs(num_agents, num_cities, train_stations,
-                                                                              city_orientations)
-
+                                                                  city_orientations)
         return grid_map, {'agents_hints': {
             'num_agents': num_agents,
             'agent_start_targets_cities': agent_start_targets_cities,
@@ -603,7 +615,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             'city_orientations': city_orientations
         }}
 
-    def _generate_random_city_positions(num_cities: int, city_radius: int, width: int, height: int) -> (IntVector2DArray, IntVector2DArray):
+    def _generate_random_city_positions(num_cities: int, city_radius: int, width: int, height: int, vector_field) -> (
+        IntVector2DArray, IntVector2DArray):
         city_positions: IntVector2DArray = []
         city_cells: IntVector2DArray = []
         for city_idx in range(num_cities):
@@ -621,7 +634,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
                 if not too_close:
                     city_positions.append((row, col))
-                    city_cells.extend(_get_cells_in_city(city_positions[-1], city_radius))
+                    city_cells.extend(_get_cells_in_city(city_positions[-1], city_radius, vector_field))
 
                 tries += 1
                 if tries > 200:
@@ -632,19 +645,23 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                     break
         return city_positions, city_cells
 
-    def _generate_evenly_distr_city_positions(num_cities: int, city_radius: int, width: int, height: int) -> (IntVector2DArray, IntVector2DArray):
+    def _generate_evenly_distr_city_positions(num_cities: int, city_radius: int, width: int, height: int,
+                                              vector_field) -> (IntVector2DArray, IntVector2DArray):
         aspect_ratio = height / width
-        cities_per_row = int(np.ceil(np.sqrt(num_cities * aspect_ratio)))
-        cities_per_col = int(np.ceil(num_cities / cities_per_row))
-        row_positions = np.linspace(city_radius + 1, height - city_radius - 2, cities_per_row, dtype=int)
-        col_positions = np.linspace(city_radius + 1, width - city_radius - 2, cities_per_col, dtype=int)
+        cities_per_row = min(int(np.ceil(np.sqrt(num_cities * aspect_ratio))),
+                             int((height - 2) / (2 * city_radius + 1)))
+        cities_per_col = min(int(np.ceil(num_cities / cities_per_row)),
+                             int((width - 2) / (2 * city_radius + 1)))
+        num_build_cities = min(num_cities, cities_per_col * cities_per_row)
+        row_positions = np.linspace(city_radius + 1, height - 2 * (city_radius + 1), cities_per_row, dtype=int)
+        col_positions = np.linspace(city_radius + 1, width - 2 * (city_radius + 1), cities_per_col, dtype=int)
         city_positions = []
         city_cells = []
-        for city_idx in range(num_cities):
+        for city_idx in range(num_build_cities):
             row = row_positions[city_idx % cities_per_row]
             col = col_positions[city_idx // cities_per_row]
             city_positions.append((row, col))
-            city_cells.extend(_get_cells_in_city(city_positions[-1], city_radius))
+            city_cells.extend(_get_cells_in_city(city_positions[-1], city_radius, vector_field))
         return city_positions, city_cells
 
     def _generate_city_connection_points(city_positions: IntVector2DArray, city_radius: int, rails_between_cities: int,
@@ -676,7 +693,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             city_orientations.append(current_closest_direction)
             # set the number of tracks within a city, at least 2 tracks per city
             connections_per_direction = np.zeros(4, dtype=int)
-            nr_of_connection_points = np.random.randint(3, rails_in_city + 1)
+            nr_of_connection_points = np.random.randint(2, rails_in_city + 1)
             for idx in connection_sides_idx:
                 connections_per_direction[idx] = nr_of_connection_points
             connection_points_coordinates_inner: List[List[IntVector2D]] = [[] for i in range(4)]
@@ -684,31 +701,44 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             number_of_out_rails = np.random.randint(1, min(rails_between_cities, nr_of_connection_points) + 1)
             start_idx = int((nr_of_connection_points - number_of_out_rails) / 2)
             for direction in range(4):
-                connection_slots = np.arange(connections_per_direction[direction]) - int(
-                    connections_per_direction[direction] / 2)
+                connection_slots = np.arange(nr_of_connection_points) - start_idx
+                inner_point_offset = np.abs(connection_slots) + np.clip(connection_slots, 0, 1)
                 for connection_idx in range(connections_per_direction[direction]):
                     if direction == 0:
                         tmp_coordinates = (
+                            city_position[0] - city_radius + inner_point_offset[connection_idx],
+                            city_position[1] + connection_slots[connection_idx])
+                        out_tmp_coordinates = (
                             city_position[0] - city_radius, city_position[1] + connection_slots[connection_idx])
                     if direction == 1:
                         tmp_coordinates = (
+                            city_position[0] + connection_slots[connection_idx],
+                            city_position[1] + city_radius - inner_point_offset[connection_idx])
+                        out_tmp_coordinates = (
                             city_position[0] + connection_slots[connection_idx], city_position[1] + city_radius)
                     if direction == 2:
                         tmp_coordinates = (
+                            city_position[0] + city_radius - inner_point_offset[connection_idx],
+                            city_position[1] + connection_slots[connection_idx])
+                        out_tmp_coordinates = (
                             city_position[0] + city_radius, city_position[1] + connection_slots[connection_idx])
                     if direction == 3:
                         tmp_coordinates = (
+                            city_position[0] + connection_slots[connection_idx],
+                            city_position[1] - city_radius + inner_point_offset[connection_idx])
+                        out_tmp_coordinates = (
                             city_position[0] + connection_slots[connection_idx], city_position[1] - city_radius)
                     connection_points_coordinates_inner[direction].append(tmp_coordinates)
-                    if connection_idx in range(start_idx, start_idx + number_of_out_rails + 1):
-                        connection_points_coordinates_outer[direction].append(tmp_coordinates)
+                    if connection_idx in range(start_idx, start_idx + number_of_out_rails):
+                        connection_points_coordinates_outer[direction].append(out_tmp_coordinates)
 
             inner_connection_points.append(connection_points_coordinates_inner)
             outer_connection_points.append(connection_points_coordinates_outer)
             connection_info.append(connections_per_direction)
         return inner_connection_points, outer_connection_points, connection_info, city_orientations
 
-    def _connect_cities(city_positions: IntVector2DArray, connection_points: List[List[List[IntVector2D]]], city_cells: IntVector2DArray,
+    def _connect_cities(city_positions: IntVector2DArray, connection_points: List[List[List[IntVector2D]]],
+                        city_cells: IntVector2DArray,
                         rail_trans: RailEnvTransitions, grid_map: GridTransitionMap) -> List[IntVector2DArray]:
         """
         Function to connect the different cities through their connection points
@@ -754,7 +784,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         if neighbour_idx is not None:
             return neighbour_idx
 
-        neighbour_idx = closest_neighbours[(out_direction - 1) % 4] # counter-clockwise
+        neighbour_idx = closest_neighbours[(out_direction - 1) % 4]  # counter-clockwise
         if neighbour_idx is not None:
             return neighbour_idx
 
@@ -776,11 +806,9 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         :param grid_map:
         :return: Returns the cells of the through path which cannot be occupied by trainstations
         """
-        through_path_cells: List[IntVector2DArray] = [[] for i in range(len(city_positions))]
         free_rails: List[List[List[IntVector2D]]] = [[] for i in range(len(city_positions))]
         for current_city in range(len(city_positions)):
-            all_outer_connection_points = [item for sublist in outer_connection_points[current_city] for item in
-                                           sublist]
+
             # This part only works if we have keep same number of connection points for both directions
             # Also only works with two connection direction at each city
             for i in range(4):
@@ -789,23 +817,33 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                     break
 
             opposite_boarder = (boarder + 2) % 4
-            boarder_one = inner_connection_points[current_city][boarder]
-            boarder_two = inner_connection_points[current_city][opposite_boarder]
-
-            # Connect the ends of the tracks
-            connect_straight_line_in_grid_map(grid_map, boarder_one[0], boarder_one[-1], rail_trans)
-            connect_straight_line_in_grid_map(grid_map, boarder_two[0], boarder_two[-1], rail_trans)
-
+            nr_of_connection_points = len(inner_connection_points[current_city][boarder])
+            number_of_out_rails = len(outer_connection_points[current_city][boarder])
+            start_idx = int((nr_of_connection_points - number_of_out_rails) / 2)
             # Connect parallel tracks
-            for track_id in range(len(inner_connection_points[current_city][boarder])):
+            for track_id in range(nr_of_connection_points):
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
                 current_track = connect_straight_line_in_grid_map(grid_map, source, target, rail_trans)
-                if target in all_outer_connection_points and source in all_outer_connection_points and len(through_path_cells[current_city]) < 1:
-                    through_path_cells[current_city].extend(current_track)
-                else:
-                    free_rails[current_city].append(current_track)
-        return through_path_cells, free_rails
+                free_rails[current_city].append(current_track)
+            for track_id in range(nr_of_connection_points):
+                source = inner_connection_points[current_city][boarder][track_id]
+                target = inner_connection_points[current_city][opposite_boarder][track_id]
+
+                # Connect parallel tracks with each other
+                fix_inner_nodes(
+                    grid_map, source, rail_trans)
+                fix_inner_nodes(
+                    grid_map, target, rail_trans)
+
+                # Connect outer tracks to inner tracks
+                if start_idx <= track_id < start_idx + number_of_out_rails:
+                    source_outer = outer_connection_points[current_city][boarder][track_id - start_idx]
+                    target_outer = outer_connection_points[current_city][opposite_boarder][track_id - start_idx]
+                    connect_straight_line_in_grid_map(grid_map, source, source_outer, rail_trans)
+                    connect_straight_line_in_grid_map(grid_map, target, target_outer, rail_trans)
+
+        return free_rails
 
     def _set_trainstation_positions(city_positions: IntVector2DArray, city_radius: int,
                                     free_rails: List[List[List[IntVector2D]]]) -> List[List[Tuple[IntVector2D, int]]]:
@@ -813,7 +851,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         train_stations = [[] for i in range(num_cities)]
         for current_city in range(len(city_positions)):
             for track_nbr in range(len(free_rails[current_city])):
-                possible_location = free_rails[current_city][track_nbr][city_radius]
+                possible_location = free_rails[current_city][track_nbr][
+                    int(len(free_rails[current_city][track_nbr]) / 2)]
                 train_stations[current_city].append((possible_location, track_nbr))
         return train_stations
 
@@ -848,26 +887,25 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         return agent_start_targets_cities
 
     def _fix_transitions(city_cells: IntVector2DArray, inter_city_lines: List[IntVector2DArray],
-                         grid_map: GridTransitionMap):
+                         grid_map: GridTransitionMap, vector_field):
         """
         Function to fix all transition elements in environment
+        :param vector_field:
         """
         # Fix all cities with illegal transition maps
-        rails_to_fix = np.zeros(2 * grid_map.height * grid_map.width * 2, dtype='int')
+        rails_to_fix = np.zeros(3 * grid_map.height * grid_map.width * 2, dtype='int')
         rails_to_fix_cnt = 0
         cells_to_fix = city_cells + inter_city_lines
         for cell in cells_to_fix:
             cell_valid = grid_map.cell_neighbours_valid(cell, True)
-            if grid_map.grid[cell] == int('1000010000100001', 2):
-                grid_map.fix_transitions(cell)
             if not cell_valid:
-                rails_to_fix[2 * rails_to_fix_cnt] = cell[0]
-                rails_to_fix[2 * rails_to_fix_cnt + 1] = cell[1]
+                rails_to_fix[3 * rails_to_fix_cnt] = cell[0]
+                rails_to_fix[3 * rails_to_fix_cnt + 1] = cell[1]
+                rails_to_fix[3 * rails_to_fix_cnt + 2] = vector_field[cell]
                 rails_to_fix_cnt += 1
-
         # Fix all other cells
         for cell in range(rails_to_fix_cnt):
-            grid_map.fix_transitions((rails_to_fix[2 * cell], rails_to_fix[2 * cell + 1]), )
+            grid_map.fix_transitions((rails_to_fix[3 * cell], rails_to_fix[3 * cell + 1]), rails_to_fix[3 * cell + 2])
 
     def _closest_neighbour_in_grid4_directions(current_city_idx: int, city_positions: IntVector2DArray) -> List[int]:
         """
@@ -881,10 +919,11 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         # compute distance to all other cities
         for city_idx in range(len(city_positions)):
-            city_distances.append(Vec2dOperations.get_manhattan_distance(city_positions[current_city_idx], city_positions[city_idx]))
+            city_distances.append(
+                Vec2dOperations.get_manhattan_distance(city_positions[current_city_idx], city_positions[city_idx]))
         sorted_neighbours = np.argsort(city_distances)
 
-        for neighbour in sorted_neighbours[1:]: # do not include city itself
+        for neighbour in sorted_neighbours[1:]:  # do not include city itself
             direction_to_neighbour = direction_to_point(city_positions[current_city_idx], city_positions[neighbour])
             if closest_neighbour[direction_to_neighbour] is None:
                 closest_neighbour[direction_to_neighbour] = neighbour
@@ -899,7 +938,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         # http://stackoverflow.com/questions/3071415/efficient-method-to-calculate-the-rank-vector-of-a-list-in-python
         return sorted(range(len(seq)), key=seq.__getitem__)
 
-    def _get_cells_in_city(center: IntVector2D, radius: int) -> IntVector2DArray:
+    def _get_cells_in_city(center: IntVector2D, radius: int, vector_field: Vec2d) -> IntVector2DArray:
         """
 
         Parameters
@@ -916,7 +955,10 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         y_range = np.arange(center[1] - radius, center[1] + radius + 1)
         x_values = np.repeat(x_range, len(y_range))
         y_values = np.tile(y_range, len(x_range))
-        return list(zip(x_values, y_values))
+        city_cells = list(zip(x_values, y_values))
+        for cell in city_cells:
+            vector_field[cell] = direction_to_point(center, (cell[0], cell[1]))
+        return city_cells
 
     def _are_cities_overlapping(center_1, center_2, radius):
         return np.abs(center_1[0] - center_2[0]) < radius and np.abs(center_1[1] - center_2[1]) < radius

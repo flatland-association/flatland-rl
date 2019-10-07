@@ -67,7 +67,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             self.predicted_dir = {}
             self.predictions = self.predictor.get()
             if self.predictions:
-                for t in range(self.predictor.max_depth+1):
+                for t in range(self.predictor.max_depth + 1):
                     pos_list = []
                     dir_list = []
                     for a in handles:

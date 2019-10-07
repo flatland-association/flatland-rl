@@ -271,7 +271,7 @@ We can then use this new observation builder and the renderer to visualize the o
                   number_of_agents=3,
                   obs_builder_object=CustomObsBuilder)
 
-    obs = env.reset()
+    obs, info = env.reset()
     env_renderer = RenderTool(env, gl="PILSVG")
 
     # We render the initial step and show the obsered cells as colored boxes

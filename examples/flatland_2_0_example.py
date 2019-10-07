@@ -30,17 +30,17 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
                     1. / 3.: 0.25,  # Slow commuter train
                     1. / 4.: 0.25}  # Slow freight train
 
-env = RailEnv(width=50,
-              height=50,
-              rail_generator=sparse_rail_generator(max_num_cities=10,
+env = RailEnv(width=30,
+              height=30,
+              rail_generator=sparse_rail_generator(max_num_cities=4,
                                                    # Number of cities in map (where train stations are)
                                                    seed=1,  # Random seed
-                                                   grid_mode=False,
-                                                   max_rails_between_cities=2,
+                                                   grid_mode=True,
+                                                   max_rails_between_cities=3,
                                                    max_rails_in_city=4,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=20,
+              number_of_agents=50,
               stochastic_data=stochastic_data,  # Malfunction data generator
               obs_builder_object=TreeObservation,
               remove_agents_at_target=True
@@ -48,12 +48,11 @@ env = RailEnv(width=50,
 
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
 
-
 env_renderer = RenderTool(env, gl="PILSVG",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
                           show_debug=True,
-                          screen_height=1000,
-                          screen_width=1000)
+                          screen_height=800,
+                          screen_width=800)
 
 
 # Import your own Agent or use RLlib to train agents on Flatland
@@ -99,7 +98,7 @@ action_dict = dict()
 print("Start episode...")
 # Reset environment and get initial observations for all agents
 start_reset = time.time()
-obs = env.reset()
+obs, info = env.reset()
 end_reset = time.time()
 print(end_reset - start_reset)
 print(env.get_num_agents(), )

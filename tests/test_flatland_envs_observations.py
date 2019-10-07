@@ -27,7 +27,7 @@ def test_global_obs():
                   number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
 
-    global_obs = env.reset()
+    global_obs, info = env.reset()
 
     # we have to take step for the agent to enter the grid.
     global_obs, _, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD})

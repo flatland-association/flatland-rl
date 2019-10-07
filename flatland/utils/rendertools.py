@@ -41,7 +41,7 @@ class RenderTool(object):
 
     def __init__(self, env, gl="PILSVG", jupyter=False,
                  agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                 show_debug=False, clear_debug_text=True,screen_width=800, screen_height=600):
+                 show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600):
 
         self.env = env
         self.frame_nr = 0
@@ -561,7 +561,7 @@ class RenderTool(object):
                     self.gl.set_cell_occupied(agent_idx, *(agent.position))
                 self.gl.set_agent_at(agent_idx, *position, old_direction, direction,
                                      selected_agent == agent_idx, rail_grid=env.rail.grid,
-                                     show_debug=self.show_debug,clear_debug_text=self.clear_debug_text)
+                                     show_debug=self.show_debug, clear_debug_text=self.clear_debug_text)
             else:
                 position = agent.position
                 direction = agent.direction
@@ -574,7 +574,7 @@ class RenderTool(object):
                         # set_agent_at uses the agent index for the color
                         self.gl.set_agent_at(agent_idx, *position, agent.direction, direction,
                                              selected_agent == agent_idx, rail_grid=env.rail.grid,
-                                             show_debug=self.show_debug,clear_debug_text=self.clear_debug_text)
+                                             show_debug=self.show_debug, clear_debug_text=self.clear_debug_text)
 
                 # set_agent_at uses the agent index for the color
                 if self.agent_render_variant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:

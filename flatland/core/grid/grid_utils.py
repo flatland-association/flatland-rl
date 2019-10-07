@@ -2,8 +2,6 @@ from typing import Tuple, Callable, List, Type
 
 import numpy as np
 
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
-
 Vector2D: Type = Tuple[float, float]
 IntVector2D: Type = Tuple[int, int]
 
@@ -286,7 +284,11 @@ def coordinate_to_position(depth, coords):
     position = np.empty(len(coords), dtype=int)
     idx = 0
     for t in coords:
-        position[idx] = int(t[1] * depth + t[0])
+        # Set None type coordinates off the grid
+        if np.isnan(t[0]):
+            position[idx] = -1
+        else:
+            position[idx] = int(t[1] * depth + t[0])
         idx += 1
     return position
 

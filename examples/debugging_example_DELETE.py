@@ -62,7 +62,7 @@ env = RailEnv(width=14,
               number_of_agents=2,
               obs_builder_object=SingleAgentNavigationObs())
 
-obs = env.reset()
+obs, info = env.reset()
 env_renderer = RenderTool(env, gl="PILSVG")
 env_renderer.render_env(show=True, frames=True, show_observations=False)
 for step in range(100):
