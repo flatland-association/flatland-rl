@@ -19,11 +19,12 @@ def connect_rail_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D, en
                              rail_trans: RailEnvTransitions,
                              a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance,
                              flip_start_node_trans: bool = False, flip_end_node_trans: bool = False,
-                             respect_transition_validity: bool = True,
-                             forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
+                             respect_transition_validity: bool = True, forbidden_cells: IntVector2DArray = None,
+                             avoid_rail=False) -> IntVector2DArray:
     """
         Creates a new path [start,end] in `grid_map.grid`, based on rail_trans, and
     returns the path created as a list of positions.
+    :param avoid_rail:
     :param rail_trans: basic rail transition object
     :param grid_map: grid map
     :param start: start position of rail
@@ -36,7 +37,8 @@ def connect_rail_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D, en
     :return: List of cells in the path
     """
 
-    path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, respect_transition_validity,
+    path: IntVector2DArray = a_star(grid_map, start, end, a_star_distance_function, avoid_rail,
+                                    respect_transition_validity,
                                     forbidden_cells)
     if len(path) < 2:
         return []

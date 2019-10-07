@@ -561,7 +561,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         city_radius = int(np.ceil((max_rails_in_city + 2) / 2.0)) + 2
         vector_field = np.zeros(shape=(height, width)) - 1.
 
-        min_nr_rails_in_city = 3
+        min_nr_rails_in_city = 2
+        max_nr_rail_in_city = 6
         rails_in_city = min_nr_rails_in_city if max_rails_in_city < min_nr_rails_in_city else max_rails_in_city
         rails_between_cities = rails_in_city if max_rails_between_cities > rails_in_city else max_rails_between_cities
 
@@ -604,7 +605,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         # Populate cities
         train_stations = _set_trainstation_positions(city_positions, city_radius, free_rails)
         # Fix all transition elements
-        _fix_transitions(city_cells, inter_city_lines, grid_map, vector_field)
+        _fix_transitions(city_cells, inter_city_lines, grid_map, vector_field, rail_trans)
         # Generate start target pairs
         agent_start_targets_cities = _generate_start_target_pairs(num_agents, num_cities, train_stations,
                                                                   city_orientations)
@@ -702,7 +703,9 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             start_idx = int((nr_of_connection_points - number_of_out_rails) / 2)
             for direction in range(4):
                 connection_slots = np.arange(nr_of_connection_points) - start_idx
-                inner_point_offset = np.abs(connection_slots) + np.clip(connection_slots, 0, 1)
+                offset_distances = np.arange(nr_of_connection_points) - int(nr_of_connection_points / 2)
+                inner_point_offset = np.abs(offset_distances) + np.clip(offset_distances, 0, 1) + 1
+
                 for connection_idx in range(connections_per_direction[direction]):
                     if direction == 0:
                         tmp_coordinates = (
@@ -774,6 +777,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                     new_line = connect_rail_in_grid_map(grid_map, city_out_connection_point, neighbour_connection_point,
                                                         rail_trans, flip_start_node_trans=False,
                                                         flip_end_node_trans=False, respect_transition_validity=False,
+                                                        avoid_rail=True,
                                                         forbidden_cells=city_cells)
                     all_paths.extend(new_line)
 
@@ -887,9 +891,10 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         return agent_start_targets_cities
 
     def _fix_transitions(city_cells: IntVector2DArray, inter_city_lines: List[IntVector2DArray],
-                         grid_map: GridTransitionMap, vector_field):
+                         grid_map: GridTransitionMap, vector_field, rail_trans: RailEnvTransitions, ):
         """
         Function to fix all transition elements in environment
+        :param rail_trans:
         :param vector_field:
         """
         # Fix all cities with illegal transition maps
