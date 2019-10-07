@@ -112,7 +112,6 @@ class PILGL(GraphicsLayer):
             # rebuild background_grid to control the visualisation of buildings, trees, mountains, lakes and river
             self.background_grid = np.zeros(shape=(self.width, self.height))
 
-
             # build base distance map (distance to targets)
             for x in range(self.width):
                 for y in range(self.height):
@@ -636,7 +635,7 @@ class PILSVG(PILGL):
                     self.pil_zug[(in_direction_2, out_direction_2, color_idx)] = pils[color_idx]
 
     def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected,
-                     rail_grid=None, show_debug=False,clear_debug_text=True):
+                     rail_grid=None, show_debug=False, clear_debug_text=True):
         delta_dir = (out_direction - in_direction) % 4
         color_idx = agent_idx % self.n_agent_colors
         # when flipping direction at a dead end, use the "out_direction" direction.
