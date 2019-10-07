@@ -440,6 +440,8 @@ class RailEnv(Environment):
                 agent.status = RailAgentStatus.ACTIVE
                 agent.position = agent.initial_position
             else:
+                # TODO: Here we need to check for the departure time in future releases with full schedules
+                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
                 return
 
         agent.old_direction = agent.direction
