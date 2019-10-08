@@ -2,7 +2,6 @@
 Definition of the RailEnv environment.
 """
 # TODO:  _ this is a global method --> utils or remove later
-import warnings
 from enum import IntEnum
 from typing import List, NamedTuple, Optional, Dict
 
@@ -18,6 +17,7 @@ from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
 
@@ -114,7 +114,7 @@ class RailEnv(Environment):
                  rail_generator: RailGenerator = random_rail_generator(),
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
-                 obs_builder_object: ObservationBuilder = ObservationBuilder(),
+                 obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  max_episode_steps=None,
                  stochastic_data=None,
                  remove_agents_at_target=False,
@@ -267,9 +267,9 @@ class RailEnv(Environment):
 
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
-            # NOTE : Ignore Validation on every reset. rail_generator should ensure that 
+            # NOTE : Ignore Validation on every reset. rail_generator should ensure that
             #        only valid grids are generated.
-            # 
+            #
             # for r in range(self.height):
             #     for c in range(self.width):
             #         rc_pos = (r, c)
