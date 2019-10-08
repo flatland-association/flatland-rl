@@ -24,7 +24,6 @@ def test_random_seeding():
                   )
     # reset to initialize agents_static
     obs, info = env.reset(True, True, False, random_seed=0)
-
     env.agents[0].target = (0, 0)
     # Move target to unreachable position in order to not interfere with test
     for idx in range(4):
