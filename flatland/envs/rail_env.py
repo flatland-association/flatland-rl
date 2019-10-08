@@ -2,13 +2,13 @@
 Definition of the RailEnv environment.
 """
 # TODO:  _ this is a global method --> utils or remove later
-import warnings
 from enum import IntEnum
-from typing import List, NamedTuple, Optional, Tuple, Dict
+from typing import List, NamedTuple, Optional, Dict
 
 import msgpack
 import msgpack_numpy as m
 import numpy as np
+from gym.utils import seeding
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -17,7 +17,7 @@ from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
 
@@ -114,10 +114,11 @@ class RailEnv(Environment):
                  rail_generator: RailGenerator = random_rail_generator(),
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
-                 obs_builder_object: ObservationBuilder = TreeObsForRailEnv(max_depth=2),
+                 obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  max_episode_steps=None,
                  stochastic_data=None,
-                 remove_agents_at_target=False
+                 remove_agents_at_target=False,
+                 random_seed=None
                  ):
         """
         Environment init.
@@ -151,6 +152,9 @@ class RailEnv(Environment):
         remove_agents_at_target : bool
             If remove_agents_at_target is set to true then the agents will be removed by placing to
             RailEnv.DEPOT_POSITION when the agent has reach it's target position.
+        random_seed : int or None
+            if None, then its ignored, else the random generators are seeded with this number to ensure
+            that stochastic operations are replicable across multiple operations
         """
         super().__init__()
 
@@ -184,6 +188,13 @@ class RailEnv(Environment):
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
         self.action_space = [1]
+        
+        self._seed()
+
+        self._seed()
+        self.random_seed = random_seed
+        if self.random_seed:
+            self._seed(seed=random_seed)
 
         # Stochastic train malfunctioning parameters
         if stochastic_data is not None:
@@ -211,6 +222,10 @@ class RailEnv(Environment):
         self.num_resets = 0  # yes, set it to zero again!
 
         self.valid_positions = None
+
+    def _seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
     # no more agent_handles
     def get_agent_handles(self):
@@ -240,26 +255,30 @@ class RailEnv(Environment):
         """
         self.agents = EnvAgent.list_from_static(self.agents_static)
 
-    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False):
+    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False, random_seed=None):
         """ if regen_rail then regenerate the rails.
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
+        if random_seed:
+            self._seed(random_seed)
 
-        # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
-        #  can we not put 'self.rail_generator(..)' into 'if regen_rail or self.rail is None' condition?
-        rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
-
+        optionals = {}
         if regen_rail or self.rail is None:
+            rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
+
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
-            for r in range(self.height):
-                for c in range(self.width):
-                    rc_pos = (r, c)
-                    check = self.rail.cell_neighbours_valid(rc_pos, True)
-                    if not check:
-                        print(self.rail.grid[rc_pos])
-                        warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
+            # NOTE : Ignore Validation on every reset. rail_generator should ensure that
+            #        only valid grids are generated.
+            #
+            # for r in range(self.height):
+            #     for c in range(self.width):
+            #         rc_pos = (r, c)
+            #         check = self.rail.cell_neighbours_valid(rc_pos, True)
+            #         if not check:
+            #             print(self.rail.grid[rc_pos])
+            #             warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
         # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
         #  hacky: we must re-compute the distance map and not use the initial distance_map loaded from file by
         #  rail_from_file!!!
@@ -274,7 +293,7 @@ class RailEnv(Environment):
             # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/185
             #  why do we need static agents? could we it more elegantly?
             self.agents_static = EnvAgentStatic.from_lists(
-                *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints))
+                *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets))
 
         self.restart_agents()
 
@@ -287,7 +306,7 @@ class RailEnv(Environment):
             #    continue
 
             # A proportion of agent in the environment will receive a positive malfunction rate
-            if np.random.random() < self.proportion_malfunctioning_trains:
+            if self.np_random.rand() < self.proportion_malfunctioning_trains:
                 agent.malfunction_data['malfunction_rate'] = self.mean_malfunction_rate
 
             agent.malfunction_data['malfunction'] = 0
@@ -335,17 +354,17 @@ class RailEnv(Environment):
         # If counter has come to zero --> Agent has malfunction
         # set next malfunction time and duration of current malfunction
         if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction'] and \
-            agent.malfunction_data['next_malfunction'] <= 0:
+                agent.malfunction_data['next_malfunction'] <= 0:
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
 
             # Next malfunction in number of stops
             next_breakdown = int(
-                np.random.exponential(scale=agent.malfunction_data['malfunction_rate']))
+                self.np_random.exponential(scale=agent.malfunction_data['malfunction_rate']))
             agent.malfunction_data['next_malfunction'] = next_breakdown
 
             # Duration of current malfunction
-            num_broken_steps = np.random.randint(self.min_number_of_steps_broken,
+            num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
                                                  self.max_number_of_steps_broken + 1) + 1
             agent.malfunction_data['malfunction'] = num_broken_steps
             agent.malfunction_data['moving_before_malfunction'] = agent.moving
@@ -405,7 +424,8 @@ class RailEnv(Environment):
         info_dict = {
             'action_required': {
                 i: (agent.status == RailAgentStatus.READY_TO_DEPART or (
-                    agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0))
+                    agent.status == RailAgentStatus.ACTIVE and np.isclose(agent.speed_data['position_fraction'], 0.0,
+                                                                          rtol=1e-03)))
                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
@@ -457,8 +477,9 @@ class RailEnv(Environment):
             return
 
         # Is the agent at the beginning of the cell? Then, it can take an action.
-        # As long as the agent is malfunctioning or stopped at the beginning of the cell, different actions may be taken!
-        if agent.speed_data['position_fraction'] == 0.0:
+        # As long as the agent is malfunctioning or stopped at the beginning of the cell,
+        # different actions may be taken!
+        if np.isclose(agent.speed_data['position_fraction'], 0.0, rtol=1e-03):
             # No action has been supplied for this agent -> set DO_NOTHING as default
             if action is None:
                 action = RailEnvActions.DO_NOTHING
@@ -479,7 +500,7 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] += self.stop_penalty
 
             if not agent.moving and not (
-                action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                    action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[i_agent] += self.start_penalty

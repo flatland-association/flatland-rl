@@ -166,6 +166,8 @@ class FlatlandRemoteClient(object):
         _request['payload'] = {}
         _response = self._blocking_request(_request)
         observation = _response['payload']['observation']
+        info = _response['payload']['info']
+        random_seed = _response['payload']['random_seed']
 
         if not observation:
             # If the observation is False,
@@ -196,10 +198,18 @@ class FlatlandRemoteClient(object):
         self.env._max_episode_steps = \
             int(1.5 * (self.env.width + self.env.height))
 
-        local_observation = self.env.reset()
+        local_observation = self.env.reset(random_seed=random_seed)
+
+        local_observation, info = self.env.reset(
+                                regen_rail=False,
+                                replace_agents=False,
+                                activate_agents=False,
+                                random_seed=random_seed
+                            )
+
         # Use the local observation 
         # as the remote server uses a dummy observation builder
-        return local_observation
+        return local_observation, info
 
     def env_step(self, action, render=False):
         """
