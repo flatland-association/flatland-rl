@@ -151,7 +151,7 @@ def test_malfunction_process_statistically():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
-    env.reset(False, False, False, random_seed=0)
+    env.reset(True, True, False, random_seed=0)
 
     env.agents[0].target = (0, 0)
     nb_malfunction = 0
