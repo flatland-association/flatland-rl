@@ -61,8 +61,6 @@ class DistanceMap:
                                                     self.env_width,
                                                     4))
         for i, agent in enumerate(agents):
-            print("computing distance map")
-
             self._distance_map_walker(rail, agent.target, i)
 
     def _distance_map_walker(self, rail: GridTransitionMap, position, target_nr: int):
