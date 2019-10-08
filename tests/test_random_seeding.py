@@ -33,3 +33,7 @@ def test_random_seeding():
         assert env.agents[0].position == (3, 6)
         # print("env.agents[0].initial_position == {}".format(env.agents[0].initial_position))
         #print("assert env.agents[0].position ==  {}".format(env.agents[0].position))
+
+
+def test_seeding_and_observations():
+    print("nothing yet")
