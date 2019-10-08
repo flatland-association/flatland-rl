@@ -82,12 +82,8 @@ def test_malfunction_process():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
-<<<<<<< HEAD
     obs, info = env.reset(False, False, True, random_seed=10)
-=======
-    obs, info = env.reset(False, False, True, random_seed=0)
->>>>>>> fixed first tests in malfunction test
-    print(env.agents[0].malfunction_data)
+
     # Check that a initial duration for malfunction was assigned
     assert env.agents[0].malfunction_data['next_malfunction'] > 0
     for agent in env.agents:
@@ -155,11 +151,7 @@ def test_malfunction_process_statistically():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
-<<<<<<< HEAD
     env.reset(True, True, False, random_seed=10)
-=======
-    env.reset(False, False, False, random_seed=0)
->>>>>>> fixed first tests in malfunction test
 
     env.agents[0].target = (0, 0)
     nb_malfunction = 0
