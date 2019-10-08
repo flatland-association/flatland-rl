@@ -829,6 +829,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
                 current_track = connect_straight_line_in_grid_map(grid_map, source, target, rail_trans)
+
                 free_rails[current_city].append(current_track)
             for track_id in range(nr_of_connection_points):
                 source = inner_connection_points[current_city][boarder][track_id]

@@ -18,7 +18,6 @@ from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
 
@@ -115,7 +114,7 @@ class RailEnv(Environment):
                  rail_generator: RailGenerator = random_rail_generator(),
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
-                 obs_builder_object: ObservationBuilder = TreeObsForRailEnv(max_depth=2),
+                 obs_builder_object: ObservationBuilder = ObservationBuilder(),
                  max_episode_steps=None,
                  stochastic_data=None,
                  remove_agents_at_target=False,
@@ -254,14 +253,14 @@ class RailEnv(Environment):
         """
         self.agents = EnvAgent.list_from_static(self.agents_static)
 
-    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False, random_seed=None):
+    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False):
         """ if regen_rail then regenerate the rails.
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
         if random_seed:
             self._seed(random_seed)
-        
+
         optionals = {}
         if regen_rail or self.rail is None:
             rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
