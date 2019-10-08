@@ -642,7 +642,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                 tries += 1
                 if tries > 200:
                     warnings.warn(
-                        "Could not only set {} cities after {} tries, although {} of cities required to be generated!".format(  # noqa
+                        "Could only set {} cities after {} tries, although {} of cities required to be generated!".format(
+                            # noqa
                             len(city_positions),
                             tries, num_cities))
                     break
