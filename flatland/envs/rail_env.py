@@ -259,12 +259,13 @@ class RailEnv(Environment):
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
-
-        # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
-        #  can we not put 'self.rail_generator(..)' into 'if regen_rail or self.rail is None' condition?
-        rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
-
+        if random_seed:
+            self._seed(random_seed)
+        
+        optionals = {}
         if regen_rail or self.rail is None:
+            rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
+
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
             for r in range(self.height):
@@ -301,7 +302,7 @@ class RailEnv(Environment):
             #    continue
 
             # A proportion of agent in the environment will receive a positive malfunction rate
-            if self.np_random.random() < self.proportion_malfunctioning_trains:
+            if self.np_random.rand() < self.proportion_malfunctioning_trains:
                 agent.malfunction_data['malfunction_rate'] = self.mean_malfunction_rate
 
             agent.malfunction_data['malfunction'] = 0
