@@ -188,6 +188,8 @@ class RailEnv(Environment):
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
         self.action_space = [1]
+        
+        self._seed()
 
         self._seed()
         self.random_seed = random_seed
@@ -724,16 +726,20 @@ class RailEnv(Environment):
 
         return msgpack.packb(msg_data, use_bin_type=True)
 
-    def save(self, filename):
-        if self.distance_map.get() is not None:
-            if len(self.distance_map.get()) > 0:
-                with open(filename, "wb") as file_out:
-                    file_out.write(self.get_full_state_dist_msg())
+    def save(self, filename,save_distance_maps=False):
+        if save_distance_maps == True:
+            if self.distance_map.get() is not None:
+                if len(self.distance_map.get()) > 0:
+                    with open(filename, "wb") as file_out:
+                        file_out.write(self.get_full_state_dist_msg())
+                else:
+                    print("[WARNING] Unable to save the distance map for this environment, as none was found !")
+
             else:
-                with open(filename, "wb") as file_out:
-                    file_out.write(self.get_full_state_msg())
+                print("[WARNING] Unable to save the distance map for this environment, as none was found !")
+
         else:
-            with open(filename, "wb") as file_out:
+            with open(filename,"wb") as file_out:
                 file_out.write(self.get_full_state_msg())
 
     def load(self, filename):
