@@ -267,13 +267,16 @@ class RailEnv(Environment):
 
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
-            for r in range(self.height):
-                for c in range(self.width):
-                    rc_pos = (r, c)
-                    check = self.rail.cell_neighbours_valid(rc_pos, True)
-                    if not check:
-                        print(self.rail.grid[rc_pos])
-                        warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
+            # NOTE : Ignore Validation on every reset. rail_generator should ensure that 
+            #        only valid grids are generated.
+            # 
+            # for r in range(self.height):
+            #     for c in range(self.width):
+            #         rc_pos = (r, c)
+            #         check = self.rail.cell_neighbours_valid(rc_pos, True)
+            #         if not check:
+            #             print(self.rail.grid[rc_pos])
+            #             warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
         # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
         #  hacky: we must re-compute the distance map and not use the initial distance_map loaded from file by
         #  rail_from_file!!!
