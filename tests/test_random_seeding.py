@@ -36,7 +36,7 @@ def test_random_seeding():
         # Test generation print
         assert env.agents[0].position == (3, 6)
         # print("env.agents[0].initial_position == {}".format(env.agents[0].initial_position))
-        #print("assert env.agents[0].position ==  {}".format(env.agents[0].position))
+        # print("assert env.agents[0].position ==  {}".format(env.agents[0].position))
 
 
 def test_seeding_and_observations():
@@ -110,81 +110,64 @@ def test_seeding_and_malfunction():
                        'max_duration': 10}
     # Make two seperate envs with different and see if the exhibit the same malfunctions
     # Global Observation
-    env = RailEnv(width=25,
-                  height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=12),
-                  number_of_agents=10,
-                  obs_builder_object=GlobalObsForRailEnv(),
-                  stochastic_data=stochastic_data,  # Malfunction data generator
-                  )
+    for tests in range(1, 100):
+        env = RailEnv(width=25,
+                      height=30,
+                      rail_generator=rail_from_grid_transition_map(rail),
+                      schedule_generator=random_schedule_generator(),
+                      number_of_agents=10,
+                      random_seed=tests,
+                      obs_builder_object=GlobalObsForRailEnv(),
+                      stochastic_data=stochastic_data,  # Malfunction data generator
+                      )
 
-    # Tree Observation
-    env2 = RailEnv(width=25,
-                   height=30,
-                   rail_generator=rail_from_grid_transition_map(rail),
-                   schedule_generator=random_schedule_generator(seed=12),
-                   number_of_agents=10,
-                   obs_builder_object=GlobalObsForRailEnv(),
-                   stochastic_data=stochastic_data,  # Malfunction data generator
-                   )
+        # Tree Observation
+        env2 = RailEnv(width=25,
+                       height=30,
+                       rail_generator=rail_from_grid_transition_map(rail),
+                       schedule_generator=random_schedule_generator(),
+                       number_of_agents=10,
+                       random_seed=tests,
+                       obs_builder_object=GlobalObsForRailEnv(),
+                       stochastic_data=stochastic_data,  # Malfunction data generator
+                       )
 
-    env.reset(False, False, False, random_seed=12)
-    env2.reset(False, False, False, random_seed=12)
+        env.reset(True, False, True, random_seed=tests)
+        env2.reset(True, False, True, random_seed=tests)
 
-    # Check that both environments produce the same initial start positions
-    assert env.agents[0].initial_position == env2.agents[0].initial_position
-    assert env.agents[1].initial_position == env2.agents[1].initial_position
-    assert env.agents[2].initial_position == env2.agents[2].initial_position
-    assert env.agents[3].initial_position == env2.agents[3].initial_position
-    assert env.agents[4].initial_position == env2.agents[4].initial_position
-    assert env.agents[5].initial_position == env2.agents[5].initial_position
-    assert env.agents[6].initial_position == env2.agents[6].initial_position
-    assert env.agents[7].initial_position == env2.agents[7].initial_position
-    assert env.agents[8].initial_position == env2.agents[8].initial_position
-    assert env.agents[9].initial_position == env2.agents[9].initial_position
+        # Check that both environments produce the same initial start positions
+        assert env.agents[0].initial_position == env2.agents[0].initial_position
+        assert env.agents[1].initial_position == env2.agents[1].initial_position
+        assert env.agents[2].initial_position == env2.agents[2].initial_position
+        assert env.agents[3].initial_position == env2.agents[3].initial_position
+        assert env.agents[4].initial_position == env2.agents[4].initial_position
+        assert env.agents[5].initial_position == env2.agents[5].initial_position
+        assert env.agents[6].initial_position == env2.agents[6].initial_position
+        assert env.agents[7].initial_position == env2.agents[7].initial_position
+        assert env.agents[8].initial_position == env2.agents[8].initial_position
+        assert env.agents[9].initial_position == env2.agents[9].initial_position
 
-    action_dict = {}
-    for step in range(10):
-        for a in range(env.get_num_agents()):
-            action = np.random.randint(4)
-            action_dict[a] = action
-            print(env.agents[a].malfunction_data['malfunction'], env2.agents[a].malfunction_data['malfunction'])
-        env.step(action_dict)
-        env2.step(action_dict)
+        action_dict = {}
+        for step in range(10):
+            for a in range(env.get_num_agents()):
+                action = np.random.randint(4)
+                action_dict[a] = action
+                # print("----------------------")
+                # print(env.agents[a].malfunction_data, env.agents[a].status)
+                # print(env2.agents[a].malfunction_data, env2.agents[a].status)
 
+            env.step(action_dict)
+            env2.step(action_dict)
 
-    # Check that both environments end up in the same position
+        # Check that both environments end up in the same position
 
-    assert env.agents[0].position == env2.agents[0].position
-    assert env.agents[1].position == env2.agents[1].position
-    assert env.agents[2].position == env2.agents[2].position
-    assert env.agents[3].position == env2.agents[3].position
-    assert env.agents[4].position == env2.agents[4].position
-    assert env.agents[5].position == env2.agents[5].position
-    assert env.agents[6].position == env2.agents[6].position
-    assert env.agents[7].position == env2.agents[7].position
-    assert env.agents[8].position == env2.agents[8].position
-    assert env.agents[9].position == env2.agents[9].position
-    for a in range(env.get_num_agents()):
-        print("assert env.agents[{}].position == env2.agents[{}].position".format(a, a))
-
-
-def tests_new_distributio():
-    def _exp_distirbution_synced(rate):
-        """
-        Generates sample from exponential distribution
-        We need this to guarantee synchronity between different instances with same seed.
-        :param rate:
-        :return:
-        """
-        u = np.random.rand()
-        x = - np.log(1 - u) * rate
-        return x
-
-    numbers = []
-    for i in range(100):
-        rate1 = 2
-        rate2 = 100
-        print((_exp_distirbution_synced(rate1), _exp_distirbution_synced(rate2)))
-    print(numbers)
+        assert env.agents[0].position == env2.agents[0].position
+        assert env.agents[1].position == env2.agents[1].position
+        assert env.agents[2].position == env2.agents[2].position
+        assert env.agents[3].position == env2.agents[3].position
+        assert env.agents[4].position == env2.agents[4].position
+        assert env.agents[5].position == env2.agents[5].position
+        assert env.agents[6].position == env2.agents[6].position
+        assert env.agents[7].position == env2.agents[7].position
+        assert env.agents[8].position == env2.agents[8].position
+        assert env.agents[9].position == env2.agents[9].position

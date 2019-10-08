@@ -40,7 +40,7 @@ def complex_rail_generator(nr_start_goal=1,
                            nr_extra=100,
                            min_dist=20,
                            max_dist=99999,
-                           seed=0) -> RailGenerator:
+                           seed=1) -> RailGenerator:
     """
     complex_rail_generator
 
@@ -272,7 +272,7 @@ def rail_from_grid_transition_map(rail_map) -> RailGenerator:
     return generator
 
 
-def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=0) -> RailGenerator:
+def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=1) -> RailGenerator:
     """
     Dummy random level generator:
     - fill in cells at random in [width-2, height-2]

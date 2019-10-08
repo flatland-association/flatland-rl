@@ -145,7 +145,7 @@ Next we configure the difficulty of our task by modifying the complex_rail_gener
                                         nr_extra=10,
                                         min_dist=10,
                                         max_dist=99999,
-                                        seed=0),
+                                        seed=1),
                     number_of_agents=5)
 
 The difficulty of a railway network depends on the dimensions (`width` x `height`) and the number of agents in the network.

@@ -28,7 +28,7 @@ def test_load_env():
 
 def test_save_load():
     env = RailEnv(width=10, height=10,
-                  rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=0),
+                  rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
                   schedule_generator=complex_schedule_generator(),
                   number_of_agents=2)
     env.reset()

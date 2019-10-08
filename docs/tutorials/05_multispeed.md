@@ -64,7 +64,7 @@ ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGe
 We can then produce `RailGenerator`s by currying:
 ```python
 def sparse_rail_generator(num_cities=5, num_intersections=4, num_trainstations=2, min_node_dist=20, node_radius=2,
-                          num_neighb=3, grid_mode=False, enhance_intersection=False, seed=0):
+                          num_neighb=3, grid_mode=False, enhance_intersection=False, seed=1):
 
     def generator(width, height, num_agents, num_resets=0):
     

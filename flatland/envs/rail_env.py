@@ -160,7 +160,6 @@ class RailEnv(Environment):
 
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
-        self.rail_generator = rail_generator
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
         self.height = height
@@ -217,7 +216,7 @@ class RailEnv(Environment):
         # Uniform distribution parameters for malfunction duration
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
-        # Rest environment
+        # Reset environment
         self.reset()
         self.num_resets = 0  # yes, set it to zero again!
 

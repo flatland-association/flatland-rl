@@ -201,7 +201,7 @@ def realistic_rail_generator(max_num_cities=5,
                              nbr_of_switches_per_station_track=2,
                              connect_max_nbr_of_shortes_city=4,
                              do_random_connect_stations=False,
-                             seed=0,
+                             seed=1,
                              print_out_info=True) -> RailGenerator:
     """
     This is a level generator which generates a realistic rail configurations

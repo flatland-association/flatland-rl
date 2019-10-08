@@ -125,7 +125,7 @@ def main(args):
     env = RailEnv(width=10,
                   height=10,
                   rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999,
-                                                        seed=0),
+                                                        seed=1),
                   schedule_generator=complex_schedule_generator(),
                   number_of_agents=3,
                   obs_builder_object=custom_obs_builder)
