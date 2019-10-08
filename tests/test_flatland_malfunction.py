@@ -70,8 +70,8 @@ def test_malfunction_process():
                        'malfunction_rate': 1000,
                        'min_duration': 3,
                        'max_duration': 3}
-    random.seed(0)
-    np.random.seed(0)
+    # random.seed(0)
+    # np.random.seed(0)
 
     stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
                        'malfunction_rate': 70,  # Rate of malfunction occurence
@@ -90,9 +90,7 @@ def test_malfunction_process():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
-    env.reset()
-
-    obs = env.reset(False, False, True)
+    obs = env.reset(False, False, True, random_seed=0)
 
     # Check that a initial duration for malfunction was assigned
     assert env.agents[0].malfunction_data['next_malfunction'] > 0
@@ -147,10 +145,6 @@ def test_malfunction_process_statistically():
                        'min_duration': 3,
                        'max_duration': 3}
 
-    random.seed(0)
-    np.random.seed(0)
-
-
     rail, rail_map = make_simple_rail2()
 
     env = RailEnv(width=25,
@@ -162,7 +156,7 @@ def test_malfunction_process_statistically():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
-    env.reset(False, False, False)
+    env.reset(False, False, False, random_seed=0)
     env.agents[0].target = (0, 0)
     nb_malfunction = 0
     for step in range(20):
@@ -185,9 +179,6 @@ def test_malfunction_before_entry():
                        'min_duration': 10,
                        'max_duration': 10}
 
-    random.seed(0)
-    np.random.seed(0)
-
     rail, rail_map = make_simple_rail2()
 
     env = RailEnv(width=25,
@@ -199,7 +190,7 @@ def test_malfunction_before_entry():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
-    env.reset(False, False, False)
+    env.reset(False, False, False, random_seed=0)
     env.agents[0].target = (0, 0)
     nb_malfunction = 0
     for step in range(20):
@@ -219,9 +210,6 @@ def test_malfunction_before_entry():
 
 def test_initial_malfunction():
 
-    random.seed(0)
-    np.random.seed(0)
-
     stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
                        'malfunction_rate': 70,  # Rate of malfunction occurence
                        'min_duration': 2,  # Minimal duration of malfunction
@@ -240,7 +228,7 @@ def test_initial_malfunction():
                   )
 
     # reset to initialize agents_static
-    env.reset(False, False, True)
+    env.reset(False, False, True, random_seed=0)
 
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
@@ -294,9 +282,6 @@ def test_initial_malfunction():
 
 
 def test_initial_malfunction_stop_moving():
-    random.seed(0)
-    np.random.seed(0)
-
     stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
                        'malfunction_rate': 70,  # Rate of malfunction occurence
                        'min_duration': 2,  # Minimal duration of malfunction

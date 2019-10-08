@@ -332,14 +332,22 @@ class FlatlandRemoteEvaluationService:
             self.simulation_steps.append(0)
 
             self.current_step = 0
-
-            _observation = self.env.reset()
+            
+            RANDOM_SEED = 1001
+            _observation, _info = self.env.reset(
+                                regen_rail=False,
+                                replace_agents=False,
+                                activate_agents=False,
+                                random_seed=RANDOM_SEED
+                                )
 
             _command_response = {}
             _command_response['type'] = messages.FLATLAND_RL.ENV_CREATE_RESPONSE
             _command_response['payload'] = {}
             _command_response['payload']['observation'] = _observation
             _command_response['payload']['env_file_path'] = self.env_file_paths[self.simulation_count]
+            _command_response['payload']['info'] = _info
+            _command_response['payload']['random_seed'] = RANDOM_SEED
         else:
             """
             All test env evaluations are complete
@@ -349,6 +357,8 @@ class FlatlandRemoteEvaluationService:
             _command_response['payload'] = {}
             _command_response['payload']['observation'] = False
             _command_response['payload']['env_file_path'] = False
+            _command_response['payload']['info'] = False
+            _command_response['payload']['random_seed'] = RANDOM_SEED
 
         self.send_response(_command_response, command)
         #####################################################################

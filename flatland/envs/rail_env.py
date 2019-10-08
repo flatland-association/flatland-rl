@@ -162,6 +162,7 @@ class RailEnv(Environment):
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
         self.height = height
+        self._seed()
 
         self.remove_agents_at_target = remove_agents_at_target
 
@@ -187,8 +188,6 @@ class RailEnv(Environment):
 
         self.action_space = [1]
         
-        self._seed()
-
         # Stochastic train malfunctioning parameters
         if stochastic_data is not None:
             prop_malfunction = stochastic_data['prop_malfunction']
