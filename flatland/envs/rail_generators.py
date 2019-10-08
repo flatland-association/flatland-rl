@@ -653,9 +653,9 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                                               vector_field) -> (IntVector2DArray, IntVector2DArray):
         aspect_ratio = height / width
         cities_per_row = min(int(np.ceil(np.sqrt(num_cities * aspect_ratio))),
-                             int((height - 2) / (2 * city_radius + 1)))
+                             int((height - 2) / (2 * (city_radius + 1))))
         cities_per_col = min(int(np.ceil(num_cities / cities_per_row)),
-                             int((width - 2) / (2 * city_radius + 1)))
+                             int((width - 2) / (2 * (city_radius + 1))))
         num_build_cities = min(num_cities, cities_per_col * cities_per_row)
         row_positions = np.linspace(city_radius + 1, height - 2 * (city_radius + 1), cities_per_row, dtype=int)
         col_positions = np.linspace(city_radius + 1, width - 2 * (city_radius + 1), cities_per_col, dtype=int)
