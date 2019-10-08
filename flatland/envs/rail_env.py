@@ -254,7 +254,7 @@ class RailEnv(Environment):
         """
         self.agents = EnvAgent.list_from_static(self.agents_static)
 
-    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False):
+    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False, random_seed=None):
         """ if regen_rail then regenerate the rails.
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
