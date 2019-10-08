@@ -353,7 +353,7 @@ class RailEnv(Environment):
         # If counter has come to zero --> Agent has malfunction
         # set next malfunction time and duration of current malfunction
         if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction'] and \
-                agent.malfunction_data['next_malfunction'] <= 0:
+            agent.malfunction_data['next_malfunction'] <= 0:
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
 
@@ -364,7 +364,7 @@ class RailEnv(Environment):
 
             # Duration of current malfunction
             num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                 self.max_number_of_steps_broken + 1) + 1
+                                                      self.max_number_of_steps_broken + 1) + 1
             agent.malfunction_data['malfunction'] = num_broken_steps
             agent.malfunction_data['moving_before_malfunction'] = agent.moving
 
@@ -499,7 +499,7 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] += self.stop_penalty
 
             if not agent.moving and not (
-                    action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[i_agent] += self.start_penalty
@@ -725,7 +725,7 @@ class RailEnv(Environment):
 
         return msgpack.packb(msg_data, use_bin_type=True)
 
-    def save(self, filename,save_distance_maps=False):
+    def save(self, filename, save_distance_maps=False):
         if save_distance_maps == True:
             if self.distance_map.get() is not None:
                 if len(self.distance_map.get()) > 0:
@@ -738,7 +738,7 @@ class RailEnv(Environment):
                 print("[WARNING] Unable to save the distance map for this environment, as none was found !")
 
         else:
-            with open(filename,"wb") as file_out:
+            with open(filename, "wb") as file_out:
                 file_out.write(self.get_full_state_msg())
 
     def load(self, filename):
