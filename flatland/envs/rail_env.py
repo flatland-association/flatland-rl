@@ -296,7 +296,7 @@ class RailEnv(Environment):
             #    continue
 
             # A proportion of agent in the environment will receive a positive malfunction rate
-            if self.np_random.random() < self.proportion_malfunctioning_trains:
+            if self.np_random.rand() < self.proportion_malfunctioning_trains:
                 agent.malfunction_data['malfunction_rate'] = self.mean_malfunction_rate
 
             agent.malfunction_data['malfunction'] = 0
