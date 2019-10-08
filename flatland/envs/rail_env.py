@@ -422,7 +422,8 @@ class RailEnv(Environment):
         info_dict = {
             'action_required': {
                 i: (agent.status == RailAgentStatus.READY_TO_DEPART or (
-                    agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0))
+                    agent.status == RailAgentStatus.ACTIVE and np.isclose(agent.speed_data['position_fraction'], 0.0,
+                                                                          rtol=1e-03)))
                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
@@ -476,7 +477,7 @@ class RailEnv(Environment):
         # Is the agent at the beginning of the cell? Then, it can take an action.
         # As long as the agent is malfunctioning or stopped at the beginning of the cell,
         # different actions may be taken!
-        if agent.speed_data['position_fraction'] == 0.0:
+        if np.isclose(agent.speed_data['position_fraction'], 0.0, rtol=1e-03):
             # No action has been supplied for this agent -> set DO_NOTHING as default
             if action is None:
                 action = RailEnvActions.DO_NOTHING

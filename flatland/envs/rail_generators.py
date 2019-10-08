@@ -543,7 +543,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=0) -> R
 
 
 def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_rails_between_cities: int = 4,
-                          max_rails_in_city: int = 4, seed: int = 0) -> RailGenerator:
+                          max_rails_in_city: int = 4, seed: int = 1) -> RailGenerator:
     """
     Generates railway networks with cities and inner city rails
     :param max_num_cities: Number of city centers in the map
@@ -618,7 +618,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             'city_orientations': city_orientations
         }}
 
-    def _generate_random_city_positions(num_cities: int, city_radius: int, width: int, 
+    def _generate_random_city_positions(num_cities: int, city_radius: int, width: int,
                                         height: int, vector_field) -> (IntVector2DArray, IntVector2DArray):
         city_positions: IntVector2DArray = []
         city_cells: IntVector2DArray = []
