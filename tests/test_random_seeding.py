@@ -20,7 +20,7 @@ def test_random_seeding():
         # Test generation print
 
         env.agents[0].target = (0, 0)
-        for step in range(100):
+        for step in range(10):
             actions = {}
             actions[0] = 2
             env.step(actions)
