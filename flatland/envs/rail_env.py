@@ -119,8 +119,7 @@ class RailEnv(Environment):
                  obs_builder_object: ObservationBuilder = TreeObsForRailEnv(max_depth=2),
                  max_episode_steps=None,
                  stochastic_data=None,
-                 remove_agents_at_target=False,
-                 random_seed=None
+                 remove_agents_at_target=False
                  ):
         """
         Environment init.
@@ -154,9 +153,6 @@ class RailEnv(Environment):
         remove_agents_at_target : bool
             If remove_agents_at_target is set to true then the agents will be removed by placing to
             RailEnv.DEPOT_POSITION when the agent has reach it's target position.
-        random_seed : int or None
-            if None, then its ignored, else the random generators are seeded with this number to ensure
-            that stochastic operations are replicable across multiple operations
         """
         super().__init__()
 
@@ -192,9 +188,6 @@ class RailEnv(Environment):
         self.action_space = [1]
         
         self._seed()
-        self.random_seed = random_seed
-        if self.random_seed:
-            self._seed(seed=random_seed)
 
         # Stochastic train malfunctioning parameters
         if stochastic_data is not None:
@@ -255,11 +248,13 @@ class RailEnv(Environment):
         """
         self.agents = EnvAgent.list_from_static(self.agents_static)
 
-    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False):
+    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False, random_seed=None):
         """ if regen_rail then regenerate the rails.
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
+        if random_seed:
+            self._seed(random_seed)
 
         # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
         #  can we not put 'self.rail_generator(..)' into 'if regen_rail or self.rail is None' condition?
