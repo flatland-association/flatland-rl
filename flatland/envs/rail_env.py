@@ -188,6 +188,8 @@ class RailEnv(Environment):
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
         self.action_space = [1]
+        
+        self._seed()
 
         self._seed()
         self.random_seed = random_seed
