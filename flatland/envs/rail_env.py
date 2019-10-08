@@ -712,11 +712,9 @@ class RailEnv(Environment):
                     with open(filename, "wb") as file_out:
                         file_out.write(self.get_full_state_dist_msg())
                 else:
-                    with open(filename, "wb") as file_out:
-                        file_out.write(self.get_full_state_msg())
+                    raise Exception("Unable to save distance map")
             else:
-                with open(filename, "wb") as file_out:
-                    file_out.write(self.get_full_state_msg())
+                raise Exception("Unable to save distance map")
         else:
             with open(filename,"wb") as file_out:
                 file_out.write(self.get_full_state_msg())
