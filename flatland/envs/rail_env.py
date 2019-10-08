@@ -360,10 +360,8 @@ class RailEnv(Environment):
 
             # Next malfunction in number of stops
             next_breakdown = int(
-                self.np_random.exponential(scale=agent.malfunction_data['malfunction_rate']))
-            next_breakdown = self.np_random.randint(self.min_number_of_steps_broken,
-                                                    self.max_number_of_steps_broken + 1) + 1
-            agent.malfunction_data['next_malfunction'] = 5  # next_breakdown
+                self._exp_distirbution_synced(rate=agent.malfunction_data['malfunction_rate']))
+            agent.malfunction_data['next_malfunction'] = next_breakdown
 
             # Duration of current malfunction
             num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,

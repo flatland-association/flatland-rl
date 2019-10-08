@@ -168,3 +168,23 @@ def test_seeding_and_malfunction():
     assert env.agents[9].position == env2.agents[9].position
     for a in range(env.get_num_agents()):
         print("assert env.agents[{}].position == env2.agents[{}].position".format(a, a))
+
+
+def tests_new_distributio():
+    def _exp_distirbution_synced(rate):
+        """
+        Generates sample from exponential distribution
+        We need this to guarantee synchronity between different instances with same seed.
+        :param rate:
+        :return:
+        """
+        u = np.random.rand()
+        x = - np.log(1 - u) * rate
+        return x
+
+    numbers = []
+    for i in range(100):
+        rate1 = 2
+        rate2 = 100
+        print((_exp_distirbution_synced(rate1), _exp_distirbution_synced(rate2)))
+    print(numbers)
