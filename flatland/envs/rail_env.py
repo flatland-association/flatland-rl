@@ -731,9 +731,11 @@ class RailEnv(Environment):
                     with open(filename, "wb") as file_out:
                         file_out.write(self.get_full_state_dist_msg())
                 else:
-                    raise Exception("Unable to save distance map")
+                    print("[WARNING] Unable to save the distance map for this environment, as none was found !")
+
             else:
-                raise Exception("Unable to save distance map")
+                print("[WARNING] Unable to save the distance map for this environment, as none was found !")
+
         else:
             with open(filename,"wb") as file_out:
                 file_out.write(self.get_full_state_msg())
