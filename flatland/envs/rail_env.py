@@ -118,7 +118,7 @@ class RailEnv(Environment):
                  max_episode_steps=None,
                  stochastic_data=None,
                  remove_agents_at_target=False,
-                 random_seed=None
+                 random_seed=1
                  ):
         """
         Environment init.

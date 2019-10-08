@@ -116,7 +116,6 @@ def test_seeding_and_malfunction():
                       rail_generator=rail_from_grid_transition_map(rail),
                       schedule_generator=random_schedule_generator(),
                       number_of_agents=10,
-                      random_seed=tests,
                       obs_builder_object=GlobalObsForRailEnv(),
                       stochastic_data=stochastic_data,  # Malfunction data generator
                       )
@@ -127,7 +126,6 @@ def test_seeding_and_malfunction():
                        rail_generator=rail_from_grid_transition_map(rail),
                        schedule_generator=random_schedule_generator(),
                        number_of_agents=10,
-                       random_seed=tests,
                        obs_builder_object=GlobalObsForRailEnv(),
                        stochastic_data=stochastic_data,  # Malfunction data generator
                        )
