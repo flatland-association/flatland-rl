@@ -563,7 +563,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         vector_field = np.zeros(shape=(height, width)) - 1.
 
         min_nr_rails_in_city = 2
-        max_nr_rail_in_city = 6
+        # max_nr_rail_in_city = 6
         rails_in_city = min_nr_rails_in_city if max_rails_in_city < min_nr_rails_in_city else max_rails_in_city
         rails_between_cities = rails_in_city if max_rails_between_cities > rails_in_city else max_rails_between_cities
 
@@ -589,9 +589,10 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             warnings.warn("Initial parameters cannot generate valid railway")
             return
         # Set up connection points for all cities
-        inner_connection_points, outer_connection_points, connection_info, city_orientations = _generate_city_connection_points(
-            city_positions, city_radius, rails_between_cities,
-            rails_in_city)
+        inner_connection_points, outer_connection_points, connection_info, city_orientations = \
+            _generate_city_connection_points(
+                city_positions, city_radius, rails_between_cities,
+                rails_in_city)
 
         # Connect the cities through the connection points
         inter_city_lines = _connect_cities(city_positions, outer_connection_points, city_cells,
@@ -617,8 +618,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             'city_orientations': city_orientations
         }}
 
-    def _generate_random_city_positions(num_cities: int, city_radius: int, width: int, height: int, vector_field) -> (
-        IntVector2DArray, IntVector2DArray):
+    def _generate_random_city_positions(num_cities: int, city_radius: int, width: int, 
+                                        height: int, vector_field) -> (IntVector2DArray, IntVector2DArray):
         city_positions: IntVector2DArray = []
         city_cells: IntVector2DArray = []
         for city_idx in range(num_cities):
@@ -641,7 +642,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                 tries += 1
                 if tries > 200:
                     warnings.warn(
-                        "Could not only set {} cities after {} tries, although {} of cities required to be generated!".format(
+                        "Could not only set {} cities after {} tries, although {} of cities required to be generated!".format(  # noqa
                             len(city_positions),
                             tries, num_cities))
                     break
@@ -880,10 +881,10 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         # Assign agents to slots
         for agent_idx in range(num_agents):
             avail_start_cities = [idx for idx, val in enumerate(city_available_start) if val > 0]
-            avail_target_cities = [idx for idx, val in enumerate(city_available_target) if val > 0]
+            # avail_target_cities = [idx for idx, val in enumerate(city_available_target) if val > 0]
             # Set probability to choose start and stop from trainstations
             sum_start = sum(np.array(city_available_start)[avail_start_cities])
-            sum_target = sum(np.array(city_available_target)[avail_target_cities])
+            # sum_target = sum(np.array(city_available_target)[avail_target_cities])
             p_avail_start = [float(i) / sum_start for i in np.array(city_available_start)[avail_start_cities]]
 
             start_target_tuple = np.random.choice(avail_start_cities, p=p_avail_start, size=2, replace=False)

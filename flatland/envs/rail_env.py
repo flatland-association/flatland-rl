@@ -291,7 +291,7 @@ class RailEnv(Environment):
             # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/185
             #  why do we need static agents? could we it more elegantly?
             self.agents_static = EnvAgentStatic.from_lists(
-                *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints))
+                *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets))
 
         self.restart_agents()
 
