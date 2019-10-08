@@ -9,7 +9,6 @@ from typing import List, NamedTuple, Optional, Dict
 import msgpack
 import msgpack_numpy as m
 import numpy as np
-
 from gym.utils import seeding
 
 from flatland.core.env import Environment
@@ -187,7 +186,7 @@ class RailEnv(Environment):
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
         self.action_space = [1]
-        
+
         # Stochastic train malfunctioning parameters
         if stochastic_data is not None:
             prop_malfunction = stochastic_data['prop_malfunction']
@@ -466,7 +465,7 @@ class RailEnv(Environment):
             return
 
         # Is the agent at the beginning of the cell? Then, it can take an action.
-        # As long as the agent is malfunctioning or stopped at the beginning of the cell, 
+        # As long as the agent is malfunctioning or stopped at the beginning of the cell,
         # different actions may be taken!
         if agent.speed_data['position_fraction'] == 0.0:
             # No action has been supplied for this agent -> set DO_NOTHING as default

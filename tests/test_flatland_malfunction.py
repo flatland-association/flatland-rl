@@ -70,14 +70,6 @@ def test_malfunction_process():
                        'malfunction_rate': 1000,
                        'min_duration': 3,
                        'max_duration': 3}
-    # random.seed(0)
-    # np.random.seed(0)
-
-    stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
-                       'malfunction_rate': 70,  # Rate of malfunction occurence
-                       'min_duration': 2,  # Minimal duration of malfunction
-                       'max_duration': 5  # Max duration of malfunction
-                       }
 
     rail, rail_map = make_simple_rail2()
 
@@ -90,8 +82,8 @@ def test_malfunction_process():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
-    obs = env.reset(False, False, True, random_seed=0)
-
+    obs, info = env.reset(False, False, True, random_seed=0)
+    print(env.agents[0].malfunction_data)
     # Check that a initial duration for malfunction was assigned
     assert env.agents[0].malfunction_data['next_malfunction'] > 0
     for agent in env.agents:
@@ -100,6 +92,9 @@ def test_malfunction_process():
     agent_halts = 0
     total_down_time = 0
     agent_old_position = env.agents[0].position
+
+    # Move target to unreachable position in order to not interfere with test
+    env.agents[0].target = (0, 0)
     for step in range(100):
         actions = {}
 
@@ -157,6 +152,7 @@ def test_malfunction_process_statistically():
                   )
     # reset to initialize agents_static
     env.reset(False, False, False, random_seed=0)
+
     env.agents[0].target = (0, 0)
     nb_malfunction = 0
     for step in range(20):
@@ -166,7 +162,6 @@ def test_malfunction_process_statistically():
             action_dict[agent.handle] = RailEnvActions(np.random.randint(4))
 
         env.step(action_dict)
-
     # check that generation of malfunctions works as expected
     assert env.agents[0].malfunction_data["nr_malfunctions"] == 4
 
