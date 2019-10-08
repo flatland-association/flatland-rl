@@ -61,8 +61,8 @@ def test_seeding_and_observations():
                    obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
                    )
 
-    env.reset(False, False, False)
-    env2.reset(False, False, False)
+    env.reset(False, False, False, random_seed=12)
+    env2.reset(False, False, False, random_seed=12)
 
     # Check that both environments produce the same initial start positions
     assert env.agents[0].initial_position == env2.agents[0].initial_position
@@ -129,8 +129,8 @@ def test_seeding_and_malfunction():
                    stochastic_data=stochastic_data,  # Malfunction data generator
                    )
 
-    env.reset(False, False, False)
-    env2.reset(False, False, False)
+    env.reset(False, False, False, random_seed=12)
+    env2.reset(False, False, False, random_seed=12)
 
     # Check that both environments produce the same initial start positions
     assert env.agents[0].initial_position == env2.agents[0].initial_position
@@ -149,8 +149,10 @@ def test_seeding_and_malfunction():
         for a in range(env.get_num_agents()):
             action = np.random.randint(4)
             action_dict[a] = action
+            print(env.agents[a].malfunction_data['malfunction'], env2.agents[a].malfunction_data['malfunction'])
         env.step(action_dict)
         env2.step(action_dict)
+
 
     # Check that both environments end up in the same position
 

@@ -188,7 +188,7 @@ class RailEnv(Environment):
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
         self.action_space = [1]
-        
+
         self._seed()
 
         self._seed()
@@ -361,7 +361,9 @@ class RailEnv(Environment):
             # Next malfunction in number of stops
             next_breakdown = int(
                 self.np_random.exponential(scale=agent.malfunction_data['malfunction_rate']))
-            agent.malfunction_data['next_malfunction'] = next_breakdown
+            next_breakdown = self.np_random.randint(self.min_number_of_steps_broken,
+                                                    self.max_number_of_steps_broken + 1) + 1
+            agent.malfunction_data['next_malfunction'] = 5  # next_breakdown
 
             # Duration of current malfunction
             num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
@@ -754,3 +756,14 @@ class RailEnv(Environment):
         from importlib_resources import read_binary
         load_data = read_binary(package, resource)
         self.set_full_state_msg(load_data)
+
+    def _exp_distirbution_synced(self, rate):
+        """
+        Generates sample from exponential distribution
+        We need this to guarantee synchronity between different instances with same seed.
+        :param rate:
+        :return:
+        """
+        u = self.np_random.rand()
+        x = - np.log(1 - u) * rate
+        return x
