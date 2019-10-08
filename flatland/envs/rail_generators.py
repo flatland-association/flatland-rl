@@ -272,7 +272,7 @@ def rail_from_grid_transition_map(rail_map) -> RailGenerator:
     return generator
 
 
-def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGenerator:
+def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=0) -> RailGenerator:
     """
     Dummy random level generator:
     - fill in cells at random in [width-2, height-2]
@@ -305,6 +305,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11) -> RailGener
     """
 
     def generator(width: int, height: int, num_agents: int, num_resets: int = 0) -> RailGeneratorProduct:
+        np.random.seed(seed + num_resets)
         t_utils = RailEnvTransitions()
 
         transition_probability = cell_type_relative_proportion
