@@ -118,7 +118,7 @@ class RailEnv(Environment):
                  max_episode_steps=None,
                  stochastic_data=None,
                  remove_agents_at_target=False,
-                 random_seed=None
+                 random_seed=1
                  ):
         """
         Environment init.
@@ -160,7 +160,6 @@ class RailEnv(Environment):
 
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
-        self.rail_generator = rail_generator
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
         self.height = height
@@ -188,7 +187,7 @@ class RailEnv(Environment):
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
         self.action_space = [1]
-        
+
         self._seed()
 
         self._seed()
@@ -217,7 +216,7 @@ class RailEnv(Environment):
         # Uniform distribution parameters for malfunction duration
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
-        # Rest environment
+        # Reset environment
         self.reset()
         self.num_resets = 0  # yes, set it to zero again!
 
@@ -354,18 +353,18 @@ class RailEnv(Environment):
         # If counter has come to zero --> Agent has malfunction
         # set next malfunction time and duration of current malfunction
         if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction'] and \
-                agent.malfunction_data['next_malfunction'] <= 0:
+            agent.malfunction_data['next_malfunction'] <= 0:
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
 
             # Next malfunction in number of stops
             next_breakdown = int(
-                self.np_random.exponential(scale=agent.malfunction_data['malfunction_rate']))
+                self._exp_distirbution_synced(rate=agent.malfunction_data['malfunction_rate']))
             agent.malfunction_data['next_malfunction'] = next_breakdown
 
             # Duration of current malfunction
             num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                 self.max_number_of_steps_broken + 1) + 1
+                                                      self.max_number_of_steps_broken + 1) + 1
             agent.malfunction_data['malfunction'] = num_broken_steps
             agent.malfunction_data['moving_before_malfunction'] = agent.moving
 
@@ -500,7 +499,7 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] += self.stop_penalty
 
             if not agent.moving and not (
-                    action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[i_agent] += self.start_penalty
@@ -726,7 +725,7 @@ class RailEnv(Environment):
 
         return msgpack.packb(msg_data, use_bin_type=True)
 
-    def save(self, filename,save_distance_maps=False):
+    def save(self, filename, save_distance_maps=False):
         if save_distance_maps == True:
             if self.distance_map.get() is not None:
                 if len(self.distance_map.get()) > 0:
@@ -754,3 +753,14 @@ class RailEnv(Environment):
         from importlib_resources import read_binary
         load_data = read_binary(package, resource)
         self.set_full_state_msg(load_data)
+
+    def _exp_distirbution_synced(self, rate):
+        """
+        Generates sample from exponential distribution
+        We need this to guarantee synchronity between different instances with same seed.
+        :param rate:
+        :return:
+        """
+        u = self.np_random.rand()
+        x = - np.log(1 - u) * rate
+        return x
