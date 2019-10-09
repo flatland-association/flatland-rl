@@ -354,7 +354,7 @@ class RailEnv(Environment):
         # If counter has come to zero --> Agent has malfunction
         # set next malfunction time and duration of current malfunction
         if agent.malfunction_data['malfunction_rate'] >= 1 and 1 > agent.malfunction_data['malfunction'] and \
-            agent.malfunction_data['next_malfunction'] <= 0:
+            agent.malfunction_data['next_malfunction'] < 1:
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
 
