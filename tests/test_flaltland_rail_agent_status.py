@@ -50,7 +50,7 @@ def test_initial_status():
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
             ),
             Replay(
-                position=(3, 8),
+                position=(3, 9),
                 direction=Grid4TransitionsEnum.WEST,
                 status=RailAgentStatus.ACTIVE,
                 action=RailEnvActions.MOVE_FORWARD,
@@ -64,7 +64,7 @@ def test_initial_status():
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
             ),
             Replay(
-                position=(3, 7),
+                position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 status=RailAgentStatus.ACTIVE,
                 action=RailEnvActions.MOVE_FORWARD,
@@ -79,7 +79,7 @@ def test_initial_status():
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
-                position=(3, 6),
+                position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_RIGHT,
                 reward=env.step_penalty * 0.5,  # wrong action is corrected to forward without penalty!
@@ -93,7 +93,7 @@ def test_initial_status():
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
-                position=(3, 5),
+                position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
                 reward=env.global_reward,  # already done
