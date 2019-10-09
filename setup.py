@@ -68,6 +68,7 @@ setup(
     },
     install_requires=requirements,
     long_description=readme,
+    long_description_content_type="text/markdown",
     include_package_data=True,
     keywords='flatland',
     name='flatland-rl',
