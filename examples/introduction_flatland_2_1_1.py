@@ -132,7 +132,7 @@ controller = RandomAgent(218, env.action_space[0])
 
 # We start by looking at the information of each agent
 # We can see the task assigned to the agent by looking at
-print("Agents in the environment have to solve the following tasks: \n")
+print("\n Agents in the environment have to solve the following tasks: \n")
 for agent_idx, agent in enumerate(env.agents):
     print(
         "The agent with index {} has the task to go from its initial position {}, facing in the direction {} to its target at {}.".format(
@@ -140,7 +140,9 @@ for agent_idx, agent in enumerate(env.agents):
 
 # The agent will always have a status indicating if it is currently present in the environment or done or active
 # For example we see that agent with index 0 is currently not active
-print("Their current statuses are: \n")
+print("\n Their current statuses are:")
+print("============================")
+
 for agent_idx, agent in enumerate(env.agents):
     print("Agent {} status is: {} with its current position being {}".format(agent_idx, str(agent.status),
                                                                              str(agent.position)))
@@ -149,7 +151,39 @@ for agent_idx, agent in enumerate(env.agents):
 # If the starting cell is free they will enter the level
 # If multiple agents want to enter the same cell at the same time the lower index agent will enter first.
 
+# Let's check if there are any agents with the same start location
+agents_with_same_start = []
+print("\n The following agents have the same initial position:")
+print("============================")
+for agent_idx, agent in enumerate(env.agents):
+    for agent_2_idx, agent2 in enumerate(env.agents):
+        if agent_idx != agent_2_idx and agent.initial_position == agent2.initial_position:
+            print("Agent {} as the same initial position as agent {}".format(agent_idx, agent_2_idx))
+            agents_with_same_start.append(agent_idx)
 
+# Lets try to enter with all of these agents at the same time
+action_dict = {}
+
+for agent_id in agents_with_same_start:
+    action_dict[agent_id] = 1  # Set agents to moving
+
+print("\n This happened when all tried to enter at the same time:")
+print("========================================================")
+for agent_id in agents_with_same_start:
+    print("Agent {} status is: {} with its current position being {}".format(agent_id, str(env.agents[agent_id].status),
+                                                                             str(env.agents[agent_id].position)))
+
+# Do a step in the environment to see what agents entered:
+env.step(action_dict)
+
+# Current state and position of the agents after all agents with same start position tried to move
+print("\n This happened when all tried to enter at the same time:")
+print("========================================================")
+for agent_id in agents_with_same_start:
+    print(
+        "Agent {} status is: {} with its current position being {} which is the same as the start position {} and orientation {}".format(
+            agent_id, str(env.agents[agent_id].status),
+            str(env.agents[agent_id].position), env.agents[agent_id].initial_position, env.agents[agent_id].direction))
 # Empty dictionary for all agent action
 action_dict = dict()
 

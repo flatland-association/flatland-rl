@@ -458,6 +458,8 @@ class RailEnv(Environment):
                           RailEnvActions.MOVE_FORWARD] and self.cell_free(agent.initial_position):
                 agent.status = RailAgentStatus.ACTIVE
                 agent.position = agent.initial_position
+                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+                return
             else:
                 # TODO: Here we need to check for the departure time in future releases with full schedules
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
