@@ -163,7 +163,7 @@ def test_malfunction_process_statistically():
 
         env.step(action_dict)
     # check that generation of malfunctions works as expected
-    assert env.agents[0].malfunction_data["nr_malfunctions"] == 5
+    assert env.agents[0].malfunction_data["nr_malfunctions"] == 4
 
 
 def test_malfunction_before_entry():

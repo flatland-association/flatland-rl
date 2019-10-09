@@ -345,14 +345,16 @@ class RailEnv(Environment):
         """
         agent = self.agents[i_agent]
 
-        # Decrease counter for next event
-        if agent.malfunction_data['malfunction_rate'] > 0 and agent.malfunction_data['next_malfunction'] > 0:
+        # Decrease counter for next event only if agent is currently not broken
+        if agent.malfunction_data['malfunction_rate'] >= 1 and agent.malfunction_data['next_malfunction'] > 0 and \
+            agent.malfunction_data['malfunction'] < 1:
+            print(i_agent, "will malfunction in ", agent.malfunction_data['next_malfunction'])
             agent.malfunction_data['next_malfunction'] -= 1
 
         # Only agents that have a positive rate for malfunctions and are not currently broken are considered
         # If counter has come to zero --> Agent has malfunction
         # set next malfunction time and duration of current malfunction
-        if agent.malfunction_data['malfunction_rate'] > 0 >= agent.malfunction_data['malfunction'] and \
+        if agent.malfunction_data['malfunction_rate'] >= 1 and 1 > agent.malfunction_data['malfunction'] and \
             agent.malfunction_data['next_malfunction'] <= 0:
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
@@ -360,8 +362,8 @@ class RailEnv(Environment):
             # Next malfunction in number of stops
             next_breakdown = int(
                 self._exp_distirbution_synced(rate=agent.malfunction_data['malfunction_rate']))
-            agent.malfunction_data['next_malfunction'] = next_breakdown
-
+            agent.malfunction_data['next_malfunction'] = max(next_breakdown, 1)
+            print("Next breakdown in ", agent.malfunction_data['next_malfunction'], "of agent")
             # Duration of current malfunction
             num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
                                                       self.max_number_of_steps_broken + 1) + 1
