@@ -68,6 +68,7 @@ setup(
     },
     install_requires=requirements,
     long_description=readme,
+    long_description_content_type="text/markdown",
     include_package_data=True,
     keywords='flatland',
     name='flatland-rl',
@@ -79,6 +80,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://gitlab.aicrowd.com/flatland/flatland',
-    version='2.0.0',
+    version='2.1.0',
     zip_safe=False,
 )
