@@ -186,10 +186,9 @@ class RailEnv(Environment):
         self.num_resets = 0
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
-        self.action_space = [1]
+        self.action_space = [5]
 
         self._seed()
-
         self._seed()
         self.random_seed = random_seed
         if self.random_seed:
@@ -217,6 +216,7 @@ class RailEnv(Environment):
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
         # Reset environment
+
         self.reset()
         self.num_resets = 0  # yes, set it to zero again!
 
@@ -259,6 +259,7 @@ class RailEnv(Environment):
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
+
         if random_seed:
             self._seed(random_seed)
 
@@ -388,6 +389,7 @@ class RailEnv(Environment):
         return False
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
+
         self._elapsed_steps += 1
 
         # Reset the step rewards
@@ -458,6 +460,8 @@ class RailEnv(Environment):
                           RailEnvActions.MOVE_FORWARD] and self.cell_free(agent.initial_position):
                 agent.status = RailAgentStatus.ACTIVE
                 agent.position = agent.initial_position
+                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+                return
             else:
                 # TODO: Here we need to check for the departure time in future releases with full schedules
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
@@ -726,7 +730,7 @@ class RailEnv(Environment):
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def save(self, filename, save_distance_maps=False):
-        if save_distance_maps == True:
+        if save_distance_maps is True:
             if self.distance_map.get() is not None:
                 if len(self.distance_map.get()) > 0:
                     with open(filename, "wb") as file_out:
