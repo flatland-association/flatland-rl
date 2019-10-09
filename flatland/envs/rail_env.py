@@ -730,7 +730,7 @@ class RailEnv(Environment):
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def save(self, filename, save_distance_maps=False):
-        if save_distance_maps == True:
+        if save_distance_maps is True:
             if self.distance_map.get() is not None:
                 if len(self.distance_map.get()) > 0:
                     with open(filename, "wb") as file_out:
