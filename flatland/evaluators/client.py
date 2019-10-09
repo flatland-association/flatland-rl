@@ -173,7 +173,7 @@ class FlatlandRemoteClient(object):
             # If the observation is False,
             # then the evaluations are complete
             # hence return false
-            return observation
+            return observation, info
 
         test_env_file_path = _response['payload']['env_file_path']
         print("Received Env : ", test_env_file_path)
@@ -195,10 +195,20 @@ class FlatlandRemoteClient(object):
             rail_generator=rail_from_file(test_env_file_path),
             obs_builder_object=obs_builder_object
         )
-        self.env._max_episode_steps = \
-            int(1.5 * (self.env.width + self.env.height))
 
-        local_observation = self.env.reset(random_seed=random_seed)
+        # Set max episode steps allowed
+        #
+        # the maximum number of episode steps is determined by : 
+        # 
+        # alpha * (grid_width + grid_height + (number_of_agents/number_of_cities))  # noqa
+        # 
+        # in the current sprase rail generator, the ratio of 
+        # `number_of_agents/number_of_cities` is roughly 20
+        #
+        # TODO: the serialized env should include the max allowed timesteps per 
+        # env, and should ideally be returned by the rail generator
+        self.env._max_episode_steps = \
+            int(2 * (self.env.width + self.env.height + 20))
 
         local_observation, info = self.env.reset(
                                 regen_rail=False,
@@ -222,7 +232,7 @@ class FlatlandRemoteClient(object):
         _response = self._blocking_request(_request)
         _payload = _response['payload']
 
-        # remote_observation = _payload['observation']
+        # remote_observation = _payload['observation']  # noqa
         remote_reward = _payload['reward']
         remote_done = _payload['done']
         remote_info = _payload['info']

@@ -38,6 +38,7 @@ m.patch()
 # CONSTANTS
 ########################################################
 PER_STEP_TIMEOUT = 10 * 60  # 5 minutes
+RANDOM_SEED = int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
 
 
 class FlatlandRemoteEvaluationService:
@@ -200,7 +201,7 @@ class FlatlandRemoteEvaluationService:
         redis_conn = redis.Redis(connection_pool=self.redis_pool)
         try:
             redis_conn.ping()
-        except Exception as e:
+        except Exception:
             raise Exception(
                 "Unable to connect to redis server at {}:{} ."
                 "Are you sure there is a redis-server running at the "
@@ -317,8 +318,18 @@ class FlatlandRemoteEvaluationService:
                 self.env_renderer = RenderTool(self.env, gl="PILSVG", )
 
             # Set max episode steps allowed
+            #
+            # the maximum number of episode steps is determined by : 
+            # 
+            # alpha * (grid_width + grid_height + (number_of_agents/number_of_cities))  # noqa
+            # 
+            # in the current sprase rail generator, the ratio of 
+            # `number_of_agents/number_of_cities` is roughly 30
+            #
+            # TODO: the serialized env should include the max allowed timesteps per 
+            # env, and should ideally be returned by the rail generator
             self.env._max_episode_steps = \
-                int(1.5 * (self.env.width + self.env.height))
+                int(2 * (self.env.width + self.env.height + 20))
 
             if self.begin_simulation:
                 # If begin simulation has already been initialized 
@@ -333,7 +344,6 @@ class FlatlandRemoteEvaluationService:
 
             self.current_step = 0
             
-            RANDOM_SEED = 1001
             _observation, _info = self.env.reset(
                                 regen_rail=False,
                                 replace_agents=False,
@@ -358,7 +368,7 @@ class FlatlandRemoteEvaluationService:
             _command_response['payload']['observation'] = False
             _command_response['payload']['env_file_path'] = False
             _command_response['payload']['info'] = False
-            _command_response['payload']['random_seed'] = RANDOM_SEED
+            _command_response['payload']['random_seed'] = False
 
         self.send_response(_command_response, command)
         #####################################################################
@@ -583,7 +593,7 @@ class FlatlandRemoteEvaluationService:
                 print("Self.Reward : ", self.reward)
                 print("Current Simulation : ", self.simulation_count)
                 if self.env_file_paths and \
-                    self.simulation_count < len(self.env_file_paths):
+                        self.simulation_count < len(self.env_file_paths):
                     print("Current Env Path : ",
                           self.env_file_paths[self.simulation_count])
 
