@@ -23,7 +23,6 @@ def test_initial_status():
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
-
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
@@ -40,7 +39,14 @@ def test_initial_status():
                 direction=Grid4TransitionsEnum.EAST,
                 status=RailAgentStatus.READY_TO_DEPART,
                 action=RailEnvActions.MOVE_LEFT,
-                reward=env.start_penalty + env.step_penalty * 0.5,  # auto-correction left to forward without penalty!
+                reward=env.step_penalty * 0.5,  # auto-correction left to forward without penalty!
+            ),
+            Replay(
+                position=(3, 9),
+                direction=Grid4TransitionsEnum.EAST,
+                status=RailAgentStatus.ACTIVE,
+                action=RailEnvActions.MOVE_LEFT,
+                reward=env.start_penalty + env.step_penalty * 0.5,  # running at speed 0.5
             ),
             Replay(
                 position=(3, 9),
@@ -50,7 +56,7 @@ def test_initial_status():
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
             ),
             Replay(
-                position=(3, 9),
+                position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 status=RailAgentStatus.ACTIVE,
                 action=RailEnvActions.MOVE_FORWARD,
@@ -61,43 +67,36 @@ def test_initial_status():
                 direction=Grid4TransitionsEnum.WEST,
                 status=RailAgentStatus.ACTIVE,
                 action=None,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
-            ),
-            Replay(
-                position=(3, 8),
-                direction=Grid4TransitionsEnum.WEST,
-                status=RailAgentStatus.ACTIVE,
-                action=RailEnvActions.MOVE_FORWARD,
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
 
             ),
             Replay(
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
-                action=None,
+                action=RailEnvActions.MOVE_FORWARD,
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
-                action=RailEnvActions.MOVE_RIGHT,
+                action=None,
                 reward=env.step_penalty * 0.5,  # wrong action is corrected to forward without penalty!
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
-                action=None,
-                reward=env.global_reward,  # done
+                action=RailEnvActions.MOVE_RIGHT,
+                reward=env.step_penalty * 0.5,  #
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
-                reward=env.global_reward,  # already done
-                status=RailAgentStatus.DONE
+                reward=env.global_reward,  #
+                status=RailAgentStatus.ACTIVE
             ),
             Replay(
                 position=(3, 5),
@@ -151,7 +150,14 @@ def test_status_done_remove():
                 direction=Grid4TransitionsEnum.EAST,
                 status=RailAgentStatus.READY_TO_DEPART,
                 action=RailEnvActions.MOVE_LEFT,
-                reward=env.start_penalty + env.step_penalty * 0.5,  # auto-correction left to forward without penalty!
+                reward=env.step_penalty * 0.5,  # auto-correction left to forward without penalty!
+            ),
+            Replay(
+                position=(3, 9),
+                direction=Grid4TransitionsEnum.EAST,
+                status=RailAgentStatus.ACTIVE,
+                action=RailEnvActions.MOVE_FORWARD,
+                reward=env.start_penalty + env.step_penalty * 0.5,  # running at speed 0.5
             ),
             Replay(
                 position=(3, 9),
@@ -173,42 +179,35 @@ def test_status_done_remove():
                 status=RailAgentStatus.ACTIVE,
                 action=None,
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
-            ),
-            Replay(
-                position=(3, 7),
-                direction=Grid4TransitionsEnum.WEST,
-                status=RailAgentStatus.ACTIVE,
-                action=RailEnvActions.MOVE_FORWARD,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
 
             ),
             Replay(
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
-                action=None,
+                action=RailEnvActions.MOVE_RIGHT,
                 reward=env.step_penalty * 0.5,  # running at speed 0.5
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
-                position=(3, 6),
+                position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
-                action=RailEnvActions.MOVE_RIGHT,
+                action=None,
                 reward=env.step_penalty * 0.5,  # wrong action is corrected to forward without penalty!
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
-                action=None,
-                reward=env.global_reward,  # done
+                action=RailEnvActions.MOVE_FORWARD,
+                reward=env.step_penalty * 0.5,  # done
                 status=RailAgentStatus.ACTIVE
             ),
             Replay(
-                position=None,
+                position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
                 reward=env.global_reward,  # already done
-                status=RailAgentStatus.DONE_REMOVED
+                status=RailAgentStatus.ACTIVE
             ),
             Replay(
                 position=None,

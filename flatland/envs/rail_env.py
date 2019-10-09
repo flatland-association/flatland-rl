@@ -189,7 +189,6 @@ class RailEnv(Environment):
         self.action_space = [5]
 
         self._seed()
-
         self._seed()
         self.random_seed = random_seed
         if self.random_seed:
@@ -217,6 +216,7 @@ class RailEnv(Environment):
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
         # Reset environment
+
         self.reset()
         self.num_resets = 0  # yes, set it to zero again!
 
@@ -259,6 +259,7 @@ class RailEnv(Environment):
             if replace_agents then regenerate the agents static.
             Relies on the rail_generator returning agent_static lists (pos, dir, target)
         """
+
         if random_seed:
             self._seed(random_seed)
 
@@ -388,6 +389,7 @@ class RailEnv(Environment):
         return False
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
+
         self._elapsed_steps += 1
 
         # Reset the step rewards
@@ -459,7 +461,6 @@ class RailEnv(Environment):
                 agent.status = RailAgentStatus.ACTIVE
                 agent.position = agent.initial_position
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
-                print(self.rewards_dict[i_agent])
                 return
             else:
                 # TODO: Here we need to check for the departure time in future releases with full schedules

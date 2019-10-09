@@ -21,7 +21,6 @@ def test_random_seeding():
                       number_of_agents=10
                       )
         env.reset(True, True, False, random_seed=1)
-        # Test generation print
 
         env.agents[0].target = (0, 0)
         for step in range(10):
@@ -29,12 +28,20 @@ def test_random_seeding():
             actions[0] = 2
             env.step(actions)
         agent_positions = []
-        for a in range(env.get_num_agents()):
-            agent_positions += env.agents[a].initial_position
-        # print(agent_positions)
-        assert agent_positions == [3, 2, 3, 5, 3, 6, 5, 6, 3, 4, 3, 1, 3, 9, 4, 6, 0, 3, 3, 7]
+
+        env.agents[0].initial_position == (3, 2)
+        env.agents[1].initial_position == (3, 5)
+        env.agents[2].initial_position == (3, 6)
+        env.agents[3].initial_position == (5, 6)
+        env.agents[4].initial_position == (3, 4)
+        env.agents[5].initial_position == (3, 1)
+        env.agents[6].initial_position == (3, 9)
+        env.agents[7].initial_position == (4, 6)
+        env.agents[8].initial_position == (0, 3)
+        env.agents[9].initial_position == (3, 7)
         # Test generation print
-        assert env.agents[0].position == (3, 6)
+        # for a in range(env.get_num_agents()):
+        #    print("env.agents[{}].initial_position == {}".format(a,env.agents[a].initial_position))
         # print("env.agents[0].initial_position == {}".format(env.agents[0].initial_position))
         # print("assert env.agents[0].position ==  {}".format(env.agents[0].position))
 
