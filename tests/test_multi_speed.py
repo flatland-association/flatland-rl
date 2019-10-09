@@ -1,4 +1,5 @@
 import numpy as np
+from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import TreeObsForRailEnv
@@ -7,7 +8,6 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import complex_rail_generator, rail_from_grid_transition_map
 from flatland.envs.schedule_generators import complex_schedule_generator, random_schedule_generator
 from flatland.utils.simple_rail import make_simple_rail
-from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 
 np.random.seed(1)
 
@@ -52,7 +52,7 @@ def test_multi_speed_init():
     env = RailEnv(width=50,
                   height=50,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999,
-                                                        seed=0),
+                                                        seed=1),
                   schedule_generator=complex_schedule_generator(),
                   number_of_agents=5)
     # Initialize the agent with the parameters corresponding to the environment and observation_builder

@@ -1,5 +1,4 @@
 """Schedule generators (railway undertaking, "EVU")."""
-import random
 import warnings
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
@@ -15,7 +14,8 @@ ScheduleGeneratorProduct = Tuple[List[AgentPosition], List[AgentPosition], List[
 ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGeneratorProduct]
 
 
-def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None) -> List[float]:
+def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None,
+                                seed: int = None) -> List[float]:
     """
     Parameters
     ----------
@@ -29,6 +29,9 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
     List[float]
         A list of size nb_agents of speeds with the corresponding probabilistic ratios.
     """
+    if seed:
+        np.random.seed(seed)
+
     if speed_ratio_map is None:
         return [1.0] * nb_agents
 
@@ -39,8 +42,12 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
     return list(map(lambda index: speeds[index], np.random.choice(nb_classes, nb_agents, p=speed_ratios)))
 
 
-def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
+def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0):
+
+        _runtime_seed = seed + num_resets
+        np.random.seed(_runtime_seed)
+
         start_goal = hints['start_goal']
         start_dir = hints['start_dir']
         agents_position = [sg[0] for sg in start_goal[:num_agents]]
@@ -48,7 +55,7 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None) ->
         agents_direction = start_dir[:num_agents]
 
         if speed_ratio_map:
-            speeds = speed_initialization_helper(num_agents, speed_ratio_map)
+            speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed)
         else:
             speeds = [1.0] * len(agents_position)
 
@@ -57,13 +64,17 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None) ->
     return generator
 
 
-def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> ScheduleGenerator:
+def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None):
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0):
+
+        _runtime_seed = seed + num_resets
+        np.random.seed(_runtime_seed)
+
         train_stations = hints['train_stations']
         agent_start_targets_cities = hints['agent_start_targets_cities']
         max_num_agents = hints['num_agents']
-        city_orientations = hints['city_orientations']
+        # city_orientations = hints['city_orientations']
         if num_agents > max_num_agents:
             num_agents = max_num_agents
             warnings.warn("Too many agents! Changes number of agents.")
@@ -76,13 +87,18 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             # Set target for agent
             start_city = agent_start_targets_cities[agent_idx][0]
             target_city = agent_start_targets_cities[agent_idx][1]
-            start = random.choice(train_stations[start_city])
-            target = random.choice(train_stations[target_city])
+
+            start_idx = np.random.choice(np.arange(len(train_stations[start_city])))
+            target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
+            start = train_stations[start_city][start_idx]
+            target = train_stations[target_city][target_idx]
 
             while start[1] % 2 != 0:
-                start = random.choice(train_stations[start_city])
+                start_idx = np.random.choice(np.arange(len(train_stations[start_city])))
+                start = train_stations[start_city][start_idx]
             while target[1] % 2 != 1:
-                target = random.choice(train_stations[target_city])
+                target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
+                target = train_stations[target_city][target_idx]
             agent_orientation = (agent_start_targets_cities[agent_idx][2] + 2 * start[1]) % 4
             if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                 agent_orientation = (agent_orientation + 2) % 4
@@ -96,7 +112,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
             # Orient the agent correctly
 
         if speed_ratio_map:
-            speeds = speed_initialization_helper(num_agents, speed_ratio_map)
+            speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed)
         else:
             speeds = [1.0] * len(agents_position)
 
@@ -105,7 +121,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None) -> 
     return generator
 
 
-def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] = None) -> ScheduleGenerator:
+def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] = None,
+                              seed: int = 1) -> ScheduleGenerator:
     """
     Given a `rail` GridTransitionMap, return a random placement of agents (initial position, direction and target).
 
@@ -120,7 +137,11 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
             initial positions, directions, targets speeds
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None,
+                num_resets: int = 0) -> ScheduleGeneratorProduct:
+        _runtime_seed = seed + num_resets
+
+        np.random.seed(_runtime_seed)
 
         valid_positions = []
         for r in range(rail.height):
@@ -189,7 +210,7 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
                     agents_direction[i] = valid_starting_directions[
                         np.random.choice(len(valid_starting_directions), 1)[0]]
 
-        agents_speed = speed_initialization_helper(num_agents, speed_ratio_map)
+        agents_speed = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed)
         return agents_position, agents_direction, agents_target, agents_speed, None
 
     return generator
@@ -209,7 +230,8 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
         initial positions, directions, targets speeds
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> ScheduleGeneratorProduct:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None,
+                  num_resets: int = 0) -> ScheduleGeneratorProduct:
         if load_from_package is not None:
             from importlib_resources import read_binary
             load_data = read_binary(load_from_package, filename)

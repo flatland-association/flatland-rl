@@ -21,7 +21,7 @@ def test_rail_env_speed_intializer():
     env = RailEnv(width=50,
                   height=50,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999,
-                                                        seed=0),
+                                                        seed=1),
                   schedule_generator=complex_schedule_generator(),
                   number_of_agents=10)
     env.reset()

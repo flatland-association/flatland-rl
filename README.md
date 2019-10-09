@@ -106,7 +106,7 @@ env = RailEnv(
                                     nr_extra=1,
                                     min_dist=8,
                                     max_dist=99999,
-                                    seed=0),
+                                    seed=1),
             schedule_generator=complex_schedule_generator(),
             number_of_agents=NUMBER_OF_AGENTS)
 

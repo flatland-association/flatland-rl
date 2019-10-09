@@ -118,7 +118,7 @@ Note that this simple strategy fails when multiple agents are present, as each a
     env = RailEnv(width=7,
                   height=7,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, \
-                    min_dist=8, max_dist=99999, seed=0),
+                    min_dist=8, max_dist=99999, seed=1),
                   number_of_agents=2,
                   obs_builder_object=SingleAgentNavigationObs())
 
@@ -267,7 +267,7 @@ We can then use this new observation builder and the renderer to visualize the o
     # Initiate Environment
     env = RailEnv(width=10,
                   height=10,
-                  rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999, seed=0),
+                  rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999, seed=1),
                   number_of_agents=3,
                   obs_builder_object=CustomObsBuilder)
 
