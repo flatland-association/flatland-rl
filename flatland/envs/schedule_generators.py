@@ -82,29 +82,37 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
         agents_position = []
         agents_target = []
         agents_direction = []
+
         for agent_idx in range(num_agents):
+            infeasible_agent = True
+            tries = 0
+            while infeasible_agent:
+                tries += 1
+                infeasible_agent = False
+                # Set target for agent
+                city_idx = np.random.randint(len(agent_start_targets_cities))
+                start_city = agent_start_targets_cities[city_idx][0]
+                target_city = agent_start_targets_cities[city_idx][1]
 
-            # Set target for agent
-            start_city = agent_start_targets_cities[agent_idx][0]
-            target_city = agent_start_targets_cities[agent_idx][1]
-
-            start_idx = np.random.choice(np.arange(len(train_stations[start_city])))
-            target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
-            start = train_stations[start_city][start_idx]
-            target = train_stations[target_city][target_idx]
-
-            while start[1] % 2 != 0:
                 start_idx = np.random.choice(np.arange(len(train_stations[start_city])))
-                start = train_stations[start_city][start_idx]
-            while target[1] % 2 != 1:
                 target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
+                start = train_stations[start_city][start_idx]
                 target = train_stations[target_city][target_idx]
-            agent_orientation = (agent_start_targets_cities[agent_idx][2] + 2 * start[1]) % 4
-            if not rail.check_path_exists(start[0], agent_orientation, target[0]):
-                agent_orientation = (agent_orientation + 2) % 4
-            if not (rail.check_path_exists(start[0], agent_orientation, target[0])):
-                warnings.warn("Infeasible task for agent {}".format(agent_idx))
 
+                while start[1] % 2 != 0:
+                    start_idx = np.random.choice(np.arange(len(train_stations[start_city])))
+                    start = train_stations[start_city][start_idx]
+                while target[1] % 2 != 1:
+                    target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
+                    target = train_stations[target_city][target_idx]
+                agent_orientation = (agent_start_targets_cities[city_idx][2] + 2 * start[1]) % 4
+                if not rail.check_path_exists(start[0], agent_orientation, target[0]):
+                    agent_orientation = (agent_orientation + 2) % 4
+                if not (rail.check_path_exists(start[0], agent_orientation, target[0])):
+                    infeasible_agent = True
+                if tries >= 100:
+                    warnings.warn("Did not find any possible path, check your parameters!!!")
+                    break
             agents_position.append((start[0][0], start[0][1]))
             agents_target.append((target[0][0], target[0][1]))
 
