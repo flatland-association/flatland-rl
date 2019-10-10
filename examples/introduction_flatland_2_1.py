@@ -241,7 +241,7 @@ score = 0
 # Run episode
 frame_step = 0
 
-for step in range(10):
+for step in range(100):
     # Chose an action for each agent in the environment
     for a in range(env.get_num_agents()):
         action = controller.act(observations[a])
@@ -252,7 +252,7 @@ for step in range(10):
 
     next_obs, all_rewards, done, _ = env.step(action_dict)
 
-    # env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
+    env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
