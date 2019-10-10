@@ -9,7 +9,7 @@ from flatland.envs.schedule_generators import sparse_schedule_generator
 # We also include a renderer because we want to visualize what is going on in the environment
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
-# This is an introduction example for the Flatland 2.1.1 version.
+# This is an introduction example for the Flatland 2.1.* version.
 # Changes and highlights of this version include
 # - Stochastic events (malfunctions)
 # - Different travel speeds for differet agents
@@ -26,8 +26,8 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 # Here we use the sparse_rail_generator with the following parameters
 
 width = 100  # With of map
-height = 100  # Height of ap
-nr_trains = 10  # Number of trains that have an assigned task in the env
+height = 100  # Height of map
+nr_trains = 50  # Number of trains that have an assigned task in the env
 cities_in_map = 20  # Number of cities where agents can start or end
 seed = 14  # Random seed
 grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
@@ -89,6 +89,7 @@ env_renderer = RenderTool(env, gl="PILSVG",
                           screen_width=1000)  # Adjust these parameters to fit your resolution
 
 
+# The first thing we notice is that some agents don't have feasible paths to their target.
 # We first look at the map we have created
 
 # nv_renderer.render_env(show=True)
@@ -151,14 +152,14 @@ for agent_idx, agent in enumerate(env.agents):
 # If multiple agents want to enter the same cell at the same time the lower index agent will enter first.
 
 # Let's check if there are any agents with the same start location
-agents_with_same_start = []
+agents_with_same_start = set()
 print("\n The following agents have the same initial position:")
 print("=====================================================")
 for agent_idx, agent in enumerate(env.agents):
     for agent_2_idx, agent2 in enumerate(env.agents):
         if agent_idx != agent_2_idx and agent.initial_position == agent2.initial_position:
             print("Agent {} as the same initial position as agent {}".format(agent_idx, agent_2_idx))
-            agents_with_same_start.append(agent_idx)
+            agents_with_same_start.add(agent_idx)
 
 # Lets try to enter with all of these agents at the same time
 action_dict = dict()
@@ -215,19 +216,19 @@ for agent_idx, agent in enumerate(env.agents):
 for a in range(env.get_num_agents()):
     action = controller.act(0)
     action_dict.update({a: action})
-
 # Do the environment step
 observations, rewards, dones, information = env.step(action_dict)
-print("\n Thefollowing agents can register an action:")
+print("\n The following agents can register an action:")
 print("========================================")
-print(information['action_required'])
+for info in information['action_required']:
+    print("Agent {} needs to submit an action.".format(info))
 
 # We recommend that you monitor the malfunction data and the action required in order to optimize your training
 # and controlling code.
 
 # Let us now look at an episode playing out with random actions performed
 
-print("Start episode...")
+print("\nStart episode...")
 
 # Reset the rendering system
 env_renderer.reset()
@@ -235,10 +236,12 @@ env_renderer.reset()
 # Here you can also further enhance the provided observation by means of normalization
 # See training navigation example in the baseline repository
 
+
 score = 0
 # Run episode
 frame_step = 0
-for step in range(500):
+
+for step in range(100):
     # Chose an action for each agent in the environment
     for a in range(env.get_num_agents()):
         action = controller.act(observations[a])
@@ -246,7 +249,9 @@ for step in range(500):
 
     # Environment step which returns the observations for all agents, their corresponding
     # reward and whether their are done
+
     next_obs, all_rewards, done, _ = env.step(action_dict)
+
     env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
     frame_step += 1
     # Update replay buffer and train agent
