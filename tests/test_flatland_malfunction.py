@@ -122,11 +122,11 @@ def test_malfunction_process():
         total_down_time += env.agents[0].malfunction_data['malfunction']
 
     # Check that the appropriate number of malfunctions is achieved
-    assert env.agents[0].malfunction_data['nr_malfunctions'] == 21, "Actual {}".format(
+    assert env.agents[0].malfunction_data['nr_malfunctions'] == 20, "Actual {}".format(
         env.agents[0].malfunction_data['nr_malfunctions'])
 
     # Check that 20 stops where performed
-    assert agent_halts == 21
+    assert agent_halts == 20
 
     # Check that malfunctioning data was standing around
     assert total_down_time > 0

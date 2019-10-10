@@ -1,8 +1,6 @@
 # In Flatland you can use custom observation builders and predicitors
 # Observation builders generate the observation needed by the controller
 # Preditctors can be used to do short time prediction which can help in avoiding conflicts in the network
-import time
-
 from flatland.envs.observations import GlobalObsForRailEnv
 # First of all we import the Flatland rail environment
 from flatland.envs.rail_env import RailEnv
@@ -91,6 +89,7 @@ env_renderer = RenderTool(env, gl="PILSVG",
                           screen_width=1000)  # Adjust these parameters to fit your resolution
 
 
+# The first thing we notice is that some agents don't have feasible paths to their target.
 # We first look at the map we have created
 
 # nv_renderer.render_env(show=True)
@@ -217,19 +216,19 @@ for agent_idx, agent in enumerate(env.agents):
 for a in range(env.get_num_agents()):
     action = controller.act(0)
     action_dict.update({a: action})
-
 # Do the environment step
 observations, rewards, dones, information = env.step(action_dict)
-print("\n Thefollowing agents can register an action:")
+print("\n The following agents can register an action:")
 print("========================================")
-print(information['action_required'])
+for info in information['action_required']:
+    print("Agent {} needs to submit an action.".format(info))
 
 # We recommend that you monitor the malfunction data and the action required in order to optimize your training
 # and controlling code.
 
 # Let us now look at an episode playing out with random actions performed
 
-print("Start episode...")
+print("\nStart episode...")
 
 # Reset the rendering system
 env_renderer.reset()
@@ -237,10 +236,12 @@ env_renderer.reset()
 # Here you can also further enhance the provided observation by means of normalization
 # See training navigation example in the baseline repository
 
+
 score = 0
 # Run episode
 frame_step = 0
-for step in range(500):
+
+for step in range(10):
     # Chose an action for each agent in the environment
     for a in range(env.get_num_agents()):
         action = controller.act(observations[a])
@@ -248,10 +249,9 @@ for step in range(500):
 
     # Environment step which returns the observations for all agents, their corresponding
     # reward and whether their are done
-    start_time = time.time()
+
     next_obs, all_rewards, done, _ = env.step(action_dict)
-    end_time = time.time()
-    print(end_time - start_time)
+
     # env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
     frame_step += 1
     # Update replay buffer and train agent
