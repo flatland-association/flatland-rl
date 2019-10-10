@@ -14,6 +14,7 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
+from flatland.envs.schedule_generators import schedule_from_file
 from flatland.evaluators import messages
 
 logger = logging.getLogger(__name__)
@@ -193,6 +194,7 @@ class FlatlandRemoteClient(object):
             width=1,
             height=1,
             rail_generator=rail_from_file(test_env_file_path),
+            schedule_generator=schedule_from_file(test_env_file_path),
             obs_builder_object=obs_builder_object
         )
 
