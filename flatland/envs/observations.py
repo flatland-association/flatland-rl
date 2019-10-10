@@ -574,9 +574,10 @@ class GlobalObsForRailEnv(ObservationBuilder):
         obs_agents_state = np.zeros((self.env.height, self.env.width, 5)) - 1
 
         # TODO can we do this more elegantly?
-        for r in range(self.env.height):
-            for c in range(self.env.width):
-                obs_agents_state[(r, c)][4] = 0
+        # for r in range(self.env.height):
+        #     for c in range(self.env.width):
+        #         obs_agents_state[(r, c)][4] = 0
+        obs_agents_state[:,:,4] = 0
 
         obs_agents_state[agent_virtual_position][0] = agent.direction
         obs_targets[agent.target][0] = 1
