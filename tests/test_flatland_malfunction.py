@@ -155,16 +155,16 @@ def test_malfunction_process_statistically():
 
     env.agents[0].target = (0, 0)
     nb_malfunction = 0
-    agent_malfunction_list = [[6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 6],
-                              [6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0],
-                              [6, 6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2],
-                              [6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0],
-                              [6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 6, 5],
-                              [6, 5, 4, 3, 2, 1, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6, 5],
-                              [6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1],
-                              [6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4],
-                              [6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0, 6],
-                              [6, 6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2]]
+    agent_malfunction_list = [[6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0],
+                              [6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1],
+                              [6, 6, 6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3],
+                              [6, 6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0],
+                              [6, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 6],
+                              [6, 6, 5, 4, 3, 2, 1, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6],
+                              [6, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2],
+                              [6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5],
+                              [6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0],
+                              [6, 6, 6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3]]
 
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}
@@ -175,7 +175,6 @@ def test_malfunction_process_statistically():
             # agent_malfunction_list[agent_idx].append(env.agents[agent_idx].malfunction_data['malfunction'])
             assert env.agents[agent_idx].malfunction_data['malfunction'] == agent_malfunction_list[agent_idx][step]
         env.step(action_dict)
-
 
 
 def test_malfunction_before_entry():
@@ -200,6 +199,8 @@ def test_malfunction_before_entry():
     env.reset(False, False, False, random_seed=10)
     env.agents[0].target = (0, 0)
 
+    # Print for test generation
+    assert env.agents[0].malfunction_data['malfunction'] == 11
     assert env.agents[1].malfunction_data['malfunction'] == 11
     assert env.agents[2].malfunction_data['malfunction'] == 11
     assert env.agents[3].malfunction_data['malfunction'] == 11
@@ -210,7 +211,6 @@ def test_malfunction_before_entry():
     assert env.agents[8].malfunction_data['malfunction'] == 11
     assert env.agents[9].malfunction_data['malfunction'] == 11
 
-
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}
         for agent in env.agents:
@@ -220,18 +220,17 @@ def test_malfunction_before_entry():
                 action_dict[agent.handle] = RailEnvActions(0)
 
         env.step(action_dict)
+    assert env.agents[1].malfunction_data['malfunction'] == 2
+    assert env.agents[2].malfunction_data['malfunction'] == 2
+    assert env.agents[3].malfunction_data['malfunction'] == 2
+    assert env.agents[4].malfunction_data['malfunction'] == 2
+    assert env.agents[5].malfunction_data['malfunction'] == 2
+    assert env.agents[6].malfunction_data['malfunction'] == 2
+    assert env.agents[7].malfunction_data['malfunction'] == 2
+    assert env.agents[8].malfunction_data['malfunction'] == 2
+    assert env.agents[9].malfunction_data['malfunction'] == 2
 
-    assert env.agents[1].malfunction_data['malfunction'] == 1
-    assert env.agents[2].malfunction_data['malfunction'] == 1
-    assert env.agents[3].malfunction_data['malfunction'] == 1
-    assert env.agents[4].malfunction_data['malfunction'] == 1
-    assert env.agents[5].malfunction_data['malfunction'] == 1
-    assert env.agents[6].malfunction_data['malfunction'] == 1
-    assert env.agents[7].malfunction_data['malfunction'] == 1
-    assert env.agents[8].malfunction_data['malfunction'] == 1
-    assert env.agents[9].malfunction_data['malfunction'] == 1
-    # Print for test generation
-    # for a in range(env.get_num_agents()):
+    #for a in range(env.get_num_agents()):
     #    print("assert env.agents[{}].malfunction_data['malfunction'] == {}".format(a,
     #                                                                               env.agents[a].malfunction_data[
     #                                                                                   'malfunction']))
@@ -348,7 +347,7 @@ def test_initial_malfunction_stop_moving():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=2,
+                malfunction=3,
                 reward=env.step_penalty,  # full step penalty when stopped
                 status=RailAgentStatus.ACTIVE
             ),
@@ -359,7 +358,7 @@ def test_initial_malfunction_stop_moving():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.STOP_MOVING,
-                malfunction=1,
+                malfunction=2,
                 reward=env.step_penalty,  # full step penalty while stopped
                 status=RailAgentStatus.ACTIVE
             ),
@@ -368,7 +367,7 @@ def test_initial_malfunction_stop_moving():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=0,
+                malfunction=1,
                 reward=env.step_penalty,  # full step penalty while stopped
                 status=RailAgentStatus.ACTIVE
             ),
@@ -437,7 +436,7 @@ def test_initial_malfunction_do_nothing():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=2,
+                malfunction=3,
                 reward=env.step_penalty,  # full step penalty while malfunctioning
                 status=RailAgentStatus.ACTIVE
             ),
@@ -448,7 +447,7 @@ def test_initial_malfunction_do_nothing():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=1,
+                malfunction=2,
                 reward=env.step_penalty,  # full step penalty while stopped
                 status=RailAgentStatus.ACTIVE
             ),
@@ -457,7 +456,7 @@ def test_initial_malfunction_do_nothing():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=0,
+                malfunction=1,
                 reward=env.step_penalty,  # full step penalty while stopped
                 status=RailAgentStatus.ACTIVE
             ),

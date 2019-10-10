@@ -55,7 +55,6 @@ class DistanceMap:
         self.env_width = rail.width
 
     def _compute(self, agents: List[EnvAgent], rail: GridTransitionMap):
-        print("computing distance map")
         self.agents_previous_computation = self.agents
         self.distance_map = np.inf * np.ones(shape=(len(agents),
                                                     self.env_height,
