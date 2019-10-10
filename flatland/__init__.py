@@ -4,4 +4,4 @@
 
 __author__ = """S.P. Mohanty"""
 __email__ = 'mohanty@aicrowd.com'
-__version__ = '2.1.3'
+__version__ = '2.1.4'
