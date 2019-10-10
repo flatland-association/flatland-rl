@@ -18,6 +18,7 @@ import timeout_decorator
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
+from flatland.envs.schedule_generators import schedule_from_file
 from flatland.evaluators import aicrowd_helpers
 from flatland.evaluators import messages
 from flatland.utils.rendertools import RenderTool
@@ -310,6 +311,7 @@ class FlatlandRemoteEvaluationService:
                 width=1,
                 height=1,
                 rail_generator=rail_from_file(test_env_file_path),
+                schedule_generator=schedule_from_file(test_env_file_path),
                 obs_builder_object=DummyObservationBuilder()
             )
             if self.visualize:
