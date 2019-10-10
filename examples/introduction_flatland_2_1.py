@@ -9,7 +9,7 @@ from flatland.envs.schedule_generators import sparse_schedule_generator
 # We also include a renderer because we want to visualize what is going on in the environment
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
-# This is an introduction example for the Flatland 2.1.1 version.
+# This is an introduction example for the Flatland 2.1.* version.
 # Changes and highlights of this version include
 # - Stochastic events (malfunctions)
 # - Different travel speeds for differet agents
