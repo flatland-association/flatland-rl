@@ -321,15 +321,15 @@ class FlatlandRemoteEvaluationService:
             #
             # the maximum number of episode steps is determined by : 
             # 
-            # alpha * (grid_width + grid_height + (number_of_agents/number_of_cities))  # noqa
+            # timedelay_factor * alpha * (grid_width + grid_height + (number_of_agents/number_of_cities))  # noqa
             # 
             # in the current sprase rail generator, the ratio of 
-            # `number_of_agents/number_of_cities` is roughly 30
+            # `number_of_agents/number_of_cities` is roughly 20
             #
             # TODO: the serialized env should include the max allowed timesteps per 
             # env, and should ideally be returned by the rail generator
             self.env._max_episode_steps = \
-                int(2 * (self.env.width + self.env.height + 20))
+                int(4 * 2 * (self.env.width + self.env.height + 20))
 
             if self.begin_simulation:
                 # If begin simulation has already been initialized 
