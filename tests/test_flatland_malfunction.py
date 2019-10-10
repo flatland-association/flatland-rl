@@ -126,7 +126,7 @@ def test_malfunction_process():
         env.agents[0].malfunction_data['nr_malfunctions'])
 
     # Check that 20 stops where performed
-    assert agent_halts == 20
+    assert agent_halts == 21
 
     # Check that malfunctioning data was standing around
     assert total_down_time > 0
@@ -155,16 +155,16 @@ def test_malfunction_process_statistically():
 
     env.agents[0].target = (0, 0)
     nb_malfunction = 0
-    agent_malfunction_list = [[6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0],
-                              [6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1],
-                              [6, 6, 6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3],
-                              [6, 6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0],
-                              [6, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 6],
-                              [6, 6, 5, 4, 3, 2, 1, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6],
-                              [6, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2],
-                              [6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5],
-                              [6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0],
-                              [6, 6, 6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3]]
+    agent_malfunction_list = [[0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 6, 5],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0, 6, 5, 4],
+                              [0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 6, 5, 4],
+                              [6, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0],
+                              [6, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0, 0, 6, 5, 4, 3],
+                              [0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5],
+                              [0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 0, 6, 5, 4, 3, 2, 1, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0, 6, 5, 4, 3, 2, 1],
+                              [6, 6, 6, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 6, 5, 4, 3, 2, 1, 0]]
 
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}
@@ -175,6 +175,7 @@ def test_malfunction_process_statistically():
             # agent_malfunction_list[agent_idx].append(env.agents[agent_idx].malfunction_data['malfunction'])
             assert env.agents[agent_idx].malfunction_data['malfunction'] == agent_malfunction_list[agent_idx][step]
         env.step(action_dict)
+    # print(agent_malfunction_list)
 
 
 def test_malfunction_before_entry():
@@ -230,14 +231,13 @@ def test_malfunction_before_entry():
     assert env.agents[8].malfunction_data['malfunction'] == 2
     assert env.agents[9].malfunction_data['malfunction'] == 2
 
-    #for a in range(env.get_num_agents()):
+    # for a in range(env.get_num_agents()):
     #    print("assert env.agents[{}].malfunction_data['malfunction'] == {}".format(a,
     #                                                                               env.agents[a].malfunction_data[
     #                                                                                   'malfunction']))
 
 
 def test_initial_malfunction():
-
     stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
                        'malfunction_rate': 100,  # Rate of malfunction occurence
                        'min_duration': 2,  # Minimal duration of malfunction
@@ -409,7 +409,6 @@ def test_initial_malfunction_do_nothing():
                        }
 
     rail, rail_map = make_simple_rail2()
-
 
     env = RailEnv(width=25,
                   height=30,

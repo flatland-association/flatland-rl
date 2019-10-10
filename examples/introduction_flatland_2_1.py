@@ -1,6 +1,8 @@
 # In Flatland you can use custom observation builders and predicitors
 # Observation builders generate the observation needed by the controller
 # Preditctors can be used to do short time prediction which can help in avoiding conflicts in the network
+import time
+
 from flatland.envs.observations import GlobalObsForRailEnv
 # First of all we import the Flatland rail environment
 from flatland.envs.rail_env import RailEnv
@@ -26,8 +28,8 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 # Here we use the sparse_rail_generator with the following parameters
 
 width = 100  # With of map
-height = 100  # Height of ap
-nr_trains = 10  # Number of trains that have an assigned task in the env
+height = 100  # Height of map
+nr_trains = 50  # Number of trains that have an assigned task in the env
 cities_in_map = 20  # Number of cities where agents can start or end
 seed = 14  # Random seed
 grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
@@ -151,14 +153,14 @@ for agent_idx, agent in enumerate(env.agents):
 # If multiple agents want to enter the same cell at the same time the lower index agent will enter first.
 
 # Let's check if there are any agents with the same start location
-agents_with_same_start = []
+agents_with_same_start = set()
 print("\n The following agents have the same initial position:")
 print("=====================================================")
 for agent_idx, agent in enumerate(env.agents):
     for agent_2_idx, agent2 in enumerate(env.agents):
         if agent_idx != agent_2_idx and agent.initial_position == agent2.initial_position:
             print("Agent {} as the same initial position as agent {}".format(agent_idx, agent_2_idx))
-            agents_with_same_start.append(agent_idx)
+            agents_with_same_start.add(agent_idx)
 
 # Lets try to enter with all of these agents at the same time
 action_dict = dict()
@@ -246,8 +248,11 @@ for step in range(500):
 
     # Environment step which returns the observations for all agents, their corresponding
     # reward and whether their are done
+    start_time = time.time()
     next_obs, all_rewards, done, _ = env.step(action_dict)
-    env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
+    end_time = time.time()
+    print(end_time - start_time)
+    # env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):

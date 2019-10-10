@@ -308,7 +308,9 @@ class RailEnv(Environment):
             # A proportion of agent in the environment will receive a positive malfunction rate
             if self.np_random.rand() < self.proportion_malfunctioning_trains:
                 agent.malfunction_data['malfunction_rate'] = self.mean_malfunction_rate
-
+                next_breakdown = int(
+                    self._exp_distirbution_synced(rate=agent.malfunction_data['malfunction_rate']))
+                agent.malfunction_data['next_malfunction'] = next_breakdown
             agent.malfunction_data['malfunction'] = 0
 
             initial_malfunction = self._agent_malfunction(i_agent)
@@ -346,7 +348,7 @@ class RailEnv(Environment):
         """
         agent = self.agents[i_agent]
 
-        # Decrease counter for next event only if agent is currently not broken
+        # Decrease counter for next event only if agent is currently not broken and agent has a malfunction rate
         if agent.malfunction_data['malfunction_rate'] >= 1 and agent.malfunction_data['next_malfunction'] > 0 and \
             agent.malfunction_data['malfunction'] < 1:
             agent.malfunction_data['next_malfunction'] -= 1
