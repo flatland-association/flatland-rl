@@ -12,7 +12,7 @@ def make_simple_rail() -> Tuple[GridTransitionMap, np.array]:
     #        |
     #        |
     #        |
-    # _ _ _ _\ _ _  _  _ _ _
+    #    _ _ _ _\ _ _  _  _ _ _
     #                /
     #                |
     #                |
