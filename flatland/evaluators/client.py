@@ -200,7 +200,7 @@ class FlatlandRemoteClient(object):
         #
         # the maximum number of episode steps is determined by : 
         # 
-        # alpha * (grid_width + grid_height + (number_of_agents/number_of_cities))  # noqa
+        # timedelay_factor * alpha * (grid_width + grid_height + (number_of_agents/number_of_cities))  # noqa
         # 
         # in the current sprase rail generator, the ratio of 
         # `number_of_agents/number_of_cities` is roughly 20
@@ -208,7 +208,7 @@ class FlatlandRemoteClient(object):
         # TODO: the serialized env should include the max allowed timesteps per 
         # env, and should ideally be returned by the rail generator
         self.env._max_episode_steps = \
-            int(2 * (self.env.width + self.env.height + 20))
+            int(4 * 2 * (self.env.width + self.env.height + 20))
 
         local_observation, info = self.env.reset(
                                 regen_rail=False,
