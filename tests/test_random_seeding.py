@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
