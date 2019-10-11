@@ -105,7 +105,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
                 while target[1] % 2 != 1:
                     target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
                     target = train_stations[target_city][target_idx]
-                agent_orientation = (agent_start_targets_cities[city_idx][2] + 2 * start[1]) % 4
+                possible_orientations = [agent_start_targets_cities[city_idx][2], (agent_start_targets_cities[city_idx][2] + 2) % 4 ]
+                agent_orientation = np.random.choice(possible_orientations)
                 if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                     agent_orientation = (agent_orientation + 2) % 4
                 if not (rail.check_path_exists(start[0], agent_orientation, target[0])):

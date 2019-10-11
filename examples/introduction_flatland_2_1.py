@@ -27,7 +27,7 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 width = 100  # With of map
 height = 100  # Height of map
-nr_trains = 50  # Number of trains that have an assigned task in the env
+nr_trains = 200  # Number of trains that have an assigned task in the env
 cities_in_map = 20  # Number of cities where agents can start or end
 seed = 14  # Random seed
 grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
