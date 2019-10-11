@@ -111,7 +111,7 @@ def test_seeding_and_malfunction():
     # Test if two different instances diverge with different observations
     rail, rail_map = make_simple_rail2()
 
-    stochastic_data = {'prop_malfunction': 1.,
+    stochastic_data = {'prop_malfunction': 0.4,
                        'malfunction_rate': 2,
                        'min_duration': 10,
                        'max_duration': 10}
@@ -161,9 +161,11 @@ def test_seeding_and_malfunction():
                 # print(env.agents[a].malfunction_data, env.agents[a].status)
                 # print(env2.agents[a].malfunction_data, env2.agents[a].status)
 
-            env.step(action_dict)
-            env2.step(action_dict)
-
+            _, reward1, done1, _ = env.step(action_dict)
+            _, reward2, done2, _ = env2.step(action_dict)
+            for a in range(env.get_num_agents()):
+                assert reward1[a] == reward2[a]
+                assert done1[a] == done2[a]
         # Check that both environments end up in the same position
 
         assert env.agents[0].position == env2.agents[0].position
