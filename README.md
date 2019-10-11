@@ -82,11 +82,11 @@ $ flatland-demo
 
 ### Jupyter Canvas Widget
 If you work with jupyter notebook you need to install the Jupyer Canvas Widget. To install the Jupyter Canvas Widget read also
-https://github.com/Who8MyLunch/Jupyter_Canvas_Widget#installation
+[https://github.com/Who8MyLunch/Jupyter_Canvas_Widget#installation]([https://github.com/Who8MyLunch/Jupyter_Canvas_Widget#installation)
 
 ## Basic Usage
 
-Basic usage of the RailEnv environment used by the Flatland Challenge
+Basic usage of the RailEnv environment used by the Flatland Challenge (also see [Example](https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/introduction_flatland_2_1.py))
 
 
 ```python
