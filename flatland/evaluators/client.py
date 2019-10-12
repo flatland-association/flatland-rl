@@ -148,7 +148,7 @@ class FlatlandRemoteClient(object):
         _request = {}
         _request['type'] = messages.FLATLAND_RL.PING
         _request['payload'] = {
-            "version" : flatland.__version__
+            "version": flatland.__version__
         }
         _response = self._blocking_request(_request)
         if _response['type'] != messages.FLATLAND_RL.PONG:
