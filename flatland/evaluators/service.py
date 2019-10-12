@@ -8,6 +8,7 @@ import shutil
 import time
 import traceback
 
+import flatland
 import crowdai_api
 import msgpack
 import msgpack_numpy as m
@@ -283,10 +284,26 @@ class FlatlandRemoteEvaluationService:
         """
         Handles PING command from the client.
         """
+        service_version = flatland.__version__
+        if "version" in command["payload"].keys():
+            client_version = command["payload"]["version"]
+        else:
+            # 2.1.4 -> when the version mismatch check was added
+            client_version = "2.1.4"
+
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.PONG
         _command_response['payload'] = {}
 
+        if client_version != service_version:
+            _command_response['type'] = messages.FLATLAND_RL.ERROR
+            _command_response['payload']['message'] = \
+                "Client-Server Version Mismatch => " + \
+                "[ Client Version : {} ] ".format(client_version) + \
+                "[ Server Version : {} ] ".format(service_version)
+            self.send_response(_command_response, command)
+            raise Exception(_command_response['payload']['message'])
+        
         self.send_response(_command_response, command)
 
     def handle_env_create(self, command):
