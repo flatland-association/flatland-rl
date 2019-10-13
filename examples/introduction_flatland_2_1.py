@@ -25,14 +25,14 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 # The railway infrastructure can be build using any of the provided generators in env/rail_generators.py
 # Here we use the sparse_rail_generator with the following parameters
 
-width = 100  # With of map
-height = 100  # Height of map
-nr_trains = 200  # Number of trains that have an assigned task in the env
-cities_in_map = 20  # Number of cities where agents can start or end
+width = 50  # With of map
+height = 50  # Height of map
+nr_trains = 20  # Number of trains that have an assigned task in the env
+cities_in_map = 7  # Number of cities where agents can start or end
 seed = 14  # Random seed
 grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
 max_rails_between_cities = 2  # Max number of tracks allowed between cities. This is number of entry point to a city
-max_rail_in_cities = 6  # Max number of parallel tracks within a city, representing a realistic trainstation
+max_rail_in_cities = 3  # Max number of parallel tracks within a city, representing a realistic trainstation
 
 rail_generator = sparse_rail_generator(max_num_cities=cities_in_map,
                                        seed=seed,
