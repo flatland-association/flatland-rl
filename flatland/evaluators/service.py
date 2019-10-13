@@ -299,7 +299,7 @@ class FlatlandRemoteEvaluationService:
                 flatland.__version__,
                 "2.1.5"
             ]
-        if client_version in SUPPORTED_CLIENT_VERSIONS:
+        if client_version not in SUPPORTED_CLIENT_VERSIONS:
             _command_response['type'] = messages.FLATLAND_RL.ERROR
             _command_response['payload']['message'] = \
                 "Client-Server Version Mismatch => " + \
