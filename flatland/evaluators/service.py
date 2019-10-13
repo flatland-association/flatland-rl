@@ -41,6 +41,10 @@ m.patch()
 ########################################################
 PER_STEP_TIMEOUT = 10 * 60  # 5 minutes
 RANDOM_SEED = int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
+SUPPORTED_CLIENT_VERSIONS = \
+    [
+        flatland.__version__
+    ]
 
 
 class FlatlandRemoteEvaluationService:
@@ -294,11 +298,6 @@ class FlatlandRemoteEvaluationService:
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.PONG
         _command_response['payload'] = {}
-        SUPPORTED_CLIENT_VERSIONS = \
-            [
-                flatland.__version__,
-                "2.1.5"
-            ]
         if client_version not in SUPPORTED_CLIENT_VERSIONS:
             _command_response['type'] = messages.FLATLAND_RL.ERROR
             _command_response['payload']['message'] = \
