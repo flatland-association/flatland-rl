@@ -10,6 +10,7 @@ import msgpack_numpy as m
 import numpy as np
 import redis
 
+import flatland
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -146,11 +147,13 @@ class FlatlandRemoteClient(object):
         """
         _request = {}
         _request['type'] = messages.FLATLAND_RL.PING
-        _request['payload'] = {}
+        _request['payload'] = {
+            "version": flatland.__version__
+        }
         _response = self._blocking_request(_request)
         if _response['type'] != messages.FLATLAND_RL.PONG:
             raise Exception(
-                "Unable to perform handshake with the redis service. \
+                "Unable to perform handshake with the evaluation service. \
                 Expected PONG; received {}".format(json.dumps(_response)))
         else:
             return True
