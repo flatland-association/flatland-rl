@@ -70,7 +70,7 @@ class DistanceMap:
                 # just copy the distance map form other agent with same target (performance)
                 target_nr = target_no[computed_targets.index(agent.target)]
                 self.distance_map[i, :, :, :] = np.copy(self.distance_map[target_nr,
-                                                                            :, :, :])
+                                                        :, :, :])
             computed_targets.append(agent.target)
             target_no.append(i)
 
