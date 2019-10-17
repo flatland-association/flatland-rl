@@ -9,6 +9,7 @@ Changes since Flatland 2.0.0
 
 ### Changes in rail generator and `RailEnv`
 - renaming of `distance_maps` into `distance_map`
+- by default the reset method of RailEnv is not called in the constructor of RailEnv anymore. Therefore the reset method needs to be called after the creation of a RailEnv object
 
 Changes since Flatland 1.0.0
 --------------------------
