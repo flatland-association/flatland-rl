@@ -81,6 +81,10 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
     If there is no path (rail disconnected), the path is given as None.
     The agent state (moving or not) and its speed are not taken into account
 
+    example:
+            agent_fixed_travel_paths = get_shortest_paths(env.distance_map, None, agent.handle)
+            path = agent_fixed_travel_paths[agent.handle]
+
     Parameters
     ----------
     distance_map : reference to the distance_map
