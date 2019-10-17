@@ -217,9 +217,6 @@ class RailEnv(Environment):
         self.max_number_of_steps_broken = malfunction_max_duration
         # Reset environment
 
-        self.reset()
-        self.num_resets = 0  # yes, set it to zero again!
-
         self.valid_positions = None
 
     def _seed(self, seed=None):

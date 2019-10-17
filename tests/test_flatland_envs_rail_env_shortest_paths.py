@@ -21,6 +21,7 @@ def test_get_shortest_paths_unreachable():
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)),
                   )
+    env.reset()
 
     # set the initial position
     agent = env.agents_static[0]
@@ -41,6 +42,7 @@ def test_get_shortest_paths_unreachable():
 
 def test_get_shortest_paths():
     env = load_flatland_environment_from_file('test_002.pkl', 'env_data.tests')
+    env.reset()
     actual = get_shortest_paths(env.distance_map)
 
     expected = {
@@ -169,6 +171,7 @@ def test_get_shortest_paths():
 
 def test_get_shortest_paths_max_depth():
     env = load_flatland_environment_from_file('test_002.pkl', 'env_data.tests')
+    env.reset()
     actual = get_shortest_paths(env.distance_map, max_depth=2)
 
     expected = {
