@@ -33,6 +33,7 @@ def main():
                   rail_generator=random_rail_generator(),
                   number_of_agents=3,
                   obs_builder_object=SimpleObs())
+    env.reset()
 
     # Print the observation vector for each agents
     obs, all_rewards, done, _ = env.step({0: 0})

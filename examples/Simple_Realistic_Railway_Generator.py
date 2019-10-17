@@ -596,7 +596,8 @@ for itrials in range(100):
                   number_of_agents=1000,
                   obs_builder_object=GlobalObsForRailEnv())
 
-    # reset to initialize agents_static
+    env.reset()
+
     env_renderer = RenderTool(env, gl="PILSVG", screen_width=1400, screen_height=1000)
     cnt = 0
     while cnt < 10:
