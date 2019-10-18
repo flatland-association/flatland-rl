@@ -269,6 +269,12 @@ class RailEnv(Environment):
 
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
+            
+            # Do a new set_env call on the obs_builder to ensure
+            # that obs_builder specific instantiations are made according to the 
+            # specifications of the current environment : like width, height, etc
+            self.obs_builder.set_env(self)
+
             # NOTE : Ignore Validation on every reset. rail_generator should ensure that
             #        only valid grids are generated.
             #
