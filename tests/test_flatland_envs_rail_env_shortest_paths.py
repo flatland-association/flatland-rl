@@ -193,3 +193,30 @@ def test_get_shortest_paths_max_depth():
     for agent_handle in expected:
         assert np.array_equal(actual[agent_handle], expected[agent_handle]), \
             "[{}] actual={},expected={}".format(agent_handle, actual[agent_handle], expected[agent_handle])
+
+
+
+
+
+
+def test_get_shortest_paths_max_depth():
+    env = load_flatland_environment_from_file('test_002.pkl', 'env_data.tests')
+    actual = get_shortest_paths(env.distance_map, max_depth=2,agent_handle=1)
+
+    expected = {
+        1: [
+            WalkingElement(position=(3, 18), direction=3,
+                           next_action_element=RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD,
+                                                                 next_position=(3, 17), next_direction=3)),
+            WalkingElement(position=(3, 17), direction=3,
+                           next_action_element=RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD,
+                                                                 next_position=(3, 16), next_direction=3)),
+        ]
+    }
+
+    for agent_handle in expected:
+        assert np.array_equal(actual[agent_handle], expected[agent_handle]), \
+            "[{}] actual={},expected={}".format(agent_handle, actual[agent_handle], expected[agent_handle])
+
+
+
