@@ -25,9 +25,9 @@ m.patch()
 
 def are_dicts_equal(d1, d2):
     """ return True if all keys and values are the same """
-    return all(k in d2 and d1[k] == d2[k]
+    return all(k in d2 and np.isclose(d1[k], d2[k])
                for k in d1) \
-           and all(k in d1 and d1[k] == d2[k]
+           and all(k in d1 and np.isclose(d1[k], d2[k])
                    for k in d2)
 
 
