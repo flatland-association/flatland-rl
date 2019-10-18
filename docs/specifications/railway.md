@@ -373,8 +373,13 @@ RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Any]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
 
 AgentPosition = Tuple[int, int]
-ScheduleGeneratorProduct = Tuple[List[AgentPosition], List[AgentPosition], List[AgentPosition], List[float]]
-ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGeneratorProduct]
+Schedule = collections.namedtuple('Schedule',   'agent_positions '
+                                                'agent_directions '
+                                                'agent_targets '
+                                                'agent_speeds '
+                                                'agent_malfunction_rates '
+                                                'max_episode_steps')
+ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[int]], Schedule]
 ```
 
 We can then produce `RailGenerator`s by currying:
@@ -435,7 +440,7 @@ The environment's `reset` takes care of applying the two generators:
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
             self.agents_static = EnvAgentStatic.from_lists(
-                *self.schedule_generator(self.rail, self.get_num_agents(), hints=agents_hints))
+                self.schedule_generator(self.rail, self.get_num_agents(), hints=agents_hints))
 ```
 
 

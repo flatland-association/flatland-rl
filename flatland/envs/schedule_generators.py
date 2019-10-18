@@ -8,10 +8,10 @@ import numpy as np
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic
+from flatland.envs.schedule_utils import Schedule
 
 AgentPosition = Tuple[int, int]
-ScheduleGeneratorProduct = Tuple[List[AgentPosition], List[AgentPosition], List[AgentPosition], List[float]]
-ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGeneratorProduct]
+ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[int]], Schedule]
 
 
 def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None,
@@ -42,8 +42,31 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
     return list(map(lambda index: speeds[index], np.random.choice(nb_classes, nb_agents, p=speed_ratios)))
 
 
+def compute_max_episode_steps(width: int,
+                              height: int,
+                              ratio_nr_agents_to_nr_cities: float = 20.0,
+                              timedelay_factor: int = 4,
+                              alpha: int = 2) -> int:
+    """
+
+    The method computes the max number of episode steps allowed
+    Parameters
+    ----------
+    width: width of environment
+    height: height of environment
+    ratio_nr_agents_to_nr_cities: number_of_agents/number_of_cities (default is 20)
+    timedelay_factor
+    alpha
+
+    Returns max number of episode steps
+    -------
+
+    """
+    return int(timedelay_factor * alpha * (width + height + ratio_nr_agents_to_nr_cities))
+
+
 def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0):
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
 
         _runtime_seed = seed + num_resets
         np.random.seed(_runtime_seed)
@@ -59,14 +82,17 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
         else:
             speeds = [1.0] * len(agents_position)
 
-        return agents_position, agents_direction, agents_target, speeds
+        max_episode_steps = compute_max_episode_steps(width=rail.width, height=rail.height)
+        return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
+                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
+                        max_episode_steps=max_episode_steps)
 
     return generator
 
 
 def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0):
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
 
         _runtime_seed = seed + num_resets
         np.random.seed(_runtime_seed)
@@ -74,7 +100,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
         train_stations = hints['train_stations']
         agent_start_targets_cities = hints['agent_start_targets_cities']
         max_num_agents = hints['num_agents']
-        # city_orientations = hints['city_orientations']
+        city_orientations = hints['city_orientations']
         if num_agents > max_num_agents:
             num_agents = max_num_agents
             warnings.warn("Too many agents! Changes number of agents.")
@@ -125,7 +151,11 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
         else:
             speeds = [1.0] * len(agents_position)
 
-        return agents_position, agents_direction, agents_target, speeds, None
+        max_episode_steps = compute_max_episode_steps(width=rail.width, height=rail.height,
+                                                      ratio_nr_agents_to_nr_cities=num_agents/len(city_orientations))
+        return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
+                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
+                        max_episode_steps=max_episode_steps)
 
     return generator
 
@@ -147,10 +177,12 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
     """
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None,
-                num_resets: int = 0) -> ScheduleGeneratorProduct:
+                num_resets: int = 0) -> Schedule:
         _runtime_seed = seed + num_resets
 
         np.random.seed(_runtime_seed)
+
+        max_episode_steps = compute_max_episode_steps(width=rail.width, height=rail.height)
 
         valid_positions = []
         for r in range(rail.height):
@@ -158,11 +190,15 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
                 if rail.get_full_transitions(r, c) > 0:
                     valid_positions.append((r, c))
         if len(valid_positions) == 0:
-            return [], [], [], []
+            return Schedule(agent_positions=[], agent_directions=[],
+                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None,
+                            max_episode_steps=max_episode_steps)
 
         if len(valid_positions) < num_agents:
             warnings.warn("schedule_generators: len(valid_positions) < num_agents")
-            return [], [], [], []
+            return Schedule(agent_positions=[], agent_directions=[],
+                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None,
+                            max_episode_steps=max_episode_steps)
 
         agents_position_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
         agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]
@@ -220,7 +256,9 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
                         np.random.choice(len(valid_starting_directions), 1)[0]]
 
         agents_speed = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed)
-        return agents_position, agents_direction, agents_target, agents_speed, None
+        return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
+                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None,
+                        max_episode_steps=max_episode_steps)
 
     return generator
 
@@ -240,7 +278,7 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
     """
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None,
-                  num_resets: int = 0) -> ScheduleGeneratorProduct:
+                  num_resets: int = 0) -> Schedule:
         if load_from_package is not None:
             from importlib_resources import read_binary
             load_data = read_binary(load_from_package, filename)
@@ -265,7 +303,10 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
         else:
             agents_speed = None
             agents_malfunction = None
-        return agents_position, agents_direction, agents_target, agents_speed, agents_malfunction
+        max_episode_steps = compute_max_episode_steps(width=rail.width, height=rail.height)
+        return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
+                        agent_targets=agents_target, agent_speeds=agents_speed,
+                        agent_malfunction_rates=agents_malfunction, max_episode_steps=max_episode_steps)
 
     return generator
 

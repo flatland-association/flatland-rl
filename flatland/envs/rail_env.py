@@ -115,7 +115,6 @@ class RailEnv(Environment):
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
-                 max_episode_steps=None,
                  stochastic_data=None,
                  remove_agents_at_target=False,
                  random_seed=1
@@ -148,7 +147,6 @@ class RailEnv(Environment):
         obs_builder_object: ObservationBuilder object
             ObservationBuilder-derived object that takes builds observation
             vectors for each agent.
-        max_episode_steps : int or None
         remove_agents_at_target : bool
             If remove_agents_at_target is set to true then the agents will be removed by placing to
             RailEnv.DEPOT_POSITION when the agent has reach it's target position.
@@ -171,7 +169,7 @@ class RailEnv(Environment):
         self.obs_builder = obs_builder_object
         self.obs_builder.set_env(self)
 
-        self._max_episode_steps = max_episode_steps
+        self._max_episode_steps = None
         self._elapsed_steps = 0
 
         self.dones = dict.fromkeys(list(range(number_of_agents)) + ["__all__"], False)
@@ -266,20 +264,8 @@ class RailEnv(Environment):
 
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
-            # NOTE : Ignore Validation on every reset. rail_generator should ensure that
-            #        only valid grids are generated.
-            #
-            # for r in range(self.height):
-            #     for c in range(self.width):
-            #         rc_pos = (r, c)
-            #         check = self.rail.cell_neighbours_valid(rc_pos, True)
-            #         if not check:
-            #             print(self.rail.grid[rc_pos])
-            #             warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
-        # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
-        #  hacky: we must re-compute the distance map and not use the initial distance_map loaded from file by
-        #  rail_from_file!!!
-        elif optionals and 'distance_map' in optionals:
+
+        if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
         if replace_agents:
@@ -289,8 +275,9 @@ class RailEnv(Environment):
 
             # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/185
             #  why do we need static agents? could we it more elegantly?
-            self.agents_static = EnvAgentStatic.from_lists(
-                *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets))
+            schedule = self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets)
+            self.agents_static = EnvAgentStatic.from_lists(schedule)
+            self._max_episode_steps = schedule.max_episode_steps
 
         self.restart_agents()
 
