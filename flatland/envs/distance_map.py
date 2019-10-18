@@ -60,8 +60,16 @@ class DistanceMap:
                                                     self.env_height,
                                                     self.env_width,
                                                     4))
+
+        computed_targets = []
         for i, agent in enumerate(agents):
-            self._distance_map_walker(rail, agent.target, i)
+            if agent.target not in computed_targets:
+                self._distance_map_walker(rail, agent.target, i)
+                computed_targets.append(agent.target)
+            else:
+                # just copy the distance map form other agent with same target (performance)
+                self.distance_map[i, :, :, :] = np.copy(
+                    self.distance_map[computed_targets.index(agent.target), :, :, :])
 
     def _distance_map_walker(self, rail: GridTransitionMap, position, target_nr: int):
         """
