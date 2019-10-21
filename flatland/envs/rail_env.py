@@ -115,7 +115,6 @@ class RailEnv(Environment):
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
-                 max_episode_steps=None,
                  stochastic_data=None,
                  remove_agents_at_target=False,
                  random_seed=1
@@ -148,7 +147,6 @@ class RailEnv(Environment):
         obs_builder_object: ObservationBuilder object
             ObservationBuilder-derived object that takes builds observation
             vectors for each agent.
-        max_episode_steps : int or None
         remove_agents_at_target : bool
             If remove_agents_at_target is set to true then the agents will be removed by placing to
             RailEnv.DEPOT_POSITION when the agent has reach it's target position.
@@ -171,7 +169,7 @@ class RailEnv(Environment):
         self.obs_builder = obs_builder_object
         self.obs_builder.set_env(self)
 
-        self._max_episode_steps = max_episode_steps
+        self._max_episode_steps = None
         self._elapsed_steps = 0
 
         self.dones = dict.fromkeys(list(range(number_of_agents)) + ["__all__"], False)
@@ -216,9 +214,6 @@ class RailEnv(Environment):
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
         # Reset environment
-
-        self.reset()
-        self.num_resets = 0  # yes, set it to zero again!
 
         self.valid_positions = None
 
@@ -285,8 +280,9 @@ class RailEnv(Environment):
 
             # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/185
             #  why do we need static agents? could we it more elegantly?
-            self.agents_static = EnvAgentStatic.from_lists(
-                *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets))
+            schedule = self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets)
+            self.agents_static = EnvAgentStatic.from_lists(schedule)
+            self._max_episode_steps = schedule.max_episode_steps
 
         self.restart_agents()
 

@@ -202,6 +202,7 @@ def test_get_shortest_paths_max_depth():
 
 def test_get_shortest_paths_agent_handle():
     env = load_flatland_environment_from_file('Level_distance_map_shortest_path.pkl', 'env_data.tests')
+    env.reset()
     actual = get_shortest_paths(env.distance_map, agent_handle=6)
 
     print(actual, file=sys.stderr)
