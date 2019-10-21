@@ -658,11 +658,22 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
     def _generate_evenly_distr_city_positions(num_cities: int, city_radius: int, width: int, height: int
                                               ) -> (IntVector2DArray, IntVector2DArray):
         aspect_ratio = height / width
-
+        
+        # Compute max numbe of possible cities per row and col.
+        # Respect padding at edges of environment
+        # Respect padding between cities
+        padding = 2
+        city_size = 2 * (city_radius + 1))
+        max_cities_per_row =int((height - padding) // city_size)
+        max_cities_per_col = int((width - padding) // city_size)
+        
+        # Choose number of cities per row.
+        # Limit if it is more then max number of possible cities
+        
         cities_per_row = min(int(np.ceil(np.sqrt(num_cities * aspect_ratio))),
-                             int((height - 2) // (2 * (city_radius + 1))))
+                             max_cities_per_row)
         cities_per_col = min(int(np.ceil(num_cities / cities_per_row)),
-                             int((width - 2) // (2 * (city_radius + 1))))
+                             max_cities_per_col)
         num_build_cities = min(num_cities, cities_per_col * cities_per_row)
         row_positions = np.linspace(city_radius + 2, height - (city_radius + 2), cities_per_row, dtype=int)
         col_positions = np.linspace(city_radius + 2, width - (city_radius + 2), cities_per_col, dtype=int)
