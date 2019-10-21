@@ -1,10 +1,10 @@
 """Rail generators (infrastructure manager, "Infrastrukturbetreiber")."""
+import sys
 import warnings
 from typing import Callable, Tuple, Optional, Dict, List
 
 import msgpack
 import numpy as np
-import sys
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_direction, mirror, direction_to_point
@@ -569,14 +569,15 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         # Calculate the max number of cities allowed
         # and reduce the number of cities to build to avoid problems
-        max_feasible_cities = min(max_num_cities, ((height - 2) // (2 * (city_radius + 1))) * ((width - 2) // (2 * (city_radius + 1))))
+        max_feasible_cities = min(max_num_cities,
+                                  ((height - 2) // (2 * (city_radius + 1))) * ((width - 2) // (2 * (city_radius + 1))))
 
         if max_feasible_cities < 2:
             sys.exit("Cannot fit more than one city in this map, no feasible environment possible! Aborting.")
         # Evenly distribute cities
         if grid_mode:
             city_positions = _generate_evenly_distr_city_positions(max_feasible_cities, city_radius, width,
-                                                                               height)
+                                                                   height)
         else:
             city_positions = _generate_random_city_positions(max_feasible_cities, city_radius, width, height)
 
@@ -586,9 +587,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         # Try with evenly distributed cities
         if num_cities < 2:
             city_positions = _generate_evenly_distr_city_positions(max_feasible_cities, city_radius, width,
-                                                                               height)
+                                                                   height)
         num_cities = len(city_positions)
-
 
         # Set up connection points for all cities
         inner_connection_points, outer_connection_points, connection_info, city_orientations, city_cells = \
@@ -665,7 +665,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             city_positions.append((row, col))
         return city_positions
 
-    def _generate_city_connection_points(city_positions: IntVector2DArray, city_radius: int, vector_field: IntVector2DArray, rails_between_cities: int,
+    def _generate_city_connection_points(city_positions: IntVector2DArray, city_radius: int,
+                                         vector_field: IntVector2DArray, rails_between_cities: int,
                                          rails_in_city: int = 2) -> (List[List[List[IntVector2D]]],
                                                                      List[List[List[IntVector2D]]],
                                                                      List[np.ndarray],
@@ -948,7 +949,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         # http://stackoverflow.com/questions/3071415/efficient-method-to-calculate-the-rank-vector-of-a-list-in-python
         return sorted(range(len(seq)), key=seq.__getitem__)
 
-    def _get_cells_in_city(center: IntVector2D, radius: int, city_orientation: int, vector_field: IntVector2DArray) -> IntVector2DArray:
+    def _get_cells_in_city(center: IntVector2D, radius: int, city_orientation: int,
+                           vector_field: IntVector2DArray) -> IntVector2DArray:
         """
 
         Parameters

@@ -547,7 +547,7 @@ def tests_random_interference_from_outside():
 
         _, reward, _, _ = env.step(action_dict)
         # Append the rewards of the first trial
-        env_data.append((reward[0],env.agents[0].position))
+        env_data.append((reward[0], env.agents[0].position))
         assert reward[0] == env_data[step][0]
         assert env.agents[0].position == env_data[step][1]
     # Run the same test as above but with an external random generator running
@@ -570,7 +570,6 @@ def tests_random_interference_from_outside():
     env.agents[0].target = (3, 9)
     env.reset(False, False, False)
 
-
     # Print for test generation
     dummy_list = [1, 2, 6, 7, 8, 9, 4, 5, 4]
     for step in range(200):
@@ -580,8 +579,8 @@ def tests_random_interference_from_outside():
             action_dict[agent.handle] = RailEnvActions(2)
 
             # Do dummy random number generations
-            a = random.shuffle(dummy_list)
-            b = np.random.rand()
+            random.shuffle(dummy_list)
+            np.random.rand()
 
         _, reward, _, _ = env.step(action_dict)
         assert reward[0] == env_data[step][0]

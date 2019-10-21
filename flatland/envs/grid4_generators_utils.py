@@ -31,7 +31,8 @@ def connect_rail_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D, en
     :param end: end position of rail
     :param flip_start_node_trans: make valid start position by adding dead-end, empty start if False
     :param flip_end_node_trans: make valid end position by adding dead-end, empty end if False
-    :param respect_transition_validity: Only draw rail maps if legal rail elements can be use, False, draw line without respecting rail transitions.
+    :param respect_transition_validity: Only draw rail maps if legal rail elements can be use, False, draw line without
+    respecting rail transitions.
     :param a_star_distance_function: Define what distance function a-star should use
     :param forbidden_cells: cells to avoid when drawing rail. Rail cannot go through this list of cells
     :return: List of cells in the path
