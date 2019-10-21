@@ -352,9 +352,13 @@ class GridTransitionMap(TransitionMap):
         return is_simple_turn(tmp)
 
     def check_path_exists(self, start: IntVector2DArray, direction: int, end: IntVector2DArray):
-        # print("_path_exists({},{},{}".format(start, direction, end))
-        # BFS - Check if a path exists between the 2 nodes
-
+        """
+        Breath first search for a possible path from one node with a certain orientation to a target node.
+        :param start: Start cell rom where we want to check the path
+        :param direction: Start direction for the path we are testing
+        :param end: Cell that we try to reach from the start cell
+        :return: True if a path exists, False otherwise
+        """
         visited = OrderedSet()
         stack = [(start, direction)]
         while stack:
@@ -583,7 +587,16 @@ class GridTransitionMap(TransitionMap):
 
     def validate_new_transition(self, prev_pos: IntVector2D, current_pos: IntVector2D,
                                 new_pos: IntVector2D, end_pos: IntVector2D):
+        """
+        Utility function to test that a path drawn by a-start algorithm uses valid transition objects.
+        We us this to quide a-star as there are many transition elements that are not allowed in RailEnv
 
+        :param prev_pos: The previous position we were checking
+        :param current_pos: The current position we are checking
+        :param new_pos: Possible child position we move into
+        :param end_pos: End cell of path we are drawing
+        :return: True if the transition is valid, False if transition element is illegal
+        """
         # start by getting direction used to get to current node
         # and direction from current node to possible child node
         new_dir = get_direction(current_pos, new_pos)
