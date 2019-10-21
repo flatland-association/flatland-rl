@@ -1324,6 +1324,7 @@ def test_sparse_rail_generator_deterministic():
 
 
 def test_rail_env_action_required_info():
+
     np.random.seed(0)
     random.seed(0)
     speed_ration_map = {1.: 0.25,  # Fast passenger train
@@ -1470,7 +1471,6 @@ def test_sparse_generator_with_too_man_cities_does_not_break_down():
 def test_sparse_generator_with_illegal_params_aborts():
     """
     Test that the constructor aborts if the initial parameters don't allow more than one city to be built.
-    :return:
     """
     np.random.seed(0)
     with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, SystemExit):
@@ -1502,10 +1502,10 @@ def test_sparse_generator_with_illegal_params_aborts():
 
 def test_sparse_generator_changes_to_grid_mode():
     """
-    Test that grid mode is evoked and two cities are created when env is too small to find random cities.
+        Test that grid mode is evoked and two cities are created when env is too small to find random cities.
     We set the limit of the env such that two cities fit in grid mode but unlikely under random mode
-    we initiate random seed to be sure taht we never create random cities.
-    :return:
+    we initiate random seed to be sure that we never create random cities.
+
     """
     np.random.seed(0)
 
