@@ -28,11 +28,11 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 width = 50  # With of map
 height = 50  # Height of map
 nr_trains = 20  # Number of trains that have an assigned task in the env
-cities_in_map = 7  # Number of cities where agents can start or end
+cities_in_map = 12  # Number of cities where agents can start or end
 seed = 14  # Random seed
 grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
 max_rails_between_cities = 2  # Max number of tracks allowed between cities. This is number of entry point to a city
-max_rail_in_cities = 3  # Max number of parallel tracks within a city, representing a realistic trainstation
+max_rail_in_cities = 6  # Max number of parallel tracks within a city, representing a realistic trainstation
 
 rail_generator = sparse_rail_generator(max_num_cities=cities_in_map,
                                        seed=seed,

@@ -269,9 +269,9 @@ class RailEnv(Environment):
 
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
-            
+
             # Do a new set_env call on the obs_builder to ensure
-            # that obs_builder specific instantiations are made according to the 
+            # that obs_builder specific instantiations are made according to the
             # specifications of the current environment : like width, height, etc
             self.obs_builder.set_env(self)
 
@@ -750,7 +750,7 @@ class RailEnv(Environment):
                 print("[WARNING] Unable to save the distance map for this environment, as none was found !")
 
         else:
-            with open(filename,"wb") as file_out:
+            with open(filename, "wb") as file_out:
                 file_out.write(self.get_full_state_msg())
 
     def load(self, filename):

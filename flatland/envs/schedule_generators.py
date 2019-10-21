@@ -141,7 +141,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
                 while target[1] % 2 != 1:
                     target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
                     target = train_stations[target_city][target_idx]
-                possible_orientations = [agent_start_targets_cities[city_idx][2], (agent_start_targets_cities[city_idx][2] + 2) % 4 ]
+                possible_orientations = [agent_start_targets_cities[city_idx][2],
+                                         (agent_start_targets_cities[city_idx][2] + 2) % 4]
                 agent_orientation = np.random.choice(possible_orientations)
                 if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                     agent_orientation = (agent_orientation + 2) % 4
@@ -183,7 +184,7 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
     """
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None,
-                num_resets: int = 0) -> ScheduleGeneratorProduct:
+                  num_resets: int = 0) -> ScheduleGeneratorProduct:
         _runtime_seed = seed + num_resets
 
         np.random.seed(_runtime_seed)
@@ -304,4 +305,3 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
         return agents_position, agents_direction, agents_target, agents_speed, agents_malfunction
 
     return generator
-

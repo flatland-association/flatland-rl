@@ -579,7 +579,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
         # for r in range(self.env.height):
         #     for c in range(self.env.width):
         #         obs_agents_state[(r, c)][4] = 0
-        obs_agents_state[:,:,4] = 0
+        obs_agents_state[:, :, 4] = 0
 
         obs_agents_state[agent_virtual_position][0] = agent.direction
         obs_targets[agent.target][0] = 1
