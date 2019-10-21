@@ -1,7 +1,8 @@
 import random
 
 import numpy as np
-
+import unittest
+import warnings
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -1464,3 +1465,63 @@ def test_sparse_generator_with_too_man_cities_does_not_break_down():
             schedule_generator=sparse_schedule_generator(),
             number_of_agents=10,
             obs_builder_object=GlobalObsForRailEnv())
+
+
+def test_sparse_generator_with_illegal_params_aborts():
+    """
+    Test that the constructor aborts if the initial parameters don't allow more than one city to be built.
+    :return:
+    """
+    np.random.seed(0)
+    with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, SystemExit):
+        RailEnv(width=6,
+                height=6,
+                rail_generator=sparse_rail_generator(
+                    max_num_cities=100,
+                    max_rails_between_cities=3,
+                    seed=5,
+                    grid_mode=False
+                ),
+                schedule_generator=sparse_schedule_generator(),
+                number_of_agents=10,
+                obs_builder_object=GlobalObsForRailEnv())
+
+    with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, SystemExit):
+        RailEnv(width=60,
+                height=60,
+                rail_generator=sparse_rail_generator(
+                    max_num_cities=1,
+                    max_rails_between_cities=3,
+                    seed=5,
+                    grid_mode=False
+                ),
+                schedule_generator=sparse_schedule_generator(),
+                number_of_agents=10,
+                obs_builder_object=GlobalObsForRailEnv())
+
+
+def test_sparse_generator_with_illegal_params_aborts():
+    """
+    Test that grid mode is evoked and two cities are created when env is too small to find random cities.
+    We set the limit of the env such that two cities fit in grid mode but unlikely under random mode
+    we initiate random seed to be sure taht we never create random cities.
+    :return:
+    """
+    np.random.seed(0)
+
+    for test_run in range(10):
+        with warnings.catch_warnings(record=True) as w:
+            RailEnv(width=10,
+                    height=20,
+                    rail_generator=sparse_rail_generator(
+                        max_num_cities=100,
+                        max_rails_between_cities=2,
+                        max_rails_in_city=2,
+                        seed=5,
+                        grid_mode=False
+                    ),
+                    schedule_generator=sparse_schedule_generator(),
+                    number_of_agents=10,
+                    obs_builder_object=GlobalObsForRailEnv())
+            assert "[WARNING]" in str(w[-1].message)
+
