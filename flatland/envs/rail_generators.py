@@ -574,17 +574,19 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         if max_feasible_cities < 2:
             sys.exit("Cannot fit more than one city in this map, no feasible environment possible! Aborting.")
+
         # Evenly distribute cities
         if grid_mode:
             city_positions = _generate_evenly_distr_city_positions(max_feasible_cities, city_radius, width,
                                                                    height)
+        # Distribute cities randomlz
         else:
             city_positions = _generate_random_city_positions(max_feasible_cities, city_radius, width, height)
 
         # reduce num_cities if less were generated in random mode
         num_cities = len(city_positions)
 
-        # Try with evenly distributed cities
+        # If random generation failed just put the cities evenly
         if num_cities < 2:
             city_positions = _generate_evenly_distr_city_positions(max_feasible_cities, city_radius, width,
                                                                    height)
@@ -608,8 +610,10 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         # Populate cities
         train_stations = _set_trainstation_positions(city_positions, city_radius, free_rails)
+
         # Fix all transition elements
         _fix_transitions(city_cells, inter_city_lines, grid_map, vector_field, rail_trans)
+
         # Generate start target pairs
         agent_start_targets_cities = _generate_start_target_pairs(num_agents, num_cities, train_stations,
                                                                   city_orientations)
