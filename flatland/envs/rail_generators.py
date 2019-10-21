@@ -647,7 +647,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         train_stations = _set_trainstation_positions(city_positions, city_radius, free_rails)
 
         # Fix all transition elements
-        _fix_transitions(city_cells, inter_city_lines, grid_map, vector_field, rail_trans)
+        _fix_transitions(city_cells, inter_city_lines, grid_map, vector_field)
 
         return grid_map, {'agents_hints': {
             'num_agents': num_agents,
@@ -1045,26 +1045,25 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         return train_stations
 
     def _fix_transitions(city_cells: IntVector2DArray, inter_city_lines: List[IntVector2DArray],
-                         grid_map: GridTransitionMap, vector_field, rail_trans: RailEnvTransitions):
+                         grid_map: GridTransitionMap, vector_field):
         """
+        Check and fix transitions of all the cells that were modified. This is necessary because we ignore validity
+        while drawing the rails.
 
         Parameters
         ----------
-        city_cells
-        inter_city_lines
-        grid_map
-        vector_field
-        rail_trans
+        city_cells: IntVector2DArray
+            Cells within cities. All of these might have changed and are thus checked
+        inter_city_lines: List[IntVector2DArray]
+            All cells within rails drawn between cities
+        vector_field: IntVector2DArray
+            Vectorfield of the size of the environment. It is used to generate preferred orienations for each cell.
+            Each cell contains the prefered orientation of cells. If no prefered orientation is present it is set to -1
+        grid_map: RailEnvTransitions
+            The grid map containing the rails. Used to draw new rails
 
-        Returns
-        -------
+        """
 
-        """
-        """
-        Function to fix all transition elements in environment
-        :param rail_trans:
-        :param vector_field:
-        """
         # Fix all cities with illegal transition maps
         rails_to_fix = np.zeros(3 * grid_map.height * grid_map.width * 2, dtype='int')
         rails_to_fix_cnt = 0
@@ -1084,22 +1083,19 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
     def _closest_neighbour_in_grid4_directions(current_city_idx: int, city_positions: IntVector2DArray) -> List[int]:
         """
-
+        Finds the closest city in each direction of the current city
         Parameters
         ----------
-        current_city_idx
-        city_positions
+        current_city_idx: int
+            Index of current city
+        city_positions: IntVector2DArray
+            Vector containing the coordinates of all cities
 
         Returns
         -------
-
-        """
-        """
         Returns indices of closest neighbour in every direction NESW
-        :param current_city_idx: Index of city in city_positions list
-        :param city_positions: list of all points being considered
-        :return: list of index of closest neighbour in all directions
         """
+
         city_distances = []
         closest_neighbour: List[int] = [None for i in range(4)]
 
@@ -1122,13 +1118,15 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
     def argsort(seq):
         """
-
+        Same as Numpy sort but for lists
         Parameters
         ----------
-        seq
+        seq: List
+            list that we would like to sort from smallest to largest
 
         Returns
         -------
+        Returns the sorted list
 
         """
         # http://stackoverflow.com/questions/3071415/efficient-method-to-calculate-the-rank-vector-of-a-list-in-python
@@ -1137,25 +1135,26 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
     def _get_cells_in_city(center: IntVector2D, radius: int, city_orientation: int,
                            vector_field: IntVector2DArray) -> IntVector2DArray:
         """
+        Function the collect cells of a city. It also populates the vector field accoring to the orientation of the
+        city.
+
+        Example: City oriented north with a radius of 5, the vectorfield in the city will be as follows:
+            |S|S|S|S|S|
+            |S|S|S|S|S|
+            |S|S|S|S|S|  <-- City center
+            |N|N|N|N|N|
+            |N|N|N|N|N|
+
+        This is used to later orient the switches to avoid infeasible maps.
 
         Parameters
         ----------
-        center
-        radius
-        city_orientation
-        vector_field
-
-        Returns
-        -------
-
-        """
-        """
-
-        Parameters
-        ----------
-        center center coordinates of city
-        radius radius of city (it is a square)
-
+        center: IntVector2D
+            center coordinates of city
+        radius: int
+            radius of city (it is a square)
+        city_orientation: int
+            Orientation of city
         Returns
         -------
         flat list of all cell coordinates in the city
@@ -1175,16 +1174,20 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
     def _are_cities_overlapping(center_1, center_2, radius):
         """
-
+        Check if two cities overlap. That is we check if two squares with certain edge length and position overlap
         Parameters
         ----------
-        center_1
-        center_2
-        radius
+        center_1: (int, int)
+            Center of first city
+        center_2: (int, int)
+            Center of second city
+
+        radius: int
+            Radius of each city. Cities are squares with edge length 2 * city_radius + 1
 
         Returns
         -------
-
+        Returns True if the cities overlap and False otherwise
         """
         return np.abs(center_1[0] - center_2[0]) < radius and np.abs(center_1[1] - center_2[1]) < radius
 
