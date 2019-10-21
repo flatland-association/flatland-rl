@@ -25,9 +25,9 @@ m.patch()
 
 def are_dicts_equal(d1, d2):
     """ return True if all keys and values are the same """
-    return all(k in d2 and d1[k] == d2[k]
+    return all(k in d2 and np.isclose(d1[k], d2[k])
                for k in d1) \
-           and all(k in d1 and d1[k] == d2[k]
+           and all(k in d1 and np.isclose(d1[k], d2[k])
                    for k in d2)
 
 
@@ -80,6 +80,7 @@ class FlatlandRemoteClient(object):
                 'AICROWD_TESTS_FOLDER',
                 '/tmp/flatland_envs'
             )
+        self.current_env_path = None
 
         self.verbose = verbose
 
@@ -180,7 +181,9 @@ class FlatlandRemoteClient(object):
             return observation, info
 
         test_env_file_path = _response['payload']['env_file_path']
-        print("Received Env : ", test_env_file_path)
+        if self.verbose:
+            print("Received Env : ", test_env_file_path)
+
         test_env_file_path = os.path.join(
             self.test_envs_root,
             test_env_file_path
@@ -192,7 +195,10 @@ class FlatlandRemoteClient(object):
                 "to point to the location of the Tests folder ? \n"
                 "We are currently looking at `{}` for the tests".format(self.test_envs_root)
             )
-        print("Current env path : ", test_env_file_path)
+        
+        if self.verbose:
+            print("Current env path : ", test_env_file_path)
+        self.current_env_path = test_env_file_path
         self.env = RailEnv(
             width=1,
             height=1,
@@ -232,11 +238,13 @@ class FlatlandRemoteClient(object):
         local_observation, local_reward, local_done, local_info = \
             self.env.step(action)
 
-        print(local_reward)
+        if self.verbose:
+            print(local_reward)
         if not are_dicts_equal(remote_reward, local_reward):
+            print("Remote Reward : ", remote_reward, "Local Reward : ", local_reward)
             raise Exception("local and remote `reward` are diverging")
-            print(remote_reward, local_reward)
         if not are_dicts_equal(remote_done, local_done):
+            print("Remote Done : ", remote_done, "Local Done : ", local_done)
             raise Exception("local and remote `done` are diverging")
 
         # Return local_observation instead of remote_observation

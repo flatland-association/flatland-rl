@@ -72,7 +72,7 @@ def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
 
 
 # N.B. get_shortest_paths is not part of distance_map since it refers to RailEnvActions (would lead to circularity!)
-def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = None) \
+def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = None, agent_handle: Optional[int] = None) \
     -> Dict[int, Optional[List[WalkingElement]]]:
     """
     Computes the shortest path for each agent to its target and the action to be taken to do so.
@@ -81,9 +81,15 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
     If there is no path (rail disconnected), the path is given as None.
     The agent state (moving or not) and its speed are not taken into account
 
+    example:
+            agent_fixed_travel_paths = get_shortest_paths(env.distance_map, None, agent.handle)
+            path = agent_fixed_travel_paths[agent.handle]
+
     Parameters
     ----------
-    distance_map
+    distance_map : reference to the distance_map
+    max_depth : max path length, if the shortest path is longer, it will be cutted
+    agent_handle : if set, the shortest for agent.handle will be returned , otherwise for all agents
 
     Returns
     -------
@@ -133,8 +139,11 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
                 WalkingElement(position, direction,
                                RailEnvNextAction(RailEnvActions.STOP_MOVING, position, direction)))
 
-    for agent in distance_map.agents:
-        _shortest_path_for_agent(agent)
+    if agent_handle is not None:
+        _shortest_path_for_agent(distance_map.agents[agent_handle])
+    else:
+        for agent in distance_map.agents:
+            _shortest_path_for_agent(agent)
 
     return shortest_paths
 
