@@ -71,7 +71,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
         np.random.seed(_runtime_seed)
 
         train_stations = hints['train_stations']
-        agent_start_targets_cities = hints['agent_start_targets_cities']
+        city_positions = hints['city_positions']
+        city_orientation = hints['city_orientations']
         max_num_agents = hints['num_agents']
         # city_orientations = hints['city_orientations']
         if num_agents > max_num_agents:
@@ -89,9 +90,9 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
                 tries += 1
                 infeasible_agent = False
                 # Set target for agent
-                city_idx = np.random.randint(len(agent_start_targets_cities))
-                start_city = agent_start_targets_cities[city_idx][0]
-                target_city = agent_start_targets_cities[city_idx][1]
+                city_idx = np.random.choice(len(city_positions), 2, replace=False)
+                start_city = city_idx[0]
+                target_city = city_idx[1]
 
                 start_idx = np.random.choice(np.arange(len(train_stations[start_city])))
                 target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
@@ -104,8 +105,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
                 while target[1] % 2 != 1:
                     target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
                     target = train_stations[target_city][target_idx]
-                possible_orientations = [agent_start_targets_cities[city_idx][2],
-                                         (agent_start_targets_cities[city_idx][2] + 2) % 4]
+                possible_orientations = [city_orientation[start_city],
+                                         (city_orientation[start_city] + 2) % 4]
                 agent_orientation = np.random.choice(possible_orientations)
                 if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                     agent_orientation = (agent_orientation + 2) % 4
