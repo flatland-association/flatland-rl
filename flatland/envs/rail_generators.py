@@ -547,15 +547,51 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                           max_rails_in_city: int = 4, seed: int = 1) -> RailGenerator:
     """
     Generates railway networks with cities and inner city rails
-    :param max_num_cities: Number of city centers in the map
-    :param grid_mode: arrange cities in a grid or randomly
-    :param max_rails_between_cities: Maximum number of connecting rails going out from a city
-    :param max_rails_in_city: maximum number of internal rails
-    :param seed: Random seed to initiate rail
-    :return: generator
+
+    Parameters
+    ----------
+    max_num_cities : int
+        Max number of cities to build. The generator tries to achieve this numbers given all the parameters
+    grid_mode: Bool
+        How to distribute the cities in the path, either equally in a grid or random
+    max_rails_between_cities: int
+        Max number of rails connecting to a city. This is only the number of connection points at city boarder.
+        Number of tracks drawn inbetween cities can still vary
+    max_rails_in_city: int
+        Number of parallel tracks in the city. This represents the number of tracks in the trainstations
+    seed: int
+        Initiate the seed
+
+    Returns
+    -------
+    Returns the rail generator object to the rail env constructor
     """
 
+
     def generator(width: int, height: int, num_agents: int, num_resets: int = 0) -> RailGeneratorProduct:
+        """
+
+        Parameters
+        ----------
+        width: int
+            Width of the environment
+        height: int
+            Height of the environment
+        num_agents:
+            Number of agents to be placed within the environment
+        num_resets: int
+            Count for how often the environment has been reset
+
+        Returns
+        -------
+        Returns the grid_map --> The railway infrastructure
+        Hints:
+        agents_hints': {
+            'num_agents': how many agents have starting and end spots
+            'agent_start_targets_cities': touples of agent start and target cities
+            'train_stations': locations of train stations for start and targets
+            'city_orientations' : orientation of cities
+        """
         np.random.seed(seed + num_resets)
 
         rail_trans = RailEnvTransitions()
@@ -593,7 +629,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         num_cities = len(city_positions)
 
         # Set up connection points for all cities
-        inner_connection_points, outer_connection_points, connection_info, city_orientations, city_cells = \
+        inner_connection_points, outer_connection_points, city_orientations, city_cells = \
             _generate_city_connection_points(
                 city_positions, city_radius, vector_field, rails_between_cities,
                 rails_in_city)
@@ -626,6 +662,26 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
     def _generate_random_city_positions(num_cities: int, city_radius: int, width: int,
                                         height: int) -> (IntVector2DArray, IntVector2DArray):
+        """
+        Distribute the cities randomly in the environment while respecting city sizes and guaranteeing that they
+        don't overlap.
+
+        Parameters
+        ----------
+        num_cities: int
+            Max number of cities that should be placed
+        city_radius: int
+            Radius of each city. Cities are squares with edge length 2 * city_radius + 1
+        width: int
+            Width of the environment
+        height: int
+            Height of the environment
+
+        Returns
+        -------
+        Returns a list of all city positions as coordinates (x,y)
+
+        """
         city_positions: IntVector2DArray = []
         for city_idx in range(num_cities):
             too_close = True
@@ -652,6 +708,25 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
     def _generate_evenly_distr_city_positions(num_cities: int, city_radius: int, width: int, height: int
                                               ) -> (IntVector2DArray, IntVector2DArray):
+        """
+        Distribute the cities in an evenly spaced grid
+
+        Parameters
+        ----------
+        num_cities: int
+            Max number of cities that should be placed
+        city_radius: int
+            Radius of each city. Cities are squares with edge length 2 * city_radius + 1
+        width: int
+            Width of the environment
+        height: int
+            Height of the environment
+
+        Returns
+        -------
+        Returns a list of all city positions as coordinates (x,y)
+
+        """
         aspect_ratio = height / width
 
         cities_per_row = min(int(np.ceil(np.sqrt(num_cities * aspect_ratio))),
@@ -675,9 +750,41 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                                                                      List[List[List[IntVector2D]]],
                                                                      List[np.ndarray],
                                                                      List[Grid4TransitionsEnum]):
+        """
+        Generate the city connection points. Internal connection points are used to generate the parallel paths
+        within the city.
+        External connection points are used to connect different cities together
+
+        Parameters
+        ----------
+        city_positions: IntVector2DArray
+            Vector that contains all the positions of the cities
+        city_radius: int
+            Radius of each city. Cities are squares with edge length 2 * city_radius + 1
+        vector_field: IntVector2DArray
+            Vectorfield of the size of the environment. It is used to generate preferred orienations for each cell.
+            Each cell contains the prefered orientation of cells. If no prefered orientation is present it is set to -1
+        rails_between_cities: int
+            Number of rails that connect out from the city
+        rails_in_city: int
+            Number of rails within the city
+
+        Returns
+        -------
+        inner_connection_points: List of List of length number of cities
+            Contains all the inner connection points for each boarder of each city.
+            [North_Points, East_Poinst, South_Points, West_Points]
+        outer_connection_points: List of List of length number of cities
+            Contains all the outer connection points for each boarder of the city.
+            [North_Points, East_Poinst, South_Points, West_Points]
+        city_orientations: List of length number of cities
+            Contains all the orientations of cities. This is then used to orient agents according to the rails
+        city_cells: List
+            List containing the coordinates of all the cells that belong to a city. This is used by other algorithms
+            to avoid drawing inter-city-rails through cities.
+        """
         inner_connection_points: List[List[List[IntVector2D]]] = []
         outer_connection_points: List[List[List[IntVector2D]]] = []
-        connection_info: List[np.ndarray] = []
         city_orientations: List[Grid4TransitionsEnum] = []
         city_cells: IntVector2DArray = []
         for city_position in city_positions:
@@ -744,8 +851,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
             inner_connection_points.append(connection_points_coordinates_inner)
             outer_connection_points.append(connection_points_coordinates_outer)
-            connection_info.append(connections_per_direction)
-        return inner_connection_points, outer_connection_points, connection_info, city_orientations, city_cells
+        return inner_connection_points, outer_connection_points, city_orientations, city_cells
 
     def _connect_cities(city_positions: IntVector2DArray, connection_points: List[List[List[IntVector2D]]],
                         city_cells: IntVector2DArray,
