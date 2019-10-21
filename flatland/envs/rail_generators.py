@@ -14,7 +14,7 @@ from flatland.core.grid.grid_utils import distance_on_rail, IntVector2DArray, In
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
-    fix_inner_nodes
+    fix_inner_nodes, align_cell_to_city
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -565,7 +565,12 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
-        city_radius = int(np.ceil((max_rails_in_city) // 2)) + 2
+
+        # We compute the city radius by the given max number of rails it can contain.
+        # The radius is equal to the number of tracks divided by 2
+        # We add 2 cells to avoid that track lenght is to shot
+        city_padding = 2
+        city_radius = int(np.ceil((max_rails_in_city) // 2)) + city_padding
         vector_field = np.zeros(shape=(height, width)) - 1.
 
         min_nr_rails_in_city = 2
@@ -659,10 +664,19 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                                               ) -> (IntVector2DArray, IntVector2DArray):
         aspect_ratio = height / width
 
-        cities_per_row = min(int(np.ceil(np.sqrt(num_cities * aspect_ratio))),
-                             int((height - 2) // (2 * (city_radius + 1))))
-        cities_per_col = min(int(np.ceil(num_cities / cities_per_row)),
-                             int((width - 2) // (2 * (city_radius + 1))))
+        # Compute max numbe of possible cities per row and col.
+        # Respect padding at edges of environment
+        # Respect padding between cities
+        padding = 2
+        city_size = 2 * (city_radius + 1)
+        max_cities_per_row =int((height - padding) // city_size)
+        max_cities_per_col = int((width - padding) // city_size)
+
+        # Choose number of cities per row.
+        # Limit if it is more then max number of possible cities
+
+        cities_per_row = min(int(np.ceil(np.sqrt(num_cities * aspect_ratio))), max_cities_per_row)
+        cities_per_col = min(int(np.ceil(num_cities / cities_per_row)), max_cities_per_col)
         num_build_cities = min(num_cities, cities_per_col * cities_per_row)
         row_positions = np.linspace(city_radius + 2, height - (city_radius + 2), cities_per_row, dtype=int)
         col_positions = np.linspace(city_radius + 2, width - (city_radius + 2), cities_per_col, dtype=int)
@@ -978,10 +992,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         y_values = np.tile(y_range, len(x_range))
         city_cells = list(zip(x_values, y_values))
         for cell in city_cells:
-            if city_orientation % 2 == 0:
-                vector_field[cell] = int(2 * np.clip(cell[0] - center[0], 0, 1))
-            else:
-                vector_field[cell] = int(2 * np.clip(center[1] - cell[1], 0, 1)) + 1
+            vector_field[cell] = align_cell_to_city(center, city_orientation, cell)
         return city_cells
 
     def _are_cities_overlapping(center_1, center_2, radius):
