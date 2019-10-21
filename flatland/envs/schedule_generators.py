@@ -66,8 +66,27 @@ def compute_max_episode_steps(width: int,
 
 
 def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
+    """
 
+    Generator used to generate the levels of Round 1 in the Flatland Challenge. It can only be used together
+    with complex_rail_generator. It places agents at end and start points provided by the rail generator.
+    It assigns speeds to the different agents according to the speed_ratio_map
+    :param speed_ratio_map: Speed ratios of all agents. They are probabilities of all different speeds and have to
+            add up to 1.
+    :param seed: Initiate random seed generator
+    :return:
+    """
+
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0):
+        """
+
+        The generator that assigns tasks to all the agents
+        :param rail: Rail infrastructure given by the rail_generator
+        :param num_agents: Number of agents to include in the schedule
+        :param hints: Hints provided by the rail_generator These include positions of start/target positions
+        :param num_resets: How often the generator has been reset.
+        :return: Returns the generator to the rail constructor
+        """
         _runtime_seed = seed + num_resets
         np.random.seed(_runtime_seed)
 
@@ -91,8 +110,25 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
 
 
 def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
+    """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
+    This is the schedule generator which is used for Round 2 of the Flatland challenge. It produces schedules
+    to railway networks provided by sparse_rail_generator.
+    :param speed_ratio_map: Speed ratios of all agents. They are probabilities of all different speeds and have to
+            add up to 1.
+    :param seed: Initiate random seed generator
+    """
+
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0):
+        """
+
+        The generator that assigns tasks to all the agents
+        :param rail: Rail infrastructure given by the rail_generator
+        :param num_agents: Number of agents to include in the schedule
+        :param hints: Hints provided by the rail_generator These include positions of start/target positions
+        :param num_resets: How often the generator has been reset.
+        :return: Returns the generator to the rail constructor
+        """
 
         _runtime_seed = seed + num_resets
         np.random.seed(_runtime_seed)
