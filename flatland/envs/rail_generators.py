@@ -111,6 +111,11 @@ def complex_rail_generator(nr_start_goal=1,
                 sg_new = [start, goal]
 
                 def check_all_dist(sg_new):
+                    """
+                    Function to check the distance betweens start and goald
+                    :param sg_new: start and goal tuple
+                    :return: True if distance is larger than 2, False otherwise
+                    """
                     for sg in start_goal:
                         for i in range(2):
                             for j in range(2):
