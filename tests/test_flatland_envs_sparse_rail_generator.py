@@ -1500,7 +1500,7 @@ def test_sparse_generator_with_illegal_params_aborts():
                 obs_builder_object=GlobalObsForRailEnv())
 
 
-def test_sparse_generator_with_illegal_params_aborts():
+def test_sparse_generator_changes_to_grid_mode():
     """
     Test that grid mode is evoked and two cities are created when env is too small to find random cities.
     We set the limit of the env such that two cities fit in grid mode but unlikely under random mode
