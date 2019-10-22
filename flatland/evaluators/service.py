@@ -205,17 +205,6 @@ class FlatlandRemoteEvaluationService:
         redis connection pool
         """
         redis_conn = redis.Redis(connection_pool=self.redis_pool)
-        try:
-            redis_conn.ping()
-        except Exception:
-            raise Exception(
-                "Unable to connect to redis server at {}:{} ."
-                "Are you sure there is a redis-server running at the "
-                "specified location ?".format(
-                    self.remote_host,
-                    self.remote_port
-                )
-            )
         return redis_conn
 
     def _error_template(self, payload):
