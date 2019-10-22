@@ -20,6 +20,7 @@ def test_initial_status():
                   height=rail_map.shape[0],
                   rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(),
+                  remove_agents_at_target=False,
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )

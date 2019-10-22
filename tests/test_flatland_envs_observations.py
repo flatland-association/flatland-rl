@@ -178,6 +178,7 @@ def test_reward_function_waiting(rendering=False):
     rail, rail_map = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
+                  remove_agents_at_target=False,
                   rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(),
                   number_of_agents=2,

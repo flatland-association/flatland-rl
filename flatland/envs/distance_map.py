@@ -55,6 +55,13 @@ class DistanceMap:
         self.env_width = rail.width
 
     def _compute(self, agents: List[EnvAgent], rail: GridTransitionMap):
+        """
+        This function computes the distance maps for each unique target. Thus if several targets are the same
+        we only compute the distance for them once and copy to all targets with same position.
+        :param agents: All the agents in the environment, independent of their current status
+        :param rail: The rail transition map
+
+        """
         self.agents_previous_computation = self.agents
         self.distance_map = np.inf * np.ones(shape=(len(agents),
                                                     self.env_height,

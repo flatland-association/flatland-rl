@@ -116,7 +116,7 @@ class RailEnv(Environment):
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  stochastic_data=None,
-                 remove_agents_at_target=False,
+                 remove_agents_at_target=True,
                  random_seed=1
                  ):
         """
@@ -766,7 +766,7 @@ class RailEnv(Environment):
                 print("[WARNING] Unable to save the distance map for this environment, as none was found !")
 
         else:
-            with open(filename,"wb") as file_out:
+            with open(filename, "wb") as file_out:
                 file_out.write(self.get_full_state_msg())
 
     def load(self, filename):

@@ -43,8 +43,27 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
 
 
 def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
+    """
 
+    Generator used to generate the levels of Round 1 in the Flatland Challenge. It can only be used together
+    with complex_rail_generator. It places agents at end and start points provided by the rail generator.
+    It assigns speeds to the different agents according to the speed_ratio_map
+    :param speed_ratio_map: Speed ratios of all agents. They are probabilities of all different speeds and have to
+            add up to 1.
+    :param seed: Initiate random seed generator
+    :return:
+    """
+
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
+        """
+
+        The generator that assigns tasks to all the agents
+        :param rail: Rail infrastructure given by the rail_generator
+        :param num_agents: Number of agents to include in the schedule
+        :param hints: Hints provided by the rail_generator These include positions of start/target positions
+        :param num_resets: How often the generator has been reset.
+        :return: Returns the generator to the rail constructor
+        """
         _runtime_seed = seed + num_resets
         np.random.seed(_runtime_seed)
 
@@ -66,8 +85,25 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
 
 
 def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
+    """
+
+    This is the schedule generator which is used for Round 2 of the Flatland challenge. It produces schedules
+    to railway networks provided by sparse_rail_generator.
+    :param speed_ratio_map: Speed ratios of all agents. They are probabilities of all different speeds and have to
+            add up to 1.
+    :param seed: Initiate random seed generator
+    """
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
+        """
+
+        The generator that assigns tasks to all the agents
+        :param rail: Rail infrastructure given by the rail_generator
+        :param num_agents: Number of agents to include in the schedule
+        :param hints: Hints provided by the rail_generator These include positions of start/target positions
+        :param num_resets: How often the generator has been reset.
+        :return: Returns the generator to the rail constructor
+        """
 
         _runtime_seed = seed + num_resets
         np.random.seed(_runtime_seed)
@@ -106,7 +142,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
                 while target[1] % 2 != 1:
                     target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
                     target = train_stations[target_city][target_idx]
-                possible_orientations = [agent_start_targets_cities[city_idx][2], (agent_start_targets_cities[city_idx][2] + 2) % 4 ]
+                possible_orientations = [agent_start_targets_cities[city_idx][2],
+                                         (agent_start_targets_cities[city_idx][2] + 2) % 4]
                 agent_orientation = np.random.choice(possible_orientations)
                 if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                     agent_orientation = (agent_orientation + 2) % 4
@@ -275,4 +312,3 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
                         agent_malfunction_rates=agents_malfunction)
 
     return generator
-

@@ -31,7 +31,8 @@ def connect_rail_in_grid_map(grid_map: GridTransitionMap, start: IntVector2D, en
     :param end: end position of rail
     :param flip_start_node_trans: make valid start position by adding dead-end, empty start if False
     :param flip_end_node_trans: make valid end position by adding dead-end, empty end if False
-    :param respect_transition_validity: Only draw rail maps if legal rail elements can be use, False, draw line without respecting rail transitions.
+    :param respect_transition_validity: Only draw rail maps if legal rail elements can be use, False, draw line without
+    respecting rail transitions.
     :param a_star_distance_function: Define what distance function a-star should use
     :param forbidden_cells: cells to avoid when drawing rail. Rail cannot go through this list of cells
     :return: List of cells in the path
@@ -158,3 +159,16 @@ def fix_inner_nodes(grid_map: GridTransitionMap, inner_node_pos: IntVector2D, ra
                                                1)
         grid_map.grid[tmp_pos] = transition
     return
+
+def align_cell_to_city(city_center, city_orientation, cell):
+    """
+    Alig all cells to face the city center along the city orientation
+    @param city_center: Center needed for orientation
+    @param city_orientation: Orientation of the city
+    @param cell: Cell we would like to orient
+    :@return: Orientation of cell towards city center along axis of city orientation
+    """
+    if city_orientation % 2 == 0:
+        return int(2 * np.clip(cell[0] - city_center[0], 0, 1))
+    else:
+       return int(2 * np.clip(city_center[1] - cell[1], 0, 1)) + 1
