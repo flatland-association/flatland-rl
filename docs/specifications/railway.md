@@ -697,3 +697,17 @@ RailEnv.step()
                                                     self.get()
                                                     ...
 ```
+
+
+### Maximum number of allowed time steps in an episode
+
+Whenever the schedule within RailEnv is generated, the maximum number of allowed time steps in an episode is calculated
+according to the following formula:
+
+```python
+
+RailEnv._max_episode_steps = timedelay_factor * alpha * (env.width + env.height + ratio_nr_agents_to_nr_cities)
+
+```
+
+where the following default values are used `timedelay_factor=4`, `alpha=2` and `ratio_nr_agents_to_nr_cities=20`

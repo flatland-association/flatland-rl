@@ -12,7 +12,7 @@ Changes since Flatland 2.0.0
 - by default the reset method of RailEnv is not called in the constructor of RailEnv anymore. Therefore the reset method needs to be called after the creation of a RailEnv object
 
 ### Changes in schedule generation
-- return value of schedule generator has changed to the named tuple Schedule
+- return value of schedule generator has changed to the named tuple `Schedule`
 
 Changes since Flatland 1.0.0
 --------------------------

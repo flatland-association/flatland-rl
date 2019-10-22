@@ -169,7 +169,7 @@ class RailEnv(Environment):
         self.obs_builder = obs_builder_object
         self.obs_builder.set_env(self)
 
-        self._max_episode_steps = None
+        self._max_episode_steps: Optional[int] = None
         self._elapsed_steps = 0
 
         self.dones = dict.fromkeys(list(range(number_of_agents)) + ["__all__"], False)
@@ -249,6 +249,35 @@ class RailEnv(Environment):
         """
         self.agents = EnvAgent.list_from_static(self.agents_static)
 
+    @staticmethod
+    def compute_max_episode_steps(width: int, height: int, timedelay_factor: int = 4, alpha: int = 2,
+                                  ratio_nr_agents_to_nr_cities: float = 20.0) -> int:
+        """
+        compute_max_episode_steps(width, height, ratio_nr_agents_to_nr_cities, timedelay_factor, alpha)
+
+        The method computes the max number of episode steps allowed
+
+        Parameters
+        ----------
+        width : int
+            width of environment
+        height : int
+            height of environment
+        ratio_nr_agents_to_nr_cities : float, optional
+            number_of_agents/number_of_cities
+        timedelay_factor : int, optional
+            timedelay_factor
+        alpha : int, optional
+            alpha
+
+        Returns
+        -------
+        max_episode_steps: int
+            maximum number of episode steps
+
+        """
+        return int(timedelay_factor * alpha * (width + height + ratio_nr_agents_to_nr_cities))
+
     def reset(self, regen_rail=True, replace_agents=True, activate_agents=False, random_seed=None):
         """ if regen_rail then regenerate the rails.
             if replace_agents then regenerate the agents static.
@@ -282,7 +311,14 @@ class RailEnv(Environment):
             #  why do we need static agents? could we it more elegantly?
             schedule = self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets)
             self.agents_static = EnvAgentStatic.from_lists(schedule)
-            self._max_episode_steps = schedule.max_episode_steps
+
+            if agents_hints and 'city_orientations' in agents_hints:
+                ratio_nr_agents_to_nr_cities = self.get_num_agents() / len(agents_hints['city_orientations'])
+                self._max_episode_steps = self.compute_max_episode_steps(
+                                                    width=self.width, height=self.height,
+                                                    ratio_nr_agents_to_nr_cities=ratio_nr_agents_to_nr_cities)
+            else:
+                self._max_episode_steps = self.compute_max_episode_steps(width=self.width, height=self.height)
 
         self.restart_agents()
 

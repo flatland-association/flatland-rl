@@ -42,29 +42,6 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
     return list(map(lambda index: speeds[index], np.random.choice(nb_classes, nb_agents, p=speed_ratios)))
 
 
-def compute_max_episode_steps(width: int,
-                              height: int,
-                              ratio_nr_agents_to_nr_cities: float = 20.0,
-                              timedelay_factor: int = 4,
-                              alpha: int = 2) -> int:
-    """
-
-    The method computes the max number of episode steps allowed
-    Parameters
-    ----------
-    width: width of environment
-    height: height of environment
-    ratio_nr_agents_to_nr_cities: number_of_agents/number_of_cities (default is 20)
-    timedelay_factor
-    alpha
-
-    Returns max number of episode steps
-    -------
-
-    """
-    return int(timedelay_factor * alpha * (width + height + ratio_nr_agents_to_nr_cities))
-
-
 def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
 
@@ -82,10 +59,8 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
         else:
             speeds = [1.0] * len(agents_position)
 
-        max_episode_steps = compute_max_episode_steps(width=rail.width, height=rail.height)
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
-                        max_episode_steps=max_episode_steps)
+                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None)
 
     return generator
 
@@ -151,11 +126,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
         else:
             speeds = [1.0] * len(agents_position)
 
-        max_episode_steps = compute_max_episode_steps(width=rail.width, height=rail.height,
-                                                      ratio_nr_agents_to_nr_cities=num_agents/len(city_orientations))
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
-                        max_episode_steps=max_episode_steps)
+                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None)
 
     return generator
 
@@ -182,8 +154,6 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
 
         np.random.seed(_runtime_seed)
 
-        max_episode_steps = compute_max_episode_steps(width=rail.width, height=rail.height)
-
         valid_positions = []
         for r in range(rail.height):
             for c in range(rail.width):
@@ -191,14 +161,12 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
                     valid_positions.append((r, c))
         if len(valid_positions) == 0:
             return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None,
-                            max_episode_steps=max_episode_steps)
+                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None)
 
         if len(valid_positions) < num_agents:
             warnings.warn("schedule_generators: len(valid_positions) < num_agents")
             return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None,
-                            max_episode_steps=max_episode_steps)
+                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None)
 
         agents_position_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
         agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]
@@ -257,8 +225,7 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
 
         agents_speed = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed)
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None,
-                        max_episode_steps=max_episode_steps)
+                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None)
 
     return generator
 
@@ -303,10 +270,9 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
         else:
             agents_speed = None
             agents_malfunction = None
-        max_episode_steps = compute_max_episode_steps(width=rail.width, height=rail.height)
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
                         agent_targets=agents_target, agent_speeds=agents_speed,
-                        agent_malfunction_rates=agents_malfunction, max_episode_steps=max_episode_steps)
+                        agent_malfunction_rates=agents_malfunction)
 
     return generator
 
