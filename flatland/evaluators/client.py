@@ -202,6 +202,7 @@ class FlatlandRemoteClient(object):
         self.env = RailEnv(
             width=1,
             height=1,
+            remove_agents_at_target=True,
             rail_generator=rail_from_file(test_env_file_path),
             schedule_generator=schedule_from_file(test_env_file_path),
             obs_builder_object=obs_builder_object

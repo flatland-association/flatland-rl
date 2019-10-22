@@ -1333,6 +1333,7 @@ def test_rail_env_action_required_info():
                         1. / 4.: 0.25}  # Slow freight train
     env_always_action = RailEnv(width=50,
                                 height=50,
+                                remove_agents_at_target=False,
                                 rail_generator=sparse_rail_generator(
                                     max_num_cities=10,
                                     max_rails_between_cities=3,
@@ -1346,6 +1347,7 @@ def test_rail_env_action_required_info():
     random.seed(0)
     env_only_if_action_required = RailEnv(width=50,
                                           height=50,
+                                          remove_agents_at_target=False,
                                           rail_generator=sparse_rail_generator(
                                               max_num_cities=10,
                                               max_rails_between_cities=3,
