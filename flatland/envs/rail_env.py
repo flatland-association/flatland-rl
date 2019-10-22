@@ -116,7 +116,7 @@ class RailEnv(Environment):
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  stochastic_data=None,
-                 remove_agents_at_target=True,
+                 remove_agents_at_target=False,
                  random_seed=1
                  ):
         """
