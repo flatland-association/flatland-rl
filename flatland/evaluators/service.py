@@ -204,7 +204,7 @@ class FlatlandRemoteEvaluationService:
         Obtains a new redis connection from a previously instantiated
         redis connection pool
         """
-        redis_conn = redis.Redis(connection_pool=self.redis_pool).pipeline()
+        redis_conn = redis.Redis(connection_pool=self.redis_pool)
         try:
             redis_conn.ping()
         except Exception:
