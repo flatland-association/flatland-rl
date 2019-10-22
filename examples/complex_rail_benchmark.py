@@ -18,6 +18,7 @@ def run_benchmark():
                   rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12),
                   schedule_generator=complex_schedule_generator(),
                   number_of_agents=5)
+    env.reset()
 
     n_trials = 20
     action_dict = dict()

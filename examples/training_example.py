@@ -20,6 +20,7 @@ env = RailEnv(width=20,
               schedule_generator=complex_schedule_generator(),
               obs_builder_object=TreeObservation,
               number_of_agents=3)
+env.reset()
 
 env_renderer = RenderTool(env, gl="PILSVG", )
 

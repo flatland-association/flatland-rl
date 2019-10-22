@@ -159,3 +159,16 @@ def fix_inner_nodes(grid_map: GridTransitionMap, inner_node_pos: IntVector2D, ra
                                                1)
         grid_map.grid[tmp_pos] = transition
     return
+
+def align_cell_to_city(city_center, city_orientation, cell):
+    """
+    Alig all cells to face the city center along the city orientation
+    @param city_center: Center needed for orientation
+    @param city_orientation: Orientation of the city
+    @param cell: Cell we would like to orient
+    :@return: Orientation of cell towards city center along axis of city orientation
+    """
+    if city_orientation % 2 == 0:
+        return int(2 * np.clip(cell[0] - city_center[0], 0, 1))
+    else:
+       return int(2 * np.clip(city_center[1] - cell[1], 0, 1)) + 1

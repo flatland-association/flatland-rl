@@ -20,6 +20,7 @@ def test_random_seeding():
                       schedule_generator=random_schedule_generator(seed=12),
                       number_of_agents=10
                       )
+        env.reset()
         env.reset(True, True, False, random_seed=1)
 
         env.agents[0].target = (0, 0)
@@ -59,6 +60,7 @@ def test_seeding_and_observations():
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv()
                   )
+    env.reset()
     # Tree Observation
     env2 = RailEnv(width=25,
                    height=30,
@@ -67,6 +69,7 @@ def test_seeding_and_observations():
                    number_of_agents=10,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
                    )
+    env2.reset()
 
     env.reset(False, False, False, random_seed=12)
     env2.reset(False, False, False, random_seed=12)
@@ -126,6 +129,7 @@ def test_seeding_and_malfunction():
                       obs_builder_object=GlobalObsForRailEnv(),
                       stochastic_data=stochastic_data,  # Malfunction data generator
                       )
+        env.reset()
 
         # Tree Observation
         env2 = RailEnv(width=25,
@@ -136,6 +140,7 @@ def test_seeding_and_malfunction():
                        obs_builder_object=GlobalObsForRailEnv(),
                        stochastic_data=stochastic_data,  # Malfunction data generator
                        )
+        env2.reset()
 
         env.reset(True, False, True, random_seed=tests)
         env2.reset(True, False, True, random_seed=tests)

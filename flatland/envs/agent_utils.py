@@ -6,6 +6,7 @@ import numpy as np
 from attr import attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.envs.schedule_utils import Schedule
 
 
 class RailAgentStatus(IntEnum):
@@ -45,30 +46,30 @@ class EnvAgentStatic(object):
     position = attrib(default=None, type=Optional[Tuple[int, int]])
 
     @classmethod
-    def from_lists(cls, positions, directions, targets, speeds=None, malfunction_rates=None):
+    def from_lists(cls, schedule: Schedule):
         """ Create a list of EnvAgentStatics from lists of positions, directions and targets
         """
         speed_datas = []
 
-        for i in range(len(positions)):
+        for i in range(len(schedule.agent_positions)):
             speed_datas.append({'position_fraction': 0.0,
-                                'speed': speeds[i] if speeds is not None else 1.0,
+                                'speed': schedule.agent_speeds[i] if schedule.agent_speeds is not None else 1.0,
                                 'transition_action_on_cellexit': 0})
 
         # TODO: on initialization, all agents are re-set as non-broken. Perhaps it may be desirable to set
         # some as broken?
 
         malfunction_datas = []
-        for i in range(len(positions)):
+        for i in range(len(schedule.agent_positions)):
             malfunction_datas.append({'malfunction': 0,
-                                      'malfunction_rate': malfunction_rates[i] if malfunction_rates is not None else 0.,
+                                      'malfunction_rate': schedule.agent_malfunction_rates[i] if schedule.agent_malfunction_rates is not None else 0.,
                                       'next_malfunction': 0,
                                       'nr_malfunctions': 0})
 
-        return list(starmap(EnvAgentStatic, zip(positions,
-                                                directions,
-                                                targets,
-                                                [False] * len(positions),
+        return list(starmap(EnvAgentStatic, zip(schedule.agent_positions,
+                                                schedule.agent_directions,
+                                                schedule.agent_targets,
+                                                [False] * len(schedule.agent_positions),
                                                 speed_datas,
                                                 malfunction_datas)))
 

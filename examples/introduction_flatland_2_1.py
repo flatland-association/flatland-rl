@@ -80,6 +80,7 @@ env = RailEnv(width=width,
               obs_builder_object=observation_builder,
               remove_agents_at_target=True  # Removes agents at the end of their journey to make space for others
               )
+env.reset()
 
 # Initiate the renderer
 env_renderer = RenderTool(env, gl="PILSVG",

@@ -25,6 +25,7 @@ def test_sparse_rail_generator():
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv()
                   )
+    env.reset()
     env.reset(False, False, True)
     # for r in range(env.height):
     #    for c in range (env.width):
@@ -565,6 +566,7 @@ def test_sparse_rail_generator_deterministic():
                   number_of_agents=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
+    env.reset()
     # for r in range(env.height):
     #   for c in range(env.width):
     #       print("assert env.rail.get_full_transitions({}, {}) == {}, \"[{}][{}]\"".format(r, c,
@@ -1333,6 +1335,7 @@ def test_rail_env_action_required_info():
                         1. / 4.: 0.25}  # Slow freight train
     env_always_action = RailEnv(width=50,
                                 height=50,
+                                remove_agents_at_target=False,
                                 rail_generator=sparse_rail_generator(
                                     max_num_cities=10,
                                     max_rails_between_cities=3,
@@ -1342,10 +1345,12 @@ def test_rail_env_action_required_info():
                                 schedule_generator=sparse_schedule_generator(speed_ration_map),
                                 number_of_agents=10,
                                 obs_builder_object=GlobalObsForRailEnv())
+    env_always_action.reset()
     np.random.seed(0)
     random.seed(0)
     env_only_if_action_required = RailEnv(width=50,
                                           height=50,
+                                          remove_agents_at_target=False,
                                           rail_generator=sparse_rail_generator(
                                               max_num_cities=10,
                                               max_rails_between_cities=3,
@@ -1356,6 +1361,7 @@ def test_rail_env_action_required_info():
                                           schedule_generator=sparse_schedule_generator(speed_ration_map),
                                           number_of_agents=10,
                                           obs_builder_object=GlobalObsForRailEnv())
+    env_only_if_action_required.reset()
     env_renderer = RenderTool(env_always_action, gl="PILSVG", )
 
     env_always_action.reset(False, False, True)
@@ -1426,6 +1432,7 @@ def test_rail_env_malfunction_speed_info():
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv(),
                   stochastic_data=stochastic_data)
+    env.reset()
     env.reset(False, False, True)
 
     env_renderer = RenderTool(env, gl="PILSVG", )
@@ -1484,7 +1491,7 @@ def test_sparse_generator_with_illegal_params_aborts():
                 ),
                 schedule_generator=sparse_schedule_generator(),
                 number_of_agents=10,
-                obs_builder_object=GlobalObsForRailEnv())
+                obs_builder_object=GlobalObsForRailEnv()).reset()
 
     with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, SystemExit):
         RailEnv(width=60,
@@ -1497,7 +1504,7 @@ def test_sparse_generator_with_illegal_params_aborts():
                 ),
                 schedule_generator=sparse_schedule_generator(),
                 number_of_agents=10,
-                obs_builder_object=GlobalObsForRailEnv())
+                obs_builder_object=GlobalObsForRailEnv()).reset()
 
 
 def test_sparse_generator_changes_to_grid_mode():
@@ -1522,6 +1529,6 @@ def test_sparse_generator_changes_to_grid_mode():
                     ),
                     schedule_generator=sparse_schedule_generator(),
                     number_of_agents=10,
-                    obs_builder_object=GlobalObsForRailEnv())
+                    obs_builder_object=GlobalObsForRailEnv()).reset()
             assert "[WARNING]" in str(w[-1].message)
 
