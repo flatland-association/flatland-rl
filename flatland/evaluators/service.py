@@ -134,6 +134,7 @@ class FlatlandRemoteEvaluationService:
         self.simulation_percentage_complete = []
         self.simulation_steps = []
         self.simulation_times = []
+        self.env_step_times = []
         self.begin_simulation = False
         self.current_step = 0
         self.visualize = visualize
@@ -401,7 +402,9 @@ class FlatlandRemoteEvaluationService:
                 has done['__all__']==True")
 
         action = _payload['action']
+        time_start = time.time()
         _observation, all_rewards, done, info = self.env.step(action)
+        self.env_step_times.append(time.time() - time_start)
 
         cumulative_reward = np.sum(list(all_rewards.values()))
         self.simulation_rewards[-1] += cumulative_reward
@@ -464,6 +467,8 @@ class FlatlandRemoteEvaluationService:
         TODO: Add a high level summary of everything thats happening here.
         """
         _payload = command['payload']
+
+        print("Mean Env Step Time : ", np.array(self.env_step_times).mean())
 
         # Register simulation time of the last episode
         self.simulation_times.append(time.time() - self.begin_simulation)
