@@ -182,6 +182,7 @@ def test_reward_function_waiting(rendering=False):
                   schedule_generator=random_schedule_generator(),
                   number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  remove_agents_at_target=False
                   )
     obs_builder: TreeObsForRailEnv = env.obs_builder
     # initialize agents_static

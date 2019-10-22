@@ -22,6 +22,7 @@ def test_initial_status():
                   schedule_generator=random_schedule_generator(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  remove_agents_at_target=False
                   )
     env.reset()
     set_penalties_for_replay(env)
