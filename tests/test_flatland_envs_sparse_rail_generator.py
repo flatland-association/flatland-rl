@@ -535,8 +535,8 @@ def test_sparse_rail_generator():
     for a in range(env.get_num_agents()):
         s0 = Vec2d.get_manhattan_distance(env.agents[a].initial_position, (0, 0))
         s1 = Vec2d.get_chebyshev_distance(env.agents[a].initial_position, (0, 0))
-    assert s0 == 52, "actual={}".format(s0)
-    assert s1 == 43, "actual={}".format(s1)
+    assert s0 == 54, "actual={}".format(s0)
+    assert s1 == 45, "actual={}".format(s1)
 
 
 def test_sparse_rail_generator_deterministic():
