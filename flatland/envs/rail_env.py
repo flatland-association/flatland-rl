@@ -250,8 +250,7 @@ class RailEnv(Environment):
         self.agents = EnvAgent.list_from_static(self.agents_static)
 
     @staticmethod
-    def compute_max_episode_steps(width: int, height: int, timedelay_factor: int = 4, alpha: int = 2,
-                                  ratio_nr_agents_to_nr_cities: float = 20.0) -> int:
+    def compute_max_episode_steps(width: int, height: int, ratio_nr_agents_to_nr_cities: float = 20.0) -> int:
         """
         compute_max_episode_steps(width, height, ratio_nr_agents_to_nr_cities, timedelay_factor, alpha)
 
@@ -265,10 +264,6 @@ class RailEnv(Environment):
             height of environment
         ratio_nr_agents_to_nr_cities : float, optional
             number_of_agents/number_of_cities
-        timedelay_factor : int, optional
-            timedelay_factor
-        alpha : int, optional
-            alpha
 
         Returns
         -------
@@ -276,6 +271,8 @@ class RailEnv(Environment):
             maximum number of episode steps
 
         """
+        timedelay_factor = 4
+        alpha = 2
         return int(timedelay_factor * alpha * (width + height + ratio_nr_agents_to_nr_cities))
 
     def reset(self, regen_rail=True, replace_agents=True, activate_agents=False, random_seed=None):

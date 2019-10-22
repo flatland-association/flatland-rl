@@ -711,3 +711,5 @@ RailEnv._max_episode_steps = timedelay_factor * alpha * (env.width + env.height 
 ```
 
 where the following default values are used `timedelay_factor=4`, `alpha=2` and `ratio_nr_agents_to_nr_cities=20`
+
+If participants want to use their own formula they have to overwrite the method `compute_max_episode_steps()` from the class `RailEnv`
