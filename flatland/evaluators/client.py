@@ -64,6 +64,8 @@ class FlatlandRemoteClient(object):
             port=remote_port,
             db=remote_db,
             password=remote_password)
+        self.redis_conn = redis.Redis(connection_pool=self.redis_pool)
+
         self.namespace = "flatland-rl"
         self.service_id = os.getenv(
             'FLATLAND_RL_SERVICE_ID',
@@ -88,7 +90,7 @@ class FlatlandRemoteClient(object):
         self.ping_pong()
 
     def get_redis_connection(self):
-        return redis.Redis(connection_pool=self.redis_pool)
+        return self.redis_conn
 
     def _generate_response_channel(self):
         random_hash = hashlib.md5(

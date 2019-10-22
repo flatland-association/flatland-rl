@@ -198,14 +198,14 @@ class FlatlandRemoteEvaluationService:
             db=self.remote_db,
             password=self.remote_password
         )
+        self.redis_conn = redis.Redis(connection_pool=self.redis_pool)
 
     def get_redis_connection(self):
         """
         Obtains a new redis connection from a previously instantiated
         redis connection pool
         """
-        redis_conn = redis.Redis(connection_pool=self.redis_pool)
-        return redis_conn
+        return self.redis_conn
 
     def _error_template(self, payload):
         """
