@@ -588,8 +588,12 @@ class FlatlandRemoteEvaluationService:
         and acts accordingly.
         """
         print("Listening at : ", self.command_channel)
+        MESSAGE_QUEUE_LATENCY = []
         while True:
             command = self.get_next_command()
+            if "timestamp" in command.keys():
+                latency = time.time() - command["timestamp"]
+                MESSAGE_QUEUE_LATENCY.append(latency)
 
             if self.verbose:
                 print("Self.Reward : ", self.reward)
@@ -627,6 +631,8 @@ class FlatlandRemoteEvaluationService:
 
                         Submit the final cumulative reward
                     """
+
+                    print("Overall Message Queue Latency : ", np.array(MESSAGE_QUEUE_LATENCY).mean())
                     self.handle_env_submit(command)
                 else:
                     _error = self._error_template(

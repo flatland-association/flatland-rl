@@ -118,6 +118,7 @@ class FlatlandRemoteClient(object):
         """
         assert isinstance(_request, dict)
         _request['response_channel'] = self._generate_response_channel()
+        _request['timestamp'] = time.time()
 
         _redis = self.get_redis_connection()
         """
@@ -233,15 +234,15 @@ class FlatlandRemoteClient(object):
         _request['payload'] = {}
         _request['payload']['action'] = action
         
-        _response = self._remote_request(_request, blocking=False)
-        # _payload = _response['payload']
+        _response = self._remote_request(_request)
+        _payload = _response['payload']
 
-        # # remote_observation = _payload['observation']  # noqa
-        # remote_reward = _payload['reward']
-        # remote_done = _payload['done']
-        # remote_info = _payload['info']
+        # remote_observation = _payload['observation']  # noqa
+        remote_reward = _payload['reward']
+        remote_done = _payload['done']
+        remote_info = _payload['info']
 
-        # Replicate the action in the local env
+        # Apply the action in the local env
         time_start = time.time()
         local_observation, local_reward, local_done, local_info = \
             self.env.step(action)
@@ -249,20 +250,20 @@ class FlatlandRemoteClient(object):
 
         if self.verbose:
             print(local_reward)
-        # if not are_dicts_equal(remote_reward, local_reward):
-        #     print("Remote Reward : ", remote_reward, "Local Reward : ", local_reward)
-        #     raise Exception("local and remote `reward` are diverging")
-        # if not are_dicts_equal(remote_done, local_done):
-        #     print("Remote Done : ", remote_done, "Local Done : ", local_done)
-        #     raise Exception("local and remote `done` are diverging")
+        if not are_dicts_equal(remote_reward, local_reward):
+            print("Remote Reward : ", remote_reward, "Local Reward : ", local_reward)
+            raise Exception("local and remote `reward` are diverging")
+        if not are_dicts_equal(remote_done, local_done):
+            print("Remote Done : ", remote_done, "Local Done : ", local_done)
+            raise Exception("local and remote `done` are diverging")
 
         # Return local_observation instead of remote_observation
         # as the remote_observation is build using a dummy observation
         # builder
         # We return the remote rewards and done as they are the
         # once used by the evaluator
-        # return [local_observation, remote_reward, remote_done, remote_info]
-        return [local_observation, local_reward, local_done, local_info]
+        return [local_observation, remote_reward, remote_done, remote_info]
+        # return [local_observation, local_reward, local_done, local_info]
 
     def submit(self):
         print("Mean Env Step internal : ", np.array(self.env_step_times).mean())
