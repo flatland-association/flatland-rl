@@ -21,7 +21,8 @@ The basic usage of RailEnv environments consists in creating a RailEnv object
 endowed with a rail generator, that generates new rail networks on each reset,
 and an observation generator object, that is supplied with environment-specific
 information at each time step and provides a suitable observation vector to the
-agents.
+agents. After the RailEnv environment is created, one need to call reset() on the
+environment in order to fully initialize the environment
 
 The simplest rail generators are envs.rail_generators.rail_from_manual_specifications_generator
 and envs.rail_generators.random_rail_generator.
@@ -43,6 +44,7 @@ For example,
                   rail_generator=rail_from_manual_specifications_generator(specs),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2))
+    env.reset()
 
 Alternatively, a random environment can be generated (optionally specifying
 weights for each cell type to increase or decrease their proportion in the
@@ -71,6 +73,7 @@ generated rail networks).
                             ),
                   number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2))
+    env.reset()
 
 Environments can be rendered using the utils.rendertools utilities, for example:
 
@@ -147,6 +150,7 @@ Next we configure the difficulty of our task by modifying the complex_rail_gener
                                         max_dist=99999,
                                         seed=1),
                     number_of_agents=5)
+    env.reset()
 
 The difficulty of a railway network depends on the dimensions (`width` x `height`) and the number of agents in the network.
 By varying the number of start and goal connections (nr_start_goal) and the number of extra railway elements added (nr_extra)

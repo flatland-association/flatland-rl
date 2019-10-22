@@ -18,6 +18,8 @@ env = RailEnv(width=7,
               number_of_agents=2,
               obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
+env.reset()
+
 # Print the observation vector for agent 0
 obs, all_rewards, done, _ = env.step({0: 0})
 for i in range(env.get_num_agents()):

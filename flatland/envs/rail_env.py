@@ -115,7 +115,6 @@ class RailEnv(Environment):
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
-                 max_episode_steps=None,
                  stochastic_data=None,
                  remove_agents_at_target=True,
                  random_seed=1
@@ -148,7 +147,6 @@ class RailEnv(Environment):
         obs_builder_object: ObservationBuilder object
             ObservationBuilder-derived object that takes builds observation
             vectors for each agent.
-        max_episode_steps : int or None
         remove_agents_at_target : bool
             If remove_agents_at_target is set to true then the agents will be removed by placing to
             RailEnv.DEPOT_POSITION when the agent has reach it's target position.
@@ -171,7 +169,7 @@ class RailEnv(Environment):
         self.obs_builder = obs_builder_object
         self.obs_builder.set_env(self)
 
-        self._max_episode_steps = max_episode_steps
+        self._max_episode_steps: Optional[int] = None
         self._elapsed_steps = 0
 
         self.dones = dict.fromkeys(list(range(number_of_agents)) + ["__all__"], False)
@@ -217,9 +215,6 @@ class RailEnv(Environment):
         self.max_number_of_steps_broken = malfunction_max_duration
         # Reset environment
 
-        self.reset()
-        self.num_resets = 0  # yes, set it to zero again!
-
         self.valid_positions = None
 
     def _seed(self, seed=None):
@@ -254,6 +249,32 @@ class RailEnv(Environment):
         """
         self.agents = EnvAgent.list_from_static(self.agents_static)
 
+    @staticmethod
+    def compute_max_episode_steps(width: int, height: int, ratio_nr_agents_to_nr_cities: float = 20.0) -> int:
+        """
+        compute_max_episode_steps(width, height, ratio_nr_agents_to_nr_cities, timedelay_factor, alpha)
+
+        The method computes the max number of episode steps allowed
+
+        Parameters
+        ----------
+        width : int
+            width of environment
+        height : int
+            height of environment
+        ratio_nr_agents_to_nr_cities : float, optional
+            number_of_agents/number_of_cities
+
+        Returns
+        -------
+        max_episode_steps: int
+            maximum number of episode steps
+
+        """
+        timedelay_factor = 4
+        alpha = 2
+        return int(timedelay_factor * alpha * (width + height + ratio_nr_agents_to_nr_cities))
+
     def reset(self, regen_rail=True, replace_agents=True, activate_agents=False, random_seed=None):
         """ if regen_rail then regenerate the rails.
             if replace_agents then regenerate the agents static.
@@ -275,20 +296,7 @@ class RailEnv(Environment):
             # specifications of the current environment : like width, height, etc
             self.obs_builder.set_env(self)
 
-            # NOTE : Ignore Validation on every reset. rail_generator should ensure that
-            #        only valid grids are generated.
-            #
-            # for r in range(self.height):
-            #     for c in range(self.width):
-            #         rc_pos = (r, c)
-            #         check = self.rail.cell_neighbours_valid(rc_pos, True)
-            #         if not check:
-            #             print(self.rail.grid[rc_pos])
-            #             warnings.warn("Invalid grid at {} -> {}".format(rc_pos, check))
-        # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/172
-        #  hacky: we must re-compute the distance map and not use the initial distance_map loaded from file by
-        #  rail_from_file!!!
-        elif optionals and 'distance_map' in optionals:
+        if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
         if replace_agents:
@@ -298,8 +306,16 @@ class RailEnv(Environment):
 
             # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/185
             #  why do we need static agents? could we it more elegantly?
-            self.agents_static = EnvAgentStatic.from_lists(
-                *self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets))
+            schedule = self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets)
+            self.agents_static = EnvAgentStatic.from_lists(schedule)
+
+            if agents_hints and 'city_orientations' in agents_hints:
+                ratio_nr_agents_to_nr_cities = self.get_num_agents() / len(agents_hints['city_orientations'])
+                self._max_episode_steps = self.compute_max_episode_steps(
+                                                    width=self.width, height=self.height,
+                                                    ratio_nr_agents_to_nr_cities=ratio_nr_agents_to_nr_cities)
+            else:
+                self._max_episode_steps = self.compute_max_episode_steps(width=self.width, height=self.height)
 
         self.restart_agents()
 
@@ -308,9 +324,6 @@ class RailEnv(Environment):
                 self.set_agent_active(i_agent)
 
         for i_agent, agent in enumerate(self.agents):
-            # if agent.status != RailAgentStatus.ACTIVE:
-            #    continue
-
             # A proportion of agent in the environment will receive a positive malfunction rate
             if self.np_random.rand() < self.proportion_malfunctioning_trains:
                 agent.malfunction_data['malfunction_rate'] = self.mean_malfunction_rate

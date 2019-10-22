@@ -19,6 +19,7 @@ from flatland.utils.simple_rail import make_simple_rail
 
 def test_load_env():
     env = RailEnv(10, 10)
+    env.reset()
     env.load_resource('env_data.tests', 'test-10x10.mpk')
 
     agent_static = EnvAgentStatic((0, 0), 2, (5, 5), False)
@@ -83,6 +84,7 @@ def test_rail_environment_single_agent():
                        schedule_generator=random_schedule_generator(),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
+    rail_env.reset()
 
     for _ in range(200):
         _ = rail_env.reset(False, False, True)
@@ -204,6 +206,7 @@ def test_get_entry_directions():
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
+    env.reset()
 
     def _assert(position, expected):
         actual = env.get_valid_directions_on_grid(*position)

@@ -55,6 +55,7 @@ def test_multi_speed_init():
                                                         seed=1),
                   schedule_generator=complex_schedule_generator(),
                   number_of_agents=5)
+    env.reset()
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
     agent = RandomAgent(218, 4)
 
@@ -104,6 +105,7 @@ def test_multispeed_actions_no_malfunction_no_blocking():
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
+    env.reset()
 
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
@@ -207,6 +209,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                   number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
+    env.reset()
     set_penalties_for_replay(env)
     test_configs = [
         ReplayConfig(
@@ -394,6 +397,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
+    env.reset()
 
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
@@ -531,6 +535,7 @@ def test_multispeed_actions_no_malfunction_invalid_actions():
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
+    env.reset()
 
     set_penalties_for_replay(env)
     test_config = ReplayConfig(

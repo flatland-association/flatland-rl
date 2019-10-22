@@ -24,6 +24,7 @@ def test_initial_status():
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
+    env.reset()
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
@@ -134,6 +135,7 @@ def test_status_done_remove():
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   remove_agents_at_target=True
                   )
+    env.reset()
 
     set_penalties_for_replay(env)
     test_config = ReplayConfig(

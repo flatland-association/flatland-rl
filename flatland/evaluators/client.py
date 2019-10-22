@@ -35,12 +35,12 @@ class FlatlandRemoteClient(object):
     """
         Redis client to interface with flatland-rl remote-evaluation-service
         The Docker container hosts a redis-server inside the container.
-        This client connects to the same redis-server, 
+        This client connects to the same redis-server,
         and communicates with the service.
-        The service eventually will reside outside the docker container, 
+        The service eventually will reside outside the docker container,
         and will communicate
         with the client only via the redis-server of the docker container.
-        On the instantiation of the docker container, one service will be 
+        On the instantiation of the docker container, one service will be
         instantiated parallely.
         The service will accepts commands at "`service_id`::commands"
         where `service_id` is either provided as an `env` variable or is
@@ -161,7 +161,7 @@ class FlatlandRemoteClient(object):
 
     def env_create(self, obs_builder_object):
         """
-            Create a local env and remote env on which the 
+            Create a local env and remote env on which the
             local agent can operate.
             The observation builder is only used in the local env
             and the remote env uses a DummyObservationBuilder
@@ -208,20 +208,6 @@ class FlatlandRemoteClient(object):
             obs_builder_object=obs_builder_object
         )
 
-        # Set max episode steps allowed
-        #
-        # the maximum number of episode steps is determined by : 
-        # 
-        # timedelay_factor * alpha * (grid_width + grid_height + (number_of_agents/number_of_cities))  # noqa
-        # 
-        # in the current sprase rail generator, the ratio of 
-        # `number_of_agents/number_of_cities` is roughly 20
-        #
-        # TODO: the serialized env should include the max allowed timesteps per 
-        # env, and should ideally be returned by the rail generator
-        self.env._max_episode_steps = \
-            int(4 * 2 * (self.env.width + self.env.height + 20))
-
         local_observation, info = self.env.reset(
                                 regen_rail=False,
                                 replace_agents=False,
@@ -229,7 +215,7 @@ class FlatlandRemoteClient(object):
                                 random_seed=random_seed
                             )
 
-        # Use the local observation 
+        # Use the local observation
         # as the remote server uses a dummy observation builder
         return local_observation, info
 
@@ -265,7 +251,7 @@ class FlatlandRemoteClient(object):
         # Return local_observation instead of remote_observation
         # as the remote_observation is build using a dummy observation
         # builder
-        # We return the remote rewards and done as they are the 
+        # We return the remote rewards and done as they are the
         # once used by the evaluator
         return [local_observation, remote_reward, remote_done, remote_info]
 

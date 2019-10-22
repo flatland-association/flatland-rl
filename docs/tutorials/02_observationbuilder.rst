@@ -45,6 +45,7 @@ We can pass an instance of our custom observation builder :code:`SimpleObs` to t
                   rail_generator=random_rail_generator(),
                   number_of_agents=3,
                   obs_builder_object=SimpleObs())
+    env.reset()
 
 Anytime :code:`env.reset()` or :code:`env.step()` is called, the observation builder will return the custom observation of all agents initialized in the env.
 In the next example we highlight how to derive from existing observation builders and how to access internal variables of **Flatland**.
@@ -121,6 +122,7 @@ Note that this simple strategy fails when multiple agents are present, as each a
                     min_dist=8, max_dist=99999, seed=1),
                   number_of_agents=2,
                   obs_builder_object=SingleAgentNavigationObs())
+    env.reset()
 
     obs, all_rewards, done, _ = env.step({0: 0, 1: 1})
     for i in range(env.get_num_agents()):
@@ -136,6 +138,7 @@ navigation to target, and shows the path taken as an animation.
                   rail_generator=random_rail_generator(),
                   number_of_agents=1,
                   obs_builder_object=SingleAgentNavigationObs())
+    env.reset()
 
     obs, all_rewards, done, _ = env.step({0: 0})
 
@@ -270,6 +273,7 @@ We can then use this new observation builder and the renderer to visualize the o
                   rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999, seed=1),
                   number_of_agents=3,
                   obs_builder_object=CustomObsBuilder)
+    env.reset()
 
     obs, info = env.reset()
     env_renderer = RenderTool(env, gl="PILSVG")

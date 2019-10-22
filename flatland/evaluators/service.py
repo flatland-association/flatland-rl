@@ -55,15 +55,15 @@ class FlatlandRemoteEvaluationService:
     - env_step
     and an additional `env_submit` to cater to score computation and on-episode-complete post processings.
 
-    This service is designed to be used in conjunction with 
-    `FlatlandRemoteClient` and both the srevice and client maintain a 
+    This service is designed to be used in conjunction with
+    `FlatlandRemoteClient` and both the srevice and client maintain a
     local instance of the RailEnv instance, and in case of any unexpected
-    divergences in the state of both the instances, the local RailEnv 
-    instance of the `FlatlandRemoteEvaluationService` is supposed to act 
+    divergences in the state of both the instances, the local RailEnv
+    instance of the `FlatlandRemoteEvaluationService` is supposed to act
     as the single source of truth.
 
-    Both the client and remote service communicate with each other 
-    via Redis as a message broker. The individual messages are packed and 
+    Both the client and remote service communicate with each other
+    via Redis as a message broker. The individual messages are packed and
     unpacked with `msgpack` (a patched version of msgpack which also supports
     numpy arrays).
     """
@@ -172,8 +172,8 @@ class FlatlandRemoteEvaluationService:
                 "*/*.pkl"
             )
         ))
-        # Remove the root folder name from the individual 
-        # lists, so that we only have the path relative 
+        # Remove the root folder name from the individual
+        # lists, so that we only have the path relative
         # to the test root folder
         env_paths = sorted([os.path.relpath(
             x, self.test_env_folder
@@ -183,7 +183,7 @@ class FlatlandRemoteEvaluationService:
 
     def instantiate_redis_connection_pool(self):
         """
-        Instantiates a Redis connection pool which can be used to 
+        Instantiates a Redis connection pool which can be used to
         communicate with the message broker
         """
         if self.verbose or self.report:
@@ -220,7 +220,7 @@ class FlatlandRemoteEvaluationService:
 
     def _error_template(self, payload):
         """
-        Simple helper function to pass a payload as a part of a 
+        Simple helper function to pass a payload as a part of a
         flatland comms error template.
         """
         _response = {}
@@ -233,9 +233,9 @@ class FlatlandRemoteEvaluationService:
         use_signals=use_signals_in_timeout)  # timeout for each command
     def _get_next_command(self, _redis):
         """
-        A low level wrapper for obtaining the next command from a 
+        A low level wrapper for obtaining the next command from a
         pre-agreed command channel.
-        At the momment, the communication protocol uses lpush for pushing 
+        At the momment, the communication protocol uses lpush for pushing
         in commands, and brpop for reading out commands.
         """
         command = _redis.brpop(self.command_channel)[1]
@@ -243,9 +243,9 @@ class FlatlandRemoteEvaluationService:
 
     def get_next_command(self):
         """
-        A helper function to obtain the next command, which transparently 
-        also deals with things like unpacking of the command from the 
-        packed message, and consider the timeouts, etc when trying to 
+        A helper function to obtain the next command, which transparently
+        also deals with things like unpacking of the command from the
+        packed message, and consider the timeouts, etc when trying to
         fetch a new command.
         """
         try:
@@ -306,7 +306,7 @@ class FlatlandRemoteEvaluationService:
                 "[ Server Version : {} ] ".format(service_version)
             self.send_response(_command_response, command)
             raise Exception(_command_response['payload']['message'])
-        
+
         self.send_response(_command_response, command)
 
     def handle_env_create(self, command):
@@ -339,22 +339,8 @@ class FlatlandRemoteEvaluationService:
                     del self.env_renderer
                 self.env_renderer = RenderTool(self.env, gl="PILSVG", )
 
-            # Set max episode steps allowed
-            #
-            # the maximum number of episode steps is determined by : 
-            # 
-            # timedelay_factor * alpha * (grid_width + grid_height + (number_of_agents/number_of_cities))  # noqa
-            # 
-            # in the current sprase rail generator, the ratio of 
-            # `number_of_agents/number_of_cities` is roughly 20
-            #
-            # TODO: the serialized env should include the max allowed timesteps per 
-            # env, and should ideally be returned by the rail generator
-            self.env._max_episode_steps = \
-                int(4 * 2 * (self.env.width + self.env.height + 20))
-
             if self.begin_simulation:
-                # If begin simulation has already been initialized 
+                # If begin simulation has already been initialized
                 # atleast once
                 self.simulation_times.append(time.time() - self.begin_simulation)
             self.begin_simulation = time.time()
@@ -365,7 +351,7 @@ class FlatlandRemoteEvaluationService:
             self.simulation_steps.append(0)
 
             self.current_step = 0
-            
+
             _observation, _info = self.env.reset(
                                 regen_rail=False,
                                 replace_agents=False,
@@ -507,8 +493,8 @@ class FlatlandRemoteEvaluationService:
         if self.visualize and len(os.listdir(self.vizualization_folder_name)) > 0:
             # Generate the video
             #
-            # Note, if you had depdency issues due to ffmpeg, you can 
-            # install it by : 
+            # Note, if you had depdency issues due to ffmpeg, you can
+            # install it by :
             #
             # conda install -c conda-forge x264 ffmpeg
 

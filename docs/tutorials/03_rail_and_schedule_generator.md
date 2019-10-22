@@ -7,13 +7,13 @@ Let's have a look at the `sparse_rail_generator`.
 ## Sparse Rail Generator
 ![Example_Sparse](https://i.imgur.com/DP8sIyx.png)
 
-The idea behind the sparse rail generator is to mimic classic railway structures where dense nodes (cities) are sparsely connected to each other and where you have to manage traffic flow between the nodes efficiently. 
+The idea behind the sparse rail generator is to mimic classic railway structures where dense nodes (cities) are sparsely connected to each other and where you have to manage traffic flow between the nodes efficiently.
 The cities in this level generator are much simplified in comparison to real city networks but it mimics parts of the problems faced in daily operations of any railway company.
 
-There are a few parameters you can tune to build your own map and test different complexity levels of the levels. 
-**Warning** some combinations of parameters do not go well together and will lead to infeasible level generation. 
-In the worst case, the level generator currently issues a warning when it cannot build the environment according to the parameters provided. 
-This will lead to a crash of the whole env. 
+There are a few parameters you can tune to build your own map and test different complexity levels of the levels.
+**Warning** some combinations of parameters do not go well together and will lead to infeasible level generation.
+In the worst case, the level generator currently issues a warning when it cannot build the environment according to the parameters provided.
+This will lead to a crash of the whole env.
 We are currently working on improvements here and are **happy for any suggestions from your side**.
 
 To build an environment you instantiate a `RailEnv` as follows:
@@ -40,6 +40,8 @@ env = RailEnv(
     number_of_agents=10,
     obs_builder_object=TreeObsForRailEnv(max_depth=3,predictor=shortest_path_predictor)
 )
+ Call reset on the environment
+env.reset()
 ```
 
 You can see that you now need both a `rail_generator` and a `schedule_generator` to generate a level. These need to work nicely together. The `rail_generator` will only generate the railway infrastructure and provide hints to the `schedule_generator` about where to place agents. The `schedule_generator` will then generate a schedule, meaning it places agents at different train stations and gives them tasks by providing individual targets.
