@@ -353,8 +353,8 @@ class FlatlandRemoteEvaluationService:
             self.current_step = 0
 
             _observation, _info = self.env.reset(
-                                regen_rail=False,
-                                replace_agents=False,
+                                regenerate_rail=False,
+                                regenerate_schedule=False,
                                 activate_agents=False,
                                 random_seed=RANDOM_SEED
                                 )

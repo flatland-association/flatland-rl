@@ -55,7 +55,6 @@ def test_multi_speed_init():
                                                         seed=1),
                   schedule_generator=complex_schedule_generator(),
                   number_of_agents=5)
-    env.reset()
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
     agent = RandomAgent(218, 4)
 

@@ -275,17 +275,37 @@ class RailEnv(Environment):
         alpha = 2
         return int(timedelay_factor * alpha * (width + height + ratio_nr_agents_to_nr_cities))
 
-    def reset(self, regen_rail=True, replace_agents=True, activate_agents=False, random_seed=None):
-        """ if regen_rail then regenerate the rails.
-            if replace_agents then regenerate the agents static.
-            Relies on the rail_generator returning agent_static lists (pos, dir, target)
+    def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, activate_agents: bool = False,
+              random_seed: bool = None) -> (Dict, Dict):
+        """
+        reset(regenerate_rail, regenerate_schedule, activate_agents, random_seed)
+
+        The method resets the rail environment
+
+        Parameters
+        ----------
+        regenerate_rail : bool, optional
+            regenerate the rails
+        regenerate_schedule : bool, optional
+            regenerate the schedule and the static agents
+        activate_agents : bool, optional
+            activate the agents
+        random_seed : bool, optional
+            random seed for environment
+
+        Returns
+        -------
+        observation_dict: Dict
+            Dictionary with an observation for each agent
+        info_dict: Dict with agent specific information
+
         """
 
         if random_seed:
             self._seed(random_seed)
 
         optionals = {}
-        if regen_rail or self.rail is None:
+        if regenerate_rail or self.rail is None:
             rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
             self.rail = rail
@@ -299,7 +319,9 @@ class RailEnv(Environment):
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
-        if replace_agents:
+        # todo change self.agents_static[0] with the refactoring for agents_static -> issue nr. 185
+        # https://gitlab.aicrowd.com/flatland/flatland/issues/185
+        if regenerate_schedule or self.agents_static[0] is None:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
@@ -347,7 +369,7 @@ class RailEnv(Environment):
         self.obs_builder.reset()
         self.distance_map.reset(self.agents, self.rail)
 
-        info_dict = {
+        info_dict: Dict = {
             'action_required': {
                 i: (agent.status == RailAgentStatus.READY_TO_DEPART or (
                     agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0))
@@ -359,7 +381,8 @@ class RailEnv(Environment):
             'status': {i: agent.status for i, agent in enumerate(self.agents)}
         }
         # Return the new observation vectors for each agent
-        return self._get_observations(), info_dict
+        observation_dict: Dict = self._get_observations()
+        return observation_dict, info_dict
 
     def _agent_malfunction(self, i_agent) -> bool:
         """

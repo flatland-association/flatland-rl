@@ -25,6 +25,7 @@ def test_empty_rail_generator():
                   number_of_agents=n_agents,
                   rail_generator=empty_rail_generator()
                   )
+    env.reset()
     # Check the dimensions
     assert env.rail.grid.shape == (y_dim, x_dim)
     # Check that no grid was generated
@@ -45,6 +46,7 @@ def test_random_rail_generator():
                   number_of_agents=n_agents,
                   rail_generator=random_rail_generator()
                   )
+    env.reset()
     assert env.rail.grid.shape == (y_dim, x_dim)
     assert env.get_num_agents() == n_agents
 
@@ -63,6 +65,7 @@ def test_complex_rail_generator():
                   rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist),
                   schedule_generator=complex_schedule_generator()
                   )
+    env.reset()
     assert env.get_num_agents() == 2
     assert env.rail.grid.shape == (y_dim, x_dim)
 
@@ -75,6 +78,7 @@ def test_complex_rail_generator():
                   rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist),
                   schedule_generator=complex_schedule_generator()
                   )
+    env.reset()
     assert env.get_num_agents() == 0
     assert env.rail.grid.shape == (y_dim, x_dim)
 
@@ -89,6 +93,7 @@ def test_complex_rail_generator():
                   rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist),
                   schedule_generator=complex_schedule_generator()
                   )
+    env.reset()
     assert env.get_num_agents() == n_agents
     assert env.rail.grid.shape == (y_dim, x_dim)
 
@@ -129,6 +134,7 @@ def tests_rail_from_file():
                   number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
+    env.reset()
     env.save(file_name)
     dist_map_shape = np.shape(env.distance_map.get())
     # initialize agents_static
@@ -142,6 +148,7 @@ def tests_rail_from_file():
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
+    env.reset()
     rails_loaded = env.rail.grid
     agents_loaded = env.agents
 
@@ -163,7 +170,7 @@ def tests_rail_from_file():
                    number_of_agents=3,
                    obs_builder_object=GlobalObsForRailEnv(),
                    )
-
+    env2.reset()
     env2.save(file_name_2)
 
     # initialize agents_static
@@ -177,7 +184,7 @@ def tests_rail_from_file():
                    number_of_agents=1,
                    obs_builder_object=GlobalObsForRailEnv(),
                    )
-
+    env2.reset()
     rails_loaded_2 = env2.rail.grid
     agents_loaded_2 = env2.agents
 
@@ -194,7 +201,7 @@ def tests_rail_from_file():
                    number_of_agents=1,
                    obs_builder_object=GlobalObsForRailEnv(),
                    )
-
+    env3.reset()
     rails_loaded_3 = env3.rail.grid
     agents_loaded_3 = env3.agents
 
@@ -212,7 +219,7 @@ def tests_rail_from_file():
                    number_of_agents=1,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2),
                    )
-
+    env4.reset()
     rails_loaded_4 = env4.rail.grid
     agents_loaded_4 = env4.agents
 
