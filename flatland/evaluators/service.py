@@ -123,6 +123,7 @@ class FlatlandRemoteEvaluationService:
                 "normalized_reward": 0.0
             }
         }
+        self.stats = {}
 
         # RailEnv specific variables
         self.env = False
@@ -148,6 +149,21 @@ class FlatlandRemoteEvaluationService:
                 ))
                 shutil.rmtree(self.vizualization_folder_name)
             os.mkdir(self.vizualization_folder_name)
+
+    def update_running_mean_stats(self, key, scalar):
+        """
+        Computes the running mean for certain params
+        """
+        mean_key = "{}_mean".format(key)
+        counter_key = "{}_counter".format(key)
+
+        try:
+            self.stats[mean_key] = \
+                ((self.stats[mean_key] * self.stats[counter_key]) + scalar) / (self.stats[counter_key] + 1)
+            self.stats[counter_key] += 1
+        except KeyError:
+            self.stats[mean_key] = 0
+            self.stats[counter_key] = 0
 
     def get_env_filepaths(self):
         """
@@ -256,7 +272,9 @@ class FlatlandRemoteEvaluationService:
         )
         if self.verbose:
             print("Received Request : ", command)
-
+        
+        message_queue_latency = time.time() - command["timestamp"]
+        self.update_running_mean_stats("message_queue_latency", message_queue_latency)
         return command
 
     def send_response(self, _command_response, command, suppress_logs=False):
@@ -309,7 +327,6 @@ class FlatlandRemoteEvaluationService:
             """
             There are still test envs left that are yet to be evaluated 
             """
-
             test_env_file_path = self.env_file_paths[self.simulation_count]
             print("Evaluating : {}".format(test_env_file_path))
             test_env_file_path = os.path.join(
@@ -324,6 +341,7 @@ class FlatlandRemoteEvaluationService:
                 schedule_generator=schedule_from_file(test_env_file_path),
                 obs_builder_object=DummyObservationBuilder()
             )
+
             if self.visualize:
                 if self.env_renderer:
                     del self.env_renderer
@@ -404,9 +422,10 @@ class FlatlandRemoteEvaluationService:
         action = _payload['action']
         time_start = time.time()
         _observation, all_rewards, done, info = self.env.step(action)
-        self.env_step_times.append(time.time() - time_start)
+        time_diff = time.time() - time_start
+        self.update_running_mean_stats("internal_env_step_time", time_diff)
 
-        cumulative_reward = np.sum(list(all_rewards.values()))
+        cumulative_reward = sum(all_rewards.values())
         self.simulation_rewards[-1] += cumulative_reward
         self.simulation_steps[-1] += 1
         """
@@ -451,16 +470,6 @@ class FlatlandRemoteEvaluationService:
                     ))
                 self.record_frame_step += 1
 
-        # Build and send response
-        _command_response = {}
-        _command_response['type'] = messages.FLATLAND_RL.ENV_STEP_RESPONSE
-        _command_response['payload'] = {}
-        _command_response['payload']['observation'] = _observation
-        _command_response['payload']['reward'] = all_rewards
-        _command_response['payload']['done'] = done
-        _command_response['payload']['info'] = info
-        self.send_response(_command_response, command)
-
     def handle_env_submit(self, command):
         """
         Handles a ENV_SUBMIT command from the client
@@ -468,7 +477,17 @@ class FlatlandRemoteEvaluationService:
         """
         _payload = command['payload']
 
-        print("Mean Env Step Time : ", np.array(self.env_step_times).mean())
+        ######################################################################
+        # Print Local Stats
+        ######################################################################
+        print("="*100)
+        print("="*100)
+        print("## Server Performance Stats")
+        print("="*100)
+        for _key in self.stats:
+            if _key.endswith("_mean"):
+                print("\t - {}\t:{}".format(_key, self.stats[_key]))
+        print("="*100)
 
         # Register simulation time of the last episode
         self.simulation_times.append(time.time() - self.begin_simulation)
