@@ -319,6 +319,8 @@ class RailEnv(Environment):
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
+        # todo change self.agents_static[0] with the refactoring for agents_static -> issue nr. 185
+        # https://gitlab.aicrowd.com/flatland/flatland/issues/185
         if regenerate_schedule or self.agents_static[0] is None:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:

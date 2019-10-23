@@ -232,7 +232,7 @@ def test_get_entry_directions():
 def test_rail_env_reset():
     file_name = "test_rail_env_reset.pkl"
 
-    # Test to save and load file with distance map.
+    # Test to save and load file.
 
     rail, rail_map = make_simple_rail()
 
@@ -264,10 +264,6 @@ def test_rail_env_reset():
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
 
-    # Check that distance map was not recomputed
-    assert np.shape(env2.distance_map.get()) == dist_map_shape
-    assert env2.distance_map.get() is not None
-
     env3 = RailEnv(width=1,
                   height=1,
                   rail_generator=rail_from_file(file_name),
@@ -282,10 +278,6 @@ def test_rail_env_reset():
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
 
-    # Check that distance map was not recomputed
-    assert np.shape(env3.distance_map.get()) == dist_map_shape
-    assert env3.distance_map.get() is not None
-
     env4 = RailEnv(width=1,
                   height=1,
                   rail_generator=rail_from_file(file_name),
@@ -299,7 +291,3 @@ def test_rail_env_reset():
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
-
-    # Check that distance map was not recomputed
-    assert np.shape(env4.distance_map.get()) == dist_map_shape
-    assert env4.distance_map.get() is not None
