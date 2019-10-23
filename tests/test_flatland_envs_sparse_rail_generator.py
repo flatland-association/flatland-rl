@@ -25,7 +25,6 @@ def test_sparse_rail_generator():
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv()
                   )
-    env.reset()
     env.reset(False, False, True)
     # for r in range(env.height):
     #    for c in range (env.width):
@@ -1345,7 +1344,6 @@ def test_rail_env_action_required_info():
                                 number_of_agents=10,
                                 obs_builder_object=GlobalObsForRailEnv(),
                                 remove_agents_at_target=False)
-    env_always_action.reset()
     np.random.seed(0)
     random.seed(0)
     env_only_if_action_required = RailEnv(width=50,
@@ -1361,7 +1359,6 @@ def test_rail_env_action_required_info():
                                           number_of_agents=10,
                                           obs_builder_object=GlobalObsForRailEnv(),
                                           remove_agents_at_target=False)
-    env_only_if_action_required.reset()
     env_renderer = RenderTool(env_always_action, gl="PILSVG", )
 
     env_always_action.reset(False, False, True)
@@ -1432,7 +1429,6 @@ def test_rail_env_malfunction_speed_info():
                   number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv(),
                   stochastic_data=stochastic_data)
-    env.reset()
     env.reset(False, False, True)
 
     env_renderer = RenderTool(env, gl="PILSVG", )
