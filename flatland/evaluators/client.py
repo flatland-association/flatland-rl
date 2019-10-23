@@ -213,7 +213,7 @@ class FlatlandRemoteClient(object):
                 "to point to the location of the Tests folder ? \n"
                 "We are currently looking at `{}` for the tests".format(self.test_envs_root)
             )
-        
+
         if self.verbose:
             print("Current env path : ", test_env_file_path)
         self.current_env_path = test_env_file_path
@@ -226,8 +226,8 @@ class FlatlandRemoteClient(object):
         )
 
         local_observation, info = self.env.reset(
-                                regen_rail=True,
-                                replace_agents=True,
+                                regenerate_rail=False,
+                                regenerate_schedule=False,
                                 activate_agents=False,
                                 random_seed=random_seed
                             )

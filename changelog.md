@@ -10,6 +10,7 @@ Changes since Flatland 2.0.0
 ### Changes in rail generator and `RailEnv`
 - renaming of `distance_maps` into `distance_map`
 - by default the reset method of RailEnv is not called in the constructor of RailEnv anymore (compliance for OpenAI Gym). Therefore the reset method needs to be called after the creation of a RailEnv object
+- renaming of parameters RailEnv.reset(): from `regen_rail` to `regenerate_rail`, from `replace_agents` to `regenerate_schedule`
 
 ### Changes in schedule generation
 - return value of schedule generator has changed to the named tuple `Schedule`. From the point of view of a consumer, nothing has changed, this is just a type hint which is introduced where the attributes of `Schedule` have names.

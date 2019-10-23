@@ -323,7 +323,7 @@ class Controller(object):
         self.log("Reset - nAgents:", self.view.regen_n_agents.value)
         self.log("Reset - size:", self.model.regen_size_width)
         self.log("Reset - size:", self.model.regen_size_height)
-        self.model.reset(replace_agents=self.view.replace_agents.value,
+        self.model.reset(regenerate_schedule=self.view.replace_agents.value,
                          nAgents=self.view.regen_n_agents.value)
 
     def rotate_agent(self, event):
@@ -611,7 +611,7 @@ class EditorModel(object):
         self.env.rail.grid[cell_row_col[0], cell_row_col[1]] = 0
         self.redraw()
 
-    def reset(self, replace_agents=False, nAgents=0):
+    def reset(self, regenerate_schedule=False, nAgents=0):
         self.regenerate("complex", nAgents=nAgents)
         self.redraw()
 
@@ -676,7 +676,7 @@ class EditorModel(object):
                                obs_builder_object=TreeObsForRailEnv(max_depth=2))
         else:
             self.env = env
-        self.env.reset(regen_rail=True)
+        self.env.reset(regenerate_rail=True)
         self.fix_env()
         self.set_env(self.env)
         self.view.new_env()

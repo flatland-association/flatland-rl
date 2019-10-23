@@ -114,7 +114,7 @@ The environment's `reset` takes care of applying the two generators:
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
 
-    def reset(self, regen_rail=True, replace_agents=True):
+    def reset(self, regenerate_rail=True, regenerate_schedule=True):
         rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
 
         ...
