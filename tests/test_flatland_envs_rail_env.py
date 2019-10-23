@@ -84,7 +84,6 @@ def test_rail_environment_single_agent():
                        schedule_generator=random_schedule_generator(),
                        number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
-    rail_env.reset()
 
     for _ in range(200):
         _ = rail_env.reset(False, False, True)

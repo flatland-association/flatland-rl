@@ -299,7 +299,7 @@ class RailEnv(Environment):
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
-        if replace_agents:
+        if replace_agents or self.agents_static[0] is None:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']

@@ -81,7 +81,6 @@ def test_malfunction_process():
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    env.reset()
     # reset to initialize agents_static
     obs, info = env.reset(False, False, True, random_seed=10)
 
@@ -197,7 +196,6 @@ def test_malfunction_before_entry():
                   random_seed=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
-    env.reset()
     # reset to initialize agents_static
     env.reset(False, False, False, random_seed=10)
     env.agents[0].target = (0, 0)
@@ -256,8 +254,6 @@ def test_initial_malfunction():
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    env.reset()
-
     # reset to initialize agents_static
     env.reset(False, False, True, random_seed=10)
     print(env.agents[0].malfunction_data)
