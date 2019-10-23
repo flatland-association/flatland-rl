@@ -1343,7 +1343,8 @@ def test_rail_env_action_required_info():
                                 ),
                                 schedule_generator=sparse_schedule_generator(speed_ration_map),
                                 number_of_agents=10,
-                                obs_builder_object=GlobalObsForRailEnv())
+                                obs_builder_object=GlobalObsForRailEnv(),
+                                remove_agents_at_target=False)
     env_always_action.reset()
     np.random.seed(0)
     random.seed(0)
@@ -1358,7 +1359,8 @@ def test_rail_env_action_required_info():
                                           ),
                                           schedule_generator=sparse_schedule_generator(speed_ration_map),
                                           number_of_agents=10,
-                                          obs_builder_object=GlobalObsForRailEnv())
+                                          obs_builder_object=GlobalObsForRailEnv(),
+                                          remove_agents_at_target=False)
     env_only_if_action_required.reset()
     env_renderer = RenderTool(env_always_action, gl="PILSVG", )
 
