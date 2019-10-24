@@ -446,7 +446,7 @@ class FlatlandRemoteEvaluationService:
             complete = 0
             for i_agent in range(self.env.get_num_agents()):
                 agent = self.env.agents[i_agent]
-                if agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED]:
+                if agent.status in [RailAgentStatus.DONE_REMOVED]:
                     complete += 1
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
