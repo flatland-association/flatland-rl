@@ -18,6 +18,7 @@ import timeout_decorator
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.rail_generators import rail_from_file
 from flatland.envs.schedule_generators import schedule_from_file
 from flatland.evaluators import aicrowd_helpers
@@ -123,6 +124,7 @@ class FlatlandRemoteEvaluationService:
                 "normalized_reward": 0.0
             }
         }
+        self.stats = {}
 
         # RailEnv specific variables
         self.env = False
@@ -134,6 +136,7 @@ class FlatlandRemoteEvaluationService:
         self.simulation_percentage_complete = []
         self.simulation_steps = []
         self.simulation_times = []
+        self.env_step_times = []
         self.begin_simulation = False
         self.current_step = 0
         self.visualize = visualize
@@ -147,6 +150,21 @@ class FlatlandRemoteEvaluationService:
                 ))
                 shutil.rmtree(self.vizualization_folder_name)
             os.mkdir(self.vizualization_folder_name)
+
+    def update_running_mean_stats(self, key, scalar):
+        """
+        Computes the running mean for certain params
+        """
+        mean_key = "{}_mean".format(key)
+        counter_key = "{}_counter".format(key)
+
+        try:
+            self.stats[mean_key] = \
+                ((self.stats[mean_key] * self.stats[counter_key]) + scalar) / (self.stats[counter_key] + 1)
+            self.stats[counter_key] += 1
+        except KeyError:
+            self.stats[mean_key] = 0
+            self.stats[counter_key] = 0
 
     def get_env_filepaths(self):
         """
@@ -198,25 +216,14 @@ class FlatlandRemoteEvaluationService:
             db=self.remote_db,
             password=self.remote_password
         )
+        self.redis_conn = redis.Redis(connection_pool=self.redis_pool)
 
     def get_redis_connection(self):
         """
         Obtains a new redis connection from a previously instantiated
         redis connection pool
         """
-        redis_conn = redis.Redis(connection_pool=self.redis_pool)
-        try:
-            redis_conn.ping()
-        except Exception:
-            raise Exception(
-                "Unable to connect to redis server at {}:{} ."
-                "Are you sure there is a redis-server running at the "
-                "specified location ?".format(
-                    self.remote_host,
-                    self.remote_port
-                )
-            )
-        return redis_conn
+        return self.redis_conn
 
     def _error_template(self, payload):
         """
@@ -266,7 +273,9 @@ class FlatlandRemoteEvaluationService:
         )
         if self.verbose:
             print("Received Request : ", command)
-
+        
+        message_queue_latency = time.time() - command["timestamp"]
+        self.update_running_mean_stats("message_queue_latency", message_queue_latency)
         return command
 
     def send_response(self, _command_response, command, suppress_logs=False):
@@ -319,7 +328,6 @@ class FlatlandRemoteEvaluationService:
             """
             There are still test envs left that are yet to be evaluated 
             """
-
             test_env_file_path = self.env_file_paths[self.simulation_count]
             print("Evaluating : {}".format(test_env_file_path))
             test_env_file_path = os.path.join(
@@ -334,10 +342,6 @@ class FlatlandRemoteEvaluationService:
                 schedule_generator=schedule_from_file(test_env_file_path),
                 obs_builder_object=DummyObservationBuilder()
             )
-            if self.visualize:
-                if self.env_renderer:
-                    del self.env_renderer
-                self.env_renderer = RenderTool(self.env, gl="PILSVG", )
 
             if self.begin_simulation:
                 # If begin simulation has already been initialized
@@ -353,11 +357,16 @@ class FlatlandRemoteEvaluationService:
             self.current_step = 0
 
             _observation, _info = self.env.reset(
-                                regenerate_rail=False,
-                                regenerate_schedule=False,
+                                regenerate_rail=True,
+                                regenerate_schedule=True,
                                 activate_agents=False,
                                 random_seed=RANDOM_SEED
                                 )
+
+            if self.visualize:
+                if self.env_renderer:
+                    del self.env_renderer
+                self.env_renderer = RenderTool(self.env, gl="PILSVG", )
 
             _command_response = {}
             _command_response['type'] = messages.FLATLAND_RL.ENV_CREATE_RESPONSE
@@ -412,9 +421,12 @@ class FlatlandRemoteEvaluationService:
                 has done['__all__']==True")
 
         action = _payload['action']
+        time_start = time.time()
         _observation, all_rewards, done, info = self.env.step(action)
+        time_diff = time.time() - time_start
+        self.update_running_mean_stats("internal_env_step_time", time_diff)
 
-        cumulative_reward = np.sum(list(all_rewards.values()))
+        cumulative_reward = sum(all_rewards.values())
         self.simulation_rewards[-1] += cumulative_reward
         self.simulation_steps[-1] += 1
         """
@@ -434,7 +446,7 @@ class FlatlandRemoteEvaluationService:
             complete = 0
             for i_agent in range(self.env.get_num_agents()):
                 agent = self.env.agents[i_agent]
-                if agent.position == agent.target:
+                if agent.status in [RailAgentStatus.DONE_REMOVED]:
                     complete += 1
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
@@ -459,22 +471,24 @@ class FlatlandRemoteEvaluationService:
                     ))
                 self.record_frame_step += 1
 
-        # Build and send response
-        _command_response = {}
-        _command_response['type'] = messages.FLATLAND_RL.ENV_STEP_RESPONSE
-        _command_response['payload'] = {}
-        _command_response['payload']['observation'] = _observation
-        _command_response['payload']['reward'] = all_rewards
-        _command_response['payload']['done'] = done
-        _command_response['payload']['info'] = info
-        self.send_response(_command_response, command)
-
     def handle_env_submit(self, command):
         """
         Handles a ENV_SUBMIT command from the client
         TODO: Add a high level summary of everything thats happening here.
         """
         _payload = command['payload']
+
+        ######################################################################
+        # Print Local Stats
+        ######################################################################
+        print("="*100)
+        print("="*100)
+        print("## Server Performance Stats")
+        print("="*100)
+        for _key in self.stats:
+            if _key.endswith("_mean"):
+                print("\t - {}\t:{}".format(_key, self.stats[_key]))
+        print("="*100)
 
         # Register simulation time of the last episode
         self.simulation_times.append(time.time() - self.begin_simulation)
@@ -594,8 +608,12 @@ class FlatlandRemoteEvaluationService:
         and acts accordingly.
         """
         print("Listening at : ", self.command_channel)
+        MESSAGE_QUEUE_LATENCY = []
         while True:
             command = self.get_next_command()
+            if "timestamp" in command.keys():
+                latency = time.time() - command["timestamp"]
+                MESSAGE_QUEUE_LATENCY.append(latency)
 
             if self.verbose:
                 print("Self.Reward : ", self.reward)
@@ -633,6 +651,8 @@ class FlatlandRemoteEvaluationService:
 
                         Submit the final cumulative reward
                     """
+
+                    print("Overall Message Queue Latency : ", np.array(MESSAGE_QUEUE_LATENCY).mean())
                     self.handle_env_submit(command)
                 else:
                     _error = self._error_template(

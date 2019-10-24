@@ -23,14 +23,6 @@ logger.setLevel(logging.INFO)
 m.patch()
 
 
-def are_dicts_equal(d1, d2):
-    """ return True if all keys and values are the same """
-    return all(k in d2 and np.isclose(d1[k], d2[k])
-               for k in d1) \
-           and all(k in d1 and np.isclose(d1[k], d2[k])
-                   for k in d2)
-
-
 class FlatlandRemoteClient(object):
     """
         Redis client to interface with flatland-rl remote-evaluation-service
@@ -64,6 +56,8 @@ class FlatlandRemoteClient(object):
             port=remote_port,
             db=remote_db,
             password=remote_password)
+        self.redis_conn = redis.Redis(connection_pool=self.redis_pool)
+
         self.namespace = "flatland-rl"
         self.service_id = os.getenv(
             'FLATLAND_RL_SERVICE_ID',
@@ -87,8 +81,26 @@ class FlatlandRemoteClient(object):
         self.env = None
         self.ping_pong()
 
+        self.env_step_times = []
+        self.stats = {}
+
+    def update_running_mean_stats(self, key, scalar):
+        """
+        Computes the running mean for certain params
+        """
+        mean_key = "{}_mean".format(key)
+        counter_key = "{}_counter".format(key)
+
+        try:
+            self.stats[mean_key] = \
+                ((self.stats[mean_key] * self.stats[counter_key]) + scalar) / (self.stats[counter_key] + 1)
+            self.stats[counter_key] += 1
+        except KeyError:
+            self.stats[mean_key] = 0
+            self.stats[counter_key] = 0
+
     def get_redis_connection(self):
-        return redis.Redis(connection_pool=self.redis_pool)
+        return self.redis_conn
 
     def _generate_response_channel(self):
         random_hash = hashlib.md5(
@@ -100,7 +112,7 @@ class FlatlandRemoteClient(object):
                                                          random_hash)
         return response_channel
 
-    def _blocking_request(self, _request):
+    def _remote_request(self, _request, blocking=True):
         """
             request:
                 -command_type
@@ -114,6 +126,7 @@ class FlatlandRemoteClient(object):
         """
         assert isinstance(_request, dict)
         _request['response_channel'] = self._generate_response_channel()
+        _request['timestamp'] = time.time()
 
         _redis = self.get_redis_connection()
         """
@@ -126,18 +139,20 @@ class FlatlandRemoteClient(object):
         # Note: The patched msgpack supports numpy arrays
         payload = msgpack.packb(_request, default=m.encode, use_bin_type=True)
         _redis.lpush(self.command_channel, payload)
-        # Wait with a blocking pop for the response
-        _response = _redis.blpop(_request['response_channel'])[1]
-        if self.verbose:
-            print("Response : ", _response)
-        _response = msgpack.unpackb(
-            _response,
-            object_hook=m.decode,
-            encoding="utf8")
-        if _response['type'] == messages.FLATLAND_RL.ERROR:
-            raise Exception(str(_response["payload"]))
-        else:
-            return _response
+
+        if blocking:
+            # Wait with a blocking pop for the response
+            _response = _redis.blpop(_request['response_channel'])[1]
+            if self.verbose:
+                print("Response : ", _response)
+            _response = msgpack.unpackb(
+                _response,
+                object_hook=m.decode,
+                encoding="utf8")
+            if _response['type'] == messages.FLATLAND_RL.ERROR:
+                raise Exception(str(_response["payload"]))
+            else:
+                return _response
 
     def ping_pong(self):
         """
@@ -151,7 +166,7 @@ class FlatlandRemoteClient(object):
         _request['payload'] = {
             "version": flatland.__version__
         }
-        _response = self._blocking_request(_request)
+        _response = self._remote_request(_request)
         if _response['type'] != messages.FLATLAND_RL.PONG:
             raise Exception(
                 "Unable to perform handshake with the evaluation service. \
@@ -166,13 +181,17 @@ class FlatlandRemoteClient(object):
             The observation builder is only used in the local env
             and the remote env uses a DummyObservationBuilder
         """
+        time_start = time.time()
         _request = {}
         _request['type'] = messages.FLATLAND_RL.ENV_CREATE
         _request['payload'] = {}
-        _response = self._blocking_request(_request)
+        _response = self._remote_request(_request)
         observation = _response['payload']['observation']
         info = _response['payload']['info']
         random_seed = _response['payload']['random_seed']
+        test_env_file_path = _response['payload']['env_file_path']
+        time_diff = time.time() - time_start
+        self.update_running_mean_stats("env_creation_wait_time", time_diff)
 
         if not observation:
             # If the observation is False,
@@ -180,7 +199,6 @@ class FlatlandRemoteClient(object):
             # hence return false
             return observation, info
 
-        test_env_file_path = _response['payload']['env_file_path']
         if self.verbose:
             print("Received Env : ", test_env_file_path)
 
@@ -207,13 +225,15 @@ class FlatlandRemoteClient(object):
             obs_builder_object=obs_builder_object
         )
 
+        time_start = time.time()
         local_observation, info = self.env.reset(
-                                regenerate_rail=False,
-                                regenerate_schedule=False,
+                                regenerate_rail=True,
+                                regenerate_schedule=True,
                                 activate_agents=False,
                                 random_seed=random_seed
                             )
-
+        time_diff = time.time() - time_start
+        self.update_running_mean_stats("internal_env_reset_time", time_diff)
         # Use the local observation
         # as the remote server uses a dummy observation builder
         return local_observation, info
@@ -226,39 +246,38 @@ class FlatlandRemoteClient(object):
         _request['type'] = messages.FLATLAND_RL.ENV_STEP
         _request['payload'] = {}
         _request['payload']['action'] = action
-        _response = self._blocking_request(_request)
-        _payload = _response['payload']
+        
+        # Relay the action in a non-blocking way to the server 
+        # so that it can start doing an env.step on it in ~ parallel
+        self._remote_request(_request, blocking=False)
 
-        # remote_observation = _payload['observation']  # noqa
-        remote_reward = _payload['reward']
-        remote_done = _payload['done']
-        remote_info = _payload['info']
-
-        # Replicate the action in the local env
+        # Apply the action in the local env
+        time_start = time.time()
         local_observation, local_reward, local_done, local_info = \
             self.env.step(action)
+        time_diff = time.time() - time_start
+        # Compute a running mean of env step times
+        self.update_running_mean_stats("internal_env_step_time", time_diff)
 
-        if self.verbose:
-            print(local_reward)
-        if not are_dicts_equal(remote_reward, local_reward):
-            print("Remote Reward : ", remote_reward, "Local Reward : ", local_reward)
-            raise Exception("local and remote `reward` are diverging")
-        if not are_dicts_equal(remote_done, local_done):
-            print("Remote Done : ", remote_done, "Local Done : ", local_done)
-            raise Exception("local and remote `done` are diverging")
-
-        # Return local_observation instead of remote_observation
-        # as the remote_observation is build using a dummy observation
-        # builder
-        # We return the remote rewards and done as they are the
-        # once used by the evaluator
-        return [local_observation, remote_reward, remote_done, remote_info]
+        return [local_observation, local_reward, local_done, local_info]
 
     def submit(self):
         _request = {}
         _request['type'] = messages.FLATLAND_RL.ENV_SUBMIT
         _request['payload'] = {}
-        _response = self._blocking_request(_request)
+        _response = self._remote_request(_request)
+
+        ######################################################################
+        # Print Local Stats
+        ######################################################################
+        print("="*100)
+        print("="*100)
+        print("## Client Performance Stats")
+        print("="*100)
+        for _key in self.stats:
+            if _key.endswith("_mean"):
+                print("\t - {}\t:{}".format(_key, self.stats[_key]))
+        print("="*100)
         if os.getenv("AICROWD_BLOCKING_SUBMIT"):
             """
             If the submission is supposed to happen as a blocking submit,
@@ -279,13 +298,12 @@ if __name__ == "__main__":
             _action[_idx] = np.random.randint(0, 5)
         return _action
 
-    my_observation_builder = TreeObsForRailEnv(max_depth=3,
-                                               predictor=ShortestPathPredictorForRailEnv())
+    my_observation_builder = DummyObservationBuilder()
 
     episode = 0
     obs = True
     while obs:
-        obs = remote_client.env_create(
+        obs, info = remote_client.env_create(
             obs_builder_object=my_observation_builder
         )
         if not obs:
@@ -301,7 +319,10 @@ if __name__ == "__main__":
 
         while True:
             action = my_controller(obs, remote_client.env)
+            time_start = time.time()
             observation, all_rewards, done, info = remote_client.env_step(action)
+            time_diff = time.time() - time_start
+            print("Step Time : ", time_diff)
             if done['__all__']:
                 print("Current Episode : ", episode)
                 print("Episode Done")
