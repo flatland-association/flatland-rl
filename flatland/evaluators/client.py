@@ -227,8 +227,8 @@ class FlatlandRemoteClient(object):
 
         time_start = time.time()
         local_observation, info = self.env.reset(
-                                regenerate_rail=False,
-                                regenerate_schedule=False,
+                                regenerate_rail=True,
+                                regenerate_schedule=True,
                                 activate_agents=False,
                                 random_seed=random_seed
                             )
