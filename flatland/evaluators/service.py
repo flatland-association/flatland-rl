@@ -343,11 +343,6 @@ class FlatlandRemoteEvaluationService:
                 obs_builder_object=DummyObservationBuilder()
             )
 
-            if self.visualize:
-                if self.env_renderer:
-                    del self.env_renderer
-                self.env_renderer = RenderTool(self.env, gl="PILSVG", )
-
             if self.begin_simulation:
                 # If begin simulation has already been initialized
                 # atleast once
@@ -367,6 +362,11 @@ class FlatlandRemoteEvaluationService:
                                 activate_agents=False,
                                 random_seed=RANDOM_SEED
                                 )
+
+            if self.visualize:
+                if self.env_renderer:
+                    del self.env_renderer
+                self.env_renderer = RenderTool(self.env, gl="PILSVG", )
 
             _command_response = {}
             _command_response['type'] = messages.FLATLAND_RL.ENV_CREATE_RESPONSE
