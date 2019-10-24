@@ -488,6 +488,8 @@ class RailEnv(Environment):
             self.rewards_dict = {i: self.global_reward for i in range(self.get_num_agents())}
         if (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps):
             self.dones["__all__"] = True
+            for i_agent in range(self.get_num_agents()):
+                self.dones[i] = True
 
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
