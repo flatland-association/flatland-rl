@@ -334,8 +334,8 @@ class RailEnv(Environment):
             if agents_hints and 'city_orientations' in agents_hints:
                 ratio_nr_agents_to_nr_cities = self.get_num_agents() / len(agents_hints['city_orientations'])
                 self._max_episode_steps = self.compute_max_episode_steps(
-                                                    width=self.width, height=self.height,
-                                                    ratio_nr_agents_to_nr_cities=ratio_nr_agents_to_nr_cities)
+                    width=self.width, height=self.height,
+                    ratio_nr_agents_to_nr_cities=ratio_nr_agents_to_nr_cities)
             else:
                 self._max_episode_steps = self.compute_max_episode_steps(width=self.width, height=self.height)
 
@@ -435,7 +435,6 @@ class RailEnv(Environment):
             agent.malfunction_data['malfunction'] < 1:
             agent.malfunction_data['next_malfunction'] -= 1
 
-
         return False
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
@@ -446,10 +445,10 @@ class RailEnv(Environment):
         if self.dones["__all__"]:
             self.rewards_dict = {}
             info_dict = {
-                "action_required" : {},
-                "malfunction" : {},
-                "speed" : {},
-                "status" : {},
+                "action_required": {},
+                "malfunction": {},
+                "speed": {},
+                "status": {},
             }
             for i_agent, agent in enumerate(self.agents):
                 self.rewards_dict[i_agent] = self.global_reward
@@ -463,12 +462,12 @@ class RailEnv(Environment):
         # Reset the step rewards
         self.rewards_dict = dict()
         info_dict = {
-            "action_required" : {},
-            "malfunction" : {},
-            "speed" : {},
-            "status" : {},
+            "action_required": {},
+            "malfunction": {},
+            "speed": {},
+            "status": {},
         }
-        have_all_agents_ended = True # boolean flag to check if all agents are done
+        have_all_agents_ended = True  # boolean flag to check if all agents are done
         for i_agent, agent in enumerate(self.agents):
             # Reset the step rewards
             self.rewards_dict[i_agent] = 0
@@ -482,8 +481,8 @@ class RailEnv(Environment):
             # Build info dict
             info_dict["action_required"][i_agent] = \
                 (agent.status == RailAgentStatus.READY_TO_DEPART or (
-                agent.status == RailAgentStatus.ACTIVE and np.isclose(agent.speed_data['position_fraction'], 0.0,
-                                                                        rtol=1e-03)))
+                    agent.status == RailAgentStatus.ACTIVE and np.isclose(agent.speed_data['position_fraction'], 0.0,
+                                                                          rtol=1e-03)))
             info_dict["malfunction"][i_agent] = agent.malfunction_data['malfunction']
             info_dict["speed"][i_agent] = agent.speed_data['speed']
             info_dict["status"][i_agent] = agent.status
