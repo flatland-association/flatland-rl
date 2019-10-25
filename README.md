@@ -182,7 +182,7 @@ for step in range(100):
 
 and **ideally** you should see something along the lines of
 
-![Flatland](https://i.imgur.com/VrTQVeM.gif)
+![Flatland](https://i.imgur.com/Pc9aH4P.gif)
 
 Best of Luck !!
 
