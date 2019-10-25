@@ -64,7 +64,8 @@ class EnvAgentStatic(object):
             malfunction_datas.append({'malfunction': 0,
                                       'malfunction_rate': schedule.agent_malfunction_rates[i] if schedule.agent_malfunction_rates is not None else 0.,
                                       'next_malfunction': 0,
-                                      'nr_malfunctions': 0})
+                                      'nr_malfunctions': 0,
+                                      'fixed':False})
 
         return list(starmap(EnvAgentStatic, zip(schedule.agent_positions,
                                                 schedule.agent_directions,

@@ -400,12 +400,15 @@ class RailEnv(Environment):
             return True
 
         # Restart fixed agents
-
-
-        if agent.malfunction_data['malfunction'] < 1 and agent.malfunction_data['next_malfunction'] > 0:
+        if agent.malfunction_data['malfunction'] < 1 and agent.malfunction_data['next_malfunction'] > 0 and not agent.malfunction_data['fixed']:
             agent.malfunction_data['next_malfunction'] -= 1
+            agent.malfunction_data['fixed'] = True
             if 'moving_before_malfunction' in agent.malfunction_data:
                 self.agents[i_agent].moving = agent.malfunction_data['moving_before_malfunction']
+            return False
+        # Agent has been running smoothly
+        elif agent.malfunction_data['malfunction'] < 1 and agent.malfunction_data['next_malfunction'] > 0:
+            agent.malfunction_data['next_malfunction'] -= 1
             return False
 
         # Break agents that have next_malfunction
@@ -429,7 +432,7 @@ class RailEnv(Environment):
         if agent.malfunction_data['next_malfunction'] > 0 and agent.malfunction_data['malfunction'] < 1:
             agent.malfunction_data['next_malfunction'] -= 1
 
-        return False
+
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
 
