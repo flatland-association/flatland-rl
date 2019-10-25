@@ -372,7 +372,8 @@ class RailEnv(Environment):
         info_dict: Dict = {
             'action_required': {
                 i: (agent.status == RailAgentStatus.READY_TO_DEPART or (
-                    agent.status == RailAgentStatus.ACTIVE and agent.speed_data['position_fraction'] == 0.0))
+                    agent.status == RailAgentStatus.ACTIVE and np.isclose(agent.speed_data['position_fraction'], 0.0,
+                                                                        rtol=1e-03)))
                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
