@@ -407,13 +407,16 @@ class RailEnv(Environment):
             return True
 
         # Restart fixed agents
+
+
         if agent.malfunction_data['malfunction'] < 1 and agent.malfunction_data['next_malfunction'] > 0:
+            agent.malfunction_data['next_malfunction'] -= 1
             if 'moving_before_malfunction' in agent.malfunction_data:
                 self.agents[i_agent].moving = agent.malfunction_data['moving_before_malfunction']
             return False
 
         # Break agents that have next_malfunction
-        if 1 > agent.malfunction_data['malfunction'] and agent.malfunction_data['next_malfunction'] < 1:
+        if agent.malfunction_data['malfunction'] < 1 and agent.malfunction_data['next_malfunction'] < 1:
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
 
