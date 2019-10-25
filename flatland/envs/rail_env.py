@@ -390,27 +390,26 @@ class RailEnv(Environment):
         """
         agent = self.agents[i_agent]
 
-        # Decrease counter for next event only if agent is currently not broken and agent has a malfunction rate
-        if agent.malfunction_data['malfunction_rate'] >= 1 and agent.malfunction_data['next_malfunction'] > 0 and \
-            agent.malfunction_data['malfunction'] < 1:
-            agent.malfunction_data['next_malfunction'] -= 1
+        # Skip agents that cannot break
+        # TODO: Make a better malfunction model such that not always the same agents break.
+        if agent.malfunction_data['malfunction_rate'] < 1:
+            return False
 
-        # Only agents that have a positive rate for malfunctions and are not currently broken are considered
-        # If counter has come to zero --> Agent has malfunction
-        # set next malfunction time and duration of current malfunction
-        if agent.malfunction_data['malfunction_rate'] >= 1 and 1 > agent.malfunction_data['malfunction'] and \
-            agent.malfunction_data['next_malfunction'] < 1:
+        # If agent is currently working and next malfunction time is reached we set it to malfunctioning
+        if 1 > agent.malfunction_data['malfunction'] and agent.malfunction_data['next_malfunction'] < 1:
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
 
-            # Next malfunction in number of stops
+            # Next malfunction in number of steps
             next_breakdown = int(
                 self._exp_distirbution_synced(rate=agent.malfunction_data['malfunction_rate']))
             agent.malfunction_data['next_malfunction'] = max(next_breakdown, 1)
+
             # Duration of current malfunction
             num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
                                                       self.max_number_of_steps_broken + 1) + 1
             agent.malfunction_data['malfunction'] = num_broken_steps
+            # Remember current moving state of the agent
             agent.malfunction_data['moving_before_malfunction'] = agent.moving
 
             return True
@@ -430,6 +429,13 @@ class RailEnv(Environment):
 
                     # Nothing left to do with broken agent
                     return True
+
+        # Decrease counter for next event only if agent is currently not broken and agent has a malfunction rate
+        if agent.malfunction_data['malfunction_rate'] >= 1 and agent.malfunction_data['next_malfunction'] > 0 and \
+            agent.malfunction_data['malfunction'] < 1:
+            agent.malfunction_data['next_malfunction'] -= 1
+
+
         return False
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
