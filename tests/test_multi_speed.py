@@ -437,9 +437,9 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.step_penalty * 0.5  # recovered: running at speed 0.5
             ),
             Replay(
-                position=(3, 7),
+                position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
-                action=RailEnvActions.MOVE_FORWARD,
+                action=None,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(
@@ -449,7 +449,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(
-                position=(3, 6),
+                position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_FORWARD,
                 set_malfunction=2,  # recovers in two steps from now!
@@ -460,14 +460,14 @@ def test_multispeed_actions_malfunction_no_blocking():
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
-                action=RailEnvActions.MOVE_LEFT,
+                action=None,
                 malfunction=1,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
-                action=None,
+                action=RailEnvActions.MOVE_FORWARD,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(
