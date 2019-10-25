@@ -407,7 +407,7 @@ class RailEnv(Environment):
 
             # Duration of current malfunction
             num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                      self.max_number_of_steps_broken + 1) + 1
+                                                      self.max_number_of_steps_broken + 1)
             agent.malfunction_data['malfunction'] = num_broken_steps
             # Remember current moving state of the agent
             agent.malfunction_data['moving_before_malfunction'] = agent.moving
