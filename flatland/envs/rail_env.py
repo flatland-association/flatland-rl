@@ -415,6 +415,7 @@ class RailEnv(Environment):
         if agent.malfunction_data['malfunction'] < 1 and agent.malfunction_data['next_malfunction'] < 1:
             # Increase number of malfunctions
             agent.malfunction_data['nr_malfunctions'] += 1
+            agent.malfunction_data['fixed'] = False
 
             # Next malfunction in number of stops
             next_breakdown = int(
