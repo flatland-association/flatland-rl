@@ -406,6 +406,7 @@ class RailEnv(Environment):
             if 'moving_before_malfunction' in agent.malfunction_data:
                 self.agents[i_agent].moving = agent.malfunction_data['moving_before_malfunction']
             return False
+
         # Agent has been running smoothly
         elif agent.malfunction_data['malfunction'] < 1 and agent.malfunction_data['next_malfunction'] > 0:
             agent.malfunction_data['next_malfunction'] -= 1
