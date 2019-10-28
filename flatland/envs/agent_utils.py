@@ -40,7 +40,7 @@ class EnvAgentStatic(object):
     malfunction_data = attrib(
         default=Factory(
             lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0,
-                          'moving_before_malfunction': False})))
+                          'moving_before_malfunction': False, 'fixed': False})))
 
     status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
     position = attrib(default=None, type=Optional[Tuple[int, int]])
