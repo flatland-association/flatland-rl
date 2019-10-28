@@ -34,8 +34,11 @@ class SingleAgentNavigationObs(ObservationBuilder):
 
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
+        if agent.position:
+            possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
+        else:
+            possible_transitions = self.env.rail.get_transitions(*agent.initial_position, agent.direction)
 
-        possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
         num_transitions = np.count_nonzero(possible_transitions)
 
         # Start from the current orientation, and see which transitions are available;
