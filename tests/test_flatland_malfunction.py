@@ -156,14 +156,14 @@ def test_malfunction_process_statistically():
 
     env.agents[0].target = (0, 0)
     # Next line only for test generation
-    # agent_malfunction_list = [[] for i in range(20)]
+    #agent_malfunction_list = [[] for i in range(20)]
     agent_malfunction_list = [[0, 0, 0, 0, 5, 5, 0, 0, 0, 0], [0, 0, 0, 0, 5, 5, 0, 0, 0, 0], [0, 0, 0, 0, 4, 4, 0, 0, 0, 0],
-     [0, 0, 0, 0, 3, 3, 5, 0, 0, 0], [5, 0, 0, 5, 2, 2, 4, 5, 0, 5], [4, 5, 0, 4, 1, 1, 3, 4, 5, 4],
-     [3, 4, 0, 3, 0, 0, 2, 3, 4, 3], [2, 3, 5, 2, 0, 0, 1, 2, 3, 2], [1, 2, 4, 1, 5, 5, 0, 1, 2, 1],
-     [0, 1, 3, 0, 4, 4, 0, 0, 1, 0], [0, 0, 2, 0, 3, 3, 0, 0, 0, 0], [5, 0, 1, 0, 2, 2, 5, 5, 0, 5],
-     [4, 0, 0, 0, 1, 1, 4, 4, 5, 4], [3, 0, 0, 5, 0, 0, 3, 3, 4, 3], [2, 5, 0, 4, 0, 0, 2, 2, 3, 2],
-     [1, 4, 0, 3, 5, 5, 1, 1, 2, 1], [0, 3, 0, 2, 4, 4, 0, 0, 1, 0], [0, 2, 0, 1, 3, 3, 0, 0, 0, 0],
-     [5, 1, 0, 0, 2, 2, 5, 5, 0, 5], [4, 0, 5, 0, 1, 1, 4, 4, 5, 4]]
+     [0, 0, 0, 0, 3, 3, 0, 0, 0, 0], [0, 0, 0, 0, 2, 2, 0, 0, 0, 5], [0, 0, 0, 0, 1, 1, 5, 0, 0, 4],
+     [0, 0, 0, 5, 0, 0, 4, 5, 0, 3], [5, 0, 0, 4, 0, 0, 3, 4, 0, 2], [4, 5, 0, 3, 5, 5, 2, 3, 5, 1],
+     [3, 4, 0, 2, 4, 4, 1, 2, 4, 0], [2, 3, 5, 1, 3, 3, 0, 1, 3, 0], [1, 2, 4, 0, 2, 2, 0, 0, 2, 0],
+     [0, 1, 3, 0, 1, 1, 5, 0, 1, 0], [0, 0, 2, 0, 0, 0, 4, 0, 0, 0], [5, 0, 1, 0, 0, 0, 3, 5, 0, 5],
+     [4, 0, 0, 0, 5, 0, 2, 4, 0, 4], [3, 0, 0, 0, 4, 0, 1, 3, 5, 3], [2, 0, 0, 0, 3, 0, 0, 2, 4, 2],
+     [1, 0, 5, 5, 2, 0, 0, 1, 3, 1], [0, 5, 4, 4, 1, 0, 5, 0, 2, 0]]
 
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}
@@ -171,7 +171,7 @@ def test_malfunction_process_statistically():
             # We randomly select an action
             action_dict[agent_idx] = RailEnvActions(np.random.randint(4))
             # For generating tests only:
-            #agent_malfunction_list[step].append(env.agents[agent_idx].malfunction_data['malfunction'])
+            # agent_malfunction_list[step].append(env.agents[agent_idx].malfunction_data['malfunction'])
             assert env.agents[agent_idx].malfunction_data['malfunction'] == agent_malfunction_list[step][agent_idx]
         env.step(action_dict)
     # For generating test onlz
@@ -202,16 +202,6 @@ def test_malfunction_before_entry():
     # Test initial malfunction values for all agents
     # we want some agents to be malfuncitoning already and some to be working
     # we want different next_malfunction values for the agents
-
-    assert env.agents[1].malfunction_data['next_malfunction'] == 5
-    assert env.agents[2].malfunction_data['next_malfunction'] == 5
-    assert env.agents[3].malfunction_data['next_malfunction'] == 2
-    assert env.agents[4].malfunction_data['next_malfunction'] == 1
-    assert env.agents[5].malfunction_data['next_malfunction'] == 1
-    assert env.agents[6].malfunction_data['next_malfunction'] == 2
-    assert env.agents[7].malfunction_data['next_malfunction'] == 3
-    assert env.agents[8].malfunction_data['next_malfunction'] == 5
-    assert env.agents[9].malfunction_data['next_malfunction'] == -1
     assert env.agents[0].malfunction_data['malfunction'] == 0
     assert env.agents[1].malfunction_data['malfunction'] == 0
     assert env.agents[2].malfunction_data['malfunction'] == 0
