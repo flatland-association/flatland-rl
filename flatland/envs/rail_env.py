@@ -687,7 +687,11 @@ class RailEnv(Environment):
         return cell_free, new_cell_valid, new_direction, new_position, transition_valid
 
     def cell_free(self, position: IntVector2D) -> bool:
-        return not self.agent_positions[position]
+        try:
+            return not self.agent_positions[position]
+        except IndexError as error:
+            print(error)
+            return False
 
     def check_action(self, agent: EnvAgent, action: RailEnvActions):
         """
