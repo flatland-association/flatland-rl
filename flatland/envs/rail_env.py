@@ -437,10 +437,6 @@ class RailEnv(Environment):
 
             return True
 
-        # Decrease counter for next event only if agent is currently not broken and agent has a malfunction rate
-        if agent.malfunction_data['next_malfunction'] > 0 and agent.malfunction_data['malfunction'] < 1:
-            agent.malfunction_data['next_malfunction'] -= 1
-
 
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
