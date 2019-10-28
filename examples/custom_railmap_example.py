@@ -7,7 +7,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import RailGenerator, RailGeneratorProduct
-from flatland.envs.schedule_generators import ScheduleGenerator, compute_max_episode_steps
+from flatland.envs.schedule_generators import ScheduleGenerator
 from flatland.envs.schedule_utils import Schedule
 from flatland.utils.rendertools import RenderTool
 
@@ -31,15 +31,14 @@ def custom_rail_generator() -> RailGenerator:
 
 
 def custom_schedule_generator() -> ScheduleGenerator:
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None) -> Schedule:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None,
+                  num_resets: int = 0) -> Schedule:
         agents_positions = []
         agents_direction = []
         agents_target = []
         speeds = []
-        max_episode_steps = compute_max_episode_steps(width=rail.width, height=rail.height)
         return Schedule(agent_positions=agents_positions, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
-                        max_episode_steps=max_episode_steps)
+                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None)
 
     return generator
 
