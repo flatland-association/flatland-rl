@@ -135,6 +135,7 @@ def test_malfunction_process():
 def test_malfunction_process_statistically():
     """Tests hat malfunctions are produced by stochastic_data!"""
     # Set fixed malfunction duration for this test
+    #
     stochastic_data = {'prop_malfunction': 1.,
                        'malfunction_rate': 5,
                        'min_duration': 5,
