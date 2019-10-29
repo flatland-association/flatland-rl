@@ -34,6 +34,7 @@ class SingleAgentNavigationObs(ObservationBuilder):
 
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
+
         if agent.position:
             possible_transitions = self.env.rail.get_transitions(*agent.position, agent.direction)
         else:

@@ -6,7 +6,7 @@ import numpy as np
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator
 from flatland.envs.schedule_generators import complex_schedule_generator
-from flatland.envs.observations import TreeObsForRailEnv
+
 
 def run_benchmark():
     """Run benchmark on a small number of agents in complex rail environment."""
@@ -17,7 +17,6 @@ def run_benchmark():
     env = RailEnv(width=15, height=15,
                   rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12),
                   schedule_generator=complex_schedule_generator(),
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2),
                   number_of_agents=5)
     env.reset()
 
@@ -25,24 +24,10 @@ def run_benchmark():
     action_dict = dict()
     action_prob = [0] * 4
 
-    def max_lt(seq, val):
-        """
-        Return greatest item in seq for which item < val applies.
-        None is returned if seq was empty or all items in seq were >= val.
-        """
-
-        idx = len(seq) - 1
-        while idx >= 0:
-            if seq[idx] < val and seq[idx] >= 0:
-                return seq[idx]
-            idx -= 1
-        return None
-
     for trials in range(1, n_trials + 1):
 
         # Reset environment
         obs, info = env.reset()
-
 
         # Run episode
         for step in range(100):
