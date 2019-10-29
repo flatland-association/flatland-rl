@@ -24,27 +24,10 @@ def run_benchmark():
     action_dict = dict()
     action_prob = [0] * 4
 
-    def max_lt(seq, val):
-        """
-        Return greatest item in seq for which item < val applies.
-        None is returned if seq was empty or all items in seq were >= val.
-        """
-
-        idx = len(seq) - 1
-        while idx >= 0:
-            if seq[idx] < val and seq[idx] >= 0:
-                return seq[idx]
-            idx -= 1
-        return None
-
     for trials in range(1, n_trials + 1):
 
         # Reset environment
         obs, info = env.reset()
-
-        for a in range(env.get_num_agents()):
-            norm = max(1, max_lt(obs[a], np.inf))
-            obs[a] = np.clip(np.array(obs[a]) / norm, -1, 1)
 
         # Run episode
         for step in range(100):
@@ -56,9 +39,6 @@ def run_benchmark():
 
             # Environment step
             next_obs, all_rewards, done, _ = env.step(action_dict)
-            for a in range(env.get_num_agents()):
-                norm = max(1, max_lt(next_obs[a], np.inf))
-                next_obs[a] = np.clip(np.array(next_obs[a]) / norm, -1, 1)
 
             if done['__all__']:
                 break
