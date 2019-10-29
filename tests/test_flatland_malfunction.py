@@ -155,11 +155,9 @@ def test_malfunction_process_statistically():
             # We randomly select an action
             action_dict[agent_idx] = RailEnvActions(np.random.randint(4))
             # For generating tests only:
-            #agent_malfunction_list[step].append(env.agents[agent_idx].malfunction_data['malfunction'])
-            assert env.agents[agent_idx].malfunction_data['malfunction'] == agent_malfunction_list[step][agent_idx]
+            # agent_malfunction_list[agent_idx].append(env.agents[agent_idx].malfunction_data['malfunction'])
+            assert env.agents[agent_idx].malfunction_data['malfunction'] == agent_malfunction_list[agent_idx][step]
         env.step(action_dict)
-    # For generating test onlz
-    #print(agent_malfunction_list)
 
 
 def test_malfunction_before_entry():
@@ -181,6 +179,7 @@ def test_malfunction_before_entry():
                   )
     # reset to initialize agents_static
     env.reset(False, False, False, random_seed=10)
+    env.agents[0].target = (0, 0)
 
     # Test initial malfunction values for all agents
     # we want some agents to be malfuncitoning already and some to be working
