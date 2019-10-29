@@ -1,6 +1,7 @@
 """
 Definition of the RailEnv environment.
 """
+import random
 # TODO:  _ this is a global method --> utils or remove later
 from enum import IntEnum
 from typing import List, NamedTuple, Optional, Dict
@@ -8,7 +9,6 @@ from typing import List, NamedTuple, Optional, Dict
 import msgpack
 import msgpack_numpy as m
 import numpy as np
-import random
 from gym.utils import seeding
 
 from flatland.core.env import Environment
@@ -211,7 +211,6 @@ class RailEnv(Environment):
         # Uniform distribution parameters for malfunction duration
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
-        # Reset environment
 
         self.valid_positions = None
 
@@ -336,8 +335,8 @@ class RailEnv(Environment):
             if agents_hints and 'city_orientations' in agents_hints:
                 ratio_nr_agents_to_nr_cities = self.get_num_agents() / len(agents_hints['city_orientations'])
                 self._max_episode_steps = self.compute_max_episode_steps(
-                                                    width=self.width, height=self.height,
-                                                    ratio_nr_agents_to_nr_cities=ratio_nr_agents_to_nr_cities)
+                    width=self.width, height=self.height,
+                    ratio_nr_agents_to_nr_cities=ratio_nr_agents_to_nr_cities)
             else:
                 self._max_episode_steps = self.compute_max_episode_steps(width=self.width, height=self.height)
 
@@ -401,9 +400,6 @@ class RailEnv(Environment):
             self.agents[i_agent].moving = agent.malfunction_data['moving_before_malfunction']
         return False
 
-
-
-
     def _malfunction(self, rate) -> bool:
         """
         Malfunction generator that breaks agents at a given rate. It does randomly chose agent to break during the run
@@ -411,16 +407,13 @@ class RailEnv(Environment):
         """
         if np.random.random() < self._malfunction_prob(rate):
             breaking_agent = random.choice(self.agents)
-            while breaking_agent.status == RailAgentStatus.DONE_REMOVED:
-                breaking_agent = random.choice(self.agents)
-
-            num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                      self.max_number_of_steps_broken + 1)
-            breaking_agent.malfunction_data['malfunction'] = num_broken_steps
-            breaking_agent.malfunction_data['moving_before_malfunction'] = breaking_agent.moving
-            breaking_agent.malfunction_data['fixed'] = False
-
-
+            if breaking_agent.malfunction_data['malfunction'] < 1:
+                num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
+                                                          self.max_number_of_steps_broken + 1)
+                breaking_agent.malfunction_data['malfunction'] = num_broken_steps
+                breaking_agent.malfunction_data['moving_before_malfunction'] = breaking_agent.moving
+                breaking_agent.malfunction_data['fixed'] = False
+                breaking_agent.malfunction_data['nr_malfunctions'] += 1
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
         """
@@ -437,10 +430,10 @@ class RailEnv(Environment):
         if self.dones["__all__"]:
             self.rewards_dict = {}
             info_dict = {
-                "action_required" : {},
-                "malfunction" : {},
-                "speed" : {},
-                "status" : {},
+                "action_required": {},
+                "malfunction": {},
+                "speed": {},
+                "status": {},
             }
             for i_agent, agent in enumerate(self.agents):
                 self.rewards_dict[i_agent] = self.global_reward
@@ -454,12 +447,12 @@ class RailEnv(Environment):
         # Reset the step rewards
         self.rewards_dict = dict()
         info_dict = {
-            "action_required" : {},
-            "malfunction" : {},
-            "speed" : {},
-            "status" : {},
+            "action_required": {},
+            "malfunction": {},
+            "speed": {},
+            "status": {},
         }
-        have_all_agents_ended = True # boolean flag to check if all agents are done
+        have_all_agents_ended = True  # boolean flag to check if all agents are done
 
         # Evoke the malfunction generator
         self._malfunction(self.mean_malfunction_rate)
@@ -476,8 +469,8 @@ class RailEnv(Environment):
             # Build info dict
             info_dict["action_required"][i_agent] = \
                 (agent.status == RailAgentStatus.READY_TO_DEPART or (
-                agent.status == RailAgentStatus.ACTIVE and np.isclose(agent.speed_data['position_fraction'], 0.0,
-                                                                        rtol=1e-03)))
+                    agent.status == RailAgentStatus.ACTIVE and np.isclose(agent.speed_data['position_fraction'], 0.0,
+                                                                          rtol=1e-03)))
             info_dict["malfunction"][i_agent] = agent.malfunction_data['malfunction']
             info_dict["speed"][i_agent] = agent.speed_data['speed']
             info_dict["status"][i_agent] = agent.status

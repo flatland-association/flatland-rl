@@ -66,8 +66,7 @@ class SingleAgentNavigationObs(ObservationBuilder):
 
 def test_malfunction_process():
     # Set fixed malfunction duration for this test
-    stochastic_data = {'prop_malfunction': 1.,
-                       'malfunction_rate': 1000,
+    stochastic_data = {'malfunction_rate': 1,
                        'min_duration': 3,
                        'max_duration': 3}
 
@@ -84,11 +83,6 @@ def test_malfunction_process():
     # reset to initialize agents_static
     obs, info = env.reset(False, False, True, random_seed=10)
 
-    # Check that a initial duration for malfunction was assigned
-    assert env.agents[0].malfunction_data['next_malfunction'] > 0
-    for agent in env.agents:
-        agent.status = RailAgentStatus.ACTIVE
-
     agent_halts = 0
     total_down_time = 0
     agent_old_position = env.agents[0].position
@@ -100,12 +94,6 @@ def test_malfunction_process():
 
         for i in range(len(obs)):
             actions[i] = np.argmax(obs[i]) + 1
-
-        if step % 5 == 0:
-            # Stop the agent and set it to be malfunctioning
-            env.agents[0].malfunction_data['malfunction'] = -1
-            env.agents[0].malfunction_data['next_malfunction'] = 0
-            agent_halts += 1
 
         obs, all_rewards, done, _ = env.step(actions)
 
@@ -122,11 +110,8 @@ def test_malfunction_process():
         total_down_time += env.agents[0].malfunction_data['malfunction']
 
     # Check that the appropriate number of malfunctions is achieved
-    assert env.agents[0].malfunction_data['nr_malfunctions'] == 20, "Actual {}".format(
+    assert env.agents[0].malfunction_data['nr_malfunctions'] == 30, "Actual {}".format(
         env.agents[0].malfunction_data['nr_malfunctions'])
-
-    # Check that 20 stops where performed
-    assert agent_halts == 20
 
     # Check that malfunctioning data was standing around
     assert total_down_time > 0
