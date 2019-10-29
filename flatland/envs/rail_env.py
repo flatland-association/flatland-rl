@@ -368,6 +368,7 @@ class RailEnv(Environment):
 
         # See if agents are already broken
         self._malfunction(self.mean_malfunction_rate)
+
         for i_agent, agent in enumerate(self.agents):
             initial_malfunction = self._agent_malfunction(i_agent)
 
