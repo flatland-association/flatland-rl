@@ -398,8 +398,8 @@ class RailEnv(Environment):
         Malfunction generator that breaks agents at a given rate. It does randomly chose agent to break during the run
 
         """
-        if np.random.random() < self._malfunction_prob(rate):
-            breaking_agent = random.choice(self.agents)
+        if self.np_random.randn() < self._malfunction_prob(rate):
+            breaking_agent = self.np_random.choice(self.agents)
             if breaking_agent.malfunction_data['malfunction'] < 1:
                 num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
                                                           self.max_number_of_steps_broken + 1)
