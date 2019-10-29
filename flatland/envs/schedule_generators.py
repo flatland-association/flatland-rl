@@ -79,7 +79,7 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
             speeds = [1.0] * len(agents_position)
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None)
+                        agent_targets=agents_target, agent_speeds=speeds)
 
     return generator
 
@@ -165,7 +165,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
             speeds = [1.0] * len(agents_position)
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None)
+                        agent_targets=agents_target, agent_speeds=speeds)
 
     return generator
 
@@ -199,12 +199,12 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
                     valid_positions.append((r, c))
         if len(valid_positions) == 0:
             return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None)
+                            agent_targets=[], agent_speeds=[])
 
         if len(valid_positions) < num_agents:
             warnings.warn("schedule_generators: len(valid_positions) < num_agents")
             return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None)
+                            agent_targets=[], agent_speeds=[])
 
         agents_position_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
         agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]
@@ -263,7 +263,7 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
 
         agents_speed = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed)
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None)
+                        agent_targets=agents_target, agent_speeds=agents_speed)
 
     return generator
 
@@ -304,12 +304,9 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
         agents_target = [a.target for a in agents_static]
         if len(data['agents_static'][0]) > 5:
             agents_speed = [a.speed_data['speed'] for a in agents_static]
-            agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents_static]
         else:
             agents_speed = None
-            agents_malfunction = None
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed,
-                        agent_malfunction_rates=agents_malfunction)
+                        agent_targets=agents_target, agent_speeds=agents_speed)
 
     return generator

@@ -63,6 +63,7 @@ class EnvAgentStatic(object):
         for i in range(len(schedule.agent_positions)):
             malfunction_datas.append({'malfunction': 0,
                                       'nr_malfunctions': 0,
+                                      'moving_before_malfunction': False,
                                       'fixed': True})
 
         return list(starmap(EnvAgentStatic, zip(schedule.agent_positions,
