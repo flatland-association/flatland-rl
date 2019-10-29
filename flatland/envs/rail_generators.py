@@ -343,6 +343,17 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=1) -> R
                 template = [template[-1]] + template[:-1]
 
         def get_matching_templates(template):
+            """
+            Returns a list of possible transition maps for a given template
+            
+            Parameters:
+            ------
+            template:List[int]
+
+            Returns:
+            ------
+            List[int]
+            """
             ret = []
             for i in range(len(transitions_templates_)):
                 is_match = True
