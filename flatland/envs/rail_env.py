@@ -717,9 +717,15 @@ class RailEnv(Environment):
                 (*agent.position, agent.direction),
                 new_direction)
 
-        # Check the new position is not the same as any of the existing agent positions
-        # (including itself, for simplicity, since it is moving)
-        cell_free = self.cell_free(new_position)
+
+        # only call cell_free() if new cell is inside the scene
+        if new_cell_valid:
+            # Check the new position is not the same as any of the existing agent positions
+            # (including itself, for simplicity, since it is moving)
+            cell_free = self.cell_free(new_position)
+        else:
+            # if new cell is outside of scene -> cell_free is False
+            cell_free = False
         return cell_free, new_cell_valid, new_direction, new_position, transition_valid
 
     def cell_free(self, position: IntVector2D) -> bool:
@@ -736,11 +742,7 @@ class RailEnv(Environment):
             is the cell free or not?
 
         """
-        try:
-            return not self.agent_positions[position]
-        except IndexError as error:
-            print(error)
-            return False
+        return not self.agent_positions[position]
 
     def check_action(self, agent: EnvAgent, action: RailEnvActions):
         """
