@@ -347,6 +347,8 @@ class RailEnv(Environment):
         if activate_agents:
             for i_agent in range(self.get_num_agents()):
                 self.set_agent_active(i_agent)
+
+        # See if agents are already broken
         self._malfunction(self.mean_malfunction_rate)
         for i_agent, agent in enumerate(self.agents):
             initial_malfunction = self._agent_malfunction(i_agent)
@@ -400,12 +402,12 @@ class RailEnv(Environment):
             self.agents[i_agent].moving = agent.malfunction_data['moving_before_malfunction']
         return False
 
-    def _malfunction(self, rate) -> bool:
+    def _malfunction(self, rate):
         """
         Malfunction generator that breaks agents at a given rate. It does randomly chose agent to break during the run
 
         """
-        if self.np_random.randn() < self._malfunction_prob(rate):
+        if self.np_random.rand() < self._malfunction_prob(rate):
             breaking_agent = self.np_random.choice(self.agents)
             if breaking_agent.malfunction_data['malfunction'] < 1:
                 num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
