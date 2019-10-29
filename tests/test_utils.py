@@ -118,8 +118,6 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 # recognizes the agent as potentially malfuncitoning
                 # We also set next malfunction to infitiy to avoid interference with our tests
                 agent.malfunction_data['malfunction'] = replay.set_malfunction
-                agent.malfunction_data['malfunction_rate'] = max(agent.malfunction_data['malfunction_rate'], 1)
-                agent.malfunction_data['next_malfunction'] = np.inf
                 agent.malfunction_data['moving_before_malfunction'] = agent.moving
             _assert(a, agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
         print(step)
