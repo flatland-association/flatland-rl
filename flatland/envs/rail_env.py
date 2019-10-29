@@ -722,7 +722,6 @@ class RailEnv(Environment):
                 (*agent.position, agent.direction),
                 new_direction)
 
-
         # only call cell_free() if new cell is inside the scene
         if new_cell_valid:
             # Check the new position is not the same as any of the existing agent positions
