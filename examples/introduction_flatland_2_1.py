@@ -59,7 +59,7 @@ schedule_generator = sparse_schedule_generator(speed_ration_map)
 # during an episode.
 
 stochastic_data = {'prop_malfunction': 0.3,  # Percentage of defective agents
-                   'malfunction_rate': 30,  # Rate of malfunction occurence
+                   'malfunction_rate': 50,  # Rate of malfunction occurence
                    'min_duration': 3,  # Minimal duration of malfunction
                    'max_duration': 20  # Max duration of malfunction
                    }
@@ -204,9 +204,8 @@ print("========================================")
 
 for agent_idx, agent in enumerate(env.agents):
     print(
-        "Agent {} will malfunction = {} at a rate of {}, the next malfunction will occur in {} step. Agent OK = {}".format(
-            agent_idx, agent.malfunction_data['malfunction_rate'] > 0, agent.malfunction_data['malfunction_rate'],
-            agent.malfunction_data['next_malfunction'], agent.malfunction_data['malfunction'] < 1))
+        "Agent {} is OK = {}".format(
+            agent_idx, agent.malfunction_data['malfunction'] < 1))
 
 # Now that you have seen these novel concepts that were introduced you will realize that agents don't need to take
 # an action at every time step as it will only change the outcome when actions are chosen at cell entry.

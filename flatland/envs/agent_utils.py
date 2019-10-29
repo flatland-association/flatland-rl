@@ -39,8 +39,8 @@ class EnvAgentStatic(object):
     # number of time the agent had to stop, since the last time it broke down
     malfunction_data = attrib(
         default=Factory(
-            lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0,
-                          'moving_before_malfunction': False, 'fixed': False})))
+            lambda: dict({'malfunction': 0, 'nr_malfunctions': 0,
+                          'moving_before_malfunction': False, 'fixed': True})))
 
     status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
     position = attrib(default=None, type=Optional[Tuple[int, int]])
@@ -62,11 +62,8 @@ class EnvAgentStatic(object):
         malfunction_datas = []
         for i in range(len(schedule.agent_positions)):
             malfunction_datas.append({'malfunction': 0,
-                                      'malfunction_rate': schedule.agent_malfunction_rates[
-                                          i] if schedule.agent_malfunction_rates is not None else 0.,
-                                      'next_malfunction': 0,
                                       'nr_malfunctions': 0,
-                                      'fixed': False})
+                                      'fixed': True})
 
         return list(starmap(EnvAgentStatic, zip(schedule.agent_positions,
                                                 schedule.agent_directions,
