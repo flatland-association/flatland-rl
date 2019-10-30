@@ -250,6 +250,7 @@ class RailEnv(Environment):
         """
         self.agents = EnvAgent.list_from_static(self.agents_static)
         self.active_agents = [i for i in range(len(self.agents))]
+
     @staticmethod
     def compute_max_episode_steps(width: int, height: int, ratio_nr_agents_to_nr_cities: float = 20.0) -> int:
         """
@@ -423,7 +424,8 @@ class RailEnv(Environment):
         Malfunction generator that breaks agents at a given rate. It does randomly chose agent to break during the run
 
         """
-        if self.np_random.rand() < self._malfunction_prob(rate):
+        if self.np_random.rand() < self._malfunction_prob(rate, len(self.active_agents)):
+            print("Malfunction")
             # Select only from agents that are not done yet
             breaking_agent_idx = self.np_random.choice(self.active_agents)
             breaking_agent = self.agents[breaking_agent_idx]
@@ -960,13 +962,13 @@ class RailEnv(Environment):
         x = - np.log(1 - u) * rate
         return x
 
-    def _malfunction_prob(self, rate):
+    def _malfunction_prob(self, rate, n_agents):
         """
-        Gives the cummulative exponential distribution at point x, with exp decay rate
+        Probability that an agent break given the number of agents an the probability of a sinlge agent to break
         :param rate:
         :return:
         """
         if rate <= 0:
             return 0.
         else:
-            return 1 - np.exp(-(1 / rate))
+            return 1 - np.exp(- (1 / rate) * (n_agents))
