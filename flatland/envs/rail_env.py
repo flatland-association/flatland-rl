@@ -434,6 +434,8 @@ class RailEnv(Environment):
             # Only break agents that are not broken yet
             # TODO: Do we want to guarantee that we have the desired rate or are we happy with lower rates?
             if breaking_agent.malfunction_data['malfunction'] < 1:
+                # Because we update agents in the same step as we break them we add one to the duration of the
+                # malfunction
                 num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
                                                           self.max_number_of_steps_broken + 1) + 1
                 breaking_agent.malfunction_data['malfunction'] = num_broken_steps
