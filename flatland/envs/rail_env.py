@@ -427,7 +427,6 @@ class RailEnv(Environment):
 
         """
         if self.np_random.rand() < self._malfunction_prob(rate, len(self.active_agents)):
-            print("Malfunction")
             # Select only from agents that are not done yet
             breaking_agent_idx = self.np_random.choice(self.active_agents)
             breaking_agent = self.agents[breaking_agent_idx]

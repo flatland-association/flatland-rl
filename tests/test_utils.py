@@ -121,7 +121,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 agent.malfunction_data['moving_before_malfunction'] = agent.moving
                 agent.malfunction_data['fixed'] = False
             _assert(a, agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
-        print(step, agent.moving, agent.malfunction_data['fixed'], agent.malfunction_data['malfunction'])
+        print(step)
         _, rewards_dict, _, info_dict = env.step(action_dict)
         if rendering:
             renderer.render_env(show=True, show_observations=True)

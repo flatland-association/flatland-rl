@@ -27,7 +27,7 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 width = 16*7  # With of map
 height = 9*7  # Height of map
-nr_trains = 10  # Number of trains that have an assigned task in the env
+nr_trains = 20  # Number of trains that have an assigned task in the env
 cities_in_map = 20  # Number of cities where agents can start or end
 seed = 14  # Random seed
 grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
@@ -58,7 +58,7 @@ schedule_generator = sparse_schedule_generator(speed_ration_map)
 # We can furthermore pass stochastic data to the RailEnv constructor which will allow for stochastic malfunctions
 # during an episode.
 
-stochastic_data = {'malfunction_rate': 1000,  # Rate of malfunction occurence of single agent
+stochastic_data = {'malfunction_rate': 5,  # Rate of malfunction occurence of single agent
                    'min_duration': 3,  # Minimal duration of malfunction
                    'max_duration': 20  # Max duration of malfunction
                    }
