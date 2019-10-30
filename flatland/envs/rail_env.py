@@ -367,14 +367,15 @@ class RailEnv(Environment):
             for i_agent in range(self.get_num_agents()):
                 self.set_agent_active(i_agent)
 
-        # See if agents are already broken
+        # Induce malfunctions
         self._malfunction(self.mean_malfunction_rate)
 
-        for i_agent, agent in enumerate(self.agents):
-            initial_malfunction = self._agent_malfunction(i_agent)
-
-            if initial_malfunction:
+        for agent in self.agents:
+            if agent.malfunction_data["malfunction"] > 0:
                 agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.DO_NOTHING
+
+        # Fix agents that finished their malfunciton
+        self._fix_agents()
 
         self.num_resets += 1
         self._elapsed_steps = 0
@@ -398,26 +399,27 @@ class RailEnv(Environment):
         observation_dict: Dict = self._get_observations()
         return observation_dict, info_dict
 
-    def _agent_malfunction(self, i_agent) -> bool:
+    def _fix_agents(self):
         """
-        Returns true if the agent enters into malfunction. (False, if not broken down or already broken down before).
+        Updates agent malfunction variables and fixes broken agents
         """
-        agent = self.agents[i_agent]
+        for agent in self.agents:
 
-        # Reduce number of malfunction steps left
-        if agent.malfunction_data['malfunction'] > 0:
+            # Ignore agents that OK
+            if agent.malfunction_data['fixed']:
+                continue
+
+            # Reduce number of malfunction steps left
+            if agent.malfunction_data['malfunction'] > 1:
+                agent.malfunction_data['malfunction'] -= 1
+                continue
+
+            # Restart agents at the end of their malfunction
             agent.malfunction_data['malfunction'] -= 1
-            return True
-
-        # Ignore agents that OK
-        if agent.malfunction_data['fixed']:
-            return False
-
-        # Restart agents at the end of their malfunction
-        agent.malfunction_data['fixed'] = True
-        if 'moving_before_malfunction' in agent.malfunction_data:
-            self.agents[i_agent].moving = agent.malfunction_data['moving_before_malfunction']
-        return False
+            agent.malfunction_data['fixed'] = True
+            if 'moving_before_malfunction' in agent.malfunction_data:
+                agent.moving = agent.malfunction_data['moving_before_malfunction']
+                continue
 
     def _malfunction(self, rate):
         """
@@ -434,7 +436,7 @@ class RailEnv(Environment):
             # TODO: Do we want to guarantee that we have the desired rate or are we happy with lower rates?
             if breaking_agent.malfunction_data['malfunction'] < 1:
                 num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                          self.max_number_of_steps_broken + 1)
+                                                          self.max_number_of_steps_broken + 1) + 1
                 breaking_agent.malfunction_data['malfunction'] = num_broken_steps
                 breaking_agent.malfunction_data['moving_before_malfunction'] = breaking_agent.moving
                 breaking_agent.malfunction_data['fixed'] = False
@@ -479,7 +481,7 @@ class RailEnv(Environment):
         }
         have_all_agents_ended = True  # boolean flag to check if all agents are done
 
-        # Evoke the malfunction generator
+        # Induce malfunctions
         self._malfunction(self.mean_malfunction_rate)
 
         for i_agent, agent in enumerate(self.agents):
@@ -497,6 +499,9 @@ class RailEnv(Environment):
             info_dict["malfunction"][i_agent] = agent.malfunction_data['malfunction']
             info_dict["speed"][i_agent] = agent.speed_data['speed']
             info_dict["status"][i_agent] = agent.status
+
+        # Fix agents that finished their malfunction
+        self._fix_agents()
 
         # Check for end of episode + set global reward to all rewards!
         if have_all_agents_ended:
@@ -542,12 +547,9 @@ class RailEnv(Environment):
         agent.old_direction = agent.direction
         agent.old_position = agent.position
 
-        # is the agent malfunctioning?
-        malfunction = self._agent_malfunction(i_agent)
-
         # if agent is broken, actions are ignored and agent does not move.
         # full step penalty in this case
-        if malfunction:
+        if agent.malfunction_data['malfunction'] > 0:
             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
             return
 

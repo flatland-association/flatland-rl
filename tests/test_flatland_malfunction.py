@@ -110,7 +110,7 @@ def test_malfunction_process():
         total_down_time += env.agents[0].malfunction_data['malfunction']
 
     # Check that the appropriate number of malfunctions is achieved
-    assert env.agents[0].malfunction_data['nr_malfunctions'] == 28, "Actual {}".format(
+    assert env.agents[0].malfunction_data['nr_malfunctions'] == 22, "Actual {}".format(
         env.agents[0].malfunction_data['nr_malfunctions'])
 
     # Check that malfunctioning data was standing around
@@ -140,17 +140,17 @@ def test_malfunction_process_statistically():
 
     env.agents[0].target = (0, 0)
     # Next line only for test generation
-    #agent_malfunction_list = [[] for i in range(20)]
-    agent_malfunction_list = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 2, 1, 0],
-     [0, 0, 0, 0, 0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 5, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [], [], [], [], [], [], [], [], [], []]
+    #agent_malfunction_list = [[] for i in range(10)]
+    agent_malfunction_list = [[0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+     [0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3],
+     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1],
+     [0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+     [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5],
+     [0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0],
+     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2],
+     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0],
+     [0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}
@@ -188,17 +188,25 @@ def test_malfunction_before_entry():
     # Test initial malfunction values for all agents
     # we want some agents to be malfuncitoning already and some to be working
     # we want different next_malfunction values for the agents
-
-    for a in range(10):
-
-        print("assert env.agents[{}].malfunction_data['malfunction'] == {}".format(a,env.agents[a].malfunction_data['malfunction']))
+    assert env.agents[0].malfunction_data['malfunction'] == 0
+    assert env.agents[1].malfunction_data['malfunction'] == 0
+    assert env.agents[2].malfunction_data['malfunction'] == 0
+    assert env.agents[3].malfunction_data['malfunction'] == 0
+    assert env.agents[4].malfunction_data['malfunction'] == 0
+    assert env.agents[5].malfunction_data['malfunction'] == 10
+    assert env.agents[6].malfunction_data['malfunction'] == 0
+    assert env.agents[7].malfunction_data['malfunction'] == 0
+    assert env.agents[8].malfunction_data['malfunction'] == 0
+    assert env.agents[9].malfunction_data['malfunction'] == 0
+    #for a in range(10):
+    #   print("assert env.agents[{}].malfunction_data['malfunction'] == {}".format(a,env.agents[a].malfunction_data['malfunction']))
 
 
 
 
 def test_malfunction_values_and_behavior():
     """
-    Test that the next malfunction occurs when desired.
+    Test the malfunction counts down as desired
     Returns
     -------
 
@@ -207,7 +215,7 @@ def test_malfunction_values_and_behavior():
 
     rail, rail_map = make_simple_rail2()
     action_dict: Dict[int, RailEnvActions] = {}
-    stochastic_data = {'malfunction_rate': 0.01,
+    stochastic_data = {'malfunction_rate': 0.001,
                        'min_duration': 10,
                        'max_duration': 10}
     env = RailEnv(width=25,
@@ -223,7 +231,7 @@ def test_malfunction_values_and_behavior():
     env.reset(False, False, activate_agents=True, random_seed=10)
 
     # Assertions
-    assert_list = [8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4]
+    assert_list = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 10, 9, 8, 7, 6, 5]
     print("[")
     for time_step in range(15):
         # Move in the env
@@ -233,8 +241,7 @@ def test_malfunction_values_and_behavior():
 
 
 def test_initial_malfunction():
-    stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
-                       'malfunction_rate': 100,  # Rate of malfunction occurence
+    stochastic_data = {'malfunction_rate': 1000,  # Rate of malfunction occurence
                        'min_duration': 2,  # Minimal duration of malfunction
                        'max_duration': 5  # Max duration of malfunction
                        }
@@ -278,7 +285,7 @@ def test_initial_malfunction():
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=1,
-                reward=env.step_penalty * 1.0
+                reward=env.step_penalty
 
             ),  # malfunctioning ends: starting and running at speed 1.0
             Replay(
@@ -293,7 +300,7 @@ def test_initial_malfunction():
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
-                reward=env.step_penalty * 1.0  # running at speed 1.0
+                reward=env.step_penalty  # running at speed 1.0
             )
         ],
         speed=env.agents[0].speed_data['speed'],
@@ -341,7 +348,7 @@ def test_initial_malfunction_stop_moving():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=3,
+                malfunction=2,
                 reward=env.step_penalty,  # full step penalty when stopped
                 status=RailAgentStatus.ACTIVE
             ),
@@ -352,7 +359,7 @@ def test_initial_malfunction_stop_moving():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.STOP_MOVING,
-                malfunction=2,
+                malfunction=1,
                 reward=env.step_penalty,  # full step penalty while stopped
                 status=RailAgentStatus.ACTIVE
             ),
@@ -361,7 +368,7 @@ def test_initial_malfunction_stop_moving():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=1,
+                malfunction=0,
                 reward=env.step_penalty,  # full step penalty while stopped
                 status=RailAgentStatus.ACTIVE
             ),
@@ -429,7 +436,7 @@ def test_initial_malfunction_do_nothing():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=3,
+                malfunction=2,
                 reward=env.step_penalty,  # full step penalty while malfunctioning
                 status=RailAgentStatus.ACTIVE
             ),
@@ -440,7 +447,7 @@ def test_initial_malfunction_do_nothing():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=2,
+                malfunction=1,
                 reward=env.step_penalty,  # full step penalty while stopped
                 status=RailAgentStatus.ACTIVE
             ),
@@ -449,7 +456,7 @@ def test_initial_malfunction_do_nothing():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.DO_NOTHING,
-                malfunction=1,
+                malfunction=0,
                 reward=env.step_penalty,  # full step penalty while stopped
                 status=RailAgentStatus.ACTIVE
             ),
