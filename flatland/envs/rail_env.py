@@ -431,9 +431,20 @@ class RailEnv(Environment):
             breaking_agent_idx = self.np_random.choice(self.active_agents)
             breaking_agent = self.agents[breaking_agent_idx]
 
-            # Only break agents that are not broken yet
-            # TODO: Do we want to guarantee that we have the desired rate or are we happy with lower rates?
-            if breaking_agent.malfunction_data['malfunction'] < 1:
+            # We assume that less then half of the active agents should be broken at MOST.
+            # Therefore we only try that many times before ignoring the malfunction
+
+            tries = 0
+            max_tries = 0.5 * len(self.active_agents)
+
+            # Look for a functioning active agent
+            while breaking_agent.malfunction_data['malfunction'] > 0 and tries < max_tries:
+                breaking_agent_idx = self.np_random.choice(self.active_agents)
+                breaking_agent = self.agents[breaking_agent_idx]
+                tries += 1
+
+            # If we did not manage to find a functioning agent among the active ones skip this malfunction
+            if tries < max_tries:
                 # Because we update agents in the same step as we break them we add one to the duration of the
                 # malfunction
                 num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
@@ -442,6 +453,10 @@ class RailEnv(Environment):
                 breaking_agent.malfunction_data['moving_before_malfunction'] = breaking_agent.moving
                 breaking_agent.malfunction_data['fixed'] = False
                 breaking_agent.malfunction_data['nr_malfunctions'] += 1
+
+                return
+
+            return
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
         """

@@ -1,3 +1,5 @@
+import numpy as np
+
 # In Flatland you can use custom observation builders and predicitors
 # Observation builders generate the observation needed by the controller
 # Preditctors can be used to do short time prediction which can help in avoiding conflicts in the network
@@ -58,9 +60,9 @@ schedule_generator = sparse_schedule_generator(speed_ration_map)
 # We can furthermore pass stochastic data to the RailEnv constructor which will allow for stochastic malfunctions
 # during an episode.
 
-stochastic_data = {'malfunction_rate': 5,  # Rate of malfunction occurence of single agent
-                   'min_duration': 3,  # Minimal duration of malfunction
-                   'max_duration': 20  # Max duration of malfunction
+stochastic_data = {'malfunction_rate': 100,  # Rate of malfunction occurence of single agent
+                   'min_duration': 15,  # Minimal duration of malfunction
+                   'max_duration': 50  # Max duration of malfunction
                    }
 
 # Custom observation builder without predictor
@@ -107,7 +109,7 @@ class RandomAgent:
         :param state: input is the observation of the agent
         :return: returns an action
         """
-        return 2  # np.random.choice(np.arange(self.action_size))
+        return np.random.choice([1, 2, 3, 4]) # [Left, Forward, Right, Stop]
 
     def step(self, memories):
         """
@@ -251,8 +253,8 @@ for step in range(500):
 
     next_obs, all_rewards, done, _ = env.step(action_dict)
 
-    env_renderer.render_env(show=False, show_observations=False, show_predictions=False)
-    env_renderer.gl.save_image('./misc/Fames2/flatland_frame_{:04d}.png'.format(step))
+    env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
+    # env_renderer.gl.save_image('./misc/Fames2/flatland_frame_{:04d}.png'.format(step))
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
@@ -262,5 +264,4 @@ for step in range(500):
     observations = next_obs.copy()
     if done['__all__']:
         break
-
     print('Episode: Steps {}\t Score = {}'.format(step, score))
