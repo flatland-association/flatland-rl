@@ -2,6 +2,7 @@ import time
 
 import numpy as np
 
+from flatland.envs.malfunction_generators import malfunction_from_params
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -38,7 +39,7 @@ env = RailEnv(width=100, height=100, rail_generator=sparse_rail_generator(max_nu
                                                                           max_rails_in_city=8,
                                                                           ),
               schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=100,
-              obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=stochastic_data,
+              obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=malfunction_from_params(stochastic_data),
               remove_agents_at_target=True)
 
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
