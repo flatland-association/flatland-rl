@@ -217,13 +217,9 @@ class FlatlandRemoteClient(object):
         if self.verbose:
             print("Current env path : ", test_env_file_path)
         self.current_env_path = test_env_file_path
-        self.env = RailEnv(
-            width=1,
-            height=1,
-            rail_generator=rail_from_file(test_env_file_path),
-            schedule_generator=schedule_from_file(test_env_file_path),
-            obs_builder_object=obs_builder_object
-        )
+        self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
+                           schedule_generator=schedule_from_file(test_env_file_path),
+                           obs_builder_object=obs_builder_object)
 
         time_start = time.time()
         local_observation, info = self.env.reset(
@@ -246,8 +242,8 @@ class FlatlandRemoteClient(object):
         _request['type'] = messages.FLATLAND_RL.ENV_STEP
         _request['payload'] = {}
         _request['payload']['action'] = action
-        
-        # Relay the action in a non-blocking way to the server 
+
+        # Relay the action in a non-blocking way to the server
         # so that it can start doing an env.step on it in ~ parallel
         self._remote_request(_request, blocking=False)
 

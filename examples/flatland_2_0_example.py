@@ -30,21 +30,16 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
                     1. / 3.: 0.25,  # Slow commuter train
                     1. / 4.: 0.25}  # Slow freight train
 
-env = RailEnv(width=100,
-              height=100,
-              rail_generator=sparse_rail_generator(max_num_cities=30,
-                                                   # Number of cities in map (where train stations are)
-                                                   seed=14,  # Random seed
-                                                   grid_mode=False,
-                                                   max_rails_between_cities=2,
-                                                   max_rails_in_city=8,
-                                                   ),
-              schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=100,
-              stochastic_data=stochastic_data,  # Malfunction data generator
-              obs_builder_object=GlobalObsForRailEnv(),
-              remove_agents_at_target=True
-              )
+env = RailEnv(width=100, height=100, rail_generator=sparse_rail_generator(max_num_cities=30,
+                                                                          # Number of cities in map (where train stations are)
+                                                                          seed=14,  # Random seed
+                                                                          grid_mode=False,
+                                                                          max_rails_between_cities=2,
+                                                                          max_rails_in_city=8,
+                                                                          ),
+              schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=100,
+              obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=stochastic_data,
+              remove_agents_at_target=True)
 
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
 

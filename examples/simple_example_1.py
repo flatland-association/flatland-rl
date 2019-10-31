@@ -9,10 +9,7 @@ specs = [[(0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0)],
          [(7, 270), (1, 90), (1, 90), (1, 90), (2, 90), (7, 90)],
          [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]]
 
-env = RailEnv(width=6,
-              height=4,
-              rail_generator=rail_from_manual_specifications_generator(specs),
-              number_of_agents=1)
+env = RailEnv(width=6, height=4, rail_generator=rail_from_manual_specifications_generator(specs), number_of_agents=1)
 
 env.reset()
 

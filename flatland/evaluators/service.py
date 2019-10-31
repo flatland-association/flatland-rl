@@ -273,7 +273,7 @@ class FlatlandRemoteEvaluationService:
         )
         if self.verbose:
             print("Received Request : ", command)
-        
+
         message_queue_latency = time.time() - command["timestamp"]
         self.update_running_mean_stats("message_queue_latency", message_queue_latency)
         return command
@@ -335,13 +335,9 @@ class FlatlandRemoteEvaluationService:
                 test_env_file_path
             )
             del self.env
-            self.env = RailEnv(
-                width=1,
-                height=1,
-                rail_generator=rail_from_file(test_env_file_path),
-                schedule_generator=schedule_from_file(test_env_file_path),
-                obs_builder_object=DummyObservationBuilder()
-            )
+            self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
+                               schedule_generator=schedule_from_file(test_env_file_path),
+                               obs_builder_object=DummyObservationBuilder())
 
             if self.begin_simulation:
                 # If begin simulation has already been initialized

@@ -16,14 +16,10 @@ np.random.seed(1)
 def test_initial_status():
     """Test that agent lifecycle works correctly ready-to-depart -> active -> done."""
     rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1],
-                  height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=1,
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  remove_agents_at_target=False
-                  )
+                  remove_agents_at_target=False)
     env.reset()
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
@@ -127,14 +123,10 @@ def test_initial_status():
 def test_status_done_remove():
     """Test that agent lifecycle works correctly ready-to-depart -> active -> done."""
     rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1],
-                  height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=1,
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  remove_agents_at_target=True
-                  )
+                  remove_agents_at_target=True)
     env.reset()
 
     set_penalties_for_replay(env)

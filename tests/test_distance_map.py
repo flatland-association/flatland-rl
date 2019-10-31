@@ -25,14 +25,10 @@ def test_walker():
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    env = RailEnv(width=rail_map.shape[1],
-                  height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=1,
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2,
-                                                       predictor=ShortestPathPredictorForRailEnv(max_depth=10)),
-                  )
+                                                       predictor=ShortestPathPredictorForRailEnv(max_depth=10)))
     # reset to initialize agents_static
     env.reset()
 

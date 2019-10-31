@@ -43,10 +43,7 @@ def custom_schedule_generator() -> ScheduleGenerator:
     return generator
 
 
-env = RailEnv(width=6,
-              height=4,
-              rail_generator=custom_rail_generator(),
-              schedule_generator=custom_schedule_generator(),
+env = RailEnv(width=6, height=4, rail_generator=custom_rail_generator(), schedule_generator=custom_schedule_generator(),
               number_of_agents=1)
 
 env.reset()

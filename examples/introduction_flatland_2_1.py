@@ -72,15 +72,9 @@ observation_builder = GlobalObsForRailEnv()
 # observation_builder = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 
 # Construct the enviornment with the given observation, generataors, predictors, and stochastic data
-env = RailEnv(width=width,
-              height=height,
-              rail_generator=rail_generator,
-              schedule_generator=schedule_generator,
-              number_of_agents=nr_trains,
-              stochastic_data=stochastic_data,  # Malfunction data generator
-              obs_builder_object=observation_builder,
-              remove_agents_at_target=True  # Removes agents at the end of their journey to make space for others
-              )
+env = RailEnv(width=width, height=height, rail_generator=rail_generator, schedule_generator=schedule_generator,
+              number_of_agents=nr_trains, obs_builder_object=observation_builder, malfunction_generator=stochastic_data,
+              remove_agents_at_target=True)
 env.reset()
 
 # Initiate the renderer

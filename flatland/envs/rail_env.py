@@ -19,6 +19,7 @@ from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.malfunction_generators import MalfunctionGenerator, no_malfunction_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
@@ -111,17 +112,15 @@ class RailEnv(Environment):
     stop_penalty = 0  # penalty for stopping a moving agent
     start_penalty = 0  # penalty for starting a stopped agent
 
-    def __init__(self,
-                 width,
+    def __init__(self, width,
                  height,
                  rail_generator: RailGenerator = random_rail_generator(),
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
-                 stochastic_data=None,
+                 malfunction_generator: MalfunctionGenerator = no_malfunction_generator(),
                  remove_agents_at_target=True,
-                 random_seed=1
-                 ):
+                 random_seed=1):
         """
         Environment init.
 
@@ -161,6 +160,7 @@ class RailEnv(Environment):
 
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
+        self.malfunction_generator: MalfunctionGenerator = malfunction_generator
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
         self.height = height
@@ -196,19 +196,8 @@ class RailEnv(Environment):
             self._seed(seed=random_seed)
 
         # Stochastic train malfunctioning parameters
-        if stochastic_data is not None:
-            mean_malfunction_rate = stochastic_data['malfunction_rate']
-            malfunction_min_duration = stochastic_data['min_duration']
-            malfunction_max_duration = stochastic_data['max_duration']
-        else:
-            mean_malfunction_rate = 0.
-            malfunction_min_duration = 0.
-            malfunction_max_duration = 0.
-
-        # Mean malfunction in number of time steps
+        mean_malfunction_rate, malfunction_min_duration, malfunction_max_duration = self.malfunction_generator()
         self.mean_malfunction_rate = mean_malfunction_rate
-
-        # Uniform distribution parameters for malfunction duration
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
 
@@ -358,6 +347,12 @@ class RailEnv(Environment):
                     ratio_nr_agents_to_nr_cities=ratio_nr_agents_to_nr_cities)
             else:
                 self._max_episode_steps = self.compute_max_episode_steps(width=self.width, height=self.height)
+
+        # Stochastic train malfunctioning parameters
+        mean_malfunction_rate, malfunction_min_duration, malfunction_max_duration = self.malfunction_generator()
+        self.mean_malfunction_rate = mean_malfunction_rate
+        self.min_number_of_steps_broken = malfunction_min_duration
+        self.max_number_of_steps_broken = malfunction_max_duration
 
         self.agent_positions = np.full((self.height, self.width), False)
 
@@ -837,22 +832,41 @@ class RailEnv(Environment):
         grid_data = self.rail.grid.tolist()
         agent_static_data = [agent.to_list() for agent in self.agents_static]
         agent_data = [agent.to_list() for agent in self.agents]
+        malfunction_data = {"malfunction_rate": self.mean_malfunction_rate,
+                            "min_duration": self.min_number_of_steps_broken,
+                            "max_duration": self.max_number_of_steps_broken}
+
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
         msgpack.packb(agent_static_data, use_bin_type=True)
         msg_data = {
             "grid": grid_data,
             "agents_static": agent_static_data,
-            "agents": agent_data}
+            "agents": agent_data,
+            "malfunction": malfunction_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
-    def get_agent_state_msg(self):
+    def get_full_state_dist_msg(self):
         """
-        Returns agents information in msgpack object
+        Returns environment information with distance map information as msgpack object
         """
+        grid_data = self.rail.grid.tolist()
+        agent_static_data = [agent.to_list() for agent in self.agents_static]
         agent_data = [agent.to_list() for agent in self.agents]
+        msgpack.packb(grid_data, use_bin_type=True)
+        msgpack.packb(agent_data, use_bin_type=True)
+        msgpack.packb(agent_static_data, use_bin_type=True)
+        distance_map_data = self.distance_map.get()
+        malfunction_data = {"malfunction_rate": self.mean_malfunction_rate,
+                            "min_duration": self.min_number_of_steps_broken,
+                            "max_duration": self.max_number_of_steps_broken}
+        msgpack.packb(distance_map_data, use_bin_type=True)
         msg_data = {
-            "agents": agent_data}
+            "grid": grid_data,
+            "agents_static": agent_static_data,
+            "agents": agent_data,
+            "distance_map": distance_map_data,
+            "malfunction": malfunction_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def set_full_state_msg(self, msg_data):
@@ -873,6 +887,12 @@ class RailEnv(Environment):
         self.rail.height = self.height
         self.rail.width = self.width
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
+        if "malfunction" in data:
+            # Mean malfunction in number of time steps
+            self.mean_malfunction_rate = data["malfunction"]["malfunction_rate"]
+            # Uniform distribution parameters for malfunction duration
+            self.min_number_of_steps_broken = data["malfunction"]["min_duration"]
+            self.max_number_of_steps_broken = data["malfunction"]["max_duration"]
 
     def set_full_state_dist_msg(self, msg_data):
         """
@@ -894,26 +914,12 @@ class RailEnv(Environment):
         self.rail.height = self.height
         self.rail.width = self.width
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-
-    def get_full_state_dist_msg(self):
-        """
-        Returns environment information with distance map information as msgpack object
-        """
-        grid_data = self.rail.grid.tolist()
-        agent_static_data = [agent.to_list() for agent in self.agents_static]
-        agent_data = [agent.to_list() for agent in self.agents]
-        msgpack.packb(grid_data, use_bin_type=True)
-        msgpack.packb(agent_data, use_bin_type=True)
-        msgpack.packb(agent_static_data, use_bin_type=True)
-        distance_map_data = self.distance_map.get()
-        msgpack.packb(distance_map_data, use_bin_type=True)
-        msg_data = {
-            "grid": grid_data,
-            "agents_static": agent_static_data,
-            "agents": agent_data,
-            "distance_map": distance_map_data}
-
-        return msgpack.packb(msg_data, use_bin_type=True)
+        if "malfunction" in data:
+            # Mean malfunction in number of time steps
+            self.mean_malfunction_rate = data["malfunction"]["malfunction_rate"]
+            # Uniform distribution parameters for malfunction duration
+            self.min_number_of_steps_broken = data["malfunction"]["min_duration"]
+            self.max_number_of_steps_broken = data["malfunction"]["max_duration"]
 
     def save(self, filename, save_distance_maps=False):
         """

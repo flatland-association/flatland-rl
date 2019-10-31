@@ -20,11 +20,8 @@ from flatland.utils.simple_rail import make_simple_rail
 def test_global_obs():
     rail, rail_map = make_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1],
-                  height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=1,
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(), number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
 
     global_obs, info = env.reset()
@@ -95,13 +92,9 @@ def _step_along_shortest_path(env, obs_builder, rail):
 
 def test_reward_function_conflict(rendering=False):
     rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1],
-                  height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=2,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  )
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(), number_of_agents=2,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     obs_builder: TreeObsForRailEnv = env.obs_builder
     # initialize agents_static
     env.reset()
@@ -176,14 +169,10 @@ def test_reward_function_conflict(rendering=False):
 
 def test_reward_function_waiting(rendering=False):
     rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1],
-                  height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=2,
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  remove_agents_at_target=False
-                  )
+                  remove_agents_at_target=False)
     obs_builder: TreeObsForRailEnv = env.obs_builder
     # initialize agents_static
     env.reset()

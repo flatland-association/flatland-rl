@@ -22,16 +22,13 @@ def test_get_global_observation():
                         1. / 3.: 0.25,  # Slow commuter train
                         1. / 4.: 0.25}  # Slow freight train
 
-    env = RailEnv(width=50,
-                  height=50,
-                  rail_generator=sparse_rail_generator(max_num_cities=6,
-                                                       max_rails_between_cities=4,
-                                                       seed=15,
-                                                       grid_mode=False
-                                                       ),
-                  schedule_generator=sparse_schedule_generator(speed_ration_map),
-                  number_of_agents=number_of_agents, stochastic_data=stochastic_data,  # Malfunction data generator
-                  obs_builder_object=GlobalObsForRailEnv())
+    env = RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(max_num_cities=6,
+                                                                            max_rails_between_cities=4,
+                                                                            seed=15,
+                                                                            grid_mode=False
+                                                                            ),
+                  schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=number_of_agents,
+                  obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=stochastic_data)
     env.reset()
 
     obs, all_rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in range(number_of_agents)})

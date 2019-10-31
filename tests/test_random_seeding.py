@@ -14,12 +14,8 @@ def test_random_seeding():
 
     # Move target to unreachable position in order to not interfere with test
     for idx in range(100):
-        env = RailEnv(width=25,
-                      height=30,
-                      rail_generator=rail_from_grid_transition_map(rail),
-                      schedule_generator=random_schedule_generator(seed=12),
-                      number_of_agents=10
-                      )
+        env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
+                      schedule_generator=random_schedule_generator(seed=12), number_of_agents=10)
         env.reset(True, True, False, random_seed=1)
 
         env.agents[0].target = (0, 0)
@@ -52,21 +48,13 @@ def test_seeding_and_observations():
 
     # Make two seperate envs with different observation builders
     # Global Observation
-    env = RailEnv(width=25,
-                  height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=12),
-                  number_of_agents=10,
-                  obs_builder_object=GlobalObsForRailEnv()
-                  )
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(seed=12), number_of_agents=10,
+                  obs_builder_object=GlobalObsForRailEnv())
     # Tree Observation
-    env2 = RailEnv(width=25,
-                   height=30,
-                   rail_generator=rail_from_grid_transition_map(rail),
-                   schedule_generator=random_schedule_generator(seed=12),
-                   number_of_agents=10,
-                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
-                   )
+    env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
+                   schedule_generator=random_schedule_generator(seed=12), number_of_agents=10,
+                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
 
     env.reset(False, False, False, random_seed=12)
     env2.reset(False, False, False, random_seed=12)
@@ -118,24 +106,14 @@ def test_seeding_and_malfunction():
     # Make two seperate envs with different and see if the exhibit the same malfunctions
     # Global Observation
     for tests in range(1, 100):
-        env = RailEnv(width=25,
-                      height=30,
-                      rail_generator=rail_from_grid_transition_map(rail),
-                      schedule_generator=random_schedule_generator(),
-                      number_of_agents=10,
-                      obs_builder_object=GlobalObsForRailEnv(),
-                      stochastic_data=stochastic_data,  # Malfunction data generator
-                      )
+        env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
+                      schedule_generator=random_schedule_generator(), number_of_agents=10,
+                      obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=stochastic_data)
 
         # Tree Observation
-        env2 = RailEnv(width=25,
-                       height=30,
-                       rail_generator=rail_from_grid_transition_map(rail),
-                       schedule_generator=random_schedule_generator(),
-                       number_of_agents=10,
-                       obs_builder_object=GlobalObsForRailEnv(),
-                       stochastic_data=stochastic_data,  # Malfunction data generator
-                       )
+        env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
+                       schedule_generator=random_schedule_generator(), number_of_agents=10,
+                       obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=stochastic_data)
 
         env.reset(True, False, True, random_seed=tests)
         env2.reset(True, False, True, random_seed=tests)

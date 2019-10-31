@@ -24,10 +24,7 @@ class EditorMVC(object):
         """ Create an Editor MVC assembly around a railenv, or create one if None.
         """
         if env is None:
-            env = RailEnv(width=10,
-                          height=10,
-                          rail_generator=empty_rail_generator(),
-                          number_of_agents=0,
+            env = RailEnv(width=10, height=10, rail_generator=empty_rail_generator(), number_of_agents=0,
                           obs_builder_object=TreeObsForRailEnv(max_depth=2))
 
         env.reset()
@@ -669,11 +666,8 @@ class EditorModel(object):
             fnMethod = complex_rail_generator(nr_start_goal=nAgents, nr_extra=20, min_dist=12, seed=int(time.time()))
 
         if env is None:
-            self.env = RailEnv(width=self.regen_size_width,
-                               height=self.regen_size_height,
-                               rail_generator=fnMethod,
-                               number_of_agents=nAgents,
-                               obs_builder_object=TreeObsForRailEnv(max_depth=2))
+            self.env = RailEnv(width=self.regen_size_width, height=self.regen_size_height, rail_generator=fnMethod,
+                               number_of_agents=nAgents, obs_builder_object=TreeObsForRailEnv(max_depth=2))
         else:
             self.env = env
         self.env.reset(regenerate_rail=True)

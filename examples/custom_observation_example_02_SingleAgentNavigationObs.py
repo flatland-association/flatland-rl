@@ -76,13 +76,10 @@ def main(args):
         else:
             assert False, "unhandled option"
 
-    env = RailEnv(width=7,
-                  height=7,
+    env = RailEnv(width=7, height=7,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=5, max_dist=99999,
-                                                        seed=1),
-                  schedule_generator=complex_schedule_generator(),
-                  number_of_agents=1,
-                  obs_builder_object=SingleAgentNavigationObs())
+                                                        seed=1), schedule_generator=complex_schedule_generator(),
+                  number_of_agents=1, obs_builder_object=SingleAgentNavigationObs())
 
     obs, info = env.reset()
     env_renderer = RenderTool(env, gl="PILSVG")
