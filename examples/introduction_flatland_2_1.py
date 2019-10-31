@@ -6,6 +6,7 @@ import numpy as np
 from flatland.envs.observations import GlobalObsForRailEnv
 # First of all we import the Flatland rail environment
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env import RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.schedule_generators import sparse_schedule_generator
 # We also include a renderer because we want to visualize what is going on in the environment
@@ -27,8 +28,8 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 # The railway infrastructure can be build using any of the provided generators in env/rail_generators.py
 # Here we use the sparse_rail_generator with the following parameters
 
-width = 16*7  # With of map
-height = 9*7  # Height of map
+width = 16 * 7  # With of map
+height = 9 * 7  # Height of map
 nr_trains = 20  # Number of trains that have an assigned task in the env
 cities_in_map = 20  # Number of cities where agents can start or end
 seed = 14  # Random seed
@@ -109,7 +110,8 @@ class RandomAgent:
         :param state: input is the observation of the agent
         :return: returns an action
         """
-        return np.random.choice([1, 2, 3, 4]) # [Left, Forward, Right, Stop]
+        return np.random.choice([RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT, RailEnvActions.MOVE_LEFT,
+                                 RailEnvActions.STOP_MOVING])
 
     def step(self, memories):
         """
