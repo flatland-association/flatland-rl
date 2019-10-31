@@ -106,7 +106,7 @@ def test_malfunction_process():
         total_down_time += env.agents[0].malfunction_data['malfunction']
 
     # Check that the appropriate number of malfunctions is achieved
-    assert env.agents[0].malfunction_data['nr_malfunctions'] == 22, "Actual {}".format(
+    assert env.agents[0].malfunction_data['nr_malfunctions'] == 23, "Actual {}".format(
         env.agents[0].malfunction_data['nr_malfunctions'])
 
     # Check that malfunctioning data was standing around
@@ -132,16 +132,16 @@ def test_malfunction_process_statistically():
     env.agents[0].target = (0, 0)
     # Next line only for test generation
     #agent_malfunction_list = [[] for i in range(10)]
-    agent_malfunction_list = [[0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1],
-     [0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0],
-     [0, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 5, 4],
-     [0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0],
-     [0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 5, 4, 3, 2],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 5],
-     [0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 5, 4, 3],
-     [0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+    agent_malfunction_list = [[0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1],
+     [0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 0],
+     [5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4, 3, 2, 1, 0],
+     [0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1],
+     [0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0],
+     [0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+     [0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1],
+     [0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2],
+     [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+     [5, 4, 3, 2, 1, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0]]
 
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}
@@ -158,7 +158,7 @@ def test_malfunction_process_statistically():
 def test_malfunction_before_entry():
     """Tests that malfunctions are working properly for agents before entering the environment!"""
     # Set fixed malfunction duration for this test
-    stochastic_data = {'malfunction_rate': 0.0001,
+    stochastic_data = {'malfunction_rate': 2,
                        'min_duration': 10,
                        'max_duration': 10}
 
@@ -176,16 +176,17 @@ def test_malfunction_before_entry():
     # we want different next_malfunction values for the agents
     assert env.agents[0].malfunction_data['malfunction'] == 0
     assert env.agents[1].malfunction_data['malfunction'] == 0
-    assert env.agents[2].malfunction_data['malfunction'] == 0
+    assert env.agents[2].malfunction_data['malfunction'] == 10
     assert env.agents[3].malfunction_data['malfunction'] == 0
     assert env.agents[4].malfunction_data['malfunction'] == 0
-    assert env.agents[5].malfunction_data['malfunction'] == 10
+    assert env.agents[5].malfunction_data['malfunction'] == 0
     assert env.agents[6].malfunction_data['malfunction'] == 0
     assert env.agents[7].malfunction_data['malfunction'] == 0
-    assert env.agents[8].malfunction_data['malfunction'] == 0
-    assert env.agents[9].malfunction_data['malfunction'] == 0
-    # for a in range(10):
-    #   print("assert env.agents[{}].malfunction_data['malfunction'] == {}".format(a,env.agents[a].malfunction_data['malfunction']))
+    assert env.agents[8].malfunction_data['malfunction'] == 10
+    assert env.agents[9].malfunction_data['malfunction'] == 10
+
+    #for a in range(10):
+    #  print("assert env.agents[{}].malfunction_data['malfunction'] == {}".format(a,env.agents[a].malfunction_data['malfunction']))
 
 
 def test_malfunction_values_and_behavior():

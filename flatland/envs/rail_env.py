@@ -362,15 +362,17 @@ class RailEnv(Environment):
             for i_agent in range(self.get_num_agents()):
                 self.set_agent_active(i_agent)
 
-        # Induce malfunctions
-        self._malfunction(self.mean_malfunction_rate)
+
 
         for agent in self.agents:
+            # Induce malfunctions
+            self._break_agent(self.mean_malfunction_rate, agent)
+
             if agent.malfunction_data["malfunction"] > 0:
                 agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.DO_NOTHING
 
-        # Fix agents that finished their malfunciton
-        self._fix_agents()
+            # Fix agents that finished their malfunction
+            self._fix_agent(agent)
 
         self.num_resets += 1
         self._elapsed_steps = 0
@@ -394,64 +396,48 @@ class RailEnv(Environment):
         observation_dict: Dict = self._get_observations()
         return observation_dict, info_dict
 
-    def _fix_agents(self):
+    def _fix_agent(self, agent):
         """
         Updates agent malfunction variables and fixes broken agents
+
+        Parameters
+        ----------
+        agent
         """
-        for agent in self.agents:
 
-            # Ignore agents that OK
-            if agent.malfunction_data['fixed']:
-                continue
-
-            # Reduce number of malfunction steps left
-            if agent.malfunction_data['malfunction'] > 1:
-                agent.malfunction_data['malfunction'] -= 1
-                continue
-
-            # Restart agents at the end of their malfunction
-            agent.malfunction_data['malfunction'] -= 1
-            agent.malfunction_data['fixed'] = True
-            if 'moving_before_malfunction' in agent.malfunction_data:
-                agent.moving = agent.malfunction_data['moving_before_malfunction']
-                continue
-
-    def _malfunction(self, rate):
-        """
-        Malfunction generator that breaks agents at a given rate. It does randomly chose agent to break during the run
-
-        """
-        if self.np_random.rand() < self._malfunction_prob(rate, len(self.active_agents)):
-            # Select only from agents that are not done yet
-            breaking_agent_idx = self.np_random.choice(self.active_agents)
-            breaking_agent = self.agents[breaking_agent_idx]
-
-            # We assume that less then half of the active agents should be broken at MOST.
-            # Therefore we only try that many times before ignoring the malfunction
-
-            tries = 0
-            max_tries = 0.5 * len(self.active_agents)
-
-            # Look for a functioning active agent
-            while breaking_agent.malfunction_data['malfunction'] > 0 and tries < max_tries:
-                breaking_agent_idx = self.np_random.choice(self.active_agents)
-                breaking_agent = self.agents[breaking_agent_idx]
-                tries += 1
-
-            # If we did not manage to find a functioning agent among the active ones skip this malfunction
-            if tries < max_tries:
-                # Because we update agents in the same step as we break them we add one to the duration of the
-                # malfunction
-                num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                          self.max_number_of_steps_broken + 1) + 1
-                breaking_agent.malfunction_data['malfunction'] = num_broken_steps
-                breaking_agent.malfunction_data['moving_before_malfunction'] = breaking_agent.moving
-                breaking_agent.malfunction_data['fixed'] = False
-                breaking_agent.malfunction_data['nr_malfunctions'] += 1
-
-                return
-
+        # Ignore agents that are OK
+        if self._is_ok(agent):
             return
+
+        # Reduce number of malfunction steps left
+        if agent.malfunction_data['malfunction'] > 1:
+            agent.malfunction_data['malfunction'] -= 1
+            return
+
+        # Restart agents at the end of their malfunction
+        agent.malfunction_data['malfunction'] -= 1
+        if 'moving_before_malfunction' in agent.malfunction_data:
+            agent.moving = agent.malfunction_data['moving_before_malfunction']
+            return
+
+    def _break_agent(self, rate, agent):
+        """
+        Malfunction generator that breaks agents at a given rate.
+
+        Parameters
+        ----------
+        agent
+
+        """
+        if agent.malfunction_data['malfunction'] < 1:
+            if self.np_random.rand() < self._malfunction_prob(rate):
+                num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
+                                                              self.max_number_of_steps_broken + 1) + 1
+                agent.malfunction_data['malfunction'] = num_broken_steps
+                agent.malfunction_data['moving_before_malfunction'] = agent.moving
+                agent.malfunction_data['nr_malfunctions'] += 1
+        return
+
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
         """
@@ -492,12 +478,14 @@ class RailEnv(Environment):
         }
         have_all_agents_ended = True  # boolean flag to check if all agents are done
 
-        # Induce malfunctions
-        self._malfunction(self.mean_malfunction_rate)
+
 
         for i_agent, agent in enumerate(self.agents):
             # Reset the step rewards
             self.rewards_dict[i_agent] = 0
+
+            # Induce malfunction before we do a step, thus a broken agent can't move in this step
+            self._break_agent(self.mean_malfunction_rate, agent)
 
             # Perform step on the agent
             self._step_agent(i_agent, action_dict_.get(i_agent))
@@ -511,8 +499,8 @@ class RailEnv(Environment):
             info_dict["speed"][i_agent] = agent.speed_data['speed']
             info_dict["status"][i_agent] = agent.status
 
-        # Fix agents that finished their malfunction
-        self._fix_agents()
+            # Fix agents that finished their malfunction such that they can perfom an action in the next step
+            self._fix_agent(agent)
 
         # Check for end of episode + set global reward to all rewards!
         if have_all_agents_ended:
@@ -986,7 +974,7 @@ class RailEnv(Environment):
         x = - np.log(1 - u) * rate
         return x
 
-    def _malfunction_prob(self, rate, n_agents):
+    def _malfunction_prob(self, rate):
         """
         Probability that an agent break given the number of agents an the probability of a sinlge agent to break
         :param rate:
@@ -995,4 +983,48 @@ class RailEnv(Environment):
         if rate <= 0:
             return 0.
         else:
-            return 1 - np.exp(- (1 / rate) * (n_agents))
+            return 1 - np.exp(- (1 / rate))
+
+    def _draw_malfunctioning_agent(self, tries):
+        """
+        Function to determin what agent will be breaking.
+        It only looks at active and non-broken agents.
+        After a number of steps it gives up the search after breaking agents and ignores malfunciton
+
+        Parameters
+        ----------
+        tries: How many times we tried to find an agent
+
+        Returns
+        -------
+        agent that is breaking
+        """
+        # Select only from active agents
+        breaking_agent_idx = self.np_random.choice(self.active_agents)
+        breaking_agent = self.agents[breaking_agent_idx]
+        # We assume that at least half of the agents should still be working
+        if tries > 0.5 * len(self.active_agents):
+            return None
+
+        # If agent is already broken look for a new one
+        elif breaking_agent.malfunction_data['malfunction'] > 0:
+            return self._draw_malfunctioning_agent(tries + 1)
+
+        # Return agent to be broken
+        else:
+            return breaking_agent
+
+    def _is_ok(self, agent):
+        """
+        Check if an agent is ok, meaning it can move and is not malfuncitoinig
+        Parameters
+        ----------
+        agent
+
+        Returns
+        -------
+        True if agent is ok, False otherwise
+
+        """
+        return agent.malfunction_data['malfunction'] < 1
+

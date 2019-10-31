@@ -40,7 +40,7 @@ class EnvAgentStatic(object):
     malfunction_data = attrib(
         default=Factory(
             lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0,
-                          'moving_before_malfunction': False, 'fixed': True})))
+                          'moving_before_malfunction': False})))
 
     status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
     position = attrib(default=None, type=Optional[Tuple[int, int]])
@@ -65,8 +65,7 @@ class EnvAgentStatic(object):
                                       'malfunction_rate': schedule.agent_malfunction_rates[
                                           i] if schedule.agent_malfunction_rates is not None else 0.,
                                       'next_malfunction': 0,
-                                      'nr_malfunctions': 0,
-                                      'fixed': True})
+                                      'nr_malfunctions': 0})
 
         return list(starmap(EnvAgentStatic, zip(schedule.agent_positions,
                                                 schedule.agent_directions,
