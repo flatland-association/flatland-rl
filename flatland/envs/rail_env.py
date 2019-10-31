@@ -406,7 +406,7 @@ class RailEnv(Environment):
         for agent in self.agents:
 
             # Ignore agents that OK
-            if agent.malfunction_data['fixed']:
+            if agent.malfunction_data['malfunction'] < 1:
                 continue
 
             # Reduce number of malfunction steps left
@@ -416,7 +416,6 @@ class RailEnv(Environment):
 
             # Restart agents at the end of their malfunction
             agent.malfunction_data['malfunction'] -= 1
-            agent.malfunction_data['fixed'] = True
             if 'moving_before_malfunction' in agent.malfunction_data:
                 agent.moving = agent.malfunction_data['moving_before_malfunction']
                 continue
@@ -450,7 +449,6 @@ class RailEnv(Environment):
                                                               self.max_number_of_steps_broken + 1) + 1
                 breaking_agent.malfunction_data['malfunction'] = num_broken_steps
                 breaking_agent.malfunction_data['moving_before_malfunction'] = breaking_agent.moving
-                breaking_agent.malfunction_data['fixed'] = False
                 breaking_agent.malfunction_data['nr_malfunctions'] += 1
         return
 
