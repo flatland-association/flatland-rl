@@ -219,8 +219,9 @@ class RailEnv(Environment):
 
         self.valid_positions = None
 
-        # global numpy array of agents position, True means that there is an agent at that cell
-        self.agent_positions: np.ndarray = np.full((height, width), False)
+        # global numpy array of agents position, -1 means that the cell is free, otherwise the agent handle is placed
+        # inside the cell
+        self.agent_positions: np.ndarray = np.zeros((height, width), dtype=int) - 1
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -362,7 +363,7 @@ class RailEnv(Environment):
             else:
                 self._max_episode_steps = self.compute_max_episode_steps(width=self.width, height=self.height)
 
-        self.agent_positions = np.full((self.height, self.width), False)
+        self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
 
         self.restart_agents()
 
@@ -663,7 +664,7 @@ class RailEnv(Environment):
         new_position: IntVector2D
         """
         agent.position = new_position
-        self.agent_positions[agent.position] = True
+        self.agent_positions[agent.position] = agent.handle
 
     def _move_agent_to_new_position(self, agent: EnvAgent, new_position: IntVector2D):
         """
@@ -676,8 +677,8 @@ class RailEnv(Environment):
         new_position: IntVector2D
         """
         agent.position = new_position
-        self.agent_positions[agent.old_position] = False
-        self.agent_positions[agent.position] = True
+        self.agent_positions[agent.old_position] = -1
+        self.agent_positions[agent.position] = agent.handle
 
     def _remove_agent_from_scene(self, agent: EnvAgent):
         """
@@ -688,7 +689,7 @@ class RailEnv(Environment):
         -------
         agent: EnvAgent object
         """
-        self.agent_positions[agent.position] = False
+        self.agent_positions[agent.position] = -1
         if self.remove_agents_at_target:
             agent.position = None
             agent.status = RailAgentStatus.DONE_REMOVED
@@ -753,7 +754,7 @@ class RailEnv(Environment):
             is the cell free or not?
 
         """
-        return not self.agent_positions[position]
+        return self.agent_positions[position] == -1
 
     def check_action(self, agent: EnvAgent, action: RailEnvActions):
         """
