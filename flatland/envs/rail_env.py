@@ -199,14 +199,15 @@ class RailEnv(Environment):
         # Stochastic train malfunctioning parameters
         mean_malfunction_rate, malfunction_min_duration, malfunction_max_duration = self.malfunction_generator()
         self.mean_malfunction_rate = mean_malfunction_rate
+
+        # Uniform distribution parameters for malfunction duration
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
 
         self.valid_positions = None
 
-        # global numpy array of agents position, -1 means that the cell is free, otherwise the agent handle is placed
-        # inside the cell
-        self.agent_positions: np.ndarray = np.zeros((height, width), dtype=int) - 1
+        # global numpy array of agents position, True means that there is an agent at that cell
+        self.agent_positions: np.ndarray = np.full((height, width), False)
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -230,8 +231,7 @@ class RailEnv(Environment):
         self.agents_static.append(agent_static)
         return len(self.agents_static) - 1
 
-    def set_agent_active(self, handle: int):
-        agent = self.agents[handle]
+    def set_agent_active(self, agent: EnvAgent):
         if agent.status == RailAgentStatus.READY_TO_DEPART and self.cell_free(agent.initial_position):
             agent.status = RailAgentStatus.ACTIVE
             self._set_agent_to_initial_position(agent, agent.initial_position)
@@ -360,12 +360,11 @@ class RailEnv(Environment):
 
         self.restart_agents()
 
-        if activate_agents:
-            for i_agent in range(self.get_num_agents()):
-                self.set_agent_active(i_agent)
-
         for agent in self.agents:
             # Induce malfunctions
+            if activate_agents:
+                self.set_agent_active(agent)
+
             self._break_agent(self.mean_malfunction_rate, agent)
 
             if agent.malfunction_data["malfunction"] > 0:
@@ -995,3 +994,4 @@ class RailEnv(Environment):
 
         """
         return agent.malfunction_data['malfunction'] < 1
+
