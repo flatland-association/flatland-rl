@@ -14,6 +14,7 @@ Welcome to flatland's documentation!
    06_contributing
    07_changes
    08_authors
+   09_faq_toc
 
 Indices and tables
 ==================
