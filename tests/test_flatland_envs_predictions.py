@@ -34,7 +34,7 @@ def test_dummy_predictor(rendering=False):
 
     # reset to set agents from agents_static
     env.reset(False, False)
-    env.set_agent_active(0)
+    env.set_agent_active(env.agents[0])
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
