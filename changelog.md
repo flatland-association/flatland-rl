@@ -3,6 +3,10 @@ Changelog
 
 Changes since Flatland 2.0.0
 --------------------------
+### Changes in malfunction behavior
+- agent attribute `next_malfunction`is not used anymore, it will be removed fully in future versions.
+- `break_agent()` function is introduced which induces malfunctions in agent according to poisson process
+- `_fix_agent_after_malfunction()` fixes agents after attribute `malfunction == 0`
 
 ### Changes in `Environment`
 - moving of member variable `distance_map_computed` to new class `DistanceMap`
