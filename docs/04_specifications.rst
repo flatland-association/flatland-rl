@@ -4,4 +4,3 @@
 .. include:: specifications/intro_observation_actions.rst
 .. include:: specifications/rendering.rst
 .. include:: specifications/visualization.rst
-.. include:: specifications/FAQ.rst

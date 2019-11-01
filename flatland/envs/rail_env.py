@@ -112,7 +112,8 @@ class RailEnv(Environment):
     stop_penalty = 0  # penalty for stopping a moving agent
     start_penalty = 0  # penalty for starting a stopped agent
 
-    def __init__(self, width,
+    def __init__(self,
+                 width,
                  height,
                  rail_generator: RailGenerator = random_rail_generator(),
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
@@ -203,8 +204,9 @@ class RailEnv(Environment):
 
         self.valid_positions = None
 
-        # global numpy array of agents position, True means that there is an agent at that cell
-        self.agent_positions: np.ndarray = np.full((height, width), False)
+        # global numpy array of agents position, -1 means that the cell is free, otherwise the agent handle is placed
+        # inside the cell
+        self.agent_positions: np.ndarray = np.zeros((height, width), dtype=int) - 1
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -354,15 +356,13 @@ class RailEnv(Environment):
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
 
-        self.agent_positions = np.full((self.height, self.width), False)
+        self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
 
         self.restart_agents()
 
         if activate_agents:
             for i_agent in range(self.get_num_agents()):
                 self.set_agent_active(i_agent)
-
-
 
         for agent in self.agents:
             # Induce malfunctions
@@ -372,7 +372,7 @@ class RailEnv(Environment):
                 agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.DO_NOTHING
 
             # Fix agents that finished their malfunction
-            self._fix_agent(agent)
+            self._fix_agent_after_malfunction(agent)
 
         self.num_resets += 1
         self._elapsed_steps = 0
@@ -396,7 +396,7 @@ class RailEnv(Environment):
         observation_dict: Dict = self._get_observations()
         return observation_dict, info_dict
 
-    def _fix_agent(self, agent):
+    def _fix_agent_after_malfunction(self, agent: EnvAgent):
         """
         Updates agent malfunction variables and fixes broken agents
 
@@ -406,7 +406,7 @@ class RailEnv(Environment):
         """
 
         # Ignore agents that are OK
-        if self._is_ok(agent):
+        if self._is_agent_ok(agent):
             return
 
         # Reduce number of malfunction steps left
@@ -420,7 +420,7 @@ class RailEnv(Environment):
             agent.moving = agent.malfunction_data['moving_before_malfunction']
             return
 
-    def _break_agent(self, rate, agent):
+    def _break_agent(self, rate: float, agent) -> bool:
         """
         Malfunction generator that breaks agents at a given rate.
 
@@ -432,12 +432,11 @@ class RailEnv(Environment):
         if agent.malfunction_data['malfunction'] < 1:
             if self.np_random.rand() < self._malfunction_prob(rate):
                 num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                              self.max_number_of_steps_broken + 1) + 1
+                                                          self.max_number_of_steps_broken + 1) + 1
                 agent.malfunction_data['malfunction'] = num_broken_steps
                 agent.malfunction_data['moving_before_malfunction'] = agent.moving
                 agent.malfunction_data['nr_malfunctions'] += 1
         return
-
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
         """
@@ -478,8 +477,6 @@ class RailEnv(Environment):
         }
         have_all_agents_ended = True  # boolean flag to check if all agents are done
 
-
-
         for i_agent, agent in enumerate(self.agents):
             # Reset the step rewards
             self.rewards_dict[i_agent] = 0
@@ -499,8 +496,8 @@ class RailEnv(Environment):
             info_dict["speed"][i_agent] = agent.speed_data['speed']
             info_dict["status"][i_agent] = agent.status
 
-            # Fix agents that finished their malfunction such that they can perfom an action in the next step
-            self._fix_agent(agent)
+            # Fix agents that finished their malfunction such that they can perform an action in the next step
+            self._fix_agent_after_malfunction(agent)
 
         # Check for end of episode + set global reward to all rewards!
         if have_all_agents_ended:
@@ -655,7 +652,7 @@ class RailEnv(Environment):
         new_position: IntVector2D
         """
         agent.position = new_position
-        self.agent_positions[agent.position] = True
+        self.agent_positions[agent.position] = agent.handle
 
     def _move_agent_to_new_position(self, agent: EnvAgent, new_position: IntVector2D):
         """
@@ -668,8 +665,8 @@ class RailEnv(Environment):
         new_position: IntVector2D
         """
         agent.position = new_position
-        self.agent_positions[agent.old_position] = False
-        self.agent_positions[agent.position] = True
+        self.agent_positions[agent.old_position] = -1
+        self.agent_positions[agent.position] = agent.handle
 
     def _remove_agent_from_scene(self, agent: EnvAgent):
         """
@@ -680,7 +677,7 @@ class RailEnv(Environment):
         -------
         agent: EnvAgent object
         """
-        self.agent_positions[agent.position] = False
+        self.agent_positions[agent.position] = -1
         if self.remove_agents_at_target:
             agent.position = None
             agent.status = RailAgentStatus.DONE_REMOVED
@@ -745,7 +742,7 @@ class RailEnv(Environment):
             is the cell free or not?
 
         """
-        return not self.agent_positions[position]
+        return self.agent_positions[position] == -1
 
     def check_action(self, agent: EnvAgent, action: RailEnvActions):
         """
@@ -963,7 +960,7 @@ class RailEnv(Environment):
         load_data = read_binary(package, resource)
         self.set_full_state_msg(load_data)
 
-    def _exp_distirbution_synced(self, rate):
+    def _exp_distirbution_synced(self, rate: float) -> float:
         """
         Generates sample from exponential distribution
         We need this to guarantee synchronity between different instances with same seed.
@@ -974,9 +971,9 @@ class RailEnv(Environment):
         x = - np.log(1 - u) * rate
         return x
 
-    def _malfunction_prob(self, rate):
+    def _malfunction_prob(self, rate: float) -> float:
         """
-        Probability that an agent break given the number of agents an the probability of a sinlge agent to break
+        Probability of a single agent to break. According to Poisson process with given rate
         :param rate:
         :return:
         """
@@ -985,36 +982,7 @@ class RailEnv(Environment):
         else:
             return 1 - np.exp(- (1 / rate))
 
-    def _draw_malfunctioning_agent(self, tries):
-        """
-        Function to determin what agent will be breaking.
-        It only looks at active and non-broken agents.
-        After a number of steps it gives up the search after breaking agents and ignores malfunciton
-
-        Parameters
-        ----------
-        tries: How many times we tried to find an agent
-
-        Returns
-        -------
-        agent that is breaking
-        """
-        # Select only from active agents
-        breaking_agent_idx = self.np_random.choice(self.active_agents)
-        breaking_agent = self.agents[breaking_agent_idx]
-        # We assume that at least half of the agents should still be working
-        if tries > 0.5 * len(self.active_agents):
-            return None
-
-        # If agent is already broken look for a new one
-        elif breaking_agent.malfunction_data['malfunction'] > 0:
-            return self._draw_malfunctioning_agent(tries + 1)
-
-        # Return agent to be broken
-        else:
-            return breaking_agent
-
-    def _is_ok(self, agent):
+    def _is_agent_ok(self, agent: EnvAgent) -> bool:
         """
         Check if an agent is ok, meaning it can move and is not malfuncitoinig
         Parameters
@@ -1027,4 +995,3 @@ class RailEnv(Environment):
 
         """
         return agent.malfunction_data['malfunction'] < 1
-
