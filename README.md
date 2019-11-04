@@ -149,7 +149,7 @@ env = RailEnv(width=width,
               rail_generator=rail_generator,
               schedule_generator=schedule_generator,
               number_of_agents=nr_trains,
-              malfunction_generator=stochastic_data,  # Malfunction data generator
+              malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
               obs_builder_object=observation_builder,
               remove_agents_at_target=True  # Removes agents at the end of their journey to make space for others
               )
