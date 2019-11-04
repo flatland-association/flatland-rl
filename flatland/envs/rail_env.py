@@ -19,8 +19,7 @@ from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.malfunction_generators import no_malfunction_generator, Malfunction, MalfunctionGenerator, \
-    MalfunctionProcessData
+from flatland.envs.malfunction_generators import no_malfunction_generator, Malfunction, MalfunctionProcessData
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
@@ -160,7 +159,7 @@ class RailEnv(Environment):
         """
         super().__init__()
 
-        self.malfunction_generator, self.malfunction_process_data  = malfunction_generator_and_process_data
+        self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
         self.rail: Optional[GridTransitionMap] = None

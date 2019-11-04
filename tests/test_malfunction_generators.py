@@ -23,12 +23,17 @@ def test_malfanction_from_params():
 
     rail, rail_map = make_simple_rail2()
 
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=10), number_of_agents=1)
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=10,
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
+                  )
     env.reset()
-    assert env.mean_malfunction_rate == 1000
-    assert env.min_number_of_steps_broken == 2
-    assert env.max_number_of_steps_broken == 5
+    assert env.malfunction_process_data.malfunction_rate == 1000
+    assert env.malfunction_process_data.min_duration == 2
+    assert env.malfunction_process_data.max_duration == 5
 
 
 def test_malfanction_to_and_from_file():
