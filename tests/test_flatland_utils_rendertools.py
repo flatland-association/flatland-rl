@@ -49,6 +49,7 @@ def test_render_env(save_new_images=False):
     oRT.render_env()
     checkFrozenImage(oRT, "basic-env-PIL.npz", resave=save_new_images)
 
+
 def main():
     if len(sys.argv) == 2 and sys.argv[1] == "save":
         test_render_env(save_new_images=True)

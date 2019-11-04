@@ -17,4 +17,4 @@ env_renderer = RenderTool(env)
 env_renderer.render_env(show=True, show_predictions=False, show_observations=False)
 
 # uncomment to keep the renderer open
-#input("Press Enter to continue...")
+# input("Press Enter to continue...")

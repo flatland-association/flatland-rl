@@ -11,8 +11,6 @@ import numpy as np
 import redis
 
 import flatland
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
 from flatland.envs.schedule_generators import schedule_from_file
@@ -223,11 +221,11 @@ class FlatlandRemoteClient(object):
 
         time_start = time.time()
         local_observation, info = self.env.reset(
-                                regenerate_rail=True,
-                                regenerate_schedule=True,
-                                activate_agents=False,
-                                random_seed=random_seed
-                            )
+            regenerate_rail=True,
+            regenerate_schedule=True,
+            activate_agents=False,
+            random_seed=random_seed
+        )
         time_diff = time.time() - time_start
         self.update_running_mean_stats("internal_env_reset_time", time_diff)
         # Use the local observation
@@ -266,14 +264,14 @@ class FlatlandRemoteClient(object):
         ######################################################################
         # Print Local Stats
         ######################################################################
-        print("="*100)
-        print("="*100)
+        print("=" * 100)
+        print("=" * 100)
         print("## Client Performance Stats")
-        print("="*100)
+        print("=" * 100)
         for _key in self.stats:
             if _key.endswith("_mean"):
                 print("\t - {}\t:{}".format(_key, self.stats[_key]))
-        print("="*100)
+        print("=" * 100)
         if os.getenv("AICROWD_BLOCKING_SUBMIT"):
             """
             If the submission is supposed to happen as a blocking submit,
@@ -288,11 +286,13 @@ class FlatlandRemoteClient(object):
 if __name__ == "__main__":
     remote_client = FlatlandRemoteClient()
 
+
     def my_controller(obs, _env):
         _action = {}
         for _idx, _ in enumerate(_env.agents):
             _action[_idx] = np.random.randint(0, 5)
         return _action
+
 
     my_observation_builder = DummyObservationBuilder()
 

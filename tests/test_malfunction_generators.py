@@ -1,13 +1,7 @@
-import random
-from typing import Dict, List
-
 import numpy as np
-from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.malfunction_generators import malfunction_from_params, malfunction_from_file
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
@@ -40,6 +34,7 @@ def test_malfanction_from_params():
     assert env.min_number_of_steps_broken == 2
     assert env.max_number_of_steps_broken == 5
 
+
 def test_malfanction_to_and_from_file():
     """
     Test loading malfunction from
@@ -65,11 +60,11 @@ def test_malfanction_to_and_from_file():
     env.save("./malfunction_saving_loading_tests.pkl")
 
     env2 = RailEnv(width=25,
-                  height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=10),
-                  number_of_agents=1,
-                  malfunction_generator=malfunction_from_file("./malfunction_saving_loading_tests.pkl"))
+                   height=30,
+                   rail_generator=rail_from_grid_transition_map(rail),
+                   schedule_generator=random_schedule_generator(seed=10),
+                   number_of_agents=1,
+                   malfunction_generator=malfunction_from_file("./malfunction_saving_loading_tests.pkl"))
 
     env2.reset()
 

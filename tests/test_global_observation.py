@@ -29,7 +29,8 @@ def test_get_global_observation():
                                                                             grid_mode=False
                                                                             ),
                   schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=number_of_agents,
-                  obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=malfunction_from_params(stochastic_data))
+                  obs_builder_object=GlobalObsForRailEnv(),
+                  malfunction_generator=malfunction_from_params(stochastic_data))
     env.reset()
 
     obs, all_rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in range(number_of_agents)})

@@ -994,4 +994,3 @@ class RailEnv(Environment):
 
         """
         return agent.malfunction_data['malfunction'] < 1
-

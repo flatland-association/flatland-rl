@@ -33,4 +33,4 @@ env_renderer = RenderTool(env, gl="PIL")
 env_renderer.render_env(show=True)
 
 # uncomment to keep the renderer open
-#input("Press Enter to continue...")
+# input("Press Enter to continue...")

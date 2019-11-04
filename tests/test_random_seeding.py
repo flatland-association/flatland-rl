@@ -109,12 +109,14 @@ def test_seeding_and_malfunction():
     for tests in range(1, 100):
         env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
                       schedule_generator=random_schedule_generator(), number_of_agents=10,
-                      obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=malfunction_from_params(stochastic_data))
+                      obs_builder_object=GlobalObsForRailEnv(),
+                      malfunction_generator=malfunction_from_params(stochastic_data))
 
         # Tree Observation
         env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
                        schedule_generator=random_schedule_generator(), number_of_agents=10,
-                       obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=malfunction_from_params(stochastic_data))
+                       obs_builder_object=GlobalObsForRailEnv(),
+                       malfunction_generator=malfunction_from_params(stochastic_data))
 
         env.reset(True, False, True, random_seed=tests)
         env2.reset(True, False, True, random_seed=tests)

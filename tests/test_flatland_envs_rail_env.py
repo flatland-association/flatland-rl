@@ -217,6 +217,7 @@ def test_get_entry_directions():
     # nowhere
     _assert((0, 0), [False, False, False, False])
 
+
 def test_rail_env_reset():
     file_name = "test_rail_env_reset.pkl"
 

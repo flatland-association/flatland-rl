@@ -50,7 +50,6 @@ for image_file in glob.glob(r'./specifications/img/*'):
 
 subprocess.call(['python', '-msphinx', '-M', 'html', '.', '_build'])
 
-
 # we do not currrently use pydeps, commented out https://gitlab.aicrowd.com/flatland/flatland/issues/149
 # subprocess.call(['python', '-mpydeps', '../flatland', '-o', '_build/html/flatland.svg', '--no-config', '--noshow'])
 

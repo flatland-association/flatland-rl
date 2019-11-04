@@ -120,6 +120,7 @@ def test_initial_status():
 
     run_replay_config(env, [test_config], activate_agents=False)
 
+
 def test_status_done_remove():
     """Test that agent lifecycle works correctly ready-to-depart -> active -> done."""
     rail, rail_map = make_simple_rail()

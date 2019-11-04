@@ -1,6 +1,6 @@
 """Malfunction generators for rail systems"""
 
-from typing import Tuple, List, Callable
+from typing import Tuple, Callable
 
 import msgpack
 
@@ -36,6 +36,7 @@ def malfunction_from_file(filename) -> MalfunctionGenerator:
 
     return generator
 
+
 def malfunction_from_params(parameters) -> MalfunctionGenerator:
     """
     Utility to load malfunction from parameters
@@ -59,6 +60,7 @@ def malfunction_from_params(parameters) -> MalfunctionGenerator:
         return mean_malfunction_rate, min_number_of_steps_broken, max_number_of_steps_broken
 
     return generator
+
 
 def no_malfunction_generator() -> MalfunctionGenerator:
     """

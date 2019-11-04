@@ -8,7 +8,6 @@ import shutil
 import time
 import traceback
 
-import flatland
 import crowdai_api
 import msgpack
 import msgpack_numpy as m
@@ -16,9 +15,10 @@ import numpy as np
 import redis
 import timeout_decorator
 
+import flatland
 from flatland.core.env_observation_builder import DummyObservationBuilder
-from flatland.envs.rail_env import RailEnv
 from flatland.envs.agent_utils import RailAgentStatus
+from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
 from flatland.envs.schedule_generators import schedule_from_file
 from flatland.evaluators import aicrowd_helpers
@@ -353,11 +353,11 @@ class FlatlandRemoteEvaluationService:
             self.current_step = 0
 
             _observation, _info = self.env.reset(
-                                regenerate_rail=True,
-                                regenerate_schedule=True,
-                                activate_agents=False,
-                                random_seed=RANDOM_SEED
-                                )
+                regenerate_rail=True,
+                regenerate_schedule=True,
+                activate_agents=False,
+                random_seed=RANDOM_SEED
+            )
 
             if self.visualize:
                 if self.env_renderer:
@@ -477,14 +477,14 @@ class FlatlandRemoteEvaluationService:
         ######################################################################
         # Print Local Stats
         ######################################################################
-        print("="*100)
-        print("="*100)
+        print("=" * 100)
+        print("=" * 100)
         print("## Server Performance Stats")
-        print("="*100)
+        print("=" * 100)
         for _key in self.stats:
             if _key.endswith("_mean"):
                 print("\t - {}\t:{}".format(_key, self.stats[_key]))
-        print("="*100)
+        print("=" * 100)
 
         # Register simulation time of the last episode
         self.simulation_times.append(time.time() - self.begin_simulation)
@@ -615,7 +615,7 @@ class FlatlandRemoteEvaluationService:
                 print("Self.Reward : ", self.reward)
                 print("Current Simulation : ", self.simulation_count)
                 if self.env_file_paths and \
-                        self.simulation_count < len(self.env_file_paths):
+                    self.simulation_count < len(self.env_file_paths):
                     print("Current Env Path : ",
                           self.env_file_paths[self.simulation_count])
 
