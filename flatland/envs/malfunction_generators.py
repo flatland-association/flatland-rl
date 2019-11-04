@@ -6,7 +6,7 @@ import msgpack
 import numpy as np
 from numpy.random.mtrand import RandomState
 
-from envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent
 
 Malfunction = NamedTuple('Malfunction', [('num_broken_steps', int)])
 MalfunctionGenerator = Callable[[EnvAgent], Optional[Malfunction]]
