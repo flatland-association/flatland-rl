@@ -158,8 +158,8 @@ env = RailEnv(width=width,
 env_renderer = RenderTool(env, gl="PILSVG",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
                           show_debug=False,
-                          screen_height=1000,  # Adjust these parameters to fit your resolution
-                          screen_width=1000)  # Adjust these parameters to fit your resolution
+                          screen_height=1080,  # Adjust these parameters to fit your resolution
+                          screen_width=1920)  # Adjust these parameters to fit your resolution
 
 
 def my_controller():

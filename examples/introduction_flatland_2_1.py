@@ -62,7 +62,7 @@ schedule_generator = sparse_schedule_generator(speed_ration_map)
 # We can furthermore pass stochastic data to the RailEnv constructor which will allow for stochastic malfunctions
 # during an episode.
 
-stochastic_data = {'malfunction_rate': 100,  # Rate of malfunction occurence of single agent
+stochastic_data = {'malfunction_rate': 10000,  # Rate of malfunction occurence of single agent
                    'min_duration': 15,  # Minimal duration of malfunction
                    'max_duration': 50  # Max duration of malfunction
                    }
