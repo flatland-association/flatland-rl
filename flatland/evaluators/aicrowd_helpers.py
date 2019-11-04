@@ -1,8 +1,8 @@
-import os
-import uuid
-import subprocess
 import glob
+import os
 import random
+import subprocess
+import uuid
 
 ###############################################################
 # Expected Env Variables

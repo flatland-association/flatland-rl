@@ -39,8 +39,7 @@ env = RailEnv(width=100, height=100, rail_generator=sparse_rail_generator(max_nu
                                                                           max_rails_in_city=8,
                                                                           ),
               schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=100,
-              obs_builder_object=GlobalObsForRailEnv(), malfunction_generator=malfunction_from_params(stochastic_data),
-              remove_agents_at_target=True)
+              obs_builder_object=GlobalObsForRailEnv(), remove_agents_at_target=True)
 
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
 

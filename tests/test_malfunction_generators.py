@@ -23,12 +23,8 @@ def test_malfanction_from_params():
 
     rail, rail_map = make_simple_rail2()
 
-    env = RailEnv(width=25,
-                  height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=10),
-                  number_of_agents=1,
-                  malfunction_generator=malfunction_from_params(stochastic_data))
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(seed=10), number_of_agents=1)
     env.reset()
     assert env.mean_malfunction_rate == 1000
     assert env.min_number_of_steps_broken == 2
@@ -49,22 +45,15 @@ def test_malfanction_to_and_from_file():
 
     rail, rail_map = make_simple_rail2()
 
-    env = RailEnv(width=25,
-                  height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=10),
-                  number_of_agents=1,
-                  malfunction_generator=malfunction_from_params(stochastic_data))
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(seed=10), number_of_agents=1)
 
     env.reset()
     env.save("./malfunction_saving_loading_tests.pkl")
 
-    env2 = RailEnv(width=25,
-                   height=30,
-                   rail_generator=rail_from_grid_transition_map(rail),
-                   schedule_generator=random_schedule_generator(seed=10),
-                   number_of_agents=1,
-                   malfunction_generator=malfunction_from_file("./malfunction_saving_loading_tests.pkl"))
+    malfunction_generator, malfunction_process_data = malfunction_from_file("./malfunction_saving_loading_tests.pkl")
+    env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
+                   schedule_generator=random_schedule_generator(seed=10), number_of_agents=1)
 
     env2.reset()
 

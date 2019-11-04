@@ -19,7 +19,7 @@ from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.malfunction_generators import MalfunctionGenerator, no_malfunction_generator
+from flatland.envs.malfunction_generators import no_malfunction_generator, Malfunction
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
@@ -119,7 +119,7 @@ class RailEnv(Environment):
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
-                 malfunction_generator: MalfunctionGenerator = no_malfunction_generator(),
+                 malfunction_generator_and_process_data=no_malfunction_generator(),
                  remove_agents_at_target=True,
                  random_seed=1):
         """
@@ -159,9 +159,9 @@ class RailEnv(Environment):
         """
         super().__init__()
 
+        self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
-        self.malfunction_generator: MalfunctionGenerator = malfunction_generator
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
         self.height = height
@@ -195,14 +195,6 @@ class RailEnv(Environment):
         self.random_seed = random_seed
         if self.random_seed:
             self._seed(seed=random_seed)
-
-        # Stochastic train malfunctioning parameters
-        mean_malfunction_rate, malfunction_min_duration, malfunction_max_duration = self.malfunction_generator()
-        self.mean_malfunction_rate = mean_malfunction_rate
-
-        # Uniform distribution parameters for malfunction duration
-        self.min_number_of_steps_broken = malfunction_min_duration
-        self.max_number_of_steps_broken = malfunction_max_duration
 
         self.valid_positions = None
 
@@ -350,12 +342,6 @@ class RailEnv(Environment):
             else:
                 self._max_episode_steps = self.compute_max_episode_steps(width=self.width, height=self.height)
 
-        # Stochastic train malfunctioning parameters
-        mean_malfunction_rate, malfunction_min_duration, malfunction_max_duration = self.malfunction_generator()
-        self.mean_malfunction_rate = mean_malfunction_rate
-        self.min_number_of_steps_broken = malfunction_min_duration
-        self.max_number_of_steps_broken = malfunction_max_duration
-
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
 
         self.restart_agents()
@@ -365,7 +351,7 @@ class RailEnv(Environment):
             if activate_agents:
                 self.set_agent_active(agent)
 
-            self._break_agent(self.mean_malfunction_rate, agent)
+            self._break_agent(agent)
 
             if agent.malfunction_data["malfunction"] > 0:
                 agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.DO_NOTHING
@@ -419,7 +405,7 @@ class RailEnv(Environment):
             agent.moving = agent.malfunction_data['moving_before_malfunction']
             return
 
-    def _break_agent(self, rate: float, agent) -> bool:
+    def _break_agent(self, agent):
         """
         Malfunction generator that breaks agents at a given rate.
 
@@ -428,13 +414,13 @@ class RailEnv(Environment):
         agent
 
         """
-        if agent.malfunction_data['malfunction'] < 1:
-            if self.np_random.rand() < self._malfunction_prob(rate):
-                num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                          self.max_number_of_steps_broken + 1) + 1
-                agent.malfunction_data['malfunction'] = num_broken_steps
-                agent.malfunction_data['moving_before_malfunction'] = agent.moving
-                agent.malfunction_data['nr_malfunctions'] += 1
+
+        malfunction: Malfunction = self.malfunction_generator(agent, self.np_random)
+        if malfunction.num_broken_steps > 0:
+            agent.malfunction_data['malfunction'] = malfunction.num_broken_steps
+            agent.malfunction_data['moving_before_malfunction'] = agent.moving
+            agent.malfunction_data['nr_malfunctions'] += 1
+
         return
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
@@ -481,7 +467,7 @@ class RailEnv(Environment):
             self.rewards_dict[i_agent] = 0
 
             # Induce malfunction before we do a step, thus a broken agent can't move in this step
-            self._break_agent(self.mean_malfunction_rate, agent)
+            self._break_agent(agent)
 
             # Perform step on the agent
             self._step_agent(i_agent, action_dict_.get(i_agent))
@@ -816,9 +802,7 @@ class RailEnv(Environment):
         grid_data = self.rail.grid.tolist()
         agent_static_data = [agent.to_list() for agent in self.agents_static]
         agent_data = [agent.to_list() for agent in self.agents]
-        malfunction_data = {"malfunction_rate": self.mean_malfunction_rate,
-                            "min_duration": self.min_number_of_steps_broken,
-                            "max_duration": self.max_number_of_steps_broken}
+        malfunction_data = {"malfunction_process_data": self.malfunction_process_data}
 
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
@@ -841,9 +825,7 @@ class RailEnv(Environment):
         msgpack.packb(agent_data, use_bin_type=True)
         msgpack.packb(agent_static_data, use_bin_type=True)
         distance_map_data = self.distance_map.get()
-        malfunction_data = {"malfunction_rate": self.mean_malfunction_rate,
-                            "min_duration": self.min_number_of_steps_broken,
-                            "max_duration": self.max_number_of_steps_broken}
+        malfunction_data = {"malfunction_process_data": self.malfunction_process_data}
         msgpack.packb(distance_map_data, use_bin_type=True)
         msg_data = {
             "grid": grid_data,
@@ -871,12 +853,6 @@ class RailEnv(Environment):
         self.rail.height = self.height
         self.rail.width = self.width
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-        if "malfunction" in data:
-            # Mean malfunction in number of time steps
-            self.mean_malfunction_rate = data["malfunction"]["malfunction_rate"]
-            # Uniform distribution parameters for malfunction duration
-            self.min_number_of_steps_broken = data["malfunction"]["min_duration"]
-            self.max_number_of_steps_broken = data["malfunction"]["max_duration"]
 
     def set_full_state_dist_msg(self, msg_data):
         """
@@ -898,12 +874,6 @@ class RailEnv(Environment):
         self.rail.height = self.height
         self.rail.width = self.width
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-        if "malfunction" in data:
-            # Mean malfunction in number of time steps
-            self.mean_malfunction_rate = data["malfunction"]["malfunction_rate"]
-            # Uniform distribution parameters for malfunction duration
-            self.min_number_of_steps_broken = data["malfunction"]["min_duration"]
-            self.max_number_of_steps_broken = data["malfunction"]["max_duration"]
 
     def save(self, filename, save_distance_maps=False):
         """
@@ -969,17 +939,6 @@ class RailEnv(Environment):
         u = self.np_random.rand()
         x = - np.log(1 - u) * rate
         return x
-
-    def _malfunction_prob(self, rate: float) -> float:
-        """
-        Probability of a single agent to break. According to Poisson process with given rate
-        :param rate:
-        :return:
-        """
-        if rate <= 0:
-            return 0.
-        else:
-            return 1 - np.exp(- (1 / rate))
 
     def _is_agent_ok(self, agent: EnvAgent) -> bool:
         """

@@ -557,8 +557,7 @@ def test_sparse_rail_generator_deterministic():
                                                                             seed=215545,  # Random seed
                                                                             grid_mode=True
                                                                             ),
-                  schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=1,
-                  malfunction_generator=malfunction_from_params(stochastic_data))
+                  schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=1)
     env.reset()
     # for r in range(env.height):
     #   for c in range(env.width):
@@ -1406,8 +1405,7 @@ def test_rail_env_malfunction_speed_info():
                                                                             grid_mode=False
                                                                             ),
                   schedule_generator=sparse_schedule_generator(), number_of_agents=10,
-                  obs_builder_object=GlobalObsForRailEnv(),
-                  malfunction_generator=malfunction_from_params(stochastic_data))
+                  obs_builder_object=GlobalObsForRailEnv())
     env.reset(False, False, True)
 
     env_renderer = RenderTool(env, gl="PILSVG", )
