@@ -10,7 +10,7 @@ from numpy import array
 
 import flatland.utils.rendertools as rt
 from flatland.core.grid.grid4_utils import mirror
-from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 from flatland.envs.rail_generators import complex_rail_generator, empty_rail_generator
@@ -147,7 +147,7 @@ class View(object):
     def redraw(self):
         with self.output_generator:
             self.oRT.set_new_rail()
-            self.model.env.agents = self.model.env.agents_static
+            self.model.env.restart_agents()
             for a in self.model.env.agents:
                 if hasattr(a, 'old_position') is False:
                     a.old_position = a.position
@@ -329,7 +329,7 @@ class Controller(object):
     def rotate_agent(self, event):
         self.log("Rotate Agent:", self.model.selected_agent)
         if self.model.selected_agent is not None:
-            for agent_idx, agent in enumerate(self.model.env.agents_static):
+            for agent_idx, agent in enumerate(self.model.env.agents):
                 if agent is None:
                     continue
                 if agent_idx == self.model.selected_agent:
@@ -339,13 +339,7 @@ class Controller(object):
 
     def restart_agents(self, event):
         self.log("Restart Agents - nAgents:", self.view.regen_n_agents.value)
-        if self.model.init_agents_static is not None:
-            self.model.env.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in
-                                            self.model.init_agents_static]
-            self.model.env.agents = None
-            self.model.init_agents_static = None
-            self.model.env.restart_agents()
-            self.model.env.reset(False, False)
+        self.model.env.reset(False, False)
         self.refresh(event)
 
     def regenerate(self, event):
@@ -399,7 +393,6 @@ class EditorModel(object):
         self.env_filename = "temp.pkl"
         self.set_env(env)
         self.selected_agent = None
-        self.init_agents_static = None
         self.thread = None
         self.save_image_count = 0
 
@@ -602,7 +595,6 @@ class EditorModel(object):
     def clear(self):
         self.env.rail.grid[:, :] = 0
         self.env.agents = []
-        self.env.agents_static = []
 
         self.redraw()
 
@@ -616,7 +608,7 @@ class EditorModel(object):
         self.redraw()
 
     def restart_agents(self):
-        self.env.agents = EnvAgent.list_from_static(self.env.agents_static)
+        self.env.restart_agents()
         self.redraw()
 
     def set_filename(self, filename):
@@ -634,7 +626,6 @@ class EditorModel(object):
 
             self.env.restart_agents()
             self.env.reset(False, False)
-            self.init_agents_static = None
             self.view.oRT.update_background()
             self.fix_env()
             self.set_env(self.env)
@@ -644,12 +635,7 @@ class EditorModel(object):
 
     def save(self):
         self.log("save to ", self.env_filename, " working dir: ", os.getcwd())
-        temp_store = self.env.agents
-        # clear agents before save , because we want the "init" position of the agent to expert
-        self.env.agents = []
         self.env.save(self.env_filename)
-        # reset agents current (current position)
-        self.env.agents = temp_store
 
     def save_image(self):
         self.view.oRT.gl.save_image('frame_{:04d}.bmp'.format(self.save_image_count))
@@ -689,7 +675,7 @@ class EditorModel(object):
         self.regen_size_height = size
 
     def find_agent_at(self, cell_row_col):
-        for agent_idx, agent in enumerate(self.env.agents_static):
+        for agent_idx, agent in enumerate(self.env.agents):
             if tuple(agent.position) == tuple(cell_row_col):
                 return agent_idx
         return None
@@ -709,15 +695,14 @@ class EditorModel(object):
             # No
             if self.selected_agent is None:
                 # Create a new agent and select it.
-                agent_static = EnvAgentStatic(position=cell_row_col, direction=0, target=cell_row_col, moving=False)
-                self.selected_agent = self.env.add_agent_static(agent_static)
+                agent = EnvAgent(position=cell_row_col, direction=0, target=cell_row_col, moving=False)
+                self.selected_agent = self.env.add_agent(agent)
                 self.view.oRT.update_background()
             else:
                 # Move the selected agent to this cell
-                agent_static = self.env.agents_static[self.selected_agent]
-                agent_static.position = cell_row_col
-                agent_static.old_position = cell_row_col
-                self.env.agents = []
+                agent = self.env.agents[self.selected_agent]
+                agent.position = cell_row_col
+                agent.old_position = cell_row_col
         else:
             # Yes
             # Have they clicked on the agent already selected?
@@ -728,13 +713,11 @@ class EditorModel(object):
                 # No - select the agent
                 self.selected_agent = agent_idx
 
-        self.init_agents_static = None
         self.redraw()
 
     def add_target(self, rcCell):
         if self.selected_agent is not None:
-            self.env.agents_static[self.selected_agent].target = rcCell
-            self.init_agents_static = None
+            self.env.agents[self.selected_agent].target = rcCell
             self.view.oRT.update_background()
             self.redraw()
 

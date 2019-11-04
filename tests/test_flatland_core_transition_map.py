@@ -53,13 +53,11 @@ def test_grid8_set_transitions():
 
 
 def check_path(env, rail, position, direction, target, expected, rendering=False):
-    agent = env.agents_static[0]
+    agent = env.agents[0]
     agent.position = position  # south dead-end
     agent.direction = direction  # north
     agent.target = target  # east dead-end
     agent.moving = True
-    # reset to set agents from agents_static
-    # env.reset(False, False)
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
         renderer.render_env(show=True, show_observations=False)
@@ -76,8 +74,6 @@ def test_path_exists(rendering=False):
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
-
-    # reset to initialize agents_static
     env.reset()
 
     check_path(
@@ -142,8 +138,6 @@ def test_path_not_exists(rendering=False):
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
-
-    # reset to initialize agents_static
     env.reset()
 
     check_path(
