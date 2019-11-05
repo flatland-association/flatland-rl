@@ -77,7 +77,7 @@ class RenderTool(object):
     def update_background(self):
         # create background map
         targets = {}
-        for agent_idx, agent in enumerate(self.env.agents_static):
+        for agent_idx, agent in enumerate(self.env.agents):
             if agent is None:
                 continue
             targets[tuple(agent.target)] = agent_idx
@@ -93,10 +93,9 @@ class RenderTool(object):
         self.new_rail = True
 
     def plot_agents(self, targets=True, selected_agent=None):
-        color_map = self.gl.get_cmap('hsv',
-                                     lut=max(len(self.env.agents), len(self.env.agents_static) + 1))
+        color_map = self.gl.get_cmap('hsv', lut=(len(self.env.agents) + 1))
 
-        for agent_idx, agent in enumerate(self.env.agents_static):
+        for agent_idx, agent in enumerate(self.env.agents):
             if agent is None:
                 continue
             color = color_map(agent_idx)
@@ -515,7 +514,7 @@ class RenderTool(object):
             # store the targets
             targets = {}
             selected = {}
-            for agent_idx, agent in enumerate(self.env.agents_static):
+            for agent_idx, agent in enumerate(self.env.agents):
                 if agent is None:
                     continue
                 targets[tuple(agent.target)] = agent_idx

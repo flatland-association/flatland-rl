@@ -17,7 +17,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
+from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
@@ -182,8 +182,8 @@ class RailEnv(Environment):
         self.dev_obs_dict = {}
         self.dev_pred_dict = {}
 
-        self.agents: List[EnvAgent] = [None] * number_of_agents  # live agents
-        self.agents_static: List[EnvAgentStatic] = [None] * number_of_agents  # static agent information
+        self.agents: List[EnvAgent] = []
+        self.number_of_agents = number_of_agents
         self.num_resets = 0
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
@@ -227,18 +227,15 @@ class RailEnv(Environment):
     def get_agent_handles(self):
         return range(self.get_num_agents())
 
-    def get_num_agents(self, static=True):
-        if static:
-            return len(self.agents_static)
-        else:
-            return len(self.agents)
+    def get_num_agents(self) -> int:
+        return len(self.agents)
 
-    def add_agent_static(self, agent_static):
+    def add_agent(self, agent):
         """ Add static info for a single agent.
             Returns the index of the new agent.
         """
-        self.agents_static.append(agent_static)
-        return len(self.agents_static) - 1
+        self.agents.append(agent)
+        return len(self.agents) - 1
 
     def set_agent_active(self, handle: int):
         agent = self.agents[handle]
@@ -247,9 +244,10 @@ class RailEnv(Environment):
             self._set_agent_to_initial_position(agent, agent.initial_position)
 
     def restart_agents(self):
-        """ Reset the agents to their starting positions defined in agents_static
+        """ Reset the agents to their starting positions
         """
-        self.agents = EnvAgent.list_from_static(self.agents_static)
+        for agent in self.agents:
+            agent.reset()
         self.active_agents = [i for i in range(len(self.agents))]
 
     @staticmethod
@@ -327,7 +325,7 @@ class RailEnv(Environment):
 
         optionals = {}
         if regenerate_rail or self.rail is None:
-            rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
+            rail, optionals = self.rail_generator(self.width, self.height, self.number_of_agents, self.num_resets)
 
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
@@ -340,17 +338,13 @@ class RailEnv(Environment):
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
-        # todo change self.agents_static[0] with the refactoring for agents_static -> issue nr. 185
-        # https://gitlab.aicrowd.com/flatland/flatland/issues/185
-        if regenerate_schedule or regenerate_rail or self.agents_static[0] is None:
+        if regenerate_schedule or regenerate_rail or len(self.agents) == 0:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
 
-            # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/185
-            #  why do we need static agents? could we it more elegantly?
-            schedule = self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets)
-            self.agents_static = EnvAgentStatic.from_lists(schedule)
+            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets)
+            self.agents = EnvAgent.from_schedule(schedule)
 
             if agents_hints and 'city_orientations' in agents_hints:
                 ratio_nr_agents_to_nr_cities = self.get_num_agents() / len(agents_hints['city_orientations'])
@@ -391,9 +385,9 @@ class RailEnv(Environment):
         info_dict: Dict = {
             'action_required': {i: self.action_required(agent) for i, agent in enumerate(self.agents)},
             'malfunction': {
-                i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
+                i: agent.malfunction_data['malfunction'] for i, agent in enumerate(self.agents)
             },
-            'speed': {i: self.agents[i].speed_data['speed'] for i in range(self.get_num_agents())},
+            'speed': {i: agent.speed_data['speed'] for i, agent in enumerate(self.agents)},
             'status': {i: agent.status for i, agent in enumerate(self.agents)}
         }
         # Return the new observation vectors for each agent
@@ -819,14 +813,11 @@ class RailEnv(Environment):
         Returns state of environment in msgpack object
         """
         grid_data = self.rail.grid.tolist()
-        agent_static_data = [agent.to_list() for agent in self.agents_static]
-        agent_data = [agent.to_list() for agent in self.agents]
+        agent_data = [agent.to_agent() for agent in self.agents]
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
-        msgpack.packb(agent_static_data, use_bin_type=True)
         msg_data = {
             "grid": grid_data,
-            "agents_static": agent_static_data,
             "agents": agent_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
@@ -834,7 +825,7 @@ class RailEnv(Environment):
         """
         Returns agents information in msgpack object
         """
-        agent_data = [agent.to_list() for agent in self.agents]
+        agent_data = [agent.to_agent() for agent in self.agents]
         msg_data = {
             "agents": agent_data}
         return msgpack.packb(msg_data, use_bin_type=True)
@@ -850,8 +841,7 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data["agents_static"]]
-        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]) for d in data["agents"]]
+        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -869,8 +859,7 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data["agents_static"]]
-        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]) for d in data["agents"]]
+        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         if "distance_map" in data.keys():
             self.distance_map.set(data["distance_map"])
         # setup with loaded data
@@ -884,16 +873,13 @@ class RailEnv(Environment):
         Returns environment information with distance map information as msgpack object
         """
         grid_data = self.rail.grid.tolist()
-        agent_static_data = [agent.to_list() for agent in self.agents_static]
-        agent_data = [agent.to_list() for agent in self.agents]
+        agent_data = [agent.to_agent() for agent in self.agents]
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
-        msgpack.packb(agent_static_data, use_bin_type=True)
         distance_map_data = self.distance_map.get()
         msgpack.packb(distance_map_data, use_bin_type=True)
         msg_data = {
             "grid": grid_data,
-            "agents_static": agent_static_data,
             "agents": agent_data,
             "distance_map": distance_map_data}
 

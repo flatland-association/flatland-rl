@@ -77,9 +77,10 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
     for step in range(len(test_configs[0].replay)):
         if step == 0:
             for a, test_config in enumerate(test_configs):
-                agent: EnvAgent = env.agents_static[a]
+                agent: EnvAgent = env.agents[a]
                 # set the initial position
                 agent.initial_position = test_config.initial_position
+                agent.initial_direction = test_config.initial_direction
                 agent.direction = test_config.initial_direction
                 agent.target = test_config.target
                 agent.speed_data['speed'] = test_config.speed

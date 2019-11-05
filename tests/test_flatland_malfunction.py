@@ -80,7 +80,6 @@ def test_malfunction_process():
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    # reset to initialize agents_static
     obs, info = env.reset(False, False, True, random_seed=10)
 
     agent_halts = 0
@@ -135,7 +134,6 @@ def test_malfunction_process_statistically():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
 
-    # reset to initialize agents_static
     env.reset(True, True, False, random_seed=10)
 
     env.agents[0].target = (0, 0)
@@ -181,7 +179,6 @@ def test_malfunction_before_entry():
                   random_seed=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
-    # reset to initialize agents_static
     env.reset(False, False, False, random_seed=10)
     env.agents[0].target = (0, 0)
 
@@ -226,7 +223,6 @@ def test_malfunction_values_and_behavior():
                   random_seed=1,
                   )
 
-    # reset to initialize agents_static
     env.reset(False, False, activate_agents=True, random_seed=10)
 
     # Assertions
@@ -255,7 +251,6 @@ def test_initial_malfunction():
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    # reset to initialize agents_static
     env.reset(False, False, True, random_seed=10)
     print(env.agents[0].malfunction_data)
     env.agents[0].target = (0, 5)
@@ -417,7 +412,6 @@ def test_initial_malfunction_do_nothing():
                   number_of_agents=1,
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
-    # reset to initialize agents_static
     env.reset()
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
@@ -502,7 +496,6 @@ def tests_random_interference_from_outside():
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
     env.reset()
-    # reset to initialize agents_static
     env.agents[0].speed_data['speed'] = 0.33
     env.reset(False, False, False, random_seed=10)
     env_data = []
@@ -533,7 +526,6 @@ def tests_random_interference_from_outside():
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
     env.reset()
-    # reset to initialize agents_static
     env.agents[0].speed_data['speed'] = 0.33
     env.reset(False, False, False, random_seed=10)
 
@@ -575,9 +567,8 @@ def test_last_malfunction_step():
                   stochastic_data=stochastic_data,  # Malfunction data generator
                   )
     env.reset()
-    # reset to initialize agents_static
     env.agents[0].speed_data['speed'] = 1. / 3.
-    env.agents_static[0].target = (0, 0)
+    env.agents[0].target = (0, 0)
 
     env.reset(False, False, True)
     # Force malfunction to be off at beginning and next malfunction to happen in 2 steps

@@ -7,7 +7,7 @@ import numpy as np
 
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_utils import EnvAgentStatic
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.schedule_utils import Schedule
 
 AgentPosition = Tuple[int, int]
@@ -291,21 +291,15 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
             with open(filename, "rb") as file_in:
                 load_data = file_in.read()
         data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
-
-        # agents are always reset as not moving
-        if len(data['agents_static'][0]) > 5:
-            agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3], d[4], d[5]) for d in data["agents_static"]]
-        else:
-            agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3]) for d in data["agents_static"]]
+        agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
 
         # setup with loaded data
-        agents_position = [a.initial_position for a in agents_static]
-        agents_direction = [a.direction for a in agents_static]
-        agents_target = [a.target for a in agents_static]
-        if len(data['agents_static'][0]) > 5:
-            agents_speed = [a.speed_data['speed'] for a in agents_static]
-        else:
-            agents_speed = None
+        agents_position = [a.initial_position for a in agents]
+        agents_direction = [a.direction for a in agents]
+        agents_target = [a.target for a in agents]
+        agents_speed = [a.speed_data['speed'] for a in agents]
+        agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]
+
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
                         agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None)
 
