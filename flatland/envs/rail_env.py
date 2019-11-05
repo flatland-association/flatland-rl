@@ -338,7 +338,7 @@ class RailEnv(Environment):
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
-        if regenerate_schedule or regenerate_rail or len(self.agents) == 0:
+        if regenerate_schedule or regenerate_rail or self.get_num_agents() == 0:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']

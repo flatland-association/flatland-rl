@@ -63,18 +63,12 @@ class EnvAgent:
 
     def reset(self):
         self.position = None
+        # TODO: set direction to None: https://gitlab.aicrowd.com/flatland/flatland/issues/280
         self.direction = self.initial_direction
         self.status = RailAgentStatus.READY_TO_DEPART
         self.old_position = None
         self.old_direction = None
         self.moving = False
-
-    def move(self, new_pos: Tuple[int, int], new_dir: Tuple[int, int] = None):
-        self.old_position = self.position
-        self.position = new_pos
-        if new_dir is not None:
-            self.old_direction = self.direction
-            self.direction = new_dir
 
     def to_agent(self) -> Agent:
         return Agent(initial_position=self.initial_position, initial_direction=self.initial_direction,
