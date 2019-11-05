@@ -701,7 +701,8 @@ class EditorModel(object):
             else:
                 # Move the selected agent to this cell
                 agent = self.env.agents[self.selected_agent]
-                agent.move(cell_row_col)
+                agent.position = cell_row_col
+                agent.old_position = cell_row_col
         else:
             # Yes
             # Have they clicked on the agent already selected?
