@@ -178,12 +178,12 @@ class View(object):
             self.writableData[(y - 2):(y + 2), (x - 2):(x + 2), :3] = 0
 
     def xy_to_rc(self, x, y):
-        rcCell = ((array([y, x]) - self.yxBase))
+        rc_cell = ((array([y, x]) - self.yxBase))
         nX = np.floor((self.yxSize[0] - self.yxBase[0]) / self.model.env.height)
         nY = np.floor((self.yxSize[1] - self.yxBase[1]) / self.model.env.width)
-        rcCell[0] = max(0, min(np.floor(rcCell[0] / nY), self.model.env.height - 1))
-        rcCell[1] = max(0, min(np.floor(rcCell[1] / nX), self.model.env.width - 1))
-        return rcCell
+        rc_cell[0] = max(0, min(np.floor(rc_cell[0] / nY), self.model.env.height - 1))
+        rc_cell[1] = max(0, min(np.floor(rc_cell[1] / nX), self.model.env.width - 1))
+        return rc_cell
 
     def log(self, *args, **kwargs):
         if self.output_generator:
@@ -215,23 +215,23 @@ class Controller(object):
         y = event['canvasY']
         self.debug("debug:", x, y)
 
-        rcCell = self.view.xy_to_rc(x, y)
+        rc_cell = self.view.xy_to_rc(x, y)
 
         bShift = event["shiftKey"]
         bCtrl = event["ctrlKey"]
         bAlt = event["altKey"]
         if bCtrl and not bShift and not bAlt:
-            self.model.click_agent(rcCell)
+            self.model.click_agent(rc_cell)
             self.lrcStroke = []
         elif bShift and bCtrl:
-            self.model.add_target(rcCell)
+            self.model.add_target(rc_cell)
             self.lrcStroke = []
         elif bAlt and not bShift and not bCtrl:
-            self.model.clear_cell(rcCell)
+            self.model.clear_cell(rc_cell)
             self.lrcStroke = []
 
-        self.debug("click in cell", rcCell)
-        self.model.debug_cell(rcCell)
+        self.debug("click in cell", rc_cell)
+        self.model.debug_cell(rc_cell)
 
         if self.model.selected_agent is not None:
             self.lrcStroke = []
@@ -304,8 +304,8 @@ class Controller(object):
                     self.view.drag_path_element(x, y)
 
                     # Translate and scale from x,y to integer row,col (note order change)
-                    rcCell = self.view.xy_to_rc(x, y)
-                    self.editor.drag_path_element(rcCell)
+                    rc_cell = self.view.xy_to_rc(x, y)
+                    self.editor.drag_path_element(rc_cell)
 
                 self.view.redisplay_image()
 
@@ -413,12 +413,12 @@ class EditorModel(object):
     def set_draw_mode(self, draw_mode):
         self.draw_mode = draw_mode
 
-    def interpolate_path(self, rcLast, rcCell):
-        if np.array_equal(rcLast, rcCell):
+    def interpolate_path(self, rcLast, rc_cell):
+        if np.array_equal(rcLast, rc_cell):
             return []
         rcLast = array(rcLast)
-        rcCell = array(rcCell)
-        rcDelta = rcCell - rcLast
+        rc_cell = array(rc_cell)
+        rcDelta = rc_cell - rcLast
 
         lrcInterp = []  # extra row,col points
 
@@ -450,7 +450,7 @@ class EditorModel(object):
             lrcInterp = list(map(tuple, g2Interp))
         return lrcInterp
 
-    def drag_path_element(self, rcCell):
+    def drag_path_element(self, rc_cell):
         """Mouse motion event handler for drawing.
         """
         lrcStroke = self.lrcStroke
@@ -458,15 +458,15 @@ class EditorModel(object):
         # Store the row,col location of the click, if we have entered a new cell
         if len(lrcStroke) > 0:
             rcLast = lrcStroke[-1]
-            if not np.array_equal(rcLast, rcCell):  # only save at transition
-                lrcInterp = self.interpolate_path(rcLast, rcCell)
+            if not np.array_equal(rcLast, rc_cell):  # only save at transition
+                lrcInterp = self.interpolate_path(rcLast, rc_cell)
                 lrcStroke.extend(lrcInterp)
-                self.debug("lrcStroke ", len(lrcStroke), rcCell, "interp:", lrcInterp)
+                self.debug("lrcStroke ", len(lrcStroke), rc_cell, "interp:", lrcInterp)
 
         else:
             # This is the first cell in a mouse stroke
-            lrcStroke.append(rcCell)
-            self.debug("lrcStroke ", len(lrcStroke), rcCell)
+            lrcStroke.append(rc_cell)
+            self.debug("lrcStroke ", len(lrcStroke), rc_cell)
 
     def mod_path(self, bAddRemove):
         # disabled functionality (no longer required)
@@ -701,8 +701,7 @@ class EditorModel(object):
             else:
                 # Move the selected agent to this cell
                 agent = self.env.agents[self.selected_agent]
-                agent.position = cell_row_col
-                agent.old_position = cell_row_col
+                agent.move(cell_row_col)
         else:
             # Yes
             # Have they clicked on the agent already selected?
@@ -715,9 +714,9 @@ class EditorModel(object):
 
         self.redraw()
 
-    def add_target(self, rcCell):
+    def add_target(self, rc_cell):
         if self.selected_agent is not None:
-            self.env.agents[self.selected_agent].target = rcCell
+            self.env.agents[self.selected_agent].target = rc_cell
             self.view.oRT.update_background()
             self.redraw()
 
@@ -735,11 +734,11 @@ class EditorModel(object):
         if self.debug_bool:
             self.log(*args, **kwargs)
 
-    def debug_cell(self, rcCell):
-        binTrans = self.env.rail.get_full_transitions(*rcCell)
+    def debug_cell(self, rc_cell):
+        binTrans = self.env.rail.get_full_transitions(*rc_cell)
         sbinTrans = format(binTrans, "#018b")[2:]
         self.debug("cell ",
-                   rcCell,
+                   rc_cell,
                    "Transitions: ",
                    binTrans,
                    sbinTrans,

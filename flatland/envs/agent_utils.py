@@ -1,6 +1,6 @@
 from enum import IntEnum
 from itertools import starmap
-from typing import Tuple, Optional
+from typing import Tuple, Optional, NamedTuple
 
 from attr import attrs, attrib, Factory
 
@@ -13,6 +13,20 @@ class RailAgentStatus(IntEnum):
     ACTIVE = 1  # in grid (position is not None), not done -> prediction is remaining path
     DONE = 2  # in grid (position is not None), but done -> prediction is stay at target forever
     DONE_REMOVED = 3  # removed from grid (position is None) -> prediction is None
+
+
+Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
+                             ('initial_direction', Grid4TransitionsEnum),
+                             ('direction', Grid4TransitionsEnum),
+                             ('target', Tuple[int, int]),
+                             ('moving', bool),
+                             ('speed_data', dict),
+                             ('malfunction_data', dict),
+                             ('handle', int),
+                             ('status', RailAgentStatus),
+                             ('position', Tuple[int, int]),
+                             ('old_direction', Grid4TransitionsEnum),
+                             ('old_position', Tuple[int, int])])
 
 
 @attrs
@@ -55,10 +69,18 @@ class EnvAgent:
         self.old_direction = None
         self.moving = False
 
-    def to_list(self):
-        return [self.initial_position, self.initial_direction, int(self.direction), self.target, int(self.moving),
-                self.speed_data, self.malfunction_data, self.handle, self.status, self.position, self.old_direction,
-                self.old_position]
+    def move(self, new_pos: Tuple[int, int], new_dir: Tuple[int, int] = None):
+        self.old_position = self.position
+        self.position = new_pos
+        if new_dir is not None:
+            self.old_direction = self.direction
+            self.direction = new_dir
+
+    def to_agent(self) -> Agent:
+        return Agent(initial_position=self.initial_position, initial_direction=self.initial_direction,
+                     direction=self.direction, target=self.target, moving=self.moving, speed_data=self.speed_data,
+                     malfunction_data=self.malfunction_data, handle=self.handle, status=self.status,
+                     position=self.position, old_direction=self.old_direction, old_position=self.old_position)
 
     @classmethod
     def from_schedule(cls, schedule: Schedule):

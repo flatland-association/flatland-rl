@@ -3,6 +3,9 @@ Changelog
 
 Changes since Flatland 2.0.0
 --------------------------
+### Changes in `EnvAgent`
+- class `EnvAgentStatic` was removed, so there is only class `EnvAgent` left which should simplify the handling of agents. The member `self.agents_static` of `RailEnv` was therefore also removed. Old Scence saved as pickle files cannot be loaded anymore.
+
 ### Changes in malfunction behavior
 - agent attribute `next_malfunction`is not used anymore, it will be removed fully in future versions.
 - `break_agent()` function is introduced which induces malfunctions in agent according to poisson process

@@ -813,7 +813,7 @@ class RailEnv(Environment):
         Returns state of environment in msgpack object
         """
         grid_data = self.rail.grid.tolist()
-        agent_data = [agent.to_list() for agent in self.agents]
+        agent_data = [agent.to_agent() for agent in self.agents]
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
         msg_data = {
@@ -825,7 +825,7 @@ class RailEnv(Environment):
         """
         Returns agents information in msgpack object
         """
-        agent_data = [agent.to_list() for agent in self.agents]
+        agent_data = [agent.to_agent() for agent in self.agents]
         msg_data = {
             "agents": agent_data}
         return msgpack.packb(msg_data, use_bin_type=True)
@@ -841,7 +841,7 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11]) for d in data["agents"]]
+        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -859,7 +859,7 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11]) for d in data["agents"]]
+        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         if "distance_map" in data.keys():
             self.distance_map.set(data["distance_map"])
         # setup with loaded data
@@ -873,7 +873,7 @@ class RailEnv(Environment):
         Returns environment information with distance map information as msgpack object
         """
         grid_data = self.rail.grid.tolist()
-        agent_data = [agent.to_list() for agent in self.agents]
+        agent_data = [agent.to_agent() for agent in self.agents]
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
         distance_map_data = self.distance_map.get()
