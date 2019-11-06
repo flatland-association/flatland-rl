@@ -33,13 +33,12 @@ def test_walker():
                   obs_builder_object=TreeObsForRailEnv(max_depth=2,
                                                        predictor=ShortestPathPredictorForRailEnv(max_depth=10)),
                   )
-    # reset to initialize agents_static
     env.reset()
 
     # set initial position and direction for testing...
-    env.agents_static[0].position = (0, 1)
-    env.agents_static[0].direction = 1
-    env.agents_static[0].target = (0, 0)
+    env.agents[0].position = (0, 1)
+    env.agents[0].direction = 1
+    env.agents[0].target = (0, 0)
 
     # reset to set agents from agents_static
     env.reset(False, False)

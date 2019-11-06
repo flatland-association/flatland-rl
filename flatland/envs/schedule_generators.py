@@ -7,7 +7,7 @@ import numpy as np
 
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_utils import EnvAgentStatic
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.schedule_utils import Schedule
 
 AgentPosition = Tuple[int, int]
@@ -187,7 +187,7 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
     """
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None,
-                num_resets: int = 0) -> Schedule:
+                  num_resets: int = 0) -> Schedule:
         _runtime_seed = seed + num_resets
 
         np.random.seed(_runtime_seed)
@@ -204,7 +204,7 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
         if len(valid_positions) < num_agents:
             warnings.warn("schedule_generators: len(valid_positions) < num_agents")
             return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None)
+                            agent_targets=[], agent_speeds=[],  agent_malfunction_rates=None)
 
         agents_position_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
         agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]
@@ -291,25 +291,16 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
             with open(filename, "rb") as file_in:
                 load_data = file_in.read()
         data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
-
-        # agents are always reset as not moving
-        if len(data['agents_static'][0]) > 5:
-            agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3], d[4], d[5]) for d in data["agents_static"]]
-        else:
-            agents_static = [EnvAgentStatic(d[0], d[1], d[2], d[3]) for d in data["agents_static"]]
+        agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
 
         # setup with loaded data
-        agents_position = [a.initial_position for a in agents_static]
-        agents_direction = [a.direction for a in agents_static]
-        agents_target = [a.target for a in agents_static]
-        if len(data['agents_static'][0]) > 5:
-            agents_speed = [a.speed_data['speed'] for a in agents_static]
-            agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents_static]
-        else:
-            agents_speed = None
-            agents_malfunction = None
+        agents_position = [a.initial_position for a in agents]
+        agents_direction = [a.direction for a in agents]
+        agents_target = [a.target for a in agents]
+        agents_speed = [a.speed_data['speed'] for a in agents]
+        agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]
+
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed,
-                        agent_malfunction_rates=agents_malfunction)
+                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None)
 
     return generator

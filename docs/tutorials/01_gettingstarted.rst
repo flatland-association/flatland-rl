@@ -109,15 +109,12 @@ following code. Also, tree observation data is displayed by RenderTool by defaul
     for i in range(env.get_num_agents()):
         env.obs_builder.util_print_obs_subtree(
                 tree=obs[i],
-                num_features_per_node=5
                 )
 
 The complete code for this part of the Getting Started guide can be found in
 
 * `examples/simple_example_1.py <https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/simple_example_1.py>`_
 * `examples/simple_example_2.py <https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/simple_example_2.py>`_
-* `examples/simple_example_3.py <https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/simple_example_3.py>`_
-
 
 
 Part 2 : Training a Simple an Agent on Flatland

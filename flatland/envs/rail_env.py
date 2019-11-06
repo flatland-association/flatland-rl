@@ -1,6 +1,7 @@
 """
 Definition of the RailEnv environment.
 """
+import random
 # TODO:  _ this is a global method --> utils or remove later
 from enum import IntEnum
 from typing import List, NamedTuple, Optional, Dict
@@ -16,7 +17,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_utils import EnvAgentStatic, EnvAgent, RailAgentStatus
+from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
@@ -181,8 +182,8 @@ class RailEnv(Environment):
         self.dev_obs_dict = {}
         self.dev_pred_dict = {}
 
-        self.agents: List[EnvAgent] = [None] * number_of_agents  # live agents
-        self.agents_static: List[EnvAgentStatic] = [None] * number_of_agents  # static agent information
+        self.agents: List[EnvAgent] = []
+        self.number_of_agents = number_of_agents
         self.num_resets = 0
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
@@ -196,52 +197,45 @@ class RailEnv(Environment):
 
         # Stochastic train malfunctioning parameters
         if stochastic_data is not None:
-            prop_malfunction = stochastic_data['prop_malfunction']
             mean_malfunction_rate = stochastic_data['malfunction_rate']
             malfunction_min_duration = stochastic_data['min_duration']
             malfunction_max_duration = stochastic_data['max_duration']
         else:
-            prop_malfunction = 0.
             mean_malfunction_rate = 0.
             malfunction_min_duration = 0.
             malfunction_max_duration = 0.
 
-        # percentage of malfunctioning trains
-        self.proportion_malfunctioning_trains = prop_malfunction
-
-        # Mean malfunction in number of stops
+        # Mean malfunction in number of time steps
         self.mean_malfunction_rate = mean_malfunction_rate
 
         # Uniform distribution parameters for malfunction duration
         self.min_number_of_steps_broken = malfunction_min_duration
         self.max_number_of_steps_broken = malfunction_max_duration
-        # Reset environment
 
         self.valid_positions = None
 
-        # global numpy array of agents position, True means that there is an agent at that cell
-        self.agent_positions: np.ndarray = np.full((height, width), False)
+        # global numpy array of agents position, -1 means that the cell is free, otherwise the agent handle is placed
+        # inside the cell
+        self.agent_positions: np.ndarray = np.zeros((height, width), dtype=int) - 1
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
+        random.seed(seed)
         return [seed]
 
     # no more agent_handles
     def get_agent_handles(self):
         return range(self.get_num_agents())
 
-    def get_num_agents(self, static=True):
-        if static:
-            return len(self.agents_static)
-        else:
-            return len(self.agents)
+    def get_num_agents(self) -> int:
+        return len(self.agents)
 
-    def add_agent_static(self, agent_static):
+    def add_agent(self, agent):
         """ Add static info for a single agent.
             Returns the index of the new agent.
         """
-        self.agents_static.append(agent_static)
-        return len(self.agents_static) - 1
+        self.agents.append(agent)
+        return len(self.agents) - 1
 
     def set_agent_active(self, handle: int):
         agent = self.agents[handle]
@@ -250,9 +244,11 @@ class RailEnv(Environment):
             self._set_agent_to_initial_position(agent, agent.initial_position)
 
     def restart_agents(self):
-        """ Reset the agents to their starting positions defined in agents_static
+        """ Reset the agents to their starting positions
         """
-        self.agents = EnvAgent.list_from_static(self.agents_static)
+        for agent in self.agents:
+            agent.reset()
+        self.active_agents = [i for i in range(len(self.agents))]
 
     @staticmethod
     def compute_max_episode_steps(width: int, height: int, ratio_nr_agents_to_nr_cities: float = 20.0) -> int:
@@ -329,7 +325,7 @@ class RailEnv(Environment):
 
         optionals = {}
         if regenerate_rail or self.rail is None:
-            rail, optionals = self.rail_generator(self.width, self.height, self.get_num_agents(), self.num_resets)
+            rail, optionals = self.rail_generator(self.width, self.height, self.number_of_agents, self.num_resets)
 
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
@@ -342,17 +338,13 @@ class RailEnv(Environment):
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
-        # todo change self.agents_static[0] with the refactoring for agents_static -> issue nr. 185
-        # https://gitlab.aicrowd.com/flatland/flatland/issues/185
-        if regenerate_schedule or regenerate_rail or self.agents_static[0] is None:
+        if regenerate_schedule or regenerate_rail or self.get_num_agents() == 0:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
 
-            # TODO https://gitlab.aicrowd.com/flatland/flatland/issues/185
-            #  why do we need static agents? could we it more elegantly?
-            schedule = self.schedule_generator(self.rail, self.get_num_agents(), agents_hints, self.num_resets)
-            self.agents_static = EnvAgentStatic.from_lists(schedule)
+            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets)
+            self.agents = EnvAgent.from_schedule(schedule)
 
             if agents_hints and 'city_orientations' in agents_hints:
                 ratio_nr_agents_to_nr_cities = self.get_num_agents() / len(agents_hints['city_orientations'])
@@ -362,7 +354,7 @@ class RailEnv(Environment):
             else:
                 self._max_episode_steps = self.compute_max_episode_steps(width=self.width, height=self.height)
 
-        self.agent_positions = np.full((self.height, self.width), False)
+        self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
 
         self.restart_agents()
 
@@ -370,19 +362,15 @@ class RailEnv(Environment):
             for i_agent in range(self.get_num_agents()):
                 self.set_agent_active(i_agent)
 
-        for i_agent, agent in enumerate(self.agents):
-            # A proportion of agent in the environment will receive a positive malfunction rate
-            if self.np_random.rand() < self.proportion_malfunctioning_trains:
-                agent.malfunction_data['malfunction_rate'] = self.mean_malfunction_rate
-                next_breakdown = int(
-                    self._exp_distirbution_synced(rate=agent.malfunction_data['malfunction_rate']))
-                agent.malfunction_data['next_malfunction'] = next_breakdown
-            agent.malfunction_data['malfunction'] = 0
+        for agent in self.agents:
+            # Induce malfunctions
+            self._break_agent(self.mean_malfunction_rate, agent)
 
-            initial_malfunction = self._agent_malfunction(i_agent)
-
-            if initial_malfunction:
+            if agent.malfunction_data["malfunction"] > 0:
                 agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.DO_NOTHING
+
+            # Fix agents that finished their malfunction
+            self._fix_agent_after_malfunction(agent)
 
         self.num_resets += 1
         self._elapsed_steps = 0
@@ -397,62 +385,56 @@ class RailEnv(Environment):
         info_dict: Dict = {
             'action_required': {i: self.action_required(agent) for i, agent in enumerate(self.agents)},
             'malfunction': {
-                i: self.agents[i].malfunction_data['malfunction'] for i in range(self.get_num_agents())
+                i: agent.malfunction_data['malfunction'] for i, agent in enumerate(self.agents)
             },
-            'speed': {i: self.agents[i].speed_data['speed'] for i in range(self.get_num_agents())},
+            'speed': {i: agent.speed_data['speed'] for i, agent in enumerate(self.agents)},
             'status': {i: agent.status for i, agent in enumerate(self.agents)}
         }
         # Return the new observation vectors for each agent
         observation_dict: Dict = self._get_observations()
         return observation_dict, info_dict
 
-    def _agent_malfunction(self, i_agent) -> bool:
+    def _fix_agent_after_malfunction(self, agent: EnvAgent):
         """
-        Returns true if the agent enters into malfunction. (False, if not broken down or already broken down before).
+        Updates agent malfunction variables and fixes broken agents
+
+        Parameters
+        ----------
+        agent
         """
-        agent = self.agents[i_agent]
 
-        # Decrease counter for next event only if agent is currently not broken and agent has a malfunction rate
-        if agent.malfunction_data['malfunction_rate'] >= 1 and agent.malfunction_data['next_malfunction'] > 0 and \
-            agent.malfunction_data['malfunction'] < 1:
-            agent.malfunction_data['next_malfunction'] -= 1
+        # Ignore agents that are OK
+        if self._is_agent_ok(agent):
+            return
 
-        # Only agents that have a positive rate for malfunctions and are not currently broken are considered
-        # If counter has come to zero --> Agent has malfunction
-        # set next malfunction time and duration of current malfunction
-        if agent.malfunction_data['malfunction_rate'] >= 1 and 1 > agent.malfunction_data['malfunction'] and \
-            agent.malfunction_data['next_malfunction'] < 1:
-            # Increase number of malfunctions
-            agent.malfunction_data['nr_malfunctions'] += 1
+        # Reduce number of malfunction steps left
+        if agent.malfunction_data['malfunction'] > 1:
+            agent.malfunction_data['malfunction'] -= 1
+            return
 
-            # Next malfunction in number of stops
-            next_breakdown = int(
-                self._exp_distirbution_synced(rate=agent.malfunction_data['malfunction_rate']))
-            agent.malfunction_data['next_malfunction'] = max(next_breakdown, 1)
-            # Duration of current malfunction
-            num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                      self.max_number_of_steps_broken + 1) + 1
-            agent.malfunction_data['malfunction'] = num_broken_steps
-            agent.malfunction_data['moving_before_malfunction'] = agent.moving
+        # Restart agents at the end of their malfunction
+        agent.malfunction_data['malfunction'] -= 1
+        if 'moving_before_malfunction' in agent.malfunction_data:
+            agent.moving = agent.malfunction_data['moving_before_malfunction']
+            return
 
-            return True
-        else:
-            # The train was broken before...
-            if agent.malfunction_data['malfunction'] > 0:
+    def _break_agent(self, rate: float, agent) -> bool:
+        """
+        Malfunction generator that breaks agents at a given rate.
 
-                # Last step of malfunction --> Agent starts moving again after getting fixed
-                if agent.malfunction_data['malfunction'] < 2:
-                    agent.malfunction_data['malfunction'] -= 1
+        Parameters
+        ----------
+        agent
 
-                    # restore moving state before malfunction without further penalty
-                    self.agents[i_agent].moving = agent.malfunction_data['moving_before_malfunction']
-
-                else:
-                    agent.malfunction_data['malfunction'] -= 1
-
-                    # Nothing left to do with broken agent
-                    return True
-        return False
+        """
+        if agent.malfunction_data['malfunction'] < 1:
+            if self.np_random.rand() < self._malfunction_prob(rate):
+                num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
+                                                          self.max_number_of_steps_broken + 1) + 1
+                agent.malfunction_data['malfunction'] = num_broken_steps
+                agent.malfunction_data['moving_before_malfunction'] = agent.moving
+                agent.malfunction_data['nr_malfunctions'] += 1
+        return
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
         """
@@ -492,9 +474,13 @@ class RailEnv(Environment):
             "status": {},
         }
         have_all_agents_ended = True  # boolean flag to check if all agents are done
+
         for i_agent, agent in enumerate(self.agents):
             # Reset the step rewards
             self.rewards_dict[i_agent] = 0
+
+            # Induce malfunction before we do a step, thus a broken agent can't move in this step
+            self._break_agent(self.mean_malfunction_rate, agent)
 
             # Perform step on the agent
             self._step_agent(i_agent, action_dict_.get(i_agent))
@@ -507,6 +493,9 @@ class RailEnv(Environment):
             info_dict["malfunction"][i_agent] = agent.malfunction_data['malfunction']
             info_dict["speed"][i_agent] = agent.speed_data['speed']
             info_dict["status"][i_agent] = agent.status
+
+            # Fix agents that finished their malfunction such that they can perform an action in the next step
+            self._fix_agent_after_malfunction(agent)
 
         # Check for end of episode + set global reward to all rewards!
         if have_all_agents_ended:
@@ -552,12 +541,9 @@ class RailEnv(Environment):
         agent.old_direction = agent.direction
         agent.old_position = agent.position
 
-        # is the agent malfunctioning?
-        malfunction = self._agent_malfunction(i_agent)
-
         # if agent is broken, actions are ignored and agent does not move.
         # full step penalty in this case
-        if malfunction:
+        if agent.malfunction_data['malfunction'] > 0:
             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
             return
 
@@ -644,6 +630,7 @@ class RailEnv(Environment):
             if np.equal(agent.position, agent.target).all():
                 agent.status = RailAgentStatus.DONE
                 self.dones[i_agent] = True
+                self.active_agents.remove(i_agent)
                 agent.moving = False
                 self._remove_agent_from_scene(agent)
             else:
@@ -663,7 +650,7 @@ class RailEnv(Environment):
         new_position: IntVector2D
         """
         agent.position = new_position
-        self.agent_positions[agent.position] = True
+        self.agent_positions[agent.position] = agent.handle
 
     def _move_agent_to_new_position(self, agent: EnvAgent, new_position: IntVector2D):
         """
@@ -676,8 +663,8 @@ class RailEnv(Environment):
         new_position: IntVector2D
         """
         agent.position = new_position
-        self.agent_positions[agent.old_position] = False
-        self.agent_positions[agent.position] = True
+        self.agent_positions[agent.old_position] = -1
+        self.agent_positions[agent.position] = agent.handle
 
     def _remove_agent_from_scene(self, agent: EnvAgent):
         """
@@ -688,7 +675,7 @@ class RailEnv(Environment):
         -------
         agent: EnvAgent object
         """
-        self.agent_positions[agent.position] = False
+        self.agent_positions[agent.position] = -1
         if self.remove_agents_at_target:
             agent.position = None
             agent.status = RailAgentStatus.DONE_REMOVED
@@ -753,7 +740,7 @@ class RailEnv(Environment):
             is the cell free or not?
 
         """
-        return not self.agent_positions[position]
+        return self.agent_positions[position] == -1
 
     def check_action(self, agent: EnvAgent, action: RailEnvActions):
         """
@@ -826,14 +813,11 @@ class RailEnv(Environment):
         Returns state of environment in msgpack object
         """
         grid_data = self.rail.grid.tolist()
-        agent_static_data = [agent.to_list() for agent in self.agents_static]
-        agent_data = [agent.to_list() for agent in self.agents]
+        agent_data = [agent.to_agent() for agent in self.agents]
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
-        msgpack.packb(agent_static_data, use_bin_type=True)
         msg_data = {
             "grid": grid_data,
-            "agents_static": agent_static_data,
             "agents": agent_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
@@ -841,7 +825,7 @@ class RailEnv(Environment):
         """
         Returns agents information in msgpack object
         """
-        agent_data = [agent.to_list() for agent in self.agents]
+        agent_data = [agent.to_agent() for agent in self.agents]
         msg_data = {
             "agents": agent_data}
         return msgpack.packb(msg_data, use_bin_type=True)
@@ -857,8 +841,7 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data["agents_static"]]
-        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]) for d in data["agents"]]
+        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -876,8 +859,7 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in data["agents_static"]]
-        self.agents = [EnvAgent(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]) for d in data["agents"]]
+        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         if "distance_map" in data.keys():
             self.distance_map.set(data["distance_map"])
         # setup with loaded data
@@ -891,16 +873,13 @@ class RailEnv(Environment):
         Returns environment information with distance map information as msgpack object
         """
         grid_data = self.rail.grid.tolist()
-        agent_static_data = [agent.to_list() for agent in self.agents_static]
-        agent_data = [agent.to_list() for agent in self.agents]
+        agent_data = [agent.to_agent() for agent in self.agents]
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
-        msgpack.packb(agent_static_data, use_bin_type=True)
         distance_map_data = self.distance_map.get()
         msgpack.packb(distance_map_data, use_bin_type=True)
         msg_data = {
             "grid": grid_data,
-            "agents_static": agent_static_data,
             "agents": agent_data,
             "distance_map": distance_map_data}
 
@@ -960,7 +939,7 @@ class RailEnv(Environment):
         load_data = read_binary(package, resource)
         self.set_full_state_msg(load_data)
 
-    def _exp_distirbution_synced(self, rate):
+    def _exp_distirbution_synced(self, rate: float) -> float:
         """
         Generates sample from exponential distribution
         We need this to guarantee synchronity between different instances with same seed.
@@ -970,3 +949,28 @@ class RailEnv(Environment):
         u = self.np_random.rand()
         x = - np.log(1 - u) * rate
         return x
+
+    def _malfunction_prob(self, rate: float) -> float:
+        """
+        Probability of a single agent to break. According to Poisson process with given rate
+        :param rate:
+        :return:
+        """
+        if rate <= 0:
+            return 0.
+        else:
+            return 1 - np.exp(- (1 / rate))
+
+    def _is_agent_ok(self, agent: EnvAgent) -> bool:
+        """
+        Check if an agent is ok, meaning it can move and is not malfuncitoinig
+        Parameters
+        ----------
+        agent
+
+        Returns
+        -------
+        True if agent is ok, False otherwise
+
+        """
+        return agent.malfunction_data['malfunction'] < 1
