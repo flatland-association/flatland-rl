@@ -108,21 +108,22 @@ Merge Request Guidelines
 Before you submit a merge request, check that it meets these guidelines:
 
 1. The merge request should include tests.
-2. If the merge request adds functionality, the docs should be updated. Put
+2. The could must be formatted (PyCharm)
+3. If the merge request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
-3. The merge request should work for Python 3.6, 3.7 and for PyPy. Check
+4. The merge request should work for Python 3.6, 3.7 and for PyPy. Check
    https://gitlab.aicrowd.com/flatland/flatland/pipelines
    and make sure that the tests pass for all supported Python versions.
    We force pipelines to be run successfully for merge requests to be merged.
-4. Although we cannot enforce it technically, we ask for merge requests to be reviewed by at least one core member
+5. Although we cannot enforce it technically, we ask for merge requests to be reviewed by at least one core member
    in order to ensure that the Technical Guidelines below are respected and that the code is well tested:
 
-4.1  The remarks from the review should be resolved/implemented and communicated using the 'discussions resolved':
+5.1.  The remarks from the review should be resolved/implemented and communicated using the 'discussions resolved':
 
 .. image:: images/DiscussionsResolved.png
 
-4.2  When a merge request is merged, source branches should be deleted and commits squashed:
+5.2.  When a merge request is merged, source branches should be deleted and commits squashed:
 
 .. image:: images/SourceBranchSquash.png
 
