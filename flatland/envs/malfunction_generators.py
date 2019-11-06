@@ -26,7 +26,7 @@ def _malfunction_prob(rate: float) -> float:
         return 1 - np.exp(- (1 / rate))
 
 
-def malfunction_from_file(filename) -> Tuple[MalfunctionGenerator, MalfunctionProcessData]:
+def malfunction_from_file(filename: str) -> Tuple[MalfunctionGenerator, MalfunctionProcessData]:
     """
     Utility to load pickle file
 

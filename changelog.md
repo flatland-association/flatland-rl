@@ -10,7 +10,7 @@ Changes since Flatland 2.0.0
 - agent attribute `next_malfunction`is not used anymore, it will be removed fully in future versions.
 - `break_agent()` function is introduced which induces malfunctions in agent according to poisson process
 - `_fix_agent_after_malfunction()` fixes agents after attribute `malfunction == 0`
-- Intoduced the concept of malfunction generators. Here you can add different malfunction models in future updates. Currently it only loads from files and parameters.
+- Introduced the concept of malfunction generators. Here you can add different malfunction models in future updates. Currently it only loads from files and parameters.
 
 ### Changes in `Environment`
 - moving of member variable `distance_map_computed` to new class `DistanceMap`
