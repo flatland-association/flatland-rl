@@ -18,16 +18,11 @@ from flatland.utils.rendertools import RenderTool
 @click.command()
 def demo(args=None):
     """Demo script to check installation"""
-    env = RailEnv(
-        width=15,
-        height=15,
-        rail_generator=complex_rail_generator(
-            nr_start_goal=10,
-            nr_extra=1,
-            min_dist=8,
-            max_dist=99999),
-        schedule_generator=complex_schedule_generator(),
-        number_of_agents=5)
+    env = RailEnv(width=15, height=15, rail_generator=complex_rail_generator(
+        nr_start_goal=10,
+        nr_extra=1,
+        min_dist=8,
+        max_dist=99999), schedule_generator=complex_schedule_generator(), number_of_agents=5)
 
     env._max_episode_steps = int(15 * (env.width + env.height))
     env_renderer = RenderTool(env)

@@ -345,7 +345,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=1) -> R
         def get_matching_templates(template):
             """
             Returns a list of possible transition maps for a given template
-            
+
             Parameters:
             ------
             template:List[int]
@@ -751,7 +751,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         # Respect padding between cities
         padding = 2
         city_size = 2 * (city_radius + 1)
-        max_cities_per_row =int((height - padding) // city_size)
+        max_cities_per_row = int((height - padding) // city_size)
         max_cities_per_col = int((width - padding) // city_size)
 
         # Choose number of cities per row.

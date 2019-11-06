@@ -204,7 +204,7 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
         if len(valid_positions) < num_agents:
             warnings.warn("schedule_generators: len(valid_positions) < num_agents")
             return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[],  agent_malfunction_rates=None)
+                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None)
 
         agents_position_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
         agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]

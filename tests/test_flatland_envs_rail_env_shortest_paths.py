@@ -17,13 +17,9 @@ from flatland.utils.simple_rail import make_disconnected_simple_rail
 def test_get_shortest_paths_unreachable():
     rail, rail_map = make_disconnected_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1],
-                  height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)),
-                  )
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(), number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)))
     env.reset()
 
     # set the initial position

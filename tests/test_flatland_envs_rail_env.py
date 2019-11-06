@@ -29,8 +29,7 @@ def test_load_env():
 def test_save_load():
     env = RailEnv(width=10, height=10,
                   rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
-                  schedule_generator=complex_schedule_generator(),
-                  number_of_agents=2)
+                  schedule_generator=complex_schedule_generator(), number_of_agents=2)
     env.reset()
     agent_1_pos = env.agents[0].position
     agent_1_dir = env.agents[0].direction
@@ -77,11 +76,8 @@ def test_rail_environment_single_agent():
 
     rail = GridTransitionMap(width=3, height=3, transitions=transitions)
     rail.grid = rail_map
-    rail_env = RailEnv(width=3,
-                       height=3,
-                       rail_generator=rail_from_grid_transition_map(rail),
-                       schedule_generator=random_schedule_generator(),
-                       number_of_agents=1,
+    rail_env = RailEnv(width=3, height=3, rail_generator=rail_from_grid_transition_map(rail),
+                       schedule_generator=random_schedule_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
     for _ in range(200):
@@ -154,11 +150,9 @@ def test_dead_end():
                              transitions=transitions)
 
     rail.grid = rail_map
-    rail_env = RailEnv(width=rail_map.shape[1],
-                       height=rail_map.shape[0],
+    rail_env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
                        rail_generator=rail_from_grid_transition_map(rail),
-                       schedule_generator=random_schedule_generator(),
-                       number_of_agents=1,
+                       schedule_generator=random_schedule_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
     # We try the configuration in the 4 directions:
@@ -179,11 +173,9 @@ def test_dead_end():
                              transitions=transitions)
 
     rail.grid = rail_map
-    rail_env = RailEnv(width=rail_map.shape[1],
-                       height=rail_map.shape[0],
+    rail_env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
                        rail_generator=rail_from_grid_transition_map(rail),
-                       schedule_generator=random_schedule_generator(),
-                       number_of_agents=1,
+                       schedule_generator=random_schedule_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
     rail_env.reset()
@@ -197,13 +189,9 @@ def test_dead_end():
 
 def test_get_entry_directions():
     rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1],
-                  height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  )
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(), number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
 
     def _assert(position, expected):
@@ -228,6 +216,7 @@ def test_get_entry_directions():
     # nowhere
     _assert((0, 0), [False, False, False, False])
 
+
 def test_rail_env_reset():
     file_name = "test_rail_env_reset.pkl"
 
@@ -235,26 +224,18 @@ def test_rail_env_reset():
 
     rail, rail_map = make_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1],
-                  height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=3,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  )
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(), number_of_agents=3,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
     env.save(file_name)
     dist_map_shape = np.shape(env.distance_map.get())
     rails_initial = env.rail.grid
     agents_initial = env.agents
 
-    env2 = RailEnv(width=1,
-                  height=1,
-                  rail_generator=rail_from_file(file_name),
-                  schedule_generator=schedule_from_file(file_name),
-                  number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  )
+    env2 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
+                   schedule_generator=schedule_from_file(file_name), number_of_agents=1,
+                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env2.reset(False, False, False)
     rails_loaded = env2.rail.grid
     agents_loaded = env2.agents
@@ -262,13 +243,9 @@ def test_rail_env_reset():
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
 
-    env3 = RailEnv(width=1,
-                  height=1,
-                  rail_generator=rail_from_file(file_name),
-                  schedule_generator=schedule_from_file(file_name),
-                  number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  )
+    env3 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
+                   schedule_generator=schedule_from_file(file_name), number_of_agents=1,
+                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env3.reset(False, True, False)
     rails_loaded = env3.rail.grid
     agents_loaded = env3.agents
@@ -276,13 +253,9 @@ def test_rail_env_reset():
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
 
-    env4 = RailEnv(width=1,
-                  height=1,
-                  rail_generator=rail_from_file(file_name),
-                  schedule_generator=schedule_from_file(file_name),
-                  number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  )
+    env4 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
+                   schedule_generator=schedule_from_file(file_name), number_of_agents=1,
+                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env4.reset(True, False, False)
     rails_loaded = env4.rail.grid
     agents_loaded = env4.agents

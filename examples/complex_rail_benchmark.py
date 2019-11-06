@@ -14,10 +14,8 @@ def run_benchmark():
     np.random.seed(1)
 
     # Example generate a random rail
-    env = RailEnv(width=15, height=15,
-                  rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12),
-                  schedule_generator=complex_schedule_generator(),
-                  number_of_agents=5)
+    env = RailEnv(width=15, height=15, rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=20, min_dist=12),
+                  schedule_generator=complex_schedule_generator(), number_of_agents=5)
     env.reset()
 
     n_trials = 20
