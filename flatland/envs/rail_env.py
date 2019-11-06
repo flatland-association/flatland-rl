@@ -218,7 +218,7 @@ class RailEnv(Environment):
         # global numpy array of agents position, -1 means that the cell is free, otherwise the agent handle is placed
         # inside the cell
         self.agent_positions: np.ndarray = np.zeros((height, width), dtype=int) - 1
-				
+
         # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
         self.record_steps = record_steps  # whether to save timesteps
         self.cur_episode = []  # save timesteps in here
@@ -578,7 +578,8 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] += self.stop_penalty
 
             if not agent.moving and not (
-                action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                    action == RailEnvActions.DO_NOTHING or
+                    action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[i_agent] += self.start_penalty
@@ -939,6 +940,7 @@ class RailEnv(Environment):
         # msgpack.packb(msg_data, use_bin_type=True)
         with open(filename, "wb") as file_out:
             file_out.write(msgpack.packb(dict_data))
+
     def load(self, filename):
         """
         Load environment with distance map from a file
