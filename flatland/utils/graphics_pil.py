@@ -133,6 +133,7 @@ class PILGL(GraphicsLayer):
         return self.agent_colors[iAgent % self.n_agent_colors]
 
     def plot(self, gX, gY, color=None, linewidth=3, layer=RAIL_LAYER, opacity=255, **kwargs):
+        """ Draw a line joining the points in gX, GY - each an"""
         color = self.adapt_color(color)
         if len(color) == 3:
             color += (opacity,)
@@ -140,7 +141,8 @@ class PILGL(GraphicsLayer):
             color = color[:3] + (opacity,)
         gPoints = np.stack([array(gX), -array(gY)]).T * self.nPixCell
         gPoints = list(gPoints.ravel())
-        self.draws[layer].line(gPoints, fill=color, width=self.linewidth)
+        # the width here was self.linewidth - not really sure of the implications
+        self.draws[layer].line(gPoints, fill=color, width=linewidth)
 
     def scatter(self, gX, gY, color=None, marker="o", s=50, layer=RAIL_LAYER, opacity=255, *args, **kwargs):
         color = self.adapt_color(color)
@@ -540,9 +542,8 @@ class PILSVG(PILGL):
                         if (col + row + col * row) % 3 == 0:
                             a = (a + (col + row + col * row)) % len(self.dBuildings)
                         pil_track = self.dBuildings[a]
-                elif (self.background_grid[col][row] > 5 + ((col * row + col) % 3)) or (
-                    (col ** 3 + row ** 2 + col * row) %
-                    10 == 0):
+                elif ((self.background_grid[col][row] > 5 + ((col * row + col) % 3)) or 
+                        ((col ** 3 + row ** 2 + col * row) % 10 == 0)):
                     a = int(self.background_grid[col][row]) - 4
                     a2 = (a + (col + row + col * row + col ** 3 + row ** 4))
                     if a2 % 64 > 11:
@@ -635,7 +636,7 @@ class PILSVG(PILGL):
                     self.pil_zug[(in_direction_2, out_direction_2, color_idx)] = pils[color_idx]
 
     def set_agent_at(self, agent_idx, row, col, in_direction, out_direction, is_selected,
-                     rail_grid=None, show_debug=False, clear_debug_text=True):
+                     rail_grid=None, show_debug=False, clear_debug_text=True, malfunction=False):
         delta_dir = (out_direction - in_direction) % 4
         color_idx = agent_idx % self.n_agent_colors
         # when flipping direction at a dead end, use the "out_direction" direction.
@@ -671,10 +672,22 @@ class PILSVG(PILGL):
                 self.text_rowcol((row + dr, col + dc,), str(agent_idx), layer=PILGL.SELECTED_AGENT_LAYER)
             else:
                 self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
+        if malfunction:
+            self.draw_malfunction(agent_idx, (row, col))
 
     def set_cell_occupied(self, agent_idx, row, col):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]
         self.draw_image_row_col(occupied_im, (row, col), 1)
+
+    def draw_malfunction(self, agent_idx, rcTopLeft):
+        # Roughly an "X" shape to indicate malfunction
+        grcOffsets = np.array([[0, 0], [1, 1], [1, 0], [0, 1]])
+        grcPoints = np.array(rcTopLeft)[None] + grcOffsets
+        gxyPoints = grcPoints[:, [1, 0]]
+        gxPoints, gyPoints = gxyPoints.T
+        # print(agent_idx, rcTopLeft, gxyPoints, "X:", gxPoints, "Y:", gyPoints)
+        # plot(self, gX, gY, color=None, linewidth=3, layer=RAIL_LAYER, opacity=255, **kwargs):
+        self.plot(gxPoints, -gyPoints, color=(0, 0, 0, 255), layer=PILGL.AGENT_LAYER, linewidth=2)
 
 
 def main2():

@@ -120,7 +120,8 @@ class RailEnv(Environment):
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  stochastic_data=None,
                  remove_agents_at_target=True,
-                 random_seed=1
+                 random_seed=1,
+                 record_steps=False
                  ):
         """
         Environment init.
@@ -217,6 +218,10 @@ class RailEnv(Environment):
         # global numpy array of agents position, -1 means that the cell is free, otherwise the agent handle is placed
         # inside the cell
         self.agent_positions: np.ndarray = np.zeros((height, width), dtype=int) - 1
+
+        # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
+        self.record_steps = record_steps  # whether to save timesteps
+        self.cur_episode = []  # save timesteps in here
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -505,6 +510,8 @@ class RailEnv(Environment):
             self.dones["__all__"] = True
             for i_agent in range(self.get_num_agents()):
                 self.dones[i_agent] = True
+        if self.record_steps:
+            self.record_timestep()
 
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
@@ -571,7 +578,8 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] += self.stop_penalty
 
             if not agent.moving and not (
-                action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                    action == RailEnvActions.DO_NOTHING or
+                    action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[i_agent] += self.start_penalty
@@ -725,6 +733,22 @@ class RailEnv(Environment):
             # if new cell is outside of scene -> cell_free is False
             cell_free = False
         return cell_free, new_cell_valid, new_direction, new_position, transition_valid
+
+    def record_timestep(self):
+        ''' Record the positions and orientations of all agents in memory, in the cur_episode
+        '''
+        list_agents_state = []
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
+            # the int cast is to avoid numpy types which may cause problems with msgpack
+            # in env v2, agents may have position None, before starting
+            if agent.position is None:
+                pos = (0, 0)
+            else:
+                pos = (int(agent.position[0]), int(agent.position[1]))
+            # print("pos:", pos, type(pos[0]))
+            list_agents_state.append([*pos, int(agent.direction)])
+        self.cur_episode.append(list_agents_state)
 
     def cell_free(self, position: IntVector2D) -> bool:
         """
@@ -908,6 +932,14 @@ class RailEnv(Environment):
         else:
             with open(filename, "wb") as file_out:
                 file_out.write(self.get_full_state_msg())
+
+    def save_episode(self, filename):
+        episode_data = self.cur_episode
+        msgpack.packb(episode_data, use_bin_type=True)
+        dict_data = {"episode": episode_data}
+        # msgpack.packb(msg_data, use_bin_type=True)
+        with open(filename, "wb") as file_out:
+            file_out.write(msgpack.packb(dict_data))
 
     def load(self, filename):
         """
