@@ -16,6 +16,7 @@ import redis
 import timeout_decorator
 
 import flatland
+from envs.malfunction_generators import malfunction_from_file
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.rail_env import RailEnv
@@ -337,6 +338,7 @@ class FlatlandRemoteEvaluationService:
             del self.env
             self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
                                schedule_generator=schedule_from_file(test_env_file_path),
+                               malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
                                obs_builder_object=DummyObservationBuilder())
 
             if self.begin_simulation:

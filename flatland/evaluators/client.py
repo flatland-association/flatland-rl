@@ -11,6 +11,7 @@ import numpy as np
 import redis
 
 import flatland
+from envs.malfunction_generators import malfunction_from_file
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
 from flatland.envs.schedule_generators import schedule_from_file
@@ -217,6 +218,7 @@ class FlatlandRemoteClient(object):
         self.current_env_path = test_env_file_path
         self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
                            schedule_generator=schedule_from_file(test_env_file_path),
+                           malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
                            obs_builder_object=obs_builder_object)
 
         time_start = time.time()
