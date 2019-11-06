@@ -16,7 +16,7 @@ import redis
 import timeout_decorator
 
 import flatland
-from envs.malfunction_generators import malfunction_from_file
+from flatland.envs.malfunction_generators import malfunction_from_file
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.rail_env import RailEnv
