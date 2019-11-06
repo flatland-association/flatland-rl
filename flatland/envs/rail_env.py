@@ -10,6 +10,7 @@ import msgpack
 import msgpack_numpy as m
 import numpy as np
 from gym.utils import seeding
+from msgpack import Packer
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -399,7 +400,7 @@ class RailEnv(Environment):
             agent.moving = agent.malfunction_data['moving_before_malfunction']
             return
 
-    def _break_agent(self, agent):
+    def _break_agent(self, agent: EnvAgent):
         """
         Malfunction generator that breaks agents at a given rate.
 
@@ -789,7 +790,7 @@ class RailEnv(Environment):
         """
         return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row, col))
 
-    def get_full_state_msg(self):
+    def get_full_state_msg(self) -> Packer:
         """
         Returns state of environment in msgpack object
         """
@@ -804,7 +805,7 @@ class RailEnv(Environment):
             "malfunction": malfunction_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
-    def get_agent_state_msg(self):
+    def get_agent_state_msg(self) -> Packer:
         """
         Returns agents information in msgpack object
         """
@@ -813,7 +814,7 @@ class RailEnv(Environment):
             "agents": agent_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
-    def get_full_state_dist_msg(self):
+    def get_full_state_dist_msg(self) -> Packer:
         """
         Returns environment information with distance map information as msgpack object
         """
@@ -868,26 +869,6 @@ class RailEnv(Environment):
         self.rail.height = self.height
         self.rail.width = self.width
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-
-    def get_full_state_dist_msg(self):
-        """
-        Returns environment information with distance map information as msgpack object
-        """
-        grid_data = self.rail.grid.tolist()
-        agent_static_data = [agent.to_list() for agent in self.agents_static]
-        agent_data = [agent.to_list() for agent in self.agents]
-        msgpack.packb(grid_data, use_bin_type=True)
-        msgpack.packb(agent_data, use_bin_type=True)
-        msgpack.packb(agent_static_data, use_bin_type=True)
-        distance_map_data = self.distance_map.get()
-        msgpack.packb(distance_map_data, use_bin_type=True)
-        msg_data = {
-            "grid": grid_data,
-            "agents_static": agent_static_data,
-            "agents": agent_data,
-            "distance_map": distance_map_data}
-
-        return msgpack.packb(msg_data, use_bin_type=True)
 
     def save(self, filename, save_distance_maps=False):
         """

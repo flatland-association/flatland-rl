@@ -41,7 +41,7 @@ def malfunction_from_file(filename: str) -> Tuple[MalfunctionGenerator, Malfunct
     with open(filename, "rb") as file_in:
         load_data = file_in.read()
     data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
-    # TODO: make this better by using namedtuple in the pickle file
+    # TODO: make this better by using namedtuple in the pickle file. See issue 282
     data['malfunction'] = MalfunctionProcessData._make(data['malfunction'])
     if "malfunction" in data:
         # Mean malfunction in number of time steps
