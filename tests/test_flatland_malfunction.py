@@ -81,7 +81,6 @@ def test_malfunction_process():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    # reset to initialize agents_static
     obs, info = env.reset(False, False, True, random_seed=10)
 
     agent_halts = 0
@@ -136,7 +135,6 @@ def test_malfunction_process_statistically():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
 
-    # reset to initialize agents_static
     env.reset(True, True, False, random_seed=10)
 
     env.agents[0].target = (0, 0)
@@ -182,7 +180,6 @@ def test_malfunction_before_entry():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    # reset to initialize agents_static
     env.reset(False, False, False, random_seed=10)
     env.agents[0].target = (0, 0)
 
@@ -227,7 +224,6 @@ def test_malfunction_values_and_behavior():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
 
-    # reset to initialize agents_static
     env.reset(False, False, activate_agents=True, random_seed=10)
 
     # Assertions
@@ -248,9 +244,14 @@ def test_initial_malfunction():
 
     rail, rail_map = make_simple_rail2()
 
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=10), number_of_agents=1,
-                  obs_builder_object=SingleAgentNavigationObs())
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(seed=10),
+                  number_of_agents=1,
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),  # Malfunction data generator
+                  obs_builder_object=SingleAgentNavigationObs()
+                  )
     # reset to initialize agents_static
     env.reset(False, False, True, random_seed=10)
     print(env.agents[0].malfunction_data)
@@ -401,9 +402,13 @@ def test_initial_malfunction_do_nothing():
 
     rail, rail_map = make_simple_rail2()
 
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1)
-    # reset to initialize agents_static
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=1,
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),  # Malfunction data generator
+                  )
     env.reset()
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
@@ -482,7 +487,6 @@ def tests_random_interference_from_outside():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
-    # reset to initialize agents_static
     env.agents[0].speed_data['speed'] = 0.33
     env.reset(False, False, False, random_seed=10)
     env_data = []
@@ -507,7 +511,6 @@ def tests_random_interference_from_outside():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
-    # reset to initialize agents_static
     env.agents[0].speed_data['speed'] = 0.33
     env.reset(False, False, False, random_seed=10)
 
@@ -543,9 +546,8 @@ def test_last_malfunction_step():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
-    # reset to initialize agents_static
     env.agents[0].speed_data['speed'] = 1. / 3.
-    env.agents_static[0].target = (0, 0)
+    env.agents[0].target = (0, 0)
 
     env.reset(False, False, True)
     # Force malfunction to be off at beginning and next malfunction to happen in 2 steps

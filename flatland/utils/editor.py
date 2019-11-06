@@ -10,7 +10,7 @@ from numpy import array
 
 import flatland.utils.rendertools as rt
 from flatland.core.grid.grid4_utils import mirror
-from flatland.envs.agent_utils import EnvAgent, EnvAgentStatic
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv, random_rail_generator
 from flatland.envs.rail_generators import complex_rail_generator, empty_rail_generator
@@ -144,7 +144,7 @@ class View(object):
     def redraw(self):
         with self.output_generator:
             self.oRT.set_new_rail()
-            self.model.env.agents = self.model.env.agents_static
+            self.model.env.restart_agents()
             for a in self.model.env.agents:
                 if hasattr(a, 'old_position') is False:
                     a.old_position = a.position
@@ -175,12 +175,12 @@ class View(object):
             self.writableData[(y - 2):(y + 2), (x - 2):(x + 2), :3] = 0
 
     def xy_to_rc(self, x, y):
-        rcCell = ((array([y, x]) - self.yxBase))
+        rc_cell = ((array([y, x]) - self.yxBase))
         nX = np.floor((self.yxSize[0] - self.yxBase[0]) / self.model.env.height)
         nY = np.floor((self.yxSize[1] - self.yxBase[1]) / self.model.env.width)
-        rcCell[0] = max(0, min(np.floor(rcCell[0] / nY), self.model.env.height - 1))
-        rcCell[1] = max(0, min(np.floor(rcCell[1] / nX), self.model.env.width - 1))
-        return rcCell
+        rc_cell[0] = max(0, min(np.floor(rc_cell[0] / nY), self.model.env.height - 1))
+        rc_cell[1] = max(0, min(np.floor(rc_cell[1] / nX), self.model.env.width - 1))
+        return rc_cell
 
     def log(self, *args, **kwargs):
         if self.output_generator:
@@ -212,23 +212,23 @@ class Controller(object):
         y = event['canvasY']
         self.debug("debug:", x, y)
 
-        rcCell = self.view.xy_to_rc(x, y)
+        rc_cell = self.view.xy_to_rc(x, y)
 
         bShift = event["shiftKey"]
         bCtrl = event["ctrlKey"]
         bAlt = event["altKey"]
         if bCtrl and not bShift and not bAlt:
-            self.model.click_agent(rcCell)
+            self.model.click_agent(rc_cell)
             self.lrcStroke = []
         elif bShift and bCtrl:
-            self.model.add_target(rcCell)
+            self.model.add_target(rc_cell)
             self.lrcStroke = []
         elif bAlt and not bShift and not bCtrl:
-            self.model.clear_cell(rcCell)
+            self.model.clear_cell(rc_cell)
             self.lrcStroke = []
 
-        self.debug("click in cell", rcCell)
-        self.model.debug_cell(rcCell)
+        self.debug("click in cell", rc_cell)
+        self.model.debug_cell(rc_cell)
 
         if self.model.selected_agent is not None:
             self.lrcStroke = []
@@ -301,8 +301,8 @@ class Controller(object):
                     self.view.drag_path_element(x, y)
 
                     # Translate and scale from x,y to integer row,col (note order change)
-                    rcCell = self.view.xy_to_rc(x, y)
-                    self.editor.drag_path_element(rcCell)
+                    rc_cell = self.view.xy_to_rc(x, y)
+                    self.editor.drag_path_element(rc_cell)
 
                 self.view.redisplay_image()
 
@@ -326,7 +326,7 @@ class Controller(object):
     def rotate_agent(self, event):
         self.log("Rotate Agent:", self.model.selected_agent)
         if self.model.selected_agent is not None:
-            for agent_idx, agent in enumerate(self.model.env.agents_static):
+            for agent_idx, agent in enumerate(self.model.env.agents):
                 if agent is None:
                     continue
                 if agent_idx == self.model.selected_agent:
@@ -336,13 +336,7 @@ class Controller(object):
 
     def restart_agents(self, event):
         self.log("Restart Agents - nAgents:", self.view.regen_n_agents.value)
-        if self.model.init_agents_static is not None:
-            self.model.env.agents_static = [EnvAgentStatic(d[0], d[1], d[2], moving=False) for d in
-                                            self.model.init_agents_static]
-            self.model.env.agents = None
-            self.model.init_agents_static = None
-            self.model.env.restart_agents()
-            self.model.env.reset(False, False)
+        self.model.env.reset(False, False)
         self.refresh(event)
 
     def regenerate(self, event):
@@ -396,7 +390,6 @@ class EditorModel(object):
         self.env_filename = "temp.pkl"
         self.set_env(env)
         self.selected_agent = None
-        self.init_agents_static = None
         self.thread = None
         self.save_image_count = 0
 
@@ -417,12 +410,12 @@ class EditorModel(object):
     def set_draw_mode(self, draw_mode):
         self.draw_mode = draw_mode
 
-    def interpolate_path(self, rcLast, rcCell):
-        if np.array_equal(rcLast, rcCell):
+    def interpolate_path(self, rcLast, rc_cell):
+        if np.array_equal(rcLast, rc_cell):
             return []
         rcLast = array(rcLast)
-        rcCell = array(rcCell)
-        rcDelta = rcCell - rcLast
+        rc_cell = array(rc_cell)
+        rcDelta = rc_cell - rcLast
 
         lrcInterp = []  # extra row,col points
 
@@ -454,7 +447,7 @@ class EditorModel(object):
             lrcInterp = list(map(tuple, g2Interp))
         return lrcInterp
 
-    def drag_path_element(self, rcCell):
+    def drag_path_element(self, rc_cell):
         """Mouse motion event handler for drawing.
         """
         lrcStroke = self.lrcStroke
@@ -462,15 +455,15 @@ class EditorModel(object):
         # Store the row,col location of the click, if we have entered a new cell
         if len(lrcStroke) > 0:
             rcLast = lrcStroke[-1]
-            if not np.array_equal(rcLast, rcCell):  # only save at transition
-                lrcInterp = self.interpolate_path(rcLast, rcCell)
+            if not np.array_equal(rcLast, rc_cell):  # only save at transition
+                lrcInterp = self.interpolate_path(rcLast, rc_cell)
                 lrcStroke.extend(lrcInterp)
-                self.debug("lrcStroke ", len(lrcStroke), rcCell, "interp:", lrcInterp)
+                self.debug("lrcStroke ", len(lrcStroke), rc_cell, "interp:", lrcInterp)
 
         else:
             # This is the first cell in a mouse stroke
-            lrcStroke.append(rcCell)
-            self.debug("lrcStroke ", len(lrcStroke), rcCell)
+            lrcStroke.append(rc_cell)
+            self.debug("lrcStroke ", len(lrcStroke), rc_cell)
 
     def mod_path(self, bAddRemove):
         # disabled functionality (no longer required)
@@ -599,7 +592,6 @@ class EditorModel(object):
     def clear(self):
         self.env.rail.grid[:, :] = 0
         self.env.agents = []
-        self.env.agents_static = []
 
         self.redraw()
 
@@ -613,7 +605,7 @@ class EditorModel(object):
         self.redraw()
 
     def restart_agents(self):
-        self.env.agents = EnvAgent.list_from_static(self.env.agents_static)
+        self.env.restart_agents()
         self.redraw()
 
     def set_filename(self, filename):
@@ -631,7 +623,6 @@ class EditorModel(object):
 
             self.env.restart_agents()
             self.env.reset(False, False)
-            self.init_agents_static = None
             self.view.oRT.update_background()
             self.fix_env()
             self.set_env(self.env)
@@ -641,12 +632,7 @@ class EditorModel(object):
 
     def save(self):
         self.log("save to ", self.env_filename, " working dir: ", os.getcwd())
-        temp_store = self.env.agents
-        # clear agents before save , because we want the "init" position of the agent to expert
-        self.env.agents = []
         self.env.save(self.env_filename)
-        # reset agents current (current position)
-        self.env.agents = temp_store
 
     def save_image(self):
         self.view.oRT.gl.save_image('frame_{:04d}.bmp'.format(self.save_image_count))
@@ -683,7 +669,7 @@ class EditorModel(object):
         self.regen_size_height = size
 
     def find_agent_at(self, cell_row_col):
-        for agent_idx, agent in enumerate(self.env.agents_static):
+        for agent_idx, agent in enumerate(self.env.agents):
             if tuple(agent.position) == tuple(cell_row_col):
                 return agent_idx
         return None
@@ -703,15 +689,14 @@ class EditorModel(object):
             # No
             if self.selected_agent is None:
                 # Create a new agent and select it.
-                agent_static = EnvAgentStatic(position=cell_row_col, direction=0, target=cell_row_col, moving=False)
-                self.selected_agent = self.env.add_agent_static(agent_static)
+                agent = EnvAgent(position=cell_row_col, direction=0, target=cell_row_col, moving=False)
+                self.selected_agent = self.env.add_agent(agent)
                 self.view.oRT.update_background()
             else:
                 # Move the selected agent to this cell
-                agent_static = self.env.agents_static[self.selected_agent]
-                agent_static.position = cell_row_col
-                agent_static.old_position = cell_row_col
-                self.env.agents = []
+                agent = self.env.agents[self.selected_agent]
+                agent.position = cell_row_col
+                agent.old_position = cell_row_col
         else:
             # Yes
             # Have they clicked on the agent already selected?
@@ -722,13 +707,11 @@ class EditorModel(object):
                 # No - select the agent
                 self.selected_agent = agent_idx
 
-        self.init_agents_static = None
         self.redraw()
 
-    def add_target(self, rcCell):
+    def add_target(self, rc_cell):
         if self.selected_agent is not None:
-            self.env.agents_static[self.selected_agent].target = rcCell
-            self.init_agents_static = None
+            self.env.agents[self.selected_agent].target = rc_cell
             self.view.oRT.update_background()
             self.redraw()
 
@@ -746,11 +729,11 @@ class EditorModel(object):
         if self.debug_bool:
             self.log(*args, **kwargs)
 
-    def debug_cell(self, rcCell):
-        binTrans = self.env.rail.get_full_transitions(*rcCell)
+    def debug_cell(self, rc_cell):
+        binTrans = self.env.rail.get_full_transitions(*rc_cell)
         sbinTrans = format(binTrans, "#018b")[2:]
         self.debug("cell ",
-                   rcCell,
+                   rc_cell,
                    "Transitions: ",
                    binTrans,
                    sbinTrans,

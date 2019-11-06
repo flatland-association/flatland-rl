@@ -21,18 +21,21 @@ from flatland.utils.simple_rail import make_simple_rail, make_simple_rail2, make
 def test_dummy_predictor(rendering=False):
     rail, rail_map = make_simple_rail2()
 
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)))
-    # reset to initialize agents_static
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)),
+                  )
     env.reset()
 
     # set initial position and direction for testing...
-    env.agents_static[0].initial_position = (5, 6)
-    env.agents_static[0].direction = 0
-    env.agents_static[0].target = (3, 0)
+    env.agents[0].initial_position = (5, 6)
+    env.agents[0].initial_direction = 0
+    env.agents[0].direction = 0
+    env.agents[0].target = (3, 0)
 
-    # reset to set agents from agents_static
     env.reset(False, False)
     env.set_agent_active(env.agents[0])
 
@@ -109,23 +112,25 @@ def test_dummy_predictor(rendering=False):
 
 def test_shortest_path_predictor(rendering=False):
     rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-
-    # reset to initialize agents_static
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  )
     env.reset()
 
     # set the initial position
-    agent = env.agents_static[0]
+    agent = env.agents[0]
     agent.initial_position = (5, 6)  # south dead-end
     agent.position = (5, 6)  # south dead-end
     agent.direction = 0  # north
+    agent.initial_direction = 0  # north
     agent.target = (3, 9)  # east dead-end
     agent.moving = True
     agent.status = RailAgentStatus.ACTIVE
 
-    # reset to set agents from agents_static
     env.reset(False, False)
 
     if rendering:
@@ -243,30 +248,34 @@ def test_shortest_path_predictor(rendering=False):
 
 def test_shortest_path_predictor_conflicts(rendering=False):
     rail, rail_map = make_invalid_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=2,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-    # initialize agents_static
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=2,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  )
     env.reset()
 
     # set the initial position
-    agent = env.agents_static[0]
+    agent = env.agents[0]
     agent.initial_position = (5, 6)  # south dead-end
     agent.position = (5, 6)  # south dead-end
     agent.direction = 0  # north
+    agent.initial_direction = 0  # north
     agent.target = (3, 9)  # east dead-end
     agent.moving = True
     agent.status = RailAgentStatus.ACTIVE
 
-    agent = env.agents_static[1]
+    agent = env.agents[1]
     agent.initial_position = (3, 8)  # east dead-end
     agent.position = (3, 8)  # east dead-end
     agent.direction = 3  # west
+    agent.initial_direction = 3  # west
     agent.target = (6, 6)  # south dead-end
     agent.moving = True
     agent.status = RailAgentStatus.ACTIVE
 
-    # reset to set agents from agents_static
     observations, info = env.reset(False, False, True)
 
     if rendering:

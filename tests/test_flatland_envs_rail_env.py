@@ -5,7 +5,6 @@ import numpy as np
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.agent_utils import EnvAgentStatic
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -22,8 +21,8 @@ def test_load_env():
     env.reset()
     env.load_resource('env_data.tests', 'test-10x10.mpk')
 
-    agent_static = EnvAgentStatic((0, 0), 2, (5, 5), False)
-    env.add_agent_static(agent_static)
+    agent_static = EnvAgent((0, 0), 2, (5, 5), False)
+    env.add_agent(agent_static)
     assert env.get_num_agents() == 1
 
 
@@ -32,23 +31,23 @@ def test_save_load():
                   rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
                   schedule_generator=complex_schedule_generator(), number_of_agents=2)
     env.reset()
-    agent_1_pos = env.agents_static[0].position
-    agent_1_dir = env.agents_static[0].direction
-    agent_1_tar = env.agents_static[0].target
-    agent_2_pos = env.agents_static[1].position
-    agent_2_dir = env.agents_static[1].direction
-    agent_2_tar = env.agents_static[1].target
+    agent_1_pos = env.agents[0].position
+    agent_1_dir = env.agents[0].direction
+    agent_1_tar = env.agents[0].target
+    agent_2_pos = env.agents[1].position
+    agent_2_dir = env.agents[1].direction
+    agent_2_tar = env.agents[1].target
     env.save("test_save.dat")
     env.load("test_save.dat")
     assert (env.width == 10)
     assert (env.height == 10)
     assert (len(env.agents) == 2)
-    assert (agent_1_pos == env.agents_static[0].position)
-    assert (agent_1_dir == env.agents_static[0].direction)
-    assert (agent_1_tar == env.agents_static[0].target)
-    assert (agent_2_pos == env.agents_static[1].position)
-    assert (agent_2_dir == env.agents_static[1].direction)
-    assert (agent_2_tar == env.agents_static[1].target)
+    assert (agent_1_pos == env.agents[0].position)
+    assert (agent_1_dir == env.agents[0].direction)
+    assert (agent_1_tar == env.agents[0].target)
+    assert (agent_2_pos == env.agents[1].position)
+    assert (agent_2_dir == env.agents[1].direction)
+    assert (agent_2_tar == env.agents[1].target)
 
 
 def test_rail_environment_single_agent():
@@ -158,10 +157,10 @@ def test_dead_end():
 
     # We try the configuration in the 4 directions:
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_position=(0, 2), direction=1, target=(0, 0), moving=False)]
+    rail_env.agents = [EnvAgent(initial_position=(0, 2), initial_direction=1, direction=1, target=(0, 0), moving=False)]
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_position=(0, 2), direction=3, target=(0, 4), moving=False)]
+    rail_env.agents = [EnvAgent(initial_position=(0, 2), initial_direction=3, direction=3, target=(0, 4), moving=False)]
 
     # In the vertical configuration:
     rail_map = np.array(
@@ -180,10 +179,10 @@ def test_dead_end():
                        obs_builder_object=GlobalObsForRailEnv())
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_position=(2, 0), direction=2, target=(0, 0), moving=False)]
+    rail_env.agents = [EnvAgent(initial_position=(2, 0), initial_direction=2, direction=2, target=(0, 0), moving=False)]
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_position=(2, 0), direction=0, target=(4, 0), moving=False)]
+    rail_env.agents = [EnvAgent(initial_position=(2, 0), initial_direction=0, direction=0, target=(4, 0), moving=False)]
 
     # TODO make assertions
 
@@ -231,7 +230,6 @@ def test_rail_env_reset():
     env.reset()
     env.save(file_name)
     dist_map_shape = np.shape(env.distance_map.get())
-    # initialize agents_static
     rails_initial = env.rail.grid
     agents_initial = env.agents
 

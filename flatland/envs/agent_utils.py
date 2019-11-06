@@ -1,8 +1,7 @@
 from enum import IntEnum
 from itertools import starmap
-from typing import Tuple, Optional
+from typing import Tuple, Optional, NamedTuple
 
-import numpy as np
 from attr import attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
@@ -16,14 +15,25 @@ class RailAgentStatus(IntEnum):
     DONE_REMOVED = 3  # removed from grid (position is None) -> prediction is None
 
 
+Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
+                             ('initial_direction', Grid4TransitionsEnum),
+                             ('direction', Grid4TransitionsEnum),
+                             ('target', Tuple[int, int]),
+                             ('moving', bool),
+                             ('speed_data', dict),
+                             ('malfunction_data', dict),
+                             ('handle', int),
+                             ('status', RailAgentStatus),
+                             ('position', Tuple[int, int]),
+                             ('old_direction', Grid4TransitionsEnum),
+                             ('old_position', Tuple[int, int])])
+
+
 @attrs
-class EnvAgentStatic(object):
-    """ EnvAgentStatic - Stores initial position, direction and target.
-        This is like static data for the environment - it's where an agent starts,
-        rather than where it is at the moment.
-        The target should also be stored here.
-    """
+class EnvAgent:
+
     initial_position = attrib(type=Tuple[int, int])
+    initial_direction = attrib(type=Grid4TransitionsEnum)
     direction = attrib(type=Grid4TransitionsEnum)
     target = attrib(type=Tuple[int, int])
     moving = attrib(default=False, type=bool)
@@ -42,12 +52,33 @@ class EnvAgentStatic(object):
             lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0,
                           'moving_before_malfunction': False})))
 
+    handle = attrib(default=None)
+
     status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
     position = attrib(default=None, type=Optional[Tuple[int, int]])
 
+    # used in rendering
+    old_direction = attrib(default=None)
+    old_position = attrib(default=None)
+
+    def reset(self):
+        self.position = None
+        # TODO: set direction to None: https://gitlab.aicrowd.com/flatland/flatland/issues/280
+        self.direction = self.initial_direction
+        self.status = RailAgentStatus.READY_TO_DEPART
+        self.old_position = None
+        self.old_direction = None
+        self.moving = False
+
+    def to_agent(self) -> Agent:
+        return Agent(initial_position=self.initial_position, initial_direction=self.initial_direction,
+                     direction=self.direction, target=self.target, moving=self.moving, speed_data=self.speed_data,
+                     malfunction_data=self.malfunction_data, handle=self.handle, status=self.status,
+                     position=self.position, old_direction=self.old_direction, old_position=self.old_position)
+
     @classmethod
-    def from_lists(cls, schedule: Schedule):
-        """ Create a list of EnvAgentStatics from lists of positions, directions and targets
+    def from_schedule(cls, schedule: Schedule):
+        """ Create a list of EnvAgent from lists of positions, directions and targets
         """
         speed_datas = []
 
@@ -55,9 +86,6 @@ class EnvAgentStatic(object):
             speed_datas.append({'position_fraction': 0.0,
                                 'speed': schedule.agent_speeds[i] if schedule.agent_speeds is not None else 1.0,
                                 'transition_action_on_cellexit': 0})
-
-        # TODO: on initialization, all agents are re-set as non-broken. Perhaps it may be desirable to set
-        # some as broken?
 
         malfunction_datas = []
         for i in range(len(schedule.agent_positions)):
@@ -67,59 +95,11 @@ class EnvAgentStatic(object):
                                       'next_malfunction': 0,
                                       'nr_malfunctions': 0})
 
-        return list(starmap(EnvAgentStatic, zip(schedule.agent_positions,
-                                                schedule.agent_directions,
-                                                schedule.agent_targets,
-                                                [False] * len(schedule.agent_positions),
-                                                speed_datas,
-                                                malfunction_datas)))
-
-    def to_list(self):
-
-        # I can't find an expression which works on both tuples, lists and ndarrays
-        # which converts them all to a list of native python ints.
-        lPos = self.initial_position
-        if type(lPos) is np.ndarray:
-            lPos = lPos.tolist()
-
-        lTarget = self.target
-        if type(lTarget) is np.ndarray:
-            lTarget = lTarget.tolist()
-
-        return [lPos, int(self.direction), lTarget, int(self.moving), self.speed_data, self.malfunction_data]
-
-
-@attrs
-class EnvAgent(EnvAgentStatic):
-    """ EnvAgent - replace separate agent_* lists with a single list
-        of agent objects.  The EnvAgent represent's the environment's view
-        of the dynamic agent state.
-        We are duplicating target in the EnvAgent, which seems simpler than
-        forcing the env to refer to it in the EnvAgentStatic
-    """
-    handle = attrib(default=None)
-    old_direction = attrib(default=None)
-    old_position = attrib(default=None)
-
-    def to_list(self):
-        return [
-            self.position, self.direction, self.target, self.handle,
-            self.old_direction, self.old_position, self.moving, self.speed_data, self.malfunction_data]
-
-    @classmethod
-    def from_static(cls, oStatic):
-        """ Create an EnvAgent from the EnvAgentStatic,
-        copying all the fields, and adding handle with the default 0.
-        """
-        return EnvAgent(*oStatic.__dict__, handle=0)
-
-    @classmethod
-    def list_from_static(cls, lEnvAgentStatic, handles=None):
-        """ Create an EnvAgent from the EnvAgentStatic,
-        copying all the fields, and adding handle with the default 0.
-        """
-        if handles is None:
-            handles = range(len(lEnvAgentStatic))
-
-        return [EnvAgent(**oEAS.__dict__, handle=handle)
-                for handle, oEAS in zip(handles, lEnvAgentStatic)]
+        return list(starmap(EnvAgent, zip(schedule.agent_positions,
+                                          schedule.agent_directions,
+                                          schedule.agent_directions,
+                                          schedule.agent_targets,
+                                          [False] * len(schedule.agent_positions),
+                                          speed_datas,
+                                          malfunction_datas,
+                                          range(len(schedule.agent_positions)))))

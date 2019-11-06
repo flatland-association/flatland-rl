@@ -96,26 +96,37 @@ def test_reward_function_conflict(rendering=False):
                   schedule_generator=random_schedule_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     obs_builder: TreeObsForRailEnv = env.obs_builder
-    # initialize agents_static
     env.reset()
 
     # set the initial position
-    agent = env.agents_static[0]
+    agent = env.agents[0]
     agent.position = (5, 6)  # south dead-end
+    agent.initial_position = (5, 6)  # south dead-end
     agent.direction = 0  # north
+    agent.initial_direction = 0  # north
     agent.target = (3, 9)  # east dead-end
     agent.moving = True
     agent.status = RailAgentStatus.ACTIVE
 
-    agent = env.agents_static[1]
+    agent = env.agents[1]
     agent.position = (3, 8)  # east dead-end
+    agent.initial_position = (3, 8)  # east dead-end
     agent.direction = 3  # west
+    agent.initial_direction = 3  # west
     agent.target = (6, 6)  # south dead-end
     agent.moving = True
     agent.status = RailAgentStatus.ACTIVE
 
-    # reset to set agents from agents_static
     env.reset(False, False)
+    env.agents[0].moving = True
+    env.agents[1].moving = True
+    env.agents[0].status = RailAgentStatus.ACTIVE
+    env.agents[1].status = RailAgentStatus.ACTIVE
+    env.agents[0].position = (5, 6)
+    env.agents[1].position = (3, 8)
+    print("\n")
+    print(env.agents[0])
+    print(env.agents[1])
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
@@ -174,28 +185,34 @@ def test_reward_function_waiting(rendering=False):
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   remove_agents_at_target=False)
     obs_builder: TreeObsForRailEnv = env.obs_builder
-    # initialize agents_static
     env.reset()
 
     # set the initial position
-    agent = env.agents_static[0]
+    agent = env.agents[0]
     agent.initial_position = (3, 8)  # east dead-end
     agent.position = (3, 8)  # east dead-end
     agent.direction = 3  # west
+    agent.initial_direction = 3  # west
     agent.target = (3, 1)  # west dead-end
     agent.moving = True
     agent.status = RailAgentStatus.ACTIVE
 
-    agent = env.agents_static[1]
+    agent = env.agents[1]
     agent.initial_position = (5, 6)  # south dead-end
     agent.position = (5, 6)  # south dead-end
     agent.direction = 0  # north
+    agent.initial_direction = 0  # north
     agent.target = (3, 8)  # east dead-end
     agent.moving = True
     agent.status = RailAgentStatus.ACTIVE
 
-    # reset to set agents from agents_static
     env.reset(False, False)
+    env.agents[0].moving = True
+    env.agents[1].moving = True
+    env.agents[0].status = RailAgentStatus.ACTIVE
+    env.agents[1].status = RailAgentStatus.ACTIVE
+    env.agents[0].position = (3, 8)
+    env.agents[1].position = (5, 6)
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")

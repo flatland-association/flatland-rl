@@ -53,13 +53,11 @@ def test_grid8_set_transitions():
 
 
 def check_path(env, rail, position, direction, target, expected, rendering=False):
-    agent = env.agents_static[0]
+    agent = env.agents[0]
     agent.position = position  # south dead-end
     agent.direction = direction  # north
     agent.target = target  # east dead-end
     agent.moving = True
-    # reset to set agents from agents_static
-    # env.reset(False, False)
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
         renderer.render_env(show=True, show_observations=False)
@@ -69,11 +67,13 @@ def check_path(env, rail, position, direction, target, expected, rendering=False
 
 def test_path_exists(rendering=False):
     rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-
-    # reset to initialize agents_static
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  )
     env.reset()
 
     check_path(
@@ -131,11 +131,13 @@ def test_path_exists(rendering=False):
 
 def test_path_not_exists(rendering=False):
     rail, rail_map = make_simple_rail_unconnected()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-
-    # reset to initialize agents_static
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  )
     env.reset()
 
     check_path(

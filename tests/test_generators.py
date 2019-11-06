@@ -112,7 +112,6 @@ def tests_rail_from_file():
     env.reset()
     env.save(file_name)
     dist_map_shape = np.shape(env.distance_map.get())
-    # initialize agents_static
     rails_initial = env.rail.grid
     agents_initial = env.agents
 
@@ -140,7 +139,6 @@ def tests_rail_from_file():
     env2.reset()
     env2.save(file_name_2)
 
-    # initialize agents_static
     rails_initial_2 = env2.rail.grid
     agents_initial_2 = env2.agents
 
@@ -170,10 +168,13 @@ def tests_rail_from_file():
 
     # Test to save without distance map and load with generating distance map
 
-    # initialize agents_static
-    env4 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name_2),
-                   schedule_generator=schedule_from_file(file_name_2), number_of_agents=1,
-                   obs_builder_object=TreeObsForRailEnv(max_depth=2))
+    env4 = RailEnv(width=1,
+                   height=1,
+                   rail_generator=rail_from_file(file_name_2),
+                   schedule_generator=schedule_from_file(file_name_2),
+                   number_of_agents=1,
+                   obs_builder_object=TreeObsForRailEnv(max_depth=2),
+                   )
     env4.reset()
     rails_loaded_4 = env4.rail.grid
     agents_loaded_4 = env4.agents
