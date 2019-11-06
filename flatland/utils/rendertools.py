@@ -400,7 +400,7 @@ class RenderTool(object):
 
     def render_env(self,
                    show=False,  # whether to call matplotlib show() or equivalent after completion
-                   agents=True,  # whether to include agents
+                   show_agents=True,  # whether to include agents
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
                    frames=False,  # frame counter to show (intended since invocation)
@@ -415,11 +415,11 @@ class RenderTool(object):
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
                                 selected_agent=selected_agent,
-                                agents=agents
+                                show_agents=show_agents
                                 )
         else:
             self.render_env_pil(show=show,
-                                agents=agents,
+                                show_agents=show_agents,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
                                 frames=frames,
@@ -441,7 +441,7 @@ class RenderTool(object):
     def render_env_pil(self,
                        show=False,  # whether to call matplotlib show() or equivalent after completion
                        # use false when calling from Jupyter.  (and matplotlib no longer supported!)
-                       agents=True,  # whether to include agents
+                       show_agents=True,  # whether to include agents
                        show_observations=True,  # whether to include observations
                        show_predictions=False,  # whether to include predictions
                        frames=False,  # frame counter to show (intended since invocation)
@@ -458,7 +458,7 @@ class RenderTool(object):
         self.render_rail()
 
         # Draw each agent + its orientation + its target
-        if agents:
+        if show_agents:
             self.plot_agents(targets=True, selected_agent=selected_agent)
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)

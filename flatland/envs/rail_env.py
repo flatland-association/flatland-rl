@@ -733,6 +733,22 @@ class RailEnv(Environment):
             cell_free = False
         return cell_free, new_cell_valid, new_direction, new_position, transition_valid
 
+    def record_timestep(self):
+        ''' Record the positions and orientations of all agents in memory, in the cur_episode
+        '''
+        list_agents_state = []
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
+            # the int cast is to avoid numpy types which may cause problems with msgpack
+            # in env v2, agents may have position None, before starting
+            if agent.position is None:
+                pos = (0, 0)
+            else:
+                pos = (int(agent.position[0]), int(agent.position[1]))
+            # print("pos:", pos, type(pos[0]))
+            list_agents_state.append([*pos, int(agent.direction)])
+        self.cur_episode.append(list_agents_state)
+
     def cell_free(self, position: IntVector2D) -> bool:
         """
         Utility to check if a cell is free
