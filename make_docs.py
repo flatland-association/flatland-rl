@@ -36,6 +36,13 @@ for md_file in glob.glob(r'./*.md') + glob.glob(r'./docs/specifications/*.md') +
         out.write(rst_content)
         out.flush()
 
+img_dest = 'docs/images/'
+if not os.path.exists(img_dest):
+    os.makedirs(img_dest)
+for image_file in glob.glob(r'./images/*.png'):
+    shutil.copy(image_file, img_dest)
+
+
 subprocess.call(['sphinx-apidoc', '--force', '-a', '-e', '-o', 'docs/', 'flatland', '-H', 'API Reference', '--tocfile',
                  '05_apidoc'])
 
@@ -47,7 +54,6 @@ if not os.path.exists(img_dest):
     os.makedirs(img_dest)
 for image_file in glob.glob(r'./specifications/img/*'):
     shutil.copy(image_file, img_dest)
-
 subprocess.call(['python', '-msphinx', '-M', 'html', '.', '_build'])
 
 

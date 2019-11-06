@@ -114,6 +114,17 @@ Before you submit a merge request, check that it meets these guidelines:
 3. The merge request should work for Python 3.6, 3.7 and for PyPy. Check
    https://gitlab.aicrowd.com/flatland/flatland/pipelines
    and make sure that the tests pass for all supported Python versions.
+   We force pipelines to be run successfully for merge requests to be merged.
+4. Although we cannot enforce it technically, we ask for merge requests to be reviewed by at least one core member
+   in order to ensure that the Technical Guidelines below are respected and that the code is well tested:
+
+4.1  The remarks from the review should be resolved/implemented and communicated using the 'discussions resolved':
+
+.. image:: images/DiscussionsResolved.png
+
+4.2  When a merge request is merged, source branches should be deleted and commits squashed:
+
+.. image:: images/SourceBranchSquash.png
 
 Tips
 ----
@@ -204,17 +215,6 @@ RemoteClient
 
 Technical Guidelines
 --------------------
-
-
-Merge Requests
-~~~~~~~~~~~~~~
-
-Although we cannot enforce it technically, we ask for
-* merge requests to be reviewed
-* review points to be implemented using the 'discussions resolved'
-.. image:: images/DiscussionsResolved.PNG
-* source branches to be deleted and commits to be squashed
-.. image:: images/SourceBranchSquash.PNG
 
 
 Naming Conventions
@@ -362,7 +362,11 @@ We use the abc_ class decorator and a way to declaratively define the attributes
             def save(self, output, data):
                 """Save the data object to the output."""
 
+
+
+
 And then
+
     .. code-block:: python
 
         # abc_subclass.py
