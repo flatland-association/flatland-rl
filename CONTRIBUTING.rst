@@ -202,3 +202,210 @@ RemoteClient
     python run.py
 
 
+Technical Guidelines
+--------------------
+
+
+Merge Requests
+~~~~~~~~~~~~~~
+
+Although we cannot enforce it technically, we ask for
+* merge requests to be reviewed
+* review points to be implemented using the 'discussions resolved'
+.. image:: images/DiscussionsResolved.PNG
+* source branches to be deleted and commits to be squashed
+.. image:: images/SourceBranchSquash.PNG
+
+
+Naming Conventions
+~~~~~~~~~~~~~~~~~~
+
+We use the pylint naming conventions:
+
+`module_name`, `package_name`, `ClassName`, `method_name`, `ExceptionName`, `function_name`, `GLOBAL_CONSTANT_NAME`, `global_var_name`, `instance_var_name`, `function_parameter_name`, `local_var_name`.
+
+
+numpydoc
+~~~~~~~~
+
+Docstrings should be formatted using numpydoc_.
+
+
+.. _numpydoc: https://numpydoc.readthedocs.io/en/latest/format.html
+
+
+Acessing resources
+~~~~~~~~~~~~~~~~~~
+
+We use `importlib-resources`_ to read from local files.
+    Sample usages:
+
+    .. code-block:: python
+
+        from importlib_resources import path
+
+        with path(package, resource) as file_in:
+            new_grid = np.load(file_in)
+
+    And:
+
+    .. code-block:: python
+
+        from importlib_resources import read_binary
+
+        load_data = read_binary(package, resource)
+        self.set_full_state_msg(load_data)
+
+
+    .. _importlib-resources: https://importlib-resources.readthedocs.io/en/latest/
+
+    Renders the scene into a image (screenshot)
+
+    .. code-block:: python
+
+        renderer.gl.save_image("filename.bmp")
+
+Type Hints
+~~~~~~~~~~
+We use Type Hints (type_hints_pep484_) for better readability and better IDE support.
+
+    .. code-block:: python
+        # This is how you declare the type of a variable type in Python 3.6
+        age: int = 1
+
+        # In Python 3.5 and earlier you can use a type comment instead
+        # (equivalent to the previous definition)
+        age = 1  # type: int
+
+        # You don't need to initialize a variable to annotate it
+        a: int  # Ok (no value at runtime until assigned)
+
+        # The latter is useful in conditional branches
+        child: bool
+        if age < 18:
+            child = True
+        else:
+            child = False
+
+Have a look at the _type_hints_cheat_sheet to get started with Type Hints.
+
+Caveat: We discourage the usage of Type Aliases for structured data since its members remain unnamed (see refactor_unnamed_tuples_).
+
+    .. code-block:: python
+        # Discouraged: Type Alias with unnamed members
+        Tuple[int, int]
+
+        # Better: use NamedTuple
+        from typing import NamedTuple
+
+        Position = NamedTuple('Position',
+            [
+                ('r', int),
+                ('c', int)
+            ]
+
+
+.. _type_hints_pep484: https://www.python.org/dev/peps/pep-0484/
+.. _type_hints_cheat_sheet: https://mypy.readthedocs.io/en/latest/cheat_sheet_py3.html
+.. _refactor_unnamed_tuples: https://gitlab.aicrowd.com/flatland/flatland/issues/284
+
+NamedTuple
+~~~~~~~~~~
+For structured data containers for which we do not write methods that have to ensure
+some (class) invariant over multiple members, we use
+`NamedTuple`s instead of plain `Dict`s to ensure better readability by
+
+    .. code-block:: python
+        from typing import NamedTuple
+
+        RailEnvNextAction = NamedTuple('RailEnvNextAction',
+            [
+                ('action', RailEnvActions),
+                ('next_position', RailEnvGridPos),
+                ('next_direction', Grid4TransitionsEnum)
+            ])
+
+Members of NamedTuple can then be accessed through `.<member>` instead of `['<key>']`.
+
+Class Attributes
+~~~~~~~~~~~~~~~~
+We use classes for data structures if we need to write methods that ensure (class) invariants over multiple members.
+We use the attrs_ class decorator and a way to declaratively define the attributes on that class:
+
+    .. code-block:: python
+        @attrs
+        class Replay(object):
+            position = attrib(type=Tuple[int, int])
+
+.. _attrs: https://github.com/python-attrs/attrs
+
+
+Abstract Base Classes
+~~~~~~~~~~~~~~~~~~~~~
+We use the abc_ class decorator and a way to declaratively define the attributes on that class:
+
+    .. code-block:: python
+        # abc_base.py
+
+        import abc
+
+
+        class PluginBase(metaclass=abc.ABCMeta):
+
+            @abc.abstractmethod
+            def load(self, input):
+                """Retrieve data from the input source
+                and return an object.
+                """
+
+            @abc.abstractmethod
+            def save(self, output, data):
+                """Save the data object to the output."""
+
+And then
+    .. code-block:: python
+
+        # abc_subclass.py
+
+        import abc
+        from abc_base import PluginBase
+
+
+        class SubclassImplementation(PluginBase):
+
+            def load(self, input):
+                return input.read()
+
+            def save(self, output, data):
+                return output.write(data)
+
+
+        if __name__ == '__main__':
+            print('Subclass:', issubclass(SubclassImplementation,
+                                          PluginBase))
+            print('Instance:', isinstance(SubclassImplementation(),
+                                          PluginBase))
+
+.. _abc: https://pymotw.com/3/abc/
+
+
+
+Currying
+~~~~~~~~
+We discourage currying to encapsulate state since we often the stateful object to have multiple methods.
+
+Thus, we should refactor our generators and use classes instead (refactor_currying_).
+
+    .. code-block:: python
+        # Type Alias
+        RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
+        RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
+
+        # Currying: a function that returns a confectioned function with internal state
+        def complex_rail_generator(nr_start_goal=1,
+                                   nr_extra=100,
+                                   min_dist=20,
+                                   max_dist=99999,
+                                   seed=1) -> RailGenerator:
+
+.. _refactor_currying: https://gitlab.aicrowd.com/flatland/flatland/issues/283

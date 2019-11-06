@@ -18,31 +18,4 @@ Frequently Asked Questions (FAQs)
         export LC_ALL=en_US.utf-8
         export LANG=en_US.utf-8
 
--   We use `importlib-resources`_ to read from local files.
-    Sample usages:
-
-    .. code-block:: python
-
-        from importlib_resources import path
-
-        with path(package, resource) as file_in:
-            new_grid = np.load(file_in)
-            
-    And:
-
-    .. code-block:: python
-
-        from importlib_resources import read_binary
-        
-        load_data = read_binary(package, resource)
-        self.set_full_state_msg(load_data)
-        
-
-    .. _importlib-resources: https://importlib-resources.readthedocs.io/en/latest/
-
-    Renders the scene into a image (screenshot)
-
-    .. code-block:: python
-
-        renderer.gl.save_image("filename.bmp")
 
