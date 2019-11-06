@@ -120,7 +120,8 @@ class RailEnv(Environment):
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  stochastic_data=None,
                  remove_agents_at_target=True,
-                 random_seed=1
+                 random_seed=1,
+                 record_steps=False
                  ):
         """
         Environment init.
@@ -217,6 +218,10 @@ class RailEnv(Environment):
         # global numpy array of agents position, -1 means that the cell is free, otherwise the agent handle is placed
         # inside the cell
         self.agent_positions: np.ndarray = np.zeros((height, width), dtype=int) - 1
+				
+        # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
+        self.record_steps = record_steps  # whether to save timesteps
+        self.cur_episode = []  # save timesteps in here
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -505,6 +510,8 @@ class RailEnv(Environment):
             self.dones["__all__"] = True
             for i_agent in range(self.get_num_agents()):
                 self.dones[i_agent] = True
+        if self.record_steps:
+            self.record_timestep()
 
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
@@ -909,6 +916,13 @@ class RailEnv(Environment):
             with open(filename, "wb") as file_out:
                 file_out.write(self.get_full_state_msg())
 
+    def save_episode(self, filename):
+        episode_data = self.cur_episode
+        msgpack.packb(episode_data, use_bin_type=True)
+        dict_data = {"episode": episode_data}
+        # msgpack.packb(msg_data, use_bin_type=True)
+        with open(filename, "wb") as file_out:
+            file_out.write(msgpack.packb(dict_data))
     def load(self, filename):
         """
         Load environment with distance map from a file
