@@ -291,7 +291,10 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
             with open(filename, "rb") as file_in:
                 load_data = file_in.read()
         data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
-        agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
+        if "agents_static" in data:
+            agents = EnvAgent.load_legacy_static_agent(data["agents_static"])
+        else:
+            agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
 
         # setup with loaded data
         agents_position = [a.initial_position for a in agents]
