@@ -217,6 +217,10 @@ RemoteClient
 Technical Guidelines
 --------------------
 
+Clean Code
+~~~~~~~~~~
+Please adhere to the general `Clean Code <https://www.planetgeek.ch/wp-content/uploads/2014/11/Clean-Code-V2.4.pdf>`_ principles,
+for instance we write short and concise functions and use appropriate naming to ensure readability.
 
 Naming Conventions
 ~~~~~~~~~~~~~~~~~~
@@ -238,7 +242,7 @@ Docstrings should be formatted using numpydoc_.
 Acessing resources
 ~~~~~~~~~~~~~~~~~~
 
-We use `importlib-resources`_ to read from local files.
+We use `importlib-resources <https://importlib-resources.readthedocs.io/en/latest/>`_ to read from local files.
     Sample usages:
 
     .. code-block:: python
@@ -258,7 +262,6 @@ We use `importlib-resources`_ to read from local files.
         self.set_full_state_msg(load_data)
 
 
-    .. _importlib-resources: https://importlib-resources.readthedocs.io/en/latest/
 
     Renders the scene into a image (screenshot)
 
@@ -268,7 +271,8 @@ We use `importlib-resources`_ to read from local files.
 
 Type Hints
 ~~~~~~~~~~
-We use Type Hints (type_hints_pep484_) for better readability and better IDE support.
+
+We use Type Hints (`PEP 484 <https://www.python.org/dev/peps/pep-0484/>`_) for better readability and better IDE support.
 
     .. code-block:: python
         # This is how you declare the type of a variable type in Python 3.6
@@ -288,9 +292,9 @@ We use Type Hints (type_hints_pep484_) for better readability and better IDE sup
         else:
             child = False
 
-Have a look at the _type_hints_cheat_sheet to get started with Type Hints.
+Have a look at the `Type Hints Cheat Sheet <https://mypy.readthedocs.io/en/latest/cheat_sheet_py3.html>`_ to get started with Type Hints.
 
-Caveat: We discourage the usage of Type Aliases for structured data since its members remain unnamed (see refactor_unnamed_tuples_).
+Caveat: We discourage the usage of Type Aliases for structured data since its members remain unnamed (see `Issue #284 <https://gitlab.aicrowd.com/flatland/flatland/issues/284/>`_).
 
     .. code-block:: python
         # Discouraged: Type Alias with unnamed members
@@ -306,12 +310,10 @@ Caveat: We discourage the usage of Type Aliases for structured data since its me
             ]
 
 
-.. _type_hints_pep484: https://www.python.org/dev/peps/pep-0484/
-.. _type_hints_cheat_sheet: https://mypy.readthedocs.io/en/latest/cheat_sheet_py3.html
-.. _refactor_unnamed_tuples: https://gitlab.aicrowd.com/flatland/flatland/issues/284
 
 NamedTuple
 ~~~~~~~~~~
+
 For structured data containers for which we do not write methods that have to ensure
 some (class) invariant over multiple members, we use
 `NamedTuple`s instead of plain `Dict`s to ensure better readability by
@@ -330,6 +332,7 @@ Members of NamedTuple can then be accessed through `.<member>` instead of `['<ke
 
 Class Attributes
 ~~~~~~~~~~~~~~~~
+
 We use classes for data structures if we need to write methods that ensure (class) invariants over multiple members.
 We use the attrs_ class decorator and a way to declaratively define the attributes on that class:
 
@@ -397,9 +400,9 @@ And then
 
 Currying
 ~~~~~~~~
-We discourage currying to encapsulate state since we often the stateful object to have multiple methods.
+We discourage currying to encapsulate state since we often want the stateful object to have multiple methods (but the curried function only has its one and only interface).
 
-Thus, we should refactor our generators and use classes instead (refactor_currying_).
+Thus, we should refactor our generators and use classes instead (see `Issue #283 <https://gitlab.aicrowd.com/flatland/flatland/issues/283>`_).
 
     .. code-block:: python
         # Type Alias
@@ -413,4 +416,3 @@ Thus, we should refactor our generators and use classes instead (refactor_curryi
                                    max_dist=99999,
                                    seed=1) -> RailGenerator:
 
-.. _refactor_currying: https://gitlab.aicrowd.com/flatland/flatland/issues/283
