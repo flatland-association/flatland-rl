@@ -869,7 +869,10 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
+        if "agents_static" in data:
+            self.agents = EnvAgent.load_legacy_static_agent(data["agents_static"])
+        else:
+            self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -887,7 +890,10 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
+        if "agents_static" in data:
+            self.agents = EnvAgent.load_legacy_static_agent(data["agents_static"])
+        else:
+            self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         if "distance_map" in data.keys():
             self.distance_map.set(data["distance_map"])
         # setup with loaded data
