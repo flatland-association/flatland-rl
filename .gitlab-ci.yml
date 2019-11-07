@@ -12,7 +12,8 @@ image: themattrix/tox
 stages:
     - tests
     - integration_testing
-    - benchmarks_and_profiling
+    - profiling
+    - benchmarks
     - deploy_docs
 cache:
     paths:
@@ -61,10 +62,10 @@ build_and_deploy_docs:
         name: ${CI_COMMIT_REF_SLUG}
         url: http://${BUCKET_NAME}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com/
 
-benchmarks_and_profiling:
+profiling:
     dependencies:
         - tests
-    stage: benchmarks_and_profiling
+    stage: profiling
     only:
         variables:
             - $BENCHMARKS_AND_PROFILING
@@ -78,7 +79,26 @@ benchmarks_and_profiling:
         - conda update -n root conda -y
         - conda install -c conda-forge tox-conda
     script:
-        - xvfb-run tox -e benchmarks,profiling -v --recreate
+        - xvfb-run tox -e profiling -v --recreate
+
+benchmarks:
+    dependencies:
+        - tests
+    stage: benchmarks
+    only:
+        variables:
+            - $BENCHMARKS_AND_PROFILING
+    before_script:
+        - apt update
+        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
+        - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
+        - export PATH=/tmp/miniconda3/bin:$PATH
+        - pip install tox awscli
+        - conda update -n root conda -y
+        - conda install -c conda-forge tox-conda
+    script:
+        - xvfb-run tox -e benchmarks -v --recreate
 
 test_conda_setup:
     stage: integration_testing
