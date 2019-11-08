@@ -7,11 +7,12 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv
 from flatland.envs.rail_env import RailEnvNextAction, RailEnvActions, RailEnv
-from flatland.envs.rail_env_shortest_paths import get_shortest_paths, WalkingElement
+from flatland.envs.rail_env_shortest_paths import get_shortest_paths, WalkingElement, get_k_shortest_paths
 from flatland.envs.rail_env_utils import load_flatland_environment_from_file
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
-from flatland.utils.simple_rail import make_disconnected_simple_rail
+from flatland.utils.rendertools import RenderTool
+from flatland.utils.simple_rail import make_disconnected_simple_rail, make_simple_rail_with_alternatives
 
 
 def test_get_shortest_paths_unreachable():
@@ -370,3 +371,81 @@ def test_get_shortest_paths_agent_handle():
     for agent_handle in expected:
         assert np.array_equal(actual[agent_handle], expected[agent_handle]), \
             "[{}] actual={},expected={}".format(agent_handle, actual[agent_handle], expected[agent_handle])
+
+
+def test_get_k_shortest_paths(rendering=False):
+    rail, rail_map = make_simple_rail_with_alternatives()
+
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail),
+                  schedule_generator=random_schedule_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)),
+                  )
+    env.reset()
+
+    initial_position = (3, 1)  # west dead-end
+    initial_direction = Grid4TransitionsEnum.WEST  # west
+    target_position = (3, 9)  # east
+
+    # set the initial position
+    agent = env.agents[0]
+    agent.position = initial_position
+    agent.initial_position = initial_position
+    agent.direction = initial_direction
+    agent.target = target_position  # east dead-end
+    agent.moving = True
+
+    env.reset(False, False)
+    if rendering:
+        renderer = RenderTool(env, gl="PILSVG")
+        renderer.render_env(show=True, show_observations=False)
+        input()
+
+    actual = get_k_shortest_paths(
+        env=env,
+        source_position=initial_position,  # west dead-end
+        source_direction=int(initial_direction),  # east
+        target_position=target_position,
+        k=10
+    )
+
+    expected = [
+        (WalkingElement(position=(3, 1), direction=3, next_action_element=None),
+         WalkingElement(position=(3, 0), direction=3, next_action_element=None),
+         WalkingElement(position=(3, 1), direction=1, next_action_element=None),
+         WalkingElement(position=(3, 2), direction=1, next_action_element=None),
+         WalkingElement(position=(3, 3), direction=1, next_action_element=None),
+         WalkingElement(position=(3, 4), direction=1, next_action_element=None),
+         WalkingElement(position=(3, 5), direction=1, next_action_element=None),
+         WalkingElement(position=(3, 6), direction=1, next_action_element=None),
+         WalkingElement(position=(4, 6), direction=2, next_action_element=None),
+         WalkingElement(position=(5, 6), direction=2, next_action_element=None),
+         WalkingElement(position=(6, 6), direction=2, next_action_element=None),
+         WalkingElement(position=(5, 6), direction=0, next_action_element=None),
+         WalkingElement(position=(4, 6), direction=0, next_action_element=None),
+         WalkingElement(position=(4, 7), direction=1, next_action_element=None),
+         WalkingElement(position=(4, 8), direction=1, next_action_element=None),
+         WalkingElement(position=(4, 9), direction=1, next_action_element=None),
+         WalkingElement(position=(3, 9), direction=0, next_action_element=None)),
+        (WalkingElement(position=(3, 1), direction=3, next_action_element=None),
+         WalkingElement(position=(3, 0), direction=3, next_action_element=None),
+         WalkingElement(position=(3, 1), direction=1, next_action_element=None),
+         WalkingElement(position=(3, 2), direction=1, next_action_element=None),
+         WalkingElement(position=(3, 3), direction=1, next_action_element=None),
+         WalkingElement(position=(2, 3), direction=0, next_action_element=None),
+         WalkingElement(position=(1, 3), direction=0, next_action_element=None),
+         WalkingElement(position=(0, 3), direction=0, next_action_element=None),
+         WalkingElement(position=(0, 4), direction=1, next_action_element=None),
+         WalkingElement(position=(0, 5), direction=1, next_action_element=None),
+         WalkingElement(position=(0, 6), direction=1, next_action_element=None),
+         WalkingElement(position=(0, 7), direction=1, next_action_element=None),
+         WalkingElement(position=(0, 8), direction=1, next_action_element=None),
+         WalkingElement(position=(0, 9), direction=1, next_action_element=None),
+         WalkingElement(position=(1, 9), direction=2, next_action_element=None),
+         WalkingElement(position=(2, 9), direction=2, next_action_element=None),
+         WalkingElement(position=(3, 9), direction=2, next_action_element=None))
+    ]
+
+    assert actual == expected, "actual={},expected={}".format(actual, expected)
