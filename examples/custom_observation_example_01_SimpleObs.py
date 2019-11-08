@@ -28,10 +28,7 @@ class SimpleObs(ObservationBuilder):
 
 
 def main():
-    env = RailEnv(width=7,
-                  height=7,
-                  rail_generator=random_rail_generator(),
-                  number_of_agents=3,
+    env = RailEnv(width=7, height=7, rail_generator=random_rail_generator(), number_of_agents=3,
                   obs_builder_object=SimpleObs())
     env.reset()
 

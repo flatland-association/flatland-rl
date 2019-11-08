@@ -149,7 +149,7 @@ env = RailEnv(width=width,
               rail_generator=rail_generator,
               schedule_generator=schedule_generator,
               number_of_agents=nr_trains,
-              stochastic_data=stochastic_data,  # Malfunction data generator
+              malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
               obs_builder_object=observation_builder,
               remove_agents_at_target=True  # Removes agents at the end of their journey to make space for others
               )
@@ -158,8 +158,8 @@ env = RailEnv(width=width,
 env_renderer = RenderTool(env, gl="PILSVG",
                           agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
                           show_debug=False,
-                          screen_height=1000,  # Adjust these parameters to fit your resolution
-                          screen_width=1000)  # Adjust these parameters to fit your resolution
+                          screen_height=1080,  # Adjust these parameters to fit your resolution
+                          screen_width=1920)  # Adjust these parameters to fit your resolution
 
 
 def my_controller():

@@ -23,8 +23,7 @@ transition_probability = [1.0,  # empty cell - Case 0
                           1.0]  # Case 10 - mirrored switch
 
 # Example generate a random rail
-env = RailEnv(width=10,
-              height=10,
+env = RailEnv(width=10, height=10,
               rail_generator=random_rail_generator(cell_type_relative_proportion=transition_probability),
               number_of_agents=3)
 
@@ -34,4 +33,4 @@ env_renderer = RenderTool(env, gl="PIL")
 env_renderer.render_env(show=True)
 
 # uncomment to keep the renderer open
-#input("Press Enter to continue...")
+# input("Press Enter to continue...")

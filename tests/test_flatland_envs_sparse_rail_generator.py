@@ -1,9 +1,11 @@
 import random
-
-import numpy as np
 import unittest
 import warnings
+
+import numpy as np
+
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
+from flatland.envs.malfunction_generators import malfunction_from_params
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
@@ -14,17 +16,13 @@ from flatland.utils.rendertools import RenderTool
 def test_sparse_rail_generator():
     np.random.seed(0)
     random.seed(0)
-    env = RailEnv(width=50,
-                  height=50,
-                  rail_generator=sparse_rail_generator(max_num_cities=10,
-                                                       max_rails_between_cities=3,
-                                                       seed=5,
-                                                       grid_mode=False
-                                                       ),
-                  schedule_generator=sparse_schedule_generator(),
-                  number_of_agents=10,
-                  obs_builder_object=GlobalObsForRailEnv()
-                  )
+    env = RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(max_num_cities=10,
+                                                                            max_rails_between_cities=3,
+                                                                            seed=5,
+                                                                            grid_mode=False
+                                                                            ),
+                  schedule_generator=sparse_schedule_generator(), number_of_agents=10,
+                  obs_builder_object=GlobalObsForRailEnv())
     env.reset(False, False, True)
     # for r in range(env.height):
     #    for c in range (env.width):
@@ -554,17 +552,12 @@ def test_sparse_rail_generator_deterministic():
                         1. / 3.: 0.,  # Slow commuter train
                         1. / 4.: 0.}  # Slow freight train
 
-    env = RailEnv(width=25,
-                  height=30,
-                  rail_generator=sparse_rail_generator(max_num_cities=5,
-                                                       max_rails_between_cities=3,
-                                                       seed=215545,  # Random seed
-                                                       grid_mode=True
-                                                       ),
-                  schedule_generator=sparse_schedule_generator(speed_ration_map),
-                  number_of_agents=1,
-                  stochastic_data=stochastic_data,  # Malfunction data generator
-                  )
+    env = RailEnv(width=25, height=30, rail_generator=sparse_rail_generator(max_num_cities=5,
+                                                                            max_rails_between_cities=3,
+                                                                            seed=215545,  # Random seed
+                                                                            grid_mode=True
+                                                                            ),
+                  schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=1)
     env.reset()
     # for r in range(env.height):
     #   for c in range(env.width):
@@ -1323,42 +1316,30 @@ def test_sparse_rail_generator_deterministic():
     assert env.rail.get_full_transitions(29, 24) == 0, "[29][24]"
 
 
-
 def test_rail_env_action_required_info():
-
     np.random.seed(0)
     random.seed(0)
     speed_ration_map = {1.: 0.25,  # Fast passenger train
                         1. / 2.: 0.25,  # Fast freight train
                         1. / 3.: 0.25,  # Slow commuter train
                         1. / 4.: 0.25}  # Slow freight train
-    env_always_action = RailEnv(width=50,
-                                height=50,
-                                rail_generator=sparse_rail_generator(
-                                    max_num_cities=10,
-                                    max_rails_between_cities=3,
-                                    seed=5,  # Random seed
-                                    grid_mode=False  # Ordered distribution of nodes
-                                ),
-                                schedule_generator=sparse_schedule_generator(speed_ration_map),
-                                number_of_agents=10,
-                                obs_builder_object=GlobalObsForRailEnv(),
-                                remove_agents_at_target=False)
+    env_always_action = RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(
+        max_num_cities=10,
+        max_rails_between_cities=3,
+        seed=5,  # Random seed
+        grid_mode=False  # Ordered distribution of nodes
+    ), schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=10,
+                                obs_builder_object=GlobalObsForRailEnv(), remove_agents_at_target=False)
     np.random.seed(0)
     random.seed(0)
-    env_only_if_action_required = RailEnv(width=50,
-                                          height=50,
-                                          rail_generator=sparse_rail_generator(
-                                              max_num_cities=10,
-                                              max_rails_between_cities=3,
-                                              seed=5,  # Random seed
-                                              grid_mode=False
-                                              # Ordered distribution of nodes
-                                          ),
-                                          schedule_generator=sparse_schedule_generator(speed_ration_map),
-                                          number_of_agents=10,
-                                          obs_builder_object=GlobalObsForRailEnv(),
-                                          remove_agents_at_target=False)
+    env_only_if_action_required = RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(
+        max_num_cities=10,
+        max_rails_between_cities=3,
+        seed=5,  # Random seed
+        grid_mode=False
+        # Ordered distribution of nodes
+    ), schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=10,
+                                          obs_builder_object=GlobalObsForRailEnv(), remove_agents_at_target=False)
     env_renderer = RenderTool(env_always_action, gl="PILSVG", )
 
     env_always_action.reset(False, False, True)
@@ -1418,17 +1399,13 @@ def test_rail_env_malfunction_speed_info():
                        'min_duration': 3,  # Minimal duration of malfunction
                        'max_duration': 10  # Max duration of malfunction
                        }
-    env = RailEnv(width=50,
-                  height=50,
-                  rail_generator=sparse_rail_generator(max_num_cities=10,
-                                                       max_rails_between_cities=3,
-                                                       seed=5,
-                                                       grid_mode=False
-                                                       ),
-                  schedule_generator=sparse_schedule_generator(),
-                  number_of_agents=10,
-                  obs_builder_object=GlobalObsForRailEnv(),
-                  stochastic_data=stochastic_data)
+    env = RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(max_num_cities=10,
+                                                                            max_rails_between_cities=3,
+                                                                            seed=5,
+                                                                            grid_mode=False
+                                                                            ),
+                  schedule_generator=sparse_schedule_generator(), number_of_agents=10,
+                  obs_builder_object=GlobalObsForRailEnv())
     env.reset(False, False, True)
 
     env_renderer = RenderTool(env, gl="PILSVG", )
@@ -1458,17 +1435,12 @@ def test_rail_env_malfunction_speed_info():
 def test_sparse_generator_with_too_man_cities_does_not_break_down():
     np.random.seed(0)
 
-    RailEnv(width=50,
-            height=50,
-            rail_generator=sparse_rail_generator(
-                max_num_cities=100,
-                max_rails_between_cities=3,
-                seed=5,
-                grid_mode=False
-            ),
-            schedule_generator=sparse_schedule_generator(),
-            number_of_agents=10,
-            obs_builder_object=GlobalObsForRailEnv())
+    RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(
+        max_num_cities=100,
+        max_rails_between_cities=3,
+        seed=5,
+        grid_mode=False
+    ), schedule_generator=sparse_schedule_generator(), number_of_agents=10, obs_builder_object=GlobalObsForRailEnv())
 
 
 def test_sparse_generator_with_illegal_params_aborts():
@@ -1477,29 +1449,21 @@ def test_sparse_generator_with_illegal_params_aborts():
     """
     np.random.seed(0)
     with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, SystemExit):
-        RailEnv(width=6,
-                height=6,
-                rail_generator=sparse_rail_generator(
-                    max_num_cities=100,
-                    max_rails_between_cities=3,
-                    seed=5,
-                    grid_mode=False
-                ),
-                schedule_generator=sparse_schedule_generator(),
-                number_of_agents=10,
+        RailEnv(width=6, height=6, rail_generator=sparse_rail_generator(
+            max_num_cities=100,
+            max_rails_between_cities=3,
+            seed=5,
+            grid_mode=False
+        ), schedule_generator=sparse_schedule_generator(), number_of_agents=10,
                 obs_builder_object=GlobalObsForRailEnv()).reset()
 
     with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, SystemExit):
-        RailEnv(width=60,
-                height=60,
-                rail_generator=sparse_rail_generator(
-                    max_num_cities=1,
-                    max_rails_between_cities=3,
-                    seed=5,
-                    grid_mode=False
-                ),
-                schedule_generator=sparse_schedule_generator(),
-                number_of_agents=10,
+        RailEnv(width=60, height=60, rail_generator=sparse_rail_generator(
+            max_num_cities=1,
+            max_rails_between_cities=3,
+            seed=5,
+            grid_mode=False
+        ), schedule_generator=sparse_schedule_generator(), number_of_agents=10,
                 obs_builder_object=GlobalObsForRailEnv()).reset()
 
 
@@ -1514,17 +1478,12 @@ def test_sparse_generator_changes_to_grid_mode():
 
     for test_run in range(10):
         with warnings.catch_warnings(record=True) as w:
-            RailEnv(width=10,
-                    height=20,
-                    rail_generator=sparse_rail_generator(
-                        max_num_cities=100,
-                        max_rails_between_cities=2,
-                        max_rails_in_city=2,
-                        seed=5,
-                        grid_mode=False
-                    ),
-                    schedule_generator=sparse_schedule_generator(),
-                    number_of_agents=10,
+            RailEnv(width=10, height=20, rail_generator=sparse_rail_generator(
+                max_num_cities=100,
+                max_rails_between_cities=2,
+                max_rails_in_city=2,
+                seed=5,
+                grid_mode=False
+            ), schedule_generator=sparse_schedule_generator(), number_of_agents=10,
                     obs_builder_object=GlobalObsForRailEnv()).reset()
             assert "[WARNING]" in str(w[-1].message)
-

@@ -400,7 +400,7 @@ class RenderTool(object):
 
     def render_env(self,
                    show=False,  # whether to call matplotlib show() or equivalent after completion
-                   agents=True,  # whether to include agents
+                   show_agents=True,  # whether to include agents
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
                    frames=False,  # frame counter to show (intended since invocation)
@@ -414,11 +414,12 @@ class RenderTool(object):
             self.render_env_svg(show=show,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
-                                selected_agent=selected_agent
+                                selected_agent=selected_agent,
+                                show_agents=show_agents
                                 )
         else:
             self.render_env_pil(show=show,
-                                agents=agents,
+                                show_agents=show_agents,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
                                 frames=frames,
@@ -440,7 +441,7 @@ class RenderTool(object):
     def render_env_pil(self,
                        show=False,  # whether to call matplotlib show() or equivalent after completion
                        # use false when calling from Jupyter.  (and matplotlib no longer supported!)
-                       agents=True,  # whether to include agents
+                       show_agents=True,  # whether to include agents
                        show_observations=True,  # whether to include observations
                        show_predictions=False,  # whether to include predictions
                        frames=False,  # frame counter to show (intended since invocation)
@@ -457,7 +458,7 @@ class RenderTool(object):
         self.render_rail()
 
         # Draw each agent + its orientation + its target
-        if agents:
+        if show_agents:
             self.plot_agents(targets=True, selected_agent=selected_agent)
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)
@@ -497,7 +498,8 @@ class RenderTool(object):
         return
 
     def render_env_svg(
-        self, show=False, show_observations=True, show_predictions=False, selected_agent=None
+        self, show=False, show_observations=True, show_predictions=False, selected_agent=None,
+        show_agents=True
     ):
         """
         Renders the environment with SVG support (nice image)
@@ -537,49 +539,54 @@ class RenderTool(object):
 
             self.gl.build_background_map(targets)
 
-        for agent_idx, agent in enumerate(self.env.agents):
+        if show_agents:
+            for agent_idx, agent in enumerate(self.env.agents):
 
-            if agent is None or agent.position is None:
-                continue
+                if agent is None or agent.position is None:
+                    continue
 
-            if self.agent_render_variant == AgentRenderVariant.BOX_ONLY:
-                self.gl.set_cell_occupied(agent_idx, *(agent.position))
-            elif self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND or \
-                self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:  # noqa: E125
-                if agent.old_position is not None:
-                    position = agent.old_position
-                    direction = agent.direction
-                    old_direction = agent.old_direction
+                is_malfunction = agent.malfunction_data["malfunction"] > 0
+
+                if self.agent_render_variant == AgentRenderVariant.BOX_ONLY:
+                    self.gl.set_cell_occupied(agent_idx, *(agent.position))
+                elif self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND or \
+                    self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:  # noqa: E125
+                    if agent.old_position is not None:
+                        position = agent.old_position
+                        direction = agent.direction
+                        old_direction = agent.old_direction
+                    else:
+                        position = agent.position
+                        direction = agent.direction
+                        old_direction = agent.direction
+
+                    # set_agent_at uses the agent index for the color
+                    if self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
+                        self.gl.set_cell_occupied(agent_idx, *(agent.position))
+                    self.gl.set_agent_at(agent_idx, *position, old_direction, direction,
+                                        selected_agent == agent_idx, rail_grid=env.rail.grid,
+                                        show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
+                                        malfunction=is_malfunction)
                 else:
                     position = agent.position
                     direction = agent.direction
-                    old_direction = agent.direction
+                    for possible_direction in range(4):
+                        # Is a transition along movement `desired_movement_from_new_cell` to the current cell possible?
+                        isValid = env.rail.get_transition((*agent.position, agent.direction), possible_direction)
+                        if isValid:
+                            direction = possible_direction
 
-                # set_agent_at uses the agent index for the color
-                if self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
-                    self.gl.set_cell_occupied(agent_idx, *(agent.position))
-                self.gl.set_agent_at(agent_idx, *position, old_direction, direction,
-                                     selected_agent == agent_idx, rail_grid=env.rail.grid,
-                                     show_debug=self.show_debug, clear_debug_text=self.clear_debug_text)
-            else:
-                position = agent.position
-                direction = agent.direction
-                for possible_directions in range(4):
-                    # Is a transition along movement `desired_movement_from_new_cell` to the current cell possible?
-                    isValid = env.rail.get_transition((*agent.position, agent.direction), possible_directions)
-                    if isValid:
-                        direction = possible_directions
+                            # set_agent_at uses the agent index for the color
+                            self.gl.set_agent_at(agent_idx, *position, agent.direction, direction,
+                                                selected_agent == agent_idx, rail_grid=env.rail.grid,
+                                                show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
+                                                malfunction=is_malfunction)
 
-                        # set_agent_at uses the agent index for the color
-                        self.gl.set_agent_at(agent_idx, *position, agent.direction, direction,
-                                             selected_agent == agent_idx, rail_grid=env.rail.grid,
-                                             show_debug=self.show_debug, clear_debug_text=self.clear_debug_text)
-
-                # set_agent_at uses the agent index for the color
-                if self.agent_render_variant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:
-                    self.gl.set_cell_occupied(agent_idx, *(agent.position))
-                self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, selected_agent == agent_idx,
-                                     rail_grid=env.rail.grid)
+                    # set_agent_at uses the agent index for the color
+                    if self.agent_render_variant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:
+                        self.gl.set_cell_occupied(agent_idx, *(agent.position))
+                    self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, selected_agent == agent_idx,
+                                        rail_grid=env.rail.grid, malfunction=is_malfunction)
 
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)

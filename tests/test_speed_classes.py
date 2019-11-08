@@ -18,11 +18,9 @@ def test_speed_initialization_helper():
 def test_rail_env_speed_intializer():
     speed_ratio_map = {1: 0.3, 2: 0.4, 3: 0.1, 5: 0.2}
 
-    env = RailEnv(width=50,
-                  height=50,
+    env = RailEnv(width=50, height=50,
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999,
-                                                        seed=1),
-                  schedule_generator=complex_schedule_generator(),
+                                                        seed=1), schedule_generator=complex_schedule_generator(),
                   number_of_agents=10)
     env.reset()
     actual_speeds = list(map(lambda agent: agent.speed_data['speed'], env.agents))

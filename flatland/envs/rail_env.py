@@ -10,6 +10,7 @@ import msgpack
 import msgpack_numpy as m
 import numpy as np
 from gym.utils import seeding
+from msgpack import Packer
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -19,6 +20,7 @@ from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.malfunction_generators import no_malfunction_generator, Malfunction, MalfunctionProcessData
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
@@ -118,9 +120,10 @@ class RailEnv(Environment):
                  schedule_generator: ScheduleGenerator = random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
-                 stochastic_data=None,
+                 malfunction_generator_and_process_data=no_malfunction_generator(),
                  remove_agents_at_target=True,
-                 random_seed=1
+                 random_seed=1,
+                 record_steps=False
                  ):
         """
         Environment init.
@@ -159,6 +162,7 @@ class RailEnv(Environment):
         """
         super().__init__()
 
+        self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
         self.rail_generator: RailGenerator = rail_generator
         self.schedule_generator: ScheduleGenerator = schedule_generator
         self.rail: Optional[GridTransitionMap] = None
@@ -195,28 +199,14 @@ class RailEnv(Environment):
         if self.random_seed:
             self._seed(seed=random_seed)
 
-        # Stochastic train malfunctioning parameters
-        if stochastic_data is not None:
-            mean_malfunction_rate = stochastic_data['malfunction_rate']
-            malfunction_min_duration = stochastic_data['min_duration']
-            malfunction_max_duration = stochastic_data['max_duration']
-        else:
-            mean_malfunction_rate = 0.
-            malfunction_min_duration = 0.
-            malfunction_max_duration = 0.
-
-        # Mean malfunction in number of time steps
-        self.mean_malfunction_rate = mean_malfunction_rate
-
-        # Uniform distribution parameters for malfunction duration
-        self.min_number_of_steps_broken = malfunction_min_duration
-        self.max_number_of_steps_broken = malfunction_max_duration
-
         self.valid_positions = None
 
-        # global numpy array of agents position, -1 means that the cell is free, otherwise the agent handle is placed
-        # inside the cell
-        self.agent_positions: np.ndarray = np.zeros((height, width), dtype=int) - 1
+        # global numpy array of agents position, True means that there is an agent at that cell
+        self.agent_positions: np.ndarray = np.full((height, width), False)
+
+        # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
+        self.record_steps = record_steps  # whether to save timesteps
+        self.cur_episode = []  # save timesteps in here
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -237,8 +227,7 @@ class RailEnv(Environment):
         self.agents.append(agent)
         return len(self.agents) - 1
 
-    def set_agent_active(self, handle: int):
-        agent = self.agents[handle]
+    def set_agent_active(self, agent: EnvAgent):
         if agent.status == RailAgentStatus.READY_TO_DEPART and self.cell_free(agent.initial_position):
             agent.status = RailAgentStatus.ACTIVE
             self._set_agent_to_initial_position(agent, agent.initial_position)
@@ -358,13 +347,12 @@ class RailEnv(Environment):
 
         self.restart_agents()
 
-        if activate_agents:
-            for i_agent in range(self.get_num_agents()):
-                self.set_agent_active(i_agent)
-
         for agent in self.agents:
             # Induce malfunctions
-            self._break_agent(self.mean_malfunction_rate, agent)
+            if activate_agents:
+                self.set_agent_active(agent)
+
+            self._break_agent(agent)
 
             if agent.malfunction_data["malfunction"] > 0:
                 agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.DO_NOTHING
@@ -418,7 +406,7 @@ class RailEnv(Environment):
             agent.moving = agent.malfunction_data['moving_before_malfunction']
             return
 
-    def _break_agent(self, rate: float, agent) -> bool:
+    def _break_agent(self, agent: EnvAgent):
         """
         Malfunction generator that breaks agents at a given rate.
 
@@ -427,13 +415,13 @@ class RailEnv(Environment):
         agent
 
         """
-        if agent.malfunction_data['malfunction'] < 1:
-            if self.np_random.rand() < self._malfunction_prob(rate):
-                num_broken_steps = self.np_random.randint(self.min_number_of_steps_broken,
-                                                          self.max_number_of_steps_broken + 1) + 1
-                agent.malfunction_data['malfunction'] = num_broken_steps
-                agent.malfunction_data['moving_before_malfunction'] = agent.moving
-                agent.malfunction_data['nr_malfunctions'] += 1
+
+        malfunction: Malfunction = self.malfunction_generator(agent, self.np_random)
+        if malfunction.num_broken_steps > 0:
+            agent.malfunction_data['malfunction'] = malfunction.num_broken_steps
+            agent.malfunction_data['moving_before_malfunction'] = agent.moving
+            agent.malfunction_data['nr_malfunctions'] += 1
+
         return
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
@@ -480,7 +468,7 @@ class RailEnv(Environment):
             self.rewards_dict[i_agent] = 0
 
             # Induce malfunction before we do a step, thus a broken agent can't move in this step
-            self._break_agent(self.mean_malfunction_rate, agent)
+            self._break_agent(agent)
 
             # Perform step on the agent
             self._step_agent(i_agent, action_dict_.get(i_agent))
@@ -505,6 +493,8 @@ class RailEnv(Environment):
             self.dones["__all__"] = True
             for i_agent in range(self.get_num_agents()):
                 self.dones[i_agent] = True
+        if self.record_steps:
+            self.record_timestep()
 
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
@@ -571,7 +561,8 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] += self.stop_penalty
 
             if not agent.moving and not (
-                action == RailEnvActions.DO_NOTHING or action == RailEnvActions.STOP_MOVING):
+                    action == RailEnvActions.DO_NOTHING or
+                    action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[i_agent] += self.start_penalty
@@ -609,7 +600,8 @@ class RailEnv(Environment):
         #   transition_action_on_cellexit if the cell is free.
         if agent.moving:
             agent.speed_data['position_fraction'] += agent.speed_data['speed']
-            if agent.speed_data['position_fraction'] >= 1.0:
+            if agent.speed_data['position_fraction'] > 1.0 or np.isclose(agent.speed_data['position_fraction'], 1.0,
+                                                                  rtol=1e-03):
                 # Perform stored action to transition to the next cell as soon as cell is free
                 # Notice that we've already checked new_cell_valid and transition valid when we stored the action,
                 # so we only have to check cell_free now!
@@ -726,6 +718,22 @@ class RailEnv(Environment):
             cell_free = False
         return cell_free, new_cell_valid, new_direction, new_position, transition_valid
 
+    def record_timestep(self):
+        ''' Record the positions and orientations of all agents in memory, in the cur_episode
+        '''
+        list_agents_state = []
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
+            # the int cast is to avoid numpy types which may cause problems with msgpack
+            # in env v2, agents may have position None, before starting
+            if agent.position is None:
+                pos = (0, 0)
+            else:
+                pos = (int(agent.position[0]), int(agent.position[1]))
+            # print("pos:", pos, type(pos[0]))
+            list_agents_state.append([*pos, int(agent.direction)])
+        self.cur_episode.append(list_agents_state)
+
     def cell_free(self, position: IntVector2D) -> bool:
         """
         Utility to check if a cell is free
@@ -808,26 +816,46 @@ class RailEnv(Environment):
         """
         return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row, col))
 
-    def get_full_state_msg(self):
+    def get_full_state_msg(self) -> Packer:
         """
         Returns state of environment in msgpack object
         """
         grid_data = self.rail.grid.tolist()
         agent_data = [agent.to_agent() for agent in self.agents]
+        malfunction_data: MalfunctionProcessData = self.malfunction_process_data
         msgpack.packb(grid_data, use_bin_type=True)
         msgpack.packb(agent_data, use_bin_type=True)
         msg_data = {
             "grid": grid_data,
-            "agents": agent_data}
+            "agents": agent_data,
+            "malfunction": malfunction_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
-    def get_agent_state_msg(self):
+    def get_agent_state_msg(self) -> Packer:
         """
         Returns agents information in msgpack object
         """
         agent_data = [agent.to_agent() for agent in self.agents]
         msg_data = {
             "agents": agent_data}
+        return msgpack.packb(msg_data, use_bin_type=True)
+
+    def get_full_state_dist_msg(self) -> Packer:
+        """
+        Returns environment information with distance map information as msgpack object
+        """
+        grid_data = self.rail.grid.tolist()
+        agent_data = [agent.to_agent() for agent in self.agents]
+        msgpack.packb(grid_data, use_bin_type=True)
+        msgpack.packb(agent_data, use_bin_type=True)
+        distance_map_data = self.distance_map.get()
+        malfunction_data: MalfunctionProcessData = self.malfunction_process_data
+        msgpack.packb(distance_map_data, use_bin_type=True)
+        msg_data = {
+            "grid": grid_data,
+            "agents": agent_data,
+            "distance_map": distance_map_data,
+            "malfunction": malfunction_data}
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def set_full_state_msg(self, msg_data):
@@ -841,7 +869,10 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
+        if "agents_static" in data:
+            self.agents = EnvAgent.load_legacy_static_agent(data["agents_static"])
+        else:
+            self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         # setup with loaded data
         self.height, self.width = self.rail.grid.shape
         self.rail.height = self.height
@@ -859,7 +890,10 @@ class RailEnv(Environment):
         data = msgpack.unpackb(msg_data, use_list=False, encoding='utf-8')
         self.rail.grid = np.array(data["grid"])
         # agents are always reset as not moving
-        self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
+        if "agents_static" in data:
+            self.agents = EnvAgent.load_legacy_static_agent(data["agents_static"])
+        else:
+            self.agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
         if "distance_map" in data.keys():
             self.distance_map.set(data["distance_map"])
         # setup with loaded data
@@ -867,23 +901,6 @@ class RailEnv(Environment):
         self.rail.height = self.height
         self.rail.width = self.width
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
-
-    def get_full_state_dist_msg(self):
-        """
-        Returns environment information with distance map information as msgpack object
-        """
-        grid_data = self.rail.grid.tolist()
-        agent_data = [agent.to_agent() for agent in self.agents]
-        msgpack.packb(grid_data, use_bin_type=True)
-        msgpack.packb(agent_data, use_bin_type=True)
-        distance_map_data = self.distance_map.get()
-        msgpack.packb(distance_map_data, use_bin_type=True)
-        msg_data = {
-            "grid": grid_data,
-            "agents": agent_data,
-            "distance_map": distance_map_data}
-
-        return msgpack.packb(msg_data, use_bin_type=True)
 
     def save(self, filename, save_distance_maps=False):
         """
@@ -908,6 +925,14 @@ class RailEnv(Environment):
         else:
             with open(filename, "wb") as file_out:
                 file_out.write(self.get_full_state_msg())
+
+    def save_episode(self, filename):
+        episode_data = self.cur_episode
+        msgpack.packb(episode_data, use_bin_type=True)
+        dict_data = {"episode": episode_data}
+        # msgpack.packb(msg_data, use_bin_type=True)
+        with open(filename, "wb") as file_out:
+            file_out.write(msgpack.packb(dict_data))
 
     def load(self, filename):
         """
@@ -949,17 +974,6 @@ class RailEnv(Environment):
         u = self.np_random.rand()
         x = - np.log(1 - u) * rate
         return x
-
-    def _malfunction_prob(self, rate: float) -> float:
-        """
-        Probability of a single agent to break. According to Poisson process with given rate
-        :param rate:
-        :return:
-        """
-        if rate <= 0:
-            return 0.
-        else:
-            return 1 - np.exp(- (1 / rate))
 
     def _is_agent_ok(self, agent: EnvAgent) -> bool:
         """

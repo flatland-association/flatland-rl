@@ -11,8 +11,7 @@ import numpy as np
 import redis
 
 import flatland
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
+from flatland.envs.malfunction_generators import malfunction_from_file
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
 from flatland.envs.schedule_generators import schedule_from_file
@@ -217,21 +216,18 @@ class FlatlandRemoteClient(object):
         if self.verbose:
             print("Current env path : ", test_env_file_path)
         self.current_env_path = test_env_file_path
-        self.env = RailEnv(
-            width=1,
-            height=1,
-            rail_generator=rail_from_file(test_env_file_path),
-            schedule_generator=schedule_from_file(test_env_file_path),
-            obs_builder_object=obs_builder_object
-        )
+        self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
+                           schedule_generator=schedule_from_file(test_env_file_path),
+                           malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
+                           obs_builder_object=obs_builder_object)
 
         time_start = time.time()
         local_observation, info = self.env.reset(
-                                regenerate_rail=True,
-                                regenerate_schedule=True,
-                                activate_agents=False,
-                                random_seed=random_seed
-                            )
+            regenerate_rail=True,
+            regenerate_schedule=True,
+            activate_agents=False,
+            random_seed=random_seed
+        )
         time_diff = time.time() - time_start
         self.update_running_mean_stats("internal_env_reset_time", time_diff)
         # Use the local observation
@@ -246,8 +242,8 @@ class FlatlandRemoteClient(object):
         _request['type'] = messages.FLATLAND_RL.ENV_STEP
         _request['payload'] = {}
         _request['payload']['action'] = action
-        
-        # Relay the action in a non-blocking way to the server 
+
+        # Relay the action in a non-blocking way to the server
         # so that it can start doing an env.step on it in ~ parallel
         self._remote_request(_request, blocking=False)
 
@@ -270,14 +266,14 @@ class FlatlandRemoteClient(object):
         ######################################################################
         # Print Local Stats
         ######################################################################
-        print("="*100)
-        print("="*100)
+        print("=" * 100)
+        print("=" * 100)
         print("## Client Performance Stats")
-        print("="*100)
+        print("=" * 100)
         for _key in self.stats:
             if _key.endswith("_mean"):
                 print("\t - {}\t:{}".format(_key, self.stats[_key]))
-        print("="*100)
+        print("=" * 100)
         if os.getenv("AICROWD_BLOCKING_SUBMIT"):
             """
             If the submission is supposed to happen as a blocking submit,
@@ -292,11 +288,13 @@ class FlatlandRemoteClient(object):
 if __name__ == "__main__":
     remote_client = FlatlandRemoteClient()
 
+
     def my_controller(obs, _env):
         _action = {}
         for _idx, _ in enumerate(_env.agents):
             _action[_idx] = np.random.randint(0, 5)
         return _action
+
 
     my_observation_builder = DummyObservationBuilder()
 

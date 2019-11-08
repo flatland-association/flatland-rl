@@ -2,6 +2,7 @@ import time
 
 import numpy as np
 
+from flatland.envs.malfunction_generators import malfunction_from_params
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -41,9 +42,10 @@ env = RailEnv(width=100,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
               number_of_agents=100,
-              stochastic_data=stochastic_data,  # Malfunction data generator
+              malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),  # Malfunction data generator
               obs_builder_object=GlobalObsForRailEnv(),
-              remove_agents_at_target=True
+              remove_agents_at_target=True,
+              record_steps=True
               )
 
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
@@ -132,3 +134,4 @@ for step in range(500):
         break
 
 print('Episode: Steps {}\t Score = {}'.format(step, score))
+env.save_episode("saved_episode_2.mpk")
