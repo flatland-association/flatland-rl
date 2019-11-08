@@ -3,7 +3,7 @@ import numpy as np
 # In Flatland you can use custom observation builders and predicitors
 # Observation builders generate the observation needed by the controller
 # Preditctors can be used to do short time prediction which can help in avoiding conflicts in the network
-from envs.malfunction_generators import malfunction_from_params
+from flatland.envs.malfunction_generators import malfunction_from_params
 from flatland.envs.observations import GlobalObsForRailEnv
 # First of all we import the Flatland rail environment
 from flatland.envs.rail_env import RailEnv
@@ -31,7 +31,7 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 width = 16 * 7  # With of map
 height = 9 * 7  # Height of map
-nr_trains = 20  # Number of trains that have an assigned task in the env
+nr_trains = 50  # Number of trains that have an assigned task in the env
 cities_in_map = 20  # Number of cities where agents can start or end
 seed = 14  # Random seed
 grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
@@ -62,7 +62,7 @@ schedule_generator = sparse_schedule_generator(speed_ration_map)
 # We can furthermore pass stochastic data to the RailEnv constructor which will allow for stochastic malfunctions
 # during an episode.
 
-stochastic_data = {'malfunction_rate': 10000,  # Rate of malfunction occurence of single agent
+stochastic_data = {'malfunction_rate': 12000,  # Rate of malfunction occurence of single agent
                    'min_duration': 15,  # Minimal duration of malfunction
                    'max_duration': 50  # Max duration of malfunction
                    }
@@ -86,7 +86,7 @@ env.reset()
 
 # Initiate the renderer
 env_renderer = RenderTool(env, gl="PILSVG",
-                          agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
+                          agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                           show_debug=False,
                           screen_height=600,  # Adjust these parameters to fit your resolution
                           screen_width=800)  # Adjust these parameters to fit your resolution
