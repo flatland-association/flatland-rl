@@ -614,9 +614,10 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
         # We compute the city radius by the given max number of rails it can contain.
         # The radius is equal to the number of tracks divided by 2
-        # We add 2 cells to avoid that track lenght is to shot
+        # We add 2 cells to avoid that track lenght is to short
         city_padding = 2
-        city_radius = int(np.ceil((max_rails_in_city) // 2)) + city_padding
+        # We use ceil if we get uneven numbers of city radius. This is to guarantee that all rails fit within the city.
+        city_radius = int(np.ceil((max_rails_in_city) / 2)) + city_padding
         vector_field = np.zeros(shape=(height, width)) - 1.
 
         min_nr_rails_in_city = 2
@@ -843,9 +844,11 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             start_idx = int((nr_of_connection_points - number_of_out_rails) / 2)
             for direction in range(4):
                 connection_slots = np.arange(nr_of_connection_points) - start_idx
+                # Offset the rails away from the center of the city
                 offset_distances = np.arange(nr_of_connection_points) - int(nr_of_connection_points / 2)
+                # The clipping helps ofsetting one side more than the other to avoid switches at same locations
+                # The magic number plus one is added such that all points have at least one offset
                 inner_point_offset = np.abs(offset_distances) + np.clip(offset_distances, 0, 1) + 1
-
                 for connection_idx in range(connections_per_direction[direction]):
                     if direction == 0:
                         tmp_coordinates = (
@@ -1024,8 +1027,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
                 current_track = connect_straight_line_in_grid_map(grid_map, source, target, rail_trans)
-
                 free_rails[current_city].append(current_track)
+
             for track_id in range(nr_of_connection_points):
                 source = inner_connection_points[current_city][boarder][track_id]
                 target = inner_connection_points[current_city][opposite_boarder][track_id]
@@ -1042,7 +1045,6 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                     target_outer = outer_connection_points[current_city][opposite_boarder][track_id - start_idx]
                     connect_straight_line_in_grid_map(grid_map, source, source_outer, rail_trans)
                     connect_straight_line_in_grid_map(grid_map, target, target_outer, rail_trans)
-
         return free_rails
 
     def _set_trainstation_positions(city_positions: IntVector2DArray, city_radius: int,
