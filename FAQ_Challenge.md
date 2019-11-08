@@ -53,3 +53,79 @@ The environments vary in size and number of agents as well as malfunction parame
 - `(x_dim, y_dim) <= (150, 150)`
 - `n_agents <= 250` (this might be updated)
 - `malfunction rates` this is currently being refactored
+
+### How can I experiment locally before submitting?
+You can follow the instruction in the [starter kit](https://github.com/AIcrowd/flatland-challenge-starter-kit) and use the [provided example files](https://www.aicrowd.com/challenges/flatland-challenge/dataset_files) to run your tests locally.
+
+If you want to generate your own test instances to test your solution you can either head over to the [torch baselines](https://gitlab.aicrowd.com/flatland/baselines/tree/master/torch_training) and get inspired by the setup there.
+Or you can generate your own test cases by using the same generators as used by the submission test set.
+
+In order to generate the appropriate levels you need to import the `malfunction_generator`, `rail_generator` and `schedule_generator` as follows:
+
+```
+from flatland.envs.malfunction_generators import malfunction_from_params
+from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import sparse_rail_generator
+from flatland.envs.schedule_generators import sparse_schedule_generator
+```
+
+Then you can simply generate levels by instantiating:
+
+```python
+stochastic_data = {'malfunction_rate': 8000,  # Rate of malfunction occurence of single agent
+                   'min_duration': 15,  # Minimal duration of malfunction
+                   'max_duration': 50  # Max duration of malfunction
+                   }
+
+# Custom observation builder without predictor
+observation_builder = YourObservationBuilder()
+
+width = 16 * 7  # With of map
+height = 9 * 7  # Height of map
+nr_trains = 50  # Number of trains that have an assigned task in the env
+cities_in_map = 20  # Number of cities where agents can start or end
+seed = 14  # Random seed
+grid_distribution_of_cities = False  # Type of city distribution, if False cities are randomly placed
+max_rails_between_cities = 2  # Max number of tracks allowed between cities. This is number of entry point to a city
+max_rail_in_cities = 6  # Max number of parallel tracks within a city, representing a realistic trainstation
+
+rail_generator = sparse_rail_generator(max_num_cities=cities_in_map,
+                                       seed=seed,
+                                       grid_mode=grid_distribution_of_cities,
+                                       max_rails_between_cities=max_rails_between_cities,
+                                       max_rails_in_city=max_rail_in_cities,
+                                       )
+# Different agent types (trains) with different speeds.
+speed_ration_map = {1.: 0.25,  # Fast passenger train
+                    1. / 2.: 0.25,  # Fast freight train
+                    1. / 3.: 0.25,  # Slow commuter train
+                    1. / 4.: 0.25}  # Slow freight train
+
+# We can now initiate the schedule generator with the given speed profiles
+
+schedule_generator = sparse_schedule_generator(speed_ration_map)
+
+# Construct the enviornment with the given observation, generataors, predictors, and stochastic data
+env = RailEnv(width=width,
+              height=height,
+              rail_generator=rail_generator,
+              schedule_generator=schedule_generator,
+              number_of_agents=nr_trains,
+              obs_builder_object=observation_builder,
+              malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
+              remove_agents_at_target=True)
+```
+
+For the testing of you submission you should test different levels in these parameter ranges:
+
+- `width` and `height` between `20` and `150`
+- `nr_train` between `50` and `200`
+- `n_cities` between `2` and `35`
+- `max_rails_between_cities` between `2` and `4`
+- `max_rail_in_city` between `3` and `6`
+- `malfunction_rate` between `500` and `4000`
+- `min_duration` and `max_duration` in ranges from `20` to `80`
+- speeds you can keep more or less equally distributed.
+
+
+With these parameters you should get a good feeling of the test cases your algorithm will be tested against.
