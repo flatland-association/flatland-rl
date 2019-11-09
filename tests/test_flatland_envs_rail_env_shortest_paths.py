@@ -436,7 +436,9 @@ def test_get_k_shortest_paths(rendering=False):
             WalkingElement(position=(1, 9), direction=2,
                            next_action_element=RailEnvNextAction(action=2, next_position=(2, 9), next_direction=2)),
             WalkingElement(position=(2, 9), direction=2,
-                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 9), next_direction=2))
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 9), next_direction=2)),
+            WalkingElement(position=(3, 9), direction=2,
+                           next_action_element=RailEnvNextAction(action=0, next_position=None, next_direction=None))
         ),
         (
             WalkingElement(position=(3, 1), direction=3,
@@ -470,7 +472,9 @@ def test_get_k_shortest_paths(rendering=False):
             WalkingElement(position=(4, 8), direction=1,
                            next_action_element=RailEnvNextAction(action=2, next_position=(4, 9), next_direction=1)),
             WalkingElement(position=(4, 9), direction=1,
-                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 9), next_direction=0))
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 9), next_direction=0)),
+            WalkingElement(position=(3, 9), direction=0,
+                           next_action_element=RailEnvNextAction(action=0, next_position=None, next_direction=None))
         )
     ])
 

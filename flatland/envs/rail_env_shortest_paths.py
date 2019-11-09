@@ -372,13 +372,16 @@ def get_k_shortest_paths(env: RailEnv,
                                              direction=el.direction,
                                              next_action_element=RailEnvNextAction(
                                                  action=int(get_action_for_move(el.position,
-                                                                            el.direction,
-                                                                            p[i + 1].position,
-                                                                            p[i + 1].direction,
-                                                                            env.rail)),
+                                                                                el.direction,
+                                                                                p[i + 1].position,
+                                                                                p[i + 1].direction,
+                                                                                env.rail)),
                                                  next_position=p[i + 1].position,
                                                  next_direction=p[i + 1].direction)) for i, el in enumerate(p[:-1]))
-        shortest_paths_with_action.append(p_with_action)
+        target_walking_element = WalkingElement(position=p[-1].position, direction=p[-1].direction,
+                                 next_action_element=RailEnvNextAction(action=int(RailEnvActions.DO_NOTHING),
+                                                                       next_position=None, next_direction=None))
+        shortest_paths_with_action.append(p_with_action + (target_walking_element,))
 
     # return P
     return shortest_paths_with_action
