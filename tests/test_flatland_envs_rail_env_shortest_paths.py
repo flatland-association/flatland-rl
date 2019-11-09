@@ -395,49 +395,83 @@ def test_get_k_shortest_paths(rendering=False):
         renderer.render_env(show=True, show_observations=False)
         input()
 
-    actual = get_k_shortest_paths(
+    actual = set(get_k_shortest_paths(
         env=env,
         source_position=initial_position,  # west dead-end
         source_direction=int(initial_direction),  # east
         target_position=target_position,
         k=10
-    )
+    ))
 
-    expected = [
-        (WalkingElement(position=(3, 1), direction=3, next_action_element=None),
-         WalkingElement(position=(3, 0), direction=3, next_action_element=None),
-         WalkingElement(position=(3, 1), direction=1, next_action_element=None),
-         WalkingElement(position=(3, 2), direction=1, next_action_element=None),
-         WalkingElement(position=(3, 3), direction=1, next_action_element=None),
-         WalkingElement(position=(3, 4), direction=1, next_action_element=None),
-         WalkingElement(position=(3, 5), direction=1, next_action_element=None),
-         WalkingElement(position=(3, 6), direction=1, next_action_element=None),
-         WalkingElement(position=(4, 6), direction=2, next_action_element=None),
-         WalkingElement(position=(5, 6), direction=2, next_action_element=None),
-         WalkingElement(position=(6, 6), direction=2, next_action_element=None),
-         WalkingElement(position=(5, 6), direction=0, next_action_element=None),
-         WalkingElement(position=(4, 6), direction=0, next_action_element=None),
-         WalkingElement(position=(4, 7), direction=1, next_action_element=None),
-         WalkingElement(position=(4, 8), direction=1, next_action_element=None),
-         WalkingElement(position=(4, 9), direction=1, next_action_element=None),
-         WalkingElement(position=(3, 9), direction=0, next_action_element=None)),
-        (WalkingElement(position=(3, 1), direction=3, next_action_element=None),
-         WalkingElement(position=(3, 0), direction=3, next_action_element=None),
-         WalkingElement(position=(3, 1), direction=1, next_action_element=None),
-         WalkingElement(position=(3, 2), direction=1, next_action_element=None),
-         WalkingElement(position=(3, 3), direction=1, next_action_element=None),
-         WalkingElement(position=(2, 3), direction=0, next_action_element=None),
-         WalkingElement(position=(1, 3), direction=0, next_action_element=None),
-         WalkingElement(position=(0, 3), direction=0, next_action_element=None),
-         WalkingElement(position=(0, 4), direction=1, next_action_element=None),
-         WalkingElement(position=(0, 5), direction=1, next_action_element=None),
-         WalkingElement(position=(0, 6), direction=1, next_action_element=None),
-         WalkingElement(position=(0, 7), direction=1, next_action_element=None),
-         WalkingElement(position=(0, 8), direction=1, next_action_element=None),
-         WalkingElement(position=(0, 9), direction=1, next_action_element=None),
-         WalkingElement(position=(1, 9), direction=2, next_action_element=None),
-         WalkingElement(position=(2, 9), direction=2, next_action_element=None),
-         WalkingElement(position=(3, 9), direction=2, next_action_element=None))
-    ]
+    expected = set([
+        (
+            WalkingElement(position=(3, 1), direction=3,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 0), next_direction=3)),
+            WalkingElement(position=(3, 0), direction=3,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 1), next_direction=1)),
+            WalkingElement(position=(3, 1), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 2), next_direction=1)),
+            WalkingElement(position=(3, 2), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 3), next_direction=1)),
+            WalkingElement(position=(3, 3), direction=1,
+                           next_action_element=RailEnvNextAction(action=1, next_position=(2, 3), next_direction=0)),
+            WalkingElement(position=(2, 3), direction=0,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(1, 3), next_direction=0)),
+            WalkingElement(position=(1, 3), direction=0,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(0, 3), next_direction=0)),
+            WalkingElement(position=(0, 3), direction=0,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(0, 4), next_direction=1)),
+            WalkingElement(position=(0, 4), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(0, 5), next_direction=1)),
+            WalkingElement(position=(0, 5), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(0, 6), next_direction=1)),
+            WalkingElement(position=(0, 6), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(0, 7), next_direction=1)),
+            WalkingElement(position=(0, 7), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(0, 8), next_direction=1)),
+            WalkingElement(position=(0, 8), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(0, 9), next_direction=1)),
+            WalkingElement(position=(0, 9), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(1, 9), next_direction=2)),
+            WalkingElement(position=(1, 9), direction=2,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(2, 9), next_direction=2)),
+            WalkingElement(position=(2, 9), direction=2,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 9), next_direction=2))
+        ),
+        (
+            WalkingElement(position=(3, 1), direction=3,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 0), next_direction=3)),
+            WalkingElement(position=(3, 0), direction=3,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 1), next_direction=1)),
+            WalkingElement(position=(3, 1), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 2), next_direction=1)),
+            WalkingElement(position=(3, 2), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 3), next_direction=1)),
+            WalkingElement(position=(3, 3), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 4), next_direction=1)),
+            WalkingElement(position=(3, 4), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 5), next_direction=1)),
+            WalkingElement(position=(3, 5), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 6), next_direction=1)),
+            WalkingElement(position=(3, 6), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(4, 6), next_direction=2)),
+            WalkingElement(position=(4, 6), direction=2,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(5, 6), next_direction=2)),
+            WalkingElement(position=(5, 6), direction=2,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(6, 6), next_direction=2)),
+            WalkingElement(position=(6, 6), direction=2,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(5, 6), next_direction=0)),
+            WalkingElement(position=(5, 6), direction=0,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(4, 6), next_direction=0)),
+            WalkingElement(position=(4, 6), direction=0,
+                           next_action_element=RailEnvNextAction(action=3, next_position=(4, 7), next_direction=1)),
+            WalkingElement(position=(4, 7), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(4, 8), next_direction=1)),
+            WalkingElement(position=(4, 8), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(4, 9), next_direction=1)),
+            WalkingElement(position=(4, 9), direction=1,
+                           next_action_element=RailEnvNextAction(action=2, next_position=(3, 9), next_direction=0))
+        )
+    ])
 
     assert actual == expected, "actual={},expected={}".format(actual, expected)
