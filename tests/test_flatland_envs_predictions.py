@@ -8,7 +8,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
-from flatland.envs.rail_env import RailEnv, RailEnvActions, RailEnvNextAction
+from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths, WalkingElement
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
@@ -146,18 +146,13 @@ def test_shortest_path_predictor(rendering=False):
 
     paths = get_shortest_paths(env.distance_map)[0]
     assert paths == [
-        WalkingElement((5, 6), 0, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(4, 6),
-                                                    next_direction=0)),
-        WalkingElement((4, 6), 0, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 6),
-                                                    next_direction=0)),
-        WalkingElement((3, 6), 0, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 7),
-                                                    next_direction=1)),
-        WalkingElement((3, 7), 1, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 8),
-                                                    next_direction=1)),
-        WalkingElement((3, 8), 1, RailEnvNextAction(action=RailEnvActions.MOVE_FORWARD, next_position=(3, 9),
-                                                    next_direction=1)),
-        WalkingElement((3, 9), 1, RailEnvNextAction(action=RailEnvActions.STOP_MOVING, next_position=(3, 9),
-                                                    next_direction=1))]
+        WalkingElement((5, 6), 0, RailEnvActions.MOVE_FORWARD),
+        WalkingElement((4, 6), 0, RailEnvActions.MOVE_FORWARD),
+        WalkingElement((3, 6), 0, RailEnvActions.MOVE_FORWARD),
+        WalkingElement((3, 7), 1, RailEnvActions.MOVE_FORWARD),
+        WalkingElement((3, 8), 1, RailEnvActions.MOVE_FORWARD),
+        WalkingElement((3, 9), 1, RailEnvActions.STOP_MOVING)
+    ]
 
     # extract the data
     predictions = env.obs_builder.predictions
