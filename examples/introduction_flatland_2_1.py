@@ -3,7 +3,7 @@ import numpy as np
 # In Flatland you can use custom observation builders and predicitors
 # Observation builders generate the observation needed by the controller
 # Preditctors can be used to do short time prediction which can help in avoiding conflicts in the network
-from flatland.envs.malfunction_generators import malfunction_from_params
+from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.observations import GlobalObsForRailEnv
 # First of all we import the Flatland rail environment
 from flatland.envs.rail_env import RailEnv
@@ -62,11 +62,10 @@ schedule_generator = sparse_schedule_generator(speed_ration_map)
 # We can furthermore pass stochastic data to the RailEnv constructor which will allow for stochastic malfunctions
 # during an episode.
 
-stochastic_data = {'malfunction_rate': 12000,  # Rate of malfunction occurence of single agent
-                   'min_duration': 15,  # Minimal duration of malfunction
-                   'max_duration': 50  # Max duration of malfunction
-                   }
-
+stochastic_data = MalfunctionParameters(malfunction_rate=10000,  # Rate of malfunction occurence
+                                        min_duration=15,  # Minimal duration of malfunction
+                                        max_duration=50  # Max duration of malfunction
+                                        )
 # Custom observation builder without predictor
 observation_builder = GlobalObsForRailEnv()
 
@@ -256,7 +255,7 @@ for step in range(500):
     next_obs, all_rewards, done, _ = env.step(action_dict)
 
     env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-    # env_renderer.gl.save_image('./misc/Fames2/flatland_frame_{:04d}.png'.format(step))
+    env_renderer.gl.save_image('./misc/Fames2/flatland_frame_{:04d}.png'.format(step))
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
