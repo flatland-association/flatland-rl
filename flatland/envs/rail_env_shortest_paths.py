@@ -1,5 +1,5 @@
 import math
-from typing import Dict, List, Optional, NamedTuple, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,11 +10,8 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env import RailEnvNextAction, RailEnvActions, RailEnv
+from flatland.envs.rail_train_run_data_structures import WayPoint
 from flatland.utils.ordered_set import OrderedSet
-
-WalkingElement = \
-    NamedTuple('WalkingElement',
-               [('position', Tuple[int, int]), ('direction', int), ('next_action', Optional[RailEnvActions])])
 
 
 def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
@@ -195,7 +192,7 @@ def get_action_for_move(
 
 # N.B. get_shortest_paths is not part of distance_map since it refers to RailEnvActions (would lead to circularity!)
 def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = None, agent_handle: Optional[int] = None) \
-    -> Dict[int, Optional[List[WalkingElement]]]:
+    -> Dict[int, Optional[List[WayPoint]]]:
     """
     Computes the shortest path for each agent to its target and the action to be taken to do so.
     The paths are derived from a `DistanceMap`.
@@ -245,8 +242,7 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
                     best_next_action = next_action
                     distance = next_action_distance
 
-            shortest_paths[agent.handle].append(
-                WalkingElement(position, direction, best_next_action.action if best_next_action is not None else None))
+            shortest_paths[agent.handle].append(WayPoint(position, direction))
             depth += 1
 
             # if there is no way to continue, the rail must be disconnected!
@@ -258,7 +254,7 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
             position = best_next_action.next_position
             direction = best_next_action.next_direction
         if max_depth is None or depth < max_depth:
-            shortest_paths[agent.handle].append(WalkingElement(position, direction, RailEnvActions.STOP_MOVING))
+            shortest_paths[agent.handle].append(WayPoint(position, direction))
 
     if agent_handle is not None:
         _shortest_path_for_agent(distance_map.agents[agent_handle])
@@ -273,7 +269,7 @@ def get_k_shortest_paths(env: RailEnv,
                          source_position: Tuple[int, int],
                          source_direction: int,
                          target_position=Tuple[int, int],
-                         k: int = 1, debug=False) -> List[Tuple[WalkingElement]]:
+                         k: int = 1, debug=False) -> List[Tuple[WayPoint]]:
     """
     Computes the k shortest paths using modified Dijkstra
     following pseudo-code https://en.wikipedia.org/wiki/K_shortest_path_routing
@@ -300,17 +296,17 @@ def get_k_shortest_paths(env: RailEnv,
 
     # P: set of shortest paths from s to t
     # P =empty,
-    shortest_paths: List[Tuple[WalkingElement]] = []
+    shortest_paths: List[Tuple[WayPoint]] = []
 
     # countu: number of shortest paths found to node u
     # countu = 0, for all u in V
     count = {(r, c, d): 0 for r in range(env.height) for c in range(env.width) for d in range(4)}
 
     # B is a heap data structure containing paths
-    heap: Set[Tuple[WalkingElement]] = set()
+    heap: Set[Tuple[WayPoint]] = set()
 
     # insert path Ps = {s} into B with cost 0
-    heap.add((WalkingElement(source_position, source_direction, None),))
+    heap.add((WayPoint(source_position, source_direction),))
 
     # while B is not empty and countt < K:
     while len(heap) > 0 and len(shortest_paths) < k:
@@ -323,7 +319,7 @@ def get_k_shortest_paths(env: RailEnv,
             if len(path) < c:
                 pu = path
                 c = len(path)
-        u: WalkingElement = pu[-1]
+        u: WayPoint = pu[-1]
         if debug:
             print("  looking at pu={}".format(pu))
 
@@ -355,7 +351,7 @@ def get_k_shortest_paths(env: RailEnv,
                     if debug:
                         print("        looking at neighbor v={}".format((*new_position, new_direction)))
 
-                    v = WalkingElement(position=new_position, direction=new_direction, next_action=None)
+                    v = WayPoint(position=new_position, direction=new_direction)
                     # CAVEAT: do not allow for loopy paths
                     if v in pu:
                         continue
@@ -364,25 +360,9 @@ def get_k_shortest_paths(env: RailEnv,
                     pv = pu + (v,)
                     #     – insert Pv into B
                     heap.add(pv)
-    # add actions to shortest paths
-    shortest_paths_with_action = []
-    for p in shortest_paths:
-        p_with_action = tuple(
-            WalkingElement(position=el.position,
-                           direction=el.direction,
-                           next_action=int(get_action_for_move(el.position,
-                                                               el.direction,
-                                                               p[i + 1].position,
-                                                               p[i + 1].direction,
-                                                               env.rail))) for i, el in
-            enumerate(p[:-1]))
-        target_walking_element = WalkingElement(position=p[-1].position,
-                                                direction=p[-1].direction,
-                                                next_action=int(RailEnvActions.DO_NOTHING))
-        shortest_paths_with_action.append(p_with_action + (target_walking_element,))
 
     # return P
-    return shortest_paths_with_action
+    return shortest_paths
 
 
 def visualize_distance_map(distance_map: DistanceMap, agent_handle: int = 0):
