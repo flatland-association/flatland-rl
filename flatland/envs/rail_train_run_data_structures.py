@@ -14,5 +14,5 @@ TrainRunWayPoint = NamedTuple('TrainRunWayPoint', [
     ('scheduled_at', int),
     ('way_point', WayPoint)
 ])
-# A path schedule is the list of an agent's cell pin entries
+# A train run is the list of an agent's way points and their scheduled time
 TrainRun = List[TrainRunWayPoint]

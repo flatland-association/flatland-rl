@@ -20,6 +20,9 @@ def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
     """
     Get the valid move actions (forward, left, right) for an agent.
 
+    TODO https://gitlab.aicrowd.com/flatland/flatland/issues/299 The implementation could probably be more efficient
+    and more elegant. But given the few calls this has no priority now.
+
     Parameters
     ----------
     agent_direction : Grid4TransitionsEnum
@@ -75,6 +78,9 @@ def get_new_position_for_action(
     rail: GridTransitionMap) -> Tuple[int, int, int]:
     """
     Get the next position for this action.
+
+    TODO https://gitlab.aicrowd.com/flatland/flatland/issues/299 The implementation could probably be more efficient
+    and more elegant. But given the few calls this has no priority now.
 
     Parameters
     ----------
@@ -137,7 +143,8 @@ def get_action_for_move(
     """
     Get the action (if any) to move from a position and direction to another.
 
-    The implementation could probably be more efficient I believe. But given the few calls this has no priority now.
+    TODO https://gitlab.aicrowd.com/flatland/flatland/issues/299 The implementation could probably be more efficient
+    and more elegant. But given the few calls this has no priority now.
 
     Parameters
     ----------

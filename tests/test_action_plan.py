@@ -84,5 +84,5 @@ def test_action_plan(rendering: bool = False):
 
     deterministic_controller = DeterministicController(env, chosen_path_dict)
     deterministic_controller.print_action_plan()
-    DeterministicController.compare_action_plans(expected_action_plan, deterministic_controller.action_plan)
+    DeterministicController.assert_actions_plans_equal(expected_action_plan, deterministic_controller.action_plan)
     DeterministicControllerReplayer.replay_verify(MAX_EPISODE_STEPS, deterministic_controller, env, rendering)

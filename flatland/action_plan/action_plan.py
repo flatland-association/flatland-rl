@@ -18,7 +18,7 @@ ActionPlanElement = NamedTuple('ActionPlanElement', [
 # an action plan gathers all the the actions to be taken by a single agent at the corresponding time steps
 ActionPlan = List[ActionPlanElement]
 
-# An action plan dict gathers all the actions for every agent identified by the dictionary key
+# An action plan dict gathers all the actions for every agent identified by the dictionary key = agent_handle
 ActionPlanDict = Dict[int, ActionPlan]
 
 
@@ -29,10 +29,10 @@ class DeterministicController():
                  env: RailEnv,
                  train_run_dict: Dict[int, TrainRun]):
 
-        self.env = env
+        self.env: RailEnv = env
         self.train_run_dict: Dict[int, TrainRun] = train_run_dict
-        self.action_plan = [self._create_action_plan_for_agent(agent_id, chosen_path)
-                            for agent_id, chosen_path in train_run_dict.items()]
+        self.action_plan: ActionPlanDict = [self._create_action_plan_for_agent(agent_id, chosen_path)
+                                            for agent_id, chosen_path in train_run_dict.items()]
 
     def get_way_point_before_or_at_step(self, agent_id: int, step: int) -> WayPoint:
         """
@@ -84,7 +84,6 @@ class DeterministicController():
 
         """
         for action_plan_element in self.action_plan[agent_id]:
-            action_plan_element: ActionPlanElement = action_plan_element
             scheduled_at = action_plan_element.scheduled_at
             if scheduled_at > current_step:
                 return None
@@ -95,6 +94,7 @@ class DeterministicController():
     def act(self, current_step: int) -> Dict[int, RailEnvActions]:
         """
         Get the action dictionary to be replayed at the current step.
+        Returns only action where required (no action for done agents or those not at the beginning of the cell).
 
         Parameters
         ----------
@@ -119,7 +119,7 @@ class DeterministicController():
                 print("  {}".format(step))
 
     @staticmethod
-    def compare_action_plans(expected_action_plan: ActionPlanDict, actual_action_plan: ActionPlanDict):
+    def assert_actions_plans_equal(expected_action_plan: ActionPlanDict, actual_action_plan: ActionPlanDict):
         assert len(expected_action_plan) == len(actual_action_plan)
         for k in range(len(expected_action_plan)):
             assert len(expected_action_plan[k]) == len(actual_action_plan[k]), \
