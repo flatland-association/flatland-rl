@@ -22,7 +22,8 @@ ActionPlan = List[ActionPlanElement]
 ActionPlanDict = Dict[int, ActionPlan]
 
 
-class DeterministicController():
+class ControllerFromTrainRuns():
+    """Takes train runs, derives the actions from it and re-acts them."""
     pp = pprint.PrettyPrinter(indent=4)
 
     def __init__(self,
@@ -36,7 +37,7 @@ class DeterministicController():
 
     def get_way_point_before_or_at_step(self, agent_id: int, step: int) -> WayPoint:
         """
-        Get the walking element from which the current position can be extracted.
+        Get the way point point from which the current position can be extracted.
 
         Parameters
         ----------
@@ -126,23 +127,23 @@ class DeterministicController():
                 "len for agent {} should be the same.\n\n  expected ({}) = {}\n\n  actual ({}) = {}".format(
                     k,
                     len(expected_action_plan[k]),
-                    DeterministicController.pp.pformat(expected_action_plan[k]),
+                    ControllerFromTrainRuns.pp.pformat(expected_action_plan[k]),
                     len(actual_action_plan[k]),
-                    DeterministicController.pp.pformat(actual_action_plan[k]))
+                    ControllerFromTrainRuns.pp.pformat(actual_action_plan[k]))
             for i in range(len(expected_action_plan[k])):
                 assert expected_action_plan[k][i] == actual_action_plan[k][i], \
                     "not the same at agent {} at step {}\n\n  expected = {}\n\n  actual = {}".format(
                         k, i,
-                        DeterministicController.pp.pformat(expected_action_plan[k][i]),
-                        DeterministicController.pp.pformat(actual_action_plan[k][i]))
+                        ControllerFromTrainRuns.pp.pformat(expected_action_plan[k][i]),
+                        ControllerFromTrainRuns.pp.pformat(actual_action_plan[k][i]))
         assert expected_action_plan == actual_action_plan, \
             "expected {}, found {}".format(expected_action_plan, actual_action_plan)
 
-    def _create_action_plan_for_agent(self, agent_id, agent_path_new) -> ActionPlan:
+    def _create_action_plan_for_agent(self, agent_id, train_run) -> ActionPlan:
         action_plan = []
         agent = self.env.agents[agent_id]
         minimum_cell_time = int(np.ceil(1.0 / agent.speed_data['speed']))
-        for path_loop, train_run_way_point in enumerate(agent_path_new):
+        for path_loop, train_run_way_point in enumerate(train_run):
             train_run_way_point: TrainRunWayPoint = train_run_way_point
 
             position = train_run_way_point.way_point.position
@@ -150,7 +151,7 @@ class DeterministicController():
             if Vec2d.is_equal(agent.target, position):
                 break
 
-            next_train_run_way_point: TrainRunWayPoint = agent_path_new[path_loop + 1]
+            next_train_run_way_point: TrainRunWayPoint = train_run[path_loop + 1]
             next_position = next_train_run_way_point.way_point.position
 
             if path_loop == 0:
@@ -247,11 +248,11 @@ class DeterministicController():
         action_plan.append(action)
 
 
-class DeterministicControllerReplayer():
+class ControllerFromTrainRunsReplayer():
     """Allows to verify a `DeterministicController` by replaying it against a FLATland env without malfunction."""
 
     @staticmethod
-    def replay_verify(max_episode_steps: int, ctl: DeterministicController, env: RailEnv, rendering: bool):
+    def replay_verify(max_episode_steps: int, ctl: ControllerFromTrainRuns, env: RailEnv, rendering: bool):
         """Replays this deterministic `ActionPlan` and verifies whether it is feasible."""
         if rendering:
             renderer = RenderTool(env, gl="PILSVG",
