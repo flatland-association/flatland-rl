@@ -8,7 +8,7 @@ from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.agent_utils import RailAgentStatus
-from flatland.envs.malfunction_generators import malfunction_from_params
+from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
@@ -67,9 +67,10 @@ class SingleAgentNavigationObs(ObservationBuilder):
 
 def test_malfunction_process():
     # Set fixed malfunction duration for this test
-    stochastic_data = {'malfunction_rate': 1,
-                       'min_duration': 3,
-                       'max_duration': 3}
+    stochastic_data = MalfunctionParameters(malfunction_rate=1,  # Rate of malfunction occurence
+                                            min_duration=3,  # Minimal duration of malfunction
+                                            max_duration=3  # Max duration of malfunction
+                                            )
 
     rail, rail_map = make_simple_rail2()
 
@@ -120,9 +121,10 @@ def test_malfunction_process():
 def test_malfunction_process_statistically():
     """Tests hat malfunctions are produced by stochastic_data!"""
     # Set fixed malfunction duration for this test
-    stochastic_data = {'malfunction_rate': 5,
-                       'min_duration': 5,
-                       'max_duration': 5}
+    stochastic_data = MalfunctionParameters(malfunction_rate=5,  # Rate of malfunction occurence
+                                            min_duration=5,  # Minimal duration of malfunction
+                                            max_duration=5  # Max duration of malfunction
+                                            )
 
     rail, rail_map = make_simple_rail2()
 
@@ -166,9 +168,10 @@ def test_malfunction_process_statistically():
 def test_malfunction_before_entry():
     """Tests that malfunctions are working properly for agents before entering the environment!"""
     # Set fixed malfunction duration for this test
-    stochastic_data = {'malfunction_rate': 2,
-                       'min_duration': 10,
-                       'max_duration': 10}
+    stochastic_data = MalfunctionParameters(malfunction_rate=2,  # Rate of malfunction occurence
+                                            min_duration=10,  # Minimal duration of malfunction
+                                            max_duration=10  # Max duration of malfunction
+                                            )
 
     rail, rail_map = make_simple_rail2()
 
@@ -212,9 +215,10 @@ def test_malfunction_values_and_behavior():
 
     rail, rail_map = make_simple_rail2()
     action_dict: Dict[int, RailEnvActions] = {}
-    stochastic_data = {'malfunction_rate': 0.001,
-                       'min_duration': 10,
-                       'max_duration': 10}
+    stochastic_data = MalfunctionParameters(malfunction_rate=0.001,  # Rate of malfunction occurence
+                                            min_duration=10,  # Minimal duration of malfunction
+                                            max_duration=10  # Max duration of malfunction
+                                            )
     env = RailEnv(width=25,
                   height=30,
                   rail_generator=rail_from_grid_transition_map(rail),
@@ -237,10 +241,10 @@ def test_malfunction_values_and_behavior():
 
 
 def test_initial_malfunction():
-    stochastic_data = {'malfunction_rate': 1000,  # Rate of malfunction occurence
-                       'min_duration': 2,  # Minimal duration of malfunction
-                       'max_duration': 5  # Max duration of malfunction
-                       }
+    stochastic_data = MalfunctionParameters(malfunction_rate=1000,  # Rate of malfunction occurence
+                                            min_duration=2,  # Minimal duration of malfunction
+                                            max_duration=5  # Max duration of malfunction
+                                            )
 
     rail, rail_map = make_simple_rail2()
 
@@ -308,12 +312,6 @@ def test_initial_malfunction():
 
 
 def test_initial_malfunction_stop_moving():
-    stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
-                       'malfunction_rate': 70,  # Rate of malfunction occurence
-                       'min_duration': 2,  # Minimal duration of malfunction
-                       'max_duration': 5  # Max duration of malfunction
-                       }
-
     rail, rail_map = make_simple_rail2()
 
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
@@ -394,11 +392,10 @@ def test_initial_malfunction_do_nothing():
     random.seed(0)
     np.random.seed(0)
 
-    stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
-                       'malfunction_rate': 70,  # Rate of malfunction occurence
-                       'min_duration': 2,  # Minimal duration of malfunction
-                       'max_duration': 5  # Max duration of malfunction
-                       }
+    stochastic_data = MalfunctionParameters(malfunction_rate=70,  # Rate of malfunction occurence
+                                            min_duration=2,  # Minimal duration of malfunction
+                                            max_duration=5  # Max duration of malfunction
+                                            )
 
     rail, rail_map = make_simple_rail2()
 
@@ -479,10 +476,6 @@ def test_initial_malfunction_do_nothing():
 def tests_random_interference_from_outside():
     """Tests that malfunctions are produced by stochastic_data!"""
     # Set fixed malfunction duration for this test
-    stochastic_data = {'malfunction_rate': 1,
-                       'min_duration': 10,
-                       'max_duration': 10}
-
     rail, rail_map = make_simple_rail2()
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
@@ -537,9 +530,6 @@ def test_last_malfunction_step():
     """
 
     # Set fixed malfunction duration for this test
-    stochastic_data = {'malfunction_rate': 5,
-                       'min_duration': 4,
-                       'max_duration': 4}
 
     rail, rail_map = make_simple_rail2()
 
