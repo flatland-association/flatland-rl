@@ -1,4 +1,5 @@
-from flatland.action_plan.action_plan import TrainRunWayPoint, ActionPlanReplayer, ActionPlanElement
+from flatland.action_plan.action_plan import TrainRunWayPoint, DeterministicControllerReplayer, ActionPlanElement, \
+    DeterministicController
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -82,10 +83,10 @@ def test_action_plan(rendering: bool = False):
 
     MAX_EPISODE_STEPS = 50
 
-    actual_action_plan = ActionPlanReplayer(env, chosen_path_dict)
-    actual_action_plan.print_action_plan()
-    ActionPlanReplayer.compare_action_plans(expected_action_plan, actual_action_plan.action_plan)
-    assert actual_action_plan.action_plan == expected_action_plan, \
-        "expected {}, found {}".format(expected_action_plan, actual_action_plan.action_plan)
+    deterministic_controller = DeterministicController(env, chosen_path_dict)
+    deterministic_controller.print_action_plan()
+    DeterministicController.compare_action_plans(expected_action_plan, deterministic_controller.action_plan)
+    assert deterministic_controller.action_plan == expected_action_plan, \
+        "expected {}, found {}".format(expected_action_plan, deterministic_controller.action_plan)
 
-    actual_action_plan.replay_verify(MAX_EPISODE_STEPS, env, rendering)
+    DeterministicControllerReplayer.replay_verify(MAX_EPISODE_STEPS, deterministic_controller, env, rendering)

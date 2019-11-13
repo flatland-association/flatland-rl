@@ -9,8 +9,8 @@ from flatland.envs.rail_env_shortest_paths import get_action_for_move
 from flatland.envs.rail_train_run_data_structures import WayPoint, TrainRun, TrainRunWayPoint
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
-# ---- Output Data Structures (FLATland representation) ---------------------------------------------
-# An action plan element represents the actions to be taken by an agent at deterministic time steps
+# ---- ActionPlan ---------------
+# represents the actions to be taken by an agent at deterministic time steps
 #  plus the position before the action
 ActionPlanElement = NamedTuple('ActionPlanElement', [
     ('scheduled_at', int),
@@ -21,10 +21,7 @@ ActionPlanElement = NamedTuple('ActionPlanElement', [
 ActionPlan = Dict[int, List[ActionPlanElement]]
 
 
-class ActionPlanReplayer():
-    """Allows to deduce an `ActionPlan` from the agents' `PathSchedule` and
-    to be replayed/verified in a FLATland env without malfunction."""
-
+class DeterministicController():
     pp = pprint.PrettyPrinter(indent=4)
 
     def __init__(self,
@@ -33,7 +30,6 @@ class ActionPlanReplayer():
 
         self.env = env
         self.train_run_dict: Dict[int, TrainRun] = train_run_dict
-        print(train_run_dict)
         self.action_plan = [[] for _ in range(self.env.get_num_agents())]
 
         for agent_id, chosen_path in train_run_dict.items():
@@ -97,7 +93,7 @@ class ActionPlanReplayer():
                 return action_plan_step.action
         return None
 
-    def get_action_dict_for_step_replay(self, current_step: int) -> Dict[int, RailEnvActions]:
+    def act(self, current_step: int) -> Dict[int, RailEnvActions]:
         """
         Get the action dictionary to be replayed at the current step.
 
@@ -117,33 +113,6 @@ class ActionPlanReplayer():
                 action_dict[agent_id] = action
         return action_dict
 
-    def replay_verify(self, MAX_EPISODE_STEPS: int, env: RailEnv, rendering: bool):
-        """Replays this deterministic `ActionPlan` and verifies whether it is feasible."""
-        if rendering:
-            renderer = RenderTool(env, gl="PILSVG",
-                                  agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
-                                  show_debug=True,
-                                  clear_debug_text=True,
-                                  screen_height=1000,
-                                  screen_width=1000)
-            renderer.render_env(show=True, show_observations=False, show_predictions=False)
-        i = 0
-        while not env.dones['__all__'] and i <= MAX_EPISODE_STEPS:
-            for agent_id, agent in enumerate(env.agents):
-                way_point: WayPoint = self.get_way_point_before_or_at_step(agent_id, i)
-                assert agent.position == way_point.position, \
-                    "before {}, agent {} at {}, expected {}".format(i, agent_id, agent.position,
-                                                                    way_point.position)
-            actions = self.get_action_dict_for_step_replay(i)
-            print("actions for {}: {}".format(i, actions))
-
-            obs, all_rewards, done, _ = env.step(actions)
-
-            if rendering:
-                renderer.render_env(show=True, show_observations=False, show_predictions=False)
-
-            i += 1
-
     def print_action_plan(self):
         for agent_id, plan in enumerate(self.action_plan):
             print("{}: ".format(agent_id))
@@ -158,15 +127,15 @@ class ActionPlanReplayer():
                 "len for agent {} should be the same.\n\n  expected ({}) = {}\n\n  actual ({}) = {}".format(
                     k,
                     len(expected_action_plan[k]),
-                    ActionPlanReplayer.pp.pformat(expected_action_plan[k]),
+                    DeterministicControllerReplayer.pp.pformat(expected_action_plan[k]),
                     len(actual_action_plan[k]),
-                    ActionPlanReplayer.pp.pformat(actual_action_plan[k]))
+                    DeterministicControllerReplayer.pp.pformat(actual_action_plan[k]))
             for i in range(len(expected_action_plan[k])):
                 assert expected_action_plan[k][i] == actual_action_plan[k][i], \
                     "not the same at agent {} at step {}\n\n  expected = {}\n\n  actual = {}".format(
                         k, i,
-                        ActionPlanReplayer.pp.pformat(expected_action_plan[k][i]),
-                        ActionPlanReplayer.pp.pformat(actual_action_plan[k][i]))
+                        DeterministicControllerReplayer.pp.pformat(expected_action_plan[k][i]),
+                        DeterministicControllerReplayer.pp.pformat(actual_action_plan[k][i]))
 
     def _add_aggent_to_action_plan(self, action_plan, agent_id, agent_path_new):
         agent = self.env.agents[agent_id]
@@ -280,3 +249,35 @@ class ActionPlanReplayer():
         # now, we have a position need to perform the action
         action = ActionPlanElement(scheduled_at + 1, next_action)
         action_plan[agent_id].append(action)
+
+
+class DeterministicControllerReplayer():
+    """Allows to verify a `DeterministicController` by replaying it against a FLATland env without malfunction."""
+
+    @staticmethod
+    def replay_verify(MAX_EPISODE_STEPS: int, ctl: DeterministicController, env: RailEnv, rendering: bool):
+        """Replays this deterministic `ActionPlan` and verifies whether it is feasible."""
+        if rendering:
+            renderer = RenderTool(env, gl="PILSVG",
+                                  agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
+                                  show_debug=True,
+                                  clear_debug_text=True,
+                                  screen_height=1000,
+                                  screen_width=1000)
+            renderer.render_env(show=True, show_observations=False, show_predictions=False)
+        i = 0
+        while not env.dones['__all__'] and i <= MAX_EPISODE_STEPS:
+            for agent_id, agent in enumerate(env.agents):
+                way_point: WayPoint = ctl.get_way_point_before_or_at_step(agent_id, i)
+                assert agent.position == way_point.position, \
+                    "before {}, agent {} at {}, expected {}".format(i, agent_id, agent.position,
+                                                                    way_point.position)
+            actions = ctl.act(i)
+            print("actions for {}: {}".format(i, actions))
+
+            obs, all_rewards, done, _ = env.step(actions)
+
+            if rendering:
+                renderer.render_env(show=True, show_observations=False, show_predictions=False)
+
+            i += 1
