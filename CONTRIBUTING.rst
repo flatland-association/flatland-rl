@@ -108,7 +108,7 @@ Merge Request Guidelines
 Before you submit a merge request, check that it meets these guidelines:
 
 1. The merge request should include tests.
-2. The could must be formatted (PyCharm)
+2. The code must be formatted (PyCharm)
 3. If the merge request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
@@ -313,10 +313,8 @@ Caveat: We discourage the usage of Type Aliases for structured data since its me
 
 NamedTuple
 ~~~~~~~~~~
-
-For structured data containers for which we do not write methods that have to ensure
-some (class) invariant over multiple members, we use
-`NamedTuple`s instead of plain `Dict`s to ensure better readability by
+For structured data containers for which we do not write additional methods, we use
+`NamedTuple` instead of plain `Dict` to ensure better readability by
 
     .. code-block:: python
         from typing import NamedTuple
@@ -330,10 +328,15 @@ some (class) invariant over multiple members, we use
 
 Members of NamedTuple can then be accessed through `.<member>` instead of `['<key>']`.
 
+If we have to ensure some (class) invariant over multiple members
+(for instance, `o.A` always changes at the same time as `o.B`),
+then we should uses classes instead, see the next section.
+
 Class Attributes
 ~~~~~~~~~~~~~~~~
 
-We use classes for data structures if we need to write methods that ensure (class) invariants over multiple members.
+We use classes for data structures if we need to write methods that ensure (class) invariants over multiple members,
+for instance, `o.A` always changes at the same time as `o.B`.
 We use the attrs_ class decorator and a way to declaratively define the attributes on that class:
 
     .. code-block:: python
@@ -400,7 +403,8 @@ And then
 
 Currying
 ~~~~~~~~
-We discourage currying to encapsulate state since we often want the stateful object to have multiple methods (but the curried function only has its one and only interface).
+We discourage currying to encapsulate state since we often want the stateful object to have multiple methods
+(but the curried function has only its signature and abusing params to switch behaviour is not very readable).
 
 Thus, we should refactor our generators and use classes instead (see `Issue #283 <https://gitlab.aicrowd.com/flatland/flatland/issues/283>`_).
 
