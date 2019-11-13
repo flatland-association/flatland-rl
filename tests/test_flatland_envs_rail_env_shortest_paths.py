@@ -3,8 +3,7 @@ import sys
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.predictions import DummyPredictorForRailEnv
+from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths, get_k_shortest_paths
 from flatland.envs.rail_env_utils import load_flatland_environment_from_file
@@ -20,7 +19,7 @@ def test_get_shortest_paths_unreachable():
 
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(), number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)))
+                  obs_builder_object=GlobalObsForRailEnv())
     env.reset()
 
     # set the initial position
@@ -215,7 +214,7 @@ def test_get_k_shortest_paths(rendering=False):
                   rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(),
                   number_of_agents=1,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)),
+                  obs_builder_object=GlobalObsForRailEnv(),
                   )
     env.reset()
 

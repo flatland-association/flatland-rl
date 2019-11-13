@@ -1,8 +1,7 @@
 from flatland.action_plan.action_plan import TrainRunWayPoint, DeterministicControllerReplayer, ActionPlanElement, \
     DeterministicController
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
+from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_train_run_data_structures import WayPoint
@@ -18,7 +17,7 @@ def test_action_plan(rendering: bool = False):
                   rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(seed=77),
                   number_of_agents=2,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  obs_builder_object=GlobalObsForRailEnv(),
                   remove_agents_at_target=True
                   )
     env.reset()
@@ -86,7 +85,4 @@ def test_action_plan(rendering: bool = False):
     deterministic_controller = DeterministicController(env, chosen_path_dict)
     deterministic_controller.print_action_plan()
     DeterministicController.compare_action_plans(expected_action_plan, deterministic_controller.action_plan)
-    assert deterministic_controller.action_plan == expected_action_plan, \
-        "expected {}, found {}".format(expected_action_plan, deterministic_controller.action_plan)
-
     DeterministicControllerReplayer.replay_verify(MAX_EPISODE_STEPS, deterministic_controller, env, rendering)

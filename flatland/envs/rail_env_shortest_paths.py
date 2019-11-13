@@ -137,6 +137,8 @@ def get_action_for_move(
     """
     Get the action (if any) to move from a position and direction to another.
 
+    The implementation could probably be more efficient I believe. But given the few calls this has no priority now.
+
     Parameters
     ----------
     agent_position
@@ -274,7 +276,6 @@ def get_k_shortest_paths(env: RailEnv,
     Computes the k shortest paths using modified Dijkstra
     following pseudo-code https://en.wikipedia.org/wiki/K_shortest_path_routing
     In contrast to the pseudo-code in wikipedia, we do not a allow for loopy paths.
-    We add the next_action
 
     Parameters
     ----------
@@ -313,12 +314,12 @@ def get_k_shortest_paths(env: RailEnv,
         if debug:
             print("iteration heap={}, shortest_paths={}".format(heap, shortest_paths))
         # – let Pu be the shortest cost path in B with cost C
-        c = np.inf
+        cost = np.inf
         pu = None
         for path in heap:
-            if len(path) < c:
+            if len(path) < cost:
                 pu = path
-                c = len(path)
+                cost = len(path)
         u: WayPoint = pu[-1]
         if debug:
             print("  looking at pu={}".format(pu))
