@@ -311,7 +311,8 @@ def get_k_shortest_paths(env: RailEnv,
     count = {(r, c, d): 0 for r in range(env.height) for c in range(env.width) for d in range(4)}
 
     # B is a heap data structure containing paths
-    heap: Set[Tuple[WayPoint]] = set()
+    # N.B. use OrderedSet to make result deterministic!
+    heap: OrderedSet[Tuple[WayPoint]] = OrderedSet()
 
     # insert path Ps = {s} into B with cost 0
     heap.add((WayPoint(source_position, source_direction),))
