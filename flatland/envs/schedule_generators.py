@@ -4,6 +4,7 @@ from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 import msgpack
 import numpy as np
+from numpy.random.mtrand import RandomState
 
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
@@ -15,7 +16,7 @@ ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[in
 
 
 def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None,
-                                seed: int = None) -> List[float]:
+                                seed: int = None, np_random: RandomState = None) -> List[float]:
     """
     Parameters
     ----------
@@ -29,9 +30,6 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
     List[float]
         A list of size nb_agents of speeds with the corresponding probabilistic ratios.
     """
-    if seed:
-        np.random.seed(seed)
-
     if speed_ratio_map is None:
         return [1.0] * nb_agents
 
@@ -39,7 +37,7 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
     speed_ratio_map_as_list: List[Tuple[float, float]] = list(speed_ratio_map.items())
     speed_ratios = list(map(lambda t: t[1], speed_ratio_map_as_list))
     speeds = list(map(lambda t: t[0], speed_ratio_map_as_list))
-    return list(map(lambda index: speeds[index], np.random.choice(nb_classes, nb_agents, p=speed_ratios)))
+    return list(map(lambda index: speeds[index], np_random.choice(nb_classes, nb_agents, p=speed_ratios)))
 
 
 def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
@@ -54,7 +52,8 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
     :return:
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
+                  np_random: RandomState = None) -> Schedule:
         """
 
         The generator that assigns tasks to all the agents
@@ -64,8 +63,8 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
         :param num_resets: How often the generator has been reset.
         :return: Returns the generator to the rail constructor
         """
+        #Todo: Remove parameters and variables not used for next version, Issue: <https://gitlab.aicrowd.com/flatland/flatland/issues/305>
         _runtime_seed = seed + num_resets
-        np.random.seed(_runtime_seed)
 
         start_goal = hints['start_goal']
         start_dir = hints['start_dir']
@@ -74,7 +73,7 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
         agents_direction = start_dir[:num_agents]
 
         if speed_ratio_map:
-            speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed)
+            speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed, np_random=np_random)
         else:
             speeds = [1.0] * len(agents_position)
 
@@ -94,7 +93,8 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
     :param seed: Initiate random seed generator
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0) -> Schedule:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
+                  np_random: RandomState = None) -> Schedule:
         """
 
         The generator that assigns tasks to all the agents
@@ -106,7 +106,6 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
         """
 
         _runtime_seed = seed + num_resets
-        np.random.seed(_runtime_seed)
 
         train_stations = hints['train_stations']
         city_positions = hints['city_positions']
@@ -128,24 +127,24 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
                 tries += 1
                 infeasible_agent = False
                 # Set target for agent
-                city_idx = np.random.choice(len(city_positions), 2, replace=False)
+                city_idx = np_random.choice(len(city_positions), 2, replace=False)
                 start_city = city_idx[0]
                 target_city = city_idx[1]
 
-                start_idx = np.random.choice(np.arange(len(train_stations[start_city])))
-                target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
+                start_idx = np_random.choice(np.arange(len(train_stations[start_city])))
+                target_idx = np_random.choice(np.arange(len(train_stations[target_city])))
                 start = train_stations[start_city][start_idx]
                 target = train_stations[target_city][target_idx]
 
                 while start[1] % 2 != 0:
-                    start_idx = np.random.choice(np.arange(len(train_stations[start_city])))
+                    start_idx = np_random.choice(np.arange(len(train_stations[start_city])))
                     start = train_stations[start_city][start_idx]
                 while target[1] % 2 != 1:
-                    target_idx = np.random.choice(np.arange(len(train_stations[target_city])))
+                    target_idx = np_random.choice(np.arange(len(train_stations[target_city])))
                     target = train_stations[target_city][target_idx]
                 possible_orientations = [city_orientation[start_city],
                                          (city_orientation[start_city] + 2) % 4]
-                agent_orientation = np.random.choice(possible_orientations)
+                agent_orientation = np_random.choice(possible_orientations)
                 if not rail.check_path_exists(start[0], agent_orientation, target[0]):
                     agent_orientation = (agent_orientation + 2) % 4
                 if not (rail.check_path_exists(start[0], agent_orientation, target[0])):
@@ -160,7 +159,7 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
             # Orient the agent correctly
 
         if speed_ratio_map:
-            speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed)
+            speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed, np_random=np_random)
         else:
             speeds = [1.0] * len(agents_position)
 
@@ -186,11 +185,9 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
             initial positions, directions, targets speeds
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None,
-                  num_resets: int = 0) -> Schedule:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
+                  np_random: RandomState = None) -> Schedule:
         _runtime_seed = seed + num_resets
-
-        np.random.seed(_runtime_seed)
 
         valid_positions = []
         for r in range(rail.height):
@@ -206,9 +203,9 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
             return Schedule(agent_positions=[], agent_directions=[],
                             agent_targets=[], agent_speeds=[], agent_malfunction_rates=None)
 
-        agents_position_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
+        agents_position_idx = [i for i in np_random.choice(len(valid_positions), num_agents, replace=False)]
         agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]
-        agents_target_idx = [i for i in np.random.choice(len(valid_positions), num_agents, replace=False)]
+        agents_target_idx = [i for i in np_random.choice(len(valid_positions), num_agents, replace=False)]
         agents_target = [valid_positions[agents_target_idx[i]] for i in range(num_agents)]
         update_agents = np.zeros(num_agents)
 
@@ -224,10 +221,10 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
             for i in range(num_agents):
                 if update_agents[i] == 1:
                     x = np.setdiff1d(np.arange(len(valid_positions)), agents_position_idx)
-                    agents_position_idx[i] = np.random.choice(x)
+                    agents_position_idx[i] = np_random.choice(x)
                     agents_position[i] = valid_positions[agents_position_idx[i]]
                     x = np.setdiff1d(np.arange(len(valid_positions)), agents_target_idx)
-                    agents_target_idx[i] = np.random.choice(x)
+                    agents_target_idx[i] = np_random.choice(x)
                     agents_target[i] = valid_positions[agents_target_idx[i]]
             update_agents = np.zeros(num_agents)
 
@@ -259,9 +256,9 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
                     break
                 else:
                     agents_direction[i] = valid_starting_directions[
-                        np.random.choice(len(valid_starting_directions), 1)[0]]
+                        np_random.choice(len(valid_starting_directions), 1)[0]]
 
-        agents_speed = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed)
+        agents_speed = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed, np_random=np_random)
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
                         agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None)
 
@@ -282,8 +279,8 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
         initial positions, directions, targets speeds
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None,
-                  num_resets: int = 0) -> Schedule:
+    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
+                  np_random: RandomState = None) -> Schedule:
         if load_from_package is not None:
             from importlib_resources import read_binary
             load_data = read_binary(load_from_package, filename)

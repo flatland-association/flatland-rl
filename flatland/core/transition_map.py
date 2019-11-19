@@ -117,7 +117,7 @@ class GridTransitionMap(TransitionMap):
     GridTransitionMap implements utility functions.
     """
 
-    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([])):
+    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), random_seed=None):
         """
         Builder for GridTransitionMap object.
 
@@ -136,7 +136,11 @@ class GridTransitionMap(TransitionMap):
         self.width = width
         self.height = height
         self.transitions = transitions
-
+        self.random_generator = np.random.RandomState()
+        if random_seed is None:
+            self.random_generator.seed(12)
+        else:
+            self.random_generator.seed(random_seed)
         self.grid = np.zeros((height, width), dtype=self.transitions.get_type())
 
     def get_full_transitions(self, row, column):
@@ -511,7 +515,6 @@ class GridTransitionMap(TransitionMap):
         gDir2dRC = self.transitions.gDir2dRC  # [[-1,0] = N, [0,1]=E, etc]
         grcPos = array(rcPos)
         grcMax = self.grid.shape
-
         # Transition elements
         transitions = RailEnvTransitions()
         cells = transitions.transition_list
@@ -572,15 +575,15 @@ class GridTransitionMap(TransitionMap):
                 elif switch_type_idx == 2:
                     transition = simple_switch_east_south
                 else:
-                    transition = np.random.choice(three_way_transitions, 1)
+                    transition = self.random_generator.choice(three_way_transitions, 1)
             else:
-                transition = np.random.choice(three_way_transitions, 1)
+                transition = self.random_generator.choice(three_way_transitions, 1)
             transition = transitions.rotate_transition(transition, int(hole * 90))
             self.set_transitions((rcPos[0], rcPos[1]), transition)
 
         # Make a double slip switch
         if number_of_incoming == 4:
-            rotation = np.random.randint(2)
+            rotation = self.random_generator.randint(2)
             transition = transitions.rotate_transition(double_slip, int(rotation * 90))
             self.set_transitions((rcPos[0], rcPos[1]), transition)
         return True

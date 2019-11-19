@@ -314,7 +314,8 @@ class RailEnv(Environment):
 
         optionals = {}
         if regenerate_rail or self.rail is None:
-            rail, optionals = self.rail_generator(self.width, self.height, self.number_of_agents, self.num_resets)
+            rail, optionals = self.rail_generator(self.width, self.height, self.number_of_agents, self.num_resets,
+                                                  self.np_random)
 
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
@@ -332,7 +333,8 @@ class RailEnv(Environment):
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
 
-            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets)
+            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets,
+                                               self.np_random)
             self.agents = EnvAgent.from_schedule(schedule)
 
             if agents_hints and 'city_orientations' in agents_hints:
@@ -564,8 +566,8 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] += self.stop_penalty
 
             if not agent.moving and not (
-                    action == RailEnvActions.DO_NOTHING or
-                    action == RailEnvActions.STOP_MOVING):
+                action == RailEnvActions.DO_NOTHING or
+                action == RailEnvActions.STOP_MOVING):
                 # Allow agent to start with any forward or direction action
                 agent.moving = True
                 self.rewards_dict[i_agent] += self.start_penalty
@@ -604,7 +606,7 @@ class RailEnv(Environment):
         if agent.moving:
             agent.speed_data['position_fraction'] += agent.speed_data['speed']
             if agent.speed_data['position_fraction'] > 1.0 or np.isclose(agent.speed_data['position_fraction'], 1.0,
-                                                                  rtol=1e-03):
+                                                                         rtol=1e-03):
                 # Perform stored action to transition to the next cell as soon as cell is free
                 # Notice that we've already checked new_cell_valid and transition valid when we stored the action,
                 # so we only have to check cell_free now!

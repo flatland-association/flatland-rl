@@ -7,12 +7,13 @@ from flatland.envs.schedule_generators import speed_initialization_helper, compl
 
 
 def test_speed_initialization_helper():
-    np.random.seed(1)
+    random_generator = np.random.RandomState()
+    random_generator.seed(10)
     speed_ratio_map = {1: 0.3, 2: 0.4, 3: 0.3}
-    actual_speeds = speed_initialization_helper(10, speed_ratio_map)
+    actual_speeds = speed_initialization_helper(10, speed_ratio_map, np_random=random_generator)
 
     # seed makes speed_initialization_helper deterministic -> check generated speeds.
-    assert actual_speeds == [2, 3, 1, 2, 1, 1, 1, 2, 2, 2]
+    assert actual_speeds == [3, 1, 2, 3, 2, 1, 1, 3, 1, 1]
 
 
 def test_rail_env_speed_intializer():

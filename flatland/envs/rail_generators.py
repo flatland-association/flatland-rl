@@ -5,6 +5,7 @@ from typing import Callable, Tuple, Optional, Dict, List
 
 import msgpack
 import numpy as np
+from numpy.random.mtrand import RandomState
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_direction, mirror, direction_to_point
@@ -26,7 +27,8 @@ def empty_rail_generator() -> RailGenerator:
     Primarily used by the editor
     """
 
-    def generator(width: int, height: int, num_agents: int = 0, num_resets: int = 0) -> RailGeneratorProduct:
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> RailGenerator:
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         rail_array = grid_map.grid
@@ -58,7 +60,8 @@ def complex_rail_generator(nr_start_goal=1,
         The matrix with the correct 16-bit bitmaps for each cell.
     """
 
-    def generator(width, height, num_agents, num_resets=0):
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> RailGenerator:
 
         if num_agents > nr_start_goal:
             num_agents = nr_start_goal
@@ -66,8 +69,6 @@ def complex_rail_generator(nr_start_goal=1,
         grid_map = GridTransitionMap(width=width, height=height, transitions=RailEnvTransitions())
         rail_array = grid_map.grid
         rail_array.fill(0)
-
-        np.random.seed(seed + num_resets)
 
         # generate rail array
         # step 1:
@@ -96,8 +97,8 @@ def complex_rail_generator(nr_start_goal=1,
         while nr_created < nr_start_goal and created_sanity < sanity_max:
             all_ok = False
             for _ in range(sanity_max):
-                start = (np.random.randint(0, height), np.random.randint(0, width))
-                goal = (np.random.randint(0, height), np.random.randint(0, width))
+                start = (np_random.randint(0, height), np_random.randint(0, width))
+                goal = (np_random.randint(0, height), np_random.randint(0, width))
 
                 # check to make sure start,goal pos is empty?
                 if rail_array[goal] != 0 or rail_array[start] != 0:
@@ -150,8 +151,8 @@ def complex_rail_generator(nr_start_goal=1,
         while nr_created < nr_extra and created_sanity < sanity_max:
             all_ok = False
             for _ in range(sanity_max):
-                start = (np.random.randint(0, height), np.random.randint(0, width))
-                goal = (np.random.randint(0, height), np.random.randint(0, width))
+                start = (np_random.randint(0, height), np_random.randint(0, width))
+                goal = (np_random.randint(0, height), np_random.randint(0, width))
                 # check to make sure start,goal pos are not empty
                 if rail_array[goal] == 0 or rail_array[start] == 0:
                     continue
@@ -195,7 +196,8 @@ def rail_from_manual_specifications_generator(rail_spec):
         the matrix of correct 16-bit bitmaps for each rail_spec_of_cell.
     """
 
-    def generator(width, height, num_agents, num_resets=0):
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> RailGenerator:
         rail_env_transitions = RailEnvTransitions()
 
         height = len(rail_spec)
@@ -234,7 +236,8 @@ def rail_from_file(filename, load_from_package=None) -> RailGenerator:
         the matrix of correct 16-bit bitmaps for each rail_spec_of_cell.
     """
 
-    def generator(width, height, num_agents, num_resets):
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> RailGenerator:
         rail_env_transitions = RailEnvTransitions()
         if load_from_package is not None:
             from importlib_resources import read_binary
@@ -272,7 +275,8 @@ def rail_from_grid_transition_map(rail_map) -> RailGenerator:
         Generator function that always returns the given `rail_map` object.
     """
 
-    def generator(width: int, height: int, num_agents: int, num_resets: int = 0) -> RailGeneratorProduct:
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> RailGenerator:
         return rail_map, None
 
     return generator
@@ -310,8 +314,8 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=1) -> R
         The matrix with the correct 16-bit bitmaps for each cell.
     """
 
-    def generator(width: int, height: int, num_agents: int, num_resets: int = 0) -> RailGeneratorProduct:
-        np.random.seed(seed + num_resets)
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> RailGenerator:
         t_utils = RailEnvTransitions()
 
         transition_probability = cell_type_relative_proportion
@@ -379,7 +383,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=1) -> R
 
             num_insertions = 0
             while num_insertions < MAX_INSERTIONS and len(cells_to_fill) > 0:
-                cell = cells_to_fill[np.random.choice(len(cells_to_fill), 1)[0]]
+                cell = cells_to_fill[np_random.choice(len(cells_to_fill), 1)[0]]
                 cells_to_fill.remove(cell)
                 row = cell[0]
                 col = cell[1]
@@ -463,7 +467,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=1) -> R
                             possible_transitions, possible_probabilities = zip(*besttrans)
                             possible_probabilities = [p / sum(possible_probabilities) for p in possible_probabilities]
 
-                            rail[row][col] = np.random.choice(possible_transitions,
+                            rail[row][col] = np_random.choice(possible_transitions,
                                                               p=possible_probabilities)
                             num_insertions += 1
 
@@ -477,7 +481,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=1) -> R
                     possible_transitions, possible_probabilities = zip(*possible_cell_transitions)
                     possible_probabilities = [p / sum(possible_probabilities) for p in possible_probabilities]
 
-                    rail[row][col] = np.random.choice(possible_transitions,
+                    rail[row][col] = np_random.choice(possible_transitions,
                                                       p=possible_probabilities)
                     num_insertions += 1
 
@@ -560,7 +564,7 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=1) -> R
 
 
 def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_rails_between_cities: int = 4,
-                          max_rails_in_city: int = 4, seed: int = 1) -> RailGenerator:
+                          max_rails_in_city: int = 4, seed=0) -> RailGenerator:
     """
     Generates railway networks with cities and inner city rails
 
@@ -583,7 +587,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
     Returns the rail generator object to the rail env constructor
     """
 
-    def generator(width: int, height: int, num_agents: int, num_resets: int = 0) -> RailGeneratorProduct:
+    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> RailGenerator:
         """
 
         Parameters
@@ -607,11 +612,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             'train_stations': locations of train stations for start and targets
             'city_orientations' : orientation of cities
         """
-        np.random.seed(seed + num_resets)
-
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
-
         # We compute the city radius by the given max number of rails it can contain.
         # The radius is equal to the number of tracks divided by 2
         # We add 2 cells to avoid that track lenght is to short
@@ -637,11 +639,11 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
                                                                    height)
         # Distribute cities randomlz
         else:
-            city_positions = _generate_random_city_positions(max_feasible_cities, city_radius, width, height)
+            city_positions = _generate_random_city_positions(max_feasible_cities, city_radius, width, height,
+                                                             np_random=np_random)
 
         # reduce num_cities if less were generated in random mode
         num_cities = len(city_positions)
-
         # If random generation failed just put the cities evenly
         if num_cities < 2:
             warnings.warn("[WARNING] Changing to Grid mode to place at least 2 cities.")
@@ -653,7 +655,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         inner_connection_points, outer_connection_points, city_orientations, city_cells = \
             _generate_city_connection_points(
                 city_positions, city_radius, vector_field, rails_between_cities,
-                rails_in_city)
+                rails_in_city, np_random=np_random)
 
         # Connect the cities through the connection points
         inter_city_lines = _connect_cities(city_positions, outer_connection_points, city_cells,
@@ -679,7 +681,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         }}
 
     def _generate_random_city_positions(num_cities: int, city_radius: int, width: int,
-                                        height: int) -> (IntVector2DArray, IntVector2DArray):
+                                        height: int, np_random: RandomState = None) -> (
+        IntVector2DArray, IntVector2DArray):
         """
         Distribute the cities randomly in the environment while respecting city sizes and guaranteeing that they
         don't overlap.
@@ -700,14 +703,15 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         Returns a list of all city positions as coordinates (x,y)
 
         """
+
         city_positions: IntVector2DArray = []
         for city_idx in range(num_cities):
             too_close = True
             tries = 0
 
             while too_close:
-                row = city_radius + 1 + np.random.randint(height - 2 * (city_radius + 1))
-                col = city_radius + 1 + np.random.randint(width - 2 * (city_radius + 1))
+                row = city_radius + 1 + np_random.randint(height - 2 * (city_radius + 1))
+                col = city_radius + 1 + np_random.randint(width - 2 * (city_radius + 1))
                 too_close = False
                 # Check distance to cities
                 for city_pos in city_positions:
@@ -773,10 +777,11 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
 
     def _generate_city_connection_points(city_positions: IntVector2DArray, city_radius: int,
                                          vector_field: IntVector2DArray, rails_between_cities: int,
-                                         rails_in_city: int = 2) -> (List[List[List[IntVector2D]]],
-                                                                     List[List[List[IntVector2D]]],
-                                                                     List[np.ndarray],
-                                                                     List[Grid4TransitionsEnum]):
+                                         rails_in_city: int = 2, np_random: RandomState = None) -> (
+        List[List[List[IntVector2D]]],
+        List[List[List[IntVector2D]]],
+        List[np.ndarray],
+        List[Grid4TransitionsEnum]):
         """
         Generate the city connection points. Internal connection points are used to generate the parallel paths
         within the city.
@@ -814,6 +819,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         outer_connection_points: List[List[List[IntVector2D]]] = []
         city_orientations: List[Grid4TransitionsEnum] = []
         city_cells: IntVector2DArray = []
+
         for city_position in city_positions:
 
             # Chose the directions where close cities are situated
@@ -826,7 +832,7 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             connection_sides_idx = []
             idx = 1
             if grid_mode:
-                current_closest_direction = np.random.randint(4)
+                current_closest_direction = np_random.randint(4)
             else:
                 current_closest_direction = direction_to_point(city_position, city_positions[closest_neighb_idx[idx]])
             connection_sides_idx.append(current_closest_direction)
@@ -835,12 +841,12 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
             city_cells.extend(_get_cells_in_city(city_position, city_radius, city_orientations[-1], vector_field))
             # set the number of tracks within a city, at least 2 tracks per city
             connections_per_direction = np.zeros(4, dtype=int)
-            nr_of_connection_points = np.random.randint(2, rails_in_city + 1)
+            nr_of_connection_points = np_random.randint(2, rails_in_city + 1)
             for idx in connection_sides_idx:
                 connections_per_direction[idx] = nr_of_connection_points
             connection_points_coordinates_inner: List[List[IntVector2D]] = [[] for i in range(4)]
             connection_points_coordinates_outer: List[List[IntVector2D]] = [[] for i in range(4)]
-            number_of_out_rails = np.random.randint(1, min(rails_between_cities, nr_of_connection_points) + 1)
+            number_of_out_rails = np_random.randint(1, min(rails_between_cities, nr_of_connection_points) + 1)
             start_idx = int((nr_of_connection_points - number_of_out_rails) / 2)
             for direction in range(4):
                 connection_slots = np.arange(nr_of_connection_points) - start_idx

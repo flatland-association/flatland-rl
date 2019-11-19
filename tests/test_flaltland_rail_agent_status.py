@@ -10,7 +10,6 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.simple_rail import make_simple_rail
 
-np.random.seed(1)
 
 
 def test_initial_status():

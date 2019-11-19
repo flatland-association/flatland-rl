@@ -10,7 +10,6 @@ def test_build_railway_infrastructure():
     rail_trans = RailEnvTransitions()
     grid_map = GridTransitionMap(width=20, height=20, transitions=rail_trans)
     grid_map.grid.fill(0)
-    np.random.seed(0)
 
     # Make connection with dead-ends on both sides
     start_point = (2, 2)
@@ -84,7 +83,6 @@ def test_fix_inner_nodes():
     rail_trans = RailEnvTransitions()
     grid_map = GridTransitionMap(width=6, height=10, transitions=rail_trans)
     grid_map.grid.fill(0)
-    np.random.seed(0)
 
     start = (2, 2)
     target = (8, 2)

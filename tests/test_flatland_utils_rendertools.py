@@ -36,7 +36,6 @@ def checkFrozenImage(oRT, sFileImage, resave=False):
 
 
 def test_render_env(save_new_images=False):
-    np.random.seed(100)
     oEnv = RailEnv(width=10, height=10, rail_generator=empty_rail_generator(), number_of_agents=0,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2))
     oEnv.reset()

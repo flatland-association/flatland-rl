@@ -142,16 +142,16 @@ def test_malfunction_process_statistically():
     env.agents[0].target = (0, 0)
     # Next line only for test generation
     # agent_malfunction_list = [[] for i in range(10)]
-    agent_malfunction_list = [[0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1],
-     [0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 0],
-     [5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4, 3, 2, 1, 0],
-     [0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1],
-     [0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1],
-     [0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2],
-     [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [5, 4, 3, 2, 1, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0]]
+    agent_malfunction_list = [[0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4],
+                              [0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2],
+                              [0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1],
+                              [0, 0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0],
+                              [5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 5],
+                              [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2],
+                              [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4]]
 
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}
@@ -190,18 +190,18 @@ def test_malfunction_before_entry():
     # we want some agents to be malfuncitoning already and some to be working
     # we want different next_malfunction values for the agents
     assert env.agents[0].malfunction_data['malfunction'] == 0
-    assert env.agents[1].malfunction_data['malfunction'] == 0
-    assert env.agents[2].malfunction_data['malfunction'] == 10
-    assert env.agents[3].malfunction_data['malfunction'] == 0
-    assert env.agents[4].malfunction_data['malfunction'] == 0
-    assert env.agents[5].malfunction_data['malfunction'] == 0
-    assert env.agents[6].malfunction_data['malfunction'] == 0
-    assert env.agents[7].malfunction_data['malfunction'] == 0
+    assert env.agents[1].malfunction_data['malfunction'] == 10
+    assert env.agents[2].malfunction_data['malfunction'] == 0
+    assert env.agents[3].malfunction_data['malfunction'] == 10
+    assert env.agents[4].malfunction_data['malfunction'] == 10
+    assert env.agents[5].malfunction_data['malfunction'] == 10
+    assert env.agents[6].malfunction_data['malfunction'] == 10
+    assert env.agents[7].malfunction_data['malfunction'] == 10
     assert env.agents[8].malfunction_data['malfunction'] == 10
     assert env.agents[9].malfunction_data['malfunction'] == 10
 
     # for a in range(10):
-    #  print("assert env.agents[{}].malfunction_data['malfunction'] == {}".format(a,env.agents[a].malfunction_data['malfunction']))
+    # print("assert env.agents[{}].malfunction_data['malfunction'] == {}".format(a,env.agents[a].malfunction_data['malfunction']))
 
 
 def test_malfunction_values_and_behavior():
@@ -253,7 +253,8 @@ def test_initial_malfunction():
                   rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(seed=10),
                   number_of_agents=1,
-                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),  # Malfunction data generator
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
+                  # Malfunction data generator
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
@@ -389,9 +390,6 @@ def test_initial_malfunction_stop_moving():
 
 
 def test_initial_malfunction_do_nothing():
-    random.seed(0)
-    np.random.seed(0)
-
     stochastic_data = MalfunctionParameters(malfunction_rate=70,  # Rate of malfunction occurence
                                             min_duration=2,  # Minimal duration of malfunction
                                             max_duration=5  # Max duration of malfunction
@@ -404,7 +402,8 @@ def test_initial_malfunction_do_nothing():
                   rail_generator=rail_from_grid_transition_map(rail),
                   schedule_generator=random_schedule_generator(),
                   number_of_agents=1,
-                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),  # Malfunction data generator
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
+                  # Malfunction data generator
                   )
     env.reset()
     set_penalties_for_replay(env)
