@@ -9,7 +9,6 @@ from flatland.envs.schedule_generators import sparse_schedule_generator
 
 
 def test_get_global_observation():
-    np.random.seed(1)
     number_of_agents = 20
 
     stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents

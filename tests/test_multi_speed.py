@@ -9,9 +9,6 @@ from flatland.envs.rail_generators import complex_rail_generator, rail_from_grid
 from flatland.envs.schedule_generators import complex_schedule_generator, random_schedule_generator
 from flatland.utils.simple_rail import make_simple_rail
 
-np.random.seed(1)
-
-
 # Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
 # Training on simple small tasks is the best way to get familiar with the environment
 #

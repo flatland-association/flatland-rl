@@ -1,11 +1,10 @@
 import numpy as np
 
-from flatland.envs.malfunction_generators import malfunction_from_params
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.envs.rail_generators import rail_from_grid_transition_map, sparse_rail_generator
+from flatland.envs.schedule_generators import random_schedule_generator, sparse_schedule_generator
 from flatland.utils.simple_rail import make_simple_rail2
 
 
@@ -157,3 +156,86 @@ def test_seeding_and_malfunction():
         assert env.agents[7].position == env2.agents[7].position
         assert env.agents[8].position == env2.agents[8].position
         assert env.agents[9].position == env2.agents[9].position
+
+
+def test_reproducability_env():
+    """
+    Test that no random generators are present within the env that get influenced by external np random
+    """
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25, height=30, rail_generator=sparse_rail_generator(max_num_cities=5,
+                                                                            max_rails_between_cities=3,
+                                                                            seed=215545,  # Random seed
+                                                                            grid_mode=True
+                                                                            ),
+                  schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=1)
+    env.reset(True, True, True, random_seed=10)
+    excpeted_grid = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                     [0, 0, 0, 0, 0, 16386, 1025, 4608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16386, 1025, 4608, 0, 0, 0, 0],
+                     [0, 16386, 1025, 5633, 17411, 3089, 1025, 1097, 5633, 17411, 1025, 1025, 1025, 1025, 1025, 1025,
+                      5633, 17411, 3089, 1025, 1097, 5633, 17411, 1025, 4608],
+                     [0, 49186, 1025, 1097, 3089, 5633, 1025, 17411, 1097, 3089, 1025, 1025, 1025, 1025, 1025, 1025,
+                      1097, 3089, 5633, 1025, 17411, 1097, 3089, 1025, 37408],
+                     [0, 32800, 0, 0, 0, 72, 1025, 2064, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 72, 1025, 2064, 0, 0, 0, 32800],
+                     [0, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800],
+                     [0, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800],
+                     [0, 32872, 4608, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16386, 17411, 1025, 17411,
+                      34864],
+                     [16386, 34864, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 32800, 16386,
+                      33825, 2064],
+                     [32800, 32800, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 32800, 32800,
+                      32800, 0],
+                     [32800, 32800, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 32800, 32800,
+                      32800, 0],
+                     [32800, 32800, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 32800, 32800,
+                      32800, 0],
+                     [32800, 32800, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 32800, 32800,
+                      32800, 0],
+                     [32800, 32800, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 32800, 32800,
+                      32800, 0],
+                     [32800, 32800, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 32800, 32800,
+                      32800, 0],
+                     [32800, 49186, 2064, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16386, 1025, 1025, 1025, 1025, 20994, 38505,
+                      50211, 3089, 2064, 0],
+                     [32800, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 0, 0, 0, 0, 32800, 32800, 32800, 0, 0,
+                      0],
+                     [32800, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 0, 0, 0, 0, 32800, 32872, 37408, 0, 0,
+                      0],
+                     [32800, 32800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 0, 0, 0, 0, 32800, 32800, 32800, 0, 0,
+                      0],
+                     [32800, 32800, 0, 0, 16386, 1025, 1025, 1025, 4608, 0, 0, 0, 0, 0, 32800, 0, 0, 0, 0, 49186, 34864,
+                      32872, 4608, 0, 0],
+                     [72, 1097, 1025, 1025, 3089, 5633, 1025, 17411, 1097, 1025, 1025, 5633, 1025, 1025, 2064, 0, 0, 0,
+                      0, 32800, 32800, 32800, 32800, 0, 0],
+                     [0, 0, 0, 0, 0, 72, 1025, 2064, 0, 0, 0, 32872, 5633, 4608, 0, 0, 0, 0, 0, 32872, 37408, 49186,
+                      2064, 0, 0],
+                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 32800, 32800, 0, 0, 0, 0, 0, 32800, 32800, 32800, 0, 0,
+                      0],
+                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 32800, 72, 4608, 0, 0, 0, 0, 32800, 49186, 34864, 0, 0,
+                      0],
+                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32800, 72, 1025, 37408, 0, 0, 0, 0, 32800, 32800, 32800, 0, 0,
+                      0],
+                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 72, 1025, 1025, 1097, 1025, 1025, 1025, 1025, 3089, 3089, 2064,
+                      0, 0, 0]]
+    assert env.rail.grid.tolist() == excpeted_grid
+
+    # Test that we don't have interference from calling mulitple function outisde
+    env2 = RailEnv(width=25, height=30, rail_generator=sparse_rail_generator(max_num_cities=5,
+                                                                             max_rails_between_cities=3,
+                                                                             seed=215545,  # Random seed
+                                                                             grid_mode=True
+                                                                             ),
+                   schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=1)
+    np.random.seed(10)
+    for i in range(10):
+        np.random.randn()
+    env2.reset(True, True, True, random_seed=10)
+    assert env2.rail.grid.tolist() == excpeted_grid

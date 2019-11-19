@@ -168,6 +168,7 @@ def single_malfunction_generator(earlierst_malfunction: int, malfunction_duratio
 
     Parameters
     ----------
+    earlierst_malfunction: Earliest possible malfunction onset
     malfunction_duration: The duration of the single malfunction
 
     Returns

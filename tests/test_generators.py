@@ -14,7 +14,6 @@ from flatland.utils.simple_rail import make_simple_rail
 
 
 def test_empty_rail_generator():
-    np.random.seed(0)
     n_agents = 1
     x_dim = 5
     y_dim = 10
@@ -31,7 +30,6 @@ def test_empty_rail_generator():
 
 
 def test_random_rail_generator():
-    np.random.seed(0)
     n_agents = 1
     x_dim = 5
     y_dim = 10
