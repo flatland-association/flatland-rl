@@ -73,6 +73,7 @@ class ControllerFromTrainRuns():
     def get_action_at_step(self, agent_id: int, current_step: int) -> Optional[RailEnvActions]:
         """
         Get the current action if any is defined in the `ActionPlan`.
+        ASSUMPTION we assume the env has `remove_agents_at_target=True` and `activate_agents=False`!!
 
         Parameters
         ----------
@@ -96,6 +97,8 @@ class ControllerFromTrainRuns():
         """
         Get the action dictionary to be replayed at the current step.
         Returns only action where required (no action for done agents or those not at the beginning of the cell).
+
+        ASSUMPTION we assume the env has `remove_agents_at_target=True` and `activate_agents=False`!!
 
         Parameters
         ----------
@@ -158,7 +161,9 @@ class ControllerFromTrainRuns():
                 self._add_action_plan_elements_for_first_path_element_of_agent(
                     action_plan,
                     train_run_way_point,
-                    next_train_run_way_point)
+                    next_train_run_way_point,
+                    minimum_cell_time
+                )
                 continue
 
             just_before_target = Vec2d.is_equal(agent.target, next_position)
@@ -222,17 +227,19 @@ class ControllerFromTrainRuns():
     def _add_action_plan_elements_for_first_path_element_of_agent(self,
                                                                   action_plan: ActionPlan,
                                                                   train_run_way_point: TrainRunWayPoint,
-                                                                  next_train_run_way_point: TrainRunWayPoint):
+                                                                  next_train_run_way_point: TrainRunWayPoint,
+                                                                  minimum_cell_time: int):
         scheduled_at = train_run_way_point.scheduled_at
         position = train_run_way_point.way_point.position
         direction = train_run_way_point.way_point.direction
         next_position = next_train_run_way_point.way_point.position
         next_direction = next_train_run_way_point.way_point.direction
 
-        # add intial do nothing if we do not enter immediately
+        # add intial do nothing if we do not enter immediately, actually not necessary
         if scheduled_at > 0:
             action = ActionPlanElement(0, RailEnvActions.DO_NOTHING)
             action_plan.append(action)
+
         # add action to enter the grid
         action = ActionPlanElement(scheduled_at, RailEnvActions.MOVE_FORWARD)
         action_plan.append(action)
@@ -243,8 +250,13 @@ class ControllerFromTrainRuns():
                                           next_direction,
                                           self.env.rail)
 
-        # now, we have a position need to perform the action
-        action = ActionPlanElement(scheduled_at + 1, next_action)
+        # if the agent is blocked in the cell, we have to call stop upon entering!
+        if next_train_run_way_point.scheduled_at > scheduled_at + 1 + minimum_cell_time:
+            action = ActionPlanElement(scheduled_at + 1, RailEnvActions.STOP_MOVING)
+            action_plan.append(action)
+
+        # execute the action exactly minimum_cell_time before the entry into the next cell
+        action = ActionPlanElement(next_train_run_way_point.scheduled_at - minimum_cell_time, next_action)
         action_plan.append(action)
 
 
