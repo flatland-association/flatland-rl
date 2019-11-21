@@ -564,9 +564,9 @@ class RenderTool(object):
                     if self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
                         self.gl.set_cell_occupied(agent_idx, *(agent.position))
                     self.gl.set_agent_at(agent_idx, *position, old_direction, direction,
-                                        selected_agent == agent_idx, rail_grid=env.rail.grid,
-                                        show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
-                                        malfunction=is_malfunction)
+                                         selected_agent == agent_idx, rail_grid=env.rail.grid,
+                                         show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
+                                         malfunction=is_malfunction)
                 else:
                     position = agent.position
                     direction = agent.direction
@@ -578,15 +578,15 @@ class RenderTool(object):
 
                             # set_agent_at uses the agent index for the color
                             self.gl.set_agent_at(agent_idx, *position, agent.direction, direction,
-                                                selected_agent == agent_idx, rail_grid=env.rail.grid,
-                                                show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
-                                                malfunction=is_malfunction)
+                                                 selected_agent == agent_idx, rail_grid=env.rail.grid,
+                                                 show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
+                                                 malfunction=is_malfunction)
 
                     # set_agent_at uses the agent index for the color
                     if self.agent_render_variant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:
                         self.gl.set_cell_occupied(agent_idx, *(agent.position))
                     self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, selected_agent == agent_idx,
-                                        rail_grid=env.rail.grid, malfunction=is_malfunction)
+                                         rail_grid=env.rail.grid, malfunction=is_malfunction)
 
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)

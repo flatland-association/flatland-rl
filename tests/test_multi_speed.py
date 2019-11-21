@@ -1,5 +1,4 @@
 import numpy as np
-from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import TreeObsForRailEnv
@@ -8,6 +7,8 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import complex_rail_generator, rail_from_grid_transition_map
 from flatland.envs.schedule_generators import complex_schedule_generator, random_schedule_generator
 from flatland.utils.simple_rail import make_simple_rail
+from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
+
 
 # Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
 # Training on simple small tasks is the best way to get familiar with the environment

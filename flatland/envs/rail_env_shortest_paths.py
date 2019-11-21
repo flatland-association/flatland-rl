@@ -10,7 +10,7 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env import RailEnvNextAction, RailEnvActions, RailEnv
-from flatland.envs.rail_train_run_data_structures import WayPoint
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.utils.ordered_set import OrderedSet
 
 
@@ -201,7 +201,7 @@ def get_action_for_move(
 
 # N.B. get_shortest_paths is not part of distance_map since it refers to RailEnvActions (would lead to circularity!)
 def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = None, agent_handle: Optional[int] = None) \
-    -> Dict[int, Optional[List[WayPoint]]]:
+    -> Dict[int, Optional[List[Waypoint]]]:
     """
     Computes the shortest path for each agent to its target and the action to be taken to do so.
     The paths are derived from a `DistanceMap`.
@@ -251,7 +251,7 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
                     best_next_action = next_action
                     distance = next_action_distance
 
-            shortest_paths[agent.handle].append(WayPoint(position, direction))
+            shortest_paths[agent.handle].append(Waypoint(position, direction))
             depth += 1
 
             # if there is no way to continue, the rail must be disconnected!
@@ -263,7 +263,7 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
             position = best_next_action.next_position
             direction = best_next_action.next_direction
         if max_depth is None or depth < max_depth:
-            shortest_paths[agent.handle].append(WayPoint(position, direction))
+            shortest_paths[agent.handle].append(Waypoint(position, direction))
 
     if agent_handle is not None:
         _shortest_path_for_agent(distance_map.agents[agent_handle])
@@ -278,7 +278,7 @@ def get_k_shortest_paths(env: RailEnv,
                          source_position: Tuple[int, int],
                          source_direction: int,
                          target_position=Tuple[int, int],
-                         k: int = 1, debug=False) -> List[Tuple[WayPoint]]:
+                         k: int = 1, debug=False) -> List[Tuple[Waypoint]]:
     """
     Computes the k shortest paths using modified Dijkstra
     following pseudo-code https://en.wikipedia.org/wiki/K_shortest_path_routing
@@ -304,7 +304,7 @@ def get_k_shortest_paths(env: RailEnv,
 
     # P: set of shortest paths from s to t
     # P =empty,
-    shortest_paths: List[Tuple[WayPoint]] = []
+    shortest_paths: List[Tuple[Waypoint]] = []
 
     # countu: number of shortest paths found to node u
     # countu = 0, for all u in V
@@ -312,10 +312,10 @@ def get_k_shortest_paths(env: RailEnv,
 
     # B is a heap data structure containing paths
     # N.B. use OrderedSet to make result deterministic!
-    heap: OrderedSet[Tuple[WayPoint]] = OrderedSet()
+    heap: OrderedSet[Tuple[Waypoint]] = OrderedSet()
 
     # insert path Ps = {s} into B with cost 0
-    heap.add((WayPoint(source_position, source_direction),))
+    heap.add((Waypoint(source_position, source_direction),))
 
     # while B is not empty and countt < K:
     while len(heap) > 0 and len(shortest_paths) < k:
@@ -328,7 +328,7 @@ def get_k_shortest_paths(env: RailEnv,
             if len(path) < cost:
                 pu = path
                 cost = len(path)
-        u: WayPoint = pu[-1]
+        u: Waypoint = pu[-1]
         if debug:
             print("  looking at pu={}".format(pu))
 
@@ -360,7 +360,7 @@ def get_k_shortest_paths(env: RailEnv,
                     if debug:
                         print("        looking at neighbor v={}".format((*new_position, new_direction)))
 
-                    v = WayPoint(position=new_position, direction=new_direction)
+                    v = Waypoint(position=new_position, direction=new_direction)
                     # CAVEAT: do not allow for loopy paths
                     if v in pu:
                         continue

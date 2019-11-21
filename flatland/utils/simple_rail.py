@@ -193,9 +193,10 @@ def make_simple_rail_with_alternatives() -> Tuple[GridTransitionMap, np.array]:
     rail_map = np.array(
         [[empty] * 3 + [right_turn_from_south] + [horizontal_straight] * 5 + [right_turn_from_west]] +
         [[empty] * 3 + [vertical_straight] + [empty] * 5 + [vertical_straight]] * 2 +
-        [[dead_end_from_east] + [horizontal_straight] * 2 + [simple_switch_left_east] + [horizontal_straight] * 2 + [right_turn_from_west] + [empty] * 2 + [vertical_straight]] +
-        [[empty] * 6 + [simple_switch_north_right] + [horizontal_straight] * 2 + [right_turn_from_north]]  +
-        [[empty] * 6 + [vertical_straight] + [empty] * 3]  +
+        [[dead_end_from_east] + [horizontal_straight] * 2 + [simple_switch_left_east] + [horizontal_straight] * 2 + [
+            right_turn_from_west] + [empty] * 2 + [vertical_straight]] +
+        [[empty] * 6 + [simple_switch_north_right] + [horizontal_straight] * 2 + [right_turn_from_north]] +
+        [[empty] * 6 + [vertical_straight] + [empty] * 3] +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)

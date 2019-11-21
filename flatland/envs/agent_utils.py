@@ -31,7 +31,6 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
 
 @attrs
 class EnvAgent:
-
     initial_position = attrib(type=Tuple[int, int])
     initial_direction = attrib(type=Grid4TransitionsEnum)
     direction = attrib(type=Grid4TransitionsEnum)
