@@ -6,7 +6,7 @@ import numpy as np
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_action_for_move
-from flatland.envs.rail_train_run_data_structures import Wayoint, Trainrun, TrainrunWaypoint
+from flatland.envs.rail_train_run_data_structures import Waypoint, Trainrun, TrainrunWaypoint
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 # ---- ActionPlan ---------------
@@ -35,7 +35,7 @@ class ControllerFromTrainruns():
         self.action_plan: ActionPlanDict = [self._create_action_plan_for_agent(agent_id, chosen_path)
                                             for agent_id, chosen_path in train_run_dict.items()]
 
-    def get_way_point_before_or_at_step(self, agent_id: int, step: int) -> Wayoint:
+    def get_way_point_before_or_at_step(self, agent_id: int, step: int) -> Waypoint:
         """
         Get the way point point from which the current position can be extracted.
 
@@ -53,13 +53,13 @@ class ControllerFromTrainruns():
         entry_time_step = train_run[0].scheduled_at
         # the agent has no position before and at choosing to enter the grid (one tick elapses before the agent enters the grid)
         if step <= entry_time_step:
-            return Wayoint(position=None, direction=self.env.agents[agent_id].initial_direction)
+            return Waypoint(position=None, direction=self.env.agents[agent_id].initial_direction)
 
         # the agent has no position as soon as the target is reached
         exit_time_step = train_run[-1].scheduled_at
         if step >= exit_time_step:
             # agent loses position as soon as target cell is reached
-            return Wayoint(position=None, direction=train_run[-1].way_point.direction)
+            return Waypoint(position=None, direction=train_run[-1].way_point.direction)
 
         way_point = None
         for train_run_way_point in train_run:
@@ -277,7 +277,7 @@ class ControllerFromTrainrunsReplayer():
         i = 0
         while not env.dones['__all__'] and i <= max_episode_steps:
             for agent_id, agent in enumerate(env.agents):
-                way_point: Wayoint = ctl.get_way_point_before_or_at_step(agent_id, i)
+                way_point: Waypoint = ctl.get_way_point_before_or_at_step(agent_id, i)
                 assert agent.position == way_point.position, \
                     "before {}, agent {} at {}, expected {}".format(i, agent_id, agent.position,
                                                                     way_point.position)
