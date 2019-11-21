@@ -40,7 +40,8 @@ env = RailEnv(width=100,
                                                    ),
               schedule_generator=sparse_schedule_generator(speed_ration_map),
               number_of_agents=100,
-              malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),  # Malfunction data generator
+              malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
+              # Malfunction data generator
               obs_builder_object=GlobalObsForRailEnv(),
               remove_agents_at_target=True,
               record_steps=True

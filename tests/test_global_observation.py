@@ -1,7 +1,6 @@
 import numpy as np
 
 from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
-from flatland.envs.malfunction_generators import malfunction_from_params
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator

@@ -264,7 +264,7 @@ class ControllerFromTrainrunsReplayer():
     """Allows to verify a `DeterministicController` by replaying it against a FLATland env without malfunction."""
 
     @staticmethod
-    def replay_verify(max_episode_steps: int, ctl: ControllerFromTrainruns, env: RailEnv, rendering: bool):
+    def replay_verify(ctl: ControllerFromTrainruns, env: RailEnv, rendering: bool):
         """Replays this deterministic `ActionPlan` and verifies whether it is feasible."""
         if rendering:
             renderer = RenderTool(env, gl="PILSVG",
@@ -275,7 +275,7 @@ class ControllerFromTrainrunsReplayer():
                                   screen_width=1000)
             renderer.render_env(show=True, show_observations=False, show_predictions=False)
         i = 0
-        while not env.dones['__all__'] and i <= max_episode_steps:
+        while not env.dones['__all__'] and i <= env._max_episode_steps:
             for agent_id, agent in enumerate(env.agents):
                 way_point: Waypoint = ctl.get_way_point_before_or_at_step(agent_id, i)
                 assert agent.position == way_point.position, \

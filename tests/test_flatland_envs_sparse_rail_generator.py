@@ -1,4 +1,3 @@
-import random
 import unittest
 import warnings
 
@@ -13,7 +12,6 @@ from flatland.utils.rendertools import RenderTool
 
 
 def test_sparse_rail_generator():
-
     env = RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(max_num_cities=10,
                                                                             max_rails_between_cities=3,
                                                                             seed=5,
@@ -593,7 +591,6 @@ def test_sparse_rail_generator():
 
 def test_sparse_rail_generator_deterministic():
     """Check that sparse_rail_generator runs deterministic over different python versions!"""
-
 
     speed_ration_map = {1.: 1.,  # Fast passenger train
                         1. / 2.: 0.,  # Fast freight train
@@ -1440,7 +1437,6 @@ def test_rail_env_action_required_info():
 
 
 def test_rail_env_malfunction_speed_info():
-
     env = RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(max_num_cities=10,
                                                                             max_rails_between_cities=3,
                                                                             seed=5,
@@ -1475,7 +1471,6 @@ def test_rail_env_malfunction_speed_info():
 
 
 def test_sparse_generator_with_too_man_cities_does_not_break_down():
-
     RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(
         max_num_cities=100,
         max_rails_between_cities=3,

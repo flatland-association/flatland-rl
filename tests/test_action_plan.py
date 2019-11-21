@@ -80,9 +80,7 @@ def test_action_plan(rendering: bool = False):
 
     ]]
 
-    MAX_EPISODE_STEPS = 50
-
     deterministic_controller = ControllerFromTrainruns(env, chosen_path_dict)
     deterministic_controller.print_action_plan()
     ControllerFromTrainruns.assert_actions_plans_equal(expected_action_plan, deterministic_controller.action_plan)
-    ControllerFromTrainrunsReplayer.replay_verify(MAX_EPISODE_STEPS, deterministic_controller, env, rendering)
+    ControllerFromTrainrunsReplayer.replay_verify(deterministic_controller, env, rendering)

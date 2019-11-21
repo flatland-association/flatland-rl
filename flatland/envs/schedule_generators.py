@@ -63,7 +63,7 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
         :param num_resets: How often the generator has been reset.
         :return: Returns the generator to the rail constructor
         """
-        #Todo: Remove parameters and variables not used for next version, Issue: <https://gitlab.aicrowd.com/flatland/flatland/issues/305>
+        # Todo: Remove parameters and variables not used for next version, Issue: <https://gitlab.aicrowd.com/flatland/flatland/issues/305>
         _runtime_seed = seed + num_resets
 
         start_goal = hints['start_goal']

@@ -42,7 +42,6 @@ if not os.path.exists(img_dest):
 for image_file in glob.glob(r'./images/*.png'):
     shutil.copy(image_file, img_dest)
 
-
 subprocess.call(['sphinx-apidoc', '--force', '-a', '-e', '-o', 'docs/', 'flatland', '-H', 'API Reference', '--tocfile',
                  '05_apidoc'])
 

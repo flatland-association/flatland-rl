@@ -2,7 +2,6 @@ import random
 from typing import Dict, List
 
 import numpy as np
-from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
@@ -13,6 +12,7 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.simple_rail import make_simple_rail2
+from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 
 class SingleAgentNavigationObs(ObservationBuilder):

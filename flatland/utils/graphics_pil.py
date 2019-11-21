@@ -542,8 +542,8 @@ class PILSVG(PILGL):
                         if (col + row + col * row) % 3 == 0:
                             a = (a + (col + row + col * row)) % len(self.dBuildings)
                         pil_track = self.dBuildings[a]
-                elif ((self.background_grid[col][row] > 5 + ((col * row + col) % 3)) or 
-                        ((col ** 3 + row ** 2 + col * row) % 10 == 0)):
+                elif ((self.background_grid[col][row] > 5 + ((col * row + col) % 3)) or
+                      ((col ** 3 + row ** 2 + col * row) % 10 == 0)):
                     a = int(self.background_grid[col][row]) - 4
                     a2 = (a + (col + row + col * row + col ** 3 + row ** 4))
                     if a2 % 64 > 11:
