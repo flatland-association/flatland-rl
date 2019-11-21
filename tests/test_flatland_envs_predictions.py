@@ -11,7 +11,7 @@ from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPred
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.rail_train_run_data_structures import Waypoint
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail, make_simple_rail2, make_invalid_simple_rail

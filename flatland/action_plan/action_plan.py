@@ -6,7 +6,7 @@ import numpy as np
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_action_for_move
-from flatland.envs.rail_train_run_data_structures import Waypoint, Trainrun, TrainrunWaypoint
+from flatland.envs.rail_trainrun_data_structures import Waypoint, Trainrun, TrainrunWaypoint
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 # ---- ActionPlan ---------------
@@ -28,14 +28,14 @@ class ControllerFromTrainruns():
 
     def __init__(self,
                  env: RailEnv,
-                 train_run_dict: Dict[int, Trainrun]):
+                 trainrun_dict: Dict[int, Trainrun]):
 
         self.env: RailEnv = env
-        self.train_run_dict: Dict[int, Trainrun] = train_run_dict
+        self.trainrun_dict: Dict[int, Trainrun] = trainrun_dict
         self.action_plan: ActionPlanDict = [self._create_action_plan_for_agent(agent_id, chosen_path)
-                                            for agent_id, chosen_path in train_run_dict.items()]
+                                            for agent_id, chosen_path in trainrun_dict.items()]
 
-    def get_way_point_before_or_at_step(self, agent_id: int, step: int) -> Waypoint:
+    def get_waypoint_before_or_at_step(self, agent_id: int, step: int) -> Waypoint:
         """
         Get the way point point from which the current position can be extracted.
 
@@ -49,26 +49,26 @@ class ControllerFromTrainruns():
         WalkingElement
 
         """
-        train_run = self.train_run_dict[agent_id]
-        entry_time_step = train_run[0].scheduled_at
+        trainrun = self.trainrun_dict[agent_id]
+        entry_time_step = trainrun[0].scheduled_at
         # the agent has no position before and at choosing to enter the grid (one tick elapses before the agent enters the grid)
         if step <= entry_time_step:
             return Waypoint(position=None, direction=self.env.agents[agent_id].initial_direction)
 
         # the agent has no position as soon as the target is reached
-        exit_time_step = train_run[-1].scheduled_at
+        exit_time_step = trainrun[-1].scheduled_at
         if step >= exit_time_step:
             # agent loses position as soon as target cell is reached
-            return Waypoint(position=None, direction=train_run[-1].way_point.direction)
+            return Waypoint(position=None, direction=trainrun[-1].waypoint.direction)
 
-        way_point = None
-        for train_run_way_point in train_run:
-            if step < train_run_way_point.scheduled_at:
-                return way_point
-            if step >= train_run_way_point.scheduled_at:
-                way_point = train_run_way_point.way_point
-        assert way_point is not None
-        return way_point
+        waypoint = None
+        for trainrun_waypoint in trainrun:
+            if step < trainrun_waypoint.scheduled_at:
+                return waypoint
+            if step >= trainrun_waypoint.scheduled_at:
+                waypoint = trainrun_waypoint.waypoint
+        assert waypoint is not None
+        return waypoint
 
     def get_action_at_step(self, agent_id: int, current_step: int) -> Optional[RailEnvActions]:
         """
@@ -142,26 +142,26 @@ class ControllerFromTrainruns():
         assert expected_action_plan == actual_action_plan, \
             "expected {}, found {}".format(expected_action_plan, actual_action_plan)
 
-    def _create_action_plan_for_agent(self, agent_id, train_run) -> ActionPlan:
+    def _create_action_plan_for_agent(self, agent_id, trainrun) -> ActionPlan:
         action_plan = []
         agent = self.env.agents[agent_id]
         minimum_cell_time = int(np.ceil(1.0 / agent.speed_data['speed']))
-        for path_loop, train_run_way_point in enumerate(train_run):
-            train_run_way_point: TrainrunWaypoint = train_run_way_point
+        for path_loop, trainrun_waypoint in enumerate(trainrun):
+            trainrun_waypoint: TrainrunWaypoint = trainrun_waypoint
 
-            position = train_run_way_point.way_point.position
+            position = trainrun_waypoint.waypoint.position
 
             if Vec2d.is_equal(agent.target, position):
                 break
 
-            next_train_run_way_point: TrainrunWaypoint = train_run[path_loop + 1]
-            next_position = next_train_run_way_point.way_point.position
+            next_trainrun_waypoint: TrainrunWaypoint = trainrun[path_loop + 1]
+            next_position = next_trainrun_waypoint.waypoint.position
 
             if path_loop == 0:
                 self._add_action_plan_elements_for_first_path_element_of_agent(
                     action_plan,
-                    train_run_way_point,
-                    next_train_run_way_point,
+                    trainrun_waypoint,
+                    next_trainrun_waypoint,
                     minimum_cell_time
                 )
                 continue
@@ -171,30 +171,30 @@ class ControllerFromTrainruns():
             self._add_action_plan_elements_for_current_path_element(
                 action_plan,
                 minimum_cell_time,
-                train_run_way_point,
-                next_train_run_way_point)
+                trainrun_waypoint,
+                next_trainrun_waypoint)
 
             # add a final element
             if just_before_target:
                 self._add_action_plan_elements_for_target_at_path_element_just_before_target(
                     action_plan,
                     minimum_cell_time,
-                    train_run_way_point,
-                    next_train_run_way_point)
+                    trainrun_waypoint,
+                    next_trainrun_waypoint)
         return action_plan
 
     def _add_action_plan_elements_for_current_path_element(self,
                                                            action_plan: ActionPlan,
                                                            minimum_cell_time: int,
-                                                           train_run_way_point: TrainrunWaypoint,
-                                                           next_train_run_way_point: TrainrunWaypoint):
-        scheduled_at = train_run_way_point.scheduled_at
-        next_entry_value = next_train_run_way_point.scheduled_at
+                                                           trainrun_waypoint: TrainrunWaypoint,
+                                                           next_trainrun_waypoint: TrainrunWaypoint):
+        scheduled_at = trainrun_waypoint.scheduled_at
+        next_entry_value = next_trainrun_waypoint.scheduled_at
 
-        position = train_run_way_point.way_point.position
-        direction = train_run_way_point.way_point.direction
-        next_position = next_train_run_way_point.way_point.position
-        next_direction = next_train_run_way_point.way_point.direction
+        position = trainrun_waypoint.waypoint.position
+        direction = trainrun_waypoint.waypoint.direction
+        next_position = next_trainrun_waypoint.waypoint.position
+        next_direction = next_trainrun_waypoint.waypoint.direction
         next_action = get_action_for_move(position,
                                           direction,
                                           next_position,
@@ -217,23 +217,23 @@ class ControllerFromTrainruns():
     def _add_action_plan_elements_for_target_at_path_element_just_before_target(self,
                                                                                 action_plan: ActionPlan,
                                                                                 minimum_cell_time: int,
-                                                                                train_run_way_point: TrainrunWaypoint,
-                                                                                next_train_run_way_point: TrainrunWaypoint):
-        scheduled_at = train_run_way_point.scheduled_at
+                                                                                trainrun_waypoint: TrainrunWaypoint,
+                                                                                next_trainrun_waypoint: TrainrunWaypoint):
+        scheduled_at = trainrun_waypoint.scheduled_at
 
         action = ActionPlanElement(scheduled_at + minimum_cell_time, RailEnvActions.STOP_MOVING)
         action_plan.append(action)
 
     def _add_action_plan_elements_for_first_path_element_of_agent(self,
                                                                   action_plan: ActionPlan,
-                                                                  train_run_way_point: TrainrunWaypoint,
-                                                                  next_train_run_way_point: TrainrunWaypoint,
+                                                                  trainrun_waypoint: TrainrunWaypoint,
+                                                                  next_trainrun_waypoint: TrainrunWaypoint,
                                                                   minimum_cell_time: int):
-        scheduled_at = train_run_way_point.scheduled_at
-        position = train_run_way_point.way_point.position
-        direction = train_run_way_point.way_point.direction
-        next_position = next_train_run_way_point.way_point.position
-        next_direction = next_train_run_way_point.way_point.direction
+        scheduled_at = trainrun_waypoint.scheduled_at
+        position = trainrun_waypoint.waypoint.position
+        direction = trainrun_waypoint.waypoint.direction
+        next_position = next_trainrun_waypoint.waypoint.position
+        next_direction = next_trainrun_waypoint.waypoint.direction
 
         # add intial do nothing if we do not enter immediately, actually not necessary
         if scheduled_at > 0:
@@ -251,12 +251,12 @@ class ControllerFromTrainruns():
                                           self.env.rail)
 
         # if the agent is blocked in the cell, we have to call stop upon entering!
-        if next_train_run_way_point.scheduled_at > scheduled_at + 1 + minimum_cell_time:
+        if next_trainrun_waypoint.scheduled_at > scheduled_at + 1 + minimum_cell_time:
             action = ActionPlanElement(scheduled_at + 1, RailEnvActions.STOP_MOVING)
             action_plan.append(action)
 
         # execute the action exactly minimum_cell_time before the entry into the next cell
-        action = ActionPlanElement(next_train_run_way_point.scheduled_at - minimum_cell_time, next_action)
+        action = ActionPlanElement(next_trainrun_waypoint.scheduled_at - minimum_cell_time, next_action)
         action_plan.append(action)
 
 
@@ -277,10 +277,10 @@ class ControllerFromTrainrunsReplayer():
         i = 0
         while not env.dones['__all__'] and i <= env._max_episode_steps:
             for agent_id, agent in enumerate(env.agents):
-                way_point: Waypoint = ctl.get_way_point_before_or_at_step(agent_id, i)
-                assert agent.position == way_point.position, \
+                waypoint: Waypoint = ctl.get_waypoint_before_or_at_step(agent_id, i)
+                assert agent.position == waypoint.position, \
                     "before {}, agent {} at {}, expected {}".format(i, agent_id, agent.position,
-                                                                    way_point.position)
+                                                                    waypoint.position)
             actions = ctl.act(i)
             print("actions for {}: {}".format(i, actions))
 

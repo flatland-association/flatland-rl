@@ -4,7 +4,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.rail_train_run_data_structures import Waypoint
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.simple_rail import make_simple_rail
 
@@ -32,25 +32,25 @@ def test_action_plan(rendering: bool = False):
     for handle, agent in enumerate(env.agents):
         print("[{}] {} -> {}".format(handle, agent.initial_position, agent.target))
 
-    chosen_path_dict = {0: [TrainrunWaypoint(scheduled_at=0, way_point=Waypoint(position=(3, 0), direction=3)),
-                            TrainrunWaypoint(scheduled_at=2, way_point=Waypoint(position=(3, 1), direction=1)),
-                            TrainrunWaypoint(scheduled_at=3, way_point=Waypoint(position=(3, 2), direction=1)),
-                            TrainrunWaypoint(scheduled_at=14, way_point=Waypoint(position=(3, 3), direction=1)),
-                            TrainrunWaypoint(scheduled_at=15, way_point=Waypoint(position=(3, 4), direction=1)),
-                            TrainrunWaypoint(scheduled_at=16, way_point=Waypoint(position=(3, 5), direction=1)),
-                            TrainrunWaypoint(scheduled_at=17, way_point=Waypoint(position=(3, 6), direction=1)),
-                            TrainrunWaypoint(scheduled_at=18, way_point=Waypoint(position=(3, 7), direction=1)),
-                            TrainrunWaypoint(scheduled_at=19, way_point=Waypoint(position=(3, 8), direction=1)),
-                            TrainrunWaypoint(scheduled_at=20, way_point=Waypoint(position=(3, 8), direction=5))],
-                        1: [TrainrunWaypoint(scheduled_at=0, way_point=Waypoint(position=(3, 8), direction=3)),
-                            TrainrunWaypoint(scheduled_at=3, way_point=Waypoint(position=(3, 7), direction=3)),
-                            TrainrunWaypoint(scheduled_at=5, way_point=Waypoint(position=(3, 6), direction=3)),
-                            TrainrunWaypoint(scheduled_at=7, way_point=Waypoint(position=(3, 5), direction=3)),
-                            TrainrunWaypoint(scheduled_at=9, way_point=Waypoint(position=(3, 4), direction=3)),
-                            TrainrunWaypoint(scheduled_at=11, way_point=Waypoint(position=(3, 3), direction=3)),
-                            TrainrunWaypoint(scheduled_at=13, way_point=Waypoint(position=(2, 3), direction=0)),
-                            TrainrunWaypoint(scheduled_at=15, way_point=Waypoint(position=(1, 3), direction=0)),
-                            TrainrunWaypoint(scheduled_at=17, way_point=Waypoint(position=(0, 3), direction=0))]}
+    chosen_path_dict = {0: [TrainrunWaypoint(scheduled_at=0, waypoint=Waypoint(position=(3, 0), direction=3)),
+                            TrainrunWaypoint(scheduled_at=2, waypoint=Waypoint(position=(3, 1), direction=1)),
+                            TrainrunWaypoint(scheduled_at=3, waypoint=Waypoint(position=(3, 2), direction=1)),
+                            TrainrunWaypoint(scheduled_at=14, waypoint=Waypoint(position=(3, 3), direction=1)),
+                            TrainrunWaypoint(scheduled_at=15, waypoint=Waypoint(position=(3, 4), direction=1)),
+                            TrainrunWaypoint(scheduled_at=16, waypoint=Waypoint(position=(3, 5), direction=1)),
+                            TrainrunWaypoint(scheduled_at=17, waypoint=Waypoint(position=(3, 6), direction=1)),
+                            TrainrunWaypoint(scheduled_at=18, waypoint=Waypoint(position=(3, 7), direction=1)),
+                            TrainrunWaypoint(scheduled_at=19, waypoint=Waypoint(position=(3, 8), direction=1)),
+                            TrainrunWaypoint(scheduled_at=20, waypoint=Waypoint(position=(3, 8), direction=5))],
+                        1: [TrainrunWaypoint(scheduled_at=0, waypoint=Waypoint(position=(3, 8), direction=3)),
+                            TrainrunWaypoint(scheduled_at=3, waypoint=Waypoint(position=(3, 7), direction=3)),
+                            TrainrunWaypoint(scheduled_at=5, waypoint=Waypoint(position=(3, 6), direction=3)),
+                            TrainrunWaypoint(scheduled_at=7, waypoint=Waypoint(position=(3, 5), direction=3)),
+                            TrainrunWaypoint(scheduled_at=9, waypoint=Waypoint(position=(3, 4), direction=3)),
+                            TrainrunWaypoint(scheduled_at=11, waypoint=Waypoint(position=(3, 3), direction=3)),
+                            TrainrunWaypoint(scheduled_at=13, waypoint=Waypoint(position=(2, 3), direction=0)),
+                            TrainrunWaypoint(scheduled_at=15, waypoint=Waypoint(position=(1, 3), direction=0)),
+                            TrainrunWaypoint(scheduled_at=17, waypoint=Waypoint(position=(0, 3), direction=0))]}
     expected_action_plan = [[
         # take action to enter the grid
         ActionPlanElement(0, RailEnvActions.MOVE_FORWARD),

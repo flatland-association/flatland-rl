@@ -10,7 +10,7 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env import RailEnvNextAction, RailEnvActions, RailEnv
-from flatland.envs.rail_train_run_data_structures import Waypoint
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.utils.ordered_set import OrderedSet
 
 

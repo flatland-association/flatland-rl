@@ -8,7 +8,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths, get_k_shortest_paths
 from flatland.envs.rail_env_utils import load_flatland_environment_from_file
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.rail_train_run_data_structures import Waypoint
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_disconnected_simple_rail, make_simple_rail_with_alternatives
