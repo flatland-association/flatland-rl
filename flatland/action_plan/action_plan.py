@@ -6,7 +6,7 @@ import numpy as np
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_action_for_move
-from flatland.envs.rail_train_run_data_structures import WayPoint, TrainRun, TrainRunWayPoint
+from flatland.envs.rail_train_run_data_structures import Wayoint, Trainrun, TrainrunWaypoint
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 # ---- ActionPlan ---------------
@@ -22,20 +22,20 @@ ActionPlan = List[ActionPlanElement]
 ActionPlanDict = Dict[int, ActionPlan]
 
 
-class ControllerFromTrainRuns():
+class ControllerFromTrainruns():
     """Takes train runs, derives the actions from it and re-acts them."""
     pp = pprint.PrettyPrinter(indent=4)
 
     def __init__(self,
                  env: RailEnv,
-                 train_run_dict: Dict[int, TrainRun]):
+                 train_run_dict: Dict[int, Trainrun]):
 
         self.env: RailEnv = env
-        self.train_run_dict: Dict[int, TrainRun] = train_run_dict
+        self.train_run_dict: Dict[int, Trainrun] = train_run_dict
         self.action_plan: ActionPlanDict = [self._create_action_plan_for_agent(agent_id, chosen_path)
                                             for agent_id, chosen_path in train_run_dict.items()]
 
-    def get_way_point_before_or_at_step(self, agent_id: int, step: int) -> WayPoint:
+    def get_way_point_before_or_at_step(self, agent_id: int, step: int) -> Wayoint:
         """
         Get the way point point from which the current position can be extracted.
 
@@ -53,13 +53,13 @@ class ControllerFromTrainRuns():
         entry_time_step = train_run[0].scheduled_at
         # the agent has no position before and at choosing to enter the grid (one tick elapses before the agent enters the grid)
         if step <= entry_time_step:
-            return WayPoint(position=None, direction=self.env.agents[agent_id].initial_direction)
+            return Wayoint(position=None, direction=self.env.agents[agent_id].initial_direction)
 
         # the agent has no position as soon as the target is reached
         exit_time_step = train_run[-1].scheduled_at
         if step >= exit_time_step:
             # agent loses position as soon as target cell is reached
-            return WayPoint(position=None, direction=train_run[-1].way_point.direction)
+            return Wayoint(position=None, direction=train_run[-1].way_point.direction)
 
         way_point = None
         for train_run_way_point in train_run:
@@ -130,15 +130,15 @@ class ControllerFromTrainRuns():
                 "len for agent {} should be the same.\n\n  expected ({}) = {}\n\n  actual ({}) = {}".format(
                     k,
                     len(expected_action_plan[k]),
-                    ControllerFromTrainRuns.pp.pformat(expected_action_plan[k]),
+                    ControllerFromTrainruns.pp.pformat(expected_action_plan[k]),
                     len(actual_action_plan[k]),
-                    ControllerFromTrainRuns.pp.pformat(actual_action_plan[k]))
+                    ControllerFromTrainruns.pp.pformat(actual_action_plan[k]))
             for i in range(len(expected_action_plan[k])):
                 assert expected_action_plan[k][i] == actual_action_plan[k][i], \
                     "not the same at agent {} at step {}\n\n  expected = {}\n\n  actual = {}".format(
                         k, i,
-                        ControllerFromTrainRuns.pp.pformat(expected_action_plan[k][i]),
-                        ControllerFromTrainRuns.pp.pformat(actual_action_plan[k][i]))
+                        ControllerFromTrainruns.pp.pformat(expected_action_plan[k][i]),
+                        ControllerFromTrainruns.pp.pformat(actual_action_plan[k][i]))
         assert expected_action_plan == actual_action_plan, \
             "expected {}, found {}".format(expected_action_plan, actual_action_plan)
 
@@ -147,14 +147,14 @@ class ControllerFromTrainRuns():
         agent = self.env.agents[agent_id]
         minimum_cell_time = int(np.ceil(1.0 / agent.speed_data['speed']))
         for path_loop, train_run_way_point in enumerate(train_run):
-            train_run_way_point: TrainRunWayPoint = train_run_way_point
+            train_run_way_point: TrainrunWaypoint = train_run_way_point
 
             position = train_run_way_point.way_point.position
 
             if Vec2d.is_equal(agent.target, position):
                 break
 
-            next_train_run_way_point: TrainRunWayPoint = train_run[path_loop + 1]
+            next_train_run_way_point: TrainrunWaypoint = train_run[path_loop + 1]
             next_position = next_train_run_way_point.way_point.position
 
             if path_loop == 0:
@@ -186,8 +186,8 @@ class ControllerFromTrainRuns():
     def _add_action_plan_elements_for_current_path_element(self,
                                                            action_plan: ActionPlan,
                                                            minimum_cell_time: int,
-                                                           train_run_way_point: TrainRunWayPoint,
-                                                           next_train_run_way_point: TrainRunWayPoint):
+                                                           train_run_way_point: TrainrunWaypoint,
+                                                           next_train_run_way_point: TrainrunWaypoint):
         scheduled_at = train_run_way_point.scheduled_at
         next_entry_value = next_train_run_way_point.scheduled_at
 
@@ -217,8 +217,8 @@ class ControllerFromTrainRuns():
     def _add_action_plan_elements_for_target_at_path_element_just_before_target(self,
                                                                                 action_plan: ActionPlan,
                                                                                 minimum_cell_time: int,
-                                                                                train_run_way_point: TrainRunWayPoint,
-                                                                                next_train_run_way_point: TrainRunWayPoint):
+                                                                                train_run_way_point: TrainrunWaypoint,
+                                                                                next_train_run_way_point: TrainrunWaypoint):
         scheduled_at = train_run_way_point.scheduled_at
 
         action = ActionPlanElement(scheduled_at + minimum_cell_time, RailEnvActions.STOP_MOVING)
@@ -226,8 +226,8 @@ class ControllerFromTrainRuns():
 
     def _add_action_plan_elements_for_first_path_element_of_agent(self,
                                                                   action_plan: ActionPlan,
-                                                                  train_run_way_point: TrainRunWayPoint,
-                                                                  next_train_run_way_point: TrainRunWayPoint,
+                                                                  train_run_way_point: TrainrunWaypoint,
+                                                                  next_train_run_way_point: TrainrunWaypoint,
                                                                   minimum_cell_time: int):
         scheduled_at = train_run_way_point.scheduled_at
         position = train_run_way_point.way_point.position
@@ -260,11 +260,11 @@ class ControllerFromTrainRuns():
         action_plan.append(action)
 
 
-class ControllerFromTrainRunsReplayer():
+class ControllerFromTrainrunsReplayer():
     """Allows to verify a `DeterministicController` by replaying it against a FLATland env without malfunction."""
 
     @staticmethod
-    def replay_verify(max_episode_steps: int, ctl: ControllerFromTrainRuns, env: RailEnv, rendering: bool):
+    def replay_verify(max_episode_steps: int, ctl: ControllerFromTrainruns, env: RailEnv, rendering: bool):
         """Replays this deterministic `ActionPlan` and verifies whether it is feasible."""
         if rendering:
             renderer = RenderTool(env, gl="PILSVG",
@@ -277,7 +277,7 @@ class ControllerFromTrainRunsReplayer():
         i = 0
         while not env.dones['__all__'] and i <= max_episode_steps:
             for agent_id, agent in enumerate(env.agents):
-                way_point: WayPoint = ctl.get_way_point_before_or_at_step(agent_id, i)
+                way_point: Wayoint = ctl.get_way_point_before_or_at_step(agent_id, i)
                 assert agent.position == way_point.position, \
                     "before {}, agent {} at {}, expected {}".format(i, agent_id, agent.position,
                                                                     way_point.position)
