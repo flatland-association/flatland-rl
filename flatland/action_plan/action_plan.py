@@ -117,7 +117,13 @@ class ControllerFromTrainruns():
         return action_dict
 
     def print_action_plan(self):
-        for agent_id, plan in enumerate(self.action_plan):
+        """Pretty-prints `ActionPlanDict` of this `ControllerFromTrainruns`  to stdout."""
+        self.__class__.print_action_plan_dict(self.action_plan)
+
+    @staticmethod
+    def print_action_plan_dict(action_plan: ActionPlanDict):
+        """Pretty-prints `ActionPlanDict` to stdout."""
+        for agent_id, plan in enumerate(action_plan):
             print("{}: ".format(agent_id))
             for step in plan:
                 print("  {}".format(step))
