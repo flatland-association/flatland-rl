@@ -108,7 +108,7 @@ class View(object):
         ldButtons = [
             dict(name="Refresh", method=self.controller.refresh, tip="Redraw only"),
             dict(name="Rotate Agent", method=self.controller.rotate_agent, tip="Rotate selected agent"),
-            dict(name="Restart Agents", method=self.controller.restart_agents,
+            dict(name="Restart Agents", method=self.controller.reset_agents,
                  tip="Move agents back to start positions"),
             dict(name="Random", method=self.controller.reset,
                  tip="Generate a randomized scene, including regen rail + agents"),
@@ -144,7 +144,7 @@ class View(object):
     def redraw(self):
         with self.output_generator:
             self.oRT.set_new_rail()
-            self.model.env.restart_agents()
+            self.model.env.reset_agents()
             for a in self.model.env.agents:
                 if hasattr(a, 'old_position') is False:
                     a.old_position = a.position
@@ -334,7 +334,7 @@ class Controller(object):
                     agent.old_direction = agent.direction
         self.model.redraw()
 
-    def restart_agents(self, event):
+    def reset_agents(self, event):
         self.log("Restart Agents - nAgents:", self.view.regen_n_agents.value)
         self.model.env.reset(False, False)
         self.refresh(event)
@@ -605,7 +605,7 @@ class EditorModel(object):
         self.redraw()
 
     def restart_agents(self):
-        self.env.restart_agents()
+        self.env.reset_agents()
         self.redraw()
 
     def set_filename(self, filename):
@@ -621,7 +621,7 @@ class EditorModel(object):
                 self.regenerate(None, 0, self.env)
                 self.env.load(self.env_filename)
 
-            self.env.restart_agents()
+            self.env.reset_agents()
             self.env.reset(False, False)
             self.view.oRT.update_background()
             self.fix_env()

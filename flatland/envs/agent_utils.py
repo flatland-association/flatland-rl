@@ -61,6 +61,9 @@ class EnvAgent:
     old_position = attrib(default=None)
 
     def reset(self):
+        """
+        Resets the agents to their initial values of the episode
+        """
         self.position = None
         # TODO: set direction to None: https://gitlab.aicrowd.com/flatland/flatland/issues/280
         self.direction = self.initial_direction
@@ -68,6 +71,15 @@ class EnvAgent:
         self.old_position = None
         self.old_direction = None
         self.moving = False
+
+        # Reset agent values for speed
+        self.speed_data['position_fraction'] = 0.
+        self.speed_data['transition_action_on_cellexit'] = 0.
+
+        # Reset agent malfunction values
+        self.malfunction_data['malfunction'] = 0
+        self.malfunction_data['nr_malfunctions'] = 0
+        self.malfunction_data['moving_before_malfunction'] = False
 
     def to_agent(self) -> Agent:
         return Agent(initial_position=self.initial_position, initial_direction=self.initial_direction,
