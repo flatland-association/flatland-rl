@@ -232,7 +232,7 @@ class RailEnv(Environment):
             agent.status = RailAgentStatus.ACTIVE
             self._set_agent_to_initial_position(agent, agent.initial_position)
 
-    def restart_agents(self):
+    def reset_agents(self):
         """ Reset the agents to their starting positions
         """
         for agent in self.agents:
@@ -328,6 +328,8 @@ class RailEnv(Environment):
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
+
+
         if regenerate_schedule or regenerate_rail or self.get_num_agents() == 0:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
@@ -347,7 +349,8 @@ class RailEnv(Environment):
 
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
 
-        self.restart_agents()
+        # Reset agents to initial
+        self.reset_agents()
 
         for agent in self.agents:
             # Induce malfunctions
