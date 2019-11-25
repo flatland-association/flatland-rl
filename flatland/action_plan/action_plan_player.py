@@ -4,13 +4,15 @@ from flatland.action_plan.action_plan import ControllerFromTrainruns
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
+ControllerFromTrainrunsReplayerRenderCallback = Callable[[RailEnv], None]
+
 
 class ControllerFromTrainrunsReplayer():
     """Allows to verify a `DeterministicController` by replaying it against a FLATland env without malfunction."""
 
     @staticmethod
     def replay_verify(ctl: ControllerFromTrainruns, env: RailEnv,
-                      call_back: Callable[[RailEnv], None] = lambda *a, **k: None):
+                      call_back: ControllerFromTrainrunsReplayerRenderCallback = lambda *a, **k: None):
         """Replays this deterministic `ActionPlan` and verifies whether it is feasible.
 
         Parameters
