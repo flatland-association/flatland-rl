@@ -1,5 +1,6 @@
-from flatland.action_plan.action_plan import TrainrunWaypoint, ControllerFromTrainrunsReplayer, ActionPlanElement, \
+from flatland.action_plan.action_plan import TrainrunWaypoint, ActionPlanElement, \
     ControllerFromTrainruns
+from flatland.action_plan.action_plan_player import ControllerFromTrainrunsReplayer
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
