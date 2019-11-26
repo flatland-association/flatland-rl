@@ -77,8 +77,8 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
         else:
             speeds = [1.0] * len(agents_position)
         # Compute max number of steps with given schedule
-        nice_factor = 1.5  # Factor to allow for more then minimal time
-        max_episode_steps = int(nice_factor * rail.height * rail.width)
+        extra_time_factor = 1.5  # Factor to allow for more then minimal time
+        max_episode_steps = int(extra_time_factor * rail.height * rail.width)
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
                         agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
@@ -166,6 +166,9 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
             speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed, np_random=np_random)
         else:
             speeds = [1.0] * len(agents_position)
+
+        # We add multiply factors to the max number of time steps to simplify task in Flatland challenge.
+        # These factors might change in the future.
         timedelay_factor = 4
         alpha = 2
         max_episode_steps = int(
@@ -270,8 +273,8 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
         agents_speed = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed, np_random=np_random)
 
         # Compute max number of steps with given schedule
-        nice_factor = 1.5  # Factor to allow for more then minimal time
-        max_episode_steps = int(nice_factor * rail.height * rail.width)
+        extra_time_factor = 1.5  # Factor to allow for more then minimal time
+        max_episode_steps = int(extra_time_factor * rail.height * rail.width)
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
                         agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None,
