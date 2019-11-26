@@ -1,8 +1,10 @@
+from flatland.envs.rail_env import RailEnv
 from test_utils import create_and_save_env
 
-from flatland.envs.rail_generators import sparse_rail_generator, random_rail_generator, complex_rail_generator
+from flatland.envs.rail_generators import sparse_rail_generator, random_rail_generator, complex_rail_generator, \
+    rail_from_file
 from flatland.envs.schedule_generators import sparse_schedule_generator, random_schedule_generator, \
-    complex_schedule_generator
+    complex_schedule_generator, schedule_from_file
 
 
 def test_schedule_from_file():
@@ -64,6 +66,29 @@ def test_schedule_from_file():
 
     create_and_save_env(file_name="./complex_env_test.pkl", rail_generator=rail_generator,
                         schedule_generator=schedule_generator)
+
+    # Load the different envs and check the parameters
+
+    # Sparse generator
+    rail_generator = rail_from_file("./sparse_env_test.pkl")
+    schedule_generator = schedule_from_file("./sparse_env_test.pkl")
+    sparse_env_from_file = RailEnv(width=1, height=1, rail_generator=rail_generator, schedule_generator=schedule_generator)
+    sparse_env_from_file.reset(True,True)
+    assert sparse_env_from_file.get_num_agents() == 10
+
+    # Random generator
+    rail_generator = rail_from_file("./random_env_test.pkl")
+    schedule_generator = schedule_from_file("./random_env_test.pkl")
+    random_env_from_file = RailEnv(width=1, height=1, rail_generator=rail_generator, schedule_generator=schedule_generator)
+    random_env_from_file.reset(True,True)
+    assert random_env_from_file.get_num_agents() == 10
+
+    # Complex generator
+    rail_generator = rail_from_file("./complex_env_test.pkl")
+    schedule_generator = schedule_from_file("./complex_env_test.pkl")
+    complex_env_from_file = RailEnv(width=1, height=1, rail_generator=rail_generator, schedule_generator=schedule_generator)
+    complex_env_from_file.reset(True,True)
+    assert complex_env_from_file.get_num_agents() == 10
 
 # def test_sparse_schedule_generator():
 
