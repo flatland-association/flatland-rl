@@ -76,9 +76,13 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
             speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed, np_random=np_random)
         else:
             speeds = [1.0] * len(agents_position)
+        # Compute max number of steps with given schedule
+        nice_factor = 1.5  # Factor to allow for more then minimal time
+        max_episode_steps = nice_factor * rail.height * rail.width
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None)
+                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
+                        max_episode_steps=max_episode_steps)
 
     return generator
 
@@ -162,9 +166,14 @@ def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, see
             speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed, np_random=np_random)
         else:
             speeds = [1.0] * len(agents_position)
+        timedelay_factor = 4
+        alpha = 2
+        max_episode_steps = int(
+            timedelay_factor * alpha * (rail.width + rail.height + num_agents / len(city_positions)))
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None)
+                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
+                        max_episode_steps=max_episode_steps)
 
     return generator
 
@@ -196,12 +205,12 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
                     valid_positions.append((r, c))
         if len(valid_positions) == 0:
             return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None)
+                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None, max_episode_steps=0)
 
         if len(valid_positions) < num_agents:
             warnings.warn("schedule_generators: len(valid_positions) < num_agents")
             return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None)
+                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None, max_episode_steps=0)
 
         agents_position_idx = [i for i in np_random.choice(len(valid_positions), num_agents, replace=False)]
         agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]
@@ -259,8 +268,14 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
                         np_random.choice(len(valid_starting_directions), 1)[0]]
 
         agents_speed = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed, np_random=np_random)
+
+        # Compute max number of steps with given schedule
+        nice_factor = 1.5  # Factor to allow for more then minimal time
+        max_episode_steps = nice_factor * rail.height * rail.width
+
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None)
+                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None,
+                        max_episode_steps=max_episode_steps)
 
     return generator
 
@@ -292,7 +307,11 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
             agents = EnvAgent.load_legacy_static_agent(data["agents_static"])
         else:
             agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
-
+        if "max_episode_steps" in data:
+            max_episode_steps = data["max_episode_steps"]
+        else:
+            # If no max time was found return 0.
+            max_episode_steps = 0
         # setup with loaded data
         agents_position = [a.initial_position for a in agents]
         agents_direction = [a.direction for a in agents]
@@ -301,6 +320,7 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
         agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None)
+                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None,
+                        max_episode_steps=max_episode_steps)
 
     return generator

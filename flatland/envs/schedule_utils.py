@@ -7,4 +7,5 @@ Schedule = NamedTuple('Schedule', [('agent_positions', IntVector2DArray),
                                    ('agent_directions', List[Grid4TransitionsEnum]),
                                    ('agent_targets', IntVector2DArray),
                                    ('agent_speeds', List[float]),
-                                   ('agent_malfunction_rates', List[int])])
+                                   ('agent_malfunction_rates', List[int]),
+                                   ('max_episode_steps', int)])

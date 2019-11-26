@@ -167,6 +167,9 @@ def complex_rail_generator(nr_start_goal=1,
 
             if len(new_path) >= 2:
                 nr_created += 1
+            else:
+                # after too many failures we will give up
+                created_sanity += 1
 
         return grid_map, {'agents_hints': {
             'start_goal': start_goal,

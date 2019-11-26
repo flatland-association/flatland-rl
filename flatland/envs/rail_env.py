@@ -239,32 +239,6 @@ class RailEnv(Environment):
             agent.reset()
         self.active_agents = [i for i in range(len(self.agents))]
 
-    @staticmethod
-    def compute_max_episode_steps(width: int, height: int, ratio_nr_agents_to_nr_cities: float = 20.0) -> int:
-        """
-        compute_max_episode_steps(width, height, ratio_nr_agents_to_nr_cities, timedelay_factor, alpha)
-
-        The method computes the max number of episode steps allowed
-
-        Parameters
-        ----------
-        width : int
-            width of environment
-        height : int
-            height of environment
-        ratio_nr_agents_to_nr_cities : float, optional
-            number_of_agents/number_of_cities
-
-        Returns
-        -------
-        max_episode_steps: int
-            maximum number of episode steps
-
-        """
-        timedelay_factor = 4
-        alpha = 2
-        return int(timedelay_factor * alpha * (width + height + ratio_nr_agents_to_nr_cities))
-
     def action_required(self, agent):
         """
         Check if an agent needs to provide an action
@@ -328,8 +302,6 @@ class RailEnv(Environment):
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
 
-
-
         if regenerate_schedule or regenerate_rail or self.get_num_agents() == 0:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
@@ -339,13 +311,8 @@ class RailEnv(Environment):
                                                self.np_random)
             self.agents = EnvAgent.from_schedule(schedule)
 
-            if agents_hints and 'city_orientations' in agents_hints:
-                ratio_nr_agents_to_nr_cities = self.get_num_agents() / len(agents_hints['city_orientations'])
-                self._max_episode_steps = self.compute_max_episode_steps(
-                    width=self.width, height=self.height,
-                    ratio_nr_agents_to_nr_cities=ratio_nr_agents_to_nr_cities)
-            else:
-                self._max_episode_steps = self.compute_max_episode_steps(width=self.width, height=self.height)
+            # Get max number of allowed time steps from schedule generator
+            self._max_episode_steps = schedule.max_episode_steps
 
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
 
@@ -836,7 +803,8 @@ class RailEnv(Environment):
         msg_data = {
             "grid": grid_data,
             "agents": agent_data,
-            "malfunction": malfunction_data}
+            "malfunction": malfunction_data,
+            "max_episode_steps": self._max_episode_steps}
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def get_agent_state_msg(self) -> Packer:
@@ -863,7 +831,8 @@ class RailEnv(Environment):
             "grid": grid_data,
             "agents": agent_data,
             "distance_map": distance_map_data,
-            "malfunction": malfunction_data}
+            "malfunction": malfunction_data,
+            "max_episode_steps": self._max_episode_steps}
         return msgpack.packb(msg_data, use_bin_type=True)
 
     def set_full_state_msg(self, msg_data):
