@@ -1,5 +1,10 @@
 Changelog
 ==========
+Changes since Flatland 2.1.0
+--------------------------
+
+### Changes in 'scheulde_generators'
+- Schedule generators now provide the max number of steps allowed per episode
 
 Changes since Flatland 2.0.0
 --------------------------
