@@ -1,11 +1,13 @@
-from flatland.action_plan.action_plan import TrainrunWaypoint, ControllerFromTrainrunsReplayer, ActionPlanElement, \
+from flatland.action_plan.action_plan import TrainrunWaypoint, ActionPlanElement, \
     ControllerFromTrainruns
+from flatland.action_plan.action_plan_player import ControllerFromTrainrunsReplayer
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.utils.simple_rail import make_simple_rail
 
 
@@ -83,4 +85,16 @@ def test_action_plan(rendering: bool = False):
     deterministic_controller = ControllerFromTrainruns(env, chosen_path_dict)
     deterministic_controller.print_action_plan()
     ControllerFromTrainruns.assert_actions_plans_equal(expected_action_plan, deterministic_controller.action_plan)
-    ControllerFromTrainrunsReplayer.replay_verify(deterministic_controller, env, rendering)
+    if rendering:
+        renderer = RenderTool(env, gl="PILSVG",
+                              agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX,
+                              show_debug=True,
+                              clear_debug_text=True,
+                              screen_height=1000,
+                              screen_width=1000)
+
+    def render(*argv):
+        if rendering:
+            renderer.render_env(show=True, show_observations=False, show_predictions=False)
+
+    ControllerFromTrainrunsReplayer.replay_verify(deterministic_controller, env, call_back=render)
