@@ -73,27 +73,35 @@ def test_schedule_from_file():
     rail_generator = rail_from_file("./sparse_env_test.pkl")
     schedule_generator = schedule_from_file("./sparse_env_test.pkl")
     sparse_env_from_file = RailEnv(width=1, height=1, rail_generator=rail_generator, schedule_generator=schedule_generator)
-    sparse_env_from_file.reset(True,True)
+    sparse_env_from_file.reset(True, True)
+
+    # Assert loaded agent number is correct
     assert sparse_env_from_file.get_num_agents() == 10
+
+    # Assert max steps is correct
+    assert sparse_env_from_file._max_episode_steps == 500
 
     # Random generator
     rail_generator = rail_from_file("./random_env_test.pkl")
     schedule_generator = schedule_from_file("./random_env_test.pkl")
     random_env_from_file = RailEnv(width=1, height=1, rail_generator=rail_generator, schedule_generator=schedule_generator)
-    random_env_from_file.reset(True,True)
+    random_env_from_file.reset(True, True)
+
+    # Assert loaded agent number is correct
     assert random_env_from_file.get_num_agents() == 10
+
+    # Assert max steps is correct
+    assert random_env_from_file._max_episode_steps == 1350
 
     # Complex generator
     rail_generator = rail_from_file("./complex_env_test.pkl")
     schedule_generator = schedule_from_file("./complex_env_test.pkl")
     complex_env_from_file = RailEnv(width=1, height=1, rail_generator=rail_generator, schedule_generator=schedule_generator)
-    complex_env_from_file.reset(True,True)
+    complex_env_from_file.reset(True, True)
+
+    # Assert loaded agent number is correct
     assert complex_env_from_file.get_num_agents() == 10
 
-# def test_sparse_schedule_generator():
+    # Assert max steps is correct
+    assert complex_env_from_file._max_episode_steps == 1350
 
-
-# def test_random_schedule_generator():
-
-
-# def test_complex_schedule_generator():

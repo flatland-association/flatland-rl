@@ -78,7 +78,7 @@ def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, se
             speeds = [1.0] * len(agents_position)
         # Compute max number of steps with given schedule
         nice_factor = 1.5  # Factor to allow for more then minimal time
-        max_episode_steps = nice_factor * rail.height * rail.width
+        max_episode_steps = int(nice_factor * rail.height * rail.width)
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
                         agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
@@ -271,7 +271,7 @@ def random_schedule_generator(speed_ratio_map: Optional[Mapping[float, float]] =
 
         # Compute max number of steps with given schedule
         nice_factor = 1.5  # Factor to allow for more then minimal time
-        max_episode_steps = nice_factor * rail.height * rail.width
+        max_episode_steps = int(nice_factor * rail.height * rail.width)
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
                         agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None,
