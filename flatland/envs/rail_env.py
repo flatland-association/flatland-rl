@@ -312,6 +312,7 @@ class RailEnv(Environment):
             self.agents = EnvAgent.from_schedule(schedule)
 
             # Get max number of allowed time steps from schedule generator
+            # Look at the specific schedule generator used to see where this number comes from
             self._max_episode_steps = schedule.max_episode_steps
 
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
