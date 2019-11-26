@@ -7,7 +7,7 @@ from flatland.envs.schedule_generators import sparse_schedule_generator, random_
     complex_schedule_generator, schedule_from_file
 
 
-def test_schedule_from_file():
+def test_schedule_from_file_sparse():
     """
     Test to see that all parameters are loaded as expected
     Returns
@@ -32,24 +32,6 @@ def test_schedule_from_file():
     create_and_save_env(file_name="./sparse_env_test.pkl", rail_generator=rail_generator,
                         schedule_generator=schedule_generator)
 
-    # Generate random test env
-    rail_generator = random_rail_generator()
-    schedule_generator = random_schedule_generator(speed_ration_map)
-
-    create_and_save_env(file_name="./random_env_test.pkl", rail_generator=rail_generator,
-                        schedule_generator=schedule_generator)
-
-    # Generate complex test env
-    rail_generator = complex_rail_generator(nr_start_goal=10,
-                                            nr_extra=1,
-                                            min_dist=8,
-                                            max_dist=99999)
-    schedule_generator = complex_schedule_generator(speed_ration_map)
-
-    create_and_save_env(file_name="./complex_env_test.pkl", rail_generator=rail_generator,
-                        schedule_generator=schedule_generator)
-
-    # Load the different envs and check the parameters
 
     # Sparse generator
     rail_generator = rail_from_file("./sparse_env_test.pkl")
@@ -64,6 +46,29 @@ def test_schedule_from_file():
     # Assert max steps is correct
     assert sparse_env_from_file._max_episode_steps == 500
 
+
+
+def test_schedule_from_file_random():
+    """
+    Test to see that all parameters are loaded as expected
+    Returns
+    -------
+
+    """
+    # Different agent types (trains) with different speeds.
+    speed_ration_map = {1.: 0.25,  # Fast passenger train
+                        1. / 2.: 0.25,  # Fast freight train
+                        1. / 3.: 0.25,  # Slow commuter train
+                        1. / 4.: 0.25}  # Slow freight train
+
+    # Generate random test env
+    rail_generator = random_rail_generator()
+    schedule_generator = random_schedule_generator(speed_ration_map)
+
+    create_and_save_env(file_name="./random_env_test.pkl", rail_generator=rail_generator,
+                        schedule_generator=schedule_generator)
+
+
     # Random generator
     rail_generator = rail_from_file("./random_env_test.pkl")
     schedule_generator = schedule_from_file("./random_env_test.pkl")
@@ -76,6 +81,35 @@ def test_schedule_from_file():
 
     # Assert max steps is correct
     assert random_env_from_file._max_episode_steps == 1350
+
+
+
+
+def test_schedule_from_file_complex():
+    """
+    Test to see that all parameters are loaded as expected
+    Returns
+    -------
+
+    """
+    # Different agent types (trains) with different speeds.
+    speed_ration_map = {1.: 0.25,  # Fast passenger train
+                        1. / 2.: 0.25,  # Fast freight train
+                        1. / 3.: 0.25,  # Slow commuter train
+                        1. / 4.: 0.25}  # Slow freight train
+
+    # Generate complex test env
+    rail_generator = complex_rail_generator(nr_start_goal=10,
+                                            nr_extra=1,
+                                            min_dist=8,
+                                            max_dist=99999)
+    schedule_generator = complex_schedule_generator(speed_ration_map)
+
+    create_and_save_env(file_name="./complex_env_test.pkl", rail_generator=rail_generator,
+                        schedule_generator=schedule_generator)
+
+    # Load the different envs and check the parameters
+
 
     # Complex generator
     rail_generator = rail_from_file("./complex_env_test.pkl")
