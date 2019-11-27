@@ -1,4 +1,4 @@
-from typing import NamedTuple, Tuple, List
+from typing import NamedTuple, Tuple, List, Dict
 
 # A way point is the entry into a cell defined by
 # - the row and column coordinates of the cell entered
@@ -16,3 +16,4 @@ TrainrunWaypoint = NamedTuple('TrainrunWaypoint', [
 ])
 # A train run is the list of an agent's way points and their scheduled time
 Trainrun = List[TrainrunWaypoint]
+TrainrunDict = Dict[int, Trainrun]
