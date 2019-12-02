@@ -1,6 +1,11 @@
 Changelog
 ==========
+Changes since Flatland 2.1.0
+--------------------------
 
+### Changes in 'schedule_generators'
+- Schedule generators now provide the max number of steps allowed per episode
+- Pickle files generated with older versions of Flatland need to be regenerated in order to include `_max_episode_steps`
 Changes since Flatland 2.0.0
 --------------------------
 ### Changes in `EnvAgent`

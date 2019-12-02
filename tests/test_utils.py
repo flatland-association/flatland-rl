@@ -6,7 +6,10 @@ from attr import attrs, attrib
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
+from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params
 from flatland.envs.rail_env import RailEnvActions, RailEnv
+from flatland.envs.rail_generators import RailGenerator
+from flatland.envs.schedule_generators import ScheduleGenerator
 from flatland.utils.rendertools import RenderTool
 
 
@@ -131,3 +134,20 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             replay = test_config.replay[step]
 
             _assert(a, rewards_dict[a], replay.reward, 'reward')
+
+
+def create_and_save_env(file_name: str, schedule_generator: ScheduleGenerator, rail_generator: RailGenerator):
+    stochastic_data = MalfunctionParameters(malfunction_rate=1000,  # Rate of malfunction occurence
+                                            min_duration=15,  # Minimal duration of malfunction
+                                            max_duration=50  # Max duration of malfunction
+                                            )
+
+    env = RailEnv(width=30,
+                  height=30,
+                  rail_generator=rail_generator,
+                  schedule_generator=schedule_generator,
+                  number_of_agents=10,
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
+                  remove_agents_at_target=True)
+    env.reset(True, True)
+    env.save(file_name)
