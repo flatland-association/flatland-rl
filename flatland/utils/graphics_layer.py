@@ -25,6 +25,13 @@ class GraphicsLayer(object):
         pass
 
     def pause(self, seconds=0.00001):
+        """ deprecated """
+        pass
+
+    def idle(self, seconds=0.00001):
+        """ process any display events eg redraw, resize.
+            Return only after the given number of seconds, ie idle / loop until that number.
+        """
         pass
 
     def clf(self):

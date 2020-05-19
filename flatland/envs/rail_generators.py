@@ -3,7 +3,6 @@ import sys
 import warnings
 from typing import Callable, Tuple, Optional, Dict, List
 
-import msgpack
 import numpy as np
 from numpy.random.mtrand import RandomState
 
@@ -16,6 +15,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes, align_cell_to_city
+from flatland.envs import persistence
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -240,21 +240,15 @@ def rail_from_file(filename, load_from_package=None) -> RailGenerator:
     """
 
     def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
-                  np_random: RandomState = None) -> RailGenerator:
+                  np_random: RandomState = None) -> List:
+        env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
         rail_env_transitions = RailEnvTransitions()
-        if load_from_package is not None:
-            from importlib_resources import read_binary
-            load_data = read_binary(load_from_package, filename)
-        else:
-            with open(filename, "rb") as file_in:
-                load_data = file_in.read()
-        data = msgpack.unpackb(load_data, use_list=False)
 
-        grid = np.array(data[b"grid"])
+        grid = np.array(env_dict["grid"])
         rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
         rail.grid = grid
-        if b"distance_map" in data.keys():
-            distance_map = data[b"distance_map"]
+        if "distance_map" in env_dict:
+            distance_map = env_dict["distance_map"]
             if len(distance_map) > 0:
                 return rail, {'distance_map': distance_map}
         return [rail, None]
@@ -634,7 +628,8 @@ def sparse_rail_generator(max_num_cities: int = 5, grid_mode: bool = False, max_
         max_feasible_cities = min(max_num_cities,
                                   ((height - 2) // (2 * (city_radius + 1))) * ((width - 2) // (2 * (city_radius + 1))))
         if max_feasible_cities < 2:
-            sys.exit("[ABORT] Cannot fit more than one city in this map, no feasible environment possible! Aborting.")
+            # sys.exit("[ABORT] Cannot fit more than one city in this map, no feasible environment possible! Aborting.")
+            raise ValueError("ERROR: Cannot fit more than one city in this map, no feasible environment possible!")
 
         # Evenly distribute cities
         if grid_mode:
