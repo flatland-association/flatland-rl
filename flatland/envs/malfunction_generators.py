@@ -2,11 +2,11 @@
 
 from typing import Callable, NamedTuple, Optional, Tuple
 
-import msgpack
 import numpy as np
 from numpy.random.mtrand import RandomState
 
 from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
+from flatland.envs import persistence 
 
 Malfunction = NamedTuple('Malfunction', [('num_broken_steps', int)])
 MalfunctionParameters = NamedTuple('MalfunctionParameters',
@@ -28,7 +28,7 @@ def _malfunction_prob(rate: float) -> float:
         return 1 - np.exp(- (1 / rate))
 
 
-def malfunction_from_file(filename: str) -> Tuple[MalfunctionGenerator, MalfunctionProcessData]:
+def malfunction_from_file(filename: str, load_from_package=None) -> Tuple[MalfunctionGenerator, MalfunctionProcessData]:
     """
     Utility to load pickle file
 
@@ -40,18 +40,26 @@ def malfunction_from_file(filename: str) -> Tuple[MalfunctionGenerator, Malfunct
     -------
     generator, Tuple[float, int, int] with mean_malfunction_rate, min_number_of_steps_broken, max_number_of_steps_broken
     """
-    with open(filename, "rb") as file_in:
-        load_data = file_in.read()
-    data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
+    # with open(filename, "rb") as file_in:
+    #     load_data = file_in.read()
+    
+    # if filename.endswith("mpk"):
+    #     data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
+    # elif filename.endswith("pkl"):
+    #     data = pickle.loads(load_data)
+    env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
     # TODO: make this better by using namedtuple in the pickle file. See issue 282
-    data['malfunction'] = MalfunctionProcessData._make(data['malfunction'])
-    if "malfunction" in data:
+    if "malfunction" in env_dict:
+        env_dict['malfunction'] = oMPD = MalfunctionProcessData._make(env_dict['malfunction'])
+    else:
+        oMPD=None
+    if oMPD is not None:
         # Mean malfunction in number of time steps
-        mean_malfunction_rate = data["malfunction"].malfunction_rate
+        mean_malfunction_rate = oMPD.malfunction_rate
 
         # Uniform distribution parameters for malfunction duration
-        min_number_of_steps_broken = data["malfunction"].min_duration
-        max_number_of_steps_broken = data["malfunction"].max_duration
+        min_number_of_steps_broken = oMPD.min_duration
+        max_number_of_steps_broken = oMPD.max_duration
     else:
         # Mean malfunction in number of time steps
         mean_malfunction_rate = 0.
