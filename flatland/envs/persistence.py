@@ -63,7 +63,9 @@ class RailEnvPersister(object):
         print("Agent 0:", type(lAgents[0]), lAgents[0])
 
         dict_env["episode"] = env.cur_episode
+        dict_env["actions"] = env.list_actions
         dict_env["shape"] = (env.width, env.height)
+        dict_env["max_episode_steps"] = env._max_episode_steps
 
         with open(filename, "wb") as file_out:
             if filename.endswith(".mpk"):
@@ -177,7 +179,9 @@ class RailEnvPersister(object):
         msg_data_dict = {
             "grid": grid_data,
             "agents": agent_data,
-            "malfunction": malfunction_data}
+            "malfunction": malfunction_data,
+            "max_episode_steps": env._max_episode_steps,
+            }
         return msg_data_dict
 
 
