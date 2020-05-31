@@ -131,15 +131,17 @@ class RailEnvPersister(object):
         """
         Load environment (with distance map?) from a binary
         """
-        from importlib_resources import read_binary
-        load_data = read_binary(package, resource)
+        #from importlib_resources import read_binary
+        #load_data = read_binary(package, resource)
 
-        if resource.endswith("pkl"):
-            env_dict = pickle.loads(load_data)
-        elif resource.endswith("mpk"):
-            env_dict = msgpack.unpackb(load_data, encoding="utf-8")
+        #if resource.endswith("pkl"):
+        #    env_dict = pickle.loads(load_data)
+        #elif resource.endswith("mpk"):
+        #    env_dict = msgpack.unpackb(load_data, encoding="utf-8")
         
-        cls.set_full_state(env, env_dict)
+        #cls.set_full_state(env, env_dict)
+
+        return cls.load_new(resource, load_from_package=package)
 
     @classmethod
     def set_full_state(cls, env, env_dict):
