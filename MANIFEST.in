@@ -9,7 +9,7 @@ include requirements_continuous_integration.txt
 
 
 
-graft svg
+graft flatland/svg
 graft env_data
 
 
