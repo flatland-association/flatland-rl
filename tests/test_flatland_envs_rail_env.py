@@ -40,8 +40,11 @@ def test_save_load():
     agent_2_pos = env.agents[1].position
     agent_2_dir = env.agents[1].direction
     agent_2_tar = env.agents[1].target
-    #env.save("test_save.dat")
+    
+    env.save("test_save_2.pkl")
     RailEnvPersister.save(env, "test_save.pkl")
+    
+
     #env.load("test_save.dat")
     env, env_dict = RailEnvPersister.load_new("test_save.pkl")
     assert (env.width == 10)
