@@ -28,7 +28,7 @@ def get_boto_client():
         raise Exception("AWS Credentials not provided..")
     try:
         import boto3
-    except ImportError as e:
+    except ImportError:
         raise Exception(
             "boto3 is not installed. Please manually install by : ",
             " pip install -U boto3"
