@@ -435,7 +435,7 @@ class FlatlandRemoteEvaluationService:
         """
         self.simulation_rewards_normalized[-1] += \
             cumulative_reward / (
-                self.env._max_episode_steps +
+                self.env._max_episode_steps *
                 self.env.get_num_agents()
             )
 
