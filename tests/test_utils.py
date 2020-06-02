@@ -11,7 +11,7 @@ from flatland.envs.rail_env import RailEnvActions, RailEnv
 from flatland.envs.rail_generators import RailGenerator
 from flatland.envs.schedule_generators import ScheduleGenerator
 from flatland.utils.rendertools import RenderTool
-
+from flatland.envs.persistence import RailEnvPersister
 
 @attrs
 class Replay(object):
@@ -150,4 +150,6 @@ def create_and_save_env(file_name: str, schedule_generator: ScheduleGenerator, r
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   remove_agents_at_target=True)
     env.reset(True, True)
-    env.save(file_name)
+    #env.save(file_name)
+    RailEnvPersister.save(env, file_name)
+    

@@ -12,14 +12,17 @@ from flatland.envs.rail_generators import complex_rail_generator, rail_from_file
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator, complex_schedule_generator, schedule_from_file
 from flatland.utils.simple_rail import make_simple_rail
+from flatland.envs.persistence import RailEnvPersister
 
 """Tests for `flatland` package."""
 
 
 def test_load_env():
-    env = RailEnv(10, 10)
-    env.reset()
-    env.load_resource('env_data.tests', 'test-10x10.mpk')
+    #env = RailEnv(10, 10)
+    #env.reset()
+    # env.load_resource('env_data.tests', 'test-10x10.mpk')
+    #env, env_dict = RailEnvPersister.load_resource("env_data.tests", "test-10x10.mpk")
+    env, env_dict = RailEnvPersister.load_new("./env_data/tests/test-10x10.mpk")
 
     agent_static = EnvAgent((0, 0), 2, (5, 5), False)
     env.add_agent(agent_static)
@@ -37,8 +40,13 @@ def test_save_load():
     agent_2_pos = env.agents[1].position
     agent_2_dir = env.agents[1].direction
     agent_2_tar = env.agents[1].target
-    env.save("test_save.dat")
-    env.load("test_save.dat")
+    
+    env.save("test_save_2.pkl")
+    RailEnvPersister.save(env, "test_save.pkl")
+    
+
+    #env.load("test_save.dat")
+    env, env_dict = RailEnvPersister.load_new("test_save.pkl")
     assert (env.width == 10)
     assert (env.height == 10)
     assert (len(env.agents) == 2)
@@ -228,15 +236,20 @@ def test_rail_env_reset():
                   schedule_generator=random_schedule_generator(), number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
-    env.save(file_name)
+
+    #env.save(file_name)
+    RailEnvPersister.save(env, file_name)
+
     dist_map_shape = np.shape(env.distance_map.get())
     rails_initial = env.rail.grid
     agents_initial = env.agents
 
-    env2 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
-                   schedule_generator=schedule_from_file(file_name), number_of_agents=1,
-                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-    env2.reset(False, False, False)
+    #env2 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
+    #               schedule_generator=schedule_from_file(file_name), number_of_agents=1,
+    #               obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    #env2.reset(False, False, False)
+    env2, env2_dict = RailEnvPersister.load_new(file_name)
+
     rails_loaded = env2.rail.grid
     agents_loaded = env2.agents
 

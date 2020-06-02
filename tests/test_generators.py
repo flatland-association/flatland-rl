@@ -11,6 +11,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_fr
 from flatland.envs.schedule_generators import random_schedule_generator, complex_schedule_generator, \
     schedule_from_file
 from flatland.utils.simple_rail import make_simple_rail
+from flatland.envs.persistence import RailEnvPersister
 
 
 def test_empty_rail_generator():
@@ -108,7 +109,8 @@ def tests_rail_from_file():
                   schedule_generator=random_schedule_generator(), number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
-    env.save(file_name)
+    #env.save(file_name)
+    RailEnvPersister.save(env, file_name)
     dist_map_shape = np.shape(env.distance_map.get())
     rails_initial = env.rail.grid
     agents_initial = env.agents
@@ -135,7 +137,8 @@ def tests_rail_from_file():
                    rail_generator=rail_from_grid_transition_map(rail), schedule_generator=random_schedule_generator(),
                    number_of_agents=3, obs_builder_object=GlobalObsForRailEnv())
     env2.reset()
-    env2.save(file_name_2)
+    #env2.save(file_name_2)
+    RailEnvPersister.save(env2, file_name_2)
 
     rails_initial_2 = env2.rail.grid
     agents_initial_2 = env2.agents

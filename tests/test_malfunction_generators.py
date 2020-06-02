@@ -4,7 +4,7 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator
 from flatland.utils.simple_rail import make_simple_rail2
-
+from flatland.envs.persistence import RailEnvPersister
 
 def test_malfanction_from_params():
     """
@@ -54,7 +54,9 @@ def test_malfanction_to_and_from_file():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
                   )
     env.reset()
-    env.save("./malfunction_saving_loading_tests.pkl")
+    #env.save("./malfunction_saving_loading_tests.pkl")
+    RailEnvPersister.save(env, "./malfunction_saving_loading_tests.pkl")
+
 
     malfunction_generator, malfunction_process_data = malfunction_from_file("./malfunction_saving_loading_tests.pkl")
     env2 = RailEnv(width=25,
