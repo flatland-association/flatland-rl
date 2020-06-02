@@ -189,7 +189,8 @@ class PILGL(GraphicsLayer):
         self.create_layer(iLayer=PILGL.PREDICTION_PATH_LAYER, clear=True)
 
     def show(self, block=False):
-        print("show() - ", self.__class__)
+        #print("show() - ", self.__class__)
+        pass
 
     def pause(self, seconds=0.00001):
         pass

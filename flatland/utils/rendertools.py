@@ -217,7 +217,6 @@ class RenderLocal(RenderBase):
             self.gl = TKPILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         elif gl in ["PGL"]:
             # Conditional import
-            print("Importing PGLGL for pyglet - requires a local display!")
             from flatland.utils.graphics_pgl import PGLGL
             self.gl = PGLGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         else:
