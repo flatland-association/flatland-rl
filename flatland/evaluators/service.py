@@ -92,6 +92,7 @@ class FlatlandRemoteEvaluationService:
                  visualize=False,
                  video_generation_envs=[],
                  report=None,
+                 result_output_path=None,
                  verbose=False):
 
         # Test Env folder Paths
@@ -107,6 +108,8 @@ class FlatlandRemoteEvaluationService:
         # Logging and Reporting related vars
         self.verbose = verbose
         self.report = report
+
+        self.result_output_path = result_output_path
 
         # Communication Protocol Related vars
         self.namespace = "flatland-rl"
@@ -196,6 +199,24 @@ class FlatlandRemoteEvaluationService:
             self.stats[max_key] = scalar
             self.stats[counter_key] = 1
 
+    def delete_key_in_running_stats(self, key):
+        """
+        This deletes a particular key in the running stats
+        dictionary, if it exists
+        """
+        mean_key = "{}_mean".format(key)
+        counter_key = "{}_counter".format(key)
+        min_key = "{}_min".format(key)
+        max_key = "{}_max".format(key)
+
+        try:
+            del mean_key
+            del counter_key
+            del min_key
+            del max_key
+        except KeyError:
+            pass
+
     def get_env_filepaths(self):
         """
         Gathers a list of all available rail env files to be used
@@ -250,12 +271,18 @@ class FlatlandRemoteEvaluationService:
                 "/" + self.evaluation_metadata_df["env_id"] + ".pkl"
             self.evaluation_metadata_df = self.evaluation_metadata_df.set_index("filename")
 
-            # Add custom columns
+            # Add custom columns for evaluation specific metrics
             self.evaluation_metadata_df["reward"] = np.nan
             self.evaluation_metadata_df["normalized_reward"] = np.nan
             self.evaluation_metadata_df["percentage_complete"] = np.nan
             self.evaluation_metadata_df["steps"] = np.nan
             self.evaluation_metadata_df["simulation_time"] = np.nan
+
+            # Add client specific columns
+            # TODO: This needs refactoring
+            self.evaluation_metadata_df["controller_inference_time_min"] = np.nan
+            self.evaluation_metadata_df["controller_inference_time_mean"] = np.nan
+            self.evaluation_metadata_df["controller_inference_time_max"] = np.nan
         else:
             print("[WARNING] metadata.csv not found in tests folder. Granular metric collection is hence Disabled.")
 
@@ -279,9 +306,26 @@ class FlatlandRemoteEvaluationService:
             _row.steps = self.simulation_steps[-1]
             _row.simulation_time = self.simulation_times[-1]
 
+            # TODO: This needs refactoring
+            # Add controller_inference_time_metrics
+            _row.controller_inference_time_min = self.stats[
+                "current_episode_controller_inference_time_min"
+            ]
+            _row.controller_inference_time_mean = self.stats[
+                "current_episode_controller_inference_time_mean"
+            ]
+            _row.controller_inference_time_max = self.stats[
+                "current_episode_controller_inference_time_max"
+            ]
+
             self.evaluation_metadata_df.loc[
                 last_simulation_env_file_path
             ] = _row
+
+            # Delete this key from the stats to ensure that it 
+            # gets computed again from scratch in the next episode
+            self.delete_key_in_running_stats(
+                "current_episode_controller_inference_time")
 
             print(self.evaluation_metadata_df)
 
@@ -548,6 +592,10 @@ class FlatlandRemoteEvaluationService:
 
         action = _payload['action']
         inference_time = _payload['inference_time']
+        # We record this metric in two keys:
+        #   - One for the current episode
+        #   - One global
+        self.update_running_stats("current_episode_controller_inference_time", inference_time)
         self.update_running_stats("controller_inference_time", inference_time)
 
         time_start = time.time()
@@ -675,6 +723,17 @@ class FlatlandRemoteEvaluationService:
                 self.evaluation_state["meta"]["static_media_frame"] = static_thumbnail_s3_key
             else:
                 print("[WARNING] Ignoring uploading of video to S3")
+
+        #####################################################################
+        # Write Results to a file (if applicable)
+        #####################################################################
+        if self.result_output_path:
+            if self.evaluation_metadata_df is not None:
+                self.evaluation_metadata_df.to_csv(self.result_output_path)
+                print("Wrote output results to : {}".format(self.result_output_path))
+            else:
+                print("[WARING] Unable to write final results to the specified path"
+                      " as metadata.csv is not provided in the tests_folder")
 
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
@@ -844,7 +903,8 @@ if __name__ == "__main__":
         flatland_rl_service_id=args.service_id,
         verbose=False,
         visualize=True,
-        video_generation_envs=["Test_0/Level_100.pkl"]
+        video_generation_envs=["Test_0/Level_100.pkl"],
+        result_output_path="/tmp/output.csv"
     )
     result = grader.run()
     if result['type'] == messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE:
