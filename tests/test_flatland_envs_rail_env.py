@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import numpy as np
+import os
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
@@ -21,8 +22,8 @@ def test_load_env():
     #env = RailEnv(10, 10)
     #env.reset()
     # env.load_resource('env_data.tests', 'test-10x10.mpk')
-    #env, env_dict = RailEnvPersister.load_resource("env_data.tests", "test-10x10.mpk")
-    env, env_dict = RailEnvPersister.load_new("./env_data/tests/test-10x10.mpk")
+    env, env_dict = RailEnvPersister.load_resource("env_data.tests", "test-10x10.mpk")
+    #env, env_dict = RailEnvPersister.load_new("./env_data/tests/test-10x10.mpk")
 
     agent_static = EnvAgent((0, 0), 2, (5, 5), False)
     env.add_agent(agent_static)
@@ -41,12 +42,13 @@ def test_save_load():
     agent_2_dir = env.agents[1].direction
     agent_2_tar = env.agents[1].target
     
-    env.save("test_save_2.pkl")
-    RailEnvPersister.save(env, "test_save.pkl")
-    
+    os.makedirs("tmp", exist_ok=True)
+
+    RailEnvPersister.save(env, "tmp/test_save.pkl")
+    env.save("tmp/test_save_2.pkl")
 
     #env.load("test_save.dat")
-    env, env_dict = RailEnvPersister.load_new("test_save.pkl")
+    env, env_dict = RailEnvPersister.load_new("tmp/test_save.pkl")
     assert (env.width == 10)
     assert (env.height == 10)
     assert (len(env.agents) == 2)
@@ -56,6 +58,29 @@ def test_save_load():
     assert (agent_2_pos == env.agents[1].position)
     assert (agent_2_dir == env.agents[1].direction)
     assert (agent_2_tar == env.agents[1].target)
+
+
+def test_save_load_mpk():
+    env = RailEnv(width=10, height=10,
+                  rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
+                  schedule_generator=complex_schedule_generator(), number_of_agents=2)
+    env.reset()
+
+    os.makedirs("tmp", exist_ok=True)
+
+    RailEnvPersister.save(env, "tmp/test_save.mpk")
+
+    #env.load("test_save.dat")
+    env2, env_dict = RailEnvPersister.load_new("tmp/test_save.mpk")
+    assert (env.width == env2.width)
+    assert (env.height == env2.height)
+    assert (len(env2.agents) == len(env.agents))
+    
+    for agent1, agent2 in zip(env.agents, env2.agents):
+        assert(agent1.position == agent2.position)
+        assert(agent1.direction == agent2.direction)
+        assert(agent1.target == agent2.target)
+
 
 
 def test_rail_environment_single_agent():

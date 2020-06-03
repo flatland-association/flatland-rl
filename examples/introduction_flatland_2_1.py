@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 # In Flatland you can use custom observation builders and predicitors
 # Observation builders generate the observation needed by the controller
@@ -84,7 +85,7 @@ env = RailEnv(width=width,
 env.reset()
 
 # Initiate the renderer
-env_renderer = RenderTool(env, gl="PILSVG",
+env_renderer = RenderTool(env,
                           agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                           show_debug=False,
                           screen_height=600,  # Adjust these parameters to fit your resolution
@@ -243,6 +244,8 @@ score = 0
 # Run episode
 frame_step = 0
 
+os.makedirs("tmp/frames", exist_ok=True)
+
 for step in range(500):
     # Chose an action for each agent in the environment
     for a in range(env.get_num_agents()):
@@ -255,7 +258,7 @@ for step in range(500):
     next_obs, all_rewards, done, _ = env.step(action_dict)
 
     env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-    env_renderer.gl.save_image('./misc/Fames2/flatland_frame_{:04d}.png'.format(step))
+    env_renderer.gl.save_image('tmp/frames/flatland_frame_{:04d}.png'.format(step))
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):

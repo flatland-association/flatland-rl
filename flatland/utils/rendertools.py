@@ -8,7 +8,7 @@ from numpy import array
 from recordtype import recordtype
 
 from flatland.utils.graphics_pil import PILGL, PILSVG
-from flatland.utils.flask_util import simple_flask_server
+
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
 
@@ -23,7 +23,7 @@ class AgentRenderVariant(IntEnum):
 class RenderTool(object):
     """ RenderTool is a facade to a renderer, either local or browser
     """
-    def __init__(self, env, gl="BROWSER", jupyter=False,
+    def __init__(self, env, gl="PGL", jupyter=False,
                  agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                  show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600,
                  host="localhost", port=None):
@@ -45,6 +45,7 @@ class RenderTool(object):
             self.gl = self.renderer.gl
 
         elif gl == "BROWSER":
+            from flatland.utils.flask_util import simple_flask_server
             self.renderer = RenderBrowser(env, host=host, port=port)
         else:
             print("[", gl, "] not found, switch to PILSVG or BROWSER")

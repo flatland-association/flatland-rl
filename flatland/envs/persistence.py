@@ -115,9 +115,12 @@ class RailEnvPersister(object):
 
         # TODO: inefficient - each one of these generators loads the complete env file.
         env = rail_env.RailEnv(width=1, height=1,
-                rail_generator=rail_gen.rail_from_file(filename),
-                schedule_generator=sched_gen.schedule_from_file(filename),
-                malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename),
+                rail_generator=rail_gen.rail_from_file(filename, 
+                    load_from_package=load_from_package),
+                schedule_generator=sched_gen.schedule_from_file(filename,
+                    load_from_package=load_from_package),
+                malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
+                    load_from_package=load_from_package),
                 obs_builder_object=DummyObservationBuilder(),
                 record_steps=True)
 
