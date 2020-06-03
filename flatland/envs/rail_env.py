@@ -130,8 +130,8 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator: rail_gen.RailGenerator = rail_gen.random_rail_generator(),
-                 schedule_generator: sched_gen.ScheduleGenerator = sched_gen.random_schedule_generator(),
+                 rail_generator = None, 
+                 schedule_generator = None, # : sched_gen.ScheduleGenerator = sched_gen.random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  malfunction_generator_and_process_data=None, #mal_gen.no_malfunction_generator(),
@@ -179,8 +179,15 @@ class RailEnv(Environment):
         if malfunction_generator_and_process_data is None:
             malfunction_generator_and_process_data = mal_gen.no_malfunction_generator()
         self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
-        self.rail_generator: RailGenerator = rail_generator
-        self.schedule_generator: ScheduleGenerator = schedule_generator
+        #self.rail_generator: RailGenerator = rail_generator
+        if rail_generator is None:
+            rail_generator = rail_gen.random_rail_generator()
+        self.rail_generator = rail_generator
+        #self.schedule_generator: ScheduleGenerator = schedule_generator
+        if schedule_generator is None:
+            schedule_generator = sched_gen.random_schedule_generator()
+        self.schedule_generator = schedule_generator
+
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
         self.height = height
