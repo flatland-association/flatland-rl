@@ -145,7 +145,7 @@ def test_get_shortest_paths_max_depth():
 # see https://gitlab.aicrowd.com/flatland/flatland/issues/279
 def test_get_shortest_paths_agent_handle():
     #env = load_flatland_environment_from_file('Level_distance_map_shortest_path.pkl', 'env_data.tests')
-    env, _ = RailEnvPersister.load_new("./env_data/tests/Level_distance_map_shortest_path.mpk")
+    env, _ = RailEnvPersister.load_new("Level_distance_map_shortest_path.mpk", "env_data.tests")
     env.reset()
     actual = get_shortest_paths(env.distance_map, agent_handle=6)
 
