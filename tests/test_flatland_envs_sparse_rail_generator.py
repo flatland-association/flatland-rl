@@ -1483,7 +1483,7 @@ def test_sparse_generator_with_illegal_params_aborts():
     """
     Test that the constructor aborts if the initial parameters don't allow more than one city to be built.
     """
-    with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, SystemExit):
+    with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, ValueError):
         RailEnv(width=6, height=6, rail_generator=sparse_rail_generator(
             max_num_cities=100,
             max_rails_between_cities=3,
@@ -1492,7 +1492,7 @@ def test_sparse_generator_with_illegal_params_aborts():
         ), schedule_generator=sparse_schedule_generator(), number_of_agents=10,
                 obs_builder_object=GlobalObsForRailEnv()).reset()
 
-    with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, SystemExit):
+    with unittest.TestCase.assertRaises(test_sparse_generator_with_illegal_params_aborts, ValueError):
         RailEnv(width=60, height=60, rail_generator=sparse_rail_generator(
             max_num_cities=1,
             max_rails_between_cities=3,
