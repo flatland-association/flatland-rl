@@ -14,6 +14,10 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.schedule_generators import random_schedule_generator, complex_schedule_generator, schedule_from_file
 from flatland.utils.simple_rail import make_simple_rail
 from flatland.envs.persistence import RailEnvPersister
+from flatland.utils.rendertools import RenderTool
+
+import pytest
+
 
 """Tests for `flatland` package."""
 
@@ -82,7 +86,7 @@ def test_save_load_mpk():
         assert(agent1.target == agent2.target)
 
 
-
+# @pytest.mark.skip(reason="Lots of unexplained hangs here")
 def test_rail_environment_single_agent():
     # We instantiate the following map on a 3x3 grid
     #  _  _
@@ -113,8 +117,12 @@ def test_rail_environment_single_agent():
                        schedule_generator=random_schedule_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
+    env_renderer = RenderTool(rail_env)
+    
     for _ in range(50):
         _ = rail_env.reset(False, False, True)
+
+        env_renderer.render_env(show=True)
 
         # We do not care about target for the moment
         agent = rail_env.agents[0]
@@ -131,6 +139,8 @@ def test_rail_environment_single_agent():
 
         valid_active_actions_done = 0
         pos = initial_pos
+
+        iStep = 0
         while valid_active_actions_done < 6:
             # We randomly select an action
             action = np.random.randint(4)
@@ -141,6 +151,8 @@ def test_rail_environment_single_agent():
             pos = agent.position  # rail_env.agents_position[0]
             if prev_pos != pos:
                 valid_active_actions_done += 1
+            iStep += 1
+            assert iStep < 100, "valid actions should have been performed by now - hung agent"
 
         # After 6 movements on this railway network, the train should be back
         # to its original height on the map.
@@ -150,13 +162,22 @@ def test_rail_environment_single_agent():
         for _ in range(10):
             _ = rail_env.reset()
 
+            # JW - to avoid problem with random_schedule_generator.
+            rail_env.agents[0].position = (1,2)
+
             done = False
-            while not done:
+
+            iStep = 0
+            while iStep < 100:
                 # We randomly select an action
                 action = np.random.randint(4)
 
                 _, _, dones, _ = rail_env.step({0: action})
                 done = dones['__all__']
+                if done:
+                    break
+                iStep +=1
+                assert iStep < 100, "agent should have finished by now"
 
 
 def test_dead_end():
