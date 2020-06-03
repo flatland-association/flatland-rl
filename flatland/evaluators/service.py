@@ -327,7 +327,8 @@ class FlatlandRemoteEvaluationService:
             self.delete_key_in_running_stats(
                 "current_episode_controller_inference_time")
 
-            print(self.evaluation_metadata_df)
+            if self.verbose:
+                print(self.evaluation_metadata_df)
 
     def instantiate_redis_connection_pool(self):
         """
