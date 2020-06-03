@@ -253,15 +253,16 @@ class FlatlandRemoteClient(object):
     def env_step(self, action, render=False):
         """
             Respond with [observation, reward, done, info]
-        """
+        """        
+        # We use the last_env_step_time as an approximate measure of the inference time
+        approximate_inference_time = time.time() - self.last_env_step_time
+        self.update_running_stats("inference_time(approx)", approximate_inference_time)
+
         _request = {}
         _request['type'] = messages.FLATLAND_RL.ENV_STEP
         _request['payload'] = {}
         _request['payload']['action'] = action
-        
-        # We use the last_env_step_time as an approximate measure of the inference time
-        approximate_inference_time = time.time() - self.last_env_step_time
-        self.update_running_stats("inference_time(approx)", approximate_inference_time)
+        _request['payload']['inference_time'] = approximate_inference_time
 
         # Relay the action in a non-blocking way to the server
         # so that it can start doing an env.step on it in ~ parallel

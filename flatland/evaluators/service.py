@@ -196,7 +196,6 @@ class FlatlandRemoteEvaluationService:
             self.stats[max_key] = scalar
             self.stats[counter_key] = 1
 
-
     def get_env_filepaths(self):
         """
         Gathers a list of all available rail env files to be used
@@ -246,8 +245,9 @@ class FlatlandRemoteEvaluationService:
             )
         if os.path.exists(metadata_file_path):
             self.evaluation_metadata_df = pd.read_csv(metadata_file_path)
-            self.evaluation_metadata_df["filename"] = self.evaluation_metadata_df["test_id"] + \
-                                                    "/" + self.evaluation_metadata_df["env_id"] + ".pkl"
+            self.evaluation_metadata_df["filename"] = \
+                self.evaluation_metadata_df["test_id"] + \
+                "/" + self.evaluation_metadata_df["env_id"] + ".pkl"
             self.evaluation_metadata_df = self.evaluation_metadata_df.set_index("filename")
 
             # Add custom columns
@@ -458,7 +458,6 @@ class FlatlandRemoteEvaluationService:
                                malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
                                obs_builder_object=DummyObservationBuilder())
 
-
             if self.begin_simulation:
                 # If begin simulation has already been initialized
                 # atleast once
@@ -548,6 +547,9 @@ class FlatlandRemoteEvaluationService:
                 has done['__all__']==True")
 
         action = _payload['action']
+        inference_time = _payload['inference_time']
+        self.update_running_stats("controller_inference_time", inference_time)
+
         time_start = time.time()
         _observation, all_rewards, done, info = self.env.step(action)
         time_diff = time.time() - time_start
@@ -624,7 +626,6 @@ class FlatlandRemoteEvaluationService:
                             self.stats[mean_key],
                             self.stats[max_key]))
         print("=" * 100)
-
 
         # Register simulation time of the last episode
         self.simulation_times.append(time.time() - self.begin_simulation)
