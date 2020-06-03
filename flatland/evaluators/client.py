@@ -84,20 +84,32 @@ class FlatlandRemoteClient(object):
         self.env_step_times = []
         self.stats = {}
 
-    def update_running_mean_stats(self, key, scalar):
+    def update_running_stats(self, key, scalar):
         """
         Computes the running mean for certain params
         """
         mean_key = "{}_mean".format(key)
         counter_key = "{}_counter".format(key)
+        min_key = "{}_min".format(key)
+        max_key = "{}_max".format(key)
 
         try:
+            # Update Mean
             self.stats[mean_key] = \
                 ((self.stats[mean_key] * self.stats[counter_key]) + scalar) / (self.stats[counter_key] + 1)
+            # Update min
+            if scalar < self.stats[min_key]:
+                self.stats[min_key] = scalar
+            # Update max
+            if scalar > self.stats[max_key]:
+                self.stats[max_key] = scalar
+
             self.stats[counter_key] += 1
         except KeyError:
-            self.stats[mean_key] = 0
-            self.stats[counter_key] = 0
+            self.stats[mean_key] = scalar
+            self.stats[min_key] = scalar
+            self.stats[max_key] = scalar
+            self.stats[counter_key] = 1
 
     def get_redis_connection(self):
         return self.redis_conn
@@ -191,7 +203,7 @@ class FlatlandRemoteClient(object):
         random_seed = _response['payload']['random_seed']
         test_env_file_path = _response['payload']['env_file_path']
         time_diff = time.time() - time_start
-        self.update_running_mean_stats("env_creation_wait_time", time_diff)
+        self.update_running_stats("env_creation_wait_time", time_diff)
 
         if not observation:
             # If the observation is False,
@@ -223,6 +235,8 @@ class FlatlandRemoteClient(object):
                            obs_builder_object=obs_builder_object)
 
         time_start = time.time()
+        # Use the local observation
+        # as the remote server uses a dummy observation builder
         local_observation, info = self.env.reset(
             regenerate_rail=True,
             regenerate_schedule=True,
@@ -230,19 +244,25 @@ class FlatlandRemoteClient(object):
             random_seed=random_seed
         )
         time_diff = time.time() - time_start
-        self.update_running_mean_stats("internal_env_reset_time", time_diff)
-        # Use the local observation
-        # as the remote server uses a dummy observation builder
+        self.update_running_stats("internal_env_reset_time", time_diff)
+
+        # We use the last_env_step_time as an approximate measure of the inference time
+        self.last_env_step_time = time.time()
         return local_observation, info
 
     def env_step(self, action, render=False):
         """
             Respond with [observation, reward, done, info]
-        """
+        """        
+        # We use the last_env_step_time as an approximate measure of the inference time
+        approximate_inference_time = time.time() - self.last_env_step_time
+        self.update_running_stats("inference_time(approx)", approximate_inference_time)
+
         _request = {}
         _request['type'] = messages.FLATLAND_RL.ENV_STEP
         _request['payload'] = {}
         _request['payload']['action'] = action
+        _request['payload']['inference_time'] = approximate_inference_time
 
         # Relay the action in a non-blocking way to the server
         # so that it can start doing an env.step on it in ~ parallel
@@ -254,7 +274,10 @@ class FlatlandRemoteClient(object):
             self.env.step(action)
         time_diff = time.time() - time_start
         # Compute a running mean of env step times
-        self.update_running_mean_stats("internal_env_step_time", time_diff)
+        self.update_running_stats("internal_env_step_time", time_diff)
+
+        # We use the last_env_step_time as an approximate measure of the inference time
+        self.last_env_step_time = time.time()
 
         return [local_observation, local_reward, local_done, local_info]
 
@@ -273,7 +296,15 @@ class FlatlandRemoteClient(object):
         print("=" * 100)
         for _key in self.stats:
             if _key.endswith("_mean"):
-                print("\t - {}\t:{}".format(_key, self.stats[_key]))
+                metric_name = _key.replace("_mean", "")
+                mean_key = "{}_mean".format(metric_name)
+                min_key = "{}_min".format(metric_name)
+                max_key = "{}_max".format(metric_name)
+                print("\t - {}\t => min: {} || mean: {} || max: {}".format(
+                            metric_name,
+                            self.stats[min_key],
+                            self.stats[mean_key],
+                            self.stats[max_key]))
         print("=" * 100)
         if os.getenv("AICROWD_BLOCKING_SUBMIT"):
             """
