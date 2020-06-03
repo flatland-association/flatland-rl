@@ -122,7 +122,7 @@ def test_rail_environment_single_agent():
     for _ in range(50):
         _ = rail_env.reset(False, False, True)
 
-        env_renderer.render_env(show=True)
+        env_renderer.render_env(show=False)
 
         # We do not care about target for the moment
         agent = rail_env.agents[0]
