@@ -299,23 +299,13 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
                   np_random: RandomState = None) -> Schedule:
-        # if load_from_package is not None:
-        #     from importlib_resources import read_binary
-        #     load_data = read_binary(load_from_package, filename)
-        # else:
-        #     with open(filename, "rb") as file_in:
-        #         load_data = file_in.read()
-        #     data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
-        # if "agents_static" in data:
-        #     agents = EnvAgent.load_legacy_static_agent(data["agents_static"])
-        # else:
-        #     agents = [EnvAgent(*d[0:12]) for d in data["agents"]]
 
         env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
 
         max_episode_steps = env_dict.get("max_episode_steps", 0)
-
         agents = env_dict["agents"]
+
+        #print("schedule generator from_file - agents: ", agents)
 
         # setup with loaded data
         agents_position = [a.initial_position for a in agents]
