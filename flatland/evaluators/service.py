@@ -746,12 +746,15 @@ class FlatlandRemoteEvaluationService:
         # Write Results to a file (if applicable)
         #####################################################################
         if self.result_output_path:
-            if self.evaluation_metadata_df is not None:
-                self.evaluation_metadata_df.to_csv(self.result_output_path)
-                print("Wrote output results to : {}".format(self.result_output_path))
-            else:
-                print("[WARING] Unable to write final results to the specified path"
-                      " as metadata.csv is not provided in the tests_folder")
+            self.evaluation_metadata_df.to_csv(self.result_output_path)
+            print("Wrote output results to : {}".format(self.result_output_path))
+            
+            # Upload the metadata file to S3 
+            if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
+                metadata_s3_key = aicrowd_helpers.upload_to_s3(
+                    self.result_output_path
+                )
+                self.evaluation_state["meta"]["private_metadata_s3_key"] = metadata_s3_key
 
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
