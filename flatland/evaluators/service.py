@@ -687,10 +687,27 @@ class FlatlandRemoteEvaluationService:
                 to operate on all the test environments.
                 """
             )
+        #################################################################################
+        #################################################################################
+        # Compute the mean rewards, mean normalized_reward and mean_percentage_complete
+        # we group all the results by the test_ids
+        # so we first compute the mean in each of the test_id groups, 
+        # and then we compute the mean across each of the test_id groups
+        #
+        # NOTE : this df should not have NaN rows for any of the above 
+        #        metrics if all the evaluations are successfully completed
+        #
+        #################################################################################
+        #################################################################################
 
-        mean_reward = round(np.mean(self.simulation_rewards), 2)
-        mean_normalized_reward = round(np.mean(self.simulation_rewards_normalized), 2)
-        mean_percentage_complete = round(np.mean(self.simulation_percentage_complete), 3)
+        grouped_df = self.evaluation_metadata_df.groupby(['test_id']).mean()
+        mean_reward = grouped_df["reward"].mean()
+        mean_normalized_reward = grouped_df["normalized_reward"].mean()
+        mean_percentage_complete = grouped_df["percentage_complete"].mean()
+        # 
+        mean_reward = round(mean_reward, 2)
+        mean_normalized_reward = round(mean_normalized_reward, 2)
+        mean_percentage_complete = round(mean_percentage_complete, 3)
 
         if self.visualize and len(os.listdir(self.vizualization_folder_name)) > 0:
             # Generate the video
