@@ -565,9 +565,9 @@ class FlatlandRemoteEvaluationService:
         progress = np.clip(
             self.simulation_count * 1.0 / len(self.env_file_paths),
             0, 1)
-        mean_reward = round(np.mean(self.simulation_rewards), 2)
-        mean_normalized_reward = round(np.mean(self.simulation_rewards_normalized), 2)
-        mean_percentage_complete = round(np.mean(self.simulation_percentage_complete), 3)
+
+        mean_reward, mean_normalized_reward, mean_percentage_complete = self.compute_mean_scores()
+
         self.evaluation_state["state"] = "IN_PROGRESS"
         self.evaluation_state["progress"] = progress
         self.evaluation_state["simulation_count"] = self.simulation_count
@@ -687,27 +687,8 @@ class FlatlandRemoteEvaluationService:
                 to operate on all the test environments.
                 """
             )
-        #################################################################################
-        #################################################################################
-        # Compute the mean rewards, mean normalized_reward and mean_percentage_complete
-        # we group all the results by the test_ids
-        # so we first compute the mean in each of the test_id groups, 
-        # and then we compute the mean across each of the test_id groups
-        #
-        # NOTE : this df should not have NaN rows for any of the above 
-        #        metrics if all the evaluations are successfully completed
-        #
-        #################################################################################
-        #################################################################################
 
-        grouped_df = self.evaluation_metadata_df.groupby(['test_id']).mean()
-        mean_reward = grouped_df["reward"].mean()
-        mean_normalized_reward = grouped_df["normalized_reward"].mean()
-        mean_percentage_complete = grouped_df["percentage_complete"].mean()
-        # 
-        mean_reward = round(mean_reward, 2)
-        mean_normalized_reward = round(mean_normalized_reward, 2)
-        mean_percentage_complete = round(mean_percentage_complete, 3)
+        mean_reward, mean_normalized_reward, mean_percentage_complete = self.compute_mean_scores()
 
         if self.visualize and len(os.listdir(self.vizualization_folder_name)) > 0:
             # Generate the video
@@ -746,12 +727,15 @@ class FlatlandRemoteEvaluationService:
         # Write Results to a file (if applicable)
         #####################################################################
         if self.result_output_path:
-            if self.evaluation_metadata_df is not None:
-                self.evaluation_metadata_df.to_csv(self.result_output_path)
-                print("Wrote output results to : {}".format(self.result_output_path))
-            else:
-                print("[WARING] Unable to write final results to the specified path"
-                      " as metadata.csv is not provided in the tests_folder")
+            self.evaluation_metadata_df.to_csv(self.result_output_path)
+            print("Wrote output results to : {}".format(self.result_output_path))
+            
+            # Upload the metadata file to S3 
+            if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
+                metadata_s3_key = aicrowd_helpers.upload_to_s3(
+                    self.result_output_path
+                )
+                self.evaluation_state["meta"]["private_metadata_s3_key"] = metadata_s3_key
 
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
@@ -768,9 +752,11 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["state"] = "FINISHED"
         self.evaluation_state["progress"] = 1.0
         self.evaluation_state["simulation_count"] = self.simulation_count
-        self.evaluation_state["score"]["score"] = mean_percentage_complete
-        self.evaluation_state["score"]["score_secondary"] = mean_reward
+        self.evaluation_state["score"]["score"] = mean_normalized_reward
+        self.evaluation_state["score"]["score_secondary"] = mean_percentage_complete
         self.evaluation_state["meta"]["normalized_reward"] = mean_normalized_reward
+        self.evaluation_state["meta"]["reward"] = mean_reward
+        self.evaluation_state["meta"]["percentage_complete"] = mean_percentage_complete
         self.handle_aicrowd_success_event(self.evaluation_state)
         print("#" * 100)
         print("EVALUATION COMPLETE !!")
@@ -780,6 +766,30 @@ class FlatlandRemoteEvaluationService:
         print("# Mean Percentage Complete : {}".format(mean_percentage_complete))
         print("#" * 100)
         print("#" * 100)
+
+    def compute_mean_scores(self):
+        #################################################################################
+        #################################################################################
+        # Compute the mean rewards, mean normalized_reward and mean_percentage_complete
+        # we group all the results by the test_ids
+        # so we first compute the mean in each of the test_id groups, 
+        # and then we compute the mean across each of the test_id groups
+        #
+        #
+        #################################################################################
+        #################################################################################
+        source_df = self.evaluation_metadata_df.dropna()
+        grouped_df = source_df.groupby(['test_id']).mean()
+
+        mean_reward = grouped_df["reward"].mean()
+        mean_normalized_reward = grouped_df["normalized_reward"].mean()
+        mean_percentage_complete = grouped_df["percentage_complete"].mean()
+        # Round off the reward values
+        mean_reward = round(mean_reward, 2)
+        mean_normalized_reward = round(mean_normalized_reward, 5)
+        mean_percentage_complete = round(mean_percentage_complete, 3)
+
+        return mean_reward, mean_normalized_reward, mean_percentage_complete
 
     def report_error(self, error_message, command_response_channel):
         """

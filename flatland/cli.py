@@ -63,7 +63,7 @@ def demo(args=None):
               )
 @click.option('--results_path',
               type=click.Path(exists=False),
-              default=False,
+              default=None,
               help="Path where the evaluator should write the results metadata.",
               required=False
               )

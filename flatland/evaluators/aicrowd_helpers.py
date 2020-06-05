@@ -3,6 +3,7 @@ import os
 import random
 import subprocess
 import uuid
+import pathlib
 
 ###############################################################
 # Expected Env Variables
@@ -11,7 +12,7 @@ import uuid
 # AICROWD_IS_GRADING : true
 # CROWDAI_IS_GRADING : true
 # S3_BUCKET : aicrowd-production
-# S3_UPLOAD_PATH_TEMPLATE : misc/flatland-rl-Media/{}.mp4
+# S3_UPLOAD_PATH_TEMPLATE : misc/flatland-rl-Media/{}
 # AWS_ACCESS_KEY_ID
 # AWS_SECRET_ACCESS_KEY
 # http_proxy
@@ -20,7 +21,7 @@ import uuid
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", False)
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", False)
 S3_BUCKET = os.getenv("S3_BUCKET", "aicrowd-production")
-S3_UPLOAD_PATH_TEMPLATE = os.getenv("S3_UPLOAD_PATH_TEMPLATE", "misc/flatland-rl-Media/{}.mp4")
+S3_UPLOAD_PATH_TEMPLATE = os.getenv("S3_UPLOAD_PATH_TEMPLATE", "misc/flatland-rl-Media/{}")
 
 
 def get_boto_client():
@@ -62,7 +63,7 @@ def upload_random_frame_to_s3(frames_folder):
     if not S3_BUCKET:
         raise Exception("S3_BUCKET not provided...")
 
-    image_target_key = S3_UPLOAD_PATH_TEMPLATE.replace(".mp4", ".png").format(str(uuid.uuid4()))
+    image_target_key = (S3_UPLOAD_PATH_TEMPLATE + ".png").format(str(uuid.uuid4()))
     s3.put_object(
         ACL="public-read",
         Bucket=S3_BUCKET,
@@ -79,14 +80,17 @@ def upload_to_s3(localpath):
     if not S3_BUCKET:
         raise Exception("S3_BUCKET not provided...")
 
-    image_target_key = S3_UPLOAD_PATH_TEMPLATE.format(str(uuid.uuid4()))
+    file_suffix = str(pathlib.Path(localpath).suffix)
+    file_target_key = (S3_UPLOAD_PATH_TEMPLATE + file_suffix).format(
+        str(uuid.uuid4())
+    )
     s3.put_object(
         ACL="public-read",
         Bucket=S3_BUCKET,
-        Key=image_target_key,
+        Key=file_target_key,
         Body=open(localpath, 'rb')
     )
-    return image_target_key
+    return file_target_key
 
 
 def make_subprocess_call(command, shell=False):
