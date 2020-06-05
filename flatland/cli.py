@@ -61,7 +61,13 @@ def demo(args=None):
               help="Evaluation Service ID. This has to match the service id on the client.",
               required=False
               )
-def evaluator(tests, service_id):
+@click.option('--results_path',
+              type=click.Path(exists=False),
+              default=False,
+              help="Path where the evaluator should write the results metadata.",
+              required=False
+              )
+def evaluator(tests, service_id, results_path):
     try:
         redis_connection = redis.Redis()
         redis_connection.ping()
@@ -75,6 +81,7 @@ def evaluator(tests, service_id):
         test_env_folder=tests,
         flatland_rl_service_id=service_id,
         visualize=False,
+        result_output_path=results_path,
         verbose=False
     )
     grader.run()
