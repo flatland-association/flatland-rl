@@ -284,7 +284,7 @@ class FlatlandRemoteEvaluationService:
             self.evaluation_metadata_df["controller_inference_time_mean"] = np.nan
             self.evaluation_metadata_df["controller_inference_time_max"] = np.nan
         else:
-            print("[WARNING] metadata.csv not found in tests folder. Granular metric collection is hence Disabled.")
+            raise Exception("metadata.csv not found in tests folder. Please use an updated version of the test set.")
 
     def update_evaluation_metadata(self):
         """
