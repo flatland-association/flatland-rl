@@ -53,7 +53,7 @@ setup(
     author="S.P. Mohanty",
     author_email='mohanty@aicrowd.com',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'Programming Language :: Python :: 3.6',
@@ -80,6 +80,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://gitlab.aicrowd.com/flatland/flatland',
-    version='2.1.10',
+    version='2.2.0',
     zip_safe=False,
 )
