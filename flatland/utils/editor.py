@@ -14,13 +14,13 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import complex_rail_generator, empty_rail_generator, random_rail_generator
-
+from flatland.envs.persistence import RailEnvPersister
 
 class EditorMVC(object):
     """ EditorMVC - a class to encompass and assemble the Jupyter Editor Model-View-Controller.
     """
 
-    def __init__(self, env=None, sGL="PIL", env_filename="temp.mpk"):
+    def __init__(self, env=None, sGL="PIL", env_filename="temp.pkl"):
         """ Create an Editor MVC assembly around a railenv, or create one if None.
         """
         if env is None:
@@ -383,7 +383,7 @@ class Controller(object):
 
 
 class EditorModel(object):
-    def __init__(self, env, env_filename="temp.mpk"):
+    def __init__(self, env, env_filename="temp.pkl"):
         self.view = None
         self.env = env
         self.regen_size_width = 10
@@ -624,12 +624,13 @@ class EditorModel(object):
     def load(self):
         if os.path.exists(self.env_filename):
             self.log("load file: ", self.env_filename)
-            self.env.load(self.env_filename)
+            #self.env.load(self.env_filename)
+            RailEnvPersister.load(self.env, self.env_filename)
             if not self.regen_size_height == self.env.height or not self.regen_size_width == self.env.width:
                 self.regen_size_height = self.env.height
                 self.regen_size_width = self.env.width
                 self.regenerate(None, 0, self.env)
-                self.env.load(self.env_filename)
+                RailEnvPersister.load(self.env, self.env_filename)
 
             self.env.reset_agents()
             self.env.reset(False, False)
@@ -642,7 +643,8 @@ class EditorModel(object):
 
     def save(self):
         self.log("save to ", self.env_filename, " working dir: ", os.getcwd())
-        self.env.save(self.env_filename)
+        #self.env.save(self.env_filename)
+        RailEnvPersister.save(self.env, self.env_filename)
 
     def save_image(self):
         self.view.oRT.gl.save_image('frame_{:04d}.bmp'.format(self.save_image_count))
