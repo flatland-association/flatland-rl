@@ -16,6 +16,7 @@ pydeps>=1.7.2
 jupyter>=1.0.0
 jupyter-core>=4.5.0
 notebook>=5.7.8
+PyVirtualDisplay==0.2.5
 pytest-xvfb>=1.2.0
 git+https://github.com/who8mylunch/Jupyter_Canvas_Widget.git@bd151ae1509c50b5809944dd3294f58b7b069c86
 m2r>=0.2.1
