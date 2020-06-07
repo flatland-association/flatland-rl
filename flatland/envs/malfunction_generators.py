@@ -6,7 +6,7 @@ import numpy as np
 from numpy.random.mtrand import RandomState
 
 from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
-from flatland.envs import persistence 
+from flatland.envs import persistence
 
 Malfunction = NamedTuple('Malfunction', [('num_broken_steps', int)])
 MalfunctionParameters = NamedTuple('MalfunctionParameters',
@@ -25,7 +25,7 @@ def _malfunction_prob(rate: float) -> float:
     if rate <= 0:
         return 0.
     else:
-        return 1 - np.exp(- (1 / rate))
+        return 1 - np.exp(-rate)
 
 
 def malfunction_from_file(filename: str, load_from_package=None) -> Tuple[MalfunctionGenerator, MalfunctionProcessData]:
@@ -42,7 +42,7 @@ def malfunction_from_file(filename: str, load_from_package=None) -> Tuple[Malfun
     """
     # with open(filename, "rb") as file_in:
     #     load_data = file_in.read()
-    
+
     # if filename.endswith("mpk"):
     #     data = msgpack.unpackb(load_data, use_list=False, encoding='utf-8')
     # elif filename.endswith("pkl"):
@@ -52,7 +52,7 @@ def malfunction_from_file(filename: str, load_from_package=None) -> Tuple[Malfun
     if "malfunction" in env_dict:
         env_dict['malfunction'] = oMPD = MalfunctionProcessData._make(env_dict['malfunction'])
     else:
-        oMPD=None
+        oMPD = None
     if oMPD is not None:
         # Mean malfunction in number of time steps
         mean_malfunction_rate = oMPD.malfunction_rate
