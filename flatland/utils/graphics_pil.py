@@ -291,12 +291,6 @@ class PILSVG(PILGL):
 
         return pil_img
 
-    def pil_from_svg_bytes(self, bytesSVG):
-        bytesPNG = svg2png(bytesSVG, output_height=self.nPixCell, output_width=self.nPixCell)
-        with io.BytesIO(bytesPNG) as fIn:
-            pil_img = Image.open(fIn)
-            return pil_img
-
     def load_buildings(self):
         lBuildingFiles = [
             "Buildings-Bank.svg",
