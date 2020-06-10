@@ -19,7 +19,6 @@ importlib-resources>=1.0.1
 six>=1.12.0
 timeout-decorator>=0.4.1
 attrs
-ushlex
 gym==0.14.0
 flask
 flask_cors
