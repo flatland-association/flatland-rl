@@ -8,7 +8,7 @@ import sys
 from setuptools import setup, find_packages
 
 assert sys.version_info >= (3, 6)
-with open('README.md') as readme_file:
+with open('README.md', 'r', encoding='utf8') as readme_file:
     readme = readme_file.read()
 
 
