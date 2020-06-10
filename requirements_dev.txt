@@ -20,6 +20,3 @@ six>=1.12.0
 timeout-decorator>=0.4.1
 attrs
 gym==0.14.0
-flask
-flask_cors
-flask_socketio
