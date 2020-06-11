@@ -88,7 +88,7 @@ This library was developed by [SBB](https://www.sbb.ch/en/), [AIcrowd](https://w
 
 ➕ Contributions
 ---
-Please follow the [Contribution Guidelines](http://flatland-rl-docs.s3-website.eu-central-1.amazonaws.com/contributing.html) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions.
+Please follow the [Contribution Guidelines](https://flatland.aicrowd.com/misc/contributing.html) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions.
 
 💬 Communication
 ---
