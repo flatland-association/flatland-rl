@@ -38,7 +38,6 @@ $ conda activate flatland-rl
 * Install the necessary dependencies:
 
 ```console
-$ conda install -c conda-forge cairosvg pycairo
 $ conda install -c anaconda tk  
 ```
 
