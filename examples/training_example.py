@@ -19,7 +19,7 @@ env = RailEnv(width=20, height=20,
               schedule_generator=complex_schedule_generator(), number_of_agents=3, obs_builder_object=TreeObservation)
 env.reset()
 
-env_renderer = RenderTool(env, gl="PILSVG", )
+env_renderer = RenderTool(env)
 
 
 # Import your own Agent or use RLlib to train agents on Flatland
