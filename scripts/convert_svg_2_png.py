@@ -42,10 +42,13 @@ for _source_svg_path in tqdm.tqdm(glob.glob(os.path.join(SVG_FOLDER, "*.svg"))):
         TARGET_FOLDER,
         target_filename
     )
-    bytesPNG = svg2png(file_obj=open(_source_svg_path, "rb"))
+    bytesPNG = svg2png(
+                    file_obj=open(_source_svg_path, "rb"),
+                    output_height=TARGET_PNG_WIDTH,
+                    output_width=TARGET_PNG_HEIGHT
+                )
     with io.BytesIO(bytesPNG) as fIn:
         im = Image.open(fIn)
-        im = im.resize((TARGET_PNG_WIDTH, TARGET_PNG_WIDTH))
         im.load()
         assert im.size == (TARGET_PNG_WIDTH, TARGET_PNG_HEIGHT)
         im.save(target_filepath)
