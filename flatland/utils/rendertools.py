@@ -8,6 +8,7 @@ from numpy import array
 from recordtype import recordtype
 
 from flatland.utils.graphics_pil import PILGL, PILSVG
+from flatland.utils.graphics_pgl import PGLGL
 
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
@@ -21,7 +22,8 @@ class AgentRenderVariant(IntEnum):
 
 
 class RenderTool(object):
-    """ RenderTool is a facade to a renderer, either local or browser
+    """ RenderTool is a facade to a renderer.
+        (This was introduced for the Browser / JS renderer which has now been removed.)
     """
     def __init__(self, env, gl="PGL", jupyter=False,
                  agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
@@ -35,20 +37,13 @@ class RenderTool(object):
 
         self.agent_render_variant = agent_render_variant
 
-        if gl in ["PIL", "PILSVG", "TKPIL", "TKPILSVG", "PGL"]:
+        if gl in ["PIL", "PILSVG", "PGL"]:
             self.renderer = RenderLocal(env, gl, jupyter,
                  agent_render_variant,
                  show_debug, clear_debug_text, screen_width, screen_height)
-            
-            # To support legacy access to the GraphicsLayer (gl)
-            # DEPRECATED - TODO: remove these calls!
             self.gl = self.renderer.gl
-
-        elif gl == "BROWSER":
-            from flatland.utils.flask_util import simple_flask_server
-            self.renderer = RenderBrowser(env, host=host, port=port)
         else:
-            print("[", gl, "] not found, switch to PILSVG or BROWSER")
+            print("[", gl, "] not found, switch to PGL")
 
     def render_env(self,
                    show=False,  # whether to call matplotlib show() or equivalent after completion
@@ -98,7 +93,6 @@ class RenderTool(object):
             return None
 
 
-
 class RenderBase(object):
     def __init__(self, env):
         pass
@@ -123,56 +117,6 @@ class RenderBase(object):
         """
         pass
 
-
-class RenderBrowser(RenderBase):
-    def __init__(self, env, host="localhost", port=None):
-        self.server = simple_flask_server(env)
-        self.server.run_flask_server_in_thread(host=host, port=port)
-        self.env = env
-        self.background_rendered = False
-
-    def render_env(self,
-            show=False,  # whether to call matplotlib show() or equivalent after completion
-            show_agents=True,  # whether to include agents
-            show_inactive_agents=False, 
-            show_observations=True,  # whether to include observations
-            show_predictions=False,  # whether to include predictions
-            frames=False,  # frame counter to show (intended since invocation)
-            episode=None,  # int episode number to show
-            step=None,  # int step number to show in image
-            selected_agent=None,  # indicate which agent is "selected" in the editor):
-            return_image=False): # indicate if image is returned for use in monitor:
-        
-        if not self.background_rendered:
-            self.server.send_env_and_wait()
-            self.background_rendered = True
-        
-        self.server.send_actions({})
-
-        if show_observations:
-            self.render_observation(range(self.env.get_num_agents()), self.env.dev_obs_dict)
-    
-    def render_observation(self, agent_handles, dict_observation):
-        # Change keys to strings, and OrderedSet to list (of tuples)
-        dict_obs2 = {str(item[0]): list(item[1]) for item in self.env.dev_obs_dict.items()}
-        # Convert any ranges into a list
-        list_handles = list(agent_handles)
-        self.server.send_observation(list_handles, dict_obs2)
-
-    def get_port(self):
-        return self.server.port
-    
-    def get_endpoint_url(self):
-        return self.server.get_endpoint_url()
-
-    def close_window(self):
-        pass
-
-    def reset(self):
-        pass
-
-    def set_new_rail(self):
-        pass
 
 
 class RenderLocal(RenderBase):
@@ -211,19 +155,11 @@ class RenderLocal(RenderBase):
             self.gl = PILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         elif gl == "PILSVG":
             self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
-        elif gl in ["TKPILSVG", "TKPIL"]:
-            # Conditional import to avoid importing tkinter unless required.
-            print("Importing TKPILGL - requires a local display!")
-            from flatland.utils.graphics_tkpil import TKPILGL
-            self.gl = TKPILGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
-        elif gl in ["PGL"]:
-            # Conditional import
-            from flatland.utils.graphics_pgl import PGLGL
-            self.gl = PGLGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
         else:
-            print("[", gl, "] not found, switch to PGL, PILSVG, TKPIL (deprecated) or BROWSER")
-            print("Using PILSVG.")
-            self.gl = PILSVG(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
+            if gl != "PGL":
+                print("[", gl, "] not found, switch to PGL, PILSVG")
+                print("Using PGL")
+            self.gl = PGLGL(env.width, env.height, jupyter, screen_width=screen_width, screen_height=screen_height)
 
         self.new_rail = True
         self.show_debug = show_debug
@@ -582,7 +518,7 @@ class RenderLocal(RenderBase):
         """
 
         # if type(self.gl) is PILSVG:
-        if self.gl_str in ["PILSVG", "TKPIL", "TKPILSVG", "PGL"]:
+        if self.gl_str in ["PILSVG", "PGL"]:
             return self.render_env_svg(show=show,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
