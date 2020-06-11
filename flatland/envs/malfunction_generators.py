@@ -103,7 +103,7 @@ def malfunction_from_params(parameters: MalfunctionParameters) -> Tuple[Malfunct
     ----------
 
     parameters : contains all the parameters of the malfunction
-        malfunction_rate : float how many time steps it takes for a sinlge agent befor it breaks
+        malfunction_rate : float rate per timestep at which each agent malfunctions
         min_duration : int minimal duration of a failure
         max_number_of_steps_broken : int maximal duration of a failure
 
