@@ -82,7 +82,7 @@ def main(args):
                   number_of_agents=1, obs_builder_object=SingleAgentNavigationObs())
 
     obs, info = env.reset()
-    env_renderer = RenderTool(env, gl="PILSVG")
+    env_renderer = RenderTool(env)
     env_renderer.render_env(show=True, frames=True, show_observations=True)
     for step in range(100):
         action = np.argmax(obs[0]) + 1

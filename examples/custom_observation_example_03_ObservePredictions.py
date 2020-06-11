@@ -128,7 +128,7 @@ def main(args):
                   number_of_agents=3, obs_builder_object=custom_obs_builder)
 
     obs, info = env.reset()
-    env_renderer = RenderTool(env, gl="PILSVG")
+    env_renderer = RenderTool(env)
 
     # We render the initial step and show the obsered cells as colored boxes
     env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
@@ -143,6 +143,10 @@ def main(args):
         env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
         if sleep_for_animation:
             time.sleep(0.5)
+
+        if done["__all__"]:
+            print("All done!")
+            break
 
 
 if __name__ == '__main__':
