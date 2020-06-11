@@ -1,6 +1,7 @@
 import io
 import os
 import time
+#import tkinter as tk
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -9,26 +10,14 @@ from pkg_resources import resource_string as resource_bytes
 
 from flatland.utils.graphics_layer import GraphicsLayer
 
-
-def enable_windows_cairo_support():
-    if os.name == 'nt':
-        import site
-        import ctypes.util
-        default_os_path = os.environ['PATH']
-        os.environ['PATH'] = ''
-        for s in site.getsitepackages():
-            os.environ['PATH'] = os.environ['PATH'] + ';' + s + '\\cairo'
-        os.environ['PATH'] = os.environ['PATH'] + ';' + default_os_path
-        if ctypes.util.find_library('cairo') is None:
-            print("Error: cairo not installed")
-
-
-enable_windows_cairo_support()
-from cairosvg import svg2png  # noqa: E402
 from flatland.core.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
 
 
 class PILGL(GraphicsLayer):
+    # tk.Tk() must be a singleton!
+    # https://stackoverflow.com/questions/26097811/image-pyimage2-doesnt-exist
+    # window = tk.Tk()
+
     RAIL_LAYER = 0
     PREDICTION_PATH_LAYER = 1
     TARGET_LAYER = 2
@@ -279,104 +268,99 @@ class PILSVG(PILGL):
 
     def pil_from_svg_file(self, package, resource):
         bytestring = resource_bytes(package, resource)
-        bytesPNG = svg2png(bytestring=bytestring, output_height=self.nPixCell, output_width=self.nPixCell)
-        with io.BytesIO(bytesPNG) as fIn:
+        with io.BytesIO(bytestring) as fIn:
             pil_img = Image.open(fIn)
-            pil_img.load()
-
+            pil_img = pil_img.resize(
+                    (self.nPixCell, self.nPixCell),
+                    Image.ANTIALIAS
+                )
         return pil_img
-
-    def pil_from_svg_bytes(self, bytesSVG):
-        bytesPNG = svg2png(bytesSVG, output_height=self.nPixCell, output_width=self.nPixCell)
-        with io.BytesIO(bytesPNG) as fIn:
-            pil_img = Image.open(fIn)
-            return pil_img
 
     def load_buildings(self):
         lBuildingFiles = [
-            "Buildings-Bank.svg",
-            "Buildings-Bar.svg",
-            "Buildings-Wohnhaus.svg",
-            "Buildings-Hochhaus.svg",
-            "Buildings-Hotel.svg",
-            "Buildings-Office.svg",
-            "Buildings-Polizei.svg",
-            "Buildings-Post.svg",
-            "Buildings-Supermarkt.svg",
-            "Buildings-Tankstelle.svg",
-            "Buildings-Fabrik_A.svg",
-            "Buildings-Fabrik_B.svg",
-            "Buildings-Fabrik_C.svg",
-            "Buildings-Fabrik_D.svg",
-            "Buildings-Fabrik_E.svg",
-            "Buildings-Fabrik_F.svg",
-            "Buildings-Fabrik_G.svg",
-            "Buildings-Fabrik_H.svg",
-            "Buildings-Fabrik_I.svg"
+            "Buildings-Bank.png",
+            "Buildings-Bar.png",
+            "Buildings-Wohnhaus.png",
+            "Buildings-Hochhaus.png",
+            "Buildings-Hotel.png",
+            "Buildings-Office.png",
+            "Buildings-Polizei.png",
+            "Buildings-Post.png",
+            "Buildings-Supermarkt.png",
+            "Buildings-Tankstelle.png",
+            "Buildings-Fabrik_A.png",
+            "Buildings-Fabrik_B.png",
+            "Buildings-Fabrik_C.png",
+            "Buildings-Fabrik_D.png",
+            "Buildings-Fabrik_E.png",
+            "Buildings-Fabrik_F.png",
+            "Buildings-Fabrik_G.png",
+            "Buildings-Fabrik_H.png",
+            "Buildings-Fabrik_I.png"
         ]
 
-        imgBg = self.pil_from_svg_file('flatland.svg', "Background_city.svg")
+        imgBg = self.pil_from_svg_file('flatland.png', "Background_city.png")
         imgBg = imgBg.convert("RGBA")
         #print("imgBg mode:", imgBg.mode)
 
         self.lBuildings = []
         for sFile in lBuildingFiles:
             #print("Loading:", sFile)
-            img = self.pil_from_svg_file('flatland.svg', sFile)
+            img = self.pil_from_svg_file('flatland.png', sFile)
             #print("img mode:", img.mode)
             img = Image.alpha_composite(imgBg, img)
             self.lBuildings.append(img)
 
     def load_scenery(self):
         scenery_files = [
-            "Scenery-Laubbaume_A.svg",
-            "Scenery-Laubbaume_B.svg",
-            "Scenery-Laubbaume_C.svg",
-            "Scenery-Nadelbaume_A.svg",
-            "Scenery-Nadelbaume_B.svg",
-            "Scenery-Bergwelt_B.svg"
+            "Scenery-Laubbaume_A.png",
+            "Scenery-Laubbaume_B.png",
+            "Scenery-Laubbaume_C.png",
+            "Scenery-Nadelbaume_A.png",
+            "Scenery-Nadelbaume_B.png",
+            "Scenery-Bergwelt_B.png"
         ]
 
         scenery_files_d2 = [
-            "Scenery-Bergwelt_C_Teil_1_links.svg",
-            "Scenery-Bergwelt_C_Teil_2_rechts.svg"
+            "Scenery-Bergwelt_C_Teil_1_links.png",
+            "Scenery-Bergwelt_C_Teil_2_rechts.png"
         ]
 
         scenery_files_d3 = [
-            "Scenery-Bergwelt_A_Teil_1_links.svg",
-            "Scenery-Bergwelt_A_Teil_2_mitte.svg",
-            "Scenery-Bergwelt_A_Teil_3_rechts.svg"
+            "Scenery-Bergwelt_A_Teil_1_links.png",
+            "Scenery-Bergwelt_A_Teil_2_mitte.png",
+            "Scenery-Bergwelt_A_Teil_3_rechts.png"
         ]
 
         scenery_files_water = [
-            "Scenery_Water.svg"
+            "Scenery_Water.png"
         ]
 
-        img_back_ground = self.pil_from_svg_file('flatland.svg', "Background_Light_green.svg").convert("RGBA")
+        img_back_ground = self.pil_from_svg_file('flatland.png', "Background_Light_green.png").convert("RGBA")
 
-        self.scenery_background_white = self.pil_from_svg_file('flatland.svg', "Background_white.svg").convert("RGBA")
+        self.scenery_background_white = self.pil_from_svg_file('flatland.png', "Background_white.png").convert("RGBA")
 
         self.scenery = []
         for file in scenery_files:
-            img = self.pil_from_svg_file('flatland.svg', file)
+            img = self.pil_from_svg_file('flatland.png', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery.append(img)
 
         self.scenery_d2 = []
         for file in scenery_files_d2:
-            img = self.pil_from_svg_file('flatland.svg', file)
+            img = self.pil_from_svg_file('flatland.png', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery_d2.append(img)
 
         self.scenery_d3 = []
         for file in scenery_files_d3:
-            img = self.pil_from_svg_file('flatland.svg', file)
+            img = self.pil_from_svg_file('flatland.png', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery_d3.append(img)
 
         self.scenery_water = []
         for file in scenery_files_water:
-            img = self.pil_from_svg_file('flatland.svg', file)
+            img = self.pil_from_svg_file('flatland.png', file)
             img = Image.alpha_composite(img_back_ground, img)
             self.scenery_water.append(img)
 
@@ -384,55 +368,55 @@ class PILSVG(PILGL):
         """ Load the rail SVG images, apply rotations, and store as PIL images.
         """
         rail_files = {
-            "": "Background_Light_green.svg",
-            "WE": "Gleis_Deadend.svg",
-            "WW EE NN SS": "Gleis_Diamond_Crossing.svg",
-            "WW EE": "Gleis_horizontal.svg",
-            "EN SW": "Gleis_Kurve_oben_links.svg",
-            "WN SE": "Gleis_Kurve_oben_rechts.svg",
-            "ES NW": "Gleis_Kurve_unten_links.svg",
-            "NE WS": "Gleis_Kurve_unten_rechts.svg",
-            "NN SS": "Gleis_vertikal.svg",
-            "NN SS EE WW ES NW SE WN": "Weiche_Double_Slip.svg",
-            "EE WW EN SW": "Weiche_horizontal_oben_links.svg",
-            "EE WW SE WN": "Weiche_horizontal_oben_rechts.svg",
-            "EE WW ES NW": "Weiche_horizontal_unten_links.svg",
-            "EE WW NE WS": "Weiche_horizontal_unten_rechts.svg",
-            "NN SS EE WW NW ES": "Weiche_Single_Slip.svg",
-            "NE NW ES WS": "Weiche_Symetrical.svg",
-            "NN SS EN SW": "Weiche_vertikal_oben_links.svg",
-            "NN SS SE WN": "Weiche_vertikal_oben_rechts.svg",
-            "NN SS NW ES": "Weiche_vertikal_unten_links.svg",
-            "NN SS NE WS": "Weiche_vertikal_unten_rechts.svg",
-            "NE NW ES WS SS NN": "Weiche_Symetrical_gerade.svg",
-            "NE EN SW WS": "Gleis_Kurve_oben_links_unten_rechts.svg"
+            "": "Background_Light_green.png",
+            "WE": "Gleis_Deadend.png",
+            "WW EE NN SS": "Gleis_Diamond_Crossing.png",
+            "WW EE": "Gleis_horizontal.png",
+            "EN SW": "Gleis_Kurve_oben_links.png",
+            "WN SE": "Gleis_Kurve_oben_rechts.png",
+            "ES NW": "Gleis_Kurve_unten_links.png",
+            "NE WS": "Gleis_Kurve_unten_rechts.png",
+            "NN SS": "Gleis_vertikal.png",
+            "NN SS EE WW ES NW SE WN": "Weiche_Double_Slip.png",
+            "EE WW EN SW": "Weiche_horizontal_oben_links.png",
+            "EE WW SE WN": "Weiche_horizontal_oben_rechts.png",
+            "EE WW ES NW": "Weiche_horizontal_unten_links.png",
+            "EE WW NE WS": "Weiche_horizontal_unten_rechts.png",
+            "NN SS EE WW NW ES": "Weiche_Single_Slip.png",
+            "NE NW ES WS": "Weiche_Symetrical.png",
+            "NN SS EN SW": "Weiche_vertikal_oben_links.png",
+            "NN SS SE WN": "Weiche_vertikal_oben_rechts.png",
+            "NN SS NW ES": "Weiche_vertikal_unten_links.png",
+            "NN SS NE WS": "Weiche_vertikal_unten_rechts.png",
+            "NE NW ES WS SS NN": "Weiche_Symetrical_gerade.png",
+            "NE EN SW WS": "Gleis_Kurve_oben_links_unten_rechts.png"
         }
 
         target_files = {
-            "EW": "Bahnhof_#d50000_Deadend_links.svg",
-            "NS": "Bahnhof_#d50000_Deadend_oben.svg",
-            "WE": "Bahnhof_#d50000_Deadend_rechts.svg",
-            "SN": "Bahnhof_#d50000_Deadend_unten.svg",
-            "EE WW": "Bahnhof_#d50000_Gleis_horizontal.svg",
-            "NN SS": "Bahnhof_#d50000_Gleis_vertikal.svg"}
+            "EW": "Bahnhof_#d50000_Deadend_links.png",
+            "NS": "Bahnhof_#d50000_Deadend_oben.png",
+            "WE": "Bahnhof_#d50000_Deadend_rechts.png",
+            "SN": "Bahnhof_#d50000_Deadend_unten.png",
+            "EE WW": "Bahnhof_#d50000_Gleis_horizontal.png",
+            "NN SS": "Bahnhof_#d50000_Gleis_vertikal.png"}
 
         # Dict of rail cell images indexed by binary transitions
         pil_rail_files_org = self.load_svgs(rail_files, rotate=True)
-        pil_rail_files = self.load_svgs(rail_files, rotate=True, background_image="Background_rail.svg",
-                                        whitefilter="Background_white_filter.svg")
+        pil_rail_files = self.load_svgs(rail_files, rotate=True, background_image="Background_rail.png",
+                                        whitefilter="Background_white_filter.png")
 
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
         pil_target_files_org = self.load_svgs(target_files, rotate=False, agent_colors=self.agent_colors)
         pil_target_files = self.load_svgs(target_files, rotate=False, agent_colors=self.agent_colors,
-                                          background_image="Background_rail.svg",
-                                          whitefilter="Background_white_filter.svg")
+                                          background_image="Background_rail.png",
+                                          whitefilter="Background_white_filter.png")
 
         # Load station and recolorize them
-        station = self.pil_from_svg_file('flatland.svg', "Bahnhof_#d50000_target.svg")
+        station = self.pil_from_svg_file('flatland.png', "Bahnhof_#d50000_target.png")
         self.station_colors = self.recolor_image(station, [0, 0, 0], self.agent_colors, False)
 
-        cell_occupied = self.pil_from_svg_file('flatland.svg', "Cell_occupied.svg")
+        cell_occupied = self.pil_from_svg_file('flatland.png', "Cell_occupied.png")
         self.cell_occupied = self.recolor_image(cell_occupied, [0, 0, 0], self.agent_colors, False)
 
         # Merge them with the regular rails.
@@ -461,14 +445,14 @@ class PILSVG(PILGL):
             transition_16_bit_string = "".join(transition_16_bit)
             binary_trans = int(transition_16_bit_string, 2)
 
-            pil_rail = self.pil_from_svg_file('flatland.svg', file).convert("RGBA")
+            pil_rail = self.pil_from_svg_file('flatland.png', file).convert("RGBA")
 
             if background_image is not None:
-                img_bg = self.pil_from_svg_file('flatland.svg', background_image).convert("RGBA")
+                img_bg = self.pil_from_svg_file('flatland.png', background_image).convert("RGBA")
                 pil_rail = Image.alpha_composite(img_bg, pil_rail)
 
             if whitefilter is not None:
-                img_bg = self.pil_from_svg_file('flatland.svg', whitefilter).convert("RGBA")
+                img_bg = self.pil_from_svg_file('flatland.png', whitefilter).convert("RGBA")
                 pil_rail = Image.alpha_composite(pil_rail, img_bg)
 
             if rotate:
@@ -560,7 +544,7 @@ class PILSVG(PILGL):
 
         if target is not None:
             if is_selected:
-                svgBG = self.pil_from_svg_file('flatland.svg', "Selected_Target.svg")
+                svgBG = self.pil_from_svg_file('flatland.png', "Selected_Target.png")
                 self.clear_layer(PILGL.SELECTED_TARGET_LAYER, 0)
                 self.draw_image_row_col(svgBG, (row, col), layer=PILGL.SELECTED_TARGET_LAYER)
 
@@ -585,9 +569,9 @@ class PILSVG(PILGL):
 
         # Seed initial train/zug files indexed by tuple(iDirIn, iDirOut):
         file_directory = {
-            (0, 0): "Zug_Gleis_#0091ea.svg",
-            (1, 2): "Zug_1_Weiche_#0091ea.svg",
-            (0, 3): "Zug_2_Weiche_#0091ea.svg"
+            (0, 0): "Zug_Gleis_#0091ea.png",
+            (1, 2): "Zug_1_Weiche_#0091ea.png",
+            (0, 3): "Zug_2_Weiche_#0091ea.png"
         }
 
         # "paint" color of the train images we load - this is the color we will change.
@@ -600,7 +584,7 @@ class PILSVG(PILGL):
         for directions, path_svg in file_directory.items():
             in_direction, out_direction = directions
 
-            pil_zug = self.pil_from_svg_file('flatland.svg', path_svg)
+            pil_zug = self.pil_from_svg_file('flatland.png', path_svg)
 
             # Rotate both the directions and the image and save in the dict
             for rot_direction in range(4):
@@ -630,7 +614,7 @@ class PILSVG(PILGL):
                 self.draw_image_row_col(self.scenery_background_white, (row, col), layer=PILGL.RAIL_LAYER)
 
         if is_selected:
-            bg_svg = self.pil_from_svg_file('flatland.svg', "Selected_Agent.svg")
+            bg_svg = self.pil_from_svg_file('flatland.png', "Selected_Agent.png")
             self.clear_layer(PILGL.SELECTED_AGENT_LAYER, 0)
             self.draw_image_row_col(bg_svg, (row, col), layer=PILGL.SELECTED_AGENT_LAYER)
         if show_debug:
