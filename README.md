@@ -35,13 +35,6 @@ $ conda create python=3.6 --name flatland-rl
 $ conda activate flatland-rl
 ```
 
-* Install the necessary dependencies:
-
-```console
-$ conda install -c conda-forge cairosvg pycairo
-$ conda install -c anaconda tk  
-```
-
 ### Stable Release
 
 You can install Flatland from pip:
@@ -57,6 +50,7 @@ This is the preferred method to install Flatland, as it will always install the 
 The Flatland code source is available from [AIcrowd gitlab](https://gitlab.aicrowd.com/flatland/flatland).
 
 You can clone the public repository:
+
 ```console
 $ git clone git@gitlab.aicrowd.com:flatland/flatland.git
 ```
@@ -88,7 +82,7 @@ This library was developed by [SBB](https://www.sbb.ch/en/), [AIcrowd](https://w
 
 ➕ Contributions
 ---
-Please follow the [Contribution Guidelines](https://flatland.aicrowd.com/misc/contributing.html) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions.
+Please follow the [Contribution Guidelines](https://flatland.aicrowd.com/misc/contributing.html) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions!
 
 💬 Communication
 ---
