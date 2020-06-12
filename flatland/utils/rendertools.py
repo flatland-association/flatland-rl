@@ -51,13 +51,14 @@ class RenderTool(object):
                    show_inactive_agents=False,  # whether to show agents before they start
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
+                   show_rowcols=False, # label the rows and columns
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
                    selected_agent=None,  # indicate which agent is "selected" in the editor):
                    return_image=False): # indicate if image is returned for use in monitor:
         return self.renderer.render_env(show, show_agents, show_inactive_agents, show_observations,
-                    show_predictions, frames, episode, step, selected_agent, return_image)
+                    show_predictions, show_rowcols, frames, episode, step, selected_agent, return_image)
 
     def close_window(self):
         self.renderer.close_window()
@@ -508,6 +509,7 @@ class RenderLocal(RenderBase):
                    show_inactive_agents=False,
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
+                   show_rowcols=False,  # label the rows and columns
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
@@ -525,6 +527,7 @@ class RenderLocal(RenderBase):
                                 selected_agent=selected_agent,
                                 show_agents=show_agents,
                                 show_inactive_agents=show_inactive_agents,
+                                show_rowcols=show_rowcols,
                                 return_image=return_image
                                 )
         else:
@@ -533,6 +536,7 @@ class RenderLocal(RenderBase):
                                 show_inactive_agents=show_inactive_agents,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
+                                show_rowcols=show_rowcols,
                                 frames=frames,
                                 episode=episode,
                                 step=step,
@@ -557,6 +561,7 @@ class RenderLocal(RenderBase):
                        show_inactive_agents=False, 
                        show_observations=True,  # whether to include observations
                        show_predictions=False,  # whether to include predictions
+                       show_rowcols=False, # label the rows and columns
                        frames=False,  # frame counter to show (intended since invocation)
                        episode=None,  # int episode number to show
                        step=None,  # int step number to show in image
@@ -615,7 +620,7 @@ class RenderLocal(RenderBase):
 
     def render_env_svg(
         self, show=False, show_observations=True, show_predictions=False, selected_agent=None,
-        show_agents=True, show_inactive_agents=False, return_image=False
+        show_agents=True, show_inactive_agents=False, show_rowcols=False, return_image=False
     ):
         """
         Renders the environment with SVG support (nice image)
@@ -655,11 +660,12 @@ class RenderLocal(RenderBase):
 
             self.gl.build_background_map(targets)
 
-            # label rows, cols
-            for iRow in range(env.height):
-                self.gl.text_rowcol((iRow, 0), str(iRow), layer=self.gl.RAIL_LAYER)
-            for iCol in range(env.width):
-                self.gl.text_rowcol((0, iCol), str(iCol), layer=self.gl.RAIL_LAYER)
+            if show_rowcols:
+                # label rows, cols
+                for iRow in range(env.height):
+                    self.gl.text_rowcol((iRow, 0), str(iRow), layer=self.gl.RAIL_LAYER)
+                for iCol in range(env.width):
+                    self.gl.text_rowcol((0, iCol), str(iCol), layer=self.gl.RAIL_LAYER)
 
 
         if show_agents:
