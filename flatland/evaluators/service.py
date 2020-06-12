@@ -535,9 +535,11 @@ class FlatlandRemoteEvaluationService:
             )
 
             if self.visualize:
-                if self.env_renderer:
-                    del self.env_renderer
-                self.env_renderer = RenderTool(self.env, gl="PILSVG", )
+                current_env_path = self.env_file_paths[self.simulation_count]
+                if current_env_path in self.video_generation_envs:
+                    self.env_renderer = RenderTool(self.env, gl="PILSVG", )
+                elif self.env_renderer:
+                    self.env_renderer = False
 
             _command_response = {}
             _command_response['type'] = messages.FLATLAND_RL.ENV_CREATE_RESPONSE
@@ -631,17 +633,18 @@ class FlatlandRemoteEvaluationService:
 
         # Record Frame
         if self.visualize:
-            self.env_renderer.render_env(
-                show=False,
-                show_observations=False,
-                show_predictions=False
-            )
             """
-            Only save the frames for environments which are separately provided 
+            Only generate and save the frames for environments which are separately provided
             in video_generation_indices param
             """
             current_env_path = self.env_file_paths[self.simulation_count]
             if current_env_path in self.video_generation_envs:
+                self.env_renderer.render_env(
+                    show=False,
+                    show_observations=False,
+                    show_predictions=False
+                )
+
                 self.env_renderer.gl.save_image(
                     os.path.join(
                         self.vizualization_folder_name,
