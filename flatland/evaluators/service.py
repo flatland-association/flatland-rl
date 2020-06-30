@@ -43,14 +43,14 @@ m.patch()
 # CONSTANTS
 ########################################################
 INTIAL_PLANNING_TIMEOUT = int(os.getenv(
-                                "FLATLAND_INITIAL_PLANNING_TIMEOUT",
-                                5 * 60))  # 5 mins
+    "FLATLAND_INITIAL_PLANNING_TIMEOUT",
+    5 * 60))  # 5 mins
 PER_STEP_TIMEOUT = int(os.getenv(
-                                "FLATLAND_PER_STEP_TIMEOUT",
-                                5))  # 5 seconds
+    "FLATLAND_PER_STEP_TIMEOUT",
+    5))  # 5 seconds
 DEFAULT_COMMAND_TIMEOUT = int(os.getenv(
-                                "FLATLAND_DEFAULT_COMMAND_TIMEOUT",
-                                1 * 60))  # 1 min
+    "FLATLAND_DEFAULT_COMMAND_TIMEOUT",
+    1 * 60))  # 1 min
 # This applies to the rest of the commands
 
 
@@ -249,7 +249,7 @@ class FlatlandRemoteEvaluationService:
         ) for x in env_paths])
 
         return env_paths
-    
+
     def instantiate_evaluation_metadata(self):
         """
             This instantiates a pandas dataframe to record
@@ -261,9 +261,9 @@ class FlatlandRemoteEvaluationService:
         """
         self.evaluation_metadata_df = None
         metadata_file_path = os.path.join(
-                self.test_env_folder,
-                "metadata.csv"
-            )
+            self.test_env_folder,
+            "metadata.csv"
+        )
         if os.path.exists(metadata_file_path):
             self.evaluation_metadata_df = pd.read_csv(metadata_file_path)
             self.evaluation_metadata_df["filename"] = \
@@ -293,7 +293,7 @@ class FlatlandRemoteEvaluationService:
         for the **previous** episode in the metadata_df if it exists.
         """
         if self.evaluation_metadata_df is not None and len(self.simulation_env_file_paths) > 0:
-            
+
             last_simulation_env_file_path = self.simulation_env_file_paths[-1]
 
             _row = self.evaluation_metadata_df.loc[
@@ -373,7 +373,7 @@ class FlatlandRemoteEvaluationService:
         packed message, and consider the timeouts, etc when trying to
         fetch a new command.
         """
-        
+
         COMMAND_TIMEOUT = DEFAULT_COMMAND_TIMEOUT
         """
         Handle case specific timeouts :
@@ -402,7 +402,7 @@ class FlatlandRemoteEvaluationService:
             If the user has already done an env_submit call, then the timeout 
             can be an arbitrarily large number.
             """
-            COMMAND_TIMEOUT = 10**6
+            COMMAND_TIMEOUT = 10 ** 6
 
         @timeout_decorator.timeout(
             COMMAND_TIMEOUT,
@@ -606,6 +606,8 @@ class FlatlandRemoteEvaluationService:
         time_diff = time.time() - time_start
         self.update_running_stats("internal_env_step_time", time_diff)
 
+        self.current_step += 1
+
         cumulative_reward = sum(all_rewards.values())
         self.simulation_rewards[-1] += cumulative_reward
         self.simulation_steps[-1] += 1
@@ -673,10 +675,10 @@ class FlatlandRemoteEvaluationService:
                 min_key = "{}_min".format(metric_name)
                 max_key = "{}_max".format(metric_name)
                 print("\t - {}\t => min: {} || mean: {} || max: {}".format(
-                            metric_name,
-                            self.stats[min_key],
-                            self.stats[mean_key],
-                            self.stats[max_key]))
+                    metric_name,
+                    self.stats[min_key],
+                    self.stats[mean_key],
+                    self.stats[max_key]))
         print("=" * 100)
 
         # Register simulation time of the last episode
@@ -732,7 +734,7 @@ class FlatlandRemoteEvaluationService:
         if self.result_output_path:
             self.evaluation_metadata_df.to_csv(self.result_output_path)
             print("Wrote output results to : {}".format(self.result_output_path))
-            
+
             # Upload the metadata file to S3 
             if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
                 metadata_s3_key = aicrowd_helpers.upload_to_s3(
@@ -848,9 +850,9 @@ class FlatlandRemoteEvaluationService:
                 print("Self.Reward : ", self.reward)
                 print("Current Simulation : ", self.simulation_count)
                 if self.env_file_paths and \
-                        self.simulation_count < len(self.env_file_paths):
+                    self.simulation_count < len(self.env_file_paths):
                     print("Current Env Path : ",
-                        self.env_file_paths[self.simulation_count])
+                          self.env_file_paths[self.simulation_count])
 
             try:
                 if command['type'] == messages.FLATLAND_RL.PING:
