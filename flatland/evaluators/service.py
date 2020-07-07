@@ -150,6 +150,7 @@ class FlatlandRemoteEvaluationService:
         self.env = False
         self.env_renderer = False
         self.reward = 0
+        self.simulation_done = True
         self.simulation_count = -1
         self.simulation_env_file_paths = []
         self.simulation_rewards = []
@@ -486,7 +487,14 @@ class FlatlandRemoteEvaluationService:
         Handles a ENV_CREATE command from the client
         TODO: Add a high level summary of everything thats happening here.
         """
+        if not self.simulation_done:
+            # trying to reset a simulation before finishing the previous one
+            _command_response = self._error_template("CAN'T CREATE NEW ENV BEFORE PREVIOUS IS DONE")
+            self.send_response(_command_response, command)
+            raise Exception(_command_response['payload'])
+
         self.simulation_count += 1
+        self.simulation_done = False
         if self.simulation_count < len(self.env_file_paths):
             """
             There are still test envs left that are yet to be evaluated 
@@ -624,6 +632,8 @@ class FlatlandRemoteEvaluationService:
             )
 
         if done["__all__"]:
+            self.simulation_done = True
+
             # Compute percentage complete
             complete = 0
             for i_agent in range(self.env.get_num_agents()):
@@ -632,6 +642,12 @@ class FlatlandRemoteEvaluationService:
                     complete += 1
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
+
+            print("Evaluation finished in {} timesteps. Percentage agents done: {:.3f}. Normalized reward: {:.3f}.".format(
+                self.simulation_steps[-1],
+                self.simulation_percentage_complete[-1],
+                self.simulation_rewards_normalized[-1]
+            ))
 
         # Record Frame
         if self.visualize:
