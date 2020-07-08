@@ -522,8 +522,8 @@ class FlatlandRemoteEvaluationService:
         _redis = self.get_redis_connection()
         #command_response_channel = command['response_channel']
 
-        if self.verbose and not suppress_logs:
-            print("Responding with : ", error_dict)
+        #if self.verbose and not suppress_logs:
+        print("Send error : ", error_dict)
 
         if self.use_pickle:
             sResponse = pickle.dumps(error_dict)
@@ -757,21 +757,6 @@ class FlatlandRemoteEvaluationService:
                     ))
                 self.record_frame_step += 1
 
-    def send_env_step_timeout(self, command):
-        print("handle_env_step_timeout")
-        error_dict = dict(
-            type=messages.FLATLAND_RL.ENV_STEP_TIMEOUT,
-
-            # payload probably unnecessary
-            payload=dict(
-                observation=False,
-                env_file_path=False,
-                info=False,
-                random_seed=False
-            ))
-        
-        self.send_error(error_dict)
-
     def save_actions(self):
         sfEnv = self.env_file_paths[self.simulation_count]
         
@@ -995,11 +980,16 @@ class FlatlandRemoteEvaluationService:
 
             try:
                 command = self.get_next_command()
+
             except timeout_decorator.timeout_decorator.TimeoutError:
                 if self.previous_command['type'] == messages.FLATLAND_RL.ENV_STEP:
-                    self.send_env_step_timeout({"error":messages.FLATLAND_RL.ENV_STEP_TIMEOUT})
-                    self.state_env_timed_out = True
-                    continue
+                    self.send_error({"type":messages.FLATLAND_RL.ENV_STEP_TIMEOUT})
+                
+                elif self.previous_command['type'] == messages.FLATLAND_RL.ENV_CREATE:
+                    self.send_error({"type":messages.FLATLAND_RL.ENV_RESET_TIMEOUT})
+
+                self.state_env_timed_out = True
+                continue
 
             if "timestamp" in command.keys():
                 latency = time.time() - command["timestamp"]
