@@ -614,6 +614,8 @@ class FlatlandRemoteEvaluationService:
         time_diff = time.time() - time_start
         self.update_running_stats("internal_env_step_time", time_diff)
 
+        self.current_step += 1
+
         cumulative_reward = sum(all_rewards.values())
         self.simulation_rewards[-1] += cumulative_reward
         self.simulation_steps[-1] += 1
