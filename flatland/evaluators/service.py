@@ -328,7 +328,7 @@ class FlatlandRemoteEvaluationService:
             self.evaluation_metadata_df["controller_inference_time_mean"] = np.nan
             self.evaluation_metadata_df["controller_inference_time_max"] = np.nan
         else:
-            raise Exception("metadata.csv not found in tests folder. Please use an updated version of the test set.")
+            raise Exception("metadata.csv not found in tests folder ({}). Please use an updated version of the test set.".format(metadata_file_path))
 
     def update_evaluation_metadata(self):
         """
