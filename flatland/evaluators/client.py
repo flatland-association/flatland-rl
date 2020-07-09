@@ -48,7 +48,7 @@ class FlatlandRemoteClient(object):
                  test_envs_root=None,
                  verbose=False,
                  use_pickle=False):
-        self.use_pickle=use_pickle
+        self.use_pickle = use_pickle
         self.remote_host = remote_host
         self.remote_port = remote_port
         self.remote_db = remote_db
@@ -90,8 +90,6 @@ class FlatlandRemoteClient(object):
 
         self.env_step_times = []
         self.stats = {}
-
-
 
     def update_running_stats(self, key, scalar):
         """
@@ -168,8 +166,8 @@ class FlatlandRemoteClient(object):
                     object_hook=m.decode,
                     strict_map_key=False,  # new for msgpack 1.0?
                     encoding="utf8"  # remove for msgpack 1.0
-                    )
-            print("error received: ", error_dict)
+                )
+            print("Error received: ", error_dict)
             raise StopAsyncIteration(error_dict["type"])
 
         # Push request in command_channels
@@ -193,7 +191,7 @@ class FlatlandRemoteClient(object):
                     object_hook=m.decode,
                     strict_map_key=False,  # new for msgpack 1.0?
                     encoding="utf8"  # remove for msgpack 1.0
-                    )
+                )
             if _response['type'] == messages.FLATLAND_RL.ERROR:
                 raise Exception(str(_response["payload"]))
             else:
@@ -286,7 +284,7 @@ class FlatlandRemoteClient(object):
     def env_step(self, action, render=False):
         """
             Respond with [observation, reward, done, info]
-        """        
+        """
         # We use the last_env_step_time as an approximate measure of the inference time
         approximate_inference_time = time.time() - self.last_env_step_time
         self.update_running_stats("inference_time(approx)", approximate_inference_time)
@@ -335,10 +333,10 @@ class FlatlandRemoteClient(object):
                 min_key = "{}_min".format(metric_name)
                 max_key = "{}_max".format(metric_name)
                 print("\t - {}\t => min: {} || mean: {} || max: {}".format(
-                            metric_name,
-                            self.stats[min_key],
-                            self.stats[mean_key],
-                            self.stats[max_key]))
+                    metric_name,
+                    self.stats[min_key],
+                    self.stats[mean_key],
+                    self.stats[max_key]))
         print("=" * 100)
         if os.getenv("AICROWD_BLOCKING_SUBMIT"):
             """
@@ -354,11 +352,13 @@ class FlatlandRemoteClient(object):
 if __name__ == "__main__":
     remote_client = FlatlandRemoteClient()
 
+
     def my_controller(obs, _env):
         _action = {}
         for _idx, _ in enumerate(_env.agents):
             _action[_idx] = np.random.randint(0, 5)
         return _action
+
 
     my_observation_builder = DummyObservationBuilder()
 

@@ -152,7 +152,6 @@ class FlatlandRemoteEvaluationService:
             self.service_id
         )
 
-
         # Message Broker related vars
         self.remote_host = remote_host
         self.remote_port = remote_port
@@ -283,15 +282,13 @@ class FlatlandRemoteEvaluationService:
             x, self.test_env_folder
         ) for x in env_paths])
 
-
- 		# if requested, only generate actions for those envs which don't already have them
+        # if requested, only generate actions for those envs which don't already have them
         if self.mergeDir and self.missing_only:
             existing_paths = (itertools.chain.from_iterable(
-                [ glob.glob(os.path.join(self.mergeDir, f"envs/*.{ext}"))
-                    for ext in ["pkl", "mpk"] ]))
+                [glob.glob(os.path.join(self.mergeDir, f"envs/*.{ext}"))
+                 for ext in ["pkl", "mpk"]]))
             existing_paths = [os.path.relpath(sPath, self.mergeDir) for sPath in existing_paths]
             env_paths = sorted(set(env_paths) - set(existing_paths))
-
 
         return env_paths
 
@@ -337,8 +334,8 @@ class FlatlandRemoteEvaluationService:
         and it simply tries to update the simulation specific information 
         for the **previous** episode in the metadata_df if it exists.
         """
-        if self.evaluation_metadata_df is not None and len(self.simulation_env_file_paths) > 0:
 
+        if self.evaluation_metadata_df is not None and len(self.simulation_env_file_paths) > 0:
             last_simulation_env_file_path = self.simulation_env_file_paths[-1]
 
             _row = self.evaluation_metadata_df.loc[
@@ -353,15 +350,21 @@ class FlatlandRemoteEvaluationService:
 
             # TODO: This needs refactoring
             # Add controller_inference_time_metrics
-            _row.controller_inference_time_min = self.stats[
-                "current_episode_controller_inference_time_min"
-            ]
-            _row.controller_inference_time_mean = self.stats[
-                "current_episode_controller_inference_time_mean"
-            ]
-            _row.controller_inference_time_max = self.stats[
-                "current_episode_controller_inference_time_max"
-            ]
+            # These metrics may be missing if no step was done before the episode finished
+            if "current_episode_controller_inference_time_min" in self.stats:
+                _row.controller_inference_time_min = self.stats[
+                    "current_episode_controller_inference_time_min"
+                ]
+                _row.controller_inference_time_mean = self.stats[
+                    "current_episode_controller_inference_time_mean"
+                ]
+                _row.controller_inference_time_max = self.stats[
+                    "current_episode_controller_inference_time_max"
+                ]
+            else:
+                _row.controller_inference_time_min = 0.0
+                _row.controller_inference_time_mean = 0.0
+                _row.controller_inference_time_max = 0.0
 
             self.evaluation_metadata_df.loc[
                 last_simulation_env_file_path
@@ -462,19 +465,19 @@ class FlatlandRemoteEvaluationService:
             command = _redis.brpop(command_channel)[1]
             return command
 
-        #try:
+        # try:
         if True:
             _redis = self.get_redis_connection()
             command = _get_next_command(self.command_channel, _redis)
             if self.verbose or self.report:
                 print("Command Service: ", command)
-        #except timeout_decorator.timeout_decorator.TimeoutError:
-            #raise Exception(
-            #    "Timeout of {}s in step {} of simulation {}".format(
-            #        COMMAND_TIMEOUT,
-            #        self.current_step,
-            #        self.simulation_count
-            #    ))
+        # except timeout_decorator.timeout_decorator.TimeoutError:
+        # raise Exception(
+        #    "Timeout of {}s in step {} of simulation {}".format(
+        #        COMMAND_TIMEOUT,
+        #        self.current_step,
+        #        self.simulation_count
+        #    ))
 
         #    print("Timeout of {}s in step {} of simulation {}".format(
         #        COMMAND_TIMEOUT,
@@ -483,15 +486,14 @@ class FlatlandRemoteEvaluationService:
         #        ))
         #    return {"type":messages.FLATLAND_RL.ENV_STEP_TIMEOUT}
 
-
         if self.use_pickle:
             command = pickle.loads(command)
         else:
             command = msgpack.unpackb(
                 command,
                 object_hook=m.decode,
-                strict_map_key=False,   # msgpack 1.0
-                encoding="utf8"        # msgpack 1.0
+                strict_map_key=False,  # msgpack 1.0
+                encoding="utf8"  # msgpack 1.0
             )
         if self.verbose:
             print("Received Request : ", command)
@@ -521,9 +523,9 @@ class FlatlandRemoteEvaluationService:
             where we do not have a command, so we have no response channel!
         """
         _redis = self.get_redis_connection()
-        #command_response_channel = command['response_channel']
+        # command_response_channel = command['response_channel']
 
-        #if self.verbose and not suppress_logs:
+        # if self.verbose and not suppress_logs:
         print("Send error : ", error_dict)
 
         if self.use_pickle:
@@ -679,7 +681,7 @@ class FlatlandRemoteEvaluationService:
         """
 
         if self.state_env_timed_out:
-            print("ignoring step command after timeout")
+            print("Ignoring step command after timeout")
             return
 
         _payload = command['payload']
@@ -725,6 +727,8 @@ class FlatlandRemoteEvaluationService:
         # record the actions before checking for done
         if self.actionDir is not None:
             self.lActions.append(action)
+
+        # all done! episode over
         if done["__all__"]:
             self.simulation_done = True
 
@@ -793,7 +797,7 @@ class FlatlandRemoteEvaluationService:
         sfEpisode = self.episodeDir + "/" + sfEnv
         print("env path: ", sfEnv, " sfEpisode:", sfEpisode)
         RailEnvPersister.save_episode(self.env, sfEpisode)
-        #self.env.save_episode(sfEpisode)
+        # self.env.save_episode(sfEpisode)
 
     def save_merged_env(self):
         sfEnv = self.env_file_paths[self.simulation_count]
@@ -804,7 +808,7 @@ class FlatlandRemoteEvaluationService:
 
         print("Input env path: ", sfEnv, " Merge File:", sfMergeEnv)
         RailEnvPersister.save_episode(self.env, sfMergeEnv)
-        #self.env.save_episode(sfMergeEnv)
+        # self.env.save_episode(sfMergeEnv)
 
     def handle_env_submit(self, command):
         """
@@ -998,13 +1002,25 @@ class FlatlandRemoteEvaluationService:
                 command = self.get_next_command()
 
             except timeout_decorator.timeout_decorator.TimeoutError:
+                # a timeout occured: send an error, and give -1.0 normalized score for this episode
                 if self.previous_command['type'] == messages.FLATLAND_RL.ENV_STEP:
-                    self.send_error({"type":messages.FLATLAND_RL.ENV_STEP_TIMEOUT})
+                    self.send_error({"type": messages.FLATLAND_RL.ENV_STEP_TIMEOUT})
 
                 elif self.previous_command['type'] == messages.FLATLAND_RL.ENV_CREATE:
-                    self.send_error({"type":messages.FLATLAND_RL.ENV_RESET_TIMEOUT})
+                    self.send_error({"type": messages.FLATLAND_RL.ENV_RESET_TIMEOUT})
+
+                self.simulation_steps[-1] += 1
+                self.simulation_rewards[-1] = self.env._max_episode_steps * self.env.get_num_agents()
+                self.simulation_rewards_normalized[-1] = -1.0
+
+                print("Evaluation TIMED OUT after {} timesteps, using max penalty. Percentage agents done: {:.3f}. Normalized reward: {:.3f}.".format(
+                    self.simulation_steps[-1],
+                    self.simulation_percentage_complete[-1],
+                    self.simulation_rewards_normalized[-1]
+                ))
 
                 self.state_env_timed_out = True
+                self.simulation_done = True
                 continue
 
             if "timestamp" in command.keys():
@@ -1050,16 +1066,16 @@ class FlatlandRemoteEvaluationService:
 
                     print("Overall Message Queue Latency : ", np.array(MESSAGE_QUEUE_LATENCY).mean())
                     self.handle_env_submit(command)
-                elif command['type'] == messages.FLATLAND_RL.ENV_STEP_TIMEOUT:
-                    """
-                        ENV_STEP_TIMEOUT
-
-                        The client took too long to give us the next command.
-
-                    """
-
-                    print("client env_step timeout")
-                    self.handle_env_step_timeout(command)
+                # elif command['type'] == messages.FLATLAND_RL.ENV_STEP_TIMEOUT:
+                #     """
+                #         ENV_STEP_TIMEOUT
+                #
+                #         The client took too long to give us the next command.
+                #
+                #     """
+                #
+                #     print("client env_step timeout")
+                #     self.handle_env_step_timeout(command)
 
                 else:
                     _error = self._error_template(
@@ -1141,7 +1157,6 @@ if __name__ == "__main__":
                         action="store_true",
                         help="only request the envs/actions which are missing",
                         required=False)
-
 
     parser.add_argument('--verbose',
                         default=False,
