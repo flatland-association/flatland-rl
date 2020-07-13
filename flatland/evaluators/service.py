@@ -479,20 +479,6 @@ class FlatlandRemoteEvaluationService:
             command = _get_next_command(self.command_channel, _redis)
             if self.verbose or self.report:
                 print("Command Service: ", command)
-        # except timeout_decorator.timeout_decorator.TimeoutError:
-        # raise Exception(
-        #    "Timeout of {}s in step {} of simulation {}".format(
-        #        COMMAND_TIMEOUT,
-        #        self.current_step,
-        #        self.simulation_count
-        #    ))
-
-        #    print("Timeout of {}s in step {} of simulation {}".format(
-        #        COMMAND_TIMEOUT,
-        #        self.current_step,
-        #        self.simulation_count
-        #        ))
-        #    return {"type":messages.FLATLAND_RL.ENV_STEP_TIMEOUT}
 
         if self.use_pickle:
             command = pickle.loads(command)
@@ -1006,7 +992,7 @@ class FlatlandRemoteEvaluationService:
             try:
                 command = self.get_next_command()
             except timeout_decorator.timeout_decorator.TimeoutError:
-                # a timeout occured: send an error, and give -1.0 normalized score for this episode
+                # a timeout occurred: send an error, and give -1.0 normalized score for this episode
                 if self.previous_command['type'] == messages.FLATLAND_RL.ENV_STEP:
                     self.send_error({"type": messages.FLATLAND_RL.ENV_STEP_TIMEOUT})
 
@@ -1078,16 +1064,6 @@ class FlatlandRemoteEvaluationService:
 
                     print("Overall Message Queue Latency : ", np.array(MESSAGE_QUEUE_LATENCY).mean())
                     self.handle_env_submit(command)
-                # elif command['type'] == messages.FLATLAND_RL.ENV_STEP_TIMEOUT:
-                #     """
-                #         ENV_STEP_TIMEOUT
-                #
-                #         The client took too long to give us the next command.
-                #
-                #     """
-                #
-                #     print("client env_step timeout")
-                #     self.handle_env_step_timeout(command)
 
                 else:
                     _error = self._error_template(

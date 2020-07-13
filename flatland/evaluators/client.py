@@ -24,6 +24,11 @@ logger.setLevel(logging.INFO)
 m.patch()
 
 
+class TimeoutException(StopAsyncIteration):
+    """ Custom exception for evaluation timeouts. """
+    pass
+
+
 class FlatlandRemoteClient(object):
     """
         Redis client to interface with flatland-rl remote-evaluation-service
@@ -168,7 +173,7 @@ class FlatlandRemoteClient(object):
                     encoding="utf8"  # remove for msgpack 1.0
                 )
             print("Error received: ", error_dict)
-            raise StopAsyncIteration(error_dict["type"])
+            raise TimeoutException(error_dict["type"])
 
         # Push request in command_channels
         # Note: The patched msgpack supports numpy arrays
@@ -392,7 +397,7 @@ if __name__ == "__main__":
                     print("Episode Done")
                     print("Reward : ", sum(list(all_rewards.values())))
                     break
-            except StopAsyncIteration as err:
+            except TimeoutException as err:
                 print("Timeout: ", err)
                 break
 
