@@ -904,8 +904,8 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["state"] = "FINISHED"
         self.evaluation_state["progress"] = 1.0
         self.evaluation_state["simulation_count"] = self.simulation_count
-        self.evaluation_state["score"]["score"] = mean_normalized_reward
-        self.evaluation_state["score"]["score_secondary"] = mean_percentage_complete
+        self.evaluation_state["score"]["score"] = mean_percentage_complete
+        self.evaluation_state["score"]["score_secondary"] = mean_reward
         self.evaluation_state["meta"]["normalized_reward"] = mean_normalized_reward
         self.evaluation_state["meta"]["reward"] = mean_reward
         self.evaluation_state["meta"]["percentage_complete"] = mean_percentage_complete
