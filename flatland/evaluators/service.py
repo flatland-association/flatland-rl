@@ -758,7 +758,8 @@ class FlatlandRemoteEvaluationService:
                 self.env_renderer.render_env(
                     show=False,
                     show_observations=False,
-                    show_predictions=False
+                    show_predictions=False,
+                    show_rowcols=False
                 )
 
                 self.env_renderer.gl.save_image(
