@@ -143,6 +143,44 @@ def malfunction_from_params(parameters: MalfunctionParameters) -> Tuple[Malfunct
                                              max_number_of_steps_broken)
 
 
+class ParamMalfunctionGen(object):
+    def __init__(self, parameters: MalfunctionParameters):
+        self.mean_malfunction_rate = parameters.malfunction_rate
+        self.min_number_of_steps_broken = parameters.min_duration
+        self.max_number_of_steps_broken = parameters.max_duration
+
+    def generate(self, agent: EnvAgent = None, np_random: RandomState = None, reset=False) -> Optional[Malfunction]:
+      
+        # Dummy reset function as we don't implement specific seeding here
+        if reset:
+            return Malfunction(0)
+
+        if agent.malfunction_data['malfunction'] < 1:
+            if np_random.rand() < _malfunction_prob(self.mean_malfunction_rate):
+                num_broken_steps = np_random.randint(self.min_number_of_steps_broken,
+                                                     self.max_number_of_steps_broken + 1) + 1
+                return Malfunction(num_broken_steps)
+        return Malfunction(0)
+
+    def get_process_data(self):
+        return MalfunctionProcessData(
+            self.mean_malfunction_rate, 
+            self.min_number_of_steps_broken,
+            self.max_number_of_steps_broken)
+
+
+class NoMalfunctionGen(ParamMalfunctionGen):
+    def __init__(self):
+        self.mean_malfunction_rate = 0.
+        self.min_number_of_steps_broken = 0
+        self.max_number_of_steps_broken = 0
+
+    def generate(self, agent: EnvAgent = None, np_random: RandomState = None, reset=False) -> Optional[Malfunction]:
+        return Malfunction(0)
+
+    
+
+
 def no_malfunction_generator() -> Tuple[MalfunctionGenerator, MalfunctionProcessData]:
     """
     Malfunction generator which generates no malfunctions
@@ -167,6 +205,7 @@ def no_malfunction_generator() -> Tuple[MalfunctionGenerator, MalfunctionProcess
 
     return generator, MalfunctionProcessData(mean_malfunction_rate, min_number_of_steps_broken,
                                              max_number_of_steps_broken)
+
 
 
 def single_malfunction_generator(earlierst_malfunction: int, malfunction_duration: int) -> Tuple[

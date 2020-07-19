@@ -59,7 +59,7 @@ def my_controller(obs, number_of_agents):
     return _action
 
 
-def test_random_timeouts():
+def __disabled__test_random_timeouts():
     remote_client = FlatlandRemoteClient(verbose=False)
 
     my_observation_builder = CustomObservationBuilder()

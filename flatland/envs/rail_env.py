@@ -135,6 +135,7 @@ class RailEnv(Environment):
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  malfunction_generator_and_process_data=None, #mal_gen.no_malfunction_generator(),
+                 malfunction_generator=None,
                  remove_agents_at_target=True,
                  random_seed=1,
                  record_steps=False
@@ -176,9 +177,19 @@ class RailEnv(Environment):
         """
         super().__init__()
 
-        if malfunction_generator_and_process_data is None:
-            malfunction_generator_and_process_data = mal_gen.no_malfunction_generator()
-        self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
+        if malfunction_generator_and_process_data is not None:
+            print("DEPRECATED - RailEnv arg: malfunction_and_process_data - use malfunction_generator")
+            self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
+        elif malfunction_generator is not None:
+            self.malfunction_generator = malfunction_generator
+            # malfunction_process_data is not used
+            #self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
+            self.malfunction_process_data = self.malfunction_generator.get_process_data()
+        # replace default values here because we can't use default args values because of cyclic imports
+        else:
+            self.malfunction_generator = mal_gen.NoMalfunctionGen()
+            self.malfunction_process_data = self.malfunction_generator.get_process_data()
+
         #self.rail_generator: RailGenerator = rail_generator
         if rail_generator is None:
             rail_generator = rail_gen.random_rail_generator()
@@ -315,8 +326,16 @@ class RailEnv(Environment):
 
         optionals = {}
         if regenerate_rail or self.rail is None:
-            rail, optionals = self.rail_generator(self.width, self.height, self.number_of_agents, self.num_resets,
-                                                  self.np_random)
+
+            if "__call__" in dir(self.rail_generator):
+                rail, optionals = self.rail_generator(
+                    self.width, self.height, self.number_of_agents, self.num_resets, self.np_random)
+            elif "generate" in dir(self.rail_generator):
+                rail, optionals = self.rail_generator.generate(
+                    self.width, self.height, self.number_of_agents, self.num_resets, self.np_random)
+            else:
+                raise ValueError("Could not invoke __call__ or generate on rail_generator")
+
 
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
@@ -373,7 +392,10 @@ class RailEnv(Environment):
         self.distance_map.reset(self.agents, self.rail)
 
         # Reset the malfunction generator
-        self.malfunction_generator(reset=True)
+        if "generate" in dir(self.malfunction_generator):
+            self.malfunction_generator.generate(reset=True)
+        else:
+            self.malfunction_generator(reset=True)
 
         # Empty the episode store of agent positions
         self.cur_episode = []
@@ -424,7 +446,12 @@ class RailEnv(Environment):
 
         """
 
-        malfunction: Malfunction = self.malfunction_generator(agent, self.np_random)
+        #malfunction: Malfunction = self.malfunction_generator(agent, self.np_random)
+        if "generate" in dir(self.malfunction_generator):
+            malfunction: mal_gen.Malfunction = self.malfunction_generator.generate(agent, self.np_random)
+        else:
+            malfunction: mal_gen.Malfunction = self.malfunction_generator(agent, self.np_random)
+
         if malfunction.num_broken_steps > 0:
             agent.malfunction_data['malfunction'] = malfunction.num_broken_steps
             agent.malfunction_data['moving_before_malfunction'] = agent.moving
