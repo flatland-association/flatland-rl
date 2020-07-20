@@ -6,7 +6,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import RailAgentStatus
-from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
@@ -294,7 +294,7 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     _check_expected_conflicts(expected_conflicts_1, obs_builder, tree_1, "agent[1]: ")
 
 
-def _check_expected_conflicts(expected_conflicts, obs_builder, tree: TreeObsForRailEnv.Node, prompt=''):
+def _check_expected_conflicts(expected_conflicts, obs_builder, tree: Node, prompt=''):
     assert (tree.num_agents_opposite_direction > 0) == (() in expected_conflicts), "{}[]".format(prompt)
     for a_1 in obs_builder.tree_explored_actions_char:
         if tree.childs[a_1] == -np.inf:

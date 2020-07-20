@@ -57,7 +57,7 @@ class EmptyRailGen(RailGen):
     Primarily used by the editor
     """
 
-    def generate(width: int, height: int, num_agents: int, num_resets: int = 0,
+    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
                   np_random: RandomState = None) -> RailGenerator:
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)

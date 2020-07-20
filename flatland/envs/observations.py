@@ -15,6 +15,7 @@ from flatland.envs.agent_utils import RailAgentStatus, EnvAgent
 from flatland.utils.ordered_set import OrderedSet
 
 
+
 Node = collections.namedtuple('Node', 'dist_own_target_encountered '
                                         'dist_other_target_encountered '
                                         'dist_other_agent_encountered '
@@ -219,6 +220,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                        speed_min_fractional=agent.speed_data['speed'],
                                                        num_agents_ready_to_depart=0,
                                                        childs={})
+        print("root node type:", type(root_node_observation))
 
         visited = OrderedSet()
 
