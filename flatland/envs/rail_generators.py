@@ -17,17 +17,47 @@ from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, conne
     fix_inner_nodes, align_cell_to_city
 from flatland.envs import persistence
 
+
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
+""" A rail generator returns a RailGenerator Product, which is just
+    a GridTransitionMap followed by an (optional) dict/
+"""
+
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
 
 
+class RailGen(object):
+    """ Base class for RailGen(erator) replacement
+    
+        WIP to replace bare generators with classes / objects without unnamed local variables
+        which prevent pickling.
+    """ 
+    def __init__(self, *args, **kwargs):
+        """ constructor to record any state to be reused in each "generation"
+        """
+        pass
+
+    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> RailGeneratorProduct:
+        pass
+
+    def __call__(self, *args, **kwargs) -> RailGeneratorProduct:
+        return self.generate(*args, **kwargs)
+
+
+
+
+
 def empty_rail_generator() -> RailGenerator:
+    return EmptyRailGen()
+
+class EmptyRailGen(RailGen):
     """
     Returns a generator which returns an empty rail mail with no agents.
     Primarily used by the editor
     """
 
-    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
+    def generate(width: int, height: int, num_agents: int, num_resets: int = 0,
                   np_random: RandomState = None) -> RailGenerator:
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
@@ -36,7 +66,6 @@ def empty_rail_generator() -> RailGenerator:
 
         return grid_map, None
 
-    return generator
 
 
 def complex_rail_generator(nr_start_goal=1,
@@ -255,8 +284,19 @@ def rail_from_file(filename, load_from_package=None) -> RailGenerator:
 
     return generator
 
+class RailFromGridGen(RailGen):
+    def __init__(self, rail_map):
+        self.rail_map = rail_map
+
+    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
+                  np_random: RandomState = None) -> RailGenerator:
+        return self.rail_map, None
+
 
 def rail_from_grid_transition_map(rail_map) -> RailGenerator:
+    return RailFromGridGen(rail_map)
+
+def rail_from_grid_transition_map_old(rail_map) -> RailGenerator:
     """
     Utility to convert a rail given by a GridTransitionMap map with the correct
     16-bit transitions specifications.
@@ -560,13 +600,6 @@ def random_rail_generator(cell_type_relative_proportion=[1.0] * 11, seed=1) -> R
     return generator
 
 
-
-class RailGen(object):
-    def __init__(self):
-        pass
-
-    def generate(self):
-        pass
 
 
 def sparse_rail_generator(*args, **kwargs):
