@@ -662,6 +662,9 @@ class SparseRailGen(RailGen):
             'train_stations': locations of train stations for start and targets
             'city_orientations' : orientation of cities
         """
+        if np_random is None:
+            np_random = RandomState()
+            
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         # We compute the city radius by the given max number of rails it can contain.
