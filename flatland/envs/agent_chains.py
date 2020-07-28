@@ -18,6 +18,15 @@ class MotionCheck(object):
             The agent's current position is given an "agent" attribute recording the agent index.
             If an agent does not move this round then its cell is 
         """
+
+        # Agents which have not yet entered the env have position None.
+        # Substitute this for the row = -1, column = agent index
+        if rc1 is None:
+            rc1 = (-1, iAg)
+
+        if rc2 is None:
+            rc2 = (-1, iAg)
+
         self.G.add_node(rc1, agent=iAg)
         if xlabel:
             self.G.nodes[rc1]["xlabel"] = xlabel
@@ -73,12 +82,12 @@ class MotionCheck(object):
             #print(svCompStops)
             
             if len(svCompStops) > 0:
-                print("component contains a stop")
+                #print("component contains a stop")
                 for vStop in svCompStops:
                     
                     iter_stops = nx.algorithms.traversal.dfs_postorder_nodes(Gwcc.reverse(), vStop)
                     lStops = list(iter_stops)
-                    print(vStop, "affected preds:", lStops)
+                    #print(vStop, "affected preds:", lStops)
                     svBlocked.update(lStops)
         
         return svBlocked
@@ -90,14 +99,86 @@ class MotionCheck(object):
         #svStops = self.find_stops2()
         llvLoops = list(nx.algorithms.cycles.simple_cycles(self.G))
         llvSwaps = [lvLoop for lvLoop in llvLoops if len(lvLoop) == 2 ]
-        return llvSwaps
+        svSwaps = { v for lvSwap in llvSwaps for v in lvSwap }
+        return svSwaps
     
     def find_same_dest(self):
         """ find groups of agents which are trying to land on the same cell.
             ie there is a gap of one cell between them and they are both landing on it.
         """
-        
+        pass
 
+    def find_conflicts(self):
+        svStops = self.find_stops2() # { u for u,v in nx.classes.function.selfloop_edges(self.G) }
+        #llvLoops = list(nx.algorithms.cycles.simple_cycles(self.G))
+        #llvSwaps = [lvLoop for lvLoop in llvLoops if len(lvLoop) == 2 ]
+        #svSwaps = { v for lvSwap in llvSwaps for v in lvSwap }
+        svSwaps = self.find_swaps()
+        svBlocked = self.find_stop_preds(svStops.union(svSwaps))
+
+        for (v, dPred) in self.G.pred.items():
+            if v in svSwaps:
+                self.G.nodes[v]["color"] = "purple"
+            elif v in svBlocked:
+                self.G.nodes[v]["color"] = "red"
+            elif len(dPred)>1:
+                
+                if self.G.nodes[v].get("color") == "red":
+                    continue
+                
+                if self.G.nodes[v].get("agent") is None:
+                    self.G.nodes[v]["color"] = "blue"    
+                else:
+                    self.G.nodes[v]["color"] = "magenta"
+                
+                # predecessors of a contended cell
+                diAgCell = {self.G.nodes[vPred].get("agent"): vPred  for vPred in dPred}
+                
+                # remove the agent with the lowest index, who wins
+                iAgWinner = min(diAgCell)
+                diAgCell.pop(iAgWinner)
+                
+                # Block all the remaining predessors, and their tree of preds
+                for iAg, v in diAgCell.items():
+                    self.G.nodes[v]["color"] = "red"
+                    for vPred in nx.traversal.dfs_postorder_nodes(self.G.reverse(), source=v):
+                        self.G.nodes[vPred]["color"] = "red"
+
+    def check_motion(self, iAgent, rcPos):
+        """ If agent position is None, we use a dummy position of (-1, iAgent)
+        """
+
+        if rcPos is None:
+            rcPos = (-1, iAgent)
+
+        dAttr = self.G.nodes.get(rcPos)
+        #print("pos:", rcPos, "dAttr:", dAttr)
+
+        if dAttr is None:
+            dAttr = {}
+
+        # If it's been marked red or purple then it can't move
+        if "color" in dAttr:
+            sColor = dAttr["color"]
+            if sColor in [ "red", "purple" ]:
+                return (False, rcPos)
+        
+        dSucc = self.G.succ[rcPos]
+
+        # This should never happen - only the next cell of an agent has no successor
+        if len(dSucc)==0:
+            print(f"error condition - agent {iAg} node {rcPos} has no successor")
+            return (False, rcPos)
+
+        # This agent has a successor
+        rcNext = self.G.successors(rcPos).__next__()
+        if rcNext == rcPos:  # the agent didn't want to move
+            return (False, rcNext)
+        # The agent wanted to move, and it can
+        return (True, rcNext)
+
+
+            
 
 def render(omc:MotionCheck):
     oAG = nx.drawing.nx_agraph.to_agraph(omc.G)
@@ -228,6 +309,7 @@ def create_test_agents2(omc:MotionCheck):
     cte.addAgentToRow(6, 5)
     cte.addAgentToRow(7, 6)
 
+
     cte.nextRow()
     cte.addAgentToRow(1, 2, "3-way\nsame")
     cte.addAgentToRow(3, 2)
@@ -250,6 +332,19 @@ def create_test_agents2(omc:MotionCheck):
     cte.addAgent((cte.iRowNext+1, 3), (cte.iRowNext, 3))
     cte.nextRow()
     
+
+    cte.nextRow()
+    cte.addAgentToRow(1, 2, "Tree")
+    cte.addAgentToRow(2, 3)
+    cte.addAgentToRow(3, 4)
+    r1 = cte.iRowNext
+    r2 = cte.iRowNext+1
+    r3 = cte.iRowNext+2
+    cte.addAgent((r2, 3), (r1, 3))
+    cte.addAgent((r2, 2), (r2, 3))
+    cte.addAgent((r3, 2), (r2, 3))
+
+    cte.nextRow()
 
 
 def test_agent_following():
@@ -289,3 +384,4 @@ def main():
 
 if __name__=="__main__":
     main()
+    

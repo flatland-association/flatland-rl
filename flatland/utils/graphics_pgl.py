@@ -21,7 +21,7 @@ class PGLGL(PILSVG):
     def open_window(self):
         print("open_window - pyglet")
         assert self.window_open is False, "Window is already open!"
-        self.window = pgl.window.Window(resizable=True, vsync=False)
+        self.window = pgl.window.Window(resizable=True, vsync=False, width=1200, height=800)
         #self.__class__.window.title("Flatland")
         #self.__class__.window.configure(background='grey')
         self.window_open = True
