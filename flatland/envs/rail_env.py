@@ -742,7 +742,8 @@ class RailEnv(Environment):
         # full step penalty in this case
         if agent.malfunction_data['malfunction'] > 0:
             self.motionCheck.addAgent(i_agent, agent.position, agent.position)
-            self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+            # agent will get penalty in step_agent2_cf
+            #self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
             return
 
         # Is the agent at the beginning of the cell? Then, it can take an action.
