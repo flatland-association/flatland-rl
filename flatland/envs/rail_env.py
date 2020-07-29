@@ -36,7 +36,7 @@ from flatland.envs import agent_chains as ac
 
 from flatland.envs.observations import GlobalObsForRailEnv
 
-import debugpy
+# import debugpy
 
 import pickle
 
@@ -844,7 +844,7 @@ class RailEnv(Environment):
             trans_block = sbTrans[agent.direction*4 : agent.direction * 4 + 4]
             if (trans_block == "0000"):
                 print (i_agent, agent.position, agent.direction, sbTrans, trans_block)
-                debugpy.breakpoint()
+                # debugpy.breakpoint()
 
         # if agent cannot enter env, then we should have move=False
         
@@ -861,22 +861,20 @@ class RailEnv(Environment):
         
                 if not all([transition_valid, new_cell_valid]):
                     print(f"ERRROR: step_agent2 invalid transition ag {i_agent} dir {new_direction} pos {agent.position} next {rc_next}")
-                    debugpy.breakpoint()
+                    # debugpy.breakpoint()
 
                 if new_position != rc_next:
                     print(f"ERROR: agent {i_agent} new_pos {new_position} != rc_next {rc_next}  " + 
                         f"pos {agent.position} dir {agent.direction} new_dir {new_direction}" +
                         f"stored action: {agent.speed_data['transition_action_on_cellexit']}")
-                    debugpy.breakpoint()
+                    # debugpy.breakpoint()
 
 
                 sbTrans = format(self.rail.grid[agent.position], "016b")
                 trans_block = sbTrans[agent.direction*4 : agent.direction * 4 + 4]
                 if (trans_block == "0000"):
-                    print (i_agent, agent.position, agent.direction, sbTrans, trans_block)
-                    debugpy.breakpoint()
-
-
+                    print ("ERROR: ", i_agent, agent.position, agent.direction, sbTrans, trans_block)
+                    # debugpy.breakpoint()
 
                 agent.position = rc_next
                 agent.direction = new_direction
