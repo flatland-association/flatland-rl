@@ -139,7 +139,8 @@ class RailEnv(Environment):
                  malfunction_generator=None,
                  remove_agents_at_target=True,
                  random_seed=1,
-                 record_steps=False
+                 record_steps=False,
+                 close_following=True
                  ):
         """
         Environment init.
@@ -245,7 +246,7 @@ class RailEnv(Environment):
         self.cur_episode = []  
         self.list_actions = [] # save actions in here
 
-        self.close_following = True  # use close following logic
+        self.close_following = close_following  # use close following logic
         self.motionCheck = ac.MotionCheck()
 
 
@@ -607,6 +608,7 @@ class RailEnv(Environment):
                 agent.status = RailAgentStatus.ACTIVE
                 self._set_agent_to_initial_position(agent, agent.initial_position)
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+                return
             else:
                 # TODO: Here we need to check for the departure time in future releases with full schedules
                 self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
@@ -653,7 +655,6 @@ class RailEnv(Environment):
 
             # Store the action if action is moving
             # If not moving, the action will be stored when the agent starts moving again.
-            new_position = None
             if agent.moving:
                 _action_stored = False
                 _, new_cell_valid, new_direction, new_position, transition_valid = \
@@ -850,7 +851,7 @@ class RailEnv(Environment):
         
         if move:
             if agent.position is None:  # agent is entering the env
-                print(i_agent, "writing new pos ", rc_next, " into agent position (None)")
+                #print(i_agent, "writing new pos ", rc_next, " into agent position (None)")
                 agent.position = rc_next
                 agent.status = RailAgentStatus.ACTIVE
                 agent.speed_data['position_fraction'] = 0.0

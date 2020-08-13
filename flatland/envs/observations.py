@@ -220,7 +220,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                        speed_min_fractional=agent.speed_data['speed'],
                                                        num_agents_ready_to_depart=0,
                                                        childs={})
-        print("root node type:", type(root_node_observation))
+        #print("root node type:", type(root_node_observation))
 
         visited = OrderedSet()
 

@@ -7,6 +7,8 @@ import numpy as np
 from numpy import array
 from recordtype import recordtype
 
+from flatland.envs.agent_utils import RailAgentStatus
+
 from flatland.utils.graphics_pil import PILGL, PILSVG
 from flatland.utils.graphics_pgl import PGLGL
 
@@ -675,14 +677,15 @@ class RenderLocal(RenderBase):
                     continue
 
                 # Show an agent even if it hasn't already started
-                if show_inactive_agents and (agent.position is None):
-                    # print("agent ", agent_idx, agent.position, agent.old_position, agent.initial_position)
-                    self.gl.set_agent_at(agent_idx, *(agent.initial_position), 
-                        agent.initial_direction, agent.initial_direction,
-                        is_selected=(selected_agent == agent_idx),
-                        rail_grid=env.rail.grid,
-                        show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
-                        malfunction=False)
+                if agent.position is None:
+                    if show_inactive_agents:
+                        # print("agent ", agent_idx, agent.position, agent.old_position, agent.initial_position)
+                        self.gl.set_agent_at(agent_idx, *(agent.initial_position), 
+                            agent.initial_direction, agent.initial_direction,
+                            is_selected=(selected_agent == agent_idx),
+                            rail_grid=env.rail.grid,
+                            show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
+                            malfunction=False)
                     continue
 
                 is_malfunction = agent.malfunction_data["malfunction"] > 0
@@ -736,8 +739,16 @@ class RenderLocal(RenderBase):
                     # set_agent_at uses the agent index for the color
                     if self.agent_render_variant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:
                         self.gl.set_cell_occupied(agent_idx, *(agent.position))
-                    self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, selected_agent == agent_idx,
-                                         rail_grid=env.rail.grid, malfunction=is_malfunction)
+                    
+                    if show_inactive_agents:
+                        show_this_agent=True
+                    else:
+                        show_this_agent = agent.status == RailAgentStatus.ACTIVE
+
+                    if show_this_agent:
+                        self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, 
+                                        selected_agent == agent_idx,
+                                        rail_grid=env.rail.grid, malfunction=is_malfunction)
 
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)
