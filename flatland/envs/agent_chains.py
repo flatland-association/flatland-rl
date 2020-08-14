@@ -74,20 +74,20 @@ class MotionCheck(object):
             #print("Component:", oWCC)
             Gwcc = self.G.subgraph(oWCC)
             
-            #lChain = list(nx.topological_sort(Gwcc))
-            #print("path:     ", lChain)
-            
             # Find all the stops in this chain
             svCompStops = svStops.intersection(Gwcc)
             #print(svCompStops)
             
             if len(svCompStops) > 0:
-                #print("component contains a stop")
+
+                # We need to traverse it in reverse - back up the movement edges
+                Gwcc_rev = Gwcc.reverse()
                 for vStop in svCompStops:
-                    
-                    iter_stops = nx.algorithms.traversal.dfs_postorder_nodes(Gwcc.reverse(), vStop)
+
+                    # Find all the agents stopped by vStop by following the (reversed) edges
+                    # This traverses a tree - dfs = depth first seearch
+                    iter_stops = nx.algorithms.traversal.dfs_postorder_nodes(Gwcc_rev, vStop)
                     lStops = list(iter_stops)
-                    #print(vStop, "affected preds:", lStops)
                     svBlocked.update(lStops)
         
         return svBlocked
