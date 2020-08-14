@@ -4,7 +4,7 @@ Definition of the RailEnv environment.
 import random
 # TODO:  _ this is a global method --> utils or remove later
 from enum import IntEnum
-from typing import List, NamedTuple, Optional, Dict
+from typing import List, NamedTuple, Optional, Dict, Tuple
 
 import msgpack
 import msgpack_numpy as m
@@ -32,6 +32,7 @@ from flatland.envs import persistence
 # from flatland.envs.observations import GlobalObsForRailEnv
 # from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 # from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
+from flatland.envs.malfunction_generators import Malfunction
 
 from flatland.envs.observations import GlobalObsForRailEnv
 
@@ -281,7 +282,7 @@ class RailEnv(Environment):
                                                                        rtol=1e-03)))
 
     def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, activate_agents: bool = False,
-              random_seed: bool = None) -> (Dict, Dict):
+              random_seed: bool = None) -> Tuple[Dict, Dict]:
         """
         reset(regenerate_rail, regenerate_schedule, activate_agents, random_seed)
 
