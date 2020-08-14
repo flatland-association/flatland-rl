@@ -420,7 +420,7 @@ class EditorModel(object):
     def set_draw_mode(self, draw_mode):
         self.draw_mode = draw_mode
 
-    def interpolate_path(self, rcLast, rc_cell):
+    def interpolate_pair(self, rcLast, rc_cell):
         if np.array_equal(rcLast, rc_cell):
             return []
         rcLast = array(rcLast)
@@ -456,6 +456,15 @@ class EditorModel(object):
             # Convert the array to a list of tuples
             lrcInterp = list(map(tuple, g2Interp))
         return lrcInterp
+    
+    def interpolate_path(self, lrcPath):
+        lrcPath2 = []  # interpolated version of the path
+        rcLast = None
+        for rcCell in lrcPath:
+            if rcLast is not None:
+                lrcPath2.extend(self.interpolate_pair(rcLast, rcCell))
+            rcLast = rcCell
+        return lrcPath2
 
     def drag_path_element(self, rc_cell):
         """Mouse motion event handler for drawing.
@@ -466,7 +475,7 @@ class EditorModel(object):
         if len(lrcStroke) > 0:
             rcLast = lrcStroke[-1]
             if not np.array_equal(rcLast, rc_cell):  # only save at transition
-                lrcInterp = self.interpolate_path(rcLast, rc_cell)
+                lrcInterp = self.interpolate_pair(rcLast, rc_cell)
                 lrcStroke.extend(lrcInterp)
                 self.debug("lrcStroke ", len(lrcStroke), rc_cell, "interp:", lrcInterp)
 
@@ -492,6 +501,8 @@ class EditorModel(object):
         # If we have already touched 3 cells
         # We have a transition into a cell, and out of it.
 
+        #print(lrcStroke)
+
         if len(lrcStroke) >= 2:
             # If the first cell in a stroke is empty, add a deadend to cell 0
             if self.env.rail.get_full_transitions(*lrcStroke[0]) == 0:
@@ -500,12 +511,15 @@ class EditorModel(object):
         # Add transitions for groups of 3 cells
         # hence inbound and outbound transitions for middle cell
         while len(lrcStroke) >= 3:
+            #print(lrcStroke)
             self.mod_rail_3cells(lrcStroke, bAddRemove=bAddRemove)
 
         # If final cell empty, insert deadend:
         if len(lrcStroke) == 2:
             if self.env.rail.get_full_transitions(*lrcStroke[1]) == 0:
                 self.mod_rail_2cells(lrcStroke, bAddRemove, iCellToMod=1)
+
+        #print("final:", lrcStroke)
 
         # now empty out the final two cells from the queue
         lrcStroke.clear()
@@ -581,6 +595,8 @@ class EditorModel(object):
             if len(iTrans) > 0:
                 iTrans = iTrans[0][0]
                 liTrans.append(iTrans)
+
+        #self.log("liTrans:", liTrans)
 
         # check that we have one transition
         if len(liTrans) == 1:

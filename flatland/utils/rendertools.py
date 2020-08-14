@@ -7,6 +7,8 @@ import numpy as np
 from numpy import array
 from recordtype import recordtype
 
+from flatland.envs.agent_utils import RailAgentStatus
+
 from flatland.utils.graphics_pil import PILGL, PILSVG
 from flatland.utils.graphics_pgl import PGLGL
 
@@ -51,13 +53,14 @@ class RenderTool(object):
                    show_inactive_agents=False,  # whether to show agents before they start
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
+                   show_rowcols=False, # label the rows and columns
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
                    selected_agent=None,  # indicate which agent is "selected" in the editor):
                    return_image=False): # indicate if image is returned for use in monitor:
         return self.renderer.render_env(show, show_agents, show_inactive_agents, show_observations,
-                    show_predictions, frames, episode, step, selected_agent, return_image)
+                    show_predictions, show_rowcols, frames, episode, step, selected_agent, return_image)
 
     def close_window(self):
         self.renderer.close_window()
@@ -508,6 +511,7 @@ class RenderLocal(RenderBase):
                    show_inactive_agents=False,
                    show_observations=True,  # whether to include observations
                    show_predictions=False,  # whether to include predictions
+                   show_rowcols=False,  # label the rows and columns
                    frames=False,  # frame counter to show (intended since invocation)
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
@@ -525,6 +529,7 @@ class RenderLocal(RenderBase):
                                 selected_agent=selected_agent,
                                 show_agents=show_agents,
                                 show_inactive_agents=show_inactive_agents,
+                                show_rowcols=show_rowcols,
                                 return_image=return_image
                                 )
         else:
@@ -533,6 +538,7 @@ class RenderLocal(RenderBase):
                                 show_inactive_agents=show_inactive_agents,
                                 show_observations=show_observations,
                                 show_predictions=show_predictions,
+                                show_rowcols=show_rowcols,
                                 frames=frames,
                                 episode=episode,
                                 step=step,
@@ -557,6 +563,7 @@ class RenderLocal(RenderBase):
                        show_inactive_agents=False, 
                        show_observations=True,  # whether to include observations
                        show_predictions=False,  # whether to include predictions
+                       show_rowcols=False, # label the rows and columns
                        frames=False,  # frame counter to show (intended since invocation)
                        episode=None,  # int episode number to show
                        step=None,  # int step number to show in image
@@ -615,7 +622,7 @@ class RenderLocal(RenderBase):
 
     def render_env_svg(
         self, show=False, show_observations=True, show_predictions=False, selected_agent=None,
-        show_agents=True, show_inactive_agents=False, return_image=False
+        show_agents=True, show_inactive_agents=False, show_rowcols=False, return_image=False
     ):
         """
         Renders the environment with SVG support (nice image)
@@ -655,11 +662,12 @@ class RenderLocal(RenderBase):
 
             self.gl.build_background_map(targets)
 
-            # label rows, cols
-            for iRow in range(env.height):
-                self.gl.text_rowcol((iRow, 0), str(iRow), layer=self.gl.RAIL_LAYER)
-            for iCol in range(env.width):
-                self.gl.text_rowcol((0, iCol), str(iCol), layer=self.gl.RAIL_LAYER)
+            if show_rowcols:
+                # label rows, cols
+                for iRow in range(env.height):
+                    self.gl.text_rowcol((iRow, 0), str(iRow), layer=self.gl.RAIL_LAYER)
+                for iCol in range(env.width):
+                    self.gl.text_rowcol((0, iCol), str(iCol), layer=self.gl.RAIL_LAYER)
 
 
         if show_agents:
@@ -669,14 +677,15 @@ class RenderLocal(RenderBase):
                     continue
 
                 # Show an agent even if it hasn't already started
-                if show_inactive_agents and (agent.position is None):
-                    # print("agent ", agent_idx, agent.position, agent.old_position, agent.initial_position)
-                    self.gl.set_agent_at(agent_idx, *(agent.initial_position), 
-                        agent.initial_direction, agent.initial_direction,
-                        is_selected=(selected_agent == agent_idx),
-                        rail_grid=env.rail.grid,
-                        show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
-                        malfunction=False)
+                if agent.position is None:
+                    if show_inactive_agents:
+                        # print("agent ", agent_idx, agent.position, agent.old_position, agent.initial_position)
+                        self.gl.set_agent_at(agent_idx, *(agent.initial_position), 
+                            agent.initial_direction, agent.initial_direction,
+                            is_selected=(selected_agent == agent_idx),
+                            rail_grid=env.rail.grid,
+                            show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
+                            malfunction=False)
                     continue
 
                 is_malfunction = agent.malfunction_data["malfunction"] > 0
@@ -730,8 +739,16 @@ class RenderLocal(RenderBase):
                     # set_agent_at uses the agent index for the color
                     if self.agent_render_variant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:
                         self.gl.set_cell_occupied(agent_idx, *(agent.position))
-                    self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, selected_agent == agent_idx,
-                                         rail_grid=env.rail.grid, malfunction=is_malfunction)
+                    
+                    if show_inactive_agents:
+                        show_this_agent=True
+                    else:
+                        show_this_agent = agent.status == RailAgentStatus.ACTIVE
+
+                    if show_this_agent:
+                        self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, 
+                                        selected_agent == agent_idx,
+                                        rail_grid=env.rail.grid, malfunction=is_malfunction)
 
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)

@@ -15,6 +15,21 @@ from flatland.envs.agent_utils import RailAgentStatus, EnvAgent
 from flatland.utils.ordered_set import OrderedSet
 
 
+
+Node = collections.namedtuple('Node', 'dist_own_target_encountered '
+                                        'dist_other_target_encountered '
+                                        'dist_other_agent_encountered '
+                                        'dist_potential_conflict '
+                                        'dist_unusable_switch '
+                                        'dist_to_next_branch '
+                                        'dist_min_to_target '
+                                        'num_agents_same_direction '
+                                        'num_agents_opposite_direction '
+                                        'num_agents_malfunctioning '
+                                        'speed_min_fractional '
+                                        'num_agents_ready_to_depart '
+                                        'childs')
+
 class TreeObsForRailEnv(ObservationBuilder):
     """
     TreeObsForRailEnv object.
@@ -25,19 +40,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     For details about the features in the tree observation see the get() function.
     """
-    Node = collections.namedtuple('Node', 'dist_own_target_encountered '
-                                          'dist_other_target_encountered '
-                                          'dist_other_agent_encountered '
-                                          'dist_potential_conflict '
-                                          'dist_unusable_switch '
-                                          'dist_to_next_branch '
-                                          'dist_min_to_target '
-                                          'num_agents_same_direction '
-                                          'num_agents_opposite_direction '
-                                          'num_agents_malfunctioning '
-                                          'speed_min_fractional '
-                                          'num_agents_ready_to_depart '
-                                          'childs')
+
 
     tree_explored_actions_char = ['L', 'F', 'R', 'B']
 
@@ -205,7 +208,8 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Here information about the agent itself is stored
         distance_map = self.env.distance_map.get()
 
-        root_node_observation = TreeObsForRailEnv.Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
+        # was referring to TreeObsForRailEnv.Node
+        root_node_observation = Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
                                                        dist_other_agent_encountered=0, dist_potential_conflict=0,
                                                        dist_unusable_switch=0, dist_to_next_branch=0,
                                                        dist_min_to_target=distance_map[
@@ -216,6 +220,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                        speed_min_fractional=agent.speed_data['speed'],
                                                        num_agents_ready_to_depart=0,
                                                        childs={})
+        #print("root node type:", type(root_node_observation))
 
         visited = OrderedSet()
 
@@ -431,7 +436,8 @@ class TreeObsForRailEnv(ObservationBuilder):
             dist_to_next_branch = tot_dist
             dist_min_to_target = self.env.distance_map.get()[handle, position[0], position[1], direction]
 
-        node = TreeObsForRailEnv.Node(dist_own_target_encountered=own_target_encountered,
+        # TreeObsForRailEnv.Node
+        node = Node(dist_own_target_encountered=own_target_encountered,
                                       dist_other_target_encountered=other_target_encountered,
                                       dist_other_agent_encountered=other_agent_encountered,
                                       dist_potential_conflict=potential_conflict,

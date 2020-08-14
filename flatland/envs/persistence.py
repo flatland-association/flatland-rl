@@ -206,7 +206,7 @@ class RailEnvPersister(object):
         # msgpack cannot persist EnvAgent so use the Agent namedtuple.
         agent_data = [agent.to_agent() for agent in env.agents]
         #print("get_full_state - agent_data:", agent_data)
-        malfunction_data: MalfunctionProcessData = env.malfunction_process_data
+        malfunction_data: mal_gen.MalfunctionProcessData = env.malfunction_process_data
 
         msg_data_dict = {
             "grid": grid_data,

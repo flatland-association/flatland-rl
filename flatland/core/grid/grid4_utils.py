@@ -25,17 +25,9 @@ def get_direction(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
 def mirror(dir):
     return (dir + 2) % 4
 
-
+MOVEMENT_ARRAY = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 def get_new_position(position, movement):
-    """ Utility function that converts a compass movement over a 2D grid to new positions (r, c). """
-    if movement == Grid4TransitionsEnum.NORTH:
-        return (position[0] - 1, position[1])
-    elif movement == Grid4TransitionsEnum.EAST:
-        return (position[0], position[1] + 1)
-    elif movement == Grid4TransitionsEnum.SOUTH:
-        return (position[0] + 1, position[1])
-    elif movement == Grid4TransitionsEnum.WEST:
-        return (position[0], position[1] - 1)
+	return (position[0] + MOVEMENT_ARRAY[movement][0], position[1] + MOVEMENT_ARRAY[movement][1])
 
 
 def direction_to_point(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
