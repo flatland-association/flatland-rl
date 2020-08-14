@@ -7,6 +7,7 @@ import time
 
 import msgpack
 import msgpack_numpy as m
+import pickle
 import numpy as np
 import redis
 
@@ -21,6 +22,11 @@ from flatland.core.env_observation_builder import DummyObservationBuilder
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 m.patch()
+
+
+class TimeoutException(StopAsyncIteration):
+    """ Custom exception for evaluation timeouts. """
+    pass
 
 
 class FlatlandRemoteClient(object):
@@ -45,8 +51,9 @@ class FlatlandRemoteClient(object):
                  remote_db=0,
                  remote_password=None,
                  test_envs_root=None,
-                 verbose=False):
-
+                 verbose=False,
+                 use_pickle=False):
+        self.use_pickle = use_pickle
         self.remote_host = remote_host
         self.remote_port = remote_port
         self.remote_db = remote_db
@@ -67,6 +74,11 @@ class FlatlandRemoteClient(object):
             self.namespace,
             self.service_id
         )
+
+        # for timeout messages sent out-of-band
+        self.error_channel = "{}::{}::errors".format(
+            self.namespace, self.service_id)
+
         if test_envs_root:
             self.test_envs_root = test_envs_root
         else:
@@ -147,9 +159,28 @@ class FlatlandRemoteClient(object):
         """
         if self.verbose:
             print("Request : ", _request)
+
+        # check for errors (essentially just timeouts, for now.)
+        error_bytes = _redis.rpop(self.error_channel)
+        if error_bytes is not None:
+            if self.use_pickle:
+                error_dict = pickle.loads(error_bytes)
+            else:
+                error_dict = msgpack.unpackb(
+                    error_bytes,
+                    object_hook=m.decode,
+                    strict_map_key=False,  # new for msgpack 1.0?
+                    encoding="utf8"  # remove for msgpack 1.0
+                )
+            print("Error received: ", error_dict)
+            raise TimeoutException(error_dict["type"])
+
         # Push request in command_channels
         # Note: The patched msgpack supports numpy arrays
-        payload = msgpack.packb(_request, default=m.encode, use_bin_type=True)
+        if self.use_pickle:
+            payload = pickle.dumps(_request)
+        else:
+            payload = msgpack.packb(_request, default=m.encode, use_bin_type=True)
         _redis.lpush(self.command_channel, payload)
 
         if blocking:
@@ -157,10 +188,15 @@ class FlatlandRemoteClient(object):
             _response = _redis.blpop(_request['response_channel'])[1]
             if self.verbose:
                 print("Response : ", _response)
-            _response = msgpack.unpackb(
-                _response,
-                object_hook=m.decode,
-                encoding="utf8")
+            if self.use_pickle:
+                _response = pickle.loads(_response)
+            else:
+                _response = msgpack.unpackb(
+                    _response,
+                    object_hook=m.decode,
+                    strict_map_key=False,  # new for msgpack 1.0?
+                    encoding="utf8"  # remove for msgpack 1.0
+                )
             if _response['type'] == messages.FLATLAND_RL.ERROR:
                 raise Exception(str(_response["payload"]))
             else:
@@ -253,7 +289,7 @@ class FlatlandRemoteClient(object):
     def env_step(self, action, render=False):
         """
             Respond with [observation, reward, done, info]
-        """        
+        """
         # We use the last_env_step_time as an approximate measure of the inference time
         approximate_inference_time = time.time() - self.last_env_step_time
         self.update_running_stats("inference_time(approx)", approximate_inference_time)
@@ -266,6 +302,7 @@ class FlatlandRemoteClient(object):
 
         # Relay the action in a non-blocking way to the server
         # so that it can start doing an env.step on it in ~ parallel
+        # Note - this can throw a Timeout
         self._remote_request(_request, blocking=False)
 
         # Apply the action in the local env
@@ -301,10 +338,10 @@ class FlatlandRemoteClient(object):
                 min_key = "{}_min".format(metric_name)
                 max_key = "{}_max".format(metric_name)
                 print("\t - {}\t => min: {} || mean: {} || max: {}".format(
-                            metric_name,
-                            self.stats[min_key],
-                            self.stats[mean_key],
-                            self.stats[max_key]))
+                    metric_name,
+                    self.stats[min_key],
+                    self.stats[mean_key],
+                    self.stats[max_key]))
         print("=" * 100)
         if os.getenv("AICROWD_BLOCKING_SUBMIT"):
             """
@@ -320,11 +357,13 @@ class FlatlandRemoteClient(object):
 if __name__ == "__main__":
     remote_client = FlatlandRemoteClient()
 
+
     def my_controller(obs, _env):
         _action = {}
         for _idx, _ in enumerate(_env.agents):
             _action[_idx] = np.random.randint(0, 5)
         return _action
+
 
     my_observation_builder = DummyObservationBuilder()
 
@@ -348,13 +387,18 @@ if __name__ == "__main__":
         while True:
             action = my_controller(obs, remote_client.env)
             time_start = time.time()
-            observation, all_rewards, done, info = remote_client.env_step(action)
-            time_diff = time.time() - time_start
-            print("Step Time : ", time_diff)
-            if done['__all__']:
-                print("Current Episode : ", episode)
-                print("Episode Done")
-                print("Reward : ", sum(list(all_rewards.values())))
+
+            try:
+                observation, all_rewards, done, info = remote_client.env_step(action)
+                time_diff = time.time() - time_start
+                print("Step Time : ", time_diff)
+                if done['__all__']:
+                    print("Current Episode : ", episode)
+                    print("Episode Done")
+                    print("Reward : ", sum(list(all_rewards.values())))
+                    break
+            except TimeoutException as err:
+                print("Timeout: ", err)
                 break
 
     print("Evaluation Complete...")
