@@ -4,6 +4,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 from typing import List, Tuple
+import graphviz as gv
 
 class MotionCheck(object):
     """ Class to find chains of agents which are "colliding" with a stopped agent.
@@ -180,10 +181,15 @@ class MotionCheck(object):
 
             
 
-def render(omc:MotionCheck):
+def render(omc:MotionCheck, horizontal=True):
     oAG = nx.drawing.nx_agraph.to_agraph(omc.G)
     oAG.layout("dot")
-    return oAG.draw(format="png")
+    sDot = oAG.to_string()
+    if horizontal:
+        sDot = sDot.replace('{', '{ rankdir="LR" ')
+    #return oAG.draw(format="png")
+    # This returns a graphviz object which implements __repr_svg
+    return gv.Source(sDot)
 
 class ChainTestEnv(object):
     """ Just for testing agent chains

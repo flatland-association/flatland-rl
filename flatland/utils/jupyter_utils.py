@@ -19,30 +19,39 @@ from flatland.utils import env_edit_utils as eeu
 class Behaviour():
     def __init__(self, env):
         self.env = env
+        self.nAg = len(env.agents)
 
     def getActions(self):
         return {}
     
-
-class AlwaysForward():
-    pass    
+class AlwaysForward(Behaviour):
+    def getActions(self):
+        return { i:RailEnvActions.MOVE_FORWARD for i in range(self.nAg) }
 
 
 class EnvCanvas():
 
-    def __init__(self, env):
+    def __init__(self, env, behaviour:Behaviour=None):
         self.env = env
+        self.iStep = 0
+        if behaviour is None:
+            behaviour = AlwaysForward(env)
+        self.behaviour = behaviour
         self.oRT = RenderTool(env, show_debug=True)
-        self.render()
+
         self.oCan = canvas.Canvas(size=(600,300))
-        self.oCan.put_image_data(self.oRT.get_image())
+        self.render()
 
     def render(self):
         self.oRT.render_env(show_rowcols=True,  show_inactive_agents=True, show_observations=False)
+        self.oCan.put_image_data(self.oRT.get_image())
+
+    def step(self):
+        dAction = self.behaviour.getActions()
+        self.env.step(dAction)
 
     def show(self):
         self.render()
-        self.oCan.put_image_data(self.oRT.get_image())
         display.display(self.oCan)
 
 
