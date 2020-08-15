@@ -14,7 +14,7 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.persistence import RailEnvPersister
 from flatland.utils.rendertools import RenderTool
 from flatland.utils import env_edit_utils as eeu
-
+from typing import List, NamedTuple
 
 class Behaviour():
     def __init__(self, env):
@@ -27,6 +27,49 @@ class Behaviour():
 class AlwaysForward(Behaviour):
     def getActions(self):
         return { i:RailEnvActions.MOVE_FORWARD for i in range(self.nAg) }
+
+AgentPause = NamedTuple("AgentPause", 
+    [
+        ("iAg", int),
+        ("iPauseAt", int),
+        ("iPauseFor", int)
+    ])
+
+class ForwardWithPause(Behaviour):
+    def __init__(self, env, lPauses:List[AgentPause]):
+        self.env = env
+        self.nAg = len(env.agents)
+        self.lPauses = lPauses
+        self.dAgPaused = {}
+
+    def getActions(self):
+        iStep = self.env._elapsed_steps + 1  # add one because this is called before step()
+
+        # new pauses starting this step
+        lNewPauses = [ tPause for tPause in self.lPauses if tPause.iPauseAt == iStep ]
+
+        # copy across the agent index and pause length
+        for pause in lNewPauses:
+            self.dAgPaused[pause.iAg] = pause.iPauseFor
+
+        # default action is move forward
+        dAction = { i:RailEnvActions.MOVE_FORWARD for i in range(self.nAg) }
+
+        # overwrite paused agents with stop
+        for iAg in self.dAgPaused:
+            dAction[iAg] = RailEnvActions.STOP_MOVING
+        
+        # decrement the counters for each pause, and remove any expired pauses.
+        lFinished = []
+        for iAg in self.dAgPaused:
+            self.dAgPaused[iAg] -= 1
+            if self.dAgPaused[iAg] <= 0:
+                lFinished.append(iAg)
+        
+        for iAg in lFinished:
+            self.dAgPaused.pop(iAg, None)
+        
+        return dAction
 
 
 class EnvCanvas():
