@@ -2,7 +2,6 @@
 import networkx as nx
 import numpy as np
 
-import matplotlib.pyplot as plt
 from typing import List, Tuple
 import graphviz as gv
 
@@ -372,17 +371,10 @@ def test_agent_following():
             for v in lvCells ]
     dPos = dict(zip(lvCells, lvCells))
 
-    #plt.ion()
     nx.draw(omc.G, 
         with_labels=True, arrowsize=20, 
         pos=dPos,
         node_color = lColours)
-
-    
-    #plt.pause(20)
-    #plt.show()
-    
-
 
 def main():
 

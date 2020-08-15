@@ -122,5 +122,10 @@ def makeTestEnv(sName="single_alternative", nAg=2, bUCF=True):
     
     dSpec = ddEnvSpecs[sName]
 
-
     return makeEnv2(nAg=nAg, bUCF=bUCF, **dSpec)
+
+def getAgentState(env):
+    dAgState={}
+    for iAg, ag in enumerate(env.agents):
+        dAgState[iAg] = (*ag.position, ag.direction)
+    return dAgState
