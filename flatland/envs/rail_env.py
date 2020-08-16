@@ -36,9 +36,6 @@ from gym.utils import seeding
 
 
 
-m.patch()
-
-
 # Adrian Egli performance fix (the fast methods brings more than 50%)
 def fast_isclose(a, b, rtol):
     return (a < (b + rtol)) or (a < (b - rtol))
