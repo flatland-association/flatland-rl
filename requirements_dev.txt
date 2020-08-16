@@ -1,6 +1,6 @@
 # contains all requirements to run the tests by running ```tox -e py36,py37```
 tox>=3.5.2
-pytest>=3.8.2
+pytest>=3.8.2,<5
 pytest-runner>=4.2
 Click>=7.0
 crowdai-api>=0.1.21
@@ -20,3 +20,6 @@ timeout-decorator>=0.4.1
 attrs
 gym==0.14.0
 networkx
+ipycanvas
+pygraphviz
+graphviz

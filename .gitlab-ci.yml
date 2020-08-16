@@ -26,7 +26,7 @@ tests:
     stage: tests
     before_script:
         - apt update
-        - apt install -y libgl1-mesa-glx xvfb graphviz xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - apt install -y libgl1-mesa-glx xvfb graphviz libgraphviz-dev xdg-utils libcairo2-dev libjpeg-dev libgif-dev python-pyglet
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
         - export PATH=/tmp/miniconda3/bin:$PATH
@@ -45,7 +45,7 @@ build_and_deploy_docs:
         - tests
     before_script:
         - apt update
-        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev graphviz libgraphviz-dev python-pyglet
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
         - export PATH=/tmp/miniconda3/bin:$PATH
@@ -71,7 +71,7 @@ profiling:
             - $BENCHMARKS_AND_PROFILING
     before_script:
         - apt update
-        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev graphviz libgraphviz-dev python-pyglet
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
         - export PATH=/tmp/miniconda3/bin:$PATH
@@ -90,7 +90,7 @@ benchmarks:
             - $BENCHMARKS_AND_PROFILING
     before_script:
         - apt update
-        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev graphviz libgraphviz-dev python-pyglet
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
         - export PATH=/tmp/miniconda3/bin:$PATH
@@ -104,7 +104,7 @@ test_conda_setup:
     stage: integration_testing
     before_script:
         - apt update
-        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev
+        - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev graphviz libgraphviz-dev python-pyglet
         - wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/Miniconda3-latest-Linux-x86_64.sh
         - bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda3
         - export PATH=/tmp/miniconda3/bin:$PATH

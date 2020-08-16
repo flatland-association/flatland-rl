@@ -6,8 +6,8 @@ import random
 from enum import IntEnum
 from typing import List, NamedTuple, Optional, Dict, Tuple
 
-import msgpack_numpy as m
 import numpy as np
+
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -34,8 +34,6 @@ from gym.utils import seeding
 # from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 # from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
 
-
-m.patch()
 
 
 # Adrian Egli performance fix (the fast methods brings more than 50%)
@@ -851,8 +849,7 @@ class RailEnv(Environment):
             sbTrans = format(self.rail.grid[agent.position], "016b")
             trans_block = sbTrans[agent.direction * 4: agent.direction * 4 + 4]
             if (trans_block == "0000"):
-                print(i_agent, agent.position, agent.direction, sbTrans, trans_block)
-                # debugpy.breakpoint()
+                print (i_agent, agent.position, agent.direction, sbTrans, trans_block)
 
         # if agent cannot enter env, then we should have move=False
 
@@ -869,19 +866,16 @@ class RailEnv(Environment):
 
                 if not all([transition_valid, new_cell_valid]):
                     print(f"ERRROR: step_agent2 invalid transition ag {i_agent} dir {new_direction} pos {agent.position} next {rc_next}")
-                    # debugpy.breakpoint()
 
                 if new_position != rc_next:
-                    print(f"ERROR: agent {i_agent} new_pos {new_position} != rc_next {rc_next}  " +
+                    print(f"ERROR: agent {i_agent} new_pos {new_position} != rc_next {rc_next}  " + 
                           f"pos {agent.position} dir {agent.direction} new_dir {new_direction}" +
                           f"stored action: {agent.speed_data['transition_action_on_cellexit']}")
-                    # debugpy.breakpoint()
 
                 sbTrans = format(self.rail.grid[agent.position], "016b")
                 trans_block = sbTrans[agent.direction * 4: agent.direction * 4 + 4]
                 if (trans_block == "0000"):
-                    print("ERROR: ", i_agent, agent.position, agent.direction, sbTrans, trans_block)
-                    # debugpy.breakpoint()
+                    print ("ERROR: ", i_agent, agent.position, agent.direction, sbTrans, trans_block)
 
                 agent.position = rc_next
                 agent.direction = new_direction
@@ -939,6 +933,8 @@ class RailEnv(Environment):
         self.agent_positions[agent.position] = -1
         if self.remove_agents_at_target:
             agent.position = None
+            # setting old_position to None here stops the DONE agents from appearing in the rendered image
+            agent.old_position = None
             agent.status = RailAgentStatus.DONE_REMOVED
 
     def _check_action_on_agent(self, action: RailEnvActions, agent: EnvAgent):

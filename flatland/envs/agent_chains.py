@@ -3,6 +3,7 @@ import networkx as nx
 import numpy as np
 
 from typing import List, Tuple
+import graphviz as gv
 
 class MotionCheck(object):
     """ Class to find chains of agents which are "colliding" with a stopped agent.
@@ -72,21 +73,21 @@ class MotionCheck(object):
         for oWCC in lWCC:
             #print("Component:", oWCC)
             Gwcc = self.G.subgraph(oWCC)
-
-            #lChain = list(nx.topological_sort(Gwcc))
-            #print("path:     ", lChain)
-
+            
             # Find all the stops in this chain
             svCompStops = svStops.intersection(Gwcc)
             #print(svCompStops)
 
             if len(svCompStops) > 0:
-                #print("component contains a stop")
+
+                # We need to traverse it in reverse - back up the movement edges
+                Gwcc_rev = Gwcc.reverse()
                 for vStop in svCompStops:
 
-                    iter_stops = nx.algorithms.traversal.dfs_postorder_nodes(Gwcc.reverse(), vStop)
+                    # Find all the agents stopped by vStop by following the (reversed) edges
+                    # This traverses a tree - dfs = depth first seearch
+                    iter_stops = nx.algorithms.traversal.dfs_postorder_nodes(Gwcc_rev, vStop)
                     lStops = list(iter_stops)
-                    #print(vStop, "affected preds:", lStops)
                     svBlocked.update(lStops)
 
         return svBlocked
@@ -179,10 +180,15 @@ class MotionCheck(object):
 
 
 
-def render(omc:MotionCheck):
+def render(omc:MotionCheck, horizontal=True):
     oAG = nx.drawing.nx_agraph.to_agraph(omc.G)
     oAG.layout("dot")
-    return oAG.draw(format="png")
+    sDot = oAG.to_string()
+    if horizontal:
+        sDot = sDot.replace('{', '{ rankdir="LR" ')
+    #return oAG.draw(format="png")
+    # This returns a graphviz object which implements __repr_svg
+    return gv.Source(sDot)
 
 class ChainTestEnv(object):
     """ Just for testing agent chains
@@ -365,17 +371,10 @@ def test_agent_following():
             for v in lvCells ]
     dPos = dict(zip(lvCells, lvCells))
 
-    #plt.ion()
-    nx.draw(omc.G,
-        with_labels=True, arrowsize=20,
+    nx.draw(omc.G, 
+        with_labels=True, arrowsize=20, 
         pos=dPos,
         node_color = lColours)
-
-
-    #plt.pause(20)
-    #plt.show()
-
-
 
 def main():
 
