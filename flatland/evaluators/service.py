@@ -576,7 +576,7 @@ class FlatlandRemoteEvaluationService:
             There are still test envs left that are yet to be evaluated 
             """
             test_env_file_path = self.env_file_paths[self.simulation_count]
-            print("Evaluating : {}".format(test_env_file_path))
+            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count, len(self.env_file_paths)))
             test_env_file_path = os.path.join(
                 self.test_env_folder,
                 test_env_file_path
@@ -589,11 +589,6 @@ class FlatlandRemoteEvaluationService:
                                obs_builder_object=DummyObservationBuilder(),
                                record_steps=True)
 
-            if self.begin_simulation:
-                # If begin simulation has already been initialized
-                # atleast once
-                # This adds the simulation time for the previous episode
-                self.simulation_times.append(time.time() - self.begin_simulation)
             self.begin_simulation = time.time()
 
             # Update evaluation metadata for the previous episode
@@ -723,6 +718,11 @@ class FlatlandRemoteEvaluationService:
         if done["__all__"]:
             self.simulation_done = True
 
+            if self.begin_simulation:
+                # If begin simulation has already been initialized at least once
+                # This adds the simulation time for the previous episode
+                self.simulation_times.append(time.time() - self.begin_simulation)
+
             # Compute percentage complete
             complete = 0
             for i_agent in range(self.env.get_num_agents()):
@@ -732,11 +732,17 @@ class FlatlandRemoteEvaluationService:
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
 
-            print("Evaluation finished in {} timesteps. Percentage agents done: {:.3f}. Normalized reward: {:.3f}.".format(
+            print("Evaluation finished in {} timesteps, {:.3f} seconds. Percentage agents done: {:.3f}. Normalized reward: {:.3f}.".format(
                 self.simulation_steps[-1],
+                self.simulation_times[-1],
                 self.simulation_percentage_complete[-1],
                 self.simulation_rewards_normalized[-1]
             ))
+
+            # Write intermediate results
+            if self.result_output_path:
+                self.evaluation_metadata_df.to_csv(self.result_output_path)
+                print("Wrote intermediate output results to : {}".format(self.result_output_path))
 
             if self.actionDir is not None:
                 self.save_actions()
