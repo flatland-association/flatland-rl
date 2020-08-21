@@ -9,6 +9,7 @@ import time
 import traceback
 import json
 import itertools
+import re
 
 import crowdai_api
 import msgpack
@@ -107,6 +108,7 @@ class FlatlandRemoteEvaluationService:
                  shuffle=True,
                  missing_only=False,
                  result_output_path=None,
+                 disable_timeouts=False
                  ):
 
         # Episode recording properties
@@ -121,6 +123,17 @@ class FlatlandRemoteEvaluationService:
             os.makedirs(self.mergeDir)
         self.use_pickle = use_pickle
         self.missing_only = missing_only
+        self.disable_timeouts = disable_timeouts
+
+        if self.disable_timeouts:
+            print("=" * 20)
+            print("Timeout are DISABLED!")
+            print("=" * 20)
+
+        if not shuffle:
+            print("=" * 20)
+            print("Env shuffling is DISABLED!")
+            print("=" * 20)
 
         # Test Env folder Paths
         self.test_env_folder = test_env_folder
@@ -202,6 +215,7 @@ class FlatlandRemoteEvaluationService:
         self.simulation_steps = []
         self.simulation_times = []
         self.env_step_times = []
+        self.nb_malfunctioning_trains = []
         self.begin_simulation = False
         self.current_step = 0
         self.visualize = visualize
@@ -279,12 +293,15 @@ class FlatlandRemoteEvaluationService:
                 ├── .......
                 └── Level_99.pkl
         """
-        env_paths = sorted(glob.glob(
-            os.path.join(
-                self.test_env_folder,
-                "*/*.pkl"
+        env_paths = sorted(
+            glob.glob(
+                os.path.join(
+                    self.test_env_folder,
+                    "*/*.pkl"
+                )
             )
-        ))
+        )
+
         # Remove the root folder name from the individual
         # lists, so that we only have the path relative
         # to the test root folder
@@ -292,13 +309,21 @@ class FlatlandRemoteEvaluationService:
             x, self.test_env_folder
         ) for x in env_paths])
 
+        # Sort in proper order
+        def get_file_order(f):
+            numbers = re.findall(r'\d+', os.path.relpath(f))
+            value = int(numbers[0]) * 1000 + int(numbers[1])
+            return value
+
+        env_paths.sort(key=get_file_order)
+
         # if requested, only generate actions for those envs which don't already have them
         if self.mergeDir and self.missing_only:
             existing_paths = (itertools.chain.from_iterable(
                 [glob.glob(os.path.join(self.mergeDir, f"envs/*.{ext}"))
                  for ext in ["pkl", "mpk"]]))
             existing_paths = [os.path.relpath(sPath, self.mergeDir) for sPath in existing_paths]
-            env_paths = sorted(set(env_paths) - set(existing_paths))
+            env_paths = set(env_paths) - set(existing_paths)
 
         return env_paths
 
@@ -329,6 +354,7 @@ class FlatlandRemoteEvaluationService:
             self.evaluation_metadata_df["percentage_complete"] = np.nan
             self.evaluation_metadata_df["steps"] = np.nan
             self.evaluation_metadata_df["simulation_time"] = np.nan
+            self.evaluation_metadata_df["nb_malfunctioning_trains"] = np.nan
 
             # Add client specific columns
             # TODO: This needs refactoring
@@ -357,6 +383,7 @@ class FlatlandRemoteEvaluationService:
             _row.percentage_complete = self.simulation_percentage_complete[-1]
             _row.steps = self.simulation_steps[-1]
             _row.simulation_time = self.simulation_times[-1]
+            _row.nb_malfunctioning_trains = self.nb_malfunctioning_trains[-1]
 
             # TODO: This needs refactoring
             # Add controller_inference_time_metrics
@@ -461,6 +488,9 @@ class FlatlandRemoteEvaluationService:
             can be an arbitrarily large number.
             """
             COMMAND_TIMEOUT = 10 ** 6
+
+        if self.disable_timeouts:
+            COMMAND_TIMEOUT = None
 
         @timeout_decorator.timeout(COMMAND_TIMEOUT, use_signals=use_signals_in_timeout)  # timeout for each command
         def _get_next_command(command_channel, _redis):
@@ -605,6 +635,7 @@ class FlatlandRemoteEvaluationService:
             self.simulation_rewards_normalized.append(0)
             self.simulation_percentage_complete.append(0)
             self.simulation_steps.append(0)
+            self.nb_malfunctioning_trains.append(0)
 
             self.current_step = 0
 
@@ -710,6 +741,12 @@ class FlatlandRemoteEvaluationService:
                 self.env.get_num_agents()
             )
 
+        num_malfunctioning = sum(agent.malfunction_data['malfunction'] > 0 for agent in self.env.agents)
+        if (num_malfunctioning > 0):
+            print(num_malfunctioning, "agent malfunctioning at step", self.current_step)
+
+        self.nb_malfunctioning_trains[-1] += num_malfunctioning
+
         # record the actions before checking for done
         if self.actionDir is not None:
             self.lActions.append(action)
@@ -732,11 +769,12 @@ class FlatlandRemoteEvaluationService:
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
 
-            print("Evaluation finished in {} timesteps, {:.3f} seconds. Percentage agents done: {:.3f}. Normalized reward: {:.3f}.".format(
+            print("Evaluation finished in {} timesteps, {:.3f} seconds. Percentage agents done: {:.3f}. Normalized reward: {:.3f}. Number of malfunctions: {}.".format(
                 self.simulation_steps[-1],
                 self.simulation_times[-1],
                 self.simulation_percentage_complete[-1],
-                self.simulation_rewards_normalized[-1]
+                self.simulation_rewards_normalized[-1],
+                self.nb_malfunctioning_trains[-1]
             ))
 
             # Write intermediate results
@@ -1010,10 +1048,11 @@ class FlatlandRemoteEvaluationService:
                 self.simulation_rewards[-1] = self.env._max_episode_steps * self.env.get_num_agents()
                 self.simulation_rewards_normalized[-1] = -1.0
 
-                print("Evaluation TIMED OUT after {} timesteps, using max penalty. Percentage agents done: {:.3f}. Normalized reward: {:.3f}.".format(
+                print("Evaluation TIMED OUT after {} timesteps, using max penalty. Percentage agents done: {:.3f}. Normalized reward: {:.3f}. Number of malfunctions: {}".format(
                     self.simulation_steps[-1],
                     self.simulation_percentage_complete[-1],
-                    self.simulation_rewards_normalized[-1]
+                    self.simulation_rewards_normalized[-1],
+                    self.nb_malfunctioning_trains[-1],
                 ))
 
                 self.timeout_counter += 1
