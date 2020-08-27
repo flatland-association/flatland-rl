@@ -16,7 +16,8 @@ class MotionCheck(object):
     def addAgent(self, iAg, rc1, rc2, xlabel=None):
         """ add an agent and its motion as row,col tuples of current and next position.
             The agent's current position is given an "agent" attribute recording the agent index.
-            If an agent does not move this round then its cell is 
+            If an agent does not want to move this round (rc1 == rc2) then a self-loop edge is created.
+            xlabel is used for test cases to give a label (see graphviz)
         """
 
         # Agents which have not yet entered the env have position None.
