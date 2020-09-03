@@ -333,7 +333,7 @@ class FlatlandRemoteEvaluationService:
             information specific to each of the individual env evaluations.
 
             This loads the template CSV with pre-filled information from the
-            provided metadata.csv file, and fills it up with 
+            provided metadata.csv file, and fills it up with
             evaluation runtime information.
         """
         self.evaluation_metadata_df = None
@@ -367,7 +367,7 @@ class FlatlandRemoteEvaluationService:
     def update_evaluation_metadata(self):
         """
         This function is called when we move from one simulation to another
-        and it simply tries to update the simulation specific information 
+        and it simply tries to update the simulation specific information
         for the **previous** episode in the metadata_df if it exists.
         """
 
@@ -407,7 +407,7 @@ class FlatlandRemoteEvaluationService:
                 last_simulation_env_file_path
             ] = _row
 
-            # Delete this key from the stats to ensure that it 
+            # Delete this key from the stats to ensure that it
             # gets computed again from scratch in the next episode
             self.delete_key_in_running_stats(
                 "current_episode_controller_inference_time")
@@ -927,7 +927,7 @@ class FlatlandRemoteEvaluationService:
             self.evaluation_metadata_df.to_csv(self.result_output_path)
             print("Wrote output results to : {}".format(self.result_output_path))
 
-            # Upload the metadata file to S3 
+            # Upload the metadata file to S3
             if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
                 metadata_s3_key = aicrowd_helpers.upload_to_s3(
                     self.result_output_path
@@ -969,7 +969,7 @@ class FlatlandRemoteEvaluationService:
         #################################################################################
         # Compute the mean rewards, mean normalized_reward and mean_percentage_complete
         # we group all the results by the test_ids
-        # so we first compute the mean in each of the test_id groups, 
+        # so we first compute the mean in each of the test_id groups,
         # and then we compute the mean across each of the test_id groups
         #
         #
@@ -1124,12 +1124,12 @@ class FlatlandRemoteEvaluationService:
                     return _error
                 ###########################################
                 # We keep a record of the previous command
-                # to be able to have different behaviors 
+                # to be able to have different behaviors
                 # between different "command transitions"
-                # 
-                # An example use case, is when we want to 
-                # have a different timeout for the 
-                # first step in every environment 
+                #
+                # An example use case, is when we want to
+                # have a different timeout for the
+                # first step in every environment
                 # to account for some initial planning time
                 self.previous_command = command
             except Exception as e:
@@ -1186,11 +1186,23 @@ if __name__ == "__main__":
                         help="don't shuffle the envs.  Default is to shuffle.",
                         required=False)
 
+    parser.add_argument('--disableTimeouts',
+                        default=False,
+                        action="store_true",
+                        help="Disable all timeouts.",
+                        required=False)
+
     parser.add_argument('--missingOnly',
                         default=False,
                         action="store_true",
                         help="only request the envs/actions which are missing",
                         required=False)
+
+    parser.add_argument('--resultsDir',
+                        default="/tmp/output.csv",
+                        help="Results CSV path",
+                        required=False)
+
 
     parser.add_argument('--verbose',
                         default=False,
@@ -1207,13 +1219,14 @@ if __name__ == "__main__":
         verbose=args.verbose,
         visualize=True,
         video_generation_envs=["Test_0/Level_100.pkl"],
-        result_output_path="/tmp/output.csv",
+        result_output_path=args.resultsDir,
         actionDir=args.actionDir,
         episodeDir=args.episodeDir,
         mergeDir=args.mergeDir,
         use_pickle=args.pickle,
         shuffle=not args.noShuffle,
         missing_only=args.missingOnly,
+        disable_timeouts=args.disableTimeouts
     )
     result = grader.run()
     if result['type'] == messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE:
