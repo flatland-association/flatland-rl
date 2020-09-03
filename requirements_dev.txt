@@ -21,6 +21,5 @@ attrs
 gym==0.14.0
 networkx
 ipycanvas
-pygraphviz
 graphviz
 imageio
