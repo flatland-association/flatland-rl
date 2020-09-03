@@ -329,13 +329,17 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
 
         # setup with loaded data
         agents_position = [a.initial_position for a in agents]
-        agents_direction = [a.direction for a in agents]
+
+        # this logic is wrong - we should really load the initial_direction as the direction.
+        #agents_direction = [a.direction for a in agents]
+        agents_direction = [a.initial_direction for a in agents]
         agents_target = [a.target for a in agents]
         agents_speed = [a.speed_data['speed'] for a in agents]
-        agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]
+        #agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None,
+                        agent_targets=agents_target, agent_speeds=agents_speed, 
+                        agent_malfunction_rates=None,
                         max_episode_steps=max_episode_steps)
 
     return generator
