@@ -323,6 +323,10 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
         env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
 
         max_episode_steps = env_dict.get("max_episode_steps", 0)
+        if (max_episode_steps==0):
+            print("This env file has no max_episode_steps (deprecated) - setting to 100")
+            max_episode_steps = 100
+            
         agents = env_dict["agents"]
 
         #print("schedule generator from_file - agents: ", agents)
@@ -335,6 +339,8 @@ def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
         agents_direction = [a.initial_direction for a in agents]
         agents_target = [a.target for a in agents]
         agents_speed = [a.speed_data['speed'] for a in agents]
+
+        # Malfunctions from here are not used.  They have their own generator.
         #agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]
 
         return Schedule(agent_positions=agents_position, agent_directions=agents_direction,

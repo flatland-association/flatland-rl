@@ -119,8 +119,20 @@ class EnvAgent:
     def load_legacy_static_agent(cls, static_agents_data: Tuple):
         agents = []
         for i, static_agent in enumerate(static_agents_data):
-            agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
-                             direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
-                             speed_data=static_agent[4], malfunction_data=static_agent[5], handle=i)
+            if len(static_agent) >= 6:
+                agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
+                                direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
+                                speed_data=static_agent[4], malfunction_data=static_agent[5], handle=i)
+            else:
+                agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
+                                direction=static_agent[1], target=static_agent[2], 
+                                moving=False,
+                                speed_data={"speed":1., "position_fraction":0., "transition_action_on_cell_exit":0.},
+                                malfunction_data={
+                                            'malfunction': 0,
+                                            'nr_malfunctions': 0,
+                                            'moving_before_malfunction': False
+                                        },
+                                handle=i)
             agents.append(agent)
         return agents
