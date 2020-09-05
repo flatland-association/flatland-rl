@@ -1018,8 +1018,11 @@ class RailEnv(Environment):
             else:
                 pos = (int(agent.position[0]), int(agent.position[1]))
             # print("pos:", pos, type(pos[0]))
-            list_agents_state.append(
-                [*pos, int(agent.direction), agent.malfunction_data["malfunction"] ])
+            list_agents_state.append([
+                    *pos, int(agent.direction), 
+                    agent.malfunction_data["malfunction"],  
+                    int(agent.status)
+                    ])
 
         self.cur_episode.append(list_agents_state)
         self.list_actions.append(dActions)
