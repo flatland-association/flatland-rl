@@ -65,7 +65,8 @@ def main():
         print("*****************************************************************")
 
         with path('notebooks', entry) as file_in:
-            out, err = run_python(" -m jupyter nbconvert --execute --to notebook --inplace " + str(file_in))
+            out, err = run_python(" -m jupyter nbconvert --ExecutePreprocessor.timeout=120 " + 
+                "--execute --to notebook --inplace " + str(file_in))
             sys.stderr.write(err)
             sys.stderr.flush()
             sys.stdout.write(out)
