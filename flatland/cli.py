@@ -61,13 +61,24 @@ def demo(args=None):
               help="Evaluation Service ID. This has to match the service id on the client.",
               required=False
               )
+@click.option('--shuffle',
+              type=bool,
+              default=True,
+              help="Shuffle the environments before starting evaluation.",
+              required=False
+              )
+@click.option('--disable_timeouts',
+              default=False,
+              help="Disable all evaluation timeouts.",
+              required=False
+              )
 @click.option('--results_path',
               type=click.Path(exists=False),
               default=None,
               help="Path where the evaluator should write the results metadata.",
               required=False
               )
-def evaluator(tests, service_id, results_path):
+def evaluator(tests, service_id, shuffle, disable_timeouts, results_path):
     try:
         redis_connection = redis.Redis()
         redis_connection.ping()
@@ -82,7 +93,9 @@ def evaluator(tests, service_id, results_path):
         flatland_rl_service_id=service_id,
         visualize=False,
         result_output_path=results_path,
-        verbose=False
+        verbose=False,
+        shuffle=shuffle,
+        disable_timeouts=disable_timeouts
     )
     grader.run()
 

@@ -32,12 +32,12 @@ class MotionCheck(object):
         if xlabel:
             self.G.nodes[rc1]["xlabel"] = xlabel
         self.G.add_edge(rc1, rc2)
-    
+
     def find_stops(self):
         """ find all the stopped agents as a set of rc position nodes
             A stopped agent is a self-loop on a cell node.
         """
-        
+
         # get the (sparse) adjacency matrix
         spAdj = nx.linalg.adjacency_matrix(self.G)
 
@@ -45,7 +45,7 @@ class MotionCheck(object):
         # the where turns this into a list of indices of the 1s
         giStops = np.where(spAdj.diagonal())[0]
 
-        # convert the cell/node indices into the node rc values 
+        # convert the cell/node indices into the node rc values
         lvAll = list(self.G.nodes())
         # pick out the stops by their indices
         lvStops = [ lvAll[i] for i in giStops ]
@@ -78,7 +78,7 @@ class MotionCheck(object):
             # Find all the stops in this chain
             svCompStops = svStops.intersection(Gwcc)
             #print(svCompStops)
-            
+
             if len(svCompStops) > 0:
 
                 # We need to traverse it in reverse - back up the movement edges
@@ -90,7 +90,7 @@ class MotionCheck(object):
                     iter_stops = nx.algorithms.traversal.dfs_postorder_nodes(Gwcc_rev, vStop)
                     lStops = list(iter_stops)
                     svBlocked.update(lStops)
-        
+
         return svBlocked
 
     def find_swaps(self):
@@ -102,7 +102,7 @@ class MotionCheck(object):
         llvSwaps = [lvLoop for lvLoop in llvLoops if len(lvLoop) == 2 ]
         svSwaps = { v for lvSwap in llvSwaps for v in lvSwap }
         return svSwaps
-    
+
     def find_same_dest(self):
         """ find groups of agents which are trying to land on the same cell.
             ie there is a gap of one cell between them and they are both landing on it.
@@ -123,22 +123,22 @@ class MotionCheck(object):
             elif v in svBlocked:
                 self.G.nodes[v]["color"] = "red"
             elif len(dPred)>1:
-                
+
                 if self.G.nodes[v].get("color") == "red":
                     continue
-                
+
                 if self.G.nodes[v].get("agent") is None:
-                    self.G.nodes[v]["color"] = "blue"    
+                    self.G.nodes[v]["color"] = "blue"
                 else:
                     self.G.nodes[v]["color"] = "magenta"
-                
+
                 # predecessors of a contended cell
                 diAgCell = {self.G.nodes[vPred].get("agent"): vPred  for vPred in dPred}
-                
+
                 # remove the agent with the lowest index, who wins
                 iAgWinner = min(diAgCell)
                 diAgCell.pop(iAgWinner)
-                
+
                 # Block all the remaining predessors, and their tree of preds
                 for iAg, v in diAgCell.items():
                     self.G.nodes[v]["color"] = "red"
@@ -163,7 +163,7 @@ class MotionCheck(object):
             sColor = dAttr["color"]
             if sColor in [ "red", "purple" ]:
                 return (False, rcPos)
-        
+
         dSucc = self.G.succ[rcPos]
 
         # This should never happen - only the next cell of an agent has no successor
@@ -179,7 +179,7 @@ class MotionCheck(object):
         return (True, rcNext)
 
 
-            
+
 
 def render(omc:MotionCheck, horizontal=True):
     try:
@@ -210,10 +210,10 @@ class ChainTestEnv(object):
 
     def addAgentToRow(self, c1, c2, xlabel=None):
         self.addAgent((self.iRowNext, c1), (self.iRowNext, c2), xlabel=xlabel)
-        
 
-    def create_test_chain(self, 
-            nAgents:int, 
+
+    def create_test_chain(self,
+            nAgents:int,
             rcVel:Tuple[int] = (0,1),
             liStopped:List[int]=[],
             xlabel=None):
@@ -227,7 +227,7 @@ class ChainTestEnv(object):
             else:
                 rcVel1 = rcVel
             self.omc.addAgent(iAg+self.iAgNext, rcPos, (rcPos[0] + rcVel1[0], rcPos[1] + rcVel1[1]) )
-        
+
         if xlabel:
             self.omc.G.nodes[lrcAgPos[0]]["xlabel"] = xlabel
 
@@ -237,7 +237,7 @@ class ChainTestEnv(object):
     def nextRow(self):
         self.iRowNext+=1
 
-    
+
 
 def create_test_agents(omc:MotionCheck):
 
@@ -326,7 +326,7 @@ def create_test_agents2(omc:MotionCheck):
     cte.addAgentToRow(3, 2)
     cte.addAgent((cte.iRowNext+1, 2), (cte.iRowNext, 2))
     cte.nextRow()
-    
+
     if False:
         cte.nextRow()
         cte.nextRow()
@@ -342,7 +342,7 @@ def create_test_agents2(omc:MotionCheck):
     cte.addAgentToRow(3, 4)
     cte.addAgent((cte.iRowNext+1, 3), (cte.iRowNext, 3))
     cte.nextRow()
-    
+
 
     cte.nextRow()
     cte.addAgentToRow(1, 2, "Tree")
@@ -370,8 +370,8 @@ def test_agent_following():
 
     lvCells = omc.G.nodes()
 
-    lColours = [ "magenta" if v in svStops 
-            else "red" if v in svBlocked 
+    lColours = [ "magenta" if v in svStops
+            else "red" if v in svBlocked
             else "purple" if v in svSwaps
             else "lightblue"
             for v in lvCells ]
@@ -388,4 +388,3 @@ def main():
 
 if __name__=="__main__":
     main()
-    
