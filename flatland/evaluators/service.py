@@ -9,6 +9,7 @@ import time
 import traceback
 import json
 import itertools
+import re
 
 import crowdai_api
 import msgpack
@@ -107,6 +108,7 @@ class FlatlandRemoteEvaluationService:
                  shuffle=True,
                  missing_only=False,
                  result_output_path=None,
+                 disable_timeouts=False
                  ):
 
         # Episode recording properties
@@ -121,6 +123,17 @@ class FlatlandRemoteEvaluationService:
             os.makedirs(self.mergeDir)
         self.use_pickle = use_pickle
         self.missing_only = missing_only
+        self.disable_timeouts = disable_timeouts
+
+        if self.disable_timeouts:
+            print("=" * 20)
+            print("Timeout are DISABLED!")
+            print("=" * 20)
+
+        if not shuffle:
+            print("=" * 20)
+            print("Env shuffling is DISABLED!")
+            print("=" * 20)
 
         # Test Env folder Paths
         self.test_env_folder = test_env_folder
@@ -202,6 +215,7 @@ class FlatlandRemoteEvaluationService:
         self.simulation_steps = []
         self.simulation_times = []
         self.env_step_times = []
+        self.nb_malfunctioning_trains = []
         self.begin_simulation = False
         self.current_step = 0
         self.visualize = visualize
@@ -279,12 +293,15 @@ class FlatlandRemoteEvaluationService:
                 ├── .......
                 └── Level_99.pkl
         """
-        env_paths = sorted(glob.glob(
-            os.path.join(
-                self.test_env_folder,
-                "*/*.pkl"
+        env_paths = sorted(
+            glob.glob(
+                os.path.join(
+                    self.test_env_folder,
+                    "*/*.pkl"
+                )
             )
-        ))
+        )
+
         # Remove the root folder name from the individual
         # lists, so that we only have the path relative
         # to the test root folder
@@ -292,13 +309,21 @@ class FlatlandRemoteEvaluationService:
             x, self.test_env_folder
         ) for x in env_paths])
 
+        # Sort in proper order
+        def get_file_order(f):
+            numbers = re.findall(r'\d+', os.path.relpath(f))
+            value = int(numbers[0]) * 1000 + int(numbers[1])
+            return value
+
+        env_paths.sort(key=get_file_order)
+
         # if requested, only generate actions for those envs which don't already have them
         if self.mergeDir and self.missing_only:
             existing_paths = (itertools.chain.from_iterable(
                 [glob.glob(os.path.join(self.mergeDir, f"envs/*.{ext}"))
                  for ext in ["pkl", "mpk"]]))
             existing_paths = [os.path.relpath(sPath, self.mergeDir) for sPath in existing_paths]
-            env_paths = sorted(set(env_paths) - set(existing_paths))
+            env_paths = set(env_paths) - set(existing_paths)
 
         return env_paths
 
@@ -308,7 +333,7 @@ class FlatlandRemoteEvaluationService:
             information specific to each of the individual env evaluations.
 
             This loads the template CSV with pre-filled information from the
-            provided metadata.csv file, and fills it up with 
+            provided metadata.csv file, and fills it up with
             evaluation runtime information.
         """
         self.evaluation_metadata_df = None
@@ -329,6 +354,7 @@ class FlatlandRemoteEvaluationService:
             self.evaluation_metadata_df["percentage_complete"] = np.nan
             self.evaluation_metadata_df["steps"] = np.nan
             self.evaluation_metadata_df["simulation_time"] = np.nan
+            self.evaluation_metadata_df["nb_malfunctioning_trains"] = np.nan
 
             # Add client specific columns
             # TODO: This needs refactoring
@@ -341,7 +367,7 @@ class FlatlandRemoteEvaluationService:
     def update_evaluation_metadata(self):
         """
         This function is called when we move from one simulation to another
-        and it simply tries to update the simulation specific information 
+        and it simply tries to update the simulation specific information
         for the **previous** episode in the metadata_df if it exists.
         """
 
@@ -357,6 +383,7 @@ class FlatlandRemoteEvaluationService:
             _row.percentage_complete = self.simulation_percentage_complete[-1]
             _row.steps = self.simulation_steps[-1]
             _row.simulation_time = self.simulation_times[-1]
+            _row.nb_malfunctioning_trains = self.nb_malfunctioning_trains[-1]
 
             # TODO: This needs refactoring
             # Add controller_inference_time_metrics
@@ -380,7 +407,7 @@ class FlatlandRemoteEvaluationService:
                 last_simulation_env_file_path
             ] = _row
 
-            # Delete this key from the stats to ensure that it 
+            # Delete this key from the stats to ensure that it
             # gets computed again from scratch in the next episode
             self.delete_key_in_running_stats(
                 "current_episode_controller_inference_time")
@@ -461,6 +488,9 @@ class FlatlandRemoteEvaluationService:
             can be an arbitrarily large number.
             """
             COMMAND_TIMEOUT = 10 ** 6
+
+        if self.disable_timeouts:
+            COMMAND_TIMEOUT = None
 
         @timeout_decorator.timeout(COMMAND_TIMEOUT, use_signals=use_signals_in_timeout)  # timeout for each command
         def _get_next_command(command_channel, _redis):
@@ -576,7 +606,7 @@ class FlatlandRemoteEvaluationService:
             There are still test envs left that are yet to be evaluated 
             """
             test_env_file_path = self.env_file_paths[self.simulation_count]
-            print("Evaluating : {}".format(test_env_file_path))
+            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count, len(self.env_file_paths)))
             test_env_file_path = os.path.join(
                 self.test_env_folder,
                 test_env_file_path
@@ -589,11 +619,6 @@ class FlatlandRemoteEvaluationService:
                                obs_builder_object=DummyObservationBuilder(),
                                record_steps=True)
 
-            if self.begin_simulation:
-                # If begin simulation has already been initialized
-                # atleast once
-                # This adds the simulation time for the previous episode
-                self.simulation_times.append(time.time() - self.begin_simulation)
             self.begin_simulation = time.time()
 
             # Update evaluation metadata for the previous episode
@@ -610,6 +635,7 @@ class FlatlandRemoteEvaluationService:
             self.simulation_rewards_normalized.append(0)
             self.simulation_percentage_complete.append(0)
             self.simulation_steps.append(0)
+            self.nb_malfunctioning_trains.append(0)
 
             self.current_step = 0
 
@@ -715,6 +741,12 @@ class FlatlandRemoteEvaluationService:
                 self.env.get_num_agents()
             )
 
+        num_malfunctioning = sum(agent.malfunction_data['malfunction'] > 0 for agent in self.env.agents)
+        if (num_malfunctioning > 0):
+            print(num_malfunctioning, "agent malfunctioning at step", self.current_step)
+
+        self.nb_malfunctioning_trains[-1] += num_malfunctioning
+
         # record the actions before checking for done
         if self.actionDir is not None:
             self.lActions.append(action)
@@ -722,6 +754,11 @@ class FlatlandRemoteEvaluationService:
         # all done! episode over
         if done["__all__"]:
             self.simulation_done = True
+
+            if self.begin_simulation:
+                # If begin simulation has already been initialized at least once
+                # This adds the simulation time for the previous episode
+                self.simulation_times.append(time.time() - self.begin_simulation)
 
             # Compute percentage complete
             complete = 0
@@ -732,11 +769,18 @@ class FlatlandRemoteEvaluationService:
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
 
-            print("Evaluation finished in {} timesteps. Percentage agents done: {:.3f}. Normalized reward: {:.3f}.".format(
+            print("Evaluation finished in {} timesteps, {:.3f} seconds. Percentage agents done: {:.3f}. Normalized reward: {:.3f}. Number of malfunctions: {}.".format(
                 self.simulation_steps[-1],
+                self.simulation_times[-1],
                 self.simulation_percentage_complete[-1],
-                self.simulation_rewards_normalized[-1]
+                self.simulation_rewards_normalized[-1],
+                self.nb_malfunctioning_trains[-1]
             ))
+
+            # Write intermediate results
+            if self.result_output_path:
+                self.evaluation_metadata_df.to_csv(self.result_output_path)
+                print("Wrote intermediate output results to : {}".format(self.result_output_path))
 
             if self.actionDir is not None:
                 self.save_actions()
@@ -883,7 +927,7 @@ class FlatlandRemoteEvaluationService:
             self.evaluation_metadata_df.to_csv(self.result_output_path)
             print("Wrote output results to : {}".format(self.result_output_path))
 
-            # Upload the metadata file to S3 
+            # Upload the metadata file to S3
             if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
                 metadata_s3_key = aicrowd_helpers.upload_to_s3(
                     self.result_output_path
@@ -925,7 +969,7 @@ class FlatlandRemoteEvaluationService:
         #################################################################################
         # Compute the mean rewards, mean normalized_reward and mean_percentage_complete
         # we group all the results by the test_ids
-        # so we first compute the mean in each of the test_id groups, 
+        # so we first compute the mean in each of the test_id groups,
         # and then we compute the mean across each of the test_id groups
         #
         #
@@ -1004,10 +1048,11 @@ class FlatlandRemoteEvaluationService:
                 self.simulation_rewards[-1] = self.env._max_episode_steps * self.env.get_num_agents()
                 self.simulation_rewards_normalized[-1] = -1.0
 
-                print("Evaluation TIMED OUT after {} timesteps, using max penalty. Percentage agents done: {:.3f}. Normalized reward: {:.3f}.".format(
+                print("Evaluation TIMED OUT after {} timesteps, using max penalty. Percentage agents done: {:.3f}. Normalized reward: {:.3f}. Number of malfunctions: {}".format(
                     self.simulation_steps[-1],
                     self.simulation_percentage_complete[-1],
-                    self.simulation_rewards_normalized[-1]
+                    self.simulation_rewards_normalized[-1],
+                    self.nb_malfunctioning_trains[-1],
                 ))
 
                 self.timeout_counter += 1
@@ -1079,12 +1124,12 @@ class FlatlandRemoteEvaluationService:
                     return _error
                 ###########################################
                 # We keep a record of the previous command
-                # to be able to have different behaviors 
+                # to be able to have different behaviors
                 # between different "command transitions"
-                # 
-                # An example use case, is when we want to 
-                # have a different timeout for the 
-                # first step in every environment 
+                #
+                # An example use case, is when we want to
+                # have a different timeout for the
+                # first step in every environment
                 # to account for some initial planning time
                 self.previous_command = command
             except Exception as e:
@@ -1141,11 +1186,23 @@ if __name__ == "__main__":
                         help="don't shuffle the envs.  Default is to shuffle.",
                         required=False)
 
+    parser.add_argument('--disableTimeouts',
+                        default=False,
+                        action="store_true",
+                        help="Disable all timeouts.",
+                        required=False)
+
     parser.add_argument('--missingOnly',
                         default=False,
                         action="store_true",
                         help="only request the envs/actions which are missing",
                         required=False)
+
+    parser.add_argument('--resultsDir',
+                        default="/tmp/output.csv",
+                        help="Results CSV path",
+                        required=False)
+
 
     parser.add_argument('--verbose',
                         default=False,
@@ -1162,13 +1219,14 @@ if __name__ == "__main__":
         verbose=args.verbose,
         visualize=True,
         video_generation_envs=["Test_0/Level_100.pkl"],
-        result_output_path="/tmp/output.csv",
+        result_output_path=args.resultsDir,
         actionDir=args.actionDir,
         episodeDir=args.episodeDir,
         mergeDir=args.mergeDir,
         use_pickle=args.pickle,
         shuffle=not args.noShuffle,
         missing_only=args.missingOnly,
+        disable_timeouts=args.disableTimeouts
     )
     result = grader.run()
     if result['type'] == messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE:

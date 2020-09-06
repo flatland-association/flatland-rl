@@ -154,11 +154,11 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator = None, 
-                 schedule_generator = None, # : sched_gen.ScheduleGenerator = sched_gen.random_schedule_generator(),
+                 rail_generator=None,
+                 schedule_generator=None,  # : sched_gen.ScheduleGenerator = sched_gen.random_schedule_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
-                 malfunction_generator_and_process_data=None, #mal_gen.no_malfunction_generator(),
+                 malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
                  malfunction_generator=None,
                  remove_agents_at_target=True,
                  random_seed=1,
@@ -208,18 +208,18 @@ class RailEnv(Environment):
         elif malfunction_generator is not None:
             self.malfunction_generator = malfunction_generator
             # malfunction_process_data is not used
-            #self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
+            # self.malfunction_generator, self.malfunction_process_data = malfunction_generator_and_process_data
             self.malfunction_process_data = self.malfunction_generator.get_process_data()
         # replace default values here because we can't use default args values because of cyclic imports
         else:
             self.malfunction_generator = mal_gen.NoMalfunctionGen()
             self.malfunction_process_data = self.malfunction_generator.get_process_data()
 
-        #self.rail_generator: RailGenerator = rail_generator
+        # self.rail_generator: RailGenerator = rail_generator
         if rail_generator is None:
             rail_generator = rail_gen.random_rail_generator()
         self.rail_generator = rail_generator
-        #self.schedule_generator: ScheduleGenerator = schedule_generator
+        # self.schedule_generator: ScheduleGenerator = schedule_generator
         if schedule_generator is None:
             schedule_generator = sched_gen.random_schedule_generator()
         self.schedule_generator = schedule_generator
@@ -266,12 +266,11 @@ class RailEnv(Environment):
         # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
         self.record_steps = record_steps  # whether to save timesteps
         # save timesteps in here: [[[row, col, dir, malfunction],...nAgents], ...nSteps]
-        self.cur_episode = []  
-        self.list_actions = [] # save actions in here
+        self.cur_episode = []
+        self.list_actions = []  # save actions in here
 
         self.close_following = close_following  # use close following logic
         self.motionCheck = ac.MotionCheck()
-
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -303,8 +302,6 @@ class RailEnv(Environment):
         for agent in self.agents:
             agent.reset()
         self.active_agents = [i for i in range(len(self.agents))]
-
-
 
     def action_required(self, agent):
         """
@@ -365,7 +362,6 @@ class RailEnv(Environment):
             else:
                 raise ValueError("Could not invoke __call__ or generate on rail_generator")
 
-
             self.rail = rail
             self.height, self.width = self.rail.grid.shape
 
@@ -376,8 +372,6 @@ class RailEnv(Environment):
 
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
-
-
 
         if regenerate_schedule or regenerate_rail or self.get_num_agents() == 0:
             agents_hints = None
@@ -475,7 +469,6 @@ class RailEnv(Environment):
 
         """
 
-        #malfunction: Malfunction = self.malfunction_generator(agent, self.np_random)
         if "generate" in dir(self.malfunction_generator):
             malfunction: mal_gen.Malfunction = self.malfunction_generator.generate(agent, self.np_random)
         else:
@@ -564,15 +557,13 @@ class RailEnv(Environment):
                 # Perform step on the agent
                 self._step_agent_cf(i_agent, action_dict_.get(i_agent))
 
-        
             # second loop: check for collisions / conflicts
             self.motionCheck.find_conflicts()
-
 
             # third loop: update positions
             for i_agent, agent in enumerate(self.agents):
                 self._step_agent2_cf(i_agent)
-                
+
                 # manage the boolean flag to check if all agents are indeed done (or done_removed)
                 have_all_agents_ended &= (agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED])
 
@@ -584,9 +575,6 @@ class RailEnv(Environment):
 
                 # Fix agents that finished their malfunction such that they can perform an action in the next step
                 self._fix_agent_after_malfunction(agent)
-        
-        
-
 
         # Check for end of episode + set global reward to all rewards!
         if have_all_agents_ended:
@@ -600,8 +588,6 @@ class RailEnv(Environment):
             self.record_timestep(action_dict_)
 
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
-
-
 
     def _step_agent(self, i_agent, action: Optional[RailEnvActions] = None):
         """
@@ -714,7 +700,7 @@ class RailEnv(Environment):
                 # Perform stored action to transition to the next cell as soon as cell is free
                 # Notice that we've already checked new_cell_valid and transition valid when we stored the action,
                 # so we only have to check cell_free now!
-                
+
                 # Traditional check that next cell is free
                 # cell and transition validity was checked when we stored transition_action_on_cellexit!
                 cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
@@ -727,7 +713,6 @@ class RailEnv(Environment):
                     self._move_agent_to_new_position(agent, new_position)
                     agent.direction = new_direction
                     agent.speed_data['position_fraction'] = 0.0
-                
 
             # has the agent reached its target?
             if np.equal(agent.position, agent.target).all():
@@ -758,7 +743,6 @@ class RailEnv(Environment):
                 self.motionCheck.addAgent(i_agent, None, None)
             return
 
-
         agent.old_direction = agent.direction
         agent.old_position = agent.position
 
@@ -767,7 +751,7 @@ class RailEnv(Environment):
         if agent.malfunction_data['malfunction'] > 0:
             self.motionCheck.addAgent(i_agent, agent.position, agent.position)
             # agent will get penalty in step_agent2_cf
-            #self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+            # self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
             return
 
         # Is the agent at the beginning of the cell? Then, it can take an action.
@@ -827,14 +811,14 @@ class RailEnv(Environment):
                     self.rewards_dict[i_agent] += self.invalid_action_penalty
                     self.rewards_dict[i_agent] += self.stop_penalty
                     agent.moving = False
-                    self.motionCheck.addAgent(i_agent, agent.position, agent.position)    
+                    self.motionCheck.addAgent(i_agent, agent.position, agent.position)
                     return
 
             if new_position is None:
                 self.motionCheck.addAgent(i_agent, agent.position, agent.position)
                 if agent.moving:
                     print("Agent", i_agent, "new_pos none, but moving")
-            
+
         # Check the pos_frac position fraction
         if agent.moving:
             agent.speed_data['position_fraction'] += agent.speed_data['speed']
@@ -853,27 +837,25 @@ class RailEnv(Environment):
             else:  # This agent hasn't yet crossed the cell
                 self.motionCheck.addAgent(i_agent, agent.position, agent.position)
 
-
-
     def _step_agent2_cf(self, i_agent):
         agent = self.agents[i_agent]
 
-        if agent.status in [ RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED ]:
+        if agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED]:
             return
 
         (move, rc_next) = self.motionCheck.check_motion(i_agent, agent.position)
 
         if agent.position is not None:
             sbTrans = format(self.rail.grid[agent.position], "016b")
-            trans_block = sbTrans[agent.direction*4 : agent.direction * 4 + 4]
+            trans_block = sbTrans[agent.direction * 4: agent.direction * 4 + 4]
             if (trans_block == "0000"):
                 print (i_agent, agent.position, agent.direction, sbTrans, trans_block)
 
         # if agent cannot enter env, then we should have move=False
-        
+
         if move:
             if agent.position is None:  # agent is entering the env
-                #print(i_agent, "writing new pos ", rc_next, " into agent position (None)")
+                # print(i_agent, "writing new pos ", rc_next, " into agent position (None)")
                 agent.position = rc_next
                 agent.status = RailAgentStatus.ACTIVE
                 agent.speed_data['position_fraction'] = 0.0
@@ -881,7 +863,7 @@ class RailEnv(Environment):
             else:  # normal agent move
                 cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
                     agent.speed_data['transition_action_on_cellexit'], agent)
-        
+
                 if not all([transition_valid, new_cell_valid]):
                     print(f"ERRROR: step_agent2 invalid transition ag {i_agent} dir {new_direction} pos {agent.position} next {rc_next}")
 
@@ -891,14 +873,14 @@ class RailEnv(Environment):
                           f"stored action: {agent.speed_data['transition_action_on_cellexit']}")
 
                 sbTrans = format(self.rail.grid[agent.position], "016b")
-                trans_block = sbTrans[agent.direction*4 : agent.direction * 4 + 4]
+                trans_block = sbTrans[agent.direction * 4: agent.direction * 4 + 4]
                 if (trans_block == "0000"):
                     print ("ERROR: ", i_agent, agent.position, agent.direction, sbTrans, trans_block)
 
                 agent.position = rc_next
                 agent.direction = new_direction
-                agent.speed_data['position_fraction'] = 0.0                        
-          
+                agent.speed_data['position_fraction'] = 0.0
+
             # has the agent reached its target?
             if np.equal(agent.position, agent.target).all():
                 agent.status = RailAgentStatus.DONE
@@ -911,10 +893,6 @@ class RailEnv(Environment):
         else:
             # step penalty if not moving (stopped now or before)
             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
-
-
-
-
 
     def _set_agent_to_initial_position(self, agent: EnvAgent, new_position: IntVector2D):
         """
@@ -1091,7 +1069,7 @@ class RailEnv(Environment):
         ------
         Dict object
         """
-        #print(f"_get_obs - num agents: {self.get_num_agents()} {list(range(self.get_num_agents()))}")
+        # print(f"_get_obs - num agents: {self.get_num_agents()} {list(range(self.get_num_agents()))}")
         self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
         return self.obs_dict
 
@@ -1109,8 +1087,6 @@ class RailEnv(Environment):
         List[int]
         """
         return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row, col))
-
-
 
     def _exp_distirbution_synced(self, rate: float) -> float:
         """
@@ -1140,5 +1116,3 @@ class RailEnv(Environment):
     def save(self, filename):
         print("deprecated call to env.save() - pls call RailEnvPersister.save()")
         persistence.RailEnvPersister.save(self, filename)
-
-
