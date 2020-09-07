@@ -653,7 +653,7 @@ class FlatlandRemoteEvaluationService:
             mean_test_complete_percentage = np.mean(self.simulation_percentage_complete_per_test[self.current_test])
             if mean_test_complete_percentage < TEST_MIN_PERCENTAGE_COMPLETE_MEAN:
                 print("=" * 15)
-                msg = "Mean percentage done too low: {:.3f} < {}.".format(
+                msg = "The mean percentage of done agents during the last 10 environments was too low: {:.f} < {}".format(
                     mean_test_complete_percentage,
                     TEST_MIN_PERCENTAGE_COMPLETE_MEAN
                 )
@@ -780,12 +780,9 @@ class FlatlandRemoteEvaluationService:
 
         overall_elapsed = (time.time() - self.overall_start_time)
         if overall_elapsed > OVERALL_TIMEOUT:
-            msg = "Reached time limit: took {:.2f}s, limit is {:.2f}s, went over by {:.2f}s".format(
-                overall_elapsed, OVERALL_TIMEOUT, overall_elapsed - OVERALL_TIMEOUT
+            msg = "Reached overall time limit: took {:.2f}s, limit is {:.2f}s.".format(
+                overall_elapsed, OVERALL_TIMEOUT
             )
-            # _command_response = self._error_template(msg)
-            # self.send_response(_command_response, command)
-            # raise Exception(_command_response['payload'])
             self.termination_cause = msg
             self.evaluation_done = True
 
