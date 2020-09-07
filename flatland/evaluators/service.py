@@ -57,11 +57,16 @@ TEST_MIN_PERCENTAGE_COMPLETE_MEAN = 0.25
 # this probably means the submission has crashed
 MAX_SUCCESSIVE_TIMEOUTS = 10
 
-# 8 hours
+debug_mode = (os.getenv("AICROWD_DEBUG_SUBMISSION", 0) == 1)
+if debug_mode:
+    print("=" * 20)
+    print("Submission in DEBUG MODE! will get limited time")
+    print("=" * 20)
+
+# 8 hours (will get debug timeout from env variable if applicable)
 OVERALL_TIMEOUT = int(os.getenv(
     "FLATLAND_OVERALL_TIMEOUT",
-    # 8 * 60 * 60))
-    15))
+    8 * 60 * 60))
 
 # 10 mins
 INTIAL_PLANNING_TIMEOUT = int(os.getenv(
@@ -235,7 +240,7 @@ class FlatlandRemoteEvaluationService:
         self.env_step_times = []
         self.nb_malfunctioning_trains = []
         self.overall_start_time = 0
-        self.overall_timeout_reached = False
+        self.evaluation_done = False
         self.begin_simulation = False
         self.current_step = 0
         self.current_test = -1
@@ -619,7 +624,7 @@ class FlatlandRemoteEvaluationService:
         """
 
         # Check if the previous episode was finished
-        if not self.simulation_done and not self.overall_timeout_reached:
+        if not self.simulation_done and not self.evaluation_done:
             _command_response = self._error_template("CAN'T CREATE NEW ENV BEFORE PREVIOUS IS DONE")
             self.send_response(_command_response, command)
             raise Exception(_command_response['payload'])
@@ -635,33 +640,34 @@ class FlatlandRemoteEvaluationService:
         # reset the timeout flag / state.
         self.state_env_timed_out = False
 
-        if self.simulation_count < len(self.env_file_paths) and not self.overall_timeout_reached:
+        test_env_file_path = self.env_file_paths[self.simulation_count]
+        env_test, env_level = self.get_env_test_and_level(test_env_file_path)
+
+        # Did we just finish a test, and if yes did it reach high enough mean percentage done?
+        if self.current_test != env_test and env_test != 0:
+            if self.current_test not in self.simulation_percentage_complete_per_test:
+                raise Exception("Missing percentages for previous test: test {}".format(self.current_test))
+
+            mean_test_complete_percentage = np.mean(self.simulation_percentage_complete_per_test[self.current_test])
+            if mean_test_complete_percentage < TEST_MIN_PERCENTAGE_COMPLETE_MEAN:
+                print("=" * 15)
+                print("Mean percentage done too low: {} < {}. Evaluation will stop here.".format(
+                    mean_test_complete_percentage,
+                    TEST_MIN_PERCENTAGE_COMPLETE_MEAN
+                ))
+                self.evaluation_done = True
+
+        if self.simulation_count < len(self.env_file_paths) and not self.evaluation_done:
             """
             There are still test envs left that are yet to be evaluated 
             """
 
-            test_env_file_path = self.env_file_paths[self.simulation_count]
             print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count, len(self.env_file_paths)))
-            env_test, env_level = self.get_env_test_and_level(test_env_file_path)
 
             test_env_file_path = os.path.join(
                 self.test_env_folder,
                 test_env_file_path
             )
-
-            if self.current_test != env_test and env_test != 0:
-                if self.current_test not in self.simulation_percentage_complete_per_test:
-                    raise Exception("Missing percentages for previous test: test {}".format(self.current_test))
-
-                # Check if episodes from the previous test had good enough results
-                mean_test_complete_percentage = np.mean(self.simulation_percentage_complete_per_test[self.current_test])
-                if mean_test_complete_percentage >= TEST_MIN_PERCENTAGE_COMPLETE_MEAN:
-                    print("Starting new test: test {} to test {}".format(self.current_test, env_test))
-                else:
-                    _command_response = self._error_template(
-                        "COMPLETE PERCENTAGE TOO LOW: {} < {}".format(mean_test_complete_percentage, TEST_MIN_PERCENTAGE_COMPLETE_MEAN))
-                    self.send_response(_command_response, command)
-                    raise Exception(_command_response['payload'])
 
             self.current_test = env_test
             self.current_level = env_level
@@ -774,7 +780,7 @@ class FlatlandRemoteEvaluationService:
             # _command_response = self._error_template(msg)
             # self.send_response(_command_response, command)
             # raise Exception(_command_response['payload'])
-            self.overall_timeout_reached = True
+            self.evaluation_done = True
 
             print("=" * 15)
             print(msg)
@@ -965,7 +971,7 @@ class FlatlandRemoteEvaluationService:
         # Compute the evaluation metadata for the last episode
         self.update_evaluation_metadata()
 
-        if len(self.simulation_rewards) != len(self.env_file_paths) and not self.overall_timeout_reached:
+        if len(self.simulation_rewards) != len(self.env_file_paths) and not self.evaluation_done:
             raise Exception(
                 """env.submit called before the agent had the chance 
                 to operate on all the test environments.
@@ -1063,7 +1069,7 @@ class FlatlandRemoteEvaluationService:
         #################################################################################
         #################################################################################
         source_df = self.evaluation_metadata_df.dropna()
-        #grouped_df = source_df.groupby(['test_id']).mean()
+        # grouped_df = source_df.groupby(['test_id']).mean()
 
         mean_reward = source_df["reward"].mean()
         mean_normalized_reward = source_df["normalized_reward"].mean()
