@@ -651,7 +651,7 @@ class FlatlandRemoteEvaluationService:
             mean_test_complete_percentage = np.mean(self.simulation_percentage_complete_per_test[self.current_test])
             if mean_test_complete_percentage < TEST_MIN_PERCENTAGE_COMPLETE_MEAN:
                 print("=" * 15)
-                print("Mean percentage done too low: {} < {}. Evaluation will stop here.".format(
+                print("Mean percentage done too low: {:.3f} < {}. Evaluation will stop here.".format(
                     mean_test_complete_percentage,
                     TEST_MIN_PERCENTAGE_COMPLETE_MEAN
                 ))
@@ -869,6 +869,8 @@ class FlatlandRemoteEvaluationService:
                     self.simulation_rewards_normalized[-1],
                     self.nb_malfunctioning_trains[-1]
                 ))
+
+            print("Total normalized reward so far: {:.3f}".format(sum(self.simulation_rewards_normalized)))
 
             # Write intermediate results
             if self.result_output_path:
