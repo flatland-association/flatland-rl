@@ -146,8 +146,9 @@ class FlatlandRemoteEvaluationService:
             os.makedirs(self.merge_dir)
         self.use_pickle = use_pickle
         self.missing_only = missing_only
-        self.disable_timeouts = disable_timeouts
+        self.episode_actions = []
 
+        self.disable_timeouts = disable_timeouts
         if self.disable_timeouts:
             print("=" * 20)
             print("Timeout are DISABLED!")
@@ -240,6 +241,7 @@ class FlatlandRemoteEvaluationService:
         self.env_step_times = []
         self.nb_malfunctioning_trains = []
         self.overall_start_time = 0
+        self.termination_cause = "No reported termination cause."
         self.evaluation_done = False
         self.begin_simulation = False
         self.current_step = 0
@@ -651,10 +653,12 @@ class FlatlandRemoteEvaluationService:
             mean_test_complete_percentage = np.mean(self.simulation_percentage_complete_per_test[self.current_test])
             if mean_test_complete_percentage < TEST_MIN_PERCENTAGE_COMPLETE_MEAN:
                 print("=" * 15)
-                print("Mean percentage done too low: {:.3f} < {}. Evaluation will stop here.".format(
+                msg = "Mean percentage done too low: {:.3f} < {}.".format(
                     mean_test_complete_percentage,
                     TEST_MIN_PERCENTAGE_COMPLETE_MEAN
-                ))
+                )
+                print(msg)
+                self.termination_cause = msg
                 self.evaluation_done = True
 
         if self.simulation_count < len(self.env_file_paths) and not self.evaluation_done:
@@ -750,8 +754,10 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["score"]["score"] = sum_normalized_reward
         self.evaluation_state["score"]["score_secondary"] = mean_percentage_complete
         self.evaluation_state["meta"]["normalized_reward"] = mean_normalized_reward
+        self.evaluation_state["meta"]["termination_cause"] = self.termination_cause
         self.handle_aicrowd_info_event(self.evaluation_state)
-        self.lActions = []
+
+        self.episode_actions = []
 
     def handle_env_step(self, command):
         """
@@ -780,6 +786,7 @@ class FlatlandRemoteEvaluationService:
             # _command_response = self._error_template(msg)
             # self.send_response(_command_response, command)
             # raise Exception(_command_response['payload'])
+            self.termination_cause = msg
             self.evaluation_done = True
 
             print("=" * 15)
@@ -832,7 +839,7 @@ class FlatlandRemoteEvaluationService:
 
         # record the actions before checking for done
         if self.action_dir is not None:
-            self.lActions.append(action)
+            self.episode_actions.append(action)
 
         # Is the episode over?
         if done["__all__"]:
@@ -919,9 +926,9 @@ class FlatlandRemoteEvaluationService:
             os.makedirs(os.path.dirname(sfActions))
 
         with open(sfActions, "w") as fOut:
-            json.dump(self.lActions, fOut)
+            json.dump(self.episode_actions, fOut)
 
-        self.lActions = []
+        self.episode_actions = []
 
     def save_episode(self):
         sfEnv = self.env_file_paths[self.simulation_count]
@@ -1050,6 +1057,7 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["meta"]["normalized_reward"] = mean_normalized_reward
         self.evaluation_state["meta"]["reward"] = mean_reward
         self.evaluation_state["meta"]["percentage_complete"] = mean_percentage_complete
+        self.evaluation_state["meta"]["termination_cause"] = self.termination_cause
         self.handle_aicrowd_success_event(self.evaluation_state)
         print("#" * 100)
         print("EVALUATION COMPLETE !!")
@@ -1101,6 +1109,7 @@ class FlatlandRemoteEvaluationService:
         )
         self.evaluation_state["state"] = "ERROR"
         self.evaluation_state["error"] = error_message
+        self.evaluation_state["meta"]["termination_cause"] = "An error occured."
         self.handle_aicrowd_error_event(self.evaluation_state)
 
     def handle_aicrowd_info_event(self, payload):
