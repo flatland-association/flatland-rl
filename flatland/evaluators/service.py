@@ -653,7 +653,7 @@ class FlatlandRemoteEvaluationService:
             mean_test_complete_percentage = np.mean(self.simulation_percentage_complete_per_test[self.current_test])
             if mean_test_complete_percentage < TEST_MIN_PERCENTAGE_COMPLETE_MEAN:
                 print("=" * 15)
-                msg = "The mean percentage of done agents during the last 10 environments was too low: {:.f} < {}".format(
+                msg = "The mean percentage of done agents during the last 10 environments was too low: {:.3f} < {}".format(
                     mean_test_complete_percentage,
                     TEST_MIN_PERCENTAGE_COMPLETE_MEAN
                 )
