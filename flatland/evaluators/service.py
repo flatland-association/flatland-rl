@@ -648,16 +648,18 @@ class FlatlandRemoteEvaluationService:
         # Did we just finish a test, and if yes did it reach high enough mean percentage done?
         if self.current_test != env_test and env_test != 0:
             if self.current_test not in self.simulation_percentage_complete_per_test:
-                raise Exception("Missing percentages for previous test: test {}".format(self.current_test))
+                print("No environment was finished at all during test {}!".format(self.current_test))
+                mean_test_complete_percentage = 0.0
+            else:
+                mean_test_complete_percentage = np.mean(self.simulation_percentage_complete_per_test[self.current_test])
 
-            mean_test_complete_percentage = np.mean(self.simulation_percentage_complete_per_test[self.current_test])
             if mean_test_complete_percentage < TEST_MIN_PERCENTAGE_COMPLETE_MEAN:
                 print("=" * 15)
                 msg = "The mean percentage of done agents during the last 10 environments was too low: {:.3f} < {}".format(
                     mean_test_complete_percentage,
                     TEST_MIN_PERCENTAGE_COMPLETE_MEAN
                 )
-                print(msg)
+                print(msg, "Evaluation will stop.")
                 self.termination_cause = msg
                 self.evaluation_done = True
 
@@ -699,6 +701,7 @@ class FlatlandRemoteEvaluationService:
             self.simulation_rewards.append(0)
             self.simulation_rewards_normalized.append(0)
             self.simulation_percentage_complete.append(0)
+            self.simulation_times.append(0)
             self.simulation_steps.append(0)
             self.nb_malfunctioning_trains.append(0)
 
@@ -765,8 +768,8 @@ class FlatlandRemoteEvaluationService:
         TODO: Add a high level summary of everything thats happening here.
         """
 
-        if self.state_env_timed_out:
-            print("Ignoring step command after timeout")
+        if self.state_env_timed_out or self.evaluation_done:
+            print("Ignoring step command after timeout.")
             return
 
         _payload = command['payload']
@@ -787,9 +790,7 @@ class FlatlandRemoteEvaluationService:
             self.evaluation_done = True
 
             print("=" * 15)
-            print(msg)
-            print("Skipping these rewards...")
-            print("=" * 15)
+            print(msg, "Evaluation will stop.")
             return
         # else:
         #     print("="*15)
@@ -845,7 +846,7 @@ class FlatlandRemoteEvaluationService:
             if self.begin_simulation:
                 # If begin simulation has already been initialized at least once
                 # This adds the simulation time for the previous episode
-                self.simulation_times.append(time.time() - self.begin_simulation)
+                self.simulation_times[-1] = time.time() - self.begin_simulation
 
             # Compute percentage complete
             complete = 0
@@ -1056,6 +1057,7 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["meta"]["percentage_complete"] = mean_percentage_complete
         self.evaluation_state["meta"]["termination_cause"] = self.termination_cause
         self.handle_aicrowd_success_event(self.evaluation_state)
+
         print("#" * 100)
         print("EVALUATION COMPLETE !!")
         print("#" * 100)
@@ -1065,6 +1067,8 @@ class FlatlandRemoteEvaluationService:
         print("# Mean Normalized Reward : {}".format(mean_normalized_reward))
         print("#" * 100)
         print("#" * 100)
+
+        return _command_response
 
     def compute_mean_scores(self):
         #################################################################################
@@ -1134,8 +1138,8 @@ class FlatlandRemoteEvaluationService:
         """
         print("Listening at : ", self.command_channel)
         MESSAGE_QUEUE_LATENCY = []
-        while True:
 
+        while True:
             try:
                 command = self.get_next_command()
             except timeout_decorator.timeout_decorator.TimeoutError:
@@ -1150,11 +1154,11 @@ class FlatlandRemoteEvaluationService:
 
                 self.simulation_steps[-1] += 1
                 self.simulation_rewards[-1] = self.env._max_episode_steps * self.env.get_num_agents()
-                self.simulation_rewards_normalized[-1] = -1.0
+                self.simulation_rewards_normalized[-1] = 0.0
 
                 print(
-                    "Evaluation TIMED OUT after {} timesteps (exceeded {}), using max penalty. {} consecutive timeouts."
-                    "Percentage agents done: {:.3f}. Normalized reward: {:.3f}. Number of malfunctions: {}".format(
+                    "Evaluation of this episode TIMED OUT after {} timesteps (exceeded {}), won't get any reward. {} consecutive timeouts. "
+                    "Percentage agents done: {:.3f}. Normalized reward: {:.3f}. Number of malfunctions: {}.".format(
                         self.simulation_steps[-1],
                         timeout_details,
                         self.timeout_counter,
@@ -1167,10 +1171,12 @@ class FlatlandRemoteEvaluationService:
                 self.state_env_timed_out = True
                 self.simulation_done = True
 
-                print("Consecutive timeouts: {}".format(self.timeout_counter))
-                if self.timeout_counter > MAX_SUCCESSIVE_TIMEOUTS:
-                    raise Exception("{} consecutive timeouts, aborting.".format(self.timeout_counter))
-
+                if self.timeout_counter >= MAX_SUCCESSIVE_TIMEOUTS:
+                    print("=" * 15)
+                    msg = "Submissions had {} consecutive timeouts.".format(self.timeout_counter)
+                    print(msg, "Evaluation will stop.")
+                    self.termination_cause = msg
+                    self.evaluation_done = True
                 continue
 
             self.timeout_counter = 0
