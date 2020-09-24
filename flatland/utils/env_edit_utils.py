@@ -59,7 +59,8 @@ def makeEnv2(nAg=2, shape=(20,10), llrcPaths=[], lrcStarts=[], lrcTargs=[], liDi
                 number_of_agents=nAg,
                 schedule_generator=oSG,
                 obs_builder_object=obs.TreeObsForRailEnv(max_depth=1),
-                close_following=bUCF)
+                close_following=bUCF,
+                record_steps=True)
 
     envModel = editor.EditorModel(env)
     env.reset()

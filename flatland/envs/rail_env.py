@@ -728,6 +728,8 @@ class RailEnv(Environment):
             self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
 
     def _step_agent_cf(self, i_agent, action: Optional[RailEnvActions] = None):
+        """ "close following" version of step_agent.
+        """
         agent = self.agents[i_agent]
         if agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED]:  # this agent has already completed...
             return
@@ -748,6 +750,8 @@ class RailEnv(Environment):
 
         # if agent is broken, actions are ignored and agent does not move.
         # full step penalty in this case
+        # TODO: this means that deadlocked agents which suffer a malfunction are marked as 
+        # stopped rather than deadlocked.
         if agent.malfunction_data['malfunction'] > 0:
             self.motionCheck.addAgent(i_agent, agent.position, agent.position)
             # agent will get penalty in step_agent2_cf
@@ -999,7 +1003,8 @@ class RailEnv(Environment):
             list_agents_state.append([
                     *pos, int(agent.direction), 
                     agent.malfunction_data["malfunction"],  
-                    int(agent.status)
+                    int(agent.status),
+                    int(agent.position in self.motionCheck.svDeadlocked)
                     ])
 
         self.cur_episode.append(list_agents_state)

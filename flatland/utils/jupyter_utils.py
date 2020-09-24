@@ -29,6 +29,16 @@ class AlwaysForward(Behaviour):
     def getActions(self):
         return { i:RailEnvActions.MOVE_FORWARD for i in range(self.nAg) }
 
+class DelayedStartForward(AlwaysForward):
+    def __init__(self, env, nStartDelay=2):
+        self.nStartDelay = nStartDelay
+        super().__init__(env)
+
+    def getActions(self):
+        iStep = self.env._elapsed_steps + 1
+        nAgentsMoving = min(self.nAg, iStep // self.nStartDelay)
+        return { i:RailEnvActions.MOVE_FORWARD for i in range(nAgentsMoving) }
+
 AgentPause = NamedTuple("AgentPause", 
     [
         ("iAg", int),
