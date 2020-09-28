@@ -63,7 +63,7 @@ def demo(args=None):
               )
 @click.option('--shuffle',
               type=bool,
-              default=True,
+              default=False,
               help="Shuffle the environments before starting evaluation.",
               required=False
               )
