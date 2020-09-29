@@ -1,0 +1,3 @@
+test_id,env_id,n_agents,x_dim,y_dim,n_cities,max_rails_in_city,malfunction_interval,n_envs_run,seed,grid_mode,max_rails_between_cities,malfunction_duration_min,malfunction_duration_max,speed_ratios
+Test_0,Level_0,5,25,25,2,3,50,50,11111,False,2,20,50,{1.0: 1.0}
+Test_0,Level_1,5,25,25,2,3,50,50,11111,False,2,20,50,{1.0: 1.0}
