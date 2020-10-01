@@ -642,8 +642,15 @@ class FlatlandRemoteEvaluationService:
         # reset the timeout flag / state.
         self.state_env_timed_out = False
 
-        test_env_file_path = self.env_file_paths[self.simulation_count]
-        env_test, env_level = self.get_env_test_and_level(test_env_file_path)
+        # Check if we have finished all the available envs
+        if self.simulation_count >= len(self.env_file_paths):
+            self.evaluation_done = True
+            # Hack - just ensure these are set
+            test_env_file_path = self.env_file_paths[self.simulation_count-1]
+            env_test, env_level = self.get_env_test_and_level(test_env_file_path)
+        else:
+            test_env_file_path = self.env_file_paths[self.simulation_count]
+            env_test, env_level = self.get_env_test_and_level(test_env_file_path)
 
         # Did we just finish a test, and if yes did it reach high enough mean percentage done?
         if self.current_test != env_test and env_test != 0:
@@ -679,12 +686,8 @@ class FlatlandRemoteEvaluationService:
             self.current_level = env_level
 
             del self.env
-            self.env = RailEnv(width=1, height=1,
-                               rail_generator=rail_from_file(test_env_file_path),
-                               schedule_generator=schedule_from_file(test_env_file_path),
-                               malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
-                               obs_builder_object=DummyObservationBuilder(),
-                               record_steps=True)
+
+            self.env, _env_dict = RailEnvPersister.load_new(test_env_file_path)
 
             self.begin_simulation = time.time()
 
@@ -1101,13 +1104,17 @@ class FlatlandRemoteEvaluationService:
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.ERROR
         _command_response['payload'] = error_message
-        _redis.rpush(
-            command_response_channel,
-            msgpack.packb(
+
+        if self.use_pickle:
+            bytes_error = pickle.dumps(_command_response)
+        else:
+            bytes_error = msgpack.packb(
                 _command_response,
                 default=m.encode,
                 use_bin_type=True)
-        )
+
+        _redis.rpush(command_response_channel, bytes_error)
+
         self.evaluation_state["state"] = "ERROR"
         self.evaluation_state["error"] = error_message
         self.evaluation_state["meta"]["termination_cause"] = "An error occured."
