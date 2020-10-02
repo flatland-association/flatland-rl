@@ -24,6 +24,8 @@ before_script:
 
 tests:
     stage: tests
+    services:
+        - redis
     before_script:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb graphviz libgraphviz-dev xdg-utils libcairo2-dev libjpeg-dev libgif-dev python-pyglet
