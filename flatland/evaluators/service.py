@@ -55,7 +55,7 @@ TEST_MIN_PERCENTAGE_COMPLETE_MEAN = 0.25
 
 # After this number of consecutive timeouts, kill the submission:
 # this probably means the submission has crashed
-MAX_SUCCESSIVE_TIMEOUTS = 10
+MAX_SUCCESSIVE_TIMEOUTS = int(os.getenv("FLATLAND_MAX_SUCCESSIVE_TIMEOUTS", 10))
 
 debug_mode = (os.getenv("AICROWD_DEBUG_SUBMISSION", 0) == 1)
 if debug_mode:
@@ -1184,6 +1184,15 @@ class FlatlandRemoteEvaluationService:
                     print(msg, "Evaluation will stop.")
                     self.termination_cause = msg
                     self.evaluation_done = True
+                    # JW - change the command to a submit
+                    print("Creating fake submit message after excessive timeouts.")
+                    command = { 
+                        "type":messages.FLATLAND_RL.ENV_SUBMIT, 
+                        "payload": {},
+                        "response_channel": self.previous_command.get("response_channel") }
+                    
+                    return self.handle_env_submit(command)
+
                 continue
 
             self.timeout_counter = 0
