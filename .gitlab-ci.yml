@@ -104,6 +104,8 @@ benchmarks:
 
 test_conda_setup:
     stage: integration_testing
+    services:
+        - redis
     before_script:
         - apt update
         - apt install -y libgl1-mesa-glx xvfb xdg-utils libcairo2-dev libjpeg-dev libgif-dev graphviz libgraphviz-dev python-pyglet
