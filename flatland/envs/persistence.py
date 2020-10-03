@@ -124,8 +124,9 @@ class RailEnvPersister(object):
                     load_from_package=load_from_package),
                 schedule_generator=sched_gen.schedule_from_file(filename,
                     load_from_package=load_from_package),
-                malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
-                    load_from_package=load_from_package),
+                #malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
+                #    load_from_package=load_from_package),
+                malfunction_generator=mal_gen.FileMalfunctionGen(env_dict),
                 obs_builder_object=DummyObservationBuilder(),
                 record_steps=True)
 
