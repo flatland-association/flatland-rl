@@ -417,10 +417,6 @@ class FlatlandRemoteEvaluationService:
                 last_simulation_env_file_path
             ]
 
-            
-
-            
-
             # Add controller_inference_time_metrics
             # These metrics may be missing if no step was done before the episode finished
 
@@ -448,10 +444,6 @@ class FlatlandRemoteEvaluationService:
                 self.nb_deadlocked_trains[-1]
             ] + lrStats
 
-            print(len(lsFields), len(loValues))
-            print(lsFields)
-            print(loValues)
-
             # update the dataframe without the updating-a-copy warning
             df = self.evaluation_metadata_df
             df.loc[last_simulation_env_file_path, lsFields] = loValues
@@ -463,8 +455,6 @@ class FlatlandRemoteEvaluationService:
             #_row.simulation_time = self.simulation_times[-1]
             #_row.nb_malfunctioning_trains = self.nb_malfunctioning_trains[-1]
 
-
-            
                 #_row.controller_inference_time_min = self.stats[
                 #    "current_episode_controller_inference_time_min"
                 #]
