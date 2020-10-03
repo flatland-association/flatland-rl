@@ -240,6 +240,7 @@ class FlatlandRemoteEvaluationService:
         self.simulation_times = []
         self.env_step_times = []
         self.nb_malfunctioning_trains = []
+        self.nb_deadlocked_trains = []
         self.overall_start_time = 0
         self.termination_cause = "No reported termination cause."
         self.evaluation_done = False
@@ -391,6 +392,8 @@ class FlatlandRemoteEvaluationService:
             self.evaluation_metadata_df["steps"] = np.nan
             self.evaluation_metadata_df["simulation_time"] = np.nan
             self.evaluation_metadata_df["nb_malfunctioning_trains"] = np.nan
+            self.evaluation_metadata_df["nb_deadlocked_trains"] = np.nan
+
 
             # Add client specific columns
             # TODO: This needs refactoring
@@ -414,34 +417,71 @@ class FlatlandRemoteEvaluationService:
                 last_simulation_env_file_path
             ]
 
-            _row.reward = self.simulation_rewards[-1]
-            _row.normalized_reward = self.simulation_rewards_normalized[-1]
-            _row.percentage_complete = self.simulation_percentage_complete[-1]
-            _row.steps = self.simulation_steps[-1]
-            _row.simulation_time = self.simulation_times[-1]
-            _row.nb_malfunctioning_trains = self.nb_malfunctioning_trains[-1]
+            
 
-            # TODO: This needs refactoring
+            
+
             # Add controller_inference_time_metrics
             # These metrics may be missing if no step was done before the episode finished
-            if "current_episode_controller_inference_time_min" in self.stats:
-                _row.controller_inference_time_min = self.stats[
-                    "current_episode_controller_inference_time_min"
-                ]
-                _row.controller_inference_time_mean = self.stats[
-                    "current_episode_controller_inference_time_mean"
-                ]
-                _row.controller_inference_time_max = self.stats[
-                    "current_episode_controller_inference_time_max"
-                ]
-            else:
-                _row.controller_inference_time_min = 0.0
-                _row.controller_inference_time_mean = 0.0
-                _row.controller_inference_time_max = 0.0
 
-            self.evaluation_metadata_df.loc[
-                last_simulation_env_file_path
-            ] = _row
+            # generate the lists of names for the stats (input names and output names)
+            sPrefixIn = "current_episode_controller_inference_time_"
+            sPrefixOut = "controller_inference_time_"
+            lsStatIn = [ sPrefixIn + sStat for sStat in ["min", "mean", "max"] ]
+            lsStatOut = [ sPrefixOut + sStat for sStat in ["min", "mean", "max"] ]
+
+            if lsStatIn[0] in self.stats:
+                lrStats = [ self.stats[sStat] for sStat in lsStatIn ]
+            else:
+                lrStats = [ 0.0 ] * len(lsStatIn)
+            
+            lsFields = ("reward, normalized_reward, percentage_complete, " +\
+                "steps, simulation_time, nb_malfunctioning_trains, nb_deadlocked_trains").split(", ") +\
+                lsStatOut
+
+            loValues = [ self.simulation_rewards[-1],
+                self.simulation_rewards_normalized[-1],
+                self.simulation_percentage_complete[-1],
+                self.simulation_steps[-1],
+                self.simulation_times[-1],
+                self.nb_malfunctioning_trains[-1],
+                self.nb_deadlocked_trains[-1]
+            ] + lrStats
+
+            print(len(lsFields), len(loValues))
+            print(lsFields)
+            print(loValues)
+
+            # update the dataframe without the updating-a-copy warning
+            df = self.evaluation_metadata_df
+            df.loc[last_simulation_env_file_path, lsFields] = loValues
+
+            #_row.reward = self.simulation_rewards[-1]
+            #_row.normalized_reward = self.simulation_rewards_normalized[-1]
+            #_row.percentage_complete = self.simulation_percentage_complete[-1]
+            #_row.steps = self.simulation_steps[-1]
+            #_row.simulation_time = self.simulation_times[-1]
+            #_row.nb_malfunctioning_trains = self.nb_malfunctioning_trains[-1]
+
+
+            
+                #_row.controller_inference_time_min = self.stats[
+                #    "current_episode_controller_inference_time_min"
+                #]
+                #_row.controller_inference_time_mean = self.stats[
+                #    "current_episode_controller_inference_time_mean"
+                #]
+                #_row.controller_inference_time_max = self.stats[
+                #    "current_episode_controller_inference_time_max"
+                #]
+            #else:
+            #    _row.controller_inference_time_min = 0.0
+            #    _row.controller_inference_time_mean = 0.0
+            #    _row.controller_inference_time_max = 0.0
+
+            #self.evaluation_metadata_df.loc[
+            #    last_simulation_env_file_path
+            #] = _row
 
             # Delete this key from the stats to ensure that it
             # gets computed again from scratch in the next episode
@@ -869,13 +909,20 @@ class FlatlandRemoteEvaluationService:
             print("Percentage for test {}, level {}: {}".format(self.current_test, self.current_level, percentage_complete))
             print(self.simulation_percentage_complete_per_test[self.current_test])
 
+            if len(self.env.cur_episode) > 0:
+                g3Ep = np.array(self.env.cur_episode)
+                self.nb_deadlocked_trains.append(np.sum(g3Ep[-1,:,5]))
+            else:
+                self.nb_deadlocked_trains.append(np.nan)
+
             print(
                 "Evaluation finished in {} timesteps, {:.3f} seconds. Percentage agents done: {:.3f}. Normalized reward: {:.3f}. Number of malfunctions: {}.".format(
                     self.simulation_steps[-1],
                     self.simulation_times[-1],
                     self.simulation_percentage_complete[-1],
                     self.simulation_rewards_normalized[-1],
-                    self.nb_malfunctioning_trains[-1]
+                    self.nb_malfunctioning_trains[-1],
+                    self.nb_deadlocked_trains[-1]
                 ))
 
             print("Total normalized reward so far: {:.3f}".format(sum(self.simulation_rewards_normalized)))
