@@ -49,9 +49,8 @@ m.patch()
 # CONSTANTS
 ########################################################
 
-# Don't proceed to next Test if the previous one
-# didn't reach this mean completion percentage
-TEST_MIN_PERCENTAGE_COMPLETE_MEAN = 0.25
+# Don't proceed to next Test if the previous one didn't reach this mean completion percentage
+TEST_MIN_PERCENTAGE_COMPLETE_MEAN = float(os.getenv("TEST_MIN_PERCENTAGE_COMPLETE_MEAN", 0.25))
 
 # After this number of consecutive timeouts, kill the submission:
 # this probably means the submission has crashed
@@ -158,6 +157,14 @@ class FlatlandRemoteEvaluationService:
             print("=" * 20)
             print("Env shuffling is ENABLED! not suitable for infinite wave")
             print("=" * 20)
+
+        print("=" * 20)
+        print("Max pre-planning time:", INTIAL_PLANNING_TIMEOUT)
+        print("Max step time:", PER_STEP_TIMEOUT)
+        print("Max overall time:", OVERALL_TIMEOUT)
+        print("Max submission startup time:", DEFAULT_COMMAND_TIMEOUT)
+        print("Max consecutive timeouts:", MAX_SUCCESSIVE_TIMEOUTS)
+        print("=" * 20)
 
         # Test Env folder Paths
         self.test_env_folder = test_env_folder
@@ -394,7 +401,6 @@ class FlatlandRemoteEvaluationService:
             self.evaluation_metadata_df["nb_malfunctioning_trains"] = np.nan
             self.evaluation_metadata_df["nb_deadlocked_trains"] = np.nan
 
-
             # Add client specific columns
             # TODO: This needs refactoring
             self.evaluation_metadata_df["controller_inference_time_min"] = np.nan
@@ -423,55 +429,55 @@ class FlatlandRemoteEvaluationService:
             # generate the lists of names for the stats (input names and output names)
             sPrefixIn = "current_episode_controller_inference_time_"
             sPrefixOut = "controller_inference_time_"
-            lsStatIn = [ sPrefixIn + sStat for sStat in ["min", "mean", "max"] ]
-            lsStatOut = [ sPrefixOut + sStat for sStat in ["min", "mean", "max"] ]
+            lsStatIn = [sPrefixIn + sStat for sStat in ["min", "mean", "max"]]
+            lsStatOut = [sPrefixOut + sStat for sStat in ["min", "mean", "max"]]
 
             if lsStatIn[0] in self.stats:
-                lrStats = [ self.stats[sStat] for sStat in lsStatIn ]
+                lrStats = [self.stats[sStat] for sStat in lsStatIn]
             else:
-                lrStats = [ 0.0 ] * len(lsStatIn)
-            
-            lsFields = ("reward, normalized_reward, percentage_complete, " +\
-                "steps, simulation_time, nb_malfunctioning_trains, nb_deadlocked_trains").split(", ") +\
-                lsStatOut
+                lrStats = [0.0] * len(lsStatIn)
 
-            loValues = [ self.simulation_rewards[-1],
-                self.simulation_rewards_normalized[-1],
-                self.simulation_percentage_complete[-1],
-                self.simulation_steps[-1],
-                self.simulation_times[-1],
-                self.nb_malfunctioning_trains[-1],
-                self.nb_deadlocked_trains[-1]
-            ] + lrStats
+            lsFields = ("reward, normalized_reward, percentage_complete, " + \
+                        "steps, simulation_time, nb_malfunctioning_trains, nb_deadlocked_trains").split(", ") + \
+                       lsStatOut
+
+            loValues = [self.simulation_rewards[-1],
+                        self.simulation_rewards_normalized[-1],
+                        self.simulation_percentage_complete[-1],
+                        self.simulation_steps[-1],
+                        self.simulation_times[-1],
+                        self.nb_malfunctioning_trains[-1],
+                        self.nb_deadlocked_trains[-1]
+                        ] + lrStats
 
             # update the dataframe without the updating-a-copy warning
             df = self.evaluation_metadata_df
             df.loc[last_simulation_env_file_path, lsFields] = loValues
 
-            #_row.reward = self.simulation_rewards[-1]
-            #_row.normalized_reward = self.simulation_rewards_normalized[-1]
-            #_row.percentage_complete = self.simulation_percentage_complete[-1]
-            #_row.steps = self.simulation_steps[-1]
-            #_row.simulation_time = self.simulation_times[-1]
-            #_row.nb_malfunctioning_trains = self.nb_malfunctioning_trains[-1]
+            # _row.reward = self.simulation_rewards[-1]
+            # _row.normalized_reward = self.simulation_rewards_normalized[-1]
+            # _row.percentage_complete = self.simulation_percentage_complete[-1]
+            # _row.steps = self.simulation_steps[-1]
+            # _row.simulation_time = self.simulation_times[-1]
+            # _row.nb_malfunctioning_trains = self.nb_malfunctioning_trains[-1]
 
-                #_row.controller_inference_time_min = self.stats[
-                #    "current_episode_controller_inference_time_min"
-                #]
-                #_row.controller_inference_time_mean = self.stats[
-                #    "current_episode_controller_inference_time_mean"
-                #]
-                #_row.controller_inference_time_max = self.stats[
-                #    "current_episode_controller_inference_time_max"
-                #]
-            #else:
+            # _row.controller_inference_time_min = self.stats[
+            #    "current_episode_controller_inference_time_min"
+            # ]
+            # _row.controller_inference_time_mean = self.stats[
+            #    "current_episode_controller_inference_time_mean"
+            # ]
+            # _row.controller_inference_time_max = self.stats[
+            #    "current_episode_controller_inference_time_max"
+            # ]
+            # else:
             #    _row.controller_inference_time_min = 0.0
             #    _row.controller_inference_time_mean = 0.0
             #    _row.controller_inference_time_max = 0.0
 
-            #self.evaluation_metadata_df.loc[
+            # self.evaluation_metadata_df.loc[
             #    last_simulation_env_file_path
-            #] = _row
+            # ] = _row
 
             # Delete this key from the stats to ensure that it
             # gets computed again from scratch in the next episode
@@ -676,7 +682,7 @@ class FlatlandRemoteEvaluationService:
         if self.simulation_count >= len(self.env_file_paths):
             self.evaluation_done = True
             # Hack - just ensure these are set
-            test_env_file_path = self.env_file_paths[self.simulation_count-1]
+            test_env_file_path = self.env_file_paths[self.simulation_count - 1]
             env_test, env_level = self.get_env_test_and_level(test_env_file_path)
         else:
             test_env_file_path = self.env_file_paths[self.simulation_count]
@@ -692,7 +698,8 @@ class FlatlandRemoteEvaluationService:
 
             if mean_test_complete_percentage < TEST_MIN_PERCENTAGE_COMPLETE_MEAN:
                 print("=" * 15)
-                msg = "The mean percentage of done agents during the last 10 environments was too low: {:.3f} < {}".format(
+                msg = "The mean percentage of done agents during the last Test ({} environments) was too low: {:.3f} < {}".format(
+                    len(self.simulation_percentage_complete_per_test[self.current_test]),
                     mean_test_complete_percentage,
                     TEST_MIN_PERCENTAGE_COMPLETE_MEAN
                 )
@@ -901,7 +908,7 @@ class FlatlandRemoteEvaluationService:
 
             if len(self.env.cur_episode) > 0:
                 g3Ep = np.array(self.env.cur_episode)
-                self.nb_deadlocked_trains.append(np.sum(g3Ep[-1,:,5]))
+                self.nb_deadlocked_trains.append(np.sum(g3Ep[-1, :, 5]))
             else:
                 self.nb_deadlocked_trains.append(np.nan)
 
@@ -1223,11 +1230,11 @@ class FlatlandRemoteEvaluationService:
                     self.evaluation_done = True
                     # JW - change the command to a submit
                     print("Creating fake submit message after excessive timeouts.")
-                    command = { 
-                        "type":messages.FLATLAND_RL.ENV_SUBMIT, 
+                    command = {
+                        "type": messages.FLATLAND_RL.ENV_SUBMIT,
                         "payload": {},
-                        "response_channel": self.previous_command.get("response_channel") }
-                    
+                        "response_channel": self.previous_command.get("response_channel")}
+
                     return self.handle_env_submit(command)
 
                 continue
