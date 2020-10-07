@@ -672,7 +672,6 @@ class FlatlandRemoteEvaluationService:
 
         if self.simulation_count == 0:
             # Very first episode: start the overall timer
-            print("Starting overall timer...")
             self.overall_start_time = time.time()
 
         # reset the timeout flag / state.
@@ -712,6 +711,7 @@ class FlatlandRemoteEvaluationService:
             There are still test envs left that are yet to be evaluated 
             """
 
+            print("=" * 15)
             print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count, len(self.env_file_paths)))
 
             test_env_file_path = os.path.join(
@@ -904,7 +904,6 @@ class FlatlandRemoteEvaluationService:
                 self.simulation_percentage_complete_per_test[self.current_test] = []
             self.simulation_percentage_complete_per_test[self.current_test].append(percentage_complete)
             print("Percentage for test {}, level {}: {}".format(self.current_test, self.current_level, percentage_complete))
-            print(self.simulation_percentage_complete_per_test[self.current_test])
 
             if len(self.env.cur_episode) > 0:
                 g3Ep = np.array(self.env.cur_episode)
