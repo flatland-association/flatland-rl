@@ -636,7 +636,6 @@ class FlatlandRemoteEvaluationService:
 
         if self.simulation_count == 0:
             # Very first episode: start the overall timer
-            print("Starting overall timer...")
             self.overall_start_time = time.time()
 
         # reset the timeout flag / state.
@@ -668,6 +667,7 @@ class FlatlandRemoteEvaluationService:
             There are still test envs left that are yet to be evaluated 
             """
 
+            print("=" * 15)
             print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count, len(self.env_file_paths)))
 
             test_env_file_path = os.path.join(
@@ -679,12 +679,14 @@ class FlatlandRemoteEvaluationService:
             self.current_level = env_level
 
             del self.env
-            self.env = RailEnv(width=1, height=1,
-                               rail_generator=rail_from_file(test_env_file_path),
-                               schedule_generator=schedule_from_file(test_env_file_path),
-                               malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
-                               obs_builder_object=DummyObservationBuilder(),
-                               record_steps=True)
+            self.env = RailEnv(
+                width=1, height=1,
+                rail_generator=rail_from_file(test_env_file_path),
+                schedule_generator=schedule_from_file(test_env_file_path),
+                malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
+                obs_builder_object=DummyObservationBuilder(),
+                record_steps=True
+            )
 
             self.begin_simulation = time.time()
 
@@ -864,7 +866,6 @@ class FlatlandRemoteEvaluationService:
                 self.simulation_percentage_complete_per_test[self.current_test] = []
             self.simulation_percentage_complete_per_test[self.current_test].append(percentage_complete)
             print("Percentage for test {}, level {}: {}".format(self.current_test, self.current_level, percentage_complete))
-            print(self.simulation_percentage_complete_per_test[self.current_test])
 
             print(
                 "Evaluation finished in {} timesteps, {:.3f} seconds. Percentage agents done: {:.3f}. Normalized reward: {:.3f}. Number of malfunctions: {}.".format(
