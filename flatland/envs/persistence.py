@@ -2,6 +2,7 @@
 
 import pickle
 import msgpack
+import msgpack_numpy
 import numpy as np
 
 from flatland.envs import rail_env 
@@ -22,6 +23,7 @@ from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import schedule_generators as sched_gen
 
+msgpack_numpy.patch()
 
 class RailEnvPersister(object):
 
@@ -111,15 +113,20 @@ class RailEnvPersister(object):
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
+        llGrid = env_dict["grid"]
+        height = len(llGrid)
+        width = len(llGrid[0])
 
         # TODO: inefficient - each one of these generators loads the complete env file.
-        env = rail_env.RailEnv(width=1, height=1,
+        env = rail_env.RailEnv(#width=1, height=1,
+                width=width, height=height,
                 rail_generator=rail_gen.rail_from_file(filename, 
                     load_from_package=load_from_package),
                 schedule_generator=sched_gen.schedule_from_file(filename,
                     load_from_package=load_from_package),
-                malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
-                    load_from_package=load_from_package),
+                #malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
+                #    load_from_package=load_from_package),
+                malfunction_generator=mal_gen.FileMalfunctionGen(env_dict),
                 obs_builder_object=DummyObservationBuilder(),
                 record_steps=True)
 
@@ -141,7 +148,11 @@ class RailEnvPersister(object):
         if filename.endswith("mpk"):
             env_dict = msgpack.unpackb(load_data, use_list=False, encoding="utf-8")
         elif filename.endswith("pkl"):
-            env_dict = pickle.loads(load_data)
+            try:
+                env_dict = pickle.loads(load_data)
+            except ValueError:
+                print("pickle failed to load file:", filename, " trying msgpack (deprecated)...")
+                env_dict = msgpack.unpackb(load_data, use_list=False, encoding="utf-8")
         else:
             print(f"filename {filename} must end with either pkl or mpk")
             env_dict = {}

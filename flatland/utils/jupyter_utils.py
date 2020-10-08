@@ -11,6 +11,7 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import agent_chains as ac
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+
 from flatland.envs.persistence import RailEnvPersister
 from flatland.utils.rendertools import RenderTool
 from flatland.utils import env_edit_utils as eeu
@@ -27,6 +28,16 @@ class Behaviour():
 class AlwaysForward(Behaviour):
     def getActions(self):
         return { i:RailEnvActions.MOVE_FORWARD for i in range(self.nAg) }
+
+class DelayedStartForward(AlwaysForward):
+    def __init__(self, env, nStartDelay=2):
+        self.nStartDelay = nStartDelay
+        super().__init__(env)
+
+    def getActions(self):
+        iStep = self.env._elapsed_steps + 1
+        nAgentsMoving = min(self.nAg, iStep // self.nStartDelay)
+        return { i:RailEnvActions.MOVE_FORWARD for i in range(nAgentsMoving) }
 
 AgentPause = NamedTuple("AgentPause", 
     [
@@ -71,6 +82,27 @@ class ForwardWithPause(Behaviour):
         
         return dAction
 
+class Deterministic(Behaviour):
+    def __init__(self, env, dAg_lActions):
+        super().__init__(env)
+        self.dAg_lActions = dAg_lActions
+    
+    def getActions(self):
+        iStep = self.env._elapsed_steps
+        
+        dAg_Action = {}
+        for iAg, lActions in self.dAg_lActions.items():
+            if iStep < len(lActions):
+                iAct = lActions[iStep]
+            else:
+                iAct = RailEnvActions.DO_NOTHING
+            dAg_Action[iAg] = iAct
+        #print(iStep, dAg_Action[0])
+        return dAg_Action
+
+
+
+
 
 class EnvCanvas():
 
@@ -86,7 +118,7 @@ class EnvCanvas():
         self.render()
 
     def render(self):
-        self.oRT.render_env(show_rowcols=True,  show_inactive_agents=True, show_observations=False)
+        self.oRT.render_env(show_rowcols=True,  show_inactive_agents=False, show_observations=False)
         self.oCan.put_image_data(self.oRT.get_image())
 
     def step(self):

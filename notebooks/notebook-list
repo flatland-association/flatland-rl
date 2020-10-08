@@ -1,0 +1,12 @@
+# list of notebooks to include in run-all-notebooks.py test
+Agent-Close-Following.ipynb
+flatland-animate.ipynb
+render-episode.ipynb
+Scene_Editor.ipynb
+simple_example1_env_from_tuple.ipynb
+simple_example2_generate_random_rail.ipynb
+simple_example_3_manual_control.ipynb
+Simple_Rendering_Demo.ipynb
+test-collision.ipynb
+test-saved-envs.ipynb
+test-service.ipynb

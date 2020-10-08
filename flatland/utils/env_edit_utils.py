@@ -59,7 +59,8 @@ def makeEnv2(nAg=2, shape=(20,10), llrcPaths=[], lrcStarts=[], lrcTargs=[], liDi
                 number_of_agents=nAg,
                 schedule_generator=oSG,
                 obs_builder_object=obs.TreeObsForRailEnv(max_depth=1),
-                close_following=bUCF)
+                close_following=bUCF,
+                record_steps=True)
 
     envModel = editor.EditorModel(env)
     env.reset()
@@ -70,9 +71,7 @@ def makeEnv2(nAg=2, shape=(20,10), llrcPaths=[], lrcStarts=[], lrcTargs=[], liDi
     return env, envModel
 
 
-def makeTestEnv(sName="single_alternative", nAg=2, bUCF=True):
-
-    ddEnvSpecs = {
+ddEnvSpecs = {
         # opposing stations with single alternative path
         "single_alternative":{
             "llrcPaths":  [
@@ -116,9 +115,33 @@ def makeTestEnv(sName="single_alternative", nAg=2, bUCF=True):
             "lrcStarts": [(1,3)],
             "lrcTargs": [(2,1)],
             "liDirs":  [1]
+            },
+
+        # two loops
+        "loop_with_loops": {
+            "llrcPaths": [
+                # big outer loop Row 1, 8; Col 1, 15
+                [(1,1), (1,15), (8, 15), (8,1), (1,1), (1,3)],
+                # alternative 1
+                [(1,3), (1,5), (3,5), (3,10), (1, 10), (1, 12)],
+                # alternative 2
+                [(8,3), (8,5), (6,5), (6,10), (8, 10), (8, 12)],
+                
+                ],
+            
+            # list of row,col of agent start cells
+            "lrcStarts": [(1,3), (8, 3)],
+            # list of row,col of targets
+            "lrcTargs": [(8,2), (1,2)],
+            # list of initial directions
+            "liDirs":  [1, 1], 
             }
 
         }
+    
+
+def makeTestEnv(sName="single_alternative", nAg=2, bUCF=True):
+    global ddEnvSpecs
     
     dSpec = ddEnvSpecs[sName]
 
