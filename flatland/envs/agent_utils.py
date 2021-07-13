@@ -2,7 +2,7 @@ from enum import IntEnum
 from itertools import starmap
 from typing import Tuple, Optional, NamedTuple
 
-from attr import attrs, attrib, Factory
+from attr import attr, attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.schedule_utils import Schedule
@@ -20,6 +20,8 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('direction', Grid4TransitionsEnum),
                              ('target', Tuple[int, int]),
                              ('moving', bool),
+                             ('earliest_departure', int),
+                             ('latest_arrival', int),
                              ('speed_data', dict),
                              ('malfunction_data', dict),
                              ('handle', int),
@@ -36,6 +38,10 @@ class EnvAgent:
     direction = attrib(type=Grid4TransitionsEnum)
     target = attrib(type=Tuple[int, int])
     moving = attrib(default=False, type=bool)
+
+    # NEW - time scheduling
+    earliest_departure = attrib(default=None, type=int)  # default None during _from_schedule()
+    latest_arrival = attrib(default=None, type=int)  # default None during _from_schedule()
 
     # speed_data: speed is added to position_fraction on each moving step, until position_fraction>=1.0,
     # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
@@ -82,8 +88,9 @@ class EnvAgent:
         self.malfunction_data['moving_before_malfunction'] = False
 
     def to_agent(self) -> Agent:
-        return Agent(initial_position=self.initial_position, initial_direction=self.initial_direction,
-                     direction=self.direction, target=self.target, moving=self.moving, speed_data=self.speed_data,
+        return Agent(initial_position=self.initial_position, initial_direction=self.initial_direction, 
+                     direction=self.direction, target=self.target, moving=self.moving, earliest_departure=self.earliest_departure, 
+                     latest_arrival=self.latest_arrival, speed_data=self.speed_data,
                      malfunction_data=self.malfunction_data, handle=self.handle, status=self.status,
                      position=self.position, old_direction=self.old_direction, old_position=self.old_position)
 
@@ -109,8 +116,10 @@ class EnvAgent:
         return list(starmap(EnvAgent, zip(schedule.agent_positions,
                                           schedule.agent_directions,
                                           schedule.agent_directions,
-                                          schedule.agent_targets,
-                                          [False] * len(schedule.agent_positions),
+                                          schedule.agent_targets, 
+                                          [False] * len(schedule.agent_positions), 
+                                          [None] * len(schedule.agent_positions), # earliest_departure
+                                          [None] * len(schedule.agent_positions), # latest_arrival
                                           speed_datas,
                                           malfunction_datas,
                                           range(len(schedule.agent_positions)))))

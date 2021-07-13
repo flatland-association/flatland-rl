@@ -34,7 +34,8 @@ from gym.utils import seeding
 # from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 # from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
 
-
+# NEW 
+from flatland.envs.schedule_time_generators import schedule_time_generator
 
 # Adrian Egli performance fix (the fast methods brings more than 50%)
 def fast_isclose(a, b, rtol):
@@ -390,6 +391,10 @@ class RailEnv(Environment):
 
         # Reset agents to initial
         self.reset_agents()
+        self.distance_map.reset(self.agents, self.rail)
+
+        # NEW - time window scheduling
+        schedule_time_generator(self.agents, self.distance_map, schedule, self.np_random, temp_info=optionals)
 
         for agent in self.agents:
             # Induce malfunctions
@@ -412,7 +417,6 @@ class RailEnv(Environment):
 
         # Reset the state of the observation builder with the new environment
         self.obs_builder.reset()
-        self.distance_map.reset(self.agents, self.rail)
 
         # Reset the malfunction generator
         if "generate" in dir(self.malfunction_generator):
