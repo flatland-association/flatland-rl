@@ -34,7 +34,7 @@ from gym.utils import seeding
 # from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 # from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
 
-# NEW 
+# NEW : Imports 
 from flatland.envs.schedule_time_generators import schedule_time_generator
 
 # Adrian Egli performance fix (the fast methods brings more than 50%)
@@ -379,22 +379,31 @@ class RailEnv(Environment):
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
 
-            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets,
-                                               self.np_random)
+            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, 
+                                               self.num_resets, self.np_random)
             self.agents = EnvAgent.from_schedule(schedule)
 
             # Get max number of allowed time steps from schedule generator
             # Look at the specific schedule generator used to see where this number comes from
-            self._max_episode_steps = schedule.max_episode_steps
+            self._max_episode_steps = schedule.max_episode_steps # NEW UPDATE THIS!
 
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
 
-        # Reset agents to initial
-        self.reset_agents()
+        # Reset distance map - basically initializing
         self.distance_map.reset(self.agents, self.rail)
 
-        # NEW - time window scheduling
-        schedule_time_generator(self.agents, self.distance_map, schedule, self.np_random, temp_info=optionals)
+        # NEW : Time Schedule Generation
+        # find agent speeds (needed for max_ep_steps recalculation)
+        if (type(self.schedule_generator.speed_ratio_map) is dict):
+            config_speeds = list(self.schedule_generator.speed_ratio_map.keys())
+        else:
+            config_speeds = [1.0]
+
+        self._max_episode_steps = schedule_time_generator(self.agents, config_speeds, self.distance_map, 
+                                        self._max_episode_steps, self.np_random, temp_info=optionals)
+        
+        # Reset agents to initial states
+        self.reset_agents()
 
         for agent in self.agents:
             # Induce malfunctions

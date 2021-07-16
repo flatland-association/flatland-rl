@@ -39,7 +39,7 @@ class EnvAgent:
     target = attrib(type=Tuple[int, int])
     moving = attrib(default=False, type=bool)
 
-    # NEW - time scheduling
+    # NEW : Agent properties for scheduling
     earliest_departure = attrib(default=None, type=int)  # default None during _from_schedule()
     latest_arrival = attrib(default=None, type=int)  # default None during _from_schedule()
 
