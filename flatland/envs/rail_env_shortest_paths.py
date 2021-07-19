@@ -227,7 +227,9 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
     shortest_paths = dict()
 
     def _shortest_path_for_agent(agent):
-        if agent.status == RailAgentStatus.READY_TO_DEPART:
+        if agent.status == RailAgentStatus.WAITING:
+            position = agent.initial_position
+        elif agent.status == RailAgentStatus.READY_TO_DEPART:
             position = agent.initial_position
         elif agent.status == RailAgentStatus.ACTIVE:
             position = agent.position

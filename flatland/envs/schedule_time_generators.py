@@ -30,17 +30,44 @@ from flatland.envs.distance_map import DistanceMap
 # city_positions = []
 # #### DATA COLLECTION *************************
 
-def schedule_time_generator(agents: List[EnvAgent], distance_map: DistanceMap, schedule: Schedule,
-                            np_random: RandomState = None, temp_info=None) -> None:
+def schedule_time_generator(agents: List[EnvAgent], config_speeds: List[float],  distance_map: DistanceMap, 
+                            max_episode_steps: int, np_random: RandomState = None, temp_info=None) -> int:
+    
+    # Multipliers
+    old_max_episode_steps_multiplier = 3.0
+    new_max_episode_steps_multiplier = 1.5
+    travel_buffer_multiplier = 1.3 # must be strictly lesser than new_max_episode_steps_multiplier
+    end_buffer_multiplier = 0.05
+    mean_shortest_path_multiplier = 0.2
     
     from flatland.envs.rail_env_shortest_paths import get_shortest_paths
     shortest_paths = get_shortest_paths(distance_map)
-    
-    max_episode_steps = int(schedule.max_episode_steps * 1.0) #needs to be increased due to fractional speeds taking way longer (best - be calculated here)
-    end_buffer = max_episode_steps // 20                 #schedule.end_buffer
-    latest_arrival_max = max_episode_steps-end_buffer
-    travel_buffer_multiplier = 1.7
+    shortest_paths_lengths = [len(v) for k,v in shortest_paths.items()]
 
+    # Find mean_shortest_path_time
+    agent_shortest_path_times = []
+    for agent in agents:
+        speed = agent.speed_data['speed']
+        distance = shortest_paths_lengths[agent.handle]
+        agent_shortest_path_times.append(int(np.ceil(distance / speed)))
+
+    mean_shortest_path_time = np.mean(agent_shortest_path_times)
+
+    # Deciding on a suitable max_episode_steps
+    max_sp_len = max(shortest_paths_lengths) # longest path
+    min_speed = min(config_speeds)           # slowest possible speed in config
+    
+    longest_sp_time = max_sp_len / min_speed
+    max_episode_steps_new = int(np.ceil(longest_sp_time * new_max_episode_steps_multiplier))
+    
+    max_episode_steps_old = int(max_episode_steps * old_max_episode_steps_multiplier)
+
+    max_episode_steps = min(max_episode_steps_new, max_episode_steps_old)
+    
+    end_buffer = max_episode_steps * end_buffer_multiplier
+    latest_arrival_max = max_episode_steps-end_buffer
+
+    # Useless unless needed by returning
     earliest_departures = []
     latest_arrivals = []
 
@@ -89,11 +116,10 @@ def schedule_time_generator(agents: List[EnvAgent], distance_map: DistanceMap, s
     # #### DATA COLLECTION *************************
 
     for agent in agents:
-        agent_speed = agent.speed_data['speed']
-        agent_shortest_path = shortest_paths[agent.handle]
-        agent_shortest_path_len = len(agent_shortest_path)
-        agent_shortest_path_time = int(np.ceil(agent_shortest_path_len / agent_speed)) # for fractional speeds 1/3 etc
-        agent_travel_time_max = min( int(np.ceil(agent_shortest_path_time * travel_buffer_multiplier)), latest_arrival_max) # min(this, latest_arrival_max), SHOULD NOT BE lesser than shortest path time
+        agent_shortest_path_time = agent_shortest_path_times[agent.handle]
+        agent_travel_time_max = int(np.ceil((agent_shortest_path_time * travel_buffer_multiplier) \
+                                            + (mean_shortest_path_time * mean_shortest_path_multiplier)))
+        
         departure_window_max = latest_arrival_max - agent_travel_time_max
 
         earliest_departure = np_random.randint(0, departure_window_max)
@@ -123,6 +149,9 @@ def schedule_time_generator(agents: List[EnvAgent], distance_map: DistanceMap, s
     # shortest_paths_len_dist.sort()
     # save_sp_fig()
     # #### DATA COLLECTION *************************
+
+    # returns max_episode_steps after deciding on the new value 
+    return max_episode_steps
 
 
 # #### DATA COLLECTION *************************

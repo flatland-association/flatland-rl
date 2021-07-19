@@ -34,7 +34,7 @@ from gym.utils import seeding
 # from flatland.envs.rail_generators import random_rail_generator, RailGenerator
 # from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
 
-# NEW 
+# NEW : Imports
 from flatland.envs.schedule_time_generators import schedule_time_generator
 
 # Adrian Egli performance fix (the fast methods brings more than 50%)
@@ -379,23 +379,34 @@ class RailEnv(Environment):
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
 
-            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets,
-                                               self.np_random)
+            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, 
+                                               self.num_resets, self.np_random)
             self.agents = EnvAgent.from_schedule(schedule)
 
             # Get max number of allowed time steps from schedule generator
             # Look at the specific schedule generator used to see where this number comes from
-            self._max_episode_steps = schedule.max_episode_steps
+            self._max_episode_steps = schedule.max_episode_steps # NEW UPDATE THIS!
 
+        # Agent Positions Map
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
 
-        # Reset agents to initial
-        self.reset_agents()
+        # Reset distance map - basically initializing
         self.distance_map.reset(self.agents, self.rail)
 
-        # NEW - time window scheduling
-        schedule_time_generator(self.agents, self.distance_map, schedule, self.np_random, temp_info=optionals)
+        # NEW : Time Schedule Generation
+        # find agent speeds (needed for max_ep_steps recalculation)
+        if (type(self.schedule_generator.speed_ratio_map) is dict):
+            config_speeds = list(self.schedule_generator.speed_ratio_map.keys())
+        else:
+            config_speeds = [1.0]
 
+        self._max_episode_steps = schedule_time_generator(self.agents, config_speeds, self.distance_map, 
+                                        self._max_episode_steps, self.np_random, temp_info=optionals)
+        
+        # Reset agents to initial states
+        self.reset_agents()
+
+        # WHY
         for agent in self.agents:
             # Induce malfunctions
             if activate_agents:
@@ -584,10 +595,24 @@ class RailEnv(Environment):
         if have_all_agents_ended:
             self.dones["__all__"] = True
             self.rewards_dict = {i: self.global_reward for i in range(self.get_num_agents())}
+        
         if (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps):
             self.dones["__all__"] = True
-            for i_agent in range(self.get_num_agents()):
+        
+            for i_agent, agent in enumerate(self.agents):
+                # NEW : STEP:REW: CANCELLED check / reward (never departed)
+                if (agent.status == RailAgentStatus.READY_TO_DEPART):
+                    agent.status = RailAgentStatus.CANCELLED
+                    # NEGATIVE REWARD?
+                
+                # NEW : STEP:REW: Departed but never reached
+                if (agent.status == RailAgentStatus.ACTIVE):
+                    pass
+                    # NEGATIVE REWARD?
+
                 self.dones[i_agent] = True
+
+        
         if self.record_steps:
             self.record_timestep(action_dict_)
 
@@ -738,6 +763,13 @@ class RailEnv(Environment):
         if agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED]:  # this agent has already completed...
             return
 
+        # NEW : STEP: WAITING > WAITING or WAITING > READY_TO_DEPART
+        if (agent.status == RailAgentStatus.WAITING):
+            if ( self._elapsed_steps >= agent.earliest_departure ):
+                agent.status == RailAgentStatus.READY_TO_DEPART
+            self.motionCheck.addAgent(i_agent, None, None)
+            return
+
         # agent gets active by a MOVE_* action and if c
         if agent.status == RailAgentStatus.READY_TO_DEPART:
             is_action_starting = action in [
@@ -848,7 +880,8 @@ class RailEnv(Environment):
     def _step_agent2_cf(self, i_agent):
         agent = self.agents[i_agent]
 
-        if agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED]:
+        # NEW : REW: no reward during WAITING...
+        if agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED, RailAgentStatus.WAITING]:
             return
 
         (move, rc_next) = self.motionCheck.check_motion(i_agent, agent.position)
@@ -889,18 +922,37 @@ class RailEnv(Environment):
                 agent.direction = new_direction
                 agent.speed_data['position_fraction'] = 0.0
 
+            # NEW : REW: Check DONE  before / after LA & Check if RUNNING before / after LA
             # has the agent reached its target?
             if np.equal(agent.position, agent.target).all():
-                agent.status = RailAgentStatus.DONE
-                self.dones[i_agent] = True
-                self.active_agents.remove(i_agent)
-                agent.moving = False
-                self._remove_agent_from_scene(agent)
-            else:
-                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+                # arrived before Latest Arrival
+                if (self._elapsed_steps <= agent.latest_arrival):
+                    agent.status = RailAgentStatus.DONE
+                    self.dones[i_agent] = True
+                    self.active_agents.remove(i_agent)
+                    agent.moving = False
+                    self._remove_agent_from_scene(agent)
+                else: # arrived after latest arrival
+                    agent.status = RailAgentStatus.DONE
+                    self.dones[i_agent] = True
+                    self.active_agents.remove(i_agent)
+                    agent.moving = False
+                    self._remove_agent_from_scene(agent)   
+                    # NEGATIVE REWARD?
+
+            else: # not reached its target and moving
+                # running before Latest Arrival
+                if (self._elapsed_steps <= agent.latest_arrival):
+                    self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+                else: # running after Latest Arrival
+                    self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed'] # + # NEGATIVE REWARD? per step?
         else:
-            # step penalty if not moving (stopped now or before)
-            self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+            # stopped (!move) before Latest Arrival
+            if (self._elapsed_steps <= agent.latest_arrival):
+                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
+            else:  # stopped (!move) after Latest Arrival
+                self.rewards_dict[i_agent] += self.step_penalty * \
+                    agent.speed_data['speed']  # + # NEGATIVE REWARD? per step?
 
     def _set_agent_to_initial_position(self, agent: EnvAgent, new_position: IntVector2D):
         """

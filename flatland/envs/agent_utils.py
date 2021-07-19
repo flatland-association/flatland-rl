@@ -9,10 +9,12 @@ from flatland.envs.schedule_utils import Schedule
 
 
 class RailAgentStatus(IntEnum):
-    READY_TO_DEPART = 0  # not in grid yet (position is None) -> prediction as if it were at initial position
-    ACTIVE = 1  # in grid (position is not None), not done -> prediction is remaining path
-    DONE = 2  # in grid (position is not None), but done -> prediction is stay at target forever
-    DONE_REMOVED = 3  # removed from grid (position is None) -> prediction is None
+    WAITING = 0
+    READY_TO_DEPART = 1  # not in grid yet (position is None) -> prediction as if it were at initial position
+    ACTIVE = 2  # in grid (position is not None), not done -> prediction is remaining path
+    DONE = 3  # in grid (position is not None), but done -> prediction is stay at target forever
+    DONE_REMOVED = 4  # removed from grid (position is None) -> prediction is None
+    CANCELLED = 5
 
 
 Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
@@ -33,13 +35,14 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
 
 @attrs
 class EnvAgent:
+    # INIT FROM HERE IN _from_schedule()
     initial_position = attrib(type=Tuple[int, int])
     initial_direction = attrib(type=Grid4TransitionsEnum)
     direction = attrib(type=Grid4TransitionsEnum)
     target = attrib(type=Tuple[int, int])
     moving = attrib(default=False, type=bool)
 
-    # NEW - time scheduling
+    # NEW : EnvAgent - Schedule properties
     earliest_departure = attrib(default=None, type=int)  # default None during _from_schedule()
     latest_arrival = attrib(default=None, type=int)  # default None during _from_schedule()
 
@@ -58,8 +61,9 @@ class EnvAgent:
                           'moving_before_malfunction': False})))
 
     handle = attrib(default=None)
+    # INIT TILL HERE IN _from_schedule()
 
-    status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
+    status = attrib(default=RailAgentStatus.WAITING, type=RailAgentStatus)
     position = attrib(default=None, type=Optional[Tuple[int, int]])
 
     # used in rendering
@@ -68,12 +72,17 @@ class EnvAgent:
 
     def reset(self):
         """
-        Resets the agents to their initial values of the episode
+        Resets the agents to their initial values of the episode. Called after ScheduleTime generation.
         """
         self.position = None
         # TODO: set direction to None: https://gitlab.aicrowd.com/flatland/flatland/issues/280
         self.direction = self.initial_direction
-        self.status = RailAgentStatus.READY_TO_DEPART
+
+        if (self.earliest_departure == 0):
+            self.status = RailAgentStatus.READY_TO_DEPART
+        else:
+            self.status = RailAgentStatus.WAITING
+            
         self.old_position = None
         self.old_direction = None
         self.moving = False
