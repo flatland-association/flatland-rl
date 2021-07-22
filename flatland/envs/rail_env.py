@@ -17,6 +17,7 @@ from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.rail_env_action import RailEnvActions
 
 # Need to use circular imports for persistence.
 from flatland.envs import malfunction_generators as mal_gen
@@ -66,28 +67,6 @@ def fast_position_equal(pos_1: (int, int), pos_2: (int, int)) -> bool:
 def fast_count_nonzero(possible_transitions: (int, int, int, int)):
     return possible_transitions[0] + possible_transitions[1] + possible_transitions[2] + possible_transitions[3]
 
-
-class RailEnvActions(IntEnum):
-    DO_NOTHING = 0  # implies change of direction in a dead-end!
-    MOVE_LEFT = 1
-    MOVE_FORWARD = 2
-    MOVE_RIGHT = 3
-    STOP_MOVING = 4
-
-    @staticmethod
-    def to_char(a: int):
-        return {
-            0: 'B',
-            1: 'L',
-            2: 'F',
-            3: 'R',
-            4: 'S',
-        }[a]
-
-
-RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])
-RailEnvNextAction = NamedTuple('RailEnvNextAction', [('action', RailEnvActions), ('next_position', RailEnvGridPos),
-                                                     ('next_direction', Grid4TransitionsEnum)])
 
 
 class RailEnv(Environment):
@@ -247,7 +226,8 @@ class RailEnv(Environment):
         self.dev_pred_dict = {}
 
         self.agents: List[EnvAgent] = []
-        self.number_of_agents = number_of_agents
+        # NEW : SCHED CONST (Even number of trains A>B, B>A)
+        self.number_of_agents = number_of_agents if ((number_of_agents % 2) == 0 ) else number_of_agents + 1 
         self.num_resets = 0
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 

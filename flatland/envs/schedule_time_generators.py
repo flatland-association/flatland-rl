@@ -5,12 +5,12 @@ import warnings
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 import numpy as np
-from numpy.core.fromnumeric import shape
 from numpy.random.mtrand import RandomState
 
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.schedule_utils import Schedule
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.rail_env_shortest_paths import get_shortest_paths
+
 
 # #### DATA COLLECTION *************************
 # import termplotlib as tpl
@@ -40,7 +40,6 @@ def schedule_time_generator(agents: List[EnvAgent], config_speeds: List[float], 
     end_buffer_multiplier = 0.05
     mean_shortest_path_multiplier = 0.2
     
-    from flatland.envs.rail_env_shortest_paths import get_shortest_paths
     shortest_paths = get_shortest_paths(distance_map)
     shortest_paths_lengths = [len(v) for k,v in shortest_paths.items()]
 
