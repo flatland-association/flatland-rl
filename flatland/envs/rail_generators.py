@@ -608,7 +608,7 @@ def sparse_rail_generator(*args, **kwargs):
 class SparseRailGen(RailGen):
 
     def __init__(self, max_num_cities: int = 5, grid_mode: bool = False, max_rails_between_cities: int = 4,
-                          max_rails_in_city: int = 4, seed=0) -> RailGenerator:
+                          max_rail_pairs_in_city: int = 2, seed=0) -> RailGenerator:
         """
         Generates railway networks with cities and inner city rails
 
@@ -621,7 +621,7 @@ class SparseRailGen(RailGen):
         max_rails_between_cities: int
             Max number of rails connecting to a city. This is only the number of connection points at city boarder.
             Number of tracks drawn inbetween cities can still vary
-        max_rails_in_city: int
+        max_rail_pairs_in_city: int
             Number of parallel tracks in the city. This represents the number of tracks in the trainstations
         seed: int
             Initiate the seed
@@ -633,7 +633,7 @@ class SparseRailGen(RailGen):
         self.max_num_cities = max_num_cities
         self.grid_mode = grid_mode
         self.max_rails_between_cities = max_rails_between_cities
-        self.max_rails_in_city = max_rails_in_city
+        self.max_rail_pairs_in_city = max_rail_pairs_in_city
         self.seed = seed # TODO: seed in constructor or generate?
 
 
@@ -667,17 +667,19 @@ class SparseRailGen(RailGen):
             
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
+
+        # NEW : SCHED CONST (Pairs of rails (1,2,3 pairs))
+        min_nr_rail_pairs_in_city = 1 # (min pair must be 1)
+        rail_pairs_in_city = min_nr_rail_pairs_in_city if self.max_rail_pairs_in_city < min_nr_rail_pairs_in_city else self.max_rail_pairs_in_city # (pairs can be 1,2,3)
+        rails_between_cities = (rail_pairs_in_city*2) if self.max_rails_between_cities > (rail_pairs_in_city*2) else self.max_rails_between_cities
+
         # We compute the city radius by the given max number of rails it can contain.
         # The radius is equal to the number of tracks divided by 2
         # We add 2 cells to avoid that track lenght is to short
         city_padding = 2
         # We use ceil if we get uneven numbers of city radius. This is to guarantee that all rails fit within the city.
-        city_radius = int(np.ceil((self.max_rails_in_city) / 2)) + city_padding
+        city_radius = int(np.ceil((rail_pairs_in_city*2) / 2)) + city_padding
         vector_field = np.zeros(shape=(height, width)) - 1.
-
-        min_nr_rails_in_city = 2
-        rails_in_city = min_nr_rails_in_city if self.max_rails_in_city < min_nr_rails_in_city else self.max_rails_in_city
-        rails_between_cities = rails_in_city if self.max_rails_between_cities > rails_in_city else self.max_rails_between_cities
 
         # Calculate the max number of cities allowed
         # and reduce the number of cities to build to avoid problems
@@ -709,7 +711,7 @@ class SparseRailGen(RailGen):
         inner_connection_points, outer_connection_points, city_orientations, city_cells = \
             self._generate_city_connection_points(
                 city_positions, city_radius, vector_field, rails_between_cities,
-                rails_in_city, np_random=np_random)
+                rail_pairs_in_city, np_random=np_random)
 
         # Connect the cities through the connection points
         inter_city_lines = self._connect_cities(city_positions, outer_connection_points, city_cells,
@@ -831,7 +833,7 @@ class SparseRailGen(RailGen):
 
     def _generate_city_connection_points(self, city_positions: IntVector2DArray, city_radius: int,
                                          vector_field: IntVector2DArray, rails_between_cities: int,
-                                         rails_in_city: int = 2, np_random: RandomState = None) -> (
+                                         rail_pairs_in_city: int = 1, np_random: RandomState = None) -> (
         List[List[List[IntVector2D]]],
         List[List[List[IntVector2D]]],
         List[np.ndarray],
@@ -852,7 +854,7 @@ class SparseRailGen(RailGen):
             Each cell contains the prefered orientation of cells. If no prefered orientation is present it is set to -1
         rails_between_cities: int
             Number of rails that connect out from the city
-        rails_in_city: int
+        rail_pairs_in_city: int
             Number of rails within the city
 
         Returns
@@ -895,7 +897,8 @@ class SparseRailGen(RailGen):
             city_cells.extend(self._get_cells_in_city(city_position, city_radius, city_orientations[-1], vector_field))
             # set the number of tracks within a city, at least 2 tracks per city
             connections_per_direction = np.zeros(4, dtype=int)
-            nr_of_connection_points = np_random.randint(2, rails_in_city + 1)
+            # NEW : SCHED CONST
+            nr_of_connection_points = np_random.randint(1, rail_pairs_in_city + 1) * 2  # can be (1,2,3)*2 = (2,4,6)
             for idx in connection_sides_idx:
                 connections_per_direction[idx] = nr_of_connection_points
             connection_points_coordinates_inner: List[List[IntVector2D]] = [[] for i in range(4)]

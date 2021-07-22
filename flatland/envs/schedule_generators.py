@@ -142,43 +142,50 @@ class SparseSchedGen(BaseSchedGen):
         agents_target = []
         agents_direction = []
 
-        for agent_idx in range(num_agents):
+        for agent_pair_idx in range(0, num_agents, 2):
             infeasible_agent = True
             tries = 0
             while infeasible_agent:
                 tries += 1
                 infeasible_agent = False
-                # Set target for agent
+
+                # Setlect 2 cities, find their num_stations and possible orientations
                 city_idx = np_random.choice(len(city_positions), 2, replace=False)
-                start_city = city_idx[0]
-                target_city = city_idx[1]
+                city1 = city_idx[0]
+                city2 = city_idx[1]
+                city1_num_stations = len(train_stations[city1])
+                city2_num_stations = len(train_stations[city2])
+                city1_possible_orientations = [city_orientation[city1],
+                                                (city_orientation[city1] + 2) % 4]
+                city2_possible_orientations = [city_orientation[city2],
+                                                (city_orientation[city2] + 2) % 4]
+                # Agent 1 : city1 > city2, Agent 2: city2 > city1
+                agent1_start_idx = ((2 * np_random.randint(0, 10))) % city1_num_stations
+                agent1_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city2_num_stations
+                agent2_start_idx = ((2 * np_random.randint(0, 10))) % city2_num_stations
+                agent2_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city1_num_stations
+                
+                agent1_start = train_stations[city1][agent1_start_idx]
+                agent1_target = train_stations[city2][agent1_target_idx]
+                agent2_start = train_stations[city2][agent2_start_idx]
+                agent2_target = train_stations[city1][agent2_target_idx]
+                            
+                agent1_orientation = np_random.choice(city1_possible_orientations)
+                agent2_orientation = np_random.choice(city2_possible_orientations)
 
-                start_idx = np_random.choice(np.arange(len(train_stations[start_city])))
-                target_idx = np_random.choice(np.arange(len(train_stations[target_city])))
-                start = train_stations[start_city][start_idx]
-                target = train_stations[target_city][target_idx]
-
-                while start[1] % 2 != 0:
-                    start_idx = np_random.choice(np.arange(len(train_stations[start_city])))
-                    start = train_stations[start_city][start_idx]
-                while target[1] % 2 != 1:
-                    target_idx = np_random.choice(np.arange(len(train_stations[target_city])))
-                    target = train_stations[target_city][target_idx]
-                possible_orientations = [city_orientation[start_city],
-                                         (city_orientation[start_city] + 2) % 4]
-                agent_orientation = np_random.choice(possible_orientations)
-                if not rail.check_path_exists(start[0], agent_orientation, target[0]):
-                    agent_orientation = (agent_orientation + 2) % 4
-                if not (rail.check_path_exists(start[0], agent_orientation, target[0])):
-                    infeasible_agent = True
+                # check path exists then break if tries > 100
                 if tries >= 100:
                     warnings.warn("Did not find any possible path, check your parameters!!!")
                     break
-            agents_position.append((start[0][0], start[0][1]))
-            agents_target.append((target[0][0], target[0][1]))
-
-            agents_direction.append(agent_orientation)
-            # Orient the agent correctly
+            
+            # agent1 details
+            agents_position.append((agent1_start[0][0], agent1_start[0][1]))
+            agents_target.append((agent1_target[0][0], agent1_target[0][1]))
+            agents_direction.append(agent1_orientation)
+            # agent2 details
+            agents_position.append((agent2_start[0][0], agent2_start[0][1]))
+            agents_target.append((agent2_target[0][0], agent2_target[0][1]))
+            agents_direction.append(agent2_orientation)
 
         if self.speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, self.speed_ratio_map, seed=_runtime_seed, np_random=np_random)
