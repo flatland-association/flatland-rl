@@ -7,6 +7,7 @@ from enum import IntEnum
 from typing import List, NamedTuple, Optional, Dict, Tuple
 
 import numpy as np
+from numpy.testing._private.utils import import_nose
 
 
 from flatland.core.env import Environment
@@ -83,6 +84,10 @@ class RailEnvActions(IntEnum):
             3: 'R',
             4: 'S',
         }[a]
+
+    @staticmethod
+    def is_moving_action(action):
+        return action in [1,2,3]
 
 
 RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])
@@ -493,6 +498,69 @@ class RailEnv(Environment):
             agent.malfunction_data['nr_malfunctions'] += 1
 
         return
+    
+    def preprocess_action(self, *args, **kwargs):
+        # TODO : Dipam - Temporarily added - Though I kind of like this system - need thoughts from others?
+        from flatland.envs.step_utils.action_preprocessing import preprocess_action
+        return preprocess_action(*args, **kwargs)
+    
+    def apply_action_independent(self, action, rail, position, direction):
+        from flatland.envs.step_utils.action_preprocessing import check_action
+        if RailEnvActions.is_moving_action(action):
+            new_direction, _ = check_action(agent, action)
+            new_position = get_new_position(position, new_direction)
+        else:
+            new_position, new_direction = position, direction
+        return new_position, direction
+        
+
+    def step_new(self, action_dict):
+        # TODO: Dipam - Add basic bookkeeping code
+        for i_agent, agent in enumerate(self.agents):
+            action = action_dict[i_agent]
+
+            # Skipping if action saved for efficiency
+            if not self.agent.action_saver.is_action_saved:
+
+                # Preprocess action
+                action = self.preprocess_action(action, agent.state, self.rail, agent.position, agent.direction)
+
+                # Speed counting
+                if agent.speed_counter.is_cell_entry:
+                    agent.action_saver.clear_saved_action()
+
+                # Save action
+                agent.action_saver.save_action_if_allowed(action)
+
+            # When cell exit occurs apply saved action independent of other agents
+            if agent.speed_counter.is_cell_exit and agent.action_saver.is_action_saved:
+                saved_action = agent.action_saver.saved_action
+                # Apply action and get temporary new position and direction
+                # TODO: Dipam - Could change name here to make it more obvious that its without conflict checks
+                # TODO: Dipam - Important - This won't handle all the possible additions to motion check like "None, None"
+                # TODO: Dipam - Important - Stop penalty will not be applied if saved_action checks for only moving actions
+                temp_new_position, temp_new_direction = self.apply_action_independent(saved_action, self.rail, agent.position, agent.direction)
+            else:
+                temp_new_position, temp_new_direction = agent.position, agent.direction
+
+            self.motionCheck.addAgent(i_agent, agent.position, temp_new_position)
+
+        # Find conflicts
+
+        # Modify conflicted positions and select one of them randomly to go to new position
+        
+        # for i_agent, agent in enumerate(self.agents):
+            # Update posiitions
+
+            # Update states
+
+            # Update rewards
+
+            # Update counters (malfunction and speed)
+            
+
+
+
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
         """

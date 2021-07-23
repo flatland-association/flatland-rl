@@ -1,4 +1,5 @@
 from enum import IntEnum
+from flatland.envs.malfunction_generators import Malfunction
 from itertools import starmap
 from typing import Tuple, Optional, NamedTuple
 
@@ -13,7 +14,13 @@ class RailAgentStatus(IntEnum):
     ACTIVE = 1  # in grid (position is not None), not done -> prediction is remaining path
     DONE = 2  # in grid (position is not None), but done -> prediction is stay at target forever
     DONE_REMOVED = 3  # removed from grid (position is None) -> prediction is None
-
+class TrainState(IntEnum):
+    WAITING = 0
+    READY_TO_DEPART = 1
+    MOVING = 1
+    STOPPED = 2
+    MALFUNCTION = 3
+    DONE = 4
 
 Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('initial_direction', Grid4TransitionsEnum),
