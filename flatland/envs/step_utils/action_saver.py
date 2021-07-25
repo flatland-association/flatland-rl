@@ -1,5 +1,4 @@
-from flatland.envs.agent_utils import TrainState
-from flatland.envs.rail_env import RailEnvActions
+from flatland.envs.rail_env_action import RailEnvActions
 
 class ActionSaver:
 	def __init__(self):
@@ -7,7 +6,7 @@ class ActionSaver:
 	
 	@property
 	def is_action_saved(self):
-		return not RailEnvActions.is_moving_action(self.saved_action)
+		return self.saved_action is not None
 
 	def save_action_if_allowed(self, action):
 		if not self.is_action_saved and RailEnvActions.is_moving_action(action):

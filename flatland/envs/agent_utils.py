@@ -1,5 +1,5 @@
 from enum import IntEnum
-from flatland.envs.malfunction_generators import Malfunction
+from flatland.envs.step_utils.states import TrainState
 from itertools import starmap
 from typing import Tuple, Optional, NamedTuple
 
@@ -8,19 +8,15 @@ from attr import attr, attrs, attrib, Factory
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.schedule_utils import Schedule
 
+from flatland.envs.step_utils.action_saver import ActionSaver
+from flatland.envs.step_utils.speed_counter import SpeedCounter
+
 
 class RailAgentStatus(IntEnum):
     READY_TO_DEPART = 0  # not in grid yet (position is None) -> prediction as if it were at initial position
     ACTIVE = 1  # in grid (position is not None), not done -> prediction is remaining path
     DONE = 2  # in grid (position is not None), but done -> prediction is stay at target forever
     DONE_REMOVED = 3  # removed from grid (position is None) -> prediction is None
-class TrainState(IntEnum):
-    WAITING = 0
-    READY_TO_DEPART = 1
-    MOVING = 1
-    STOPPED = 2
-    MALFUNCTION = 3
-    DONE = 4
 
 Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('initial_direction', Grid4TransitionsEnum),
@@ -35,7 +31,11 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('status', RailAgentStatus),
                              ('position', Tuple[int, int]),
                              ('old_direction', Grid4TransitionsEnum),
-                             ('old_position', Tuple[int, int])])
+                             ('old_position', Tuple[int, int]),
+                             ('speed_counter', SpeedCounter),
+                             ('action_saver', ActionSaver),
+                             ('state', TrainState),
+                             ])
 
 
 @attrs
@@ -66,12 +66,18 @@ class EnvAgent:
 
     handle = attrib(default=None)
 
+    # Env step facelift
+    action_saver = attrib(default=None)
+    speed_counter = attrib(default=None)
+    state = attrib(default=TrainState.WAITING, type=TrainState)
+
     status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
     position = attrib(default=None, type=Optional[Tuple[int, int]])
 
     # used in rendering
     old_direction = attrib(default=None)
     old_position = attrib(default=None)
+
 
     def reset(self):
         """
@@ -94,12 +100,26 @@ class EnvAgent:
         self.malfunction_data['nr_malfunctions'] = 0
         self.malfunction_data['moving_before_malfunction'] = False
 
+        self.action_saver.clear_saved_action()
+        self.speed_counter.reset_counter()
+
     def to_agent(self) -> Agent:
-        return Agent(initial_position=self.initial_position, initial_direction=self.initial_direction, 
-                     direction=self.direction, target=self.target, moving=self.moving, earliest_departure=self.earliest_departure, 
-                     latest_arrival=self.latest_arrival, speed_data=self.speed_data,
-                     malfunction_data=self.malfunction_data, handle=self.handle, status=self.status,
-                     position=self.position, old_direction=self.old_direction, old_position=self.old_position)
+        return Agent(initial_position=self.initial_position, 
+                     initial_direction=self.initial_direction,
+                     direction=self.direction,
+                     target=self.target,
+                     moving=self.moving,
+                     earliest_departure=self.earliest_departure, 
+                     latest_arrival=self.latest_arrival, 
+                     speed_data=self.speed_data,
+                     malfunction_data=self.malfunction_data, 
+                     handle=self.handle, 
+                     status=self.status,
+                     position=self.position, 
+                     old_direction=self.old_direction, 
+                     old_position=self.old_position,
+                     speed_counter=self.speed_counter,
+                     action_saver=self.action_saver)
 
     @classmethod
     def from_schedule(cls, schedule: Schedule):
@@ -120,7 +140,15 @@ class EnvAgent:
                                       'next_malfunction': 0,
                                       'nr_malfunctions': 0})
 
-        return list(starmap(EnvAgent, zip(schedule.agent_positions,
+        action_savers = []
+        speed_counters = []
+        num_agents = len(schedule.agent_positions)
+        agent_speeds = schedule.agent_speeds or ( [1.0] * num_agents )
+        for speed in schedule.agent_speeds:
+            speed_counters.append( SpeedCounter(speed=speed) )
+            action_savers.append( ActionSaver() )
+        
+        return list(starmap(EnvAgent, zip(schedule.agent_positions,  # TODO : Dipam - Really want to change this way of loading agents
                                           schedule.agent_directions,
                                           schedule.agent_directions,
                                           schedule.agent_targets, 
@@ -129,7 +157,10 @@ class EnvAgent:
                                           [None] * len(schedule.agent_positions), # latest_arrival
                                           speed_datas,
                                           malfunction_datas,
-                                          range(len(schedule.agent_positions)))))
+                                          range(len(schedule.agent_positions)),
+                                          action_savers,
+                                          speed_counters,
+                                          )))
 
     @classmethod
     def load_legacy_static_agent(cls, static_agents_data: Tuple):

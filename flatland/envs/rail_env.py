@@ -14,7 +14,7 @@ from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.grid.grid_utils import IntVector2D
+from flatland.core.grid.grid_utils import IntVector2D, position_to_coordinate
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
@@ -38,6 +38,11 @@ from gym.utils import seeding
 
 # NEW : Imports 
 from flatland.envs.schedule_time_generators import schedule_time_generator
+from flatland.envs.step_utils.states import TrainState
+from flatland.envs.step_utils.transition_utils import check_action
+
+# Env Step Facelift imports
+from flatland.envs.step_utils.action_preprocessing import preprocess_raw_action, check_moving_action, preprocess_action_when_waiting
 
 # Adrian Egli performance fix (the fast methods brings more than 50%)
 def fast_isclose(a, b, rtol):
@@ -253,6 +258,8 @@ class RailEnv(Environment):
 
         self.close_following = close_following  # use close following logic
         self.motionCheck = ac.MotionCheck()
+
+        self.agent_helpers = {}
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -475,70 +482,118 @@ class RailEnv(Environment):
 
         return
     
-    def preprocess_action(self, *args, **kwargs):
-        # TODO : Dipam - Temporarily added - Though I kind of like this system - need thoughts from others?
-        from flatland.envs.step_utils.action_preprocessing import preprocess_action
-        return preprocess_action(*args, **kwargs)
-    
     def apply_action_independent(self, action, rail, position, direction):
-        from flatland.envs.step_utils.action_preprocessing import check_action
         if RailEnvActions.is_moving_action(action):
-            new_direction, _ = check_action(agent, action)
+            new_direction, _ = check_action(action, position, direction, rail)
             new_position = get_new_position(position, new_direction)
         else:
             new_position, new_direction = position, direction
         return new_position, direction
         
 
-    def step_new(self, action_dict):
-        # TODO: Dipam - Add basic bookkeeping code
+    def step(self, action_dict):
+        self._elapsed_steps += 1
+
+        # If we're done, set reward and info_dict and step() is done.
+        if self.dones["__all__"]:
+            self.rewards_dict = {}
+            info_dict = {
+                "action_required": {},
+                "malfunction": {},
+                "speed": {},
+                "status": {},
+            }
+            for i_agent, agent in enumerate(self.agents):
+                self.rewards_dict[i_agent] = self.global_reward
+                info_dict["action_required"][i_agent] = False
+                info_dict["malfunction"][i_agent] = 0
+                info_dict["speed"][i_agent] = 0
+                info_dict["status"][i_agent] = agent.status
+
+            return self._get_observations(), self.rewards_dict, self.dones, info_dict
+
+        # Reset the step rewards
+        self.rewards_dict = dict()
+        info_dict = {
+            "action_required": {},
+            "malfunction": {},
+            "speed": {},
+            "status": {},
+        }
+        have_all_agents_ended = True  # boolean flag to check if all agents are done
+
+        self.motionCheck = ac.MotionCheck()  # reset the motion check
+
+        temp_pos_dirs = {} # TODO - Dipam - Needs renaming
+
         for i_agent, agent in enumerate(self.agents):
-            action = action_dict[i_agent]
+            action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
 
-            # Skipping if action saved for efficiency
-            if not self.agent.action_saver.is_action_saved:
+            # Preprocess action
+            action = preprocess_raw_action(action, agent.state)
+            action = preprocess_action_when_waiting(action, agent.state)
 
-                # Preprocess action
-                action = self.preprocess_action(action, agent.state, self.rail, agent.position, agent.direction)
+            # Try moving actions on current position
+            current_position, current_direction = agent.position, agent.direction
+            agent_not_on_map = current_position is None
+            if agent_not_on_map: # Agent not added on map yet
+                current_position, current_direction = agent.initial_position, agent.initial_direction
+            action = check_moving_action(action, agent.state, self.rail, current_position, current_direction)
 
-                # Speed counting
-                if agent.speed_counter.is_cell_entry:
-                    agent.action_saver.clear_saved_action()
+            # Save moving actions in not already saved
+            agent.action_saver.save_action_if_allowed(action) # TODO : Important - Can't save action in malfunction state?
 
-                # Save action
-                agent.action_saver.save_action_if_allowed(action)
-
+            # Calculate new position
+            # Add agent to the map if not on it yet
+            if agent_not_on_map and agent.action_saver.is_action_saved:
+                temp_new_position = agent.initial_position
+                temp_new_direction = agent.initial_direction
+                temp_pos_dirs[i_agent] = temp_new_position, temp_new_direction
             # When cell exit occurs apply saved action independent of other agents
-            if agent.speed_counter.is_cell_exit and agent.action_saver.is_action_saved:
+            elif agent.speed_counter.is_cell_exit and agent.action_saver.is_action_saved:
                 saved_action = agent.action_saver.saved_action
-                # Apply action and get temporary new position and direction
-                # TODO: Dipam - Could change name here to make it more obvious that its without conflict checks
-                # TODO: Dipam - Important - This won't handle all the possible additions to motion check like "None, None"
-                # TODO: Dipam - Important - Stop penalty will not be applied if saved_action checks for only moving actions
-                temp_new_position, temp_new_direction = self.apply_action_independent(saved_action, self.rail, agent.position, agent.direction)
+                # Apply action independent of other agents and get temporary new position and direction
+                import pdb; pdb.set_trace()
+                temp_pd = self.apply_action_independent(saved_action, self.rail, agent.position, agent.direction)
+                temp_new_position, temp_new_direction = temp_pd
             else:
                 temp_new_position, temp_new_direction = agent.position, agent.direction
 
             self.motionCheck.addAgent(i_agent, agent.position, temp_new_position)
 
         # Find conflicts
+        # self.motionCheck.find_conflicts()
 
-        # Modify conflicted positions and select one of them randomly to go to new position
+        # TODO : Important - Modify conflicted positions and select one of them randomly to go to new position
         
-        # for i_agent, agent in enumerate(self.agents):
-            # Update posiitions
+        for i_agent, agent in enumerate(self.agents):
+            ## Update posiitions
+            final_new_position = temp_pos_dirs[i_agent][0]
+            final_new_direction = temp_pos_dirs[i_agent][1]
+            agent.position = final_new_position
+            agent.direction = final_new_direction
 
-            # Update states
+            ## Update states
+            # agent.state_machine.step()
+            # agent.state = agent.state_machine.state
 
-            # Update rewards
+            ## Update rewards
+            # agent.update_rewards()
 
-            # Update counters (malfunction and speed)
-            
+            ## Update counters (malfunction and speed)
+            agent.speed_counter.update_counter(agent.state)
+            # agent.malfunction_counter.update_counter()
+
+            # Clear old action when starting in new cell
+            if agent.speed_counter.is_cell_entry:
+                agent.action_saver.clear_saved_action()
+        
+        self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))}
+        return self._get_observations(), self.rewards_dict, self.dones, info_dict
 
 
 
-
-    def step(self, action_dict_: Dict[int, RailEnvActions]):
+    def step_old(self, action_dict_: Dict[int, RailEnvActions]):
         """
         Updates rewards for the agents at a step.
 
@@ -578,6 +633,8 @@ class RailEnv(Environment):
         have_all_agents_ended = True  # boolean flag to check if all agents are done
 
         self.motionCheck = ac.MotionCheck()  # reset the motion check
+
+        import pdb; pdb.set_trace()
 
         if not self.close_following:
             for i_agent, agent in enumerate(self.agents):
@@ -645,144 +702,6 @@ class RailEnv(Environment):
             self.record_timestep(action_dict_)
 
         return self._get_observations(), self.rewards_dict, self.dones, info_dict
-
-    def _step_agent(self, i_agent, action: Optional[RailEnvActions] = None):
-        """
-        Performs a step and step, start and stop penalty on a single agent in the following sub steps:
-        - malfunction
-        - action handling if at the beginning of cell
-        - movement
-
-        Parameters
-        ----------
-        i_agent : int
-        action_dict_ : Dict[int,RailEnvActions]
-
-        """
-        agent = self.agents[i_agent]
-        if agent.status in [RailAgentStatus.DONE, RailAgentStatus.DONE_REMOVED]:  # this agent has already completed...
-            return
-
-        # agent gets active by a MOVE_* action and if c
-        if agent.status == RailAgentStatus.READY_TO_DEPART:
-            initial_cell_free = self.cell_free(agent.initial_position)
-            is_action_starting = action in [
-                RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT, RailEnvActions.MOVE_FORWARD]
-
-            if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT,
-                          RailEnvActions.MOVE_FORWARD] and self.cell_free(agent.initial_position):
-                agent.status = RailAgentStatus.ACTIVE
-                self._set_agent_to_initial_position(agent, agent.initial_position)
-                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
-                return
-            else:
-                # TODO: Here we need to check for the departure time in future releases with full schedules
-                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
-                return
-
-        agent.old_direction = agent.direction
-        agent.old_position = agent.position
-
-        # if agent is broken, actions are ignored and agent does not move.
-        # full step penalty in this case
-        if agent.malfunction_data['malfunction'] > 0:
-            self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
-            return
-
-        # Is the agent at the beginning of the cell? Then, it can take an action.
-        # As long as the agent is malfunctioning or stopped at the beginning of the cell,
-        # different actions may be taken!
-        if fast_isclose(agent.speed_data['position_fraction'], 0.0, rtol=1e-03):
-            # No action has been supplied for this agent -> set DO_NOTHING as default
-            if action is None:
-                action = RailEnvActions.DO_NOTHING
-
-            if action < 0 or action > len(RailEnvActions):
-                print('ERROR: illegal action=', action,
-                      'for agent with index=', i_agent,
-                      '"DO NOTHING" will be executed instead')
-                action = RailEnvActions.DO_NOTHING
-
-            if action == RailEnvActions.DO_NOTHING and agent.moving:
-                # Keep moving
-                action = RailEnvActions.MOVE_FORWARD
-
-            if action == RailEnvActions.STOP_MOVING and agent.moving:
-                # Only allow halting an agent on entering new cells.
-                agent.moving = False
-                self.rewards_dict[i_agent] += self.stop_penalty
-
-            if not agent.moving and not (
-                action == RailEnvActions.DO_NOTHING or
-                action == RailEnvActions.STOP_MOVING):
-                # Allow agent to start with any forward or direction action
-                agent.moving = True
-                self.rewards_dict[i_agent] += self.start_penalty
-
-            # Store the action if action is moving
-            # If not moving, the action will be stored when the agent starts moving again.
-            if agent.moving:
-                _action_stored = False
-                _, new_cell_valid, new_direction, new_position, transition_valid = \
-                    self._check_action_on_agent(action, agent)
-
-                if all([new_cell_valid, transition_valid]):
-                    agent.speed_data['transition_action_on_cellexit'] = action
-                    _action_stored = True
-                else:
-                    # But, if the chosen invalid action was LEFT/RIGHT, and the agent is moving,
-                    # try to keep moving forward!
-                    if (action == RailEnvActions.MOVE_LEFT or action == RailEnvActions.MOVE_RIGHT):
-                        _, new_cell_valid, new_direction, new_position, transition_valid = \
-                            self._check_action_on_agent(RailEnvActions.MOVE_FORWARD, agent)
-
-                        if all([new_cell_valid, transition_valid]):
-                            agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.MOVE_FORWARD
-                            _action_stored = True
-
-                if not _action_stored:
-                    # If the agent cannot move due to an invalid transition, we set its state to not moving
-                    self.rewards_dict[i_agent] += self.invalid_action_penalty
-                    self.rewards_dict[i_agent] += self.stop_penalty
-                    agent.moving = False
-
-        # Now perform a movement.
-        # If agent.moving, increment the position_fraction by the speed of the agent
-        # If the new position fraction is >= 1, reset to 0, and perform the stored
-        #   transition_action_on_cellexit if the cell is free.
-        if agent.moving:
-            agent.speed_data['position_fraction'] += agent.speed_data['speed']
-            if agent.speed_data['position_fraction'] > 1.0 or fast_isclose(agent.speed_data['position_fraction'], 1.0,
-                                                                           rtol=1e-03):
-                # Perform stored action to transition to the next cell as soon as cell is free
-                # Notice that we've already checked new_cell_valid and transition valid when we stored the action,
-                # so we only have to check cell_free now!
-
-                # Traditional check that next cell is free
-                # cell and transition validity was checked when we stored transition_action_on_cellexit!
-                cell_free, new_cell_valid, new_direction, new_position, transition_valid = self._check_action_on_agent(
-                    agent.speed_data['transition_action_on_cellexit'], agent)
-
-                # N.B. validity of new_cell and transition should have been verified before the action was stored!
-                assert new_cell_valid
-                assert transition_valid
-                if cell_free:
-                    self._move_agent_to_new_position(agent, new_position)
-                    agent.direction = new_direction
-                    agent.speed_data['position_fraction'] = 0.0
-
-            # has the agent reached its target?
-            if np.equal(agent.position, agent.target).all():
-                agent.status = RailAgentStatus.DONE
-                self.dones[i_agent] = True
-                self.active_agents.remove(i_agent)
-                agent.moving = False
-                self._remove_agent_from_scene(agent)
-            else:
-                self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
-        else:
-            # step penalty if not moving (stopped now or before)
-            self.rewards_dict[i_agent] += self.step_penalty * agent.speed_data['speed']
 
     def _step_agent_cf(self, i_agent, action: Optional[RailEnvActions] = None):
         """ "close following" version of step_agent.
