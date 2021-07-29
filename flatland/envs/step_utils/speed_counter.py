@@ -4,7 +4,7 @@ from flatland.envs.step_utils.states import TrainState
 class SpeedCounter:
 	def __init__(self, speed):
 		self.speed = speed
-		self.max_count = int(np.ceil(1/speed))
+		self.max_count = int(1/speed)
 
 	def update_counter(self, state):
 		if state == TrainState.MOVING:

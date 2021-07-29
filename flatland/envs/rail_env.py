@@ -7,6 +7,7 @@ from enum import IntEnum
 from typing import List, NamedTuple, Optional, Dict, Tuple
 
 import numpy as np
+from numpy.lib.shape_base import vsplit
 from numpy.testing._private.utils import import_nose
 
 
@@ -42,7 +43,7 @@ from flatland.envs.step_utils.states import TrainState
 from flatland.envs.step_utils.transition_utils import check_action
 
 # Env Step Facelift imports
-from flatland.envs.step_utils.action_preprocessing import preprocess_raw_action, check_moving_action, preprocess_action_when_waiting
+from flatland.envs.step_utils.action_preprocessing import preprocess_raw_action, preprocess_moving_action, preprocess_action_when_waiting
 
 # Adrian Egli performance fix (the fast methods brings more than 50%)
 def fast_isclose(a, b, rtol):
@@ -67,7 +68,10 @@ def fast_argmax(possible_transitions: (int, int, int, int)) -> bool:
 
 
 def fast_position_equal(pos_1: (int, int), pos_2: (int, int)) -> bool:
-    return pos_1[0] == pos_2[0] and pos_1[1] == pos_2[1]
+    if pos_1 is None: # TODO: Dipam - Consider making default of agent.position as (-1, -1) instead of None
+        return False
+    else:
+        return pos_1[0] == pos_2[0] and pos_1[1] == pos_2[1]
 
 
 def fast_count_nonzero(possible_transitions: (int, int, int, int)):
@@ -489,13 +493,27 @@ class RailEnv(Environment):
         else:
             new_position, new_direction = position, direction
         return new_position, direction
+    
+    def generate_state_transition_signals(self, agent, preprocessed_action, movement_allowed):
+        st_signals = {}
         
+        # st_signals['malfunction_onset'] = (agent.malfunction_data['malunction'] > 0)
+        # st_signals['malfunction_counter_complete'] = (agent.mulfunction_data['malfunction'] == 0)
+        st_signals['malfunction_onset'] = False
+        st_signals['malfunction_counter_complete'] = False
+        st_signals['earliest_departure_reached'] = self._elapsed_steps >= agent.earliest_departure
+        st_signals['stop_action_given'] = (preprocessed_action == RailEnvActions.STOP_MOVING)
+        st_signals['valid_movement_action_given'] = RailEnvActions.is_moving_action(preprocessed_action)
+        st_signals['target_reached'] = fast_position_equal(agent.position, agent.target)
+        st_signals['movement_conflict'] = (not movement_allowed) and agent.speed_counter.is_cell_exit # TODO: Modify motion check to provide proper conflict information
+
+        return st_signals
 
     def step(self, action_dict):
         self._elapsed_steps += 1
 
         # If we're done, set reward and info_dict and step() is done.
-        if self.dones["__all__"]:
+        if self.dones["__all__"]: # TODO: Move boilerplate to different function
             self.rewards_dict = {}
             info_dict = {
                 "action_required": {},
@@ -524,10 +542,13 @@ class RailEnv(Environment):
 
         self.motionCheck = ac.MotionCheck()  # reset the motion check
 
-        temp_pos_dirs = {} # TODO - Dipam - Needs renaming
-
-        for i_agent, agent in enumerate(self.agents):
+        temp_saved_data = {} # TODO : Change name
+        
+        for i_agent, agent in enumerate(self.agents): # TODO: Important - Do not use i_agent like this, use agent.handle if needed
+            # Get action for the agent
             action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
+
+            # TODO: Add the bottom stuff to separate function(s)
 
             # Preprocess action
             action = preprocess_raw_action(action, agent.state)
@@ -538,58 +559,66 @@ class RailEnv(Environment):
             agent_not_on_map = current_position is None
             if agent_not_on_map: # Agent not added on map yet
                 current_position, current_direction = agent.initial_position, agent.initial_direction
-            action = check_moving_action(action, agent.state, self.rail, current_position, current_direction)
+            action = preprocess_moving_action(action, agent.state, self.rail, current_position, current_direction)
 
             # Save moving actions in not already saved
-            agent.action_saver.save_action_if_allowed(action) # TODO : Important - Can't save action in malfunction state?
+            agent.action_saver.save_action_if_allowed(action, agent.state)
 
             # Calculate new position
             # Add agent to the map if not on it yet
             if agent_not_on_map and agent.action_saver.is_action_saved:
                 temp_new_position = agent.initial_position
                 temp_new_direction = agent.initial_direction
-                temp_pos_dirs[i_agent] = temp_new_position, temp_new_direction
+                
             # When cell exit occurs apply saved action independent of other agents
             elif agent.speed_counter.is_cell_exit and agent.action_saver.is_action_saved:
                 saved_action = agent.action_saver.saved_action
                 # Apply action independent of other agents and get temporary new position and direction
-                import pdb; pdb.set_trace()
                 temp_pd = self.apply_action_independent(saved_action, self.rail, agent.position, agent.direction)
                 temp_new_position, temp_new_direction = temp_pd
             else:
                 temp_new_position, temp_new_direction = agent.position, agent.direction
 
+            # TODO: Saving temporary positon shouldn't be needed if recheck of position is not needed later (see TAG#1)
+            temp_saved_data[i_agent] = temp_new_position, temp_new_direction, action
             self.motionCheck.addAgent(i_agent, agent.position, temp_new_position)
 
         # Find conflicts
-        # self.motionCheck.find_conflicts()
-
         # TODO : Important - Modify conflicted positions and select one of them randomly to go to new position
+        self.motionCheck.find_conflicts()
         
         for i_agent, agent in enumerate(self.agents):
-            ## Update posiitions
-            final_new_position = temp_pos_dirs[i_agent][0]
-            final_new_direction = temp_pos_dirs[i_agent][1]
+            ## Update positions
+            movement_allowed, _ = self.motionCheck.check_motion(i_agent, agent.position) # TODO: Remove final_new_postion from motioncheck
+            # TODO : Important : Original code rechecks the next position here again - not sure why? TAG#1
+            preprocessed_action = temp_saved_data[i_agent][2] # TODO : Important : Make this namedtuple or class
+            if movement_allowed:
+                final_new_position, final_new_direction = temp_saved_data[i_agent][:2] # TODO : Important : Make this namedtuple or class
+            else:
+                final_new_position = agent.position
+                final_new_direction = agent.direction
             agent.position = final_new_position
             agent.direction = final_new_direction
 
             ## Update states
-            # agent.state_machine.step()
-            # agent.state = agent.state_machine.state
+            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, movement_allowed)
+            agent.state_machine.set_transition_signals(state_transition_signals)
+            agent.state_machine.step()
+            agent.state = agent.state_machine.state # TODO : Make this a property instead?
 
             ## Update rewards
-            # agent.update_rewards()
+            # self.update_rewards(i_agent, agent, rail)
 
             ## Update counters (malfunction and speed)
-            agent.speed_counter.update_counter(agent.state)
-            # agent.malfunction_counter.update_counter()
+            agent.speed_counter.update_counter(agent.state) 
+            # agent.malfunction_counter.update_counter() # TODO : Update this to interface with current malfunction code
 
             # Clear old action when starting in new cell
             if agent.speed_counter.is_cell_entry:
                 agent.action_saver.clear_saved_action()
         
-        self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))}
-        return self._get_observations(), self.rewards_dict, self.dones, info_dict
+        self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))} # TODO : Remove this
+        return self._get_observations(), self.rewards_dict, self.dones, info_dict # TODO : Will need changes?
 
 
 
@@ -633,8 +662,6 @@ class RailEnv(Environment):
         have_all_agents_ended = True  # boolean flag to check if all agents are done
 
         self.motionCheck = ac.MotionCheck()  # reset the motion check
-
-        import pdb; pdb.set_trace()
 
         if not self.close_following:
             for i_agent, agent in enumerate(self.agents):

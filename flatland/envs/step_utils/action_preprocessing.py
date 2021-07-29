@@ -6,7 +6,7 @@ from flatland.envs.step_utils.transition_utils import check_valid_action
 
 def process_illegal_action(action: RailEnvActions):
 	# TODO - Dipam : This check is kind of weird, change this
-	if action is None or action not in RailEnvActions._value2member_map_:
+	if action is None or action not in RailEnvActions._value2member_map_: 
 		return RailEnvActions.DO_NOTHING
 	else:
 		return action
@@ -48,7 +48,7 @@ def preprocess_raw_action(action, state):
 
     return action
 
-def check_moving_action(action, state, rail, position, direction):
+def preprocess_moving_action(action, state, rail, position, direction):
     """
     LEFT/RIGHT is converted to FORWARD if left/right is not available and train is moving
     FORWARD is converted to STOP_MOVING if leading to dead end?

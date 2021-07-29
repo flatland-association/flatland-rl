@@ -10,6 +10,7 @@ from flatland.envs.schedule_utils import Schedule
 
 from flatland.envs.step_utils.action_saver import ActionSaver
 from flatland.envs.step_utils.speed_counter import SpeedCounter
+from flatland.envs.step_utils.state_machine import TrainStateMachine
 
 
 class RailAgentStatus(IntEnum):
@@ -35,6 +36,7 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('speed_counter', SpeedCounter),
                              ('action_saver', ActionSaver),
                              ('state', TrainState),
+                             ('state_machine', TrainStateMachine),
                              ])
 
 
@@ -69,6 +71,8 @@ class EnvAgent:
     # Env step facelift
     action_saver = attrib(default=None)
     speed_counter = attrib(default=None)
+    state_machine = attrib(default=None)
+    
     state = attrib(default=TrainState.WAITING, type=TrainState)
 
     status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
@@ -102,6 +106,7 @@ class EnvAgent:
 
         self.action_saver.clear_saved_action()
         self.speed_counter.reset_counter()
+        self.state_machine.reset()
 
     def to_agent(self) -> Agent:
         return Agent(initial_position=self.initial_position, 
@@ -119,7 +124,8 @@ class EnvAgent:
                      old_direction=self.old_direction, 
                      old_position=self.old_position,
                      speed_counter=self.speed_counter,
-                     action_saver=self.action_saver)
+                     action_saver=self.action_saver,
+                     state_machine=self.state_machine)
 
     @classmethod
     def from_schedule(cls, schedule: Schedule):
@@ -142,11 +148,13 @@ class EnvAgent:
 
         action_savers = []
         speed_counters = []
+        state_machines = []
         num_agents = len(schedule.agent_positions)
         agent_speeds = schedule.agent_speeds or ( [1.0] * num_agents )
-        for speed in schedule.agent_speeds:
+        for speed in agent_speeds:
             speed_counters.append( SpeedCounter(speed=speed) )
             action_savers.append( ActionSaver() )
+            state_machines.append( TrainStateMachine(initial_state=TrainState.WAITING) )
         
         return list(starmap(EnvAgent, zip(schedule.agent_positions,  # TODO : Dipam - Really want to change this way of loading agents
                                           schedule.agent_directions,
@@ -160,6 +168,7 @@ class EnvAgent:
                                           range(len(schedule.agent_positions)),
                                           action_savers,
                                           speed_counters,
+                                          state_machines,
                                           )))
 
     @classmethod
