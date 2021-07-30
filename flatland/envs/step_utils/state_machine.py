@@ -5,7 +5,7 @@ class TrainStateMachine:
     def __init__(self, initial_state=TrainState.WAITING):
         self._initial_state = initial_state
         self._state = initial_state
-        self.st_signals = {} # State Transition Signals
+        self.st_signals = {} # State Transition Signals # TODO: Make this namedtuple
         self.next_state = None
     
     def _handle_waiting(self):

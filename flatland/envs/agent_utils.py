@@ -11,13 +11,7 @@ from flatland.envs.schedule_utils import Schedule
 from flatland.envs.step_utils.action_saver import ActionSaver
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.state_machine import TrainStateMachine
-
-
-class RailAgentStatus(IntEnum):
-    READY_TO_DEPART = 0  # not in grid yet (position is None) -> prediction as if it were at initial position
-    ACTIVE = 1  # in grid (position is not None), not done -> prediction is remaining path
-    DONE = 2  # in grid (position is not None), but done -> prediction is stay at target forever
-    DONE_REMOVED = 3  # removed from grid (position is None) -> prediction is None
+from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 
 Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('initial_direction', Grid4TransitionsEnum),
@@ -29,7 +23,6 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('speed_data', dict),
                              ('malfunction_data', dict),
                              ('handle', int),
-                             ('status', RailAgentStatus),
                              ('position', Tuple[int, int]),
                              ('old_direction', Grid4TransitionsEnum),
                              ('old_position', Tuple[int, int]),
@@ -37,6 +30,7 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('action_saver', ActionSaver),
                              ('state', TrainState),
                              ('state_machine', TrainStateMachine),
+                             ('malfunction_handler', MalfunctionHandler),
                              ])
 
 
@@ -69,13 +63,14 @@ class EnvAgent:
     handle = attrib(default=None)
 
     # Env step facelift
-    action_saver = attrib(default=None)
-    speed_counter = attrib(default=None)
-    state_machine = attrib(default=None)
+    speed_counter = attrib(default = None, type=SpeedCounter)
+    action_saver = attrib(default = Factory(lambda: ActionSaver()), type=ActionSaver)
+    state_machine = attrib(default= Factory(lambda: TrainStateMachine(initial_state=TrainState.WAITING)) , 
+                           type=TrainStateMachine)
+    malfunction_handler = attrib(default = Factory(lambda: MalfunctionHandler()), type=MalfunctionHandler)
     
     state = attrib(default=TrainState.WAITING, type=TrainState)
 
-    status = attrib(default=RailAgentStatus.READY_TO_DEPART, type=RailAgentStatus)
     position = attrib(default=None, type=Optional[Tuple[int, int]])
 
     # used in rendering
@@ -90,7 +85,6 @@ class EnvAgent:
         self.position = None
         # TODO: set direction to None: https://gitlab.aicrowd.com/flatland/flatland/issues/280
         self.direction = self.initial_direction
-        self.status = RailAgentStatus.READY_TO_DEPART
         self.old_position = None
         self.old_direction = None
         self.moving = False
@@ -119,24 +113,27 @@ class EnvAgent:
                      speed_data=self.speed_data,
                      malfunction_data=self.malfunction_data, 
                      handle=self.handle, 
-                     status=self.status,
+                     state=self.state,
                      position=self.position, 
                      old_direction=self.old_direction, 
                      old_position=self.old_position,
                      speed_counter=self.speed_counter,
                      action_saver=self.action_saver,
-                     state_machine=self.state_machine)
+                     state_machine=self.state_machine,
+                     malfunction_handler=self.malfunction_handler)
 
     @classmethod
     def from_schedule(cls, schedule: Schedule):
         """ Create a list of EnvAgent from lists of positions, directions and targets
         """
         speed_datas = []
-
+        speed_counters = []
         for i in range(len(schedule.agent_positions)):
+            speed = schedule.agent_speeds[i] if schedule.agent_speeds is not None else 1.0
             speed_datas.append({'position_fraction': 0.0,
-                                'speed': schedule.agent_speeds[i] if schedule.agent_speeds is not None else 1.0,
+                                'speed': speed,
                                 'transition_action_on_cellexit': 0})
+            speed_counters.append( SpeedCounter(speed=speed) )
 
         malfunction_datas = []
         for i in range(len(schedule.agent_positions)):
@@ -145,16 +142,6 @@ class EnvAgent:
                                           i] if schedule.agent_malfunction_rates is not None else 0.,
                                       'next_malfunction': 0,
                                       'nr_malfunctions': 0})
-
-        action_savers = []
-        speed_counters = []
-        state_machines = []
-        num_agents = len(schedule.agent_positions)
-        agent_speeds = schedule.agent_speeds or ( [1.0] * num_agents )
-        for speed in agent_speeds:
-            speed_counters.append( SpeedCounter(speed=speed) )
-            action_savers.append( ActionSaver() )
-            state_machines.append( TrainStateMachine(initial_state=TrainState.WAITING) )
         
         return list(starmap(EnvAgent, zip(schedule.agent_positions,  # TODO : Dipam - Really want to change this way of loading agents
                                           schedule.agent_directions,
@@ -166,9 +153,7 @@ class EnvAgent:
                                           speed_datas,
                                           malfunction_datas,
                                           range(len(schedule.agent_positions)),
-                                          action_savers,
                                           speed_counters,
-                                          state_machines,
                                           )))
 
     @classmethod
