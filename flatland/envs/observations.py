@@ -101,10 +101,13 @@ class TreeObsForRailEnv(ObservationBuilder):
                 self.location_has_agent_malfunction[tuple(_agent.position)] = _agent.malfunction_data[
                     'malfunction']
 
-            if _agent.status in [RailAgentStatus.READY_TO_DEPART] and \
+            # [NIMISH] WHAT IS THIS
+            if _agent.status in [RailAgentStatus.READY_TO_DEPART, RailAgentStatus.WAITING] and \
                 _agent.initial_position:
-                self.location_has_agent_ready_to_depart[tuple(_agent.initial_position)] = \
-                    self.location_has_agent_ready_to_depart.get(tuple(_agent.initial_position), 0) + 1
+                    self.location_has_agent_ready_to_depart.setdefault(tuple(_agent.initial_position), 0)
+                    self.location_has_agent_ready_to_depart[tuple(_agent.initial_position)] += 1
+                # self.location_has_agent_ready_to_depart[tuple(_agent.initial_position)] = \
+                #     self.location_has_agent_ready_to_depart.get(tuple(_agent.initial_position), 0) + 1
 
         observations = super().get_many(handles)
 
@@ -192,8 +195,10 @@ class TreeObsForRailEnv(ObservationBuilder):
         if handle > len(self.env.agents):
             print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
         agent = self.env.agents[handle]  # TODO: handle being treated as index
-
-        if agent.status == RailAgentStatus.READY_TO_DEPART:
+        
+        if agent.status == RailAgentStatus.WAITING:
+            agent_virtual_position = agent.initial_position
+        elif agent.status == RailAgentStatus.READY_TO_DEPART:
             agent_virtual_position = agent.initial_position
         elif agent.status == RailAgentStatus.ACTIVE:
             agent_virtual_position = agent.position
@@ -564,7 +569,9 @@ class GlobalObsForRailEnv(ObservationBuilder):
     def get(self, handle: int = 0) -> (np.ndarray, np.ndarray, np.ndarray):
 
         agent = self.env.agents[handle]
-        if agent.status == RailAgentStatus.READY_TO_DEPART:
+        if agent.status == RailAgentStatus.WAITING:
+            agent_virtual_position = agent.initial_position
+        elif agent.status == RailAgentStatus.READY_TO_DEPART:
             agent_virtual_position = agent.initial_position
         elif agent.status == RailAgentStatus.ACTIVE:
             agent_virtual_position = agent.position
@@ -602,7 +609,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
                 obs_agents_state[other_agent.position][2] = other_agent.malfunction_data['malfunction']
                 obs_agents_state[other_agent.position][3] = other_agent.speed_data['speed']
             # fifth channel: all ready to depart on this position
-            if other_agent.status == RailAgentStatus.READY_TO_DEPART:
+            if other_agent.status == RailAgentStatus.READY_TO_DEPART or other_agent.status == RailAgentStatus.WAITING:
                 obs_agents_state[other_agent.initial_position][4] += 1
         return self.rail_obs, obs_agents_state, obs_targets
 

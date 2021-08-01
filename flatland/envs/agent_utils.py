@@ -1,3 +1,5 @@
+import numpy as np
+
 from enum import IntEnum
 from itertools import starmap
 from typing import Tuple, Optional, NamedTuple
@@ -7,14 +9,12 @@ from attr import attr, attrs, attrib, Factory
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.schedule_utils import Schedule
 
-
 class RailAgentStatus(IntEnum):
     WAITING = 0
     READY_TO_DEPART = 1  # not in grid yet (position is None) -> prediction as if it were at initial position
     ACTIVE = 2  # in grid (position is not None), not done -> prediction is remaining path
     DONE = 3  # in grid (position is not None), but done -> prediction is stay at target forever
     DONE_REMOVED = 4  # removed from grid (position is None) -> prediction is None
-    CANCELLED = 5
 
 
 Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
@@ -29,6 +29,7 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('handle', int),
                              ('status', RailAgentStatus),
                              ('position', Tuple[int, int]),
+                             ('arrival_time', int),
                              ('old_direction', Grid4TransitionsEnum),
                              ('old_position', Tuple[int, int])])
 
@@ -66,6 +67,9 @@ class EnvAgent:
     status = attrib(default=RailAgentStatus.WAITING, type=RailAgentStatus)
     position = attrib(default=None, type=Optional[Tuple[int, int]])
 
+    # NEW : EnvAgent Reward Handling
+    arrival_time = attrib(default=None, type=int)
+
     # used in rendering
     old_direction = attrib(default=None)
     old_position = attrib(default=None)
@@ -83,6 +87,8 @@ class EnvAgent:
         else:
             self.status = RailAgentStatus.WAITING
             
+        self.arrival_time = None
+
         self.old_position = None
         self.old_direction = None
         self.moving = False
@@ -96,12 +102,33 @@ class EnvAgent:
         self.malfunction_data['nr_malfunctions'] = 0
         self.malfunction_data['moving_before_malfunction'] = False
 
+    # NEW : Callables
+    def get_shortest_path(self, distance_map):
+        from flatland.envs.rail_env_shortest_paths import get_shortest_paths # Circular dep fix
+        return get_shortest_paths(distance_map=distance_map, agent_handle=self.handle)[self.handle]
+        
+    def get_travel_time_on_shortest_path(self, distance_map):
+        distance = len(self.get_shortest_path(distance_map))
+        speed = self.speed_data['speed']
+        return int(np.ceil(distance / speed))
+
+    def get_time_remaining_until_latest_arrival(self, elapsed_steps):
+        return self.latest_arrival - elapsed_steps
+
+    def get_current_delay(self, elapsed_steps, distance_map):
+        '''
+        +ve if arrival time is projected before latest arrival
+        -ve if arrival time is projected after latest arrival
+        '''
+        return self.get_time_remaining_until_latest_arrival(elapsed_steps) - \
+               self.get_travel_time_on_shortest_path(distance_map)
+
     def to_agent(self) -> Agent:
         return Agent(initial_position=self.initial_position, initial_direction=self.initial_direction, 
                      direction=self.direction, target=self.target, moving=self.moving, earliest_departure=self.earliest_departure, 
-                     latest_arrival=self.latest_arrival, speed_data=self.speed_data,
-                     malfunction_data=self.malfunction_data, handle=self.handle, status=self.status,
-                     position=self.position, old_direction=self.old_direction, old_position=self.old_position)
+                     latest_arrival=self.latest_arrival, speed_data=self.speed_data, malfunction_data=self.malfunction_data, 
+                     handle=self.handle, status=self.status, position=self.position, arrival_time=self.arrival_time, 
+                     old_direction=self.old_direction, old_position=self.old_position)
 
     @classmethod
     def from_schedule(cls, schedule: Schedule):
