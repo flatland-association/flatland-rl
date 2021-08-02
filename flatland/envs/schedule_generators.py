@@ -1,358 +1,182 @@
-"""Schedule generators (railway undertaking, "EVU")."""
+import os
+import json
+import itertools
 import warnings
 from typing import Tuple, List, Callable, Mapping, Optional, Any
+from flatland.envs.schedule_utils import Schedule
 
 import numpy as np
 from numpy.random.mtrand import RandomState
 
-from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.schedule_utils import Schedule
-from flatland.envs import persistence
-
-AgentPosition = Tuple[int, int]
-ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[int]], Schedule]
+from flatland.envs.distance_map import DistanceMap
+from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 
 
-def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None,
-                                seed: int = None, np_random: RandomState = None) -> List[float]:
-    """
-    Parameters
-    ----------
-    nb_agents : int
-        The number of agents to generate a speed for
-    speed_ratio_map : Mapping[float,float]
-        A map of speeds mappint to their ratio of appearance. The ratios must sum up to 1.
+# #### DATA COLLECTION *************************
+# import termplotlib as tpl
+# import matplotlib.pyplot as plt
+# root_path = 'C:\\Users\\nimish\\Programs\\AIcrowd\\flatland\\flatland\\playground'
+# dir_name = 'TEMP'
+# os.mkdir(os.path.join(root_path, dir_name))
 
-    Returns
-    -------
-    List[float]
-        A list of size nb_agents of speeds with the corresponding probabilistic ratios.
-    """
-    if speed_ratio_map is None:
-        return [1.0] * nb_agents
+# # Histogram 1
+# dist_resolution = 50
+# schedule_dist = np.zeros(shape=(dist_resolution))
+# # Volume dist
+# route_dist = None
+# # Dist - shortest path
+# shortest_paths_len_dist = []
+# # City positions
+# city_positions = []
+# #### DATA COLLECTION *************************
 
-    nb_classes = len(speed_ratio_map.keys())
-    speed_ratio_map_as_list: List[Tuple[float, float]] = list(speed_ratio_map.items())
-    speed_ratios = list(map(lambda t: t[1], speed_ratio_map_as_list))
-    speeds = list(map(lambda t: t[0], speed_ratio_map_as_list))
-    return list(map(lambda index: speeds[index], np_random.choice(nb_classes, nb_agents, p=speed_ratios)))
+def schedule_generator(agents: List[EnvAgent], config_speeds: List[float],  distance_map: DistanceMap, 
+                            agents_hints: dict, np_random: RandomState = None) -> Schedule:
 
-
-class BaseSchedGen(object):
-    def __init__(self, speed_ratio_map: Mapping[float, float] = None, seed: int = 1):
-        self.speed_ratio_map = speed_ratio_map
-        self.seed = seed
-
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any=None, num_resets: int = 0,
-        np_random: RandomState = None) -> Schedule:
-        pass
-
-    def __call__(self, *args, **kwargs):
-        return self.generate(*args, **kwargs)
-
-
-
-def complex_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
-    """
-
-    Generator used to generate the levels of Round 1 in the Flatland Challenge. It can only be used together
-    with complex_rail_generator. It places agents at end and start points provided by the rail generator.
-    It assigns speeds to the different agents according to the speed_ratio_map
-    :param speed_ratio_map: Speed ratios of all agents. They are probabilities of all different speeds and have to
-            add up to 1.
-    :param seed: Initiate random seed generator
-    :return:
-    """
-
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
-                  np_random: RandomState = None) -> Schedule:
-        """
-
-        The generator that assigns tasks to all the agents
-        :param rail: Rail infrastructure given by the rail_generator
-        :param num_agents: Number of agents to include in the schedule
-        :param hints: Hints provided by the rail_generator These include positions of start/target positions
-        :param num_resets: How often the generator has been reset.
-        :return: Returns the generator to the rail constructor
-        """
-        # Todo: Remove parameters and variables not used for next version, Issue: <https://gitlab.aicrowd.com/flatland/flatland/issues/305>
-        _runtime_seed = seed + num_resets
-
-        start_goal = hints['start_goal']
-        start_dir = hints['start_dir']
-        agents_position = [sg[0] for sg in start_goal[:num_agents]]
-        agents_target = [sg[1] for sg in start_goal[:num_agents]]
-        agents_direction = start_dir[:num_agents]
-
-        if speed_ratio_map:
-            speeds = speed_initialization_helper(num_agents, speed_ratio_map, seed=_runtime_seed, np_random=np_random)
-        else:
-            speeds = [1.0] * len(agents_position)
-        # Compute max number of steps with given schedule
-        extra_time_factor = 1.5  # Factor to allow for more then minimal time
-        max_episode_steps = int(extra_time_factor * rail.height * rail.width)
-
-        return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
-                        max_episode_steps=max_episode_steps)
-
-    return generator
-
-
-def sparse_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
-    return SparseSchedGen(speed_ratio_map, seed)
-
-
-class SparseSchedGen(BaseSchedGen):
-    """
-
-    This is the schedule generator which is used for Round 2 of the Flatland challenge. It produces schedules
-    to railway networks provided by sparse_rail_generator.
-    :param speed_ratio_map: Speed ratios of all agents. They are probabilities of all different speeds and have to
-            add up to 1.
-    :param seed: Initiate random seed generator
-    """
-
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
-                  np_random: RandomState = None) -> Schedule:
-        """
-
-        The generator that assigns tasks to all the agents
-        :param rail: Rail infrastructure given by the rail_generator
-        :param num_agents: Number of agents to include in the schedule
-        :param hints: Hints provided by the rail_generator These include positions of start/target positions
-        :param num_resets: How often the generator has been reset.
-        :return: Returns the generator to the rail constructor
-        """
-
-        _runtime_seed = self.seed + num_resets
-
-        train_stations = hints['train_stations']
-        city_positions = hints['city_positions']
-        city_orientation = hints['city_orientations']
-        max_num_agents = hints['num_agents']
-        city_orientations = hints['city_orientations']
-        if num_agents > max_num_agents:
-            num_agents = max_num_agents
-            warnings.warn("Too many agents! Changes number of agents.")
-        # Place agents and targets within available train stations
-        agents_position = []
-        agents_target = []
-        agents_direction = []
-
-        for agent_pair_idx in range(0, num_agents, 2):
-            infeasible_agent = True
-            tries = 0
-            while infeasible_agent:
-                tries += 1
-                infeasible_agent = False
-
-                # Setlect 2 cities, find their num_stations and possible orientations
-                city_idx = np_random.choice(len(city_positions), 2, replace=False)
-                city1 = city_idx[0]
-                city2 = city_idx[1]
-                city1_num_stations = len(train_stations[city1])
-                city2_num_stations = len(train_stations[city2])
-                city1_possible_orientations = [city_orientation[city1],
-                                                (city_orientation[city1] + 2) % 4]
-                city2_possible_orientations = [city_orientation[city2],
-                                                (city_orientation[city2] + 2) % 4]
-                # Agent 1 : city1 > city2, Agent 2: city2 > city1
-                agent1_start_idx = ((2 * np_random.randint(0, 10))) % city1_num_stations
-                agent1_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city2_num_stations
-                agent2_start_idx = ((2 * np_random.randint(0, 10))) % city2_num_stations
-                agent2_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city1_num_stations
-                
-                agent1_start = train_stations[city1][agent1_start_idx]
-                agent1_target = train_stations[city2][agent1_target_idx]
-                agent2_start = train_stations[city2][agent2_start_idx]
-                agent2_target = train_stations[city1][agent2_target_idx]
-                            
-                agent1_orientation = np_random.choice(city1_possible_orientations)
-                agent2_orientation = np_random.choice(city2_possible_orientations)
-
-                # check path exists then break if tries > 100
-                if tries >= 100:
-                    warnings.warn("Did not find any possible path, check your parameters!!!")
-                    break
-            
-            # agent1 details
-            agents_position.append((agent1_start[0][0], agent1_start[0][1]))
-            agents_target.append((agent1_target[0][0], agent1_target[0][1]))
-            agents_direction.append(agent1_orientation)
-            # agent2 details
-            agents_position.append((agent2_start[0][0], agent2_start[0][1]))
-            agents_target.append((agent2_target[0][0], agent2_target[0][1]))
-            agents_direction.append(agent2_orientation)
-
-        if self.speed_ratio_map:
-            speeds = speed_initialization_helper(num_agents, self.speed_ratio_map, seed=_runtime_seed, np_random=np_random)
-        else:
-            speeds = [1.0] * len(agents_position)
-
-        # We add multiply factors to the max number of time steps to simplify task in Flatland challenge.
-        # These factors might change in the future.
-        timedelay_factor = 4
-        alpha = 2
-        max_episode_steps = int(
-            timedelay_factor * alpha * (rail.width + rail.height + num_agents / len(city_positions)))
-
-        return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None,
-                        max_episode_steps=max_episode_steps)
-
-
-def random_schedule_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> ScheduleGenerator:
-    return RandomSchedGen(speed_ratio_map, seed)
-
-
-class RandomSchedGen(BaseSchedGen):
+    # max_episode_steps calculation
+    city_positions = agents_hints['city_positions']
+    timedelay_factor = 4
+    alpha = 2
+    max_episode_steps = int(timedelay_factor * alpha * \
+        (distance_map.rail.width + distance_map.rail.height + (len(agents) / len(city_positions))))
     
-    """
-    Given a `rail` GridTransitionMap, return a random placement of agents (initial position, direction and target).
+    # Multipliers
+    old_max_episode_steps_multiplier = 3.0
+    new_max_episode_steps_multiplier = 1.5
+    travel_buffer_multiplier = 1.3 # must be strictly lesser than new_max_episode_steps_multiplier
+    end_buffer_multiplier = 0.05
+    mean_shortest_path_multiplier = 0.2
+    
+    shortest_paths = get_shortest_paths(distance_map)
+    shortest_paths_lengths = [len(v) for k,v in shortest_paths.items()]
 
-    Parameters
-    ----------
-        speed_ratio_map : Optional[Mapping[float, float]]
-            A map of speeds mapping to their ratio of appearance. The ratios must sum up to 1.
+    # Find mean_shortest_path_time
+    agent_shortest_path_times = []
+    for agent in agents:
+        speed = agent.speed_data['speed']
+        distance = shortest_paths_lengths[agent.handle]
+        agent_shortest_path_times.append(int(np.ceil(distance / speed)))
 
-    Returns
-    -------
-        Tuple[List[Tuple[int,int]], List[Tuple[int,int]], List[Tuple[int,int]], List[float]]
-            initial positions, directions, targets speeds
-    """
+    mean_shortest_path_time = np.mean(agent_shortest_path_times)
 
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
-                  np_random: RandomState = None) -> Schedule:
-        _runtime_seed = self.seed + num_resets
+    # Deciding on a suitable max_episode_steps
+    max_sp_len = max(shortest_paths_lengths) # longest path
+    min_speed = min(config_speeds)           # slowest possible speed in config
+    
+    longest_sp_time = max_sp_len / min_speed
+    max_episode_steps_new = int(np.ceil(longest_sp_time * new_max_episode_steps_multiplier))
+    
+    max_episode_steps_old = int(max_episode_steps * old_max_episode_steps_multiplier)
 
-        valid_positions = []
-        for r in range(rail.height):
-            for c in range(rail.width):
-                if rail.get_full_transitions(r, c) > 0:
-                    valid_positions.append((r, c))
-        if len(valid_positions) == 0:
-            return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None, max_episode_steps=0)
+    max_episode_steps = min(max_episode_steps_new, max_episode_steps_old)
+    
+    end_buffer = max_episode_steps * end_buffer_multiplier
+    latest_arrival_max = max_episode_steps-end_buffer
 
-        if len(valid_positions) < num_agents:
-            warnings.warn("schedule_generators: len(valid_positions) < num_agents")
-            return Schedule(agent_positions=[], agent_directions=[],
-                            agent_targets=[], agent_speeds=[], agent_malfunction_rates=None, max_episode_steps=0)
+    # Useless unless needed by returning
+    earliest_departures = []
+    latest_arrivals = []
 
-        agents_position_idx = [i for i in np_random.choice(len(valid_positions), num_agents, replace=False)]
-        agents_position = [valid_positions[agents_position_idx[i]] for i in range(num_agents)]
-        agents_target_idx = [i for i in np_random.choice(len(valid_positions), num_agents, replace=False)]
-        agents_target = [valid_positions[agents_target_idx[i]] for i in range(num_agents)]
-        update_agents = np.zeros(num_agents)
+    # #### DATA COLLECTION *************************
+    # # Create info.txt
+    # with open(os.path.join(root_path, dir_name, 'INFO.txt'), 'w') as f:
+    #     f.write('COPY FROM main.py')
 
-        re_generate = True
-        cnt = 0
-        while re_generate:
-            cnt += 1
-            if cnt > 1:
-                print("re_generate cnt={}".format(cnt))
-            if cnt > 1000:
-                raise Exception("After 1000 re_generates still not success, giving up.")
-            # update position
-            for i in range(num_agents):
-                if update_agents[i] == 1:
-                    x = np.setdiff1d(np.arange(len(valid_positions)), agents_position_idx)
-                    agents_position_idx[i] = np_random.choice(x)
-                    agents_position[i] = valid_positions[agents_position_idx[i]]
-                    x = np.setdiff1d(np.arange(len(valid_positions)), agents_target_idx)
-                    agents_target_idx[i] = np_random.choice(x)
-                    agents_target[i] = valid_positions[agents_target_idx[i]]
-            update_agents = np.zeros(num_agents)
+    # # Volume dist
+    # route_dist = np.zeros(shape=(max_episode_steps, distance_map.rail.width, distance_map.rail.height), dtype=np.int8)
 
-            # agents_direction must be a direction for which a solution is
-            # guaranteed.
-            agents_direction = [0] * num_agents
-            re_generate = False
-            for i in range(num_agents):
-                valid_movements = []
-                for direction in range(4):
-                    position = agents_position[i]
-                    moves = rail.get_transitions(position[0], position[1], direction)
-                    for move_index in range(4):
-                        if moves[move_index]:
-                            valid_movements.append((direction, move_index))
+    # # City positions
+    # # Dummy distance map for shortest path pairs between cities
+    # city_positions = agents_hints['city_positions']
+    # d_rail = distance_map.rail
+    # d_dmap = DistanceMap([], d_rail.height, d_rail.width)
+    # d_city_permutations = list(itertools.permutations(city_positions, 2))
 
-                valid_starting_directions = []
-                for m in valid_movements:
-                    new_position = get_new_position(agents_position[i], m[1])
-                    if m[0] not in valid_starting_directions and rail.check_path_exists(new_position, m[1],
-                                                                                        agents_target[i]):
-                        valid_starting_directions.append(m[0])
+    # d_positions = []
+    # d_targets = []
+    # for position, target in d_city_permutations:
+    #     d_positions.append(position)
+    #     d_targets.append(target)
+    
+    # d_schedule = Schedule(d_positions,
+    #                       [0] * len(d_positions),
+    #                       d_targets,
+    #                       [1.0] * len(d_positions),
+    #                       [None] * len(d_positions),
+    #                       1000)
+    
+    # d_agents = EnvAgent.from_schedule(d_schedule)
+    # d_dmap.reset(d_agents, d_rail)
+    # d_map = d_dmap.get()
 
-                if len(valid_starting_directions) == 0:
-                    update_agents[i] = 1
-                    warnings.warn(
-                        "reset position for agent[{}]: {} -> {}".format(i, agents_position[i], agents_target[i]))
-                    re_generate = True
-                    break
-                else:
-                    agents_direction[i] = valid_starting_directions[
-                        np_random.choice(len(valid_starting_directions), 1)[0]]
+    # d_data = {
+    #     'city_positions': city_positions,
+    #     'start': d_positions,
+    #     'end': d_targets,
+    # }
+    # with open(os.path.join(root_path, dir_name, 'city_data.json'), 'w') as f:
+    #     json.dump(d_data, f)
 
-        agents_speed = speed_initialization_helper(num_agents, self.speed_ratio_map, seed=_runtime_seed, 
-            np_random=np_random)
+    # with open(os.path.join(root_path, dir_name, 'distance_map.npy'), 'wb') as f:
+    #     np.save(f, d_map)
+    # #### DATA COLLECTION *************************
 
-        # Compute max number of steps with given schedule
-        extra_time_factor = 1.5  # Factor to allow for more then minimal time
-        max_episode_steps = int(extra_time_factor * rail.height * rail.width)
+    for agent in agents:
+        agent_shortest_path_time = agent_shortest_path_times[agent.handle]
+        agent_travel_time_max = int(np.ceil((agent_shortest_path_time * travel_buffer_multiplier) \
+                                            + (mean_shortest_path_time * mean_shortest_path_multiplier)))
+        
+        departure_window_max = latest_arrival_max - agent_travel_time_max
 
-        return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed, agent_malfunction_rates=None,
-                        max_episode_steps=max_episode_steps)
+        earliest_departure = np_random.randint(0, departure_window_max)
+        latest_arrival = earliest_departure + agent_travel_time_max
+        
+        earliest_departures.append(earliest_departure)
+        latest_arrivals.append(latest_arrival)
+
+        agent.earliest_departure = earliest_departure
+        agent.latest_arrival = latest_arrival
+
+    # #### DATA COLLECTION *************************
+    #     # Histogram 1
+    #     dist_bounds = get_dist_window(earliest_departure, latest_arrival, latest_arrival_max)
+    #     schedule_dist[dist_bounds[0]: dist_bounds[1]] += 1
+
+    #     # Volume dist
+    #     for waypoint in agent_shortest_path:
+    #         pos = waypoint.position
+    #         route_dist[earliest_departure:latest_arrival, pos[0], pos[1]] += 1
+
+    #     # Dist - shortest path
+    #     shortest_paths_len_dist.append(agent_shortest_path_len)
+
+    # np.save(os.path.join(root_path, dir_name, 'volume.npy'), route_dist)
+    
+    # shortest_paths_len_dist.sort()
+    # save_sp_fig()
+    # #### DATA COLLECTION *************************
+
+    # returns schedule
+    return Schedule(earliest_departures=earliest_departures, latest_arrivals=latest_arrivals,
+                    max_episode_steps=max_episode_steps)
 
 
+# #### DATA COLLECTION *************************
+# # Histogram 1
+# def get_dist_window(departure_t, arrival_t, latest_arrival_max):
+#     return (int(np.round(np.interp(departure_t, [0, latest_arrival_max], [0, dist_resolution]))),
+#             int(np.round(np.interp(arrival_t, [0, latest_arrival_max], [0, dist_resolution]))))
 
-def schedule_from_file(filename, load_from_package=None) -> ScheduleGenerator:
-    """
-    Utility to load pickle file
+# def plot_dist():
+#     counts, bin_edges = schedule_dist, [i for i in range(0, dist_resolution+1)]
+#     fig = tpl.figure()
+#     fig.hist(counts, bin_edges, orientation="horizontal", force_ascii=False)
+#     fig.show()
 
-    Parameters
-    ----------
-    input_file : Pickle file generated by env.save() or editor
-
-    Returns
-    -------
-    Tuple[List[Tuple[int,int]], List[Tuple[int,int]], List[Tuple[int,int]], List[float]]
-        initial positions, directions, targets speeds
-    """
-
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
-                  np_random: RandomState = None) -> Schedule:
-
-        env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
-
-        max_episode_steps = env_dict.get("max_episode_steps", 0)
-        if (max_episode_steps==0):
-            print("This env file has no max_episode_steps (deprecated) - setting to 100")
-            max_episode_steps = 100
-            
-        agents = env_dict["agents"]
-
-        #print("schedule generator from_file - agents: ", agents)
-
-        # setup with loaded data
-        agents_position = [a.initial_position for a in agents]
-
-        # this logic is wrong - we should really load the initial_direction as the direction.
-        #agents_direction = [a.direction for a in agents]
-        agents_direction = [a.initial_direction for a in agents]
-        agents_target = [a.target for a in agents]
-        agents_speed = [a.speed_data['speed'] for a in agents]
-
-        # Malfunctions from here are not used.  They have their own generator.
-        #agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]
-
-        return Schedule(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed, 
-                        agent_malfunction_rates=None,
-                        max_episode_steps=max_episode_steps)
-
-    return generator
+# # Shortest path dist
+# def save_sp_fig():
+#     fig = plt.figure(figsize=(15, 7))
+#     plt.bar(np.arange(len(shortest_paths_len_dist)), shortest_paths_len_dist)
+#     plt.savefig(os.path.join(root_path, dir_name, 'shortest_paths_sorted.png'))
+# #### DATA COLLECTION *************************

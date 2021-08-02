@@ -1,13 +1,14 @@
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 import numpy as np
 
 from enum import IntEnum
 from itertools import starmap
-from typing import Tuple, Optional, NamedTuple
+from typing import Tuple, Optional, NamedTuple, List
 
 from attr import attr, attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.schedule_utils import Schedule
+from flatland.envs.schedule_utils import Line
 
 class RailAgentStatus(IntEnum):
     WAITING = 0
@@ -36,7 +37,7 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
 
 @attrs
 class EnvAgent:
-    # INIT FROM HERE IN _from_schedule()
+    # INIT FROM HERE IN _from_line()
     initial_position = attrib(type=Tuple[int, int])
     initial_direction = attrib(type=Grid4TransitionsEnum)
     direction = attrib(type=Grid4TransitionsEnum)
@@ -44,8 +45,8 @@ class EnvAgent:
     moving = attrib(default=False, type=bool)
 
     # NEW : EnvAgent - Schedule properties
-    earliest_departure = attrib(default=None, type=int)  # default None during _from_schedule()
-    latest_arrival = attrib(default=None, type=int)  # default None during _from_schedule()
+    earliest_departure = attrib(default=None, type=int)  # default None during _from_line()
+    latest_arrival = attrib(default=None, type=int)  # default None during _from_line()
 
     # speed_data: speed is added to position_fraction on each moving step, until position_fraction>=1.0,
     # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
@@ -62,7 +63,7 @@ class EnvAgent:
                           'moving_before_malfunction': False})))
 
     handle = attrib(default=None)
-    # INIT TILL HERE IN _from_schedule()
+    # INIT TILL HERE IN _from_line()
 
     status = attrib(default=RailAgentStatus.WAITING, type=RailAgentStatus)
     position = attrib(default=None, type=Optional[Tuple[int, int]])
@@ -103,19 +104,19 @@ class EnvAgent:
         self.malfunction_data['moving_before_malfunction'] = False
 
     # NEW : Callables
-    def get_shortest_path(self, distance_map):
+    def get_shortest_path(self, distance_map) -> List[Waypoint]:
         from flatland.envs.rail_env_shortest_paths import get_shortest_paths # Circular dep fix
         return get_shortest_paths(distance_map=distance_map, agent_handle=self.handle)[self.handle]
         
-    def get_travel_time_on_shortest_path(self, distance_map):
+    def get_travel_time_on_shortest_path(self, distance_map) -> int:
         distance = len(self.get_shortest_path(distance_map))
         speed = self.speed_data['speed']
         return int(np.ceil(distance / speed))
 
-    def get_time_remaining_until_latest_arrival(self, elapsed_steps):
+    def get_time_remaining_until_latest_arrival(self, elapsed_steps: int) -> int:
         return self.latest_arrival - elapsed_steps
 
-    def get_current_delay(self, elapsed_steps, distance_map):
+    def get_current_delay(self, elapsed_steps: int, distance_map) -> int:
         '''
         +ve if arrival time is projected before latest arrival
         -ve if arrival time is projected after latest arrival
@@ -131,34 +132,34 @@ class EnvAgent:
                      old_direction=self.old_direction, old_position=self.old_position)
 
     @classmethod
-    def from_schedule(cls, schedule: Schedule):
+    def from_line(cls, line: Line):
         """ Create a list of EnvAgent from lists of positions, directions and targets
         """
         speed_datas = []
 
-        for i in range(len(schedule.agent_positions)):
+        for i in range(len(line.agent_positions)):
             speed_datas.append({'position_fraction': 0.0,
-                                'speed': schedule.agent_speeds[i] if schedule.agent_speeds is not None else 1.0,
+                                'speed': line.agent_speeds[i] if line.agent_speeds is not None else 1.0,
                                 'transition_action_on_cellexit': 0})
 
         malfunction_datas = []
-        for i in range(len(schedule.agent_positions)):
+        for i in range(len(line.agent_positions)):
             malfunction_datas.append({'malfunction': 0,
-                                      'malfunction_rate': schedule.agent_malfunction_rates[
-                                          i] if schedule.agent_malfunction_rates is not None else 0.,
+                                      'malfunction_rate': line.agent_malfunction_rates[
+                                          i] if line.agent_malfunction_rates is not None else 0.,
                                       'next_malfunction': 0,
                                       'nr_malfunctions': 0})
 
-        return list(starmap(EnvAgent, zip(schedule.agent_positions,
-                                          schedule.agent_directions,
-                                          schedule.agent_directions,
-                                          schedule.agent_targets, 
-                                          [False] * len(schedule.agent_positions), 
-                                          [None] * len(schedule.agent_positions), # earliest_departure
-                                          [None] * len(schedule.agent_positions), # latest_arrival
+        return list(starmap(EnvAgent, zip(line.agent_positions,
+                                          line.agent_directions,
+                                          line.agent_directions,
+                                          line.agent_targets, 
+                                          [False] * len(line.agent_positions), 
+                                          [None] * len(line.agent_positions), # earliest_departure
+                                          [None] * len(line.agent_positions), # latest_arrival
                                           speed_datas,
                                           malfunction_datas,
-                                          range(len(schedule.agent_positions)))))
+                                          range(len(line.agent_positions)))))
 
     @classmethod
     def load_legacy_static_agent(cls, static_agents_data: Tuple):

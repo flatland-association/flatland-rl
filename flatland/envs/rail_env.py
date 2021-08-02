@@ -22,7 +22,9 @@ from flatland.envs.rail_env_action import RailEnvActions
 # Need to use circular imports for persistence.
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
-from flatland.envs import schedule_generators as sched_gen
+from flatland.envs import line_generators as line_gen
+# NEW : Imports
+from flatland.envs.schedule_generators import schedule_generator
 from flatland.envs import persistence
 from flatland.envs import agent_chains as ac
 
@@ -33,10 +35,9 @@ from gym.utils import seeding
 # from flatland.envs.malfunction_generators import no_malfunction_generator, Malfunction, MalfunctionProcessData
 # from flatland.envs.observations import GlobalObsForRailEnv
 # from flatland.envs.rail_generators import random_rail_generator, RailGenerator
-# from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
+# from flatland.envs.line_generators import random_line_generator, LineGenerator
 
-# NEW : Imports
-from flatland.envs.schedule_time_generators import schedule_time_generator
+
 
 # Adrian Egli performance fix (the fast methods brings more than 50%)
 def fast_isclose(a, b, rtol):
@@ -138,7 +139,7 @@ class RailEnv(Environment):
                  width,
                  height,
                  rail_generator=None,
-                 schedule_generator=None,  # : sched_gen.ScheduleGenerator = sched_gen.random_schedule_generator(),
+                 line_generator=None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
                  number_of_agents=1,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
@@ -158,12 +159,12 @@ class RailEnv(Environment):
             height and agents handles of a  rail environment, along with the number of times
             the env has been reset, and returns a GridTransitionMap object and a list of
             starting positions, targets, and initial orientations for agent handle.
-            The rail_generator can pass a distance map in the hints or information for specific schedule_generators.
+            The rail_generator can pass a distance map in the hints or information for specific line_generators.
             Implementations can be found in flatland/envs/rail_generators.py
-        schedule_generator : function
-            The schedule_generator function is a function that takes the grid, the number of agents and optional hints
+        line_generator : function
+            The line_generator function is a function that takes the grid, the number of agents and optional hints
             and returns a list of starting positions, targets, initial orientations and speed for all agent handles.
-            Implementations can be found in flatland/envs/schedule_generators.py
+            Implementations can be found in flatland/envs/line_generators.py
         width : int
             The width of the rail map. Potentially in the future,
             a range of widths to sample from.
@@ -202,10 +203,9 @@ class RailEnv(Environment):
         if rail_generator is None:
             rail_generator = rail_gen.random_rail_generator()
         self.rail_generator = rail_generator
-        # self.schedule_generator: ScheduleGenerator = schedule_generator
-        if schedule_generator is None:
-            schedule_generator = sched_gen.random_schedule_generator()
-        self.schedule_generator = schedule_generator
+        if line_generator is None:
+            line_generator = line_gen.random_line_generator()
+        self.line_generator = line_generator
 
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
@@ -362,26 +362,29 @@ class RailEnv(Environment):
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
 
-            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, 
+            line = self.line_generator(self.rail, self.number_of_agents, agents_hints, 
                                                self.num_resets, self.np_random)
-            self.agents = EnvAgent.from_schedule(schedule)
-
-            # Get max number of allowed time steps from schedule generator
-            # Look at the specific schedule generator used to see where this number comes from
-            self._max_episode_steps = schedule.max_episode_steps # NEW UPDATE THIS!
+            self.agents = EnvAgent.from_line(line)
 
             # Reset distance map - basically initializing
             self.distance_map.reset(self.agents, self.rail)
 
             # NEW : Time Schedule Generation
             # find agent speeds (needed for max_ep_steps recalculation)
-            if (type(self.schedule_generator.speed_ratio_map) is dict):
-                config_speeds = list(self.schedule_generator.speed_ratio_map.keys())
+            if (type(self.line_generator.speed_ratio_map) is dict):
+                config_speeds = list(self.line_generator.speed_ratio_map.keys())
             else:
                 config_speeds = [1.0]
 
-            self._max_episode_steps = schedule_time_generator(self.agents, config_speeds, self.distance_map, 
-                                            self._max_episode_steps, self.np_random, temp_info=optionals)
+            schedule = schedule_generator(self.agents, config_speeds, self.distance_map, 
+                                               agents_hints, self.np_random)
+
+            self._max_episode_steps = schedule.max_episode_steps
+
+            for agent_i, agent in enumerate(self.agents):
+                agent.earliest_departure = schedule.earliest_departures[agent_i]         
+                agent.latest_arrival = schedule.latest_arrivals[agent_i]
+
         
         # Reset distance map - again (just in case if regen_schedule = False)
         self.distance_map.reset(self.agents, self.rail)
@@ -749,7 +752,7 @@ class RailEnv(Environment):
         # NEW : STEP: WAITING > WAITING or WAITING > READY_TO_DEPART
         if (agent.status == RailAgentStatus.WAITING):
             if ( self._elapsed_steps >= agent.earliest_departure ):
-                agent.status == RailAgentStatus.READY_TO_DEPART
+                agent.status = RailAgentStatus.READY_TO_DEPART
             self.motionCheck.addAgent(i_agent, None, None)
             return
 
