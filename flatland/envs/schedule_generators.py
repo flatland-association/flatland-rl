@@ -13,7 +13,7 @@ from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 
 
-def schedule_generator(agents: List[EnvAgent], config_speeds: List[float],  distance_map: DistanceMap, 
+def schedule_generator(agents: List[EnvAgent], distance_map: DistanceMap, 
                             agents_hints: dict, np_random: RandomState = None) -> Schedule:
 
     # max_episode_steps calculation
