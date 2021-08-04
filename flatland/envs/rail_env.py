@@ -370,13 +370,7 @@ class RailEnv(Environment):
             self.distance_map.reset(self.agents, self.rail)
 
             # NEW : Time Schedule Generation
-            # find agent speeds (needed for max_ep_steps recalculation)
-            if (type(self.line_generator.speed_ratio_map) is dict):
-                config_speeds = list(self.line_generator.speed_ratio_map.keys())
-            else:
-                config_speeds = [1.0]
-
-            schedule = schedule_generator(self.agents, config_speeds, self.distance_map, 
+            schedule = schedule_generator(self.agents, self.distance_map, 
                                                agents_hints, self.np_random)
 
             self._max_episode_steps = schedule.max_episode_steps
