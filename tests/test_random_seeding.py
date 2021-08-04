@@ -4,7 +4,7 @@ from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map, sparse_rail_generator
-from flatland.envs.schedule_generators import random_schedule_generator, sparse_schedule_generator
+from flatland.envs.line_generators import random_line_generator, sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail2
 
 
@@ -15,7 +15,7 @@ def test_random_seeding():
     # Move target to unreachable position in order to not interfere with test
     for idx in range(100):
         env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                      schedule_generator=random_schedule_generator(seed=12), number_of_agents=10)
+                      line_generator=random_line_generator(seed=12), number_of_agents=10)
         env.reset(True, True, False, random_seed=1)
 
         env.agents[0].target = (0, 0)
@@ -49,11 +49,11 @@ def test_seeding_and_observations():
     # Make two seperate envs with different observation builders
     # Global Observation
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=12), number_of_agents=10,
+                  line_generator=random_line_generator(seed=12), number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
     # Tree Observation
     env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                   schedule_generator=random_schedule_generator(seed=12), number_of_agents=10,
+                   line_generator=random_line_generator(seed=12), number_of_agents=10,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
 
     env.reset(False, False, False, random_seed=12)
@@ -107,12 +107,12 @@ def test_seeding_and_malfunction():
     # Global Observation
     for tests in range(1, 100):
         env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                      schedule_generator=random_schedule_generator(), number_of_agents=10,
+                      line_generator=random_line_generator(), number_of_agents=10,
                       obs_builder_object=GlobalObsForRailEnv())
 
         # Tree Observation
         env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                       schedule_generator=random_schedule_generator(), number_of_agents=10,
+                       line_generator=random_line_generator(), number_of_agents=10,
                        obs_builder_object=GlobalObsForRailEnv())
 
         env.reset(True, False, True, random_seed=tests)
@@ -172,7 +172,7 @@ def test_reproducability_env():
                                                                             seed=215545,  # Random seed
                                                                             grid_mode=True
                                                                             ),
-                  schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=1)
+                  line_generator=sparse_line_generator(speed_ration_map), number_of_agents=1)
     env.reset(True, True, True, random_seed=10)
     excpeted_grid = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -233,7 +233,7 @@ def test_reproducability_env():
                                                                              seed=215545,  # Random seed
                                                                              grid_mode=True
                                                                              ),
-                   schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=1)
+                   line_generator=sparse_line_generator(speed_ration_map), number_of_agents=1)
     np.random.seed(10)
     for i in range(10):
         np.random.randn()

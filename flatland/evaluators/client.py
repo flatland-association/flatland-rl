@@ -15,7 +15,7 @@ import flatland
 from flatland.envs.malfunction_generators import malfunction_from_file
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
-from flatland.envs.schedule_generators import schedule_from_file
+from flatland.envs.line_generators import line_from_file
 from flatland.evaluators import messages
 from flatland.core.env_observation_builder import DummyObservationBuilder
 

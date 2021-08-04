@@ -3,11 +3,11 @@ from test_utils import create_and_save_env
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator, random_rail_generator, complex_rail_generator, \
     rail_from_file
-from flatland.envs.schedule_generators import sparse_schedule_generator, random_schedule_generator, \
-    complex_schedule_generator, schedule_from_file
+from flatland.envs.line_generators import sparse_line_generator, random_line_generator, \
+    complex_line_generator, line_from_file
 
 
-def test_schedule_from_file_sparse():
+def test_line_from_file_sparse():
     """
     Test to see that all parameters are loaded as expected
     Returns
@@ -27,17 +27,17 @@ def test_schedule_from_file_sparse():
                                            max_rails_between_cities=3,
                                            max_rails_in_city=6,
                                            )
-    schedule_generator = sparse_schedule_generator(speed_ration_map)
+    line_generator = sparse_line_generator(speed_ration_map)
 
     create_and_save_env(file_name="./sparse_env_test.pkl", rail_generator=rail_generator,
-                        schedule_generator=schedule_generator)
+                        line_generator=line_generator)
 
 
     # Sparse generator
     rail_generator = rail_from_file("./sparse_env_test.pkl")
-    schedule_generator = schedule_from_file("./sparse_env_test.pkl")
+    line_generator = line_from_file("./sparse_env_test.pkl")
     sparse_env_from_file = RailEnv(width=1, height=1, rail_generator=rail_generator,
-                                   schedule_generator=schedule_generator)
+                                   line_generator=line_generator)
     sparse_env_from_file.reset(True, True)
 
     # Assert loaded agent number is correct
@@ -48,7 +48,7 @@ def test_schedule_from_file_sparse():
 
 
 
-def test_schedule_from_file_random():
+def test_line_from_file_random():
     """
     Test to see that all parameters are loaded as expected
     Returns
@@ -63,17 +63,17 @@ def test_schedule_from_file_random():
 
     # Generate random test env
     rail_generator = random_rail_generator()
-    schedule_generator = random_schedule_generator(speed_ration_map)
+    line_generator = random_line_generator(speed_ration_map)
 
     create_and_save_env(file_name="./random_env_test.pkl", rail_generator=rail_generator,
-                        schedule_generator=schedule_generator)
+                        line_generator=line_generator)
 
 
     # Random generator
     rail_generator = rail_from_file("./random_env_test.pkl")
-    schedule_generator = schedule_from_file("./random_env_test.pkl")
+    line_generator = line_from_file("./random_env_test.pkl")
     random_env_from_file = RailEnv(width=1, height=1, rail_generator=rail_generator,
-                                   schedule_generator=schedule_generator)
+                                   line_generator=line_generator)
     random_env_from_file.reset(True, True)
 
     # Assert loaded agent number is correct
@@ -85,7 +85,7 @@ def test_schedule_from_file_random():
 
 
 
-def test_schedule_from_file_complex():
+def test_line_from_file_complex():
     """
     Test to see that all parameters are loaded as expected
     Returns
@@ -103,19 +103,19 @@ def test_schedule_from_file_complex():
                                             nr_extra=1,
                                             min_dist=8,
                                             max_dist=99999)
-    schedule_generator = complex_schedule_generator(speed_ration_map)
+    line_generator = complex_line_generator(speed_ration_map)
 
     create_and_save_env(file_name="./complex_env_test.pkl", rail_generator=rail_generator,
-                        schedule_generator=schedule_generator)
+                        line_generator=line_generator)
 
     # Load the different envs and check the parameters
 
 
     # Complex generator
     rail_generator = rail_from_file("./complex_env_test.pkl")
-    schedule_generator = schedule_from_file("./complex_env_test.pkl")
+    line_generator = line_from_file("./complex_env_test.pkl")
     complex_env_from_file = RailEnv(width=1, height=1, rail_generator=rail_generator,
-                                    schedule_generator=schedule_generator)
+                                    line_generator=line_generator)
     complex_env_from_file.reset(True, True)
 
     # Assert loaded agent number is correct
