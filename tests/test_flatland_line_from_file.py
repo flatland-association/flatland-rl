@@ -25,12 +25,14 @@ def test_line_from_file_sparse():
                                            seed=1,
                                            grid_mode=False,
                                            max_rails_between_cities=3,
-                                           max_rails_in_city=6,
+                                           max_rail_pairs_in_city=3,
                                            )
     line_generator = sparse_line_generator(speed_ration_map)
 
-    create_and_save_env(file_name="./sparse_env_test.pkl", rail_generator=rail_generator,
+    env = create_and_save_env(file_name="./sparse_env_test.pkl", rail_generator=rail_generator,
                         line_generator=line_generator)
+    old_num_steps = env._max_episode_steps
+    old_num_agents = len(env.agents)
 
 
     # Sparse generator
@@ -41,10 +43,10 @@ def test_line_from_file_sparse():
     sparse_env_from_file.reset(True, True)
 
     # Assert loaded agent number is correct
-    assert sparse_env_from_file.get_num_agents() == 10
+    assert sparse_env_from_file.get_num_agents() == old_num_agents
 
     # Assert max steps is correct
-    assert sparse_env_from_file._max_episode_steps == 500
+    assert sparse_env_from_file._max_episode_steps == old_num_steps
 
 
 
@@ -65,8 +67,10 @@ def test_line_from_file_random():
     rail_generator = random_rail_generator()
     line_generator = random_line_generator(speed_ration_map)
 
-    create_and_save_env(file_name="./random_env_test.pkl", rail_generator=rail_generator,
+    env = create_and_save_env(file_name="./random_env_test.pkl", rail_generator=rail_generator,
                         line_generator=line_generator)
+    old_num_steps = env._max_episode_steps
+    old_num_agents = len(env.agents)                        
 
 
     # Random generator
@@ -77,10 +81,10 @@ def test_line_from_file_random():
     random_env_from_file.reset(True, True)
 
     # Assert loaded agent number is correct
-    assert random_env_from_file.get_num_agents() == 10
+    assert random_env_from_file.get_num_agents() == old_num_agents
 
     # Assert max steps is correct
-    assert random_env_from_file._max_episode_steps == 1350
+    assert random_env_from_file._max_episode_steps == old_num_steps
 
 
 
@@ -105,8 +109,10 @@ def test_line_from_file_complex():
                                             max_dist=99999)
     line_generator = complex_line_generator(speed_ration_map)
 
-    create_and_save_env(file_name="./complex_env_test.pkl", rail_generator=rail_generator,
+    env = create_and_save_env(file_name="./complex_env_test.pkl", rail_generator=rail_generator,
                         line_generator=line_generator)
+    old_num_steps = env._max_episode_steps
+    old_num_agents = len(env.agents)
 
     # Load the different envs and check the parameters
 
@@ -119,7 +125,7 @@ def test_line_from_file_complex():
     complex_env_from_file.reset(True, True)
 
     # Assert loaded agent number is correct
-    assert complex_env_from_file.get_num_agents() == 10
+    assert complex_env_from_file.get_num_agents() == old_num_agents
 
     # Assert max steps is correct
-    assert complex_env_from_file._max_episode_steps == 1350
+    assert complex_env_from_file._max_episode_steps == old_num_steps

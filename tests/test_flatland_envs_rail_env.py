@@ -9,9 +9,9 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
-from flatland.envs.rail_generators import complex_rail_generator, rail_from_file
+from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.line_generators import random_line_generator, complex_line_generator, line_from_file
+from flatland.envs.line_generators import random_line_generator, sparse_line_generator, line_from_file
 from flatland.utils.simple_rail import make_simple_rail
 from flatland.envs.persistence import RailEnvPersister
 from flatland.utils.rendertools import RenderTool
@@ -37,9 +37,10 @@ def test_load_env():
 
 def test_save_load():
     env = RailEnv(width=10, height=10,
-                  rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
-                  line_generator=complex_line_generator(), number_of_agents=2)
+                  rail_generator=sparse_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
+                  line_generator=sparse_line_generator(), number_of_agents=2)
     env.reset()
+
     agent_1_pos = env.agents[0].position
     agent_1_dir = env.agents[0].direction
     agent_1_tar = env.agents[0].target

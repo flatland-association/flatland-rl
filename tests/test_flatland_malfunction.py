@@ -97,6 +97,8 @@ def test_malfunction_process():
             actions[i] = np.argmax(obs[i]) + 1
 
         obs, all_rewards, done, _ = env.step(actions)
+        if done["__all__"]:
+            break
 
         if env.agents[0].malfunction_data['malfunction'] > 0:
             agent_malfunctioning = True

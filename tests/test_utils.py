@@ -152,4 +152,4 @@ def create_and_save_env(file_name: str, line_generator: LineGenerator, rail_gene
     env.reset(True, True)
     #env.save(file_name)
     RailEnvPersister.save(env, file_name)
-    
+    return env

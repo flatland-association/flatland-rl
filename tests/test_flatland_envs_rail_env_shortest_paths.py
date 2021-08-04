@@ -23,6 +23,10 @@ def test_get_shortest_paths_unreachable():
                   obs_builder_object=GlobalObsForRailEnv())
     env.reset()
 
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
+
     # set the initial position
     agent = env.agents[0]
     agent.position = (3, 1)  # west dead-end
@@ -36,7 +40,7 @@ def test_get_shortest_paths_unreachable():
     actual = get_shortest_paths(env.distance_map)
     expected = {0: None}
 
-    assert actual == expected, "actual={},expected={}".format(actual, expected)
+    assert actual[0] == expected[0], "actual={},expected={}".format(actual[0], expected[0])
 
 
 # todo file test_002.pkl has to be generated automatically

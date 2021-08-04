@@ -34,25 +34,29 @@ def test_action_plan(rendering: bool = False):
     for handle, agent in enumerate(env.agents):
         print("[{}] {} -> {}".format(handle, agent.initial_position, agent.target))
 
-    chosen_path_dict = {0: [TrainrunWaypoint(lined_at=0, waypoint=Waypoint(position=(3, 0), direction=3)),
-                            TrainrunWaypoint(lined_at=2, waypoint=Waypoint(position=(3, 1), direction=1)),
-                            TrainrunWaypoint(lined_at=3, waypoint=Waypoint(position=(3, 2), direction=1)),
-                            TrainrunWaypoint(lined_at=14, waypoint=Waypoint(position=(3, 3), direction=1)),
-                            TrainrunWaypoint(lined_at=15, waypoint=Waypoint(position=(3, 4), direction=1)),
-                            TrainrunWaypoint(lined_at=16, waypoint=Waypoint(position=(3, 5), direction=1)),
-                            TrainrunWaypoint(lined_at=17, waypoint=Waypoint(position=(3, 6), direction=1)),
-                            TrainrunWaypoint(lined_at=18, waypoint=Waypoint(position=(3, 7), direction=1)),
-                            TrainrunWaypoint(lined_at=19, waypoint=Waypoint(position=(3, 8), direction=1)),
-                            TrainrunWaypoint(lined_at=20, waypoint=Waypoint(position=(3, 8), direction=5))],
-                        1: [TrainrunWaypoint(lined_at=0, waypoint=Waypoint(position=(3, 8), direction=3)),
-                            TrainrunWaypoint(lined_at=3, waypoint=Waypoint(position=(3, 7), direction=3)),
-                            TrainrunWaypoint(lined_at=5, waypoint=Waypoint(position=(3, 6), direction=3)),
-                            TrainrunWaypoint(lined_at=7, waypoint=Waypoint(position=(3, 5), direction=3)),
-                            TrainrunWaypoint(lined_at=9, waypoint=Waypoint(position=(3, 4), direction=3)),
-                            TrainrunWaypoint(lined_at=11, waypoint=Waypoint(position=(3, 3), direction=3)),
-                            TrainrunWaypoint(lined_at=13, waypoint=Waypoint(position=(2, 3), direction=0)),
-                            TrainrunWaypoint(lined_at=15, waypoint=Waypoint(position=(1, 3), direction=0)),
-                            TrainrunWaypoint(lined_at=17, waypoint=Waypoint(position=(0, 3), direction=0))]}
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
+
+    chosen_path_dict = {0: [TrainrunWaypoint(scheduled_at=0, waypoint=Waypoint(position=(3, 0), direction=3)),
+                            TrainrunWaypoint(scheduled_at=2, waypoint=Waypoint(position=(3, 1), direction=1)),
+                            TrainrunWaypoint(scheduled_at=3, waypoint=Waypoint(position=(3, 2), direction=1)),
+                            TrainrunWaypoint(scheduled_at=14, waypoint=Waypoint(position=(3, 3), direction=1)),
+                            TrainrunWaypoint(scheduled_at=15, waypoint=Waypoint(position=(3, 4), direction=1)),
+                            TrainrunWaypoint(scheduled_at=16, waypoint=Waypoint(position=(3, 5), direction=1)),
+                            TrainrunWaypoint(scheduled_at=17, waypoint=Waypoint(position=(3, 6), direction=1)),
+                            TrainrunWaypoint(scheduled_at=18, waypoint=Waypoint(position=(3, 7), direction=1)),
+                            TrainrunWaypoint(scheduled_at=19, waypoint=Waypoint(position=(3, 8), direction=1)),
+                            TrainrunWaypoint(scheduled_at=20, waypoint=Waypoint(position=(3, 8), direction=5))],
+                        1: [TrainrunWaypoint(scheduled_at=0, waypoint=Waypoint(position=(3, 8), direction=3)),
+                            TrainrunWaypoint(scheduled_at=3, waypoint=Waypoint(position=(3, 7), direction=3)),
+                            TrainrunWaypoint(scheduled_at=5, waypoint=Waypoint(position=(3, 6), direction=3)),
+                            TrainrunWaypoint(scheduled_at=7, waypoint=Waypoint(position=(3, 5), direction=3)),
+                            TrainrunWaypoint(scheduled_at=9, waypoint=Waypoint(position=(3, 4), direction=3)),
+                            TrainrunWaypoint(scheduled_at=11, waypoint=Waypoint(position=(3, 3), direction=3)),
+                            TrainrunWaypoint(scheduled_at=13, waypoint=Waypoint(position=(2, 3), direction=0)),
+                            TrainrunWaypoint(scheduled_at=15, waypoint=Waypoint(position=(1, 3), direction=0)),
+                            TrainrunWaypoint(scheduled_at=17, waypoint=Waypoint(position=(0, 3), direction=0))]}
     expected_action_plan = [[
         # take action to enter the grid
         ActionPlanElement(0, RailEnvActions.MOVE_FORWARD),

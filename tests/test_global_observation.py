@@ -30,6 +30,10 @@ def test_get_global_observation():
                   obs_builder_object=GlobalObsForRailEnv())
     env.reset()
 
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
+
     obs, all_rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in range(number_of_agents)})
     for i in range(len(env.agents)):
         agent: EnvAgent = env.agents[i]

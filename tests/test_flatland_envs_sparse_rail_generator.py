@@ -1512,7 +1512,7 @@ def test_sparse_generator_changes_to_grid_mode():
     rail_env = RailEnv(width=10, height=20, rail_generator=sparse_rail_generator(
         max_num_cities=100,
         max_rails_between_cities=2,
-        max_rails_in_city=2,
+        max_rail_pairs_in_city=1,
         seed=15,
         grid_mode=False
     ), line_generator=sparse_line_generator(), number_of_agents=10,

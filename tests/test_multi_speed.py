@@ -51,6 +51,7 @@ def test_multi_speed_init():
                   rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999,
                                                         seed=1), line_generator=complex_line_generator(),
                   number_of_agents=5)
+    
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
     agent = RandomAgent(218, 4)
 
@@ -197,6 +198,12 @@ def test_multispeed_actions_no_malfunction_blocking():
                   line_generator=random_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
+    
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
+    
+
     set_penalties_for_replay(env)
     test_configs = [
         ReplayConfig(
@@ -381,7 +388,11 @@ def test_multispeed_actions_malfunction_no_blocking():
                   line_generator=random_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
-
+    
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
+    
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
@@ -515,6 +526,10 @@ def test_multispeed_actions_no_malfunction_invalid_actions():
                   line_generator=random_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
+    
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
 
     set_penalties_for_replay(env)
     test_config = ReplayConfig(

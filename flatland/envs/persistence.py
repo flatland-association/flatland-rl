@@ -21,7 +21,7 @@ from flatland.envs.distance_map import DistanceMap
 # cannot import objects / classes directly because of circular import
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
-from flatland.envs import schedule_generators as sched_gen
+from flatland.envs import line_generators as line_gen
 
 msgpack_numpy.patch()
 
@@ -122,7 +122,7 @@ class RailEnvPersister(object):
                 width=width, height=height,
                 rail_generator=rail_gen.rail_from_file(filename, 
                     load_from_package=load_from_package),
-                schedule_generator=sched_gen.schedule_from_file(filename,
+                    line_generator=line_gen.line_from_file(filename,
                     load_from_package=load_from_package),
                 #malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
                 #    load_from_package=load_from_package),
