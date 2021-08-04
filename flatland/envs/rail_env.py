@@ -276,7 +276,7 @@ class RailEnv(Environment):
         return len(self.agents) - 1
 
     def set_agent_active(self, agent: EnvAgent):
-        if agent.status == RailAgentStatus.READY_TO_DEPART and self.cell_free(agent.initial_position):
+        if agent.status == RailAgentStatus.READY_TO_DEPART or agent.status == RailAgentStatus.WAITING and self.cell_free(agent.initial_position): ## Dipam : Why is this code even there???
             agent.status = RailAgentStatus.ACTIVE
             self._set_agent_to_initial_position(agent, agent.initial_position)
 
