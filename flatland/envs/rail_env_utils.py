@@ -33,7 +33,7 @@ def load_flatland_environment_from_file(file_name: str,
             max_depth=2,
             predictor=ShortestPathPredictorForRailEnv(max_depth=10))
     environment = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name, load_from_package),
-                          schedule_generator=line_from_file(file_name, load_from_package),
+                          line_generator=line_from_file(file_name, load_from_package),
                           number_of_agents=1,
                           obs_builder_object=obs_builder_object,
                           record_steps=record_steps,
