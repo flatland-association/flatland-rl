@@ -591,7 +591,7 @@ class RailEnv(Environment):
 
                     # Departed but never reached
                     if (agent.status == RailAgentStatus.ACTIVE):
-                        reward = agent.get_current_delay(self.distance_map)
+                        reward = agent.get_current_delay(self._elapsed_steps, self.distance_map)
                         self.rewards_dict[i_agent] += reward
                 
                 self.dones[i_agent] = True
