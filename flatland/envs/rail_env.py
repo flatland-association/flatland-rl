@@ -140,7 +140,7 @@ class RailEnv(Environment):
                  height,
                  rail_generator=None,
                  line_generator=None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
-                 number_of_agents=1,
+                 number_of_agents=2,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
                  malfunction_generator=None,
@@ -198,6 +198,9 @@ class RailEnv(Environment):
         else:
             self.malfunction_generator = mal_gen.NoMalfunctionGen()
             self.malfunction_process_data = self.malfunction_generator.get_process_data()
+        
+        if number_of_agents % 2 == 1:
+            raise ValueError("Odd number of agents is no longer supported, set number_of_agents to an even number")
 
         # self.rail_generator: RailGenerator = rail_generator
         if rail_generator is None:
@@ -229,8 +232,6 @@ class RailEnv(Environment):
         self.dev_pred_dict = {}
 
         self.agents: List[EnvAgent] = []
-        # NEW : SCHED CONST (Even number of trains A>B, B>A)
-        self.number_of_agents = number_of_agents if ((number_of_agents % 2) == 0 ) else number_of_agents + 1 
         self.num_resets = 0
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 

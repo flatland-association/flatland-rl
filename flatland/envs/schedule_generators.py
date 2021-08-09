@@ -12,6 +12,11 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 
+def len_handle_none(v):
+    if v is not None:
+        return len(v)
+    else:
+        return 0
 
 def schedule_generator(agents: List[EnvAgent], distance_map: DistanceMap, 
                             agents_hints: dict, np_random: RandomState = None) -> Schedule:
@@ -37,7 +42,7 @@ def schedule_generator(agents: List[EnvAgent], distance_map: DistanceMap,
     mean_shortest_path_multiplier = 0.2
     
     shortest_paths = get_shortest_paths(distance_map)
-    shortest_paths_lengths = [len(v) for k,v in shortest_paths.items()]
+    shortest_paths_lengths = [len_handle_none(v) for k,v in shortest_paths.items()]
 
     # Find mean_shortest_path_time
     agent_speeds = [agent.speed_data['speed'] for agent in agents]
