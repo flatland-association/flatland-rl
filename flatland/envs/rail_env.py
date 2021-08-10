@@ -201,6 +201,7 @@ class RailEnv(Environment):
         
         if number_of_agents % 2 == 1:
             raise ValueError("Odd number of agents is no longer supported, set number_of_agents to an even number")
+        self.number_of_agents = number_of_agents
 
         # self.rail_generator: RailGenerator = rail_generator
         if rail_generator is None:
