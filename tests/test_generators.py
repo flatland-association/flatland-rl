@@ -6,16 +6,14 @@ import numpy as np
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_from_file, complex_rail_generator, \
-    random_rail_generator, empty_rail_generator
-from flatland.envs.line_generators import random_line_generator, complex_line_generator, \
-    line_from_file
+from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_from_file, empty_rail_generator
+from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.utils.simple_rail import make_simple_rail
 from flatland.envs.persistence import RailEnvPersister
 
 
 def test_empty_rail_generator():
-    n_agents = 1
+    n_agents = 2
     x_dim = 5
     y_dim = 10
 
@@ -30,61 +28,11 @@ def test_empty_rail_generator():
     assert env.get_num_agents() == 0
 
 
-def test_random_rail_generator():
-    n_agents = 1
-    x_dim = 5
-    y_dim = 10
-
-    # Check that a random level at with correct parameters is generated
-    env = RailEnv(width=x_dim, height=y_dim, rail_generator=random_rail_generator(), number_of_agents=n_agents)
-    env.reset()
-    assert env.rail.grid.shape == (y_dim, x_dim)
-    assert env.get_num_agents() == n_agents
-
-
-def test_complex_rail_generator():
-    n_agents = 10
-    n_start = 2
-    x_dim = 10
-    y_dim = 10
-    min_dist = 4
-
-    # Check that agent number is changed to fit generated level
-    env = RailEnv(width=x_dim, height=y_dim,
-                  rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist),
-                  line_generator=complex_line_generator(), number_of_agents=n_agents)
-    env.reset()
-    assert env.get_num_agents() == 2
-    assert env.rail.grid.shape == (y_dim, x_dim)
-
-    min_dist = 2 * x_dim
-
-    # Check that no agents are generated when level cannot be generated
-    env = RailEnv(width=x_dim, height=y_dim,
-                  rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist),
-                  line_generator=complex_line_generator(), number_of_agents=n_agents)
-    env.reset()
-    assert env.get_num_agents() == 0
-    assert env.rail.grid.shape == (y_dim, x_dim)
-
-    # Check that everything stays the same when correct parameters are given
-    min_dist = 2
-    n_start = 5
-    n_agents = 5
-
-    env = RailEnv(width=x_dim, height=y_dim,
-                  rail_generator=complex_rail_generator(nr_start_goal=n_start, nr_extra=0, min_dist=min_dist),
-                  line_generator=complex_line_generator(), number_of_agents=n_agents)
-    env.reset()
-    assert env.get_num_agents() == n_agents
-    assert env.rail.grid.shape == (y_dim, x_dim)
-
-
 def test_rail_from_grid_transition_map():
     rail, rail_map = make_simple_rail()
-    n_agents = 3
+    n_agents = 4
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(), number_of_agents=n_agents)
+                  line_generator=sparse_line_generator(), number_of_agents=n_agents)
     env.reset(False, False, True)
     nr_rail_elements = np.count_nonzero(env.rail.grid)
 
@@ -106,7 +54,7 @@ def tests_rail_from_file():
     rail, rail_map = make_simple_rail()
 
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(), number_of_agents=3,
+                  line_generator=sparse_line_generator(), number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
     #env.save(file_name)
@@ -134,7 +82,7 @@ def tests_rail_from_file():
     file_name_2 = "test_without_distance_map.pkl"
 
     env2 = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
-                   rail_generator=rail_from_grid_transition_map(rail), line_generator=random_line_generator(),
+                   rail_generator=rail_from_grid_transition_map(rail), line_generator=sparse_line_generator(),
                    number_of_agents=3, obs_builder_object=GlobalObsForRailEnv())
     env2.reset()
     #env2.save(file_name_2)
