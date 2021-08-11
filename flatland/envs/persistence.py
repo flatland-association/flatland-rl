@@ -163,7 +163,7 @@ class RailEnvPersister(object):
             # remove the legacy key
             del env_dict["agents_static"]
         elif "agents" in env_dict:
-            env_dict["agents"] = [EnvAgent(*d[0:12]) for d in env_dict["agents"]]
+            env_dict["agents"] = [EnvAgent(*d[0:len(d)]) for d in env_dict["agents"]]
 
         return env_dict
 

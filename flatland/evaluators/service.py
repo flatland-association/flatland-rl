@@ -10,6 +10,7 @@ import traceback
 import json
 import itertools
 import re
+import logging
 
 import crowdai_api
 import msgpack
@@ -130,7 +131,7 @@ class FlatlandRemoteEvaluationService:
         shuffle=False,
         missing_only=False,
         result_output_path=None,
-        disable_timeouts=True
+        disable_timeouts=False
     ):
 
         # Episode recording properties
@@ -725,6 +726,7 @@ class FlatlandRemoteEvaluationService:
             del self.env
 
             self.env, _env_dict = RailEnvPersister.load_new(test_env_file_path)
+            # distance map here?
 
             self.begin_simulation = time.time()
 
