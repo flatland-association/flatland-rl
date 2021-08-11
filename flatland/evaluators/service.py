@@ -50,7 +50,7 @@ m.patch()
 ########################################################
 
 # Don't proceed to next Test if the previous one didn't reach this mean completion percentage
-TEST_MIN_PERCENTAGE_COMPLETE_MEAN = float(os.getenv("TEST_MIN_PERCENTAGE_COMPLETE_MEAN", 0.25))
+TEST_MIN_PERCENTAGE_COMPLETE_MEAN = float(os.getenv("TEST_MIN_PERCENTAGE_COMPLETE_MEAN", -0.05))
 
 # After this number of consecutive timeouts, kill the submission:
 # this probably means the submission has crashed
@@ -130,7 +130,7 @@ class FlatlandRemoteEvaluationService:
         shuffle=False,
         missing_only=False,
         result_output_path=None,
-        disable_timeouts=False
+        disable_timeouts=True
     ):
 
         # Episode recording properties
@@ -712,7 +712,7 @@ class FlatlandRemoteEvaluationService:
             """
 
             print("=" * 15)
-            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count, len(self.env_file_paths)))
+            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count+1, len(self.env_file_paths)))
 
             test_env_file_path = os.path.join(
                 self.test_env_folder,
