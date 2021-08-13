@@ -17,11 +17,11 @@ def test_malfanction_from_params():
                                             min_duration=2,  # Minimal duration of malfunction
                                             max_duration=5  # Max duration of malfunction
                                             )
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
@@ -44,11 +44,11 @@ def test_malfanction_to_and_from_file():
                                             max_duration=5  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
@@ -61,7 +61,7 @@ def test_malfanction_to_and_from_file():
     malfunction_generator, malfunction_process_data = malfunction_from_file("./malfunction_saving_loading_tests.pkl")
     env2 = RailEnv(width=25,
                    height=30,
-                   rail_generator=rail_from_grid_transition_map(rail),
+                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                    line_generator=sparse_line_generator(),
                    number_of_agents=10,
                    malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
@@ -83,10 +83,10 @@ def test_single_malfunction_generator():
 
     """
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=single_malfunction_generator(earlierst_malfunction=10,

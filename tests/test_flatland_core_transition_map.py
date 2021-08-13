@@ -66,10 +66,10 @@ def check_path(env, rail, position, direction, target, expected, rendering=False
 
 
 def test_path_exists(rendering=False):
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optiionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optiionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
@@ -130,10 +130,10 @@ def test_path_exists(rendering=False):
 
 
 def test_path_not_exists(rendering=False):
-    rail, rail_map = make_simple_rail_unconnected()
+    rail, rail_map, optionals = make_simple_rail_unconnected()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),

@@ -29,9 +29,9 @@ def test_empty_rail_generator():
 
 
 def test_rail_from_grid_transition_map():
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optionals = make_simple_rail()
     n_agents = 4
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=n_agents)
     env.reset(False, False, True)
     nr_rail_elements = np.count_nonzero(env.rail.grid)
@@ -51,9 +51,9 @@ def tests_rail_from_file():
 
     # Test to save and load file with distance map.
 
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optionals = make_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()

@@ -18,9 +18,9 @@ from flatland.utils.simple_rail import make_simple_rail
 
 
 def test_global_obs():
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optionals = make_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
 
@@ -91,8 +91,8 @@ def _step_along_shortest_path(env, obs_builder, rail):
 
 
 def test_reward_function_conflict(rendering=False):
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     obs_builder: TreeObsForRailEnv = env.obs_builder
@@ -179,8 +179,8 @@ def test_reward_function_conflict(rendering=False):
 
 
 def test_reward_function_waiting(rendering=False):
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   remove_agents_at_target=False)

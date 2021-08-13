@@ -25,9 +25,23 @@ def test_walker():
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
+
+    city_positions = [(0,2), (0, 1)]
+    train_stations = [
+                      [( (0, 1), 0 ) ], 
+                      [( (0, 2), 0 ) ],
+                     ]
+    city_orientations = [1, 0]
+    agents_hints = {'num_agents': 1,
+                   'city_positions': city_positions,
+                   'train_stations': train_stations,
+                   'city_orientations': city_orientations
+                  }
+    optionals = {'agents_hints': agents_hints}
+
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2,

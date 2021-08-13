@@ -92,8 +92,8 @@ def test_multi_speed_init():
 
 def test_multispeed_actions_no_malfunction_no_blocking():
     """Test that actions are correctly performed on cell exit for a single agent."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
@@ -192,8 +192,8 @@ def test_multispeed_actions_no_malfunction_no_blocking():
 
 def test_multispeed_actions_no_malfunction_blocking():
     """The second agent blocks the first because it is slower."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
@@ -382,8 +382,8 @@ def test_multispeed_actions_no_malfunction_blocking():
 
 def test_multispeed_actions_malfunction_no_blocking():
     """Test on a single agent whether action on cell exit work correctly despite malfunction."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
@@ -520,8 +520,8 @@ def test_multispeed_actions_malfunction_no_blocking():
 # TODO invalid action penalty seems only given when forward is not possible - is this the intended behaviour?
 def test_multispeed_actions_no_malfunction_invalid_actions():
     """Test that actions are correctly performed on cell exit for a single agent."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()

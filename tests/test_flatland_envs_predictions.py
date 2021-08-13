@@ -20,11 +20,11 @@ from flatland.utils.simple_rail import make_simple_rail, make_simple_rail2, make
 
 
 def test_dummy_predictor(rendering=False):
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)),
@@ -112,10 +112,10 @@ def test_dummy_predictor(rendering=False):
 
 
 def test_shortest_path_predictor(rendering=False):
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
@@ -141,9 +141,8 @@ def test_shortest_path_predictor(rendering=False):
 
     # compute the observations and predictions
     distance_map = env.distance_map.get()
-    assert distance_map[0, agent.initial_position[0], agent.initial_position[1], agent.direction] == 5.0, \
-        "found {} instead of {}".format(
-            distance_map[agent.handle, agent.initial_position[0], agent.position[1], agent.direction], 5.0)
+    distance_on_map = distance_map[0, agent.initial_position[0], agent.initial_position[1], agent.direction]
+    assert distance_on_map == 5.0, "found {} instead of {}".format(distance_on_map, 5.0)
 
     paths = get_shortest_paths(env.distance_map)[0]
     assert paths == [
@@ -243,10 +242,10 @@ def test_shortest_path_predictor(rendering=False):
 
 
 def test_shortest_path_predictor_conflicts(rendering=False):
-    rail, rail_map = make_invalid_simple_rail()
+    rail, rail_map, optionals = make_invalid_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),

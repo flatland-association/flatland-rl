@@ -4,16 +4,16 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.line_generators import rail_from_grid_transition_map
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail
 from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 
 
 def test_initial_status():
     """Test that agent lifecycle works correctly ready-to-depart -> active -> done."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=rail_from_grid_transition_map(), number_of_agents=1,
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   remove_agents_at_target=False)
     env.reset()
@@ -124,9 +124,9 @@ def test_initial_status():
 
 def test_status_done_remove():
     """Test that agent lifecycle works correctly ready-to-depart -> active -> done."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=rail_from_grid_transition_map(), number_of_agents=1,
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   remove_agents_at_target=True)
     env.reset()

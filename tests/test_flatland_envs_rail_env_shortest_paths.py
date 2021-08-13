@@ -16,9 +16,9 @@ from flatland.envs.persistence import RailEnvPersister
 
 
 def test_get_shortest_paths_unreachable():
-    rail, rail_map = make_disconnected_simple_rail()
+    rail, rail_map, optionals = make_disconnected_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
     env.reset()
@@ -237,11 +237,11 @@ def test_get_shortest_paths_agent_handle():
 
 
 def test_get_k_shortest_paths(rendering=False):
-    rail, rail_map = make_simple_rail_with_alternatives()
+    rail, rail_map, optionals = make_simple_rail_with_alternatives()
 
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv(),

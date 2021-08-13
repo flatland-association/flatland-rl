@@ -36,8 +36,8 @@ def test_load_env():
 
 
 def test_save_load():
-    env = RailEnv(width=10, height=10,
-                  rail_generator=sparse_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
+    env = RailEnv(width=30, height=30,
+                  rail_generator=sparse_rail_generator(seed=1),
                   line_generator=sparse_line_generator(), number_of_agents=2)
     env.reset()
 
@@ -55,8 +55,8 @@ def test_save_load():
 
     #env.load("test_save.dat")
     env, env_dict = RailEnvPersister.load_new("tmp/test_save.pkl")
-    assert (env.width == 10)
-    assert (env.height == 10)
+    assert (env.width == 30)
+    assert (env.height == 30)
     assert (len(env.agents) == 2)
     assert (agent_1_pos == env.agents[0].position)
     assert (agent_1_dir == env.agents[0].direction)
@@ -67,8 +67,8 @@ def test_save_load():
 
 
 def test_save_load_mpk():
-    env = RailEnv(width=10, height=10,
-                  rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
+    env = RailEnv(width=30, height=30,
+                  rail_generator=sparse_rail_generator(seed=1),
                   line_generator=sparse_line_generator(), number_of_agents=2)
     env.reset()
 
@@ -204,7 +204,7 @@ def test_rail_environment_single_agent(show=False):
 
             rail_env.agents[0].direction = 0
 
-            # JW - to avoid problem with random_line_generator.
+            # JW - to avoid problem with sparse_line_generator.
             #rail_env.agents[0].position = (1,2)
 
             iStep = 0
@@ -247,7 +247,7 @@ def test_dead_end():
     rail.grid = rail_map
     rail_env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
                        rail_generator=rail_from_grid_transition_map(rail),
-                       line_generator=random_line_generator(), number_of_agents=1,
+                       line_generator=sparse_line_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
     # We try the configuration in the 4 directions:
@@ -270,7 +270,7 @@ def test_dead_end():
     rail.grid = rail_map
     rail_env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
                        rail_generator=rail_from_grid_transition_map(rail),
-                       line_generator=random_line_generator(), number_of_agents=1,
+                       line_generator=sparse_line_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
     rail_env.reset()
@@ -283,9 +283,9 @@ def test_dead_end():
 
 
 def test_get_entry_directions():
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(), number_of_agents=1,
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
 
@@ -317,10 +317,10 @@ def test_rail_env_reset():
 
     # Test to save and load file.
 
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optionals = make_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(), number_of_agents=3,
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
 
