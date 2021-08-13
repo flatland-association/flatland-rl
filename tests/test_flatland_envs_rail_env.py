@@ -11,7 +11,7 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.line_generators import random_line_generator, sparse_line_generator, line_from_file
+from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.utils.simple_rail import make_simple_rail
 from flatland.envs.persistence import RailEnvPersister
 from flatland.utils.rendertools import RenderTool
@@ -69,7 +69,7 @@ def test_save_load():
 def test_save_load_mpk():
     env = RailEnv(width=10, height=10,
                   rail_generator=complex_rail_generator(nr_start_goal=2, nr_extra=5, min_dist=6, seed=1),
-                  line_generator=complex_line_generator(), number_of_agents=2)
+                  line_generator=sparse_line_generator(), number_of_agents=2)
     env.reset()
 
     os.makedirs("tmp", exist_ok=True)
@@ -121,7 +121,7 @@ def test_rail_environment_single_agent(show=False):
         rail = GridTransitionMap(width=3, height=3, transitions=transitions)
         rail.grid = rail_map
         rail_env = RailEnv(width=3, height=3, rail_generator=rail_from_grid_transition_map(rail),
-                        line_generator=random_line_generator(), number_of_agents=1,
+                        line_generator=sparse_line_generator(), number_of_agents=1,
                         obs_builder_object=GlobalObsForRailEnv())
     else:
         rail_env, env_dict = RailEnvPersister.load_new("test_env_loop.pkl", "env_data.tests")

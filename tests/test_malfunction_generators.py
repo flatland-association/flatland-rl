@@ -2,7 +2,7 @@ from flatland.envs.malfunction_generators import malfunction_from_params, malfun
     single_malfunction_generator, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.line_generators import random_line_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail2
 from flatland.envs.persistence import RailEnvPersister
 
@@ -22,7 +22,7 @@ def test_malfanction_from_params():
     env = RailEnv(width=25,
                   height=30,
                   rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
                   )
@@ -49,7 +49,7 @@ def test_malfanction_to_and_from_file():
     env = RailEnv(width=25,
                   height=30,
                   rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
                   )
@@ -62,7 +62,7 @@ def test_malfanction_to_and_from_file():
     env2 = RailEnv(width=25,
                    height=30,
                    rail_generator=rail_from_grid_transition_map(rail),
-                   line_generator=random_line_generator(),
+                   line_generator=sparse_line_generator(),
                    number_of_agents=10,
                    malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
                    )
@@ -87,7 +87,7 @@ def test_single_malfunction_generator():
     env = RailEnv(width=25,
                   height=30,
                   rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=single_malfunction_generator(earlierst_malfunction=10,
                                                                                       malfunction_duration=5)

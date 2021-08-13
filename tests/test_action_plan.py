@@ -6,18 +6,18 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.line_generators import random_line_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.utils.simple_rail import make_simple_rail
 
 
 def test_action_plan(rendering: bool = False):
     """Tests ActionPlanReplayer: does action plan generation and replay work as expected."""
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(seed=77),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=77),
                   number_of_agents=2,
                   obs_builder_object=GlobalObsForRailEnv(),
                   remove_agents_at_target=True

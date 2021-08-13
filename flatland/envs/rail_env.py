@@ -205,10 +205,10 @@ class RailEnv(Environment):
 
         # self.rail_generator: RailGenerator = rail_generator
         if rail_generator is None:
-            rail_generator = rail_gen.random_rail_generator()
+            rail_generator = rail_gen.sparse_rail_generator()
         self.rail_generator = rail_generator
         if line_generator is None:
-            line_generator = line_gen.random_line_generator()
+            line_generator = line_gen.sparse_line_generator()
         self.line_generator = line_generator
 
         self.rail: Optional[GridTransitionMap] = None
@@ -380,10 +380,6 @@ class RailEnv(Environment):
             for agent_i, agent in enumerate(self.agents):
                 agent.earliest_departure = schedule.earliest_departures[agent_i]         
                 agent.latest_arrival = schedule.latest_arrivals[agent_i]
-
-        
-        # Reset distance map - again (just in case if regen_schedule = False)
-        self.distance_map.reset(self.agents, self.rail)
 
         # Agent Positions Map
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1

@@ -67,8 +67,8 @@ class SparseLineGen(BaseLineGen):
     :param seed: Initiate random seed generator
     """
 
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
-                  np_random: RandomState = None) -> Line:
+    def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict, num_resets: int,
+                  np_random: RandomState) -> Line:
         """
 
         The generator that assigns tasks to all the agents

@@ -9,7 +9,7 @@ from flatland.envs.rail_env_shortest_paths import get_shortest_paths, get_k_shor
 from flatland.envs.rail_env_utils import load_flatland_environment_from_file
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.line_generators import random_line_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_disconnected_simple_rail, make_simple_rail_with_alternatives
 from flatland.envs.persistence import RailEnvPersister
@@ -19,7 +19,7 @@ def test_get_shortest_paths_unreachable():
     rail, rail_map = make_disconnected_simple_rail()
 
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(), number_of_agents=1,
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
     env.reset()
 
@@ -242,7 +242,7 @@ def test_get_k_shortest_paths(rendering=False):
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
                   rail_generator=rail_from_grid_transition_map(rail),
-                  line_generator=random_line_generator(),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv(),
                   )

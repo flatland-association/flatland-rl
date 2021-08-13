@@ -65,7 +65,7 @@ class EmptyRailGen(RailGen):
         rail_array.fill(0)
 
         return grid_map, None
-        
+
 
 def rail_from_manual_specifications_generator(rail_spec):
     """
@@ -144,38 +144,17 @@ def rail_from_file(filename, load_from_package=None) -> RailGenerator:
     return generator
 
 class RailFromGridGen(RailGen):
-    def __init__(self, rail_map):
+    def __init__(self, rail_map, optionals=None):
         self.rail_map = rail_map
+        self.optionals = optionals
 
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
                   np_random: RandomState = None) -> RailGenerator:
-        return self.rail_map, None
+        return self.rail_map, self.optionals
 
 
-def rail_from_grid_transition_map(rail_map) -> RailGenerator:
-    return RailFromGridGen(rail_map)
-
-def rail_from_grid_transition_map_old(rail_map) -> RailGenerator:
-    """
-    Utility to convert a rail given by a GridTransitionMap map with the correct
-    16-bit transitions specifications.
-
-    Parameters
-    ----------
-    rail_map : GridTransitionMap object
-        GridTransitionMap object to return when the generator is called.
-
-    Returns
-    -------
-    function
-        Generator function that always returns the given `rail_map` object.
-    """
-
-    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
-                  np_random: RandomState = None) -> RailGenerator:
-        return rail_map, None
-
-    return generator
+def rail_from_grid_transition_map(rail_map, optionals=None) -> RailGenerator:
+    return RailFromGridGen(rail_map, optionals)
 
 
 def sparse_rail_generator(*args, **kwargs):
@@ -304,7 +283,6 @@ class SparseRailGen(RailGen):
 
         # Fix all transition elements
         self._fix_transitions(city_cells, inter_city_lines, grid_map, vector_field)
-
         return grid_map, {'agents_hints': {
             'num_agents': num_agents,
             'city_positions': city_positions,
