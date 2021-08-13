@@ -266,7 +266,7 @@ class FlatlandRemoteClient(object):
             print("Current env path : ", test_env_file_path)
         self.current_env_path = test_env_file_path
         self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
-                           schedule_generator=schedule_from_file(test_env_file_path),
+                           line_generator=line_from_file(test_env_file_path),
                            malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
                            obs_builder_object=obs_builder_object)
 
