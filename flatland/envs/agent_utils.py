@@ -8,7 +8,7 @@ from typing import Tuple, Optional, NamedTuple, List
 from attr import attr, attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.schedule_utils import Line
+from flatland.envs.timetable_utils import Line
 
 class RailAgentStatus(IntEnum):
     WAITING = 0

@@ -23,7 +23,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
-from flatland.envs.schedule_generators import schedule_generator
+from flatland.envs.timetable_generators import timetable_generator
 from flatland.envs import persistence
 from flatland.envs import agent_chains as ac
 
@@ -369,14 +369,14 @@ class RailEnv(Environment):
             self.distance_map.reset(self.agents, self.rail)
 
             # NEW : Time Schedule Generation
-            schedule = schedule_generator(self.agents, self.distance_map, 
+            timetable = timetable_generator(self.agents, self.distance_map, 
                                                agents_hints, self.np_random)
 
-            self._max_episode_steps = schedule.max_episode_steps
+            self._max_episode_steps = timetable.max_episode_steps
 
             for agent_i, agent in enumerate(self.agents):
-                agent.earliest_departure = schedule.earliest_departures[agent_i]         
-                agent.latest_arrival = schedule.latest_arrivals[agent_i]
+                agent.earliest_departure = timetable.earliest_departures[agent_i]         
+                agent.latest_arrival = timetable.latest_arrivals[agent_i]
 
         # Agent Positions Map
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1

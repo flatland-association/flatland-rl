@@ -8,7 +8,7 @@ from numpy.random.mtrand import RandomState
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.schedule_utils import Line
+from flatland.envs.timetable_utils import Line
 from flatland.envs import persistence
 
 AgentPosition = Tuple[int, int]
