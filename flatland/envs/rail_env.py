@@ -23,7 +23,6 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
-# NEW : Imports
 from flatland.envs.schedule_generators import schedule_generator
 from flatland.envs import persistence
 from flatland.envs import agent_chains as ac
@@ -199,8 +198,6 @@ class RailEnv(Environment):
             self.malfunction_generator = mal_gen.NoMalfunctionGen()
             self.malfunction_process_data = self.malfunction_generator.get_process_data()
         
-        if number_of_agents % 2 == 1:
-            raise ValueError("Odd number of agents is no longer supported, set number_of_agents to an even number")
         self.number_of_agents = number_of_agents
 
         # self.rail_generator: RailGenerator = rail_generator
