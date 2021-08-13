@@ -562,7 +562,7 @@ class RailEnv(Environment):
             for i_agent, agent in enumerate(self.agents):
                 
                 # agent done? (arrival_time is not None)
-                if (self.dones[i_agent]):
+                if agent.status == RailAgentStatus.DONE or agent.status == RailAgentStatus.DONE_REMOVED:
                     
                     # if agent arrived earlier or on time = 0
                     # if agent arrived later = -ve reward based on how late

@@ -133,6 +133,11 @@ def test_shortest_path_predictor(rendering=False):
     agent.status = RailAgentStatus.ACTIVE
 
     env.reset(False, False)
+    env.distance_map._compute(env.agents, env.rail)
+    
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
