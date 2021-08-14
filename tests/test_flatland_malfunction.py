@@ -10,7 +10,7 @@ from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail2
 from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
@@ -72,12 +72,12 @@ def test_malfunction_process():
                                             max_duration=3  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
@@ -90,6 +90,9 @@ def test_malfunction_process():
 
     # Move target to unreachable position in order to not interfere with test
     env.agents[0].target = (0, 0)
+    
+    # Add in max episode steps because scheudule generator sets it to 0 for dummy data
+    env._max_episode_steps = 200
     for step in range(100):
         actions = {}
 
@@ -97,6 +100,8 @@ def test_malfunction_process():
             actions[i] = np.argmax(obs[i]) + 1
 
         obs, all_rewards, done, _ = env.step(actions)
+        if done["__all__"]:
+            break
 
         if env.agents[0].malfunction_data['malfunction'] > 0:
             agent_malfunctioning = True
@@ -109,9 +114,9 @@ def test_malfunction_process():
 
         agent_old_position = env.agents[0].position
         total_down_time += env.agents[0].malfunction_data['malfunction']
-
     # Check that the appropriate number of malfunctions is achieved
-    assert env.agents[0].malfunction_data['nr_malfunctions'] == 23, "Actual {}".format(
+    # Dipam: The number of malfunctions varies by seed
+    assert env.agents[0].malfunction_data['nr_malfunctions'] == 21, "Actual {}".format(
         env.agents[0].malfunction_data['nr_malfunctions'])
 
     # Check that malfunctioning data was standing around
@@ -126,12 +131,12 @@ def test_malfunction_process_statistically():
                                             max_duration=5  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
@@ -173,12 +178,12 @@ def test_malfunction_before_entry():
                                             max_duration=10  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
-
+    rail, rail_map, optionals = make_simple_rail2()
+    
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
@@ -213,7 +218,7 @@ def test_malfunction_values_and_behavior():
     """
     # Set fixed malfunction duration for this test
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
     action_dict: Dict[int, RailEnvActions] = {}
     stochastic_data = MalfunctionParameters(malfunction_rate=1/0.001,  # Rate of malfunction occurence
                                             min_duration=10,  # Minimal duration of malfunction
@@ -221,8 +226,8 @@ def test_malfunction_values_and_behavior():
                                             )
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
@@ -246,12 +251,12 @@ def test_initial_malfunction():
                                             max_duration=5  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=10),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=10),
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   # Malfunction data generator
@@ -313,10 +318,10 @@ def test_initial_malfunction():
 
 
 def test_initial_malfunction_stop_moving():
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=SingleAgentNavigationObs())
     env.reset()
 
@@ -395,12 +400,12 @@ def test_initial_malfunction_do_nothing():
                                             max_duration=5  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   # Malfunction data generator
@@ -475,9 +480,9 @@ def test_initial_malfunction_do_nothing():
 def tests_random_interference_from_outside():
     """Tests that malfunctions are produced by stochastic_data!"""
     # Set fixed malfunction duration for this test
-    rail, rail_map = make_simple_rail2()
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
+    rail, rail_map, optionals = make_simple_rail2()
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_data['speed'] = 0.33
     env.reset(False, False, False, random_seed=10)
@@ -497,11 +502,11 @@ def tests_random_interference_from_outside():
     # Run the same test as above but with an external random generator running
     # Check that the reward stays the same
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
     random.seed(47)
     np.random.seed(1234)
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_data['speed'] = 0.33
     env.reset(False, False, False, random_seed=10)
@@ -530,10 +535,10 @@ def test_last_malfunction_step():
 
     # Set fixed malfunction duration for this test
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_data['speed'] = 1. / 3.
     env.agents[0].target = (0, 0)

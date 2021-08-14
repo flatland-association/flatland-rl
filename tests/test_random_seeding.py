@@ -4,18 +4,18 @@ from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map, sparse_rail_generator
-from flatland.envs.schedule_generators import random_schedule_generator, sparse_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail2
 
 
-def test_random_seeding():
+def ndom_seeding():
     # Set fixed malfunction duration for this test
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     # Move target to unreachable position in order to not interfere with test
     for idx in range(100):
-        env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                      schedule_generator=random_schedule_generator(seed=12), number_of_agents=10)
+        env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                      line_generator=sparse_line_generator(seed=12), number_of_agents=10)
         env.reset(True, True, False, random_seed=1)
 
         env.agents[0].target = (0, 0)
@@ -44,21 +44,20 @@ def test_random_seeding():
 
 def test_seeding_and_observations():
     # Test if two different instances diverge with different observations
-    rail, rail_map = make_simple_rail2()
-
+    rail, rail_map, optionals = make_simple_rail2()
+    optionals['agents_hints']['num_agents'] = 10
     # Make two seperate envs with different observation builders
     # Global Observation
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=12), number_of_agents=10,
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=12), number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
     # Tree Observation
-    env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                   schedule_generator=random_schedule_generator(seed=12), number_of_agents=10,
+    env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                   line_generator=sparse_line_generator(seed=12), number_of_agents=10,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
 
     env.reset(False, False, False, random_seed=12)
     env2.reset(False, False, False, random_seed=12)
-
     # Check that both environments produce the same initial start positions
     assert env.agents[0].initial_position == env2.agents[0].initial_position
     assert env.agents[1].initial_position == env2.agents[1].initial_position
@@ -78,9 +77,7 @@ def test_seeding_and_observations():
             action_dict[a] = action
         env.step(action_dict)
         env2.step(action_dict)
-
     # Check that both environments end up in the same position
-
     assert env.agents[0].position == env2.agents[0].position
     assert env.agents[1].position == env2.agents[1].position
     assert env.agents[2].position == env2.agents[2].position
@@ -97,8 +94,8 @@ def test_seeding_and_observations():
 
 def test_seeding_and_malfunction():
     # Test if two different instances diverge with different observations
-    rail, rail_map = make_simple_rail2()
-
+    rail, rail_map, optionals = make_simple_rail2()
+    optionals['agents_hints']['num_agents'] = 10
     stochastic_data = {'prop_malfunction': 0.4,
                        'malfunction_rate': 2,
                        'min_duration': 10,
@@ -106,13 +103,13 @@ def test_seeding_and_malfunction():
     # Make two seperate envs with different and see if the exhibit the same malfunctions
     # Global Observation
     for tests in range(1, 100):
-        env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                      schedule_generator=random_schedule_generator(), number_of_agents=10,
+        env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                      line_generator=sparse_line_generator(), number_of_agents=10,
                       obs_builder_object=GlobalObsForRailEnv())
 
         # Tree Observation
-        env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                       schedule_generator=random_schedule_generator(), number_of_agents=10,
+        env2 = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                       line_generator=sparse_line_generator(), number_of_agents=10,
                        obs_builder_object=GlobalObsForRailEnv())
 
         env.reset(True, False, True, random_seed=tests)
@@ -172,7 +169,7 @@ def test_reproducability_env():
                                                                             seed=215545,  # Random seed
                                                                             grid_mode=True
                                                                             ),
-                  schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=1)
+                  line_generator=sparse_line_generator(speed_ration_map), number_of_agents=1)
     env.reset(True, True, True, random_seed=10)
     excpeted_grid = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -233,7 +230,7 @@ def test_reproducability_env():
                                                                              seed=215545,  # Random seed
                                                                              grid_mode=True
                                                                              ),
-                   schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=1)
+                   line_generator=sparse_line_generator(speed_ration_map), number_of_agents=1)
     np.random.seed(10)
     for i in range(10):
         np.random.randn()

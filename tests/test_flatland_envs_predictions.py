@@ -12,7 +12,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail, make_simple_rail2, make_invalid_simple_rail
 
@@ -20,12 +20,12 @@ from flatland.utils.simple_rail import make_simple_rail, make_simple_rail2, make
 
 
 def test_dummy_predictor(rendering=False):
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)),
                   )
@@ -112,11 +112,11 @@ def test_dummy_predictor(rendering=False):
 
 
 def test_shortest_path_predictor(rendering=False):
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
@@ -133,6 +133,11 @@ def test_shortest_path_predictor(rendering=False):
     agent.status = RailAgentStatus.ACTIVE
 
     env.reset(False, False)
+    env.distance_map._compute(env.agents, env.rail)
+    
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
@@ -141,9 +146,8 @@ def test_shortest_path_predictor(rendering=False):
 
     # compute the observations and predictions
     distance_map = env.distance_map.get()
-    assert distance_map[0, agent.initial_position[0], agent.initial_position[1], agent.direction] == 5.0, \
-        "found {} instead of {}".format(
-            distance_map[agent.handle, agent.initial_position[0], agent.position[1], agent.direction], 5.0)
+    distance_on_map = distance_map[0, agent.initial_position[0], agent.initial_position[1], agent.direction]
+    assert distance_on_map == 5.0, "found {} instead of {}".format(distance_on_map, 5.0)
 
     paths = get_shortest_paths(env.distance_map)[0]
     assert paths == [
@@ -243,11 +247,11 @@ def test_shortest_path_predictor(rendering=False):
 
 
 def test_shortest_path_predictor_conflicts(rendering=False):
-    rail, rail_map = make_invalid_simple_rail()
+    rail, rail_map, optionals = make_invalid_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )

@@ -9,7 +9,7 @@ from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.rail_env import RailEnvNextAction, RailEnvActions, RailEnv
+from flatland.envs.rail_env_action import RailEnvActions, RailEnvNextAction
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.utils.ordered_set import OrderedSet
 
@@ -227,7 +227,9 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
     shortest_paths = dict()
 
     def _shortest_path_for_agent(agent):
-        if agent.status == RailAgentStatus.READY_TO_DEPART:
+        if agent.status == RailAgentStatus.WAITING:
+            position = agent.initial_position
+        elif agent.status == RailAgentStatus.READY_TO_DEPART:
             position = agent.initial_position
         elif agent.status == RailAgentStatus.ACTIVE:
             position = agent.position
@@ -274,7 +276,7 @@ def get_shortest_paths(distance_map: DistanceMap, max_depth: Optional[int] = Non
     return shortest_paths
 
 
-def get_k_shortest_paths(env: RailEnv,
+def get_k_shortest_paths(env,
                          source_position: Tuple[int, int],
                          source_direction: int,
                          target_position=Tuple[int, int],
