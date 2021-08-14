@@ -9,19 +9,23 @@ from flatland.envs.rail_env_shortest_paths import get_shortest_paths, get_k_shor
 from flatland.envs.rail_env_utils import load_flatland_environment_from_file
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_disconnected_simple_rail, make_simple_rail_with_alternatives
 from flatland.envs.persistence import RailEnvPersister
 
 
 def test_get_shortest_paths_unreachable():
-    rail, rail_map = make_disconnected_simple_rail()
+    rail, rail_map, optionals = make_disconnected_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
     env.reset()
+
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
 
     # set the initial position
     agent = env.agents[0]
@@ -36,7 +40,7 @@ def test_get_shortest_paths_unreachable():
     actual = get_shortest_paths(env.distance_map)
     expected = {0: None}
 
-    assert actual == expected, "actual={},expected={}".format(actual, expected)
+    assert actual[0] == expected[0], "actual={},expected={}".format(actual[0], expected[0])
 
 
 # todo file test_002.pkl has to be generated automatically
@@ -233,12 +237,12 @@ def test_get_shortest_paths_agent_handle():
 
 
 def test_get_k_shortest_paths(rendering=False):
-    rail, rail_map = make_simple_rail_with_alternatives()
+    rail, rail_map, optionals = make_simple_rail_with_alternatives()
 
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv(),
                   )

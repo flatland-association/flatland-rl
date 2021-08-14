@@ -12,7 +12,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env import RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
 #from flatland.envs.sparse_rail_gen import SparseRailGen
-from flatland.envs.schedule_generators import sparse_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 # We also include a renderer because we want to visualize what is going on in the environment
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
@@ -45,7 +45,7 @@ rail_generator = sparse_rail_generator(max_num_cities=cities_in_map,
                                        seed=seed,
                                        grid_mode=grid_distribution_of_cities,
                                        max_rails_between_cities=max_rails_between_cities,
-                                       max_rails_in_city=max_rail_in_cities,
+                                       max_rail_pairs_in_city=max_rail_in_cities,
                                        )
 
 #rail_generator = SparseRailGen(max_num_cities=cities_in_map,
@@ -68,7 +68,7 @@ speed_ration_map = {1.: 0.25,  # Fast passenger train
 
 # We can now initiate the schedule generator with the given speed profiles
 
-schedule_generator = sparse_schedule_generator(speed_ration_map)
+line_generator = sparse_line_generator(speed_ration_map)
 
 # We can furthermore pass stochastic data to the RailEnv constructor which will allow for stochastic malfunctions
 # during an episode.
@@ -87,7 +87,7 @@ observation_builder = GlobalObsForRailEnv()
 env = RailEnv(width=width,
               height=height,
               rail_generator=rail_generator,
-              schedule_generator=schedule_generator,
+              line_generator=line_generator,
               number_of_agents=nr_trains,
               obs_builder_object=observation_builder,
               #malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),

@@ -6,7 +6,7 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 
 
 def test_walker():
@@ -25,10 +25,24 @@ def test_walker():
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
+
+    city_positions = [(0,2), (0, 1)]
+    train_stations = [
+                      [( (0, 1), 0 ) ], 
+                      [( (0, 2), 0 ) ],
+                     ]
+    city_orientations = [1, 0]
+    agents_hints = {'num_agents': 1,
+                   'city_positions': city_positions,
+                   'train_stations': train_stations,
+                   'city_orientations': city_orientations
+                  }
+    optionals = {'agents_hints': agents_hints}
+
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2,
                                                        predictor=ShortestPathPredictorForRailEnv(max_depth=10)),
@@ -39,9 +53,9 @@ def test_walker():
     env.agents[0].position = (0, 1)
     env.agents[0].direction = 1
     env.agents[0].target = (0, 0)
-
     # reset to set agents from agents_static
-    env.reset(False, False)
+    # env.reset(False, False)
+    env.distance_map._compute(env.agents, env.rail)
 
     print(env.distance_map.get()[(0, *[0, 1], 1)])
     assert env.distance_map.get()[(0, *[0, 1], 1)] == 3

@@ -7,7 +7,7 @@ import numpy as np
 from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.rail_env import RailEnvActions
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.utils.ordered_set import OrderedSet
 
@@ -126,8 +126,9 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
 
         prediction_dict = {}
         for agent in agents:
-
-            if agent.status == RailAgentStatus.READY_TO_DEPART:
+            if agent.status == RailAgentStatus.WAITING:
+                agent_virtual_position = agent.initial_position
+            elif agent.status == RailAgentStatus.READY_TO_DEPART:
                 agent_virtual_position = agent.initial_position
             elif agent.status == RailAgentStatus.ACTIVE:
                 agent_virtual_position = agent.position

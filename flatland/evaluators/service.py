@@ -26,7 +26,7 @@ from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.malfunction_generators import malfunction_from_file
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
-from flatland.envs.schedule_generators import schedule_from_file
+from flatland.envs.line_generators import line_from_file
 from flatland.evaluators import aicrowd_helpers
 from flatland.evaluators import messages
 from flatland.utils.rendertools import RenderTool
@@ -50,7 +50,7 @@ m.patch()
 ########################################################
 
 # Don't proceed to next Test if the previous one didn't reach this mean completion percentage
-TEST_MIN_PERCENTAGE_COMPLETE_MEAN = float(os.getenv("TEST_MIN_PERCENTAGE_COMPLETE_MEAN", 0.25))
+TEST_MIN_PERCENTAGE_COMPLETE_MEAN = float(os.getenv("TEST_MIN_PERCENTAGE_COMPLETE_MEAN", -0.05))
 
 # After this number of consecutive timeouts, kill the submission:
 # this probably means the submission has crashed
@@ -661,6 +661,8 @@ class FlatlandRemoteEvaluationService:
         Handles a ENV_CREATE command from the client
         """
 
+        print(" -- [DEBUG] [env_create] EVAL DONE: ",self.evaluation_done)
+
         # Check if the previous episode was finished
         if not self.simulation_done and not self.evaluation_done:
             _command_response = self._error_template("CAN'T CREATE NEW ENV BEFORE PREVIOUS IS DONE")
@@ -678,6 +680,8 @@ class FlatlandRemoteEvaluationService:
         self.state_env_timed_out = False
 
         # Check if we have finished all the available envs
+        print(" -- [DEBUG] [env_create] SIM COUNT: ", self.simulation_count + 1, len(self.env_file_paths))
+        
         if self.simulation_count >= len(self.env_file_paths):
             self.evaluation_done = True
             # Hack - just ensure these are set
@@ -712,7 +716,7 @@ class FlatlandRemoteEvaluationService:
             """
 
             print("=" * 15)
-            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count, len(self.env_file_paths)))
+            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count+1, len(self.env_file_paths)))
 
             test_env_file_path = os.path.join(
                 self.test_env_folder,
@@ -725,6 +729,7 @@ class FlatlandRemoteEvaluationService:
             del self.env
 
             self.env, _env_dict = RailEnvPersister.load_new(test_env_file_path)
+            # distance map here?
 
             self.begin_simulation = time.time()
 
@@ -769,6 +774,7 @@ class FlatlandRemoteEvaluationService:
             _command_response['payload']['info'] = _info
             _command_response['payload']['random_seed'] = RANDOM_SEED
         else:
+            print(" -- [DEBUG] [env_create] return obs = False (END)")
             """
             All test env evaluations are complete
             """

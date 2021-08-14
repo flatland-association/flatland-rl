@@ -4,13 +4,13 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
-from flatland.envs.rail_generators import complex_rail_generator, rail_from_grid_transition_map
-from flatland.envs.schedule_generators import complex_schedule_generator, random_schedule_generator
+from flatland.envs.rail_generators import sparse_rail_generator, rail_from_grid_transition_map
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail
 from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 
 
-# Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
+# Use the sparse_rail_generator to generate feasible network configurations with corresponding tasks
 # Training on simple small tasks is the best way to get familiar with the environment
 #
 
@@ -48,9 +48,9 @@ class RandomAgent:
 
 def test_multi_speed_init():
     env = RailEnv(width=50, height=50,
-                  rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=8, max_dist=99999,
-                                                        seed=1), schedule_generator=complex_schedule_generator(),
-                  number_of_agents=5)
+                  rail_generator=sparse_rail_generator(seed=1), line_generator=sparse_line_generator(),
+                  number_of_agents=6)
+    
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
     agent = RandomAgent(218, 4)
 
@@ -92,9 +92,9 @@ def test_multi_speed_init():
 
 def test_multispeed_actions_no_malfunction_no_blocking():
     """Test that actions are correctly performed on cell exit for a single agent."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
 
@@ -192,11 +192,17 @@ def test_multispeed_actions_no_malfunction_no_blocking():
 
 def test_multispeed_actions_no_malfunction_blocking():
     """The second agent blocks the first because it is slower."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=2,
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
+    
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
+    
+
     set_penalties_for_replay(env)
     test_configs = [
         ReplayConfig(
@@ -376,12 +382,16 @@ def test_multispeed_actions_no_malfunction_blocking():
 
 def test_multispeed_actions_malfunction_no_blocking():
     """Test on a single agent whether action on cell exit work correctly despite malfunction."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
-
+    
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
+    
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
@@ -510,11 +520,15 @@ def test_multispeed_actions_malfunction_no_blocking():
 # TODO invalid action penalty seems only given when forward is not possible - is this the intended behaviour?
 def test_multispeed_actions_no_malfunction_invalid_actions():
     """Test that actions are correctly performed on cell exit for a single agent."""
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
+    
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
 
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
