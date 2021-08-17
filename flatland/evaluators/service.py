@@ -50,7 +50,7 @@ m.patch()
 ########################################################
 
 # Don't proceed to next Test if the previous one didn't reach this mean completion percentage
-TEST_MIN_PERCENTAGE_COMPLETE_MEAN = float(os.getenv("TEST_MIN_PERCENTAGE_COMPLETE_MEAN", -0.05))
+TEST_MIN_PERCENTAGE_COMPLETE_MEAN = float(os.getenv("TEST_MIN_PERCENTAGE_COMPLETE_MEAN", 0.25))
 
 # After this number of consecutive timeouts, kill the submission:
 # this probably means the submission has crashed
@@ -65,7 +65,7 @@ if debug_mode:
 # 8 hours (will get debug timeout from env variable if applicable)
 OVERALL_TIMEOUT = int(os.getenv(
     "FLATLAND_OVERALL_TIMEOUT",
-    8 * 60 * 60))
+    2 * 60 * 60))
 
 # 10 mins
 INTIAL_PLANNING_TIMEOUT = int(os.getenv(
