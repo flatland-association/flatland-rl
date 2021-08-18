@@ -148,7 +148,7 @@ class raw_env(AECEnv, gym.Env):
         self.agent_selection = self._agent_selector.next()
         self.rewards = dict(zip(self.agents, [0 for _ in self.agents]))
         self._cumulative_rewards = dict(zip(self.agents, [0 for _ in self.agents]))
-        self.action_dict = {i:0 for i in self.possible_agents}
+        self.action_dict = {get_agent_handle(i):0 for i in self.possible_agents}
 
         return observations
 
@@ -160,14 +160,12 @@ class raw_env(AECEnv, gym.Env):
         
         agent = self.agent_selection
         self.action_dict[get_agent_handle(agent)] = action
-        if self._reset_next_step:
-            return self.reset()
 
         if self.dones[agent]:
             self.agents.remove(agent)
-            if not self.env_done():
-                self.agent_selection = self._agent_selector.next()
-            return self.last()
+            # self.agent_selection = self._agent_selector.next()
+            # self.agents.remove(agent)
+            # return self.last()
 
         if self._agent_selector.is_last():
             observations, rewards, dones, infos = self._environment.step(self.action_dict)
@@ -185,10 +183,12 @@ class raw_env(AECEnv, gym.Env):
         
         # self._cumulative_rewards[agent] = 0
         self._accumulate_rewards()
+
+        obs, cumulative_reward, done, info = self.last()
         
         self.agent_selection = self._agent_selector.next()
 
-        return self.last()
+        return obs, cumulative_reward, done, info
 
         # if self._agent_selector.is_last():
         #     self._agent_selector.reinit(self.agents)
