@@ -495,7 +495,7 @@ class RailEnv(Environment):
             # CANCELLED check (never departed)
             if (agent.status == RailAgentStatus.READY_TO_DEPART):
                 reward = -1 * self.cancellation_factor * \
-                    (agent.get_travel_time_on_shortest_path(self.distance_map) + 0)  # 0 replaced with buffer
+                    (agent.get_travel_time_on_shortest_path(self.distance_map) + self.cancellation_time_buffer)
 
             # Departed but never reached
             if (agent.status == RailAgentStatus.ACTIVE):
@@ -591,7 +591,6 @@ class RailEnv(Environment):
             
             for i_agent, agent in enumerate(self.agents):
                 
-                # agent done? (arrival_time is not None)
                 reward = self._handle_end_reward(agent)
                 self.rewards_dict[i_agent] += reward
                 
