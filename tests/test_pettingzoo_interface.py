@@ -23,7 +23,7 @@ def test_petting_zoo_interface_env():
     # Custom observation builder with predictor
     observation_builder = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv(30))
     seed = 11
-    save = False
+    save = True
     np.random.seed(seed)
     experiment_name= "flatland_pettingzoo"
     total_episodes = 1
@@ -108,8 +108,8 @@ def test_petting_zoo_interface_env():
         frame_list = []
         env.close()
         env.reset(random_seed=seed+ep_no)
-
-        assert all_actions_pettingzoo_env.sort() == all_actions_env.sort(), "actions do not match for shortest path"
+        min_len = min(len(all_actions_pettingzoo_env), len(all_actions_env))
+        assert all_actions_pettingzoo_env[:min_len] == all_actions_env[:min_len], "actions do not match for shortest path"
 
 
 
