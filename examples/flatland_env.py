@@ -7,12 +7,24 @@ from pettingzoo import AECEnv
 from pettingzoo.utils import agent_selector
 from pettingzoo.utils import wrappers
 from gym.utils import EzPickle
-from pettingzoo.utils.conversions import parallel_wrapper_fn
+from pettingzoo.utils.conversions import to_parallel_wrapper
 from flatland.envs.rail_env import RailEnv
 from mava.wrappers.flatland import infer_observation_space, normalize_observation
 from functools import partial
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 
+
+"""Adapted from 
+- https://github.com/PettingZoo-Team/PettingZoo/blob/HEAD/pettingzoo/butterfly/pistonball/pistonball.py
+- https://github.com/instadeepai/Mava/blob/HEAD/mava/wrappers/flatland.py
+"""
+
+def parallel_wrapper_fn(env_fn):
+    def par_fn(**kwargs):
+        env = env_fn(**kwargs)
+        env = custom_parallel_wrapper(env)
+        return env
+    return par_fn
 
 def env(**kwargs):
     env = raw_env(**kwargs)
@@ -23,6 +35,31 @@ def env(**kwargs):
 
 parallel_env = parallel_wrapper_fn(env)
 
+class custom_parallel_wrapper(to_parallel_wrapper):
+    
+    def step(self, actions):
+        rewards = {a: 0 for a in self.aec_env.agents}
+        dones = {}
+        infos = {}
+        observations = {}
+
+        for agent in self.aec_env.agents:
+            try:
+                assert agent == self.aec_env.agent_selection, f"expected agent {agent} got agent {self.aec_env.agent_selection}, agent order is nontrivial"
+            except Exception as e:
+                # print(e)
+                print(self.aec_env.dones.values())
+                raise e
+            obs, rew, done, info = self.aec_env.last()
+            self.aec_env.step(actions.get(agent,0))
+            for agent in self.aec_env.agents:
+                rewards[agent] += self.aec_env.rewards[agent]
+
+        dones = dict(**self.aec_env.dones)
+        infos = dict(**self.aec_env.infos)
+        self.agents = self.aec_env.agents
+        observations = {agent: self.aec_env.observe(agent) for agent in self.aec_env.agents}
+        return observations, rewards, dones, infos
 
 class raw_env(AECEnv, gym.Env):
 
@@ -43,18 +80,14 @@ class raw_env(AECEnv, gym.Env):
         self._possible_agents = self.agents[:]
         self._reset_next_step = True
 
-        # self.agent_name_mapping = dict(zip(self.agents, list(range(self.n_pistons))))
         self._agent_selector = agent_selector(self.agents)
-        # self.agent_selection = self.agents
-        # self.observation_spaces = dict(
-        #     zip(self.agents, [gym.spaces.Box(low=0, high=1,shape = (1,1) , dtype=np.float32)] * n_agents))
+
         self.num_actions = 5
 
         self.action_spaces = {
             agent: gym.spaces.Discrete(self.num_actions) for agent in self.possible_agents
         }              
-        # self.state_space = gym.spaces.Box(low=0, high=255, shape=(self.screen_height, self.screen_width, 3), dtype=np.uint8)
-        # self.closed = False
+
         self.seed()
         # preprocessor must be for observation builders other than global obs
         # treeobs builders would use the default preprocessor if none is
@@ -126,6 +159,14 @@ class raw_env(AECEnv, gym.Env):
     def observe(self,agent):
         return self.obs.get(agent)
     
+    def last(self, observe=True):
+        '''
+        returns observation, reward, done, info   for the current agent (specified by self.agent_selection)
+        '''
+        agent = self.agent_selection
+        observation = self.observe(agent) if observe else None
+        return observation, self.rewards[agent], self.dones[agent], self.infos[agent]
+    
     def seed(self, seed: int = None) -> None:
         self._environment._seed(seed)
 
@@ -135,7 +176,14 @@ class raw_env(AECEnv, gym.Env):
         '''
         return None
 
-   
+    def _clear_rewards(self):
+        '''
+        clears all items in .rewards
+        '''
+        # pass
+        for agent in self.rewards:
+            self.rewards[agent] = 0
+    
     def reset(self, *args, **kwargs):
         self._reset_next_step = False
         self._agents = self.possible_agents[:]
@@ -156,27 +204,37 @@ class raw_env(AECEnv, gym.Env):
 
         if self.env_done():
             self._agents = []
+            self._reset_next_step = True
             return self.last()
         
         agent = self.agent_selection
         self.action_dict[get_agent_handle(agent)] = action
 
         if self.dones[agent]:
-            self.agents.remove(agent)
-            # self.agent_selection = self._agent_selector.next()
-            # self.agents.remove(agent)
-            # return self.last()
+            # Disabled.. In case we want to remove agents once done
+            # if self.remove_agents:
+            #     self.agents.remove(agent)
+            if self._agent_selector.is_last():
+                observations, rewards, dones, infos = self._environment.step(self.action_dict)
+                self.rewards = {get_agent_keys(key): value for key, value in rewards.items()}
+                if observations:
+                    observations = self._collate_obs_and_info(observations, infos)
+                self._accumulate_rewards()
+                obs, cumulative_reward, done, info = self.last()
+                self.agent_selection = self._agent_selector.next()
+
+            else:
+                self._clear_rewards()
+                obs, cumulative_reward, done, info = self.last()
+                self.agent_selection = self._agent_selector.next()
+
+            return obs, cumulative_reward, done, info
 
         if self._agent_selector.is_last():
             observations, rewards, dones, infos = self._environment.step(self.action_dict)
             self.rewards = {get_agent_keys(key): value for key, value in rewards.items()}
             if observations:
                 observations = self._collate_obs_and_info(observations, infos)
-           
-            # self._agents = [agent
-            #                 for agent in self.agents
-            #                 if not self._environment.dones[get_agent_handle(agent)]
-            #                 ]
     
         else:
             self._clear_rewards()
@@ -190,8 +248,6 @@ class raw_env(AECEnv, gym.Env):
 
         return obs, cumulative_reward, done, info
 
-        # if self._agent_selector.is_last():
-        #     self._agent_selector.reinit(self.agents)
 
     # collate agent info and observation into a tuple, making the agents obervation to
     # be a tuple of the observation from the env and the agent info
