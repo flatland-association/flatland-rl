@@ -224,10 +224,10 @@ def _after_step(self, observation, reward, done, info):
 
 def perc_completion(env):
     tasks_finished = 0
-    if isinstance(env, RailEnv):        
-        agent_data = env.agents
-    else:
+    if hasattr(env, "agents_data"):
         agent_data = env.agents_data
+    else:        
+        agent_data = env.agents
     for current_agent in agent_data:
         if current_agent.status == RailAgentStatus.DONE:
             tasks_finished += 1
