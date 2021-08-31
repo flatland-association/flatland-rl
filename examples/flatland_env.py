@@ -165,7 +165,7 @@ class raw_env(AECEnv, gym.Env):
         '''
         agent = self.agent_selection
         observation = self.observe(agent) if observe else None
-        return observation, self.rewards[agent], self.dones[agent], self.infos[agent]
+        return observation, self.rewards.get(agent), self.dones.get(agent), self.infos.get(agent)
     
     def seed(self, seed: int = None) -> None:
         self._environment._seed(seed)

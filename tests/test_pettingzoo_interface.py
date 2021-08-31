@@ -441,8 +441,8 @@ def test_petting_zoo_interface_env():
 
     rail_env.reset(random_seed=seed)
 
-    rail_env = ShortestPathActionWrapper(rail_env)
-    # rail_env = SkipNoChoiceCellsWrapper(rail_env, accumulate_skipped_rewards=False, discounting=0.0)
+    # rail_env = ShortestPathActionWrapper(rail_env)
+    rail_env = SkipNoChoiceCellsWrapper(rail_env, accumulate_skipped_rewards=False, discounting=0.0)
     
 
     env_renderer = RenderTool(rail_env,
@@ -465,7 +465,7 @@ def test_petting_zoo_interface_env():
         # Chose an action for each agent
         for a in range(rail_env.get_num_agents()):
             # action = env_generators.get_shortest_path_action(rail_env, a)
-            action = 1
+            action = 2
             all_actions_env.append(action)
             action_dict.update({a: action})
             step+=1
@@ -500,7 +500,7 @@ def test_petting_zoo_interface_env():
         for agent in env.agent_iter():
             obs, reward, done, info = env.last()
             # act = env_generators.get_shortest_path_action(env.environment, get_agent_handle(agent))
-            act = 1
+            act = 2
             all_actions_pettingzoo_env.append(act)
             env.step(act)
             frame_list.append(PIL.Image.fromarray(env.render(mode='rgb_array')))
