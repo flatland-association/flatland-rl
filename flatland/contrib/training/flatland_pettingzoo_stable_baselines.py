@@ -10,8 +10,8 @@ from stable_baselines3 import PPO
 from stable_baselines3.dqn.dqn import DQN
 import supersuit as ss
 
-import flatland_env
-import env_generators
+from flatland.contrib.interface import flatland_env
+from flatland.contrib.utils import env_generators
 
 from gym.wrappers import monitor
 from flatland.envs.observations import TreeObsForRailEnv,GlobalObsForRailEnv
@@ -46,6 +46,8 @@ except OSError as e:
 # rail_env = env_generators.sparse_env_small(seed, observation_builder)
 rail_env = env_generators.small_v0(seed, observation_builder)
 
+# __sphinx_doc_begin__
+
 env = flatland_env.parallel_env(environment = rail_env, use_renderer = False)
 # env = flatland_env.env(environment = rail_env, use_renderer = False)
 
@@ -65,6 +67,8 @@ model = PPO(MlpPolicy, env, tensorboard_log = f"/tmp/{experiment_name}", verbose
 train_timesteps = 100000
 model.learn(total_timesteps=train_timesteps)
 model.save(f"policy_flatland_{train_timesteps}")
+
+# __sphinx_doc_end__
 
 model = PPO.load(f"policy_flatland_{train_timesteps}")
 

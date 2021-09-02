@@ -6,8 +6,8 @@ from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 import supersuit as ss
 import numpy as np
 
-import flatland_env
-import env_generators
+from flatland.contrib.interface import flatland_env
+from flatland.contrib.utils import env_generators
 
 from gym.wrappers import monitor
 from flatland.envs.observations import TreeObsForRailEnv,GlobalObsForRailEnv
@@ -26,10 +26,10 @@ wandb_log = False
 experiment_name= "flatland_pettingzoo"
 rail_env = env_generators.small_v0(seed, observation_builder)
 
+# __sphinx_doc_begin__
+
 def env_creator(args):
     env = flatland_env.parallel_env(environment = rail_env, use_renderer = False)
-    # env = ss.dtype_v0(env, 'float32')
-    # env = ss.flatten_v0(env)
     return env
 
 
@@ -82,3 +82,5 @@ if __name__ == "__main__":
 
        },
     )
+
+# __sphinx_doc_end__
