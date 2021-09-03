@@ -162,7 +162,7 @@ def sparse_rail_generator(*args, **kwargs):
 
 class SparseRailGen(RailGen):
 
-    def __init__(self, max_num_cities: int = 5, grid_mode: bool = False, max_rails_between_cities: int = 4,
+    def __init__(self, max_num_cities: int = 2, grid_mode: bool = False, max_rails_between_cities: int = 2,
                           max_rail_pairs_in_city: int = 2, seed=0) -> RailGenerator:
         """
         Generates railway networks with cities and inner city rails
