@@ -1,27 +1,20 @@
-from mava.wrappers.flatland import get_agent_handle, get_agent_id
 import numpy as np
 import os
 import PIL
 import shutil
-# MICHEL: my own imports
-import unittest
-import typing
-from collections import defaultdict
-from typing import Dict, Any, Optional, Set, List, Tuple
 
 from flatland.contrib.interface import flatland_env
 from flatland.contrib.utils import env_generators
 
-from flatland.envs.observations import TreeObsForRailEnv,GlobalObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.core.grid.grid4_utils import get_new_position
+
 
 # First of all we import the Flatland rail environment
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
-from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
-from flatland.envs.rail_env import RailEnv, RailEnvActions
-from flatland.contrib.wrappers.flatland_wrappers import SkipNoChoiceCellsWrapper, ShortestPathActionWrapper
+from flatland.contrib.wrappers.flatland_wrappers import SkipNoChoiceCellsWrapper
+from flatland.contrib.wrappers.flatland_wrappers import ShortestPathActionWrapper  # noqa
 import pytest
 
 
@@ -36,7 +29,7 @@ def test_petting_zoo_interface_env():
     seed = 11
     save = True
     np.random.seed(seed)
-    experiment_name= "flatland_pettingzoo"
+    experiment_name = "flatland_pettingzoo"
     total_episodes = 1
 
     if save:
@@ -45,7 +38,7 @@ def test_petting_zoo_interface_env():
                 shutil.rmtree(experiment_name)
             os.mkdir(experiment_name)
         except OSError as e:
-            print ("Error: %s - %s." % (e.filename, e.strerror))
+            print("Error: %s - %s." % (e.filename, e.strerror))
 
     rail_env = env_generators.sparse_env_small(seed, observation_builder)
     rail_env = env_generators.small_v0(seed, observation_builder)
@@ -56,7 +49,6 @@ def test_petting_zoo_interface_env():
     # rail_env = ShortestPathActionWrapper(rail_env)  
     rail_env = SkipNoChoiceCellsWrapper(rail_env, accumulate_skipped_rewards=False, discounting=0.0)
     
-
     env_renderer = RenderTool(rail_env,
                             agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                             show_debug=False,
@@ -80,20 +72,21 @@ def test_petting_zoo_interface_env():
             action = 2
             all_actions_env.append(action)
             action_dict.update({a: action})
-            step+=1
+            step += 1
             # Do the environment step
 
         observations, rewards, dones, information = rail_env.step(action_dict)
         image = env_renderer.render_env(show=False, show_observations=False, show_predictions=False,
-                                            return_image=True)
-        frame_list.append(PIL.Image.fromarray(image[:,:,:3]))
+                                        return_image=True)
+        frame_list.append(PIL.Image.fromarray(image[:, :, :3]))
 
         if dones['__all__']:
             completion = env_generators.perc_completion(rail_env)
-            print("Final Agents Completed:",completion)
+            print("Final Agents Completed:", completion)
             ep_no += 1
             if save:
-                frame_list[0].save(f"{experiment_name}{os.sep}out_{ep_no}.gif", save_all=True, append_images=frame_list[1:], duration=3, loop=0)       
+                frame_list[0].save(f"{experiment_name}{os.sep}out_{ep_no}.gif", save_all=True, 
+                                   append_images=frame_list[1:], duration=3, loop=0)       
             frame_list = []
             env_renderer = RenderTool(rail_env,
                             agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
@@ -104,7 +97,7 @@ def test_petting_zoo_interface_env():
 
     
 #  __sphinx_doc_begin__
-    env = flatland_env.env(environment = rail_env, use_renderer = True)
+    env = flatland_env.env(environment=rail_env, use_renderer=True)
     seed = 11
     env.reset(random_seed=seed)
     step = 0
@@ -118,19 +111,19 @@ def test_petting_zoo_interface_env():
             all_actions_pettingzoo_env.append(act)
             env.step(act)
             frame_list.append(PIL.Image.fromarray(env.render(mode='rgb_array')))
-            step+=1
+            step += 1
 # __sphinx_doc_end__
         completion = env_generators.perc_completion(env)
-        print("Final Agents Completed:",completion)
-        ep_no+=1
+        print("Final Agents Completed:", completion)
+        ep_no += 1
         if save:
-            frame_list[0].save(f"{experiment_name}{os.sep}pettyzoo_out_{ep_no}.gif", save_all=True, append_images=frame_list[1:], duration=3, loop=0)
+            frame_list[0].save(f"{experiment_name}{os.sep}pettyzoo_out_{ep_no}.gif", save_all=True, 
+                               append_images=frame_list[1:], duration=3, loop=0)
         frame_list = []
         env.close()
         env.reset(random_seed=seed+ep_no)
         min_len = min(len(all_actions_pettingzoo_env), len(all_actions_env))
-        assert all_actions_pettingzoo_env[:min_len] == all_actions_env[:min_len], "actions do not match for shortest path"
-
+        assert all_actions_pettingzoo_env[:min_len] == all_actions_env[:min_len], "actions do not match"
 
 
 if __name__ == "__main__":

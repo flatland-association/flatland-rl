@@ -1,35 +1,29 @@
 from ray import tune
-from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 # from ray.rllib.utils import try_import_tf
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
-import supersuit as ss
 import numpy as np
 
 from flatland.contrib.interface import flatland_env
 from flatland.contrib.utils import env_generators
 
-from gym.wrappers import monitor
-from flatland.envs.observations import TreeObsForRailEnv,GlobalObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 
-# First of all we import the Flatland rail environment
-from flatland.envs.rail_env import RailEnv
-from flatland.utils.rendertools import RenderTool, AgentRenderVariant
-import wandb
 
 # Custom observation builder with predictor, uncomment line below if you want to try this one
 observation_builder = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv(30))
 seed = 10
 np.random.seed(seed)
 wandb_log = False
-experiment_name= "flatland_pettingzoo"
+experiment_name = "flatland_pettingzoo"
 rail_env = env_generators.small_v0(seed, observation_builder)
 
 # __sphinx_doc_begin__
 
+
 def env_creator(args):
-    env = flatland_env.parallel_env(environment = rail_env, use_renderer = False)
+    env = flatland_env.parallel_env(environment=rail_env, use_renderer=False)
     return env
 
 
@@ -41,7 +35,6 @@ if __name__ == "__main__":
     test_env = ParallelPettingZooEnv(env_creator({}))
     obs_space = test_env.observation_space
     act_space = test_env.action_space
-
 
     def gen_policy(i):
         config = {
@@ -79,8 +72,7 @@ if __name__ == "__main__":
             "rollout_fragment_length": 50,  # 100
             "sgd_minibatch_size": 100,  # 500
             "vf_share_layers": False
-
-       },
+            },
     )
 
 # __sphinx_doc_end__
