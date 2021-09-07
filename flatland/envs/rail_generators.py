@@ -323,8 +323,6 @@ class SparseRailGen(RailGen):
         # Borders have to be not allowed from the start
         # allowed_grid == 1 indicates locations that are allowed
         allowed_grid[city_radius_pad1:-city_radius_pad1, city_radius_pad1:-city_radius_pad1] = 1
-        # This tracks the actual city borders
-        city_grid = np.ones((height, width), dtype=np.uint8)
         for _ in range(num_cities):
             allowed_indexes = np.where(allowed_grid == 1)
             num_allowed_points = len(allowed_indexes[0])
@@ -334,10 +332,6 @@ class SparseRailGen(RailGen):
             point_index = np_random.randint(num_allowed_points)
             row = int(allowed_indexes[0][point_index])
             col = int(allowed_indexes[1][point_index])
-            # # All points in the radius of the allowed point should be 1
-            assert np.all(city_grid[row - city_radius_pad1 : row + city_radius_pad1 + 1, 
-                                    col - city_radius_pad1 : col + city_radius_pad1 + 1]), \
-                                    "Sampling Error, Cities overlap"
                                     
                 # Need to block city radius and extra margin so that next sampling is correct                                    
             # Clipping handles the case for negative indexes being generated
@@ -347,13 +341,6 @@ class SparseRailGen(RailGen):
             col_end = col + 2 * city_radius_pad1 + 1
 
             allowed_grid[row_start : row_end, col_start : col_end] = 0
-            
-            # City grids is needed for redundant assertion check above
-            row_start = max(0, row - city_radius_pad1)                
-            col_start = max(0, col - city_radius_pad1)
-            row_end = row + city_radius_pad1 + 1
-            col_end = col + city_radius_pad1 + 1
-            city_grid[row_start : row_end, col_start : col_end] = 0
 
             city_positions.append((row, col))
 
