@@ -41,7 +41,7 @@ def set_penalties_for_replay(env: RailEnv):
     env.invalid_action_penalty = -29
 
 
-def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False, activate_agents=True):
+def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False, activate_agents=True, skip_reward_check=False):
     """
     Runs the replay configs and checks assertions.
 
@@ -133,7 +133,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         for a, test_config in enumerate(test_configs):
             replay = test_config.replay[step]
 
-            _assert(a, rewards_dict[a], replay.reward, 'reward')
+            if not skip_reward_check:
+                _assert(a, rewards_dict[a], replay.reward, 'reward')
 
 
 def create_and_save_env(file_name: str, line_generator: LineGenerator, rail_generator: RailGenerator):

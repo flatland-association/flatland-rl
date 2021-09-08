@@ -18,19 +18,16 @@ def test_empty_rail_generator():
     y_dim = 10
 
     # Check that a random level at with correct parameters is generated
-    env = RailEnv(width=x_dim, height=y_dim, rail_generator=empty_rail_generator(), number_of_agents=n_agents)
-    env.reset()
+    rail, _ = empty_rail_generator().generate(width=x_dim, height=y_dim, num_agents=n_agents)
     # Check the dimensions
-    assert env.rail.grid.shape == (y_dim, x_dim)
+    assert rail.grid.shape == (y_dim, x_dim)
     # Check that no grid was generated
-    assert np.count_nonzero(env.rail.grid) == 0
-    # Check that no agents where placed
-    assert env.get_num_agents() == 0
+    assert np.count_nonzero(rail.grid) == 0
 
 
 def test_rail_from_grid_transition_map():
     rail, rail_map, optionals = make_simple_rail()
-    n_agents = 4
+    n_agents = 2
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=n_agents)
     env.reset(False, False, True)

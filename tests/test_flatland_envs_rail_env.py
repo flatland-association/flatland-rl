@@ -88,7 +88,7 @@ def test_save_load_mpk():
         assert(agent1.target == agent2.target)
 
 
-#@pytest.mark.skip(reason="Some unfortunate behaviour here - agent gets stuck at corners.")
+@pytest.mark.skip(reason="Old file used to create env, not sure how to regenerate")
 def test_rail_environment_single_agent(show=False):
     # We instantiate the following map on a 3x3 grid
     #  _  _
@@ -245,8 +245,22 @@ def test_dead_end():
                              transitions=transitions)
 
     rail.grid = rail_map
+
+    city_positions = [(0, 0), (0, 3)]
+    train_stations = [
+                      [( (0, 0), 0 ) ], 
+                      [( (0, 0), 0 ) ],
+                     ]
+    city_orientations = [0, 2]
+    agents_hints = {'num_agents': 2,
+                   'city_positions': city_positions,
+                   'train_stations': train_stations,
+                   'city_orientations': city_orientations
+                  }
+    optionals = {'agents_hints': agents_hints}
+
     rail_env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
-                       rail_generator=rail_from_grid_transition_map(rail),
+                       rail_generator=rail_from_grid_transition_map(rail, optionals),
                        line_generator=sparse_line_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 
@@ -267,9 +281,22 @@ def test_dead_end():
                              height=rail_map.shape[0],
                              transitions=transitions)
 
+    city_positions = [(0, 0), (0, 3)]
+    train_stations = [
+                      [( (0, 0), 0 ) ], 
+                      [( (0, 0), 0 ) ],
+                     ]
+    city_orientations = [0, 2]
+    agents_hints = {'num_agents': 2,
+                   'city_positions': city_positions,
+                   'train_stations': train_stations,
+                   'city_orientations': city_orientations
+                  }
+    optionals = {'agents_hints': agents_hints}
+
     rail.grid = rail_map
     rail_env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
-                       rail_generator=rail_from_grid_transition_map(rail),
+                       rail_generator=rail_from_grid_transition_map(rail, optionals),
                        line_generator=sparse_line_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
 

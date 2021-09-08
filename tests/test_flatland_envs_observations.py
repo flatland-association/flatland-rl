@@ -166,7 +166,7 @@ def test_reward_function_conflict(rendering=False):
         rewards = _step_along_shortest_path(env, obs_builder, rail)
 
         for agent in env.agents:
-            assert rewards[agent.handle] == -1
+            assert rewards[agent.handle] == 0
             expected_position = expected_positions[iteration + 1][agent.handle]
             assert agent.position == expected_position, "[{}] agent {} at {}, expected {}".format(iteration + 1,
                                                                                                   agent.handle,
@@ -225,14 +225,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 8),
                 1: (5, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         1: {
             'positions': {
                 0: (3, 7),
                 1: (4, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         # second agent has to wait for first, first can continue
         2: {
@@ -240,7 +240,7 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 6),
                 1: (4, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         # both can move again
         3: {
@@ -248,14 +248,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 5),
                 1: (3, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         4: {
             'positions': {
                 0: (3, 4),
                 1: (3, 7),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         # second reached target
         5: {
@@ -263,14 +263,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 3),
                 1: (3, 8),
             },
-            'rewards': [-1, 0],
+            'rewards': [0, 0],
         },
         6: {
             'positions': {
                 0: (3, 2),
                 1: (3, 8),
             },
-            'rewards': [-1, 0],
+            'rewards': [0, 0],
         },
         # first reaches, target too
         7: {
@@ -278,14 +278,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 1),
                 1: (3, 8),
             },
-            'rewards': [1, 1],
+            'rewards': [0, 0],
         },
         8: {
             'positions': {
                 0: (3, 1),
                 1: (3, 8),
             },
-            'rewards': [1, 1],
+            'rewards': [0, 0],
         },
     }
     while iteration < 7:
