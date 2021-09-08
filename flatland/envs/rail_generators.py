@@ -266,7 +266,6 @@ class SparseRailGen(RailGen):
             self._generate_city_connection_points(
                 city_positions, city_radius, vector_field, rails_between_cities,
                 rail_pairs_in_city, np_random=np_random)
-        # import pdb; pdb.set_trace()
 
         # Connect the cities through the connection points
         inter_city_lines = self._connect_cities(city_positions, outer_connection_points, city_cells,
@@ -333,7 +332,7 @@ class SparseRailGen(RailGen):
             row = int(allowed_indexes[0][point_index])
             col = int(allowed_indexes[1][point_index])
                                     
-                # Need to block city radius and extra margin so that next sampling is correct                                    
+            # Need to block city radius and extra margin so that next sampling is correct                                    
             # Clipping handles the case for negative indexes being generated
             row_start = max(0, row - 2 * city_radius_pad1)                
             col_start = max(0, col - 2 * city_radius_pad1)
@@ -540,7 +539,6 @@ class SparseRailGen(RailGen):
 
         grid4_directions = [Grid4TransitionsEnum.NORTH, Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.SOUTH,
                             Grid4TransitionsEnum.WEST]
-        # import pdb; pdb.set_trace()
         for current_city_idx in np.arange(len(city_positions)):
             closest_neighbours = self._closest_neighbour_in_grid4_directions(current_city_idx, city_positions)
             for out_direction in grid4_directions:
@@ -564,11 +562,10 @@ class SparseRailGen(RailGen):
                                                         avoid_rail=True,
                                                         forbidden_cells=city_cells)
                     if len(new_line) == 0:
-                        warnings.warn("[WARNING] Unable to connect requested stations")                                                    
+                        warnings.warn("[WARNING] No line added between stations")                                                    
                     elif new_line[-1] != neighbour_connection_point or new_line[0] != city_out_connection_point:
                         warnings.warn("[WARNING] Unable to connect requested stations")
                     all_paths.extend(new_line)
-        import pdb; pdb.set_trace()
         return all_paths
 
     def get_closest_neighbour_for_direction(self, closest_neighbours, out_direction):
