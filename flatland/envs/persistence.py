@@ -2,6 +2,7 @@
 
 import pickle
 import msgpack
+import msgpack_numpy
 import numpy as np
 
 from flatland.envs import rail_env 
@@ -22,6 +23,7 @@ from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
 
+msgpack_numpy.patch()
 
 class RailEnvPersister(object):
 
