@@ -19,7 +19,7 @@ def test_sparse_rail_generator():
                                                                             ),
                   line_generator=sparse_line_generator(), number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
-    env.reset(False, False, True)
+    env.reset(False, False)
     # for r in range(env.height):
     #     for c in range(env.width):
     #         if env.rail.grid[r][c] > 0:
@@ -1300,8 +1300,8 @@ def test_rail_env_action_required_info():
 
     # Reset the envs
 
-    env_always_action.reset(False, False, True, random_seed=5)
-    env_only_if_action_required.reset(False, False, True, random_seed=5)
+    env_always_action.reset(False, False, random_seed=5)
+    env_only_if_action_required.reset(False, False, random_seed=5)
     assert env_only_if_action_required.rail.grid.tolist() == env_always_action.rail.grid.tolist()
     for step in range(50):
         print("step {}".format(step))
@@ -1358,7 +1358,7 @@ def test_rail_env_malfunction_speed_info():
                                                                             ),
                   line_generator=sparse_line_generator(), number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
-    env.reset(False, False, True)
+    env.reset(False, False)
 
     env_renderer = RenderTool(env, gl="PILSVG", )
     for step in range(100):
@@ -1432,5 +1432,5 @@ def test_sparse_generator_changes_to_grid_mode():
     ), line_generator=sparse_line_generator(), number_of_agents=10,
                        obs_builder_object=GlobalObsForRailEnv())
     with warnings.catch_warnings(record=True) as w:
-        rail_env.reset(True, True, True, random_seed=15)
+        rail_env.reset(True, True, random_seed=15)
         assert "[WARNING]" in str(w[-1].message)

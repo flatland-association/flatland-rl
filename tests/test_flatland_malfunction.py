@@ -82,7 +82,10 @@ def test_malfunction_process():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    obs, info = env.reset(False, False, True, random_seed=10)
+    obs, info = env.reset(False, False, random_seed=10)
+    for a_idx in range(len(env.agents)):
+        env.agents[a_idx].position =  env.agents[a_idx].initial_position
+        env.agents[a_idx].status = RailAgentStatus.ACTIVE
 
     agent_halts = 0
     total_down_time = 0
@@ -142,7 +145,7 @@ def test_malfunction_process_statistically():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
 
-    env.reset(True, True, False, random_seed=10)
+    env.reset(True, True, random_seed=10)
     env._max_episode_steps = 1000
 
     env.agents[0].target = (0, 0)
@@ -181,7 +184,7 @@ def test_malfunction_before_entry():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    env.reset(False, False, False, random_seed=10)
+    env.reset(False, False, random_seed=10)
     env.agents[0].target = (0, 0)
 
     # Test initial malfunction values for all agents
@@ -215,7 +218,7 @@ def test_malfunction_values_and_behavior():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
 
-    env.reset(False, False, activate_agents=True, random_seed=10)
+    env.reset(False, False, random_seed=10)
 
     # Assertions
     assert_list = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 10, 9, 8, 7, 6, 5]
@@ -247,7 +250,7 @@ def test_initial_malfunction():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
-    env.reset(False, False, True, random_seed=10)
+    env.reset(False, False, random_seed=10)
     env._max_episode_steps = 1000
     print(env.agents[0].malfunction_data)
     env.agents[0].target = (0, 5)
@@ -473,7 +476,7 @@ def tests_random_interference_from_outside():
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_data['speed'] = 0.33
-    env.reset(False, False, False, random_seed=10)
+    env.reset(False, False, random_seed=10)
     env_data = []
 
     for step in range(200):
@@ -499,7 +502,7 @@ def tests_random_interference_from_outside():
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_data['speed'] = 0.33
-    env.reset(False, False, False, random_seed=10)
+    env.reset(False, False, random_seed=10)
 
     dummy_list = [1, 2, 6, 7, 8, 9, 4, 5, 4]
     for step in range(200):
@@ -540,7 +543,10 @@ def test_last_malfunction_step():
 
     env._max_episode_steps = 1000
 
-    env.reset(False, False, True)
+    env.reset(False, False)
+    for a_idx in range(len(env.agents)):
+        env.agents[a_idx].position =  env.agents[a_idx].initial_position
+        env.agents[a_idx].status = RailAgentStatus.ACTIVE
     # Force malfunction to be off at beginning and next malfunction to happen in 2 steps
     env.agents[0].malfunction_data['next_malfunction'] = 2
     env.agents[0].malfunction_data['malfunction'] = 0

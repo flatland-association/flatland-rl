@@ -15,6 +15,7 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail, make_simple_rail2, make_invalid_simple_rail
+from flatland.envs.rail_env_action import RailEnvActions
 
 """Test predictions for `flatland` package."""
 
@@ -38,7 +39,11 @@ def test_dummy_predictor(rendering=False):
     env.agents[0].target = (3, 0)
 
     env.reset(False, False)
-    env.set_agent_active(env.agents[0])
+    env.agents[0].earliest_departure = 1
+    env._max_episode_steps = 100
+    # Make Agent 0 active
+    env.step({})
+    env.step({0: RailEnvActions.MOVE_FORWARD})
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
@@ -258,25 +263,33 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     env.reset()
 
     # set the initial position
-    agent = env.agents[0]
-    agent.initial_position = (5, 6)  # south dead-end
-    agent.position = (5, 6)  # south dead-end
-    agent.direction = 0  # north
-    agent.initial_direction = 0  # north
-    agent.target = (3, 9)  # east dead-end
-    agent.moving = True
-    agent.status = RailAgentStatus.ACTIVE
+    env.agents[0].initial_position = (5, 6)  # south dead-end
+    env.agents[0].position = (5, 6)  # south dead-end
+    env.agents[0].direction = 0  # north
+    env.agents[0].initial_direction = 0  # north
+    env.agents[0].target = (3, 9)  # east dead-end
+    env.agents[0].moving = True
+    env.agents[0].status = RailAgentStatus.ACTIVE
 
-    agent = env.agents[1]
-    agent.initial_position = (3, 8)  # east dead-end
-    agent.position = (3, 8)  # east dead-end
-    agent.direction = 3  # west
-    agent.initial_direction = 3  # west
-    agent.target = (6, 6)  # south dead-end
-    agent.moving = True
-    agent.status = RailAgentStatus.ACTIVE
+    env.agents[1].initial_position = (3, 8)  # east dead-end
+    env.agents[1].position = (3, 8)  # east dead-end
+    env.agents[1].direction = 3  # west
+    env.agents[1].initial_direction = 3  # west
+    env.agents[1].target = (6, 6)  # south dead-end
+    env.agents[1].moving = True
+    env.agents[1].status = RailAgentStatus.ACTIVE
 
-    observations, info = env.reset(False, False, True)
+    observations, info = env.reset(False, False)
+
+    env.agents[0].position = (5, 6)  # south dead-end
+    env.agent_positions[env.agents[0].position] = 0
+    env.agents[1].position = (3, 8)  # east dead-end
+    env.agent_positions[env.agents[1].position] = 1
+    env.agents[0].status = RailAgentStatus.ACTIVE
+    env.agents[1].status = RailAgentStatus.ACTIVE
+
+    observations = env._get_observations()
+
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")

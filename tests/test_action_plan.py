@@ -30,7 +30,7 @@ def test_action_plan(rendering: bool = False):
     env.agents[1].initial_direction = Grid4TransitionsEnum.WEST
     env.agents[1].target = (0, 3)
     env.agents[1].speed_data['speed'] = 0.5  # two
-    env.reset(False, False, False)
+    env.reset(False, False)
     for handle, agent in enumerate(env.agents):
         print("[{}] {} -> {}".format(handle, agent.initial_position, agent.target))
 

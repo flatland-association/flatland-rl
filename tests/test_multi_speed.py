@@ -60,7 +60,7 @@ def test_multi_speed_init():
 
     # Set all the different speeds
     # Reset environment and get initial observations for all agents
-    env.reset(False, False, True)
+    env.reset(False, False)
 
     # Here you can also further enhance the provided observation by means of normalization
     # See training navigation example in the baseline repository
@@ -68,6 +68,7 @@ def test_multi_speed_init():
     for i_agent in range(env.get_num_agents()):
         env.agents[i_agent].speed_data['speed'] = 1. / (i_agent + 2)
         old_pos.append(env.agents[i_agent].position)
+
     # Run episode
     for step in range(100):
 

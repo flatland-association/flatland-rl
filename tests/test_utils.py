@@ -87,7 +87,11 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 agent.direction = test_config.initial_direction
                 agent.target = test_config.target
                 agent.speed_data['speed'] = test_config.speed
-            env.reset(False, False, activate_agents)
+            env.reset(False, False)
+            if activate_agents:
+                for a_idx in range(len(env.agents)):
+                    env.agents[a_idx].position =  env.agents[a_idx].initial_position
+                    env.agents[a_idx].status = RailAgentStatus.ACTIVE
 
         def _assert(a, actual, expected, msg):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))

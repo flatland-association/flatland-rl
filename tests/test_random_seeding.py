@@ -16,7 +16,7 @@ def ndom_seeding():
     for idx in range(100):
         env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                       line_generator=sparse_line_generator(seed=12), number_of_agents=10)
-        env.reset(True, True, False, random_seed=1)
+        env.reset(True, True, random_seed=1)
 
         env.agents[0].target = (0, 0)
         for step in range(10):
@@ -56,8 +56,8 @@ def test_seeding_and_observations():
                    line_generator=sparse_line_generator(seed=12), number_of_agents=10,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
 
-    env.reset(False, False, False, random_seed=12)
-    env2.reset(False, False, False, random_seed=12)
+    env.reset(False, False, random_seed=12)
+    env2.reset(False, False, random_seed=12)
     # Check that both environments produce the same initial start positions
     assert env.agents[0].initial_position == env2.agents[0].initial_position
     assert env.agents[1].initial_position == env2.agents[1].initial_position
@@ -112,8 +112,8 @@ def test_seeding_and_malfunction():
                        line_generator=sparse_line_generator(), number_of_agents=10,
                        obs_builder_object=GlobalObsForRailEnv())
 
-        env.reset(True, False, True, random_seed=tests)
-        env2.reset(True, False, True, random_seed=tests)
+        env.reset(True, False, random_seed=tests)
+        env2.reset(True, False, random_seed=tests)
 
         # Check that both environments produce the same initial start positions
         assert env.agents[0].initial_position == env2.agents[0].initial_position
@@ -170,7 +170,7 @@ def test_reproducability_env():
                                                                             grid_mode=True
                                                                             ),
                   line_generator=sparse_line_generator(speed_ration_map), number_of_agents=1)
-    env.reset(True, True, True, random_seed=10)
+    env.reset(True, True, random_seed=10)
     excpeted_grid = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
@@ -213,5 +213,5 @@ def test_reproducability_env():
     np.random.seed(10)
     for i in range(10):
         np.random.randn()
-    env2.reset(True, True, True, random_seed=10)
+    env2.reset(True, True, random_seed=10)
     assert env2.rail.grid.tolist() == excpeted_grid

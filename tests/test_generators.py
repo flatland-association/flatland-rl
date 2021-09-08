@@ -10,6 +10,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_fr
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.utils.simple_rail import make_simple_rail
 from flatland.envs.persistence import RailEnvPersister
+from flatland.envs.agent_utils import RailAgentStatus
 
 
 def test_empty_rail_generator():
@@ -30,7 +31,12 @@ def test_rail_from_grid_transition_map():
     n_agents = 2
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=n_agents)
-    env.reset(False, False, True)
+    env.reset(False, False)
+
+    for a_idx in range(len(env.agents)):
+        env.agents[a_idx].position =  env.agents[a_idx].initial_position
+        env.agents[a_idx].status = RailAgentStatus.ACTIVE
+
     nr_rail_elements = np.count_nonzero(env.rail.grid)
 
     # Check if the number of non-empty rail cells is ok
