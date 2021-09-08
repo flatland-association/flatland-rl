@@ -274,11 +274,6 @@ class RailEnv(Environment):
         self.agents.append(agent)
         return len(self.agents) - 1
 
-    def set_agent_active(self, agent: EnvAgent):
-        if agent.status == RailAgentStatus.READY_TO_DEPART or agent.status == RailAgentStatus.WAITING and self.cell_free(agent.initial_position): ## Dipam : Why is this code even there???
-            agent.status = RailAgentStatus.ACTIVE
-            self._set_agent_to_initial_position(agent, agent.initial_position)
-
     def reset_agents(self):
         """ Reset the agents to their starting positions
         """
@@ -304,7 +299,7 @@ class RailEnv(Environment):
             agent.status == RailAgentStatus.ACTIVE and fast_isclose(agent.speed_data['position_fraction'], 0.0,
                                                                     rtol=1e-03)))
 
-    def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, activate_agents: bool = False,
+    def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
               random_seed: bool = None) -> Tuple[Dict, Dict]:
         """
         reset(regenerate_rail, regenerate_schedule, activate_agents, random_seed)
@@ -317,8 +312,6 @@ class RailEnv(Environment):
             regenerate the rails
         regenerate_schedule : bool, optional
             regenerate the schedule and the static agents
-        activate_agents : bool, optional
-            activate the agents
         random_seed : bool, optional
             random seed for environment
 
@@ -388,9 +381,6 @@ class RailEnv(Environment):
 
         for agent in self.agents:
             # Induce malfunctions
-            if activate_agents:
-                self.set_agent_active(agent)
-
             self._break_agent(agent)
 
             if agent.malfunction_data["malfunction"] > 0:
