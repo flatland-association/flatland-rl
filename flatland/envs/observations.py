@@ -94,7 +94,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.location_has_agent_ready_to_depart = {}
 
         for _agent in self.env.agents:
-            if not TrainState.off_map_state(_agent.state) and \
+            if not _agent.state.is_off_map_state() and \
                 _agent.position:
                 self.location_has_agent[tuple(_agent.position)] = 1
                 self.location_has_agent_direction[tuple(_agent.position)] = _agent.direction
@@ -103,7 +103,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                     'malfunction']
 
             # [NIMISH] WHAT IS THIS
-            if TrainState.off_map_state(_agent.state) and \
+            if _agent.state.is_off_map_state() and \
                 _agent.initial_position:
                     self.location_has_agent_ready_to_depart.setdefault(tuple(_agent.initial_position), 0)
                     self.location_has_agent_ready_to_depart[tuple(_agent.initial_position)] += 1
@@ -570,9 +570,9 @@ class GlobalObsForRailEnv(ObservationBuilder):
     def get(self, handle: int = 0) -> (np.ndarray, np.ndarray, np.ndarray):
 
         agent = self.env.agents[handle]
-        if TrainState.off_map_state(agent.state):
+        if agent.state.is_off_map_state():
             agent_virtual_position = agent.initial_position
-        elif TrainState.on_map_state(agent.state):
+        elif agent.state.is_on_map_state():
             agent_virtual_position = agent.position
         elif agent.state == TrainState.DONE:
             agent_virtual_position = agent.target
@@ -608,7 +608,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
                 obs_agents_state[other_agent.position][2] = other_agent.malfunction_data['malfunction']
                 obs_agents_state[other_agent.position][3] = other_agent.speed_data['speed']
             # fifth channel: all ready to depart on this position
-            if TrainState.off_map_state(other_agent.state):
+            if other_agent.state.is_off_map_state():
                 obs_agents_state[other_agent.initial_position][4] += 1
         return self.rail_obs, obs_agents_state, obs_targets
 

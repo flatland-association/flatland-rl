@@ -5,11 +5,10 @@ from flatland.envs.step_utils.transition_utils import check_valid_action
 
 
 def process_illegal_action(action: RailEnvActions):
-	# TODO - Dipam : This check is kind of weird, change this
-	if action is None or action not in RailEnvActions._value2member_map_: 
+	if not RailEnvActions.check_valid_action(action): 
 		return RailEnvActions.DO_NOTHING
 	else:
-		return action
+		return RailEnvActions(action)
 
 
 def process_do_nothing(state: TrainState):

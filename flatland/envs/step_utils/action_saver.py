@@ -15,8 +15,8 @@ class ActionSaver:
 
     def save_action_if_allowed(self, action, state):
         if not self.is_action_saved and \
-            RailEnvActions.is_moving_action(action) and \
-            not TrainState.is_malfunction_state(state):
+               action.is_moving_action() and \
+               not state.is_malfunction_state():
             self.saved_action = action
 
     def clear_saved_action(self):

@@ -1,8 +1,6 @@
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 import numpy as np
 
-from enum import IntEnum
-
 from itertools import starmap
 from typing import Tuple, Optional, NamedTuple, List
 

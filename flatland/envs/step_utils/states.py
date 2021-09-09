@@ -13,17 +13,14 @@ class TrainState(IntEnum):
     def check_valid_state(cls, state):
         return state in cls._value2member_map_
 
-    @staticmethod
-    def is_malfunction_state(state):
-        return state in [2, 5] # TODO: Can this be done with names instead?
+    def is_malfunction_state(self):
+        return self.value in [self.MALFUNCTION, self.MALFUNCTION_OFF_MAP]
 
-    @staticmethod
-    def off_map_state(state):
-        return state in [0, 1, 2]
+    def is_off_map_state(self):
+        return self.value in [self.WAITING, self.READY_TO_DEPART, self.MALFUNCTION_OFF_MAP]
     
-    @staticmethod    
-    def on_map_state(state):
-        return state in [3, 4, 5]
+    def is_on_map_state(self):
+        return self.value in [self.MOVING, self.STOPPED, self.MALFUNCTION]
 
     
 

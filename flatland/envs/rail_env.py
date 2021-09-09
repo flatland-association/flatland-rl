@@ -3,7 +3,6 @@ Definition of the RailEnv environment.
 """
 import random
 # TODO:  _ this is a global method --> utils or remove later
-from enum import IntEnum
 from typing import List, NamedTuple, Optional, Dict, Tuple
 
 import numpy as np
@@ -285,7 +284,7 @@ class RailEnv(Environment):
         False: Agent cannot provide an action
         """
         return agent.state == TrainState.READY_TO_DEPART or \
-               (TrainState.on_map_state(agent.state) and \
+               (agent.state.is_on_map_state() and \
                 fast_isclose(agent.speed_data['position_fraction'], 0.0, rtol=1e-03) )
 
     def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
@@ -406,7 +405,7 @@ class RailEnv(Environment):
         return observation_dict, info_dict
     
     def apply_action_independent(self, action, rail, position, direction):
-        if RailEnvActions.is_moving_action(action):
+        if action.is_moving_action():
             new_direction, _ = check_action(action, position, direction, rail)
             new_position = get_new_position(position, new_direction)
         else:
@@ -420,7 +419,7 @@ class RailEnv(Environment):
         st_signals['malfunction_counter_complete'] = agent.malfunction_handler.malfunction_counter_complete
         st_signals['earliest_departure_reached'] = self._elapsed_steps >= agent.earliest_departure
         st_signals['stop_action_given'] = (preprocessed_action == RailEnvActions.STOP_MOVING)
-        st_signals['valid_movement_action_given'] = RailEnvActions.is_moving_action(preprocessed_action)
+        st_signals['valid_movement_action_given'] = preprocessed_action.is_moving_action()
         st_signals['target_reached'] = fast_position_equal(agent.position, agent.target)
         st_signals['movement_conflict'] = (not movement_allowed) and agent.speed_counter.is_cell_exit # TODO: Modify motion check to provide proper conflict information
 
@@ -557,10 +556,6 @@ class RailEnv(Environment):
             else:
                 final_new_position = agent.position
                 final_new_direction = agent.direction
-            # if final_new_position and self.rail.grid[final_new_position] == 0:
-                # import pdb; pdb.set_trace()
-            # if final_new_position and not (final_new_position[0] >= 0 and final_new_position[1] >= 0 and final_new_position[0] < self.rail.height and final_new_position[1] < self.rail.width): # TODO: Remove this
-                # import pdb; pdb.set_trace()
             agent.position = final_new_position
             agent.direction = final_new_direction
 

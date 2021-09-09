@@ -743,7 +743,7 @@ class RenderLocal(RenderBase):
                     if show_inactive_agents:
                         show_this_agent = True
                     else:
-                        show_this_agent = TrainState.on_map_state(agent.state)
+                        show_this_agent = agent.state.is_on_map_state()
 
                     if show_this_agent:
                         self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, 
