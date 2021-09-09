@@ -150,7 +150,7 @@ class ControllerFromTrainruns():
     def _create_action_plan_for_agent(self, agent_id, trainrun) -> ActionPlan:
         action_plan = []
         agent = self.env.agents[agent_id]
-        minimum_cell_time = agent.speed_counter.max_count
+        minimum_cell_time = agent.speed_counter.max_count + 1
         for path_loop, trainrun_waypoint in enumerate(trainrun):
             trainrun_waypoint: TrainrunWaypoint = trainrun_waypoint
 

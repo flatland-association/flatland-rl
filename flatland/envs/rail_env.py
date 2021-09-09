@@ -366,9 +366,10 @@ class RailEnv(Environment):
             new_position = get_new_position(position, new_direction)
         else:
             new_position, new_direction = position, direction
-        return new_position, direction
+        return new_position, new_direction
     
     def generate_state_transition_signals(self, agent, preprocessed_action, movement_allowed):
+        """ Generate State Transitions Signals used in the state machine """
         st_signals = StateTransitionSignals()
         
         # Malfunction onset - Malfunction starts
@@ -442,9 +443,8 @@ class RailEnv(Environment):
         return action
     
     def clear_rewards_dict(self):
-        """ Reset the step rewards """
-
-        self.rewards_dict = dict()
+        """ Reset the rewards dictionary """
+        self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))}
 
     def get_info_dict(self): # TODO Important : Update this
         info_dict = {
@@ -456,6 +456,22 @@ class RailEnv(Environment):
             'state': {i: agent.state for i, agent in enumerate(self.agents)}
         }
         return info_dict
+    
+    def update_step_rewards(self, i_agent):
+        pass
+
+    def end_of_episode_update(self, have_all_agents_ended):
+        if have_all_agents_ended or \
+           ( (self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps)):
+
+            for i_agent, agent in enumerate(self.agents):
+                
+                reward = self._handle_end_reward(agent)
+                self.rewards_dict[i_agent] += reward
+                
+                self.dones[i_agent] = True
+
+            self.dones["__all__"] = True
 
     def step(self, action_dict_: Dict[int, RailEnvActions]):
         """
@@ -520,6 +536,8 @@ class RailEnv(Environment):
             i_agent = agent.handle
             agent_transition_data = temp_transition_data[i_agent]
 
+            old_position = agent.position
+
             ## Update positions
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
@@ -544,30 +562,18 @@ class RailEnv(Environment):
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
             ## Update rewards
-            # self.update_rewards(i_agent, agent, rail) # TODO : Step Rewards
+            self.update_step_rewards(i_agent)
 
             ## Update counters (malfunction and speed)
-            agent.speed_counter.update_counter(agent.state)
+            agent.speed_counter.update_counter(agent.state, old_position)
             agent.malfunction_handler.update_counter()
 
             # Clear old action when starting in new cell
             if agent.speed_counter.is_cell_entry:
                 agent.action_saver.clear_saved_action()
-
-
-        self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))}
         
-        if ((self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps)) \
-            or have_all_agents_ended :
-            
-            for i_agent, agent in enumerate(self.agents):
-                
-                reward = self._handle_end_reward(agent)
-                self.rewards_dict[i_agent] += reward
-                
-                self.dones[i_agent] = True
-
-            self.dones["__all__"] = True
+        # Check if episode has ended and update rewards and dones
+        self.end_of_episode_update(have_all_agents_ended)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict() 
 

@@ -9,6 +9,7 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.utils.simple_rail import make_simple_rail
+from flatland.envs.step_utils.speed_counter import SpeedCounter
 
 
 def test_action_plan(rendering: bool = False):
@@ -29,7 +30,7 @@ def test_action_plan(rendering: bool = False):
     env.agents[1].initial_position = (3, 8)
     env.agents[1].initial_direction = Grid4TransitionsEnum.WEST
     env.agents[1].target = (0, 3)
-    env.agents[1].speed_data['speed'] = 0.5  # two
+    env.agents[1].speed_counter = SpeedCounter(speed=0.5)
     env.reset(False, False)
     for handle, agent in enumerate(env.agents):
         print("[{}] {} -> {}".format(handle, agent.initial_position, agent.target))

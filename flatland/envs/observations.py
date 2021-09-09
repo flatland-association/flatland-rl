@@ -221,7 +221,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                             agent.direction)],
                                                        num_agents_same_direction=0, num_agents_opposite_direction=0,
                                                        num_agents_malfunctioning=agent.malfunction_data['malfunction'],
-                                                       speed_min_fractional=agent.speed_counter.speed
+                                                       speed_min_fractional=agent.speed_counter.speed,
                                                        num_agents_ready_to_depart=0,
                                                        childs={})
         #print("root node type:", type(root_node_observation))
