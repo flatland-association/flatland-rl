@@ -561,7 +561,6 @@ class RailEnv(Environment):
             state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, movement_allowed)
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
-            agent.state = agent.state_machine.state # TODO : Make this a property instead?
 
             # Remove agent is required
             if self.remove_agents_at_target and agent.state == TrainState.DONE:
