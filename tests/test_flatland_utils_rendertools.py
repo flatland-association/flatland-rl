@@ -14,6 +14,7 @@ import images.test
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import empty_rail_generator
+import pytest
 
 
 def checkFrozenImage(oRT, sFileImage, resave=False):
@@ -34,7 +35,7 @@ def checkFrozenImage(oRT, sFileImage, resave=False):
     #  assert ((np.sum(np.square(img_test - img_expected)) / img_expected.size / 256) < 1e-3), \ #  noqa: E800
     #      "Image {} does not match".format(sFileImage) \ #  noqa: E800
 
-
+@pytest.mark.skip("Only needed for visual editor, Flatland 3 line generator won't allow empty enviroment")
 def test_render_env(save_new_images=False):
     oEnv = RailEnv(width=10, height=10, rail_generator=empty_rail_generator(), number_of_agents=0,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2))

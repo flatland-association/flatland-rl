@@ -126,8 +126,9 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
 
         prediction_dict = {}
         for agent in agents:
-
-            if agent.status == RailAgentStatus.READY_TO_DEPART:
+            if agent.status == RailAgentStatus.WAITING:
+                agent_virtual_position = agent.initial_position
+            elif agent.status == RailAgentStatus.READY_TO_DEPART:
                 agent_virtual_position = agent.initial_position
             elif agent.status == RailAgentStatus.ACTIVE:
                 agent_virtual_position = agent.position

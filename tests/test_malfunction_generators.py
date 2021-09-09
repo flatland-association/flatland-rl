@@ -2,9 +2,10 @@ from flatland.envs.malfunction_generators import malfunction_from_params, malfun
     single_malfunction_generator, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail2
 from flatland.envs.persistence import RailEnvPersister
+import pytest
 
 def test_malfanction_from_params():
     """
@@ -17,12 +18,12 @@ def test_malfanction_from_params():
                                             min_duration=2,  # Minimal duration of malfunction
                                             max_duration=5  # Max duration of malfunction
                                             )
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
                   )
@@ -44,12 +45,12 @@ def test_malfanction_to_and_from_file():
                                             max_duration=5  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
                   )
@@ -61,8 +62,8 @@ def test_malfanction_to_and_from_file():
     malfunction_generator, malfunction_process_data = malfunction_from_file("./malfunction_saving_loading_tests.pkl")
     env2 = RailEnv(width=25,
                    height=30,
-                   rail_generator=rail_from_grid_transition_map(rail),
-                   schedule_generator=random_schedule_generator(),
+                   rail_generator=rail_from_grid_transition_map(rail, optionals),
+                   line_generator=sparse_line_generator(),
                    number_of_agents=10,
                    malfunction_generator_and_process_data=malfunction_from_params(stochastic_data)
                    )
@@ -75,6 +76,7 @@ def test_malfanction_to_and_from_file():
     assert env2.malfunction_process_data.max_duration == 5
 
 
+@pytest.mark.skip("Single malfunction generator is deprecated")
 def test_single_malfunction_generator():
     """
     Test single malfunction generator
@@ -83,13 +85,13 @@ def test_single_malfunction_generator():
 
     """
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=10,
-                  malfunction_generator_and_process_data=single_malfunction_generator(earlierst_malfunction=10,
+                  malfunction_generator_and_process_data=single_malfunction_generator(earlierst_malfunction=3,
                                                                                       malfunction_duration=5)
                   )
     for test in range(10):
@@ -102,7 +104,9 @@ def test_single_malfunction_generator():
                 # Go forward all the time
                 action_dict[agent.handle] = RailEnvActions(2)
 
-            env.step(action_dict)
+            _, _, dones, _ = env.step(action_dict)
+            if dones['__all__']:
+                break
         for agent in env.agents:
             # Go forward all the time
             tot_malfunctions += agent.malfunction_data['nr_malfunctions']

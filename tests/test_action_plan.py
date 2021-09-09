@@ -6,18 +6,18 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.utils.simple_rail import make_simple_rail
 
 
 def test_action_plan(rendering: bool = False):
     """Tests ActionPlanReplayer: does action plan generation and replay work as expected."""
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=77),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=77),
                   number_of_agents=2,
                   obs_builder_object=GlobalObsForRailEnv(),
                   remove_agents_at_target=True
@@ -30,9 +30,13 @@ def test_action_plan(rendering: bool = False):
     env.agents[1].initial_direction = Grid4TransitionsEnum.WEST
     env.agents[1].target = (0, 3)
     env.agents[1].speed_data['speed'] = 0.5  # two
-    env.reset(False, False, False)
+    env.reset(False, False)
     for handle, agent in enumerate(env.agents):
         print("[{}] {} -> {}".format(handle, agent.initial_position, agent.target))
+
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
 
     chosen_path_dict = {0: [TrainrunWaypoint(scheduled_at=0, waypoint=Waypoint(position=(3, 0), direction=3)),
                             TrainrunWaypoint(scheduled_at=2, waypoint=Waypoint(position=(3, 1), direction=1)),

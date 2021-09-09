@@ -4,7 +4,7 @@ from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
-from flatland.envs.schedule_generators import sparse_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 
 
 def test_get_global_observation():
@@ -26,9 +26,13 @@ def test_get_global_observation():
                                                                             seed=15,
                                                                             grid_mode=False
                                                                             ),
-                  schedule_generator=sparse_schedule_generator(speed_ration_map), number_of_agents=number_of_agents,
+                  line_generator=sparse_line_generator(speed_ration_map), number_of_agents=number_of_agents,
                   obs_builder_object=GlobalObsForRailEnv())
     env.reset()
+
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
 
     obs, all_rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in range(number_of_agents)})
     for i in range(len(env.agents)):

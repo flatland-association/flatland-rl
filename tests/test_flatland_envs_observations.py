@@ -10,7 +10,7 @@ from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
 
@@ -18,10 +18,10 @@ from flatland.utils.simple_rail import make_simple_rail
 
 
 def test_global_obs():
-    rail, rail_map = make_simple_rail()
+    rail, rail_map, optionals = make_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
 
     global_obs, info = env.reset()
@@ -91,9 +91,9 @@ def _step_along_shortest_path(env, obs_builder, rail):
 
 
 def test_reward_function_conflict(rendering=False):
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=2,
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     obs_builder: TreeObsForRailEnv = env.obs_builder
     env.reset()
@@ -166,7 +166,7 @@ def test_reward_function_conflict(rendering=False):
         rewards = _step_along_shortest_path(env, obs_builder, rail)
 
         for agent in env.agents:
-            assert rewards[agent.handle] == -1
+            assert rewards[agent.handle] == 0
             expected_position = expected_positions[iteration + 1][agent.handle]
             assert agent.position == expected_position, "[{}] agent {} at {}, expected {}".format(iteration + 1,
                                                                                                   agent.handle,
@@ -179,9 +179,9 @@ def test_reward_function_conflict(rendering=False):
 
 
 def test_reward_function_waiting(rendering=False):
-    rail, rail_map = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=2,
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   remove_agents_at_target=False)
     obs_builder: TreeObsForRailEnv = env.obs_builder
@@ -225,14 +225,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 8),
                 1: (5, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         1: {
             'positions': {
                 0: (3, 7),
                 1: (4, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         # second agent has to wait for first, first can continue
         2: {
@@ -240,7 +240,7 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 6),
                 1: (4, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         # both can move again
         3: {
@@ -248,14 +248,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 5),
                 1: (3, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         4: {
             'positions': {
                 0: (3, 4),
                 1: (3, 7),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         # second reached target
         5: {
@@ -263,14 +263,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 3),
                 1: (3, 8),
             },
-            'rewards': [-1, 0],
+            'rewards': [0, 0],
         },
         6: {
             'positions': {
                 0: (3, 2),
                 1: (3, 8),
             },
-            'rewards': [-1, 0],
+            'rewards': [0, 0],
         },
         # first reaches, target too
         7: {
@@ -278,14 +278,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 1),
                 1: (3, 8),
             },
-            'rewards': [1, 1],
+            'rewards': [0, 0],
         },
         8: {
             'positions': {
                 0: (3, 1),
                 1: (3, 8),
             },
-            'rewards': [1, 1],
+            'rewards': [0, 0],
         },
     }
     while iteration < 7:

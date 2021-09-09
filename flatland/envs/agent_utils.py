@@ -1,7 +1,10 @@
+from flatland.envs.rail_trainrun_data_structures import Waypoint
+import numpy as np
+
 from enum import IntEnum
 from flatland.envs.step_utils.states import TrainState
 from itertools import starmap
-from typing import Tuple, Optional, NamedTuple
+from typing import Tuple, Optional, NamedTuple, List
 
 from attr import attr, attrs, attrib, Factory
 
@@ -24,6 +27,7 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('malfunction_data', dict),
                              ('handle', int),
                              ('position', Tuple[int, int]),
+                             ('arrival_time', int),
                              ('old_direction', Grid4TransitionsEnum),
                              ('old_position', Tuple[int, int]),
                              ('speed_counter', SpeedCounter),
@@ -36,15 +40,16 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
 
 @attrs
 class EnvAgent:
+    # INIT FROM HERE IN _from_line()
     initial_position = attrib(type=Tuple[int, int])
     initial_direction = attrib(type=Grid4TransitionsEnum)
     direction = attrib(type=Grid4TransitionsEnum)
     target = attrib(type=Tuple[int, int])
     moving = attrib(default=False, type=bool)
 
-    # NEW : Agent properties for scheduling
-    earliest_departure = attrib(default=None, type=int)  # default None during _from_schedule()
-    latest_arrival = attrib(default=None, type=int)  # default None during _from_schedule()
+    # NEW : EnvAgent - Schedule properties
+    earliest_departure = attrib(default=None, type=int)  # default None during _from_line()
+    latest_arrival = attrib(default=None, type=int)  # default None during _from_line()
 
     # speed_data: speed is added to position_fraction on each moving step, until position_fraction>=1.0,
     # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
@@ -61,6 +66,7 @@ class EnvAgent:
                           'moving_before_malfunction': False})))
 
     handle = attrib(default=None)
+    # INIT TILL HERE IN _from_line()
 
     # Env step facelift
     speed_counter = attrib(default = None, type=SpeedCounter)
@@ -73,6 +79,9 @@ class EnvAgent:
 
     position = attrib(default=None, type=Optional[Tuple[int, int]])
 
+    # NEW : EnvAgent Reward Handling
+    arrival_time = attrib(default=None, type=int)
+
     # used in rendering
     old_direction = attrib(default=None)
     old_position = attrib(default=None)
@@ -80,7 +89,7 @@ class EnvAgent:
 
     def reset(self):
         """
-        Resets the agents to their initial values of the episode
+        Resets the agents to their initial values of the episode. Called after ScheduleTime generation.
         """
         self.position = None
         # TODO: set direction to None: https://gitlab.aicrowd.com/flatland/flatland/issues/280
@@ -123,7 +132,7 @@ class EnvAgent:
                      malfunction_handler=self.malfunction_handler)
 
     @classmethod
-    def from_schedule(cls, schedule: Schedule):
+    def from_line(cls, line: Line):
         """ Create a list of EnvAgent from lists of positions, directions and targets
         """
         speed_datas = []
@@ -136,10 +145,10 @@ class EnvAgent:
             speed_counters.append( SpeedCounter(speed=speed) )
 
         malfunction_datas = []
-        for i in range(len(schedule.agent_positions)):
+        for i in range(len(line.agent_positions)):
             malfunction_datas.append({'malfunction': 0,
-                                      'malfunction_rate': schedule.agent_malfunction_rates[
-                                          i] if schedule.agent_malfunction_rates is not None else 0.,
+                                      'malfunction_rate': line.agent_malfunction_rates[
+                                          i] if line.agent_malfunction_rates is not None else 0.,
                                       'next_malfunction': 0,
                                       'nr_malfunctions': 0})
         

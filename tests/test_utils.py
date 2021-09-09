@@ -9,7 +9,7 @@ from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params
 from flatland.envs.rail_env import RailEnvActions, RailEnv
 from flatland.envs.rail_generators import RailGenerator
-from flatland.envs.schedule_generators import ScheduleGenerator
+from flatland.envs.line_generators import LineGenerator
 from flatland.utils.rendertools import RenderTool
 from flatland.envs.persistence import RailEnvPersister
 
@@ -41,7 +41,7 @@ def set_penalties_for_replay(env: RailEnv):
     env.invalid_action_penalty = -29
 
 
-def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False, activate_agents=True):
+def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False, activate_agents=True, skip_reward_check=False):
     """
     Runs the replay configs and checks assertions.
 
@@ -87,7 +87,11 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 agent.direction = test_config.initial_direction
                 agent.target = test_config.target
                 agent.speed_data['speed'] = test_config.speed
-            env.reset(False, False, activate_agents)
+            env.reset(False, False)
+            if activate_agents:
+                for a_idx in range(len(env.agents)):
+                    env.agents[a_idx].position =  env.agents[a_idx].initial_position
+                    env.agents[a_idx].status = RailAgentStatus.ACTIVE
 
         def _assert(a, actual, expected, msg):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))
@@ -133,10 +137,11 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         for a, test_config in enumerate(test_configs):
             replay = test_config.replay[step]
 
-            _assert(a, rewards_dict[a], replay.reward, 'reward')
+            if not skip_reward_check:
+                _assert(a, rewards_dict[a], replay.reward, 'reward')
 
 
-def create_and_save_env(file_name: str, schedule_generator: ScheduleGenerator, rail_generator: RailGenerator):
+def create_and_save_env(file_name: str, line_generator: LineGenerator, rail_generator: RailGenerator):
     stochastic_data = MalfunctionParameters(malfunction_rate=1000,  # Rate of malfunction occurence
                                             min_duration=15,  # Minimal duration of malfunction
                                             max_duration=50  # Max duration of malfunction
@@ -145,11 +150,11 @@ def create_and_save_env(file_name: str, schedule_generator: ScheduleGenerator, r
     env = RailEnv(width=30,
                   height=30,
                   rail_generator=rail_generator,
-                  schedule_generator=schedule_generator,
+                  line_generator=line_generator,
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   remove_agents_at_target=True)
     env.reset(True, True)
     #env.save(file_name)
     RailEnvPersister.save(env, file_name)
-    
+    return env

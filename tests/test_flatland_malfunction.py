@@ -10,7 +10,7 @@ from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.schedule_generators import random_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail2
 from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
@@ -72,17 +72,20 @@ def test_malfunction_process():
                                             max_duration=3  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    obs, info = env.reset(False, False, True, random_seed=10)
+    obs, info = env.reset(False, False, random_seed=10)
+    for a_idx in range(len(env.agents)):
+        env.agents[a_idx].position =  env.agents[a_idx].initial_position
+        env.agents[a_idx].status = RailAgentStatus.ACTIVE
 
     agent_halts = 0
     total_down_time = 0
@@ -90,6 +93,9 @@ def test_malfunction_process():
 
     # Move target to unreachable position in order to not interfere with test
     env.agents[0].target = (0, 0)
+    
+    # Add in max episode steps because scheudule generator sets it to 0 for dummy data
+    env._max_episode_steps = 200
     for step in range(100):
         actions = {}
 
@@ -97,6 +103,8 @@ def test_malfunction_process():
             actions[i] = np.argmax(obs[i]) + 1
 
         obs, all_rewards, done, _ = env.step(actions)
+        if done["__all__"]:
+            break
 
         if env.agents[0].malfunction_data['malfunction'] > 0:
             agent_malfunctioning = True
@@ -109,9 +117,9 @@ def test_malfunction_process():
 
         agent_old_position = env.agents[0].position
         total_down_time += env.agents[0].malfunction_data['malfunction']
-
     # Check that the appropriate number of malfunctions is achieved
-    assert env.agents[0].malfunction_data['nr_malfunctions'] == 23, "Actual {}".format(
+    # Dipam: The number of malfunctions varies by seed
+    assert env.agents[0].malfunction_data['nr_malfunctions'] == 21, "Actual {}".format(
         env.agents[0].malfunction_data['nr_malfunctions'])
 
     # Check that malfunctioning data was standing around
@@ -126,33 +134,26 @@ def test_malfunction_process_statistically():
                                             max_duration=5  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=10,
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
+                  number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
 
-    env.reset(True, True, False, random_seed=10)
+    env.reset(True, True, random_seed=10)
+    env._max_episode_steps = 1000
 
     env.agents[0].target = (0, 0)
     # Next line only for test generation
-    # agent_malfunction_list = [[] for i in range(10)]
-    agent_malfunction_list = [[0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4],
-                              [0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                              [0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                              [0, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2],
-                              [0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1],
-                              [0, 0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1],
-                              [0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0],
-                              [5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 5],
-                              [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 3, 2],
-                              [5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 5, 4]]
-
+    # agent_malfunction_list = [[] for i in range(2)]
+    agent_malfunction_list = [[0, 5, 4, 3, 2, 1, 0, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0], 
+                              [5, 4, 3, 2, 1, 0, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5]]
+    
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}
         for agent_idx in range(env.get_num_agents()):
@@ -173,17 +174,17 @@ def test_malfunction_before_entry():
                                             max_duration=10  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
-
+    rail, rail_map, optionals = make_simple_rail2()
+    
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
-                  number_of_agents=10,
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
+                  number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
-    env.reset(False, False, False, random_seed=10)
+    env.reset(False, False, random_seed=10)
     env.agents[0].target = (0, 0)
 
     # Test initial malfunction values for all agents
@@ -191,17 +192,6 @@ def test_malfunction_before_entry():
     # we want different next_malfunction values for the agents
     assert env.agents[0].malfunction_data['malfunction'] == 0
     assert env.agents[1].malfunction_data['malfunction'] == 10
-    assert env.agents[2].malfunction_data['malfunction'] == 0
-    assert env.agents[3].malfunction_data['malfunction'] == 10
-    assert env.agents[4].malfunction_data['malfunction'] == 10
-    assert env.agents[5].malfunction_data['malfunction'] == 10
-    assert env.agents[6].malfunction_data['malfunction'] == 10
-    assert env.agents[7].malfunction_data['malfunction'] == 10
-    assert env.agents[8].malfunction_data['malfunction'] == 10
-    assert env.agents[9].malfunction_data['malfunction'] == 10
-
-    # for a in range(10):
-    # print("assert env.agents[{}].malfunction_data['malfunction'] == {}".format(a,env.agents[a].malfunction_data['malfunction']))
 
 
 def test_malfunction_values_and_behavior():
@@ -213,7 +203,7 @@ def test_malfunction_values_and_behavior():
     """
     # Set fixed malfunction duration for this test
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
     action_dict: Dict[int, RailEnvActions] = {}
     stochastic_data = MalfunctionParameters(malfunction_rate=1/0.001,  # Rate of malfunction occurence
                                             min_duration=10,  # Minimal duration of malfunction
@@ -221,23 +211,25 @@ def test_malfunction_values_and_behavior():
                                             )
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
 
-    env.reset(False, False, activate_agents=True, random_seed=10)
+    env.reset(False, False, random_seed=10)
 
     # Assertions
     assert_list = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 10, 9, 8, 7, 6, 5]
     print("[")
     for time_step in range(15):
         # Move in the env
-        env.step(action_dict)
+        _, _, dones,_ = env.step(action_dict)
         # Check that next_step decreases as expected
         assert env.agents[0].malfunction_data['malfunction'] == assert_list[time_step]
+        if dones['__all__']:
+            break
 
 
 def test_initial_malfunction():
@@ -246,19 +238,20 @@ def test_initial_malfunction():
                                             max_duration=5  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=10),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=10),
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   # Malfunction data generator
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     # reset to initialize agents_static
-    env.reset(False, False, True, random_seed=10)
+    env.reset(False, False, random_seed=10)
+    env._max_episode_steps = 1000
     print(env.agents[0].malfunction_data)
     env.agents[0].target = (0, 5)
     set_penalties_for_replay(env)
@@ -309,16 +302,18 @@ def test_initial_malfunction():
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
     )
-    run_replay_config(env, [replay_config])
+    run_replay_config(env, [replay_config], skip_reward_check=True)
 
 
 def test_initial_malfunction_stop_moving():
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(), number_of_agents=1,
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=SingleAgentNavigationObs())
     env.reset()
+    
+    env._max_episode_steps = 1000
 
     print(env.agents[0].initial_position, env.agents[0].direction, env.agents[0].position, env.agents[0].status)
 
@@ -386,7 +381,7 @@ def test_initial_malfunction_stop_moving():
         initial_direction=Grid4TransitionsEnum.EAST,
     )
 
-    run_replay_config(env, [replay_config], activate_agents=False)
+    run_replay_config(env, [replay_config], activate_agents=False, skip_reward_check=True)
 
 
 def test_initial_malfunction_do_nothing():
@@ -395,17 +390,18 @@ def test_initial_malfunction_do_nothing():
                                             max_duration=5  # Max duration of malfunction
                                             )
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
 
     env = RailEnv(width=25,
                   height=30,
-                  rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(),
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   # Malfunction data generator
                   )
     env.reset()
+    env._max_episode_steps = 1000
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
         replay=[
@@ -469,18 +465,18 @@ def test_initial_malfunction_do_nothing():
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
     )
-    run_replay_config(env, [replay_config], activate_agents=False)
+    run_replay_config(env, [replay_config], activate_agents=False, skip_reward_check=True)
 
 
 def tests_random_interference_from_outside():
     """Tests that malfunctions are produced by stochastic_data!"""
     # Set fixed malfunction duration for this test
-    rail, rail_map = make_simple_rail2()
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
+    rail, rail_map, optionals = make_simple_rail2()
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_data['speed'] = 0.33
-    env.reset(False, False, False, random_seed=10)
+    env.reset(False, False, random_seed=10)
     env_data = []
 
     for step in range(200):
@@ -489,22 +485,24 @@ def tests_random_interference_from_outside():
             # We randomly select an action
             action_dict[agent.handle] = RailEnvActions(2)
 
-        _, reward, _, _ = env.step(action_dict)
+        _, reward, dones, _ = env.step(action_dict)
         # Append the rewards of the first trial
         env_data.append((reward[0], env.agents[0].position))
         assert reward[0] == env_data[step][0]
         assert env.agents[0].position == env_data[step][1]
+        if dones['__all__']:
+            break
     # Run the same test as above but with an external random generator running
     # Check that the reward stays the same
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
     random.seed(47)
     np.random.seed(1234)
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_data['speed'] = 0.33
-    env.reset(False, False, False, random_seed=10)
+    env.reset(False, False, random_seed=10)
 
     dummy_list = [1, 2, 6, 7, 8, 9, 4, 5, 4]
     for step in range(200):
@@ -517,9 +515,11 @@ def tests_random_interference_from_outside():
             random.shuffle(dummy_list)
             np.random.rand()
 
-        _, reward, _, _ = env.step(action_dict)
+        _, reward, dones, _ = env.step(action_dict)
         assert reward[0] == env_data[step][0]
         assert env.agents[0].position == env_data[step][1]
+        if dones['__all__']:
+            break
 
 
 def test_last_malfunction_step():
@@ -530,19 +530,32 @@ def test_last_malfunction_step():
 
     # Set fixed malfunction duration for this test
 
-    rail, rail_map = make_simple_rail2()
+    rail, rail_map, optionals = make_simple_rail2()
+    # import pdb; pdb.set_trace()
 
-    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail),
-                  schedule_generator=random_schedule_generator(seed=2), number_of_agents=1, random_seed=1)
+    env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_data['speed'] = 1. / 3.
-    env.agents[0].target = (0, 0)
+    env.agents[0].initial_position = (6, 6)
+    env.agents[0].initial_direction = 2
+    env.agents[0].target = (0, 3)
 
-    env.reset(False, False, True)
+    env._max_episode_steps = 1000
+
+    env.reset(False, False)
+    for a_idx in range(len(env.agents)):
+        env.agents[a_idx].position =  env.agents[a_idx].initial_position
+        env.agents[a_idx].status = RailAgentStatus.ACTIVE
     # Force malfunction to be off at beginning and next malfunction to happen in 2 steps
     env.agents[0].malfunction_data['next_malfunction'] = 2
     env.agents[0].malfunction_data['malfunction'] = 0
     env_data = []
+
+    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
+    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+        env.step({}) # DO_NOTHING for all agents
+
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}
         for agent in env.agents:

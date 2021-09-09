@@ -17,14 +17,15 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import IntVector2D, position_to_coordinate
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
+from flatland.envs.agent_utils import Agent, EnvAgent, RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env_action import RailEnvActions
 
 # Need to use circular imports for persistence.
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
-from flatland.envs import schedule_generators as sched_gen
+from flatland.envs import line_generators as line_gen
+from flatland.envs.timetable_generators import timetable_generator
 from flatland.envs import persistence
 from flatland.envs import agent_chains as ac
 
@@ -35,7 +36,8 @@ from gym.utils import seeding
 # from flatland.envs.malfunction_generators import no_malfunction_generator, Malfunction, MalfunctionProcessData
 # from flatland.envs.observations import GlobalObsForRailEnv
 # from flatland.envs.rail_generators import random_rail_generator, RailGenerator
-# from flatland.envs.schedule_generators import random_schedule_generator, ScheduleGenerator
+# from flatland.envs.line_generators import random_line_generator, LineGenerator
+
 
 # NEW : Imports 
 from flatland.envs.schedule_time_generators import schedule_time_generator
@@ -107,22 +109,25 @@ class RailEnv(Environment):
     For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
 
     """
-    alpha = 1.0
-    beta = 1.0
     # Epsilon to avoid rounding errors
     epsilon = 0.01
-    invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
+    # NEW : REW: Sparse Reward
+    alpha = 0
+    beta = 0
     step_penalty = -1 * alpha
     global_reward = 1 * beta
+    invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
     stop_penalty = 0  # penalty for stopping a moving agent
     start_penalty = 0  # penalty for starting a stopped agent
+    cancellation_factor = 1
+    cancellation_time_buffer = 0
 
     def __init__(self,
                  width,
                  height,
                  rail_generator=None,
-                 schedule_generator=None,  # : sched_gen.ScheduleGenerator = sched_gen.random_schedule_generator(),
-                 number_of_agents=1,
+                 line_generator=None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
+                 number_of_agents=2,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
                  malfunction_generator=None,
@@ -141,12 +146,12 @@ class RailEnv(Environment):
             height and agents handles of a  rail environment, along with the number of times
             the env has been reset, and returns a GridTransitionMap object and a list of
             starting positions, targets, and initial orientations for agent handle.
-            The rail_generator can pass a distance map in the hints or information for specific schedule_generators.
+            The rail_generator can pass a distance map in the hints or information for specific line_generators.
             Implementations can be found in flatland/envs/rail_generators.py
-        schedule_generator : function
-            The schedule_generator function is a function that takes the grid, the number of agents and optional hints
+        line_generator : function
+            The line_generator function is a function that takes the grid, the number of agents and optional hints
             and returns a list of starting positions, targets, initial orientations and speed for all agent handles.
-            Implementations can be found in flatland/envs/schedule_generators.py
+            Implementations can be found in flatland/envs/line_generators.py
         width : int
             The width of the rail map. Potentially in the future,
             a range of widths to sample from.
@@ -180,15 +185,16 @@ class RailEnv(Environment):
         else:
             self.malfunction_generator = mal_gen.NoMalfunctionGen()
             self.malfunction_process_data = self.malfunction_generator.get_process_data()
+        
+        self.number_of_agents = number_of_agents
 
         # self.rail_generator: RailGenerator = rail_generator
         if rail_generator is None:
-            rail_generator = rail_gen.random_rail_generator()
+            rail_generator = rail_gen.sparse_rail_generator()
         self.rail_generator = rail_generator
-        # self.schedule_generator: ScheduleGenerator = schedule_generator
-        if schedule_generator is None:
-            schedule_generator = sched_gen.random_schedule_generator()
-        self.schedule_generator = schedule_generator
+        if line_generator is None:
+            line_generator = line_gen.sparse_line_generator()
+        self.line_generator = line_generator
 
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
@@ -212,8 +218,6 @@ class RailEnv(Environment):
         self.dev_pred_dict = {}
 
         self.agents: List[EnvAgent] = []
-        # NEW : SCHED CONST (Even number of trains A>B, B>A)
-        self.number_of_agents = number_of_agents if ((number_of_agents % 2) == 0 ) else number_of_agents + 1 
         self.num_resets = 0
         self.distance_map = DistanceMap(self.agents, self.height, self.width)
 
@@ -260,11 +264,6 @@ class RailEnv(Environment):
         self.agents.append(agent)
         return len(self.agents) - 1
 
-    def set_agent_active(self, agent: EnvAgent):
-        if agent.status == RailAgentStatus.READY_TO_DEPART and self.cell_free(agent.initial_position):
-            agent.status = RailAgentStatus.ACTIVE
-            self._set_agent_to_initial_position(agent, agent.initial_position)
-
     def reset_agents(self):
         """ Reset the agents to their starting positions
         """
@@ -290,7 +289,7 @@ class RailEnv(Environment):
             agent.status == RailAgentStatus.ACTIVE and fast_isclose(agent.speed_data['position_fraction'], 0.0,
                                                                     rtol=1e-03)))
 
-    def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, activate_agents: bool = False,
+    def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
               random_seed: bool = None) -> Tuple[Dict, Dict]:
         """
         reset(regenerate_rail, regenerate_schedule, activate_agents, random_seed)
@@ -303,8 +302,6 @@ class RailEnv(Environment):
             regenerate the rails
         regenerate_schedule : bool, optional
             regenerate the schedule and the static agents
-        activate_agents : bool, optional
-            activate the agents
         random_seed : bool, optional
             random seed for environment
 
@@ -347,28 +344,27 @@ class RailEnv(Environment):
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
 
-            schedule = self.schedule_generator(self.rail, self.number_of_agents, agents_hints, 
+            line = self.line_generator(self.rail, self.number_of_agents, agents_hints, 
                                                self.num_resets, self.np_random)
-            self.agents = EnvAgent.from_schedule(schedule)
+            self.agents = EnvAgent.from_line(line)
 
-            # Get max number of allowed time steps from schedule generator
-            # Look at the specific schedule generator used to see where this number comes from
-            self._max_episode_steps = schedule.max_episode_steps # NEW UPDATE THIS!
+            # Reset distance map - basically initializing
+            self.distance_map.reset(self.agents, self.rail)
 
-        self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
+            # NEW : Time Schedule Generation
+            timetable = timetable_generator(self.agents, self.distance_map, 
+                                               agents_hints, self.np_random)
 
-        # Reset distance map - basically initializing
-        self.distance_map.reset(self.agents, self.rail)
+            self._max_episode_steps = timetable.max_episode_steps
 
-        # NEW : Time Schedule Generation
-        # find agent speeds (needed for max_ep_steps recalculation)
-        if (type(self.schedule_generator.speed_ratio_map) is dict):
-            config_speeds = list(self.schedule_generator.speed_ratio_map.keys())
+            for agent_i, agent in enumerate(self.agents):
+                agent.earliest_departure = timetable.earliest_departures[agent_i]         
+                agent.latest_arrival = timetable.latest_arrivals[agent_i]
         else:
-            config_speeds = [1.0]
+            self.distance_map.reset(self.agents, self.rail)
 
-        self._max_episode_steps = schedule_time_generator(self.agents, config_speeds, self.distance_map, 
-                                        self._max_episode_steps, self.np_random, temp_info=optionals)
+        # Agent Positions Map
+        self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
         
         # Reset agents to initial states
         self.reset_agents()
@@ -429,7 +425,37 @@ class RailEnv(Environment):
         st_signals['target_reached'] = fast_position_equal(agent.position, agent.target)
         st_signals['movement_conflict'] = (not movement_allowed) and agent.speed_counter.is_cell_exit # TODO: Modify motion check to provide proper conflict information
 
-        return st_signals
+    def _handle_end_reward(self, agent: EnvAgent) -> int:
+        '''
+        Handles end-of-episode reward for a particular agent.
+
+        Parameters
+        ----------
+        agent : EnvAgent
+        '''
+        reward = None
+        # agent done? (arrival_time is not None)
+        if agent.status == RailAgentStatus.DONE or agent.status == RailAgentStatus.DONE_REMOVED:
+            # if agent arrived earlier or on time = 0
+            # if agent arrived later = -ve reward based on how late
+            reward = min(agent.latest_arrival - agent.arrival_time, 0)
+
+        # Agents not done (arrival_time is None)
+        else:
+            # CANCELLED check (never departed)
+            if (agent.status == RailAgentStatus.READY_TO_DEPART):
+                reward = -1 * self.cancellation_factor * \
+                    (agent.get_travel_time_on_shortest_path(self.distance_map) + self.cancellation_time_buffer)
+
+            # Departed but never reached
+            if (agent.status == RailAgentStatus.ACTIVE):
+                reward = agent.get_current_delay(self._elapsed_steps, self.distance_map)
+        
+        return reward
+
+    def step(self, action_dict_: Dict[int, RailEnvActions]):
+        """
+        Updates rewards for the agents at a step.
 
     def step(self, action_dict):
         self._elapsed_steps += 1

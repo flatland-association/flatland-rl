@@ -10,6 +10,7 @@ image: themattrix/tox
 ## - AWS_SECRET_ACCESS_KEY
 
 stages:
+    - build_wheel
     - tests
     - integration_testing
     - profiling
@@ -149,4 +150,18 @@ test_conda_setup:
     script:
         - xvfb-run bash getting_started/getting_started.sh
 
-
+build_wheel:
+    image: "python:3.7-slim"
+    stage: build_wheel
+    before_script:
+        - apt update
+        - apt install -y make
+        - pip install -r requirements_dev.txt
+    script:
+        - make dist
+        - export WHEEL_NAME="$( find dist -name 'flatland_rl*.whl' )"
+        - mv "${WHEEL_NAME}" "${WHEEL_NAME/-py2.py3-/-py3-}"
+    artifacts:
+        paths:
+            - dist/flatland_rl*.whl
+        expire_in: 2 mos
