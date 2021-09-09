@@ -119,3 +119,6 @@ test_save.dat
 .visualizations
 
 playground/
+
+*.pkl
+**/tmp
