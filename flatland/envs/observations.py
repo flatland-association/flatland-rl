@@ -196,14 +196,12 @@ class TreeObsForRailEnv(ObservationBuilder):
         if handle > len(self.env.agents):
             print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
         agent = self.env.agents[handle]  # TODO: handle being treated as index
-        
-        if agent.status == RailAgentStatus.WAITING:
+
+        if agent.state.is_off_map_state():
             agent_virtual_position = agent.initial_position
-        elif agent.status == RailAgentStatus.READY_TO_DEPART:
-            agent_virtual_position = agent.initial_position
-        elif agent.status == RailAgentStatus.ACTIVE:
+        elif agent.state.is_on_map_state():
             agent_virtual_position = agent.position
-        elif agent.status == RailAgentStatus.DONE:
+        elif agent.state == TrainState.DONE:
             agent_virtual_position = agent.target
         else:
             return None
@@ -343,7 +341,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                 self._reverse_dir(
                                     self.predicted_dir[predicted_time][ca])] == 1 and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
-                            if self.env.agents[ca].status == RailAgentStatus.DONE and tot_dist < potential_conflict:
+                            if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
 
                     # Look for conflicting paths at distance num_step-1
@@ -354,7 +352,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                 and cell_transitions[self._reverse_dir(self.predicted_dir[pre_step][ca])] == 1 \
                                 and tot_dist < potential_conflict:  # noqa: E125
                                 potential_conflict = tot_dist
-                            if self.env.agents[ca].status == RailAgentStatus.DONE and tot_dist < potential_conflict:
+                            if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
 
                     # Look for conflicting paths at distance num_step+1
@@ -365,7 +363,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                 self.predicted_dir[post_step][ca])] == 1 \
                                 and tot_dist < potential_conflict:  # noqa: E125
                                 potential_conflict = tot_dist
-                            if self.env.agents[ca].status == RailAgentStatus.DONE and tot_dist < potential_conflict:
+                            if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
 
             if position in self.location_has_target and position != agent.target:

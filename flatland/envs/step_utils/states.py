@@ -1,5 +1,7 @@
 from enum import IntEnum
 from dataclasses import dataclass
+
+
 class TrainState(IntEnum):
     WAITING = 0
     READY_TO_DEPART = 1
@@ -21,6 +23,7 @@ class TrainState(IntEnum):
     
     def is_on_map_state(self):
         return self.value in [self.MOVING, self.STOPPED, self.MALFUNCTION]
+
 
 @dataclass(repr=True)
 class StateTransitionSignals:

@@ -1,4 +1,7 @@
-from typing import Tuple, Optional, NamedTuple
+from flatland.envs.rail_trainrun_data_structures import Waypoint
+import numpy as np
+
+from typing import Tuple, Optional, NamedTuple, List
 
 from attr import attr, attrs, attrib, Factory
 
@@ -123,6 +126,31 @@ class EnvAgent:
                      action_saver=self.action_saver,
                      state_machine=self.state_machine,
                      malfunction_handler=self.malfunction_handler)
+
+    def get_shortest_path(self, distance_map) -> List[Waypoint]:
+        from flatland.envs.rail_env_shortest_paths import get_shortest_paths # Circular dep fix
+        return get_shortest_paths(distance_map=distance_map, agent_handle=self.handle)[self.handle]
+        
+    def get_travel_time_on_shortest_path(self, distance_map) -> int:
+        shortest_path = self.get_shortest_path(distance_map)
+        if shortest_path is not None:
+            distance = len(shortest_path)
+        else:
+            distance = 0
+        speed = self.speed_data['speed']
+        return int(np.ceil(distance / speed))
+
+    def get_time_remaining_until_latest_arrival(self, elapsed_steps: int) -> int:
+        return self.latest_arrival - elapsed_steps
+
+    def get_current_delay(self, elapsed_steps: int, distance_map) -> int:
+        '''
+        +ve if arrival time is projected before latest arrival
+        -ve if arrival time is projected after latest arrival
+        '''
+        return self.get_time_remaining_until_latest_arrival(elapsed_steps) - \
+               self.get_travel_time_on_shortest_path(distance_map)
+
 
     @classmethod
     def from_line(cls, line: Line):

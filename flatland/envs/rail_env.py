@@ -527,11 +527,10 @@ class RailEnv(Environment):
                                                                 direction=new_direction,
                                                                 preprocessed_action=preprocessed_action)
             
-            # This is for checking conflicts of agents trying to occupy same cell                                                    
+            # This is for storing and later checking for conflicts of agents trying to occupy same cell                                                    
             self.motionCheck.addAgent(i_agent, agent.position, new_position)
 
-        # Find conflicts
-
+        # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
         
         for agent in self.agents:

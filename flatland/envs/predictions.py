@@ -5,11 +5,11 @@ Collection of environment-specific PredictionBuilder.
 import numpy as np
 
 from flatland.core.env_prediction_builder import PredictionBuilder
-from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.utils.ordered_set import OrderedSet
+from flatland.envs.step_utils.states import TrainState
 
 
 class DummyPredictorForRailEnv(PredictionBuilder):
@@ -48,7 +48,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
         prediction_dict = {}
 
         for agent in agents:
-            if agent.status != RailAgentStatus.ACTIVE:
+            if not agent.state.is_on_map_state():
                 # TODO make this generic
                 continue
             action_priorities = [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]
@@ -126,13 +126,11 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
 
         prediction_dict = {}
         for agent in agents:
-            if agent.status == RailAgentStatus.WAITING:
+            if agent.state.is_off_map_state():
                 agent_virtual_position = agent.initial_position
-            elif agent.status == RailAgentStatus.READY_TO_DEPART:
-                agent_virtual_position = agent.initial_position
-            elif agent.status == RailAgentStatus.ACTIVE:
+            elif agent.state.is_on_map_state():
                 agent_virtual_position = agent.position
-            elif agent.status == RailAgentStatus.DONE:
+            elif agent.state == TrainState.DONE:
                 agent_virtual_position = agent.target
             else:
 
