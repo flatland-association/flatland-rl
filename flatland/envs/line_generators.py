@@ -189,7 +189,7 @@ def line_from_file(filename, load_from_package=None) -> LineGenerator:
         #agents_direction = [a.direction for a in agents]
         agents_direction = [a.initial_direction for a in agents]
         agents_target = [a.target for a in agents]
-        agents_speed = [a.speed_data['speed'] for a in agents]
+        agents_speed = [a.speed_counter.speed for a in agents]
 
         # Malfunctions from here are not used.  They have their own generator.
         #agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]

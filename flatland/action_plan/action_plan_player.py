@@ -30,6 +30,8 @@ class ControllerFromTrainrunsReplayer():
                 assert agent.position == waypoint.position, \
                     "before {}, agent {} at {}, expected {}".format(i, agent_id, agent.position,
                                                                     waypoint.position)
+                if agent_id == 1:
+                    print(env._elapsed_steps, agent.position, agent.state, agent.speed_counter)
             actions = ctl.act(i)
             print("actions for {}: {}".format(i, actions))
 

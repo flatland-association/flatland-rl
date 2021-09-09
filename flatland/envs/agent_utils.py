@@ -1,5 +1,6 @@
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 import numpy as np
+import warnings
 
 from typing import Tuple, Optional, NamedTuple, List
 
@@ -21,7 +22,6 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('moving', bool),
                              ('earliest_departure', int),
                              ('latest_arrival', int),
-                             ('speed_data', dict),
                              ('malfunction_data', dict),
                              ('handle', int),
                              ('position', Tuple[int, int]),
@@ -49,13 +49,6 @@ class EnvAgent:
     earliest_departure = attrib(default=None, type=int)  # default None during _from_line()
     latest_arrival = attrib(default=None, type=int)  # default None during _from_line()
 
-    # speed_data: speed is added to position_fraction on each moving step, until position_fraction>=1.0,
-    # after which 'transition_action_on_cellexit' is executed (equivalent to executing that action in the previous
-    # cell if speed=1, as default)
-    # N.B. we need to use factory since default arguments are not recreated on each call!
-    speed_data = attrib(
-        default=Factory(lambda: dict({'position_fraction': 0.0, 'speed': 1.0, 'transition_action_on_cellexit': 0})))
-
     # if broken>0, the agent's actions are ignored for 'broken' steps
     # number of time the agent had to stop, since the last time it broke down
     malfunction_data = attrib(
@@ -67,7 +60,7 @@ class EnvAgent:
     # INIT TILL HERE IN _from_line()
 
     # Env step facelift
-    speed_counter = attrib(default = None, type=SpeedCounter)
+    speed_counter = attrib(default = Factory(lambda: SpeedCounter(1.0)), type=SpeedCounter)
     action_saver = attrib(default = Factory(lambda: ActionSaver()), type=ActionSaver)
     state_machine = attrib(default= Factory(lambda: TrainStateMachine(initial_state=TrainState.WAITING)) , 
                            type=TrainStateMachine)
@@ -94,10 +87,6 @@ class EnvAgent:
         self.old_direction = None
         self.moving = False
 
-        # Reset agent values for speed
-        self.speed_data['position_fraction'] = 0.
-        self.speed_data['transition_action_on_cellexit'] = 0.
-
         # Reset agent malfunction values
         self.malfunction_data['malfunction'] = 0
         self.malfunction_data['nr_malfunctions'] = 0
@@ -115,7 +104,6 @@ class EnvAgent:
                      moving=self.moving,
                      earliest_departure=self.earliest_departure, 
                      latest_arrival=self.latest_arrival, 
-                     speed_data=self.speed_data,
                      malfunction_data=self.malfunction_data, 
                      handle=self.handle, 
                      state=self.state,
@@ -137,7 +125,7 @@ class EnvAgent:
             distance = len(shortest_path)
         else:
             distance = 0
-        speed = self.speed_data['speed']
+        speed = self.speed_counter.speed
         return int(np.ceil(distance / speed))
 
     def get_time_remaining_until_latest_arrival(self, elapsed_steps: int) -> int:
@@ -161,11 +149,6 @@ class EnvAgent:
         agent_list = []
         for i_agent in range(num_agents):
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
-
-            speed_data = {'position_fraction': 0.0,
-                           'speed': speed,
-                           'transition_action_on_cellexit': 0
-                          }
             
             if line.agent_malfunction_rates is not None:
                 malfunction_rate = line.agent_malfunction_rates[i_agent]
@@ -177,7 +160,6 @@ class EnvAgent:
                                 'next_malfunction': 0,
                                 'nr_malfunctions': 0
                                }
-            
             agent = EnvAgent(initial_position = line.agent_positions[i_agent],
                             initial_direction = line.agent_directions[i_agent],
                             direction = line.agent_directions[i_agent],
@@ -185,7 +167,6 @@ class EnvAgent:
                             moving = False, 
                             earliest_departure = None,
                             latest_arrival = None,
-                            speed_data = speed_data,
                             malfunction_data = malfunction_data,
                             handle = i_agent,
                             speed_counter = SpeedCounter(speed=speed))
@@ -195,6 +176,7 @@ class EnvAgent:
 
     @classmethod
     def load_legacy_static_agent(cls, static_agents_data: Tuple):
+        raise NotImplementedError("Not implemented for Flatland 3")
         agents = []
         for i, static_agent in enumerate(static_agents_data):
             if len(static_agent) >= 6:
@@ -205,16 +187,35 @@ class EnvAgent:
                 agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
                                 direction=static_agent[1], target=static_agent[2], 
                                 moving=False,
-                                speed_data={"speed":1., "position_fraction":0., "transition_action_on_cell_exit":0.},
                                 malfunction_data={
                                             'malfunction': 0,
                                             'nr_malfunctions': 0,
                                             'moving_before_malfunction': False
                                         },
+                                speed_counter=SpeedCounter(1.0),
                                 handle=i)
             agents.append(agent)
         return agents
     
+    def _set_state(self, state):
+        warnings.warn("Not recommended to set the state with this function unless completely required")
+        self.state_machine.set_state(state)
+    
+    def __str__(self):
+        return f"\n \
+                 handle(agent index): {self.handle} \n \
+                 initial_position: {self.initial_position}   initial_direction: {self.initial_direction} \n \
+                 position: {self.position}  direction: {self.position}  target: {self.target} \n \
+                 earliest_departure: {self.earliest_departure}  latest_arrival: {self.latest_arrival} \n \
+                 state: {str(self.state)} \n \
+                 malfunction_data: {self.malfunction_data} \n \
+                 action_saver: {self.action_saver} \n \
+                 speed_counter: {self.speed_counter}"
+
     @property
     def state(self):
         return self.state_machine.state
+
+
+    
+

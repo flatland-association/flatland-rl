@@ -141,7 +141,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                 continue
 
             agent_virtual_direction = agent.direction
-            agent_speed = agent.speed_data["speed"]
+            agent_speed = agent.speed_counter.speed
             times_per_cell = int(np.reciprocal(agent_speed))
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
             prediction[0] = [0, *agent_virtual_position, agent_virtual_direction, 0]

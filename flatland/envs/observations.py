@@ -98,7 +98,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 _agent.position:
                 self.location_has_agent[tuple(_agent.position)] = 1
                 self.location_has_agent_direction[tuple(_agent.position)] = _agent.direction
-                self.location_has_agent_speed[tuple(_agent.position)] = _agent.speed_data['speed']
+                self.location_has_agent_speed[tuple(_agent.position)] = _agent.speed_counter.speed
                 self.location_has_agent_malfunction[tuple(_agent.position)] = _agent.malfunction_data[
                     'malfunction']
 
@@ -221,7 +221,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                             agent.direction)],
                                                        num_agents_same_direction=0, num_agents_opposite_direction=0,
                                                        num_agents_malfunctioning=agent.malfunction_data['malfunction'],
-                                                       speed_min_fractional=agent.speed_data['speed'],
+                                                       speed_min_fractional=agent.speed_counter.speed
                                                        num_agents_ready_to_depart=0,
                                                        childs={})
         #print("root node type:", type(root_node_observation))
@@ -275,7 +275,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         visited = OrderedSet()
         agent = self.env.agents[handle]
-        time_per_cell = np.reciprocal(agent.speed_data["speed"])
+        time_per_cell = np.reciprocal(agent.speed_counter.speed)
         own_target_encountered = np.inf
         other_agent_encountered = np.inf
         other_target_encountered = np.inf
@@ -604,7 +604,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
                 if i != handle:
                     obs_agents_state[other_agent.position][1] = other_agent.direction
                 obs_agents_state[other_agent.position][2] = other_agent.malfunction_data['malfunction']
-                obs_agents_state[other_agent.position][3] = other_agent.speed_data['speed']
+                obs_agents_state[other_agent.position][3] = other_agent.speed_counter.speed
             # fifth channel: all ready to depart on this position
             if other_agent.state.is_off_map_state():
                 obs_agents_state[other_agent.initial_position][4] += 1

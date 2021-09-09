@@ -261,8 +261,7 @@ class RailEnv(Environment):
         False: Agent cannot provide an action
         """
         return agent.state == TrainState.READY_TO_DEPART or \
-               (agent.state.is_on_map_state() and \
-                fast_isclose(agent.speed_data['position_fraction'], 0.0, rtol=1e-03) )
+               (agent.state.is_on_map_state() and agent.speed_counter.is_cell_entry )
 
     def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
               random_seed: bool = None) -> Tuple[Dict, Dict]:
@@ -344,19 +343,6 @@ class RailEnv(Environment):
         # Reset agents to initial states
         self.reset_agents()
 
-        # for agent in self.agents:
-        #     # Induce malfunctions
-        #     if activate_agents:
-        #         self.set_agent_active(agent)
-
-        #     self._break_agent(agent)
-
-        #     if agent.malfunction_data["malfunction"] > 0:
-        #         agent.speed_data['transition_action_on_cellexit'] = RailEnvActions.DO_NOTHING
-
-        #     # Fix agents that finished their malfunction
-        #     self._fix_agent_after_malfunction(agent)
-
         self.num_resets += 1
         self._elapsed_steps = 0
 
@@ -369,14 +355,7 @@ class RailEnv(Environment):
         # Empty the episode store of agent positions
         self.cur_episode = []
 
-        info_dict: Dict = {
-            'action_required': {i: self.action_required(agent) for i, agent in enumerate(self.agents)},
-            'malfunction': {
-                i: agent.malfunction_data['malfunction'] for i, agent in enumerate(self.agents)
-            },
-            'speed': {i: agent.speed_data['speed'] for i, agent in enumerate(self.agents)},
-            'state': {i: agent.state for i, agent in enumerate(self.agents)}
-        }
+        info_dict = self.get_info_dict()
         # Return the new observation vectors for each agent
         observation_dict: Dict = self._get_observations()
         return observation_dict, info_dict
@@ -469,10 +448,12 @@ class RailEnv(Environment):
 
     def get_info_dict(self): # TODO Important : Update this
         info_dict = {
-            "action_required": {},
-            "malfunction": {},
-            "speed": {},
-            "status": {},
+            'action_required': {i: self.action_required(agent) for i, agent in enumerate(self.agents)},
+            'malfunction': {
+                i: agent.malfunction_data['malfunction'] for i, agent in enumerate(self.agents)
+            },
+            'speed': {i: agent.speed_counter.speed for i, agent in enumerate(self.agents)},
+            'state': {i: agent.state for i, agent in enumerate(self.agents)}
         }
         return info_dict
 
