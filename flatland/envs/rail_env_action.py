@@ -19,6 +19,10 @@ class RailEnvActions(IntEnum):
             4: 'S',
         }[a]
 
+    @staticmethod
+    def is_moving_action(action):
+        return action in [1,2,3]
+
 
 RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])
 RailEnvNextAction = NamedTuple('RailEnvNextAction', [('action', RailEnvActions), ('next_position', RailEnvGridPos),
