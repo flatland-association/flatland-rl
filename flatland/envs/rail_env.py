@@ -549,7 +549,7 @@ class RailEnv(Environment):
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                movement_allowed, _ = self.motionCheck.check_motion(i_agent, agent.position) # TODO: Remove final_new_postion from motioncheck
+                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position) # TODO: Remove final_new_postion from motioncheck
 
             if movement_allowed:
                 agent.position = agent_transition_data.position
@@ -567,7 +567,7 @@ class RailEnv(Environment):
                 agent.position = None
 
             ## Update rewards
-            # self.update_rewards(i_agent, agent, rail)
+            # self.update_rewards(i_agent, agent, rail) # TODO : Rewards - Fix this
 
             ## Update counters (malfunction and speed)
             agent.speed_counter.update_counter(agent.state)
@@ -577,7 +577,7 @@ class RailEnv(Environment):
             if agent.speed_counter.is_cell_entry:
                 agent.action_saver.clear_saved_action()
         
-        self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))} # TODO : Remove this
+        self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))} # TODO : Rewards - Remove this
         return self._get_observations(), self.rewards_dict, self.dones, info_dict # TODO : Will need changes?
 
     def record_timestep(self, dActions):

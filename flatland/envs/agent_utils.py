@@ -1,8 +1,4 @@
-from flatland.envs.rail_trainrun_data_structures import Waypoint
-import numpy as np
-
-from itertools import starmap
-from typing import Tuple, Optional, NamedTuple, List
+from typing import Tuple, Optional, NamedTuple
 
 from attr import attr, attrs, attrib, Factory
 
