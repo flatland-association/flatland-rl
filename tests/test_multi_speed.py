@@ -8,7 +8,7 @@ from flatland.envs.rail_generators import sparse_rail_generator, rail_from_grid_
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail
 from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
-from flatland.envs.agent_utils import RailAgentStatus
+from flatland.envs.step_utils.states import TrainState
 
 
 # Use the sparse_rail_generator to generate feasible network configurations with corresponding tasks
@@ -65,13 +65,13 @@ def test_multi_speed_init():
 
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position =  env.agents[a_idx].initial_position
-        env.agents[a_idx].status = RailAgentStatus.ACTIVE
+        env.agents[a_idx]._set_state(TrainState.MOVING)
 
     # Here you can also further enhance the provided observation by means of normalization
     # See training navigation example in the baseline repository
     old_pos = []
     for i_agent in range(env.get_num_agents()):
-        env.agents[i_agent].speed_data['speed'] = 1. / (i_agent + 1)
+        env.agents[i_agent].speed_counter.speed = 1. / (i_agent + 1)
         old_pos.append(env.agents[i_agent].position)
         print(env.agents[i_agent].position)
     # Run episode

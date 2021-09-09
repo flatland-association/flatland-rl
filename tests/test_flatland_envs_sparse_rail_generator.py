@@ -1315,8 +1315,8 @@ def test_rail_env_action_required_info():
             if step == 0 or info_only_if_action_required['action_required'][a]:
                 action_dict_only_if_action_required.update({a: action})
             else:
-                print("[{}] not action_required {}, speed_data={}".format(step, a,
-                                                                          env_always_action.agents[a].speed_data))
+                print("[{}] not action_required {}, speed_counter={}".format(step, a,
+                                                                          env_always_action.agents[a].speed_counter))
 
         obs_always_action, rewards_always_action, done_always_action, info_always_action = env_always_action.step(
             action_dict_always_action)
@@ -1375,7 +1375,7 @@ def test_rail_env_malfunction_speed_info():
         for a in range(env.get_num_agents()):
             assert info['malfunction'][a] >= 0
             assert info['speed'][a] >= 0 and info['speed'][a] <= 1
-            assert info['speed'][a] == env.agents[a].speed_data['speed']
+            assert info['speed'][a] == env.agents[a].sspeed_counter.speed
 
         env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
 

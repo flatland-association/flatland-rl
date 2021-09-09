@@ -8,8 +8,6 @@ import time
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.env_prediction_builder import PredictionBuilder
-from flatland.envs.agent_utils import RailAgentStatus, EnvAgent
 
 
 class CustomObservationBuilder(ObservationBuilder):

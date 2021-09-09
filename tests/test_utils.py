@@ -5,13 +5,15 @@ import numpy as np
 from attr import attrs, attrib
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params
 from flatland.envs.rail_env import RailEnvActions, RailEnv
 from flatland.envs.rail_generators import RailGenerator
 from flatland.envs.line_generators import LineGenerator
 from flatland.utils.rendertools import RenderTool
 from flatland.envs.persistence import RailEnvPersister
+from flatland.envs.step_utils.states import TrainState
+from flatland.envs.step_utils.speed_counter import SpeedCounter
 
 @attrs
 class Replay(object):
@@ -21,7 +23,7 @@ class Replay(object):
     malfunction = attrib(default=0, type=int)
     set_malfunction = attrib(default=None, type=Optional[int])
     reward = attrib(default=None, type=Optional[float])
-    status = attrib(default=None, type=Optional[RailAgentStatus])
+    state = attrib(default=None, type=Optional[TrainState])
 
 
 @attrs
@@ -86,12 +88,12 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 agent.initial_direction = test_config.initial_direction
                 agent.direction = test_config.initial_direction
                 agent.target = test_config.target
-                agent.speed_data['speed'] = test_config.speed
+                agent.speed_counter = SpeedCounter(speed=test_config.speed)
             env.reset(False, False)
             if activate_agents:
                 for a_idx in range(len(env.agents)):
                     env.agents[a_idx].position =  env.agents[a_idx].initial_position
-                    env.agents[a_idx].status = RailAgentStatus.ACTIVE
+                    env.agents[a_idx]._set_state(TrainState.MOVING)
 
         def _assert(a, actual, expected, msg):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))
@@ -108,12 +110,12 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
             _assert(a, agent.position, replay.position, 'position')
             _assert(a, agent.direction, replay.direction, 'direction')
-            if replay.status is not None:
-                _assert(a, agent.status, replay.status, 'status')
+            if replay.state is not None:
+                _assert(a, agent.state, replay.state, 'state')
 
             if replay.action is not None:
                 assert info_dict['action_required'][
-                           a] == True or agent.status == RailAgentStatus.READY_TO_DEPART, "[{}] agent {} expecting action_required={} or agent status READY_TO_DEPART".format(
+                           a] == True or agent.state == TrainState.READY_TO_DEPART, "[{}] agent {} expecting action_required={} or agent status READY_TO_DEPART".format(
                     step, a, True)
                 action_dict[a] = replay.action
             else:

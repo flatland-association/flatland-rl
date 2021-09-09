@@ -23,7 +23,7 @@ def test_rail_env_speed_intializer():
                   rail_generator=sparse_rail_generator(), line_generator=sparse_line_generator(),
                   number_of_agents=10)
     env.reset()
-    actual_speeds = list(map(lambda agent: agent.speed_data['speed'], env.agents))
+    actual_speeds = list(map(lambda agent: agent.speed_counter.speed, env.agents))
 
     expected_speed_set = set(speed_ratio_map.keys())
 

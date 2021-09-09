@@ -6,14 +6,14 @@ import numpy as np
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail2
 from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
-
+from flatland.envs.step_utils.states import TrainState
+from flatland.envs.step_utils.speed_counter import SpeedCounter
 
 class SingleAgentNavigationObs(ObservationBuilder):
     """
@@ -32,11 +32,11 @@ class SingleAgentNavigationObs(ObservationBuilder):
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 
-        if agent.status == RailAgentStatus.READY_TO_DEPART:
+        if agent.state.is_off_map_state():
             agent_virtual_position = agent.initial_position
-        elif agent.status == RailAgentStatus.ACTIVE:
+        elif agent.state.is_on_map_state():
             agent_virtual_position = agent.position
-        elif agent.status == RailAgentStatus.DONE:
+        elif agent.state == TrainState.DONE:
             agent_virtual_position = agent.target
         else:
             return None
@@ -85,7 +85,7 @@ def test_malfunction_process():
     obs, info = env.reset(False, False, random_seed=10)
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position =  env.agents[a_idx].initial_position
-        env.agents[a_idx].status = RailAgentStatus.ACTIVE
+        env.agents[a_idx].state = TrainState.MOVING
 
     agent_halts = 0
     total_down_time = 0
@@ -297,7 +297,7 @@ def test_initial_malfunction():
                 reward=env.step_penalty  # running at speed 1.0
             )
         ],
-        speed=env.agents[0].speed_data['speed'],
+        speed=env.agents[0].speed_counter.speed,
         target=env.agents[0].target,
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
@@ -315,7 +315,7 @@ def test_initial_malfunction_stop_moving():
     
     env._max_episode_steps = 1000
 
-    print(env.agents[0].initial_position, env.agents[0].direction, env.agents[0].position, env.agents[0].status)
+    print(env.agents[0].initial_position, env.agents[0].direction, env.agents[0].position, env.agents[0].state)
 
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
@@ -327,7 +327,7 @@ def test_initial_malfunction_stop_moving():
                 set_malfunction=3,
                 malfunction=3,
                 reward=env.step_penalty,  # full step penalty when stopped
-                status=RailAgentStatus.READY_TO_DEPART
+                state=TrainState.READY_TO_DEPART
             ),
             Replay(
                 position=(3, 2),
@@ -335,7 +335,7 @@ def test_initial_malfunction_stop_moving():
                 action=RailEnvActions.DO_NOTHING,
                 malfunction=2,
                 reward=env.step_penalty,  # full step penalty when stopped
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.READY_TO_DEPART
             ),
             # malfunction stops in the next step and we're still at the beginning of the cell
             # --> if we take action STOP_MOVING, agent should restart without moving
@@ -346,7 +346,7 @@ def test_initial_malfunction_stop_moving():
                 action=RailEnvActions.STOP_MOVING,
                 malfunction=1,
                 reward=env.step_penalty,  # full step penalty while stopped
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.STOPPED
             ),
             # we have stopped and do nothing --> should stand still
             Replay(
@@ -355,7 +355,7 @@ def test_initial_malfunction_stop_moving():
                 action=RailEnvActions.DO_NOTHING,
                 malfunction=0,
                 reward=env.step_penalty,  # full step penalty while stopped
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.STOPPED
             ),
             # we start to move forward --> should go to next cell now
             Replay(
@@ -364,7 +364,7 @@ def test_initial_malfunction_stop_moving():
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.start_penalty + env.step_penalty * 1.0,  # full step penalty while stopped
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.STOPPED
             ),
             Replay(
                 position=(3, 3),
@@ -372,10 +372,10 @@ def test_initial_malfunction_stop_moving():
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.step_penalty * 1.0,  # full step penalty while stopped
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.STOPPED
             )
         ],
-        speed=env.agents[0].speed_data['speed'],
+        speed=env.agents[0].speed_counter.speed,
         target=env.agents[0].target,
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
@@ -412,7 +412,7 @@ def test_initial_malfunction_do_nothing():
                 set_malfunction=3,
                 malfunction=3,
                 reward=env.step_penalty,  # full step penalty while malfunctioning
-                status=RailAgentStatus.READY_TO_DEPART
+                state=TrainState.READY_TO_DEPART
             ),
             Replay(
                 position=(3, 2),
@@ -420,7 +420,7 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.DO_NOTHING,
                 malfunction=2,
                 reward=env.step_penalty,  # full step penalty while malfunctioning
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.ACTIVE
             ),
             # malfunction stops in the next step and we're still at the beginning of the cell
             # --> if we take action DO_NOTHING, agent should restart without moving
@@ -431,7 +431,7 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.DO_NOTHING,
                 malfunction=1,
                 reward=env.step_penalty,  # full step penalty while stopped
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.ACTIVE
             ),
             # we haven't started moving yet --> stay here
             Replay(
@@ -440,7 +440,7 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.DO_NOTHING,
                 malfunction=0,
                 reward=env.step_penalty,  # full step penalty while stopped
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.ACTIVE
             ),
 
             Replay(
@@ -449,7 +449,7 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.start_penalty + env.step_penalty * 1.0,  # start penalty + step penalty for speed 1.0
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.ACTIVE
             ),  # we start to move forward --> should go to next cell now
             Replay(
                 position=(3, 3),
@@ -457,10 +457,10 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.step_penalty * 1.0,  # step penalty for speed 1.0
-                status=RailAgentStatus.ACTIVE
+                state=TrainState.ACTIVE
             )
         ],
-        speed=env.agents[0].speed_data['speed'],
+        speed=env.agents[0].speed_counter.speed,
         target=env.agents[0].target,
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
@@ -475,7 +475,7 @@ def tests_random_interference_from_outside():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
-    env.agents[0].speed_data['speed'] = 0.33
+    env.agents[0].speed_counter = SpeedCounter(speed=0.33)
     env.reset(False, False, random_seed=10)
     env_data = []
 
@@ -501,7 +501,7 @@ def tests_random_interference_from_outside():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
-    env.agents[0].speed_data['speed'] = 0.33
+    env.agents[0].speed_counter = SpeedCounter(speed=0.33)
     env.reset(False, False, random_seed=10)
 
     dummy_list = [1, 2, 6, 7, 8, 9, 4, 5, 4]
@@ -536,7 +536,7 @@ def test_last_malfunction_step():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
-    env.agents[0].speed_data['speed'] = 1. / 3.
+    env.agents[0].speed_counter = SpeedCounter(speed=1./3.)
     env.agents[0].initial_position = (6, 6)
     env.agents[0].initial_direction = 2
     env.agents[0].target = (0, 3)
@@ -546,7 +546,7 @@ def test_last_malfunction_step():
     env.reset(False, False)
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position =  env.agents[a_idx].initial_position
-        env.agents[a_idx].status = RailAgentStatus.ACTIVE
+        env.agents[a_idx].state = TrainState.ACTIVE
     # Force malfunction to be off at beginning and next malfunction to happen in 2 steps
     env.agents[0].malfunction_data['next_malfunction'] = 2
     env.agents[0].malfunction_data['malfunction'] = 0
@@ -565,13 +565,13 @@ def test_last_malfunction_step():
         if env.agents[0].malfunction_data['malfunction'] < 1:
             agent_can_move = True
         # Store the position before and after the step
-        pre_position = env.agents[0].speed_data['position_fraction']
+        pre_position = env.agents[0].speed_counter.counter
         _, reward, _, _ = env.step(action_dict)
         # Check if the agent is still allowed to move in this step
 
         if env.agents[0].malfunction_data['malfunction'] > 0:
             agent_can_move = False
-        post_position = env.agents[0].speed_data['position_fraction']
+        post_position = env.agents[0].speed_counter.counter
         # Assert that the agent moved while it was still allowed
         if agent_can_move:
             assert pre_position != post_position

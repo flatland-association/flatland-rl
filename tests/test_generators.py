@@ -10,7 +10,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_fr
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.utils.simple_rail import make_simple_rail
 from flatland.envs.persistence import RailEnvPersister
-from flatland.envs.agent_utils import RailAgentStatus
+from flatland.envs.step_utils.states import TrainState
 
 
 def test_empty_rail_generator():
@@ -35,7 +35,7 @@ def test_rail_from_grid_transition_map():
 
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position =  env.agents[a_idx].initial_position
-        env.agents[a_idx].status = RailAgentStatus.ACTIVE
+        env.agents[a_idx]._set_state(TrainState.MOVING)
 
     nr_rail_elements = np.count_nonzero(env.rail.grid)
 

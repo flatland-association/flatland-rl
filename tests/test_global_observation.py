@@ -1,10 +1,11 @@
 import numpy as np
 
-from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.step_utils.states import TrainState
 
 
 def test_get_global_observation():
@@ -37,7 +38,7 @@ def test_get_global_observation():
     obs, all_rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in range(number_of_agents)})
     for i in range(len(env.agents)):
         agent: EnvAgent = env.agents[i]
-        print("[{}] status={}, position={}, target={}, initial_position={}".format(i, agent.status, agent.position,
+        print("[{}] state={}, position={}, target={}, initial_position={}".format(i, agent.state, agent.position,
                                                                                    agent.target,
                                                                                    agent.initial_position))
 
@@ -65,19 +66,19 @@ def test_get_global_observation():
         # test first channel of obs_agents_state: direction at own position
         for r in range(env.height):
             for c in range(env.width):
-                if (agent.status == RailAgentStatus.ACTIVE or agent.status == RailAgentStatus.DONE) and (
+                if (agent.state.is_on_map_state() or agent.state == TrainState.DONE) and (
                     r, c) == agent.position:
                     assert np.isclose(obs_agents_state[(r, c)][0], agent.direction), \
-                        "agent {} in status {} at {} expected to contain own direction {}, found {}" \
-                            .format(i, agent.status, (r, c), agent.direction, obs_agents_state[(r, c)][0])
-                elif (agent.status == RailAgentStatus.READY_TO_DEPART) and (r, c) == agent.initial_position:
+                        "agent {} in state {} at {} expected to contain own direction {}, found {}" \
+                            .format(i, agent.state, (r, c), agent.direction, obs_agents_state[(r, c)][0])
+                elif (agent.state == TrainState.READY_TO_DEPART) and (r, c) == agent.initial_position:
                     assert np.isclose(obs_agents_state[(r, c)][0], agent.direction), \
-                        "agent {} in status {} at {} expected to contain own direction {}, found {}" \
-                            .format(i, agent.status, (r, c), agent.direction, obs_agents_state[(r, c)][0])
+                        "agent {} in state {} at {} expected to contain own direction {}, found {}" \
+                            .format(i, agent.state, (r, c), agent.direction, obs_agents_state[(r, c)][0])
                 else:
                     assert np.isclose(obs_agents_state[(r, c)][0], -1), \
-                        "agent {} in status {} at {} expected contain -1 found {}" \
-                            .format(i, agent.status, (r, c), obs_agents_state[(r, c)][0])
+                        "agent {} in state {} at {} expected contain -1 found {}" \
+                            .format(i, agent.state, (r, c), obs_agents_state[(r, c)][0])
 
         # test second channel of obs_agents_state: direction at other agents position
         for r in range(env.height):
@@ -86,45 +87,45 @@ def test_get_global_observation():
                 for other_i, other_agent in enumerate(env.agents):
                     if i == other_i:
                         continue
-                    if other_agent.status in [RailAgentStatus.ACTIVE, RailAgentStatus.DONE] and (
+                    if other_agent.state in [TrainState.MOVING, TrainState.MALFUNCTION, TrainState.STOPPED, TrainState.DONE] and (
                         r, c) == other_agent.position:
                         assert np.isclose(obs_agents_state[(r, c)][1], other_agent.direction), \
-                            "agent {} in status {} at {} should see other agent with direction {}, found = {}" \
-                                .format(i, agent.status, (r, c), other_agent.direction, obs_agents_state[(r, c)][1])
+                            "agent {} in state {} at {} should see other agent with direction {}, found = {}" \
+                                .format(i, agent.state, (r, c), other_agent.direction, obs_agents_state[(r, c)][1])
                     has_agent = True
                 if not has_agent:
                     assert np.isclose(obs_agents_state[(r, c)][1], -1), \
-                        "agent {} in status {} at {} should see no other agent direction (-1), found = {}" \
-                            .format(i, agent.status, (r, c), obs_agents_state[(r, c)][1])
+                        "agent {} in state {} at {} should see no other agent direction (-1), found = {}" \
+                            .format(i, agent.state, (r, c), obs_agents_state[(r, c)][1])
 
         # test third and fourth channel of obs_agents_state: malfunction and speed of own or other agent in the grid
         for r in range(env.height):
             for c in range(env.width):
                 has_agent = False
                 for other_i, other_agent in enumerate(env.agents):
-                    if other_agent.status in [RailAgentStatus.ACTIVE,
-                                              RailAgentStatus.DONE] and other_agent.position == (r, c):
+                    if other_agent.state in [TrainState.MOVING, TrainState.MALFUNCTION, TrainState.STOPPED,
+                                              TrainState.DONE] and other_agent.position == (r, c):
                         assert np.isclose(obs_agents_state[(r, c)][2], other_agent.malfunction_data['malfunction']), \
-                            "agent {} in status {} at {} should see agent malfunction {}, found = {}" \
-                                .format(i, agent.status, (r, c), other_agent.malfunction_data['malfunction'],
+                            "agent {} in state {} at {} should see agent malfunction {}, found = {}" \
+                                .format(i, agent.state, (r, c), other_agent.malfunction_data['malfunction'],
                                         obs_agents_state[(r, c)][2])
-                        assert np.isclose(obs_agents_state[(r, c)][3], other_agent.speed_data['speed'])
+                        assert np.isclose(obs_agents_state[(r, c)][3], other_agent.speed_counter.speed)
                         has_agent = True
                 if not has_agent:
                     assert np.isclose(obs_agents_state[(r, c)][2], -1), \
-                        "agent {} in status {} at {} should see no agent malfunction (-1), found = {}" \
-                            .format(i, agent.status, (r, c), obs_agents_state[(r, c)][2])
+                        "agent {} in state {} at {} should see no agent malfunction (-1), found = {}" \
+                            .format(i, agent.state, (r, c), obs_agents_state[(r, c)][2])
                     assert np.isclose(obs_agents_state[(r, c)][3], -1), \
-                        "agent {} in status {} at {} should see no agent speed (-1), found = {}" \
-                            .format(i, agent.status, (r, c), obs_agents_state[(r, c)][3])
+                        "agent {} in state {} at {} should see no agent speed (-1), found = {}" \
+                            .format(i, agent.state, (r, c), obs_agents_state[(r, c)][3])
 
         # test fifth channel of obs_agents_state: number of agents ready to depart in to this cell
         for r in range(env.height):
             for c in range(env.width):
                 count = 0
                 for other_i, other_agent in enumerate(env.agents):
-                    if other_agent.status == RailAgentStatus.READY_TO_DEPART and other_agent.initial_position == (r, c):
+                    if other_agent.state == TrainState.READY_TO_DEPART and other_agent.initial_position == (r, c):
                         count += 1
                 assert np.isclose(obs_agents_state[(r, c)][4], count), \
-                    "agent {} in status {} at {} should see {} agents ready to depart, found{}" \
-                        .format(i, agent.status, (r, c), count, obs_agents_state[(r, c)][4])
+                    "agent {} in state {} at {} should see {} agents ready to depart, found{}" \
+                        .format(i, agent.state, (r, c), count, obs_agents_state[(r, c)][4])
