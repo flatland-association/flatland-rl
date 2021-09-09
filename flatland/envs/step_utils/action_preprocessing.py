@@ -55,6 +55,6 @@ def preprocess_moving_action(action, rail, position, direction):
     if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]:
         action = process_left_right(action, rail, position, direction)
 
-    if not check_valid_action(action, rail, position, direction): # TODO: Dipam - Not sure if this is needed
+    if not check_valid_action(action, rail, position, direction):
         action = RailEnvActions.STOP_MOVING
     return action

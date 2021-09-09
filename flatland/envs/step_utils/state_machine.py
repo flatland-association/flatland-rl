@@ -1,4 +1,3 @@
-from attr import s
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 
 class TrainStateMachine:

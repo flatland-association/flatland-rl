@@ -71,9 +71,7 @@ def check_action_on_agent(action, rail, position, direction):
 
     # If transition validity hasn't been checked yet.
     if transition_valid is None:
-        transition_valid = rail.get_transition( # TODO: Dipam - Read this one
-            (*position, direction),
-            new_direction)
+        transition_valid = rail.get_transition( (*position, direction), new_direction)
 
     return new_cell_valid, new_direction, new_position, transition_valid
 
