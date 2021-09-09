@@ -2,18 +2,19 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 import numpy as np
 
 from enum import IntEnum
-from flatland.envs.step_utils.states import TrainState
+
 from itertools import starmap
 from typing import Tuple, Optional, NamedTuple, List
 
 from attr import attr, attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.schedule_utils import Schedule
+from flatland.envs.timetable_utils import Line
 
 from flatland.envs.step_utils.action_saver import ActionSaver
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.state_machine import TrainStateMachine
+from flatland.envs.step_utils.states import TrainState
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 
 Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
@@ -137,8 +138,8 @@ class EnvAgent:
         """
         speed_datas = []
         speed_counters = []
-        for i in range(len(schedule.agent_positions)):
-            speed = schedule.agent_speeds[i] if schedule.agent_speeds is not None else 1.0
+        for i in range(len(line.agent_positions)):
+            speed = line.agent_speeds[i] if line.agent_speeds is not None else 1.0
             speed_datas.append({'position_fraction': 0.0,
                                 'speed': speed,
                                 'transition_action_on_cellexit': 0})
@@ -152,16 +153,16 @@ class EnvAgent:
                                       'next_malfunction': 0,
                                       'nr_malfunctions': 0})
         
-        return list(starmap(EnvAgent, zip(schedule.agent_positions,  # TODO : Dipam - Really want to change this way of loading agents
-                                          schedule.agent_directions,
-                                          schedule.agent_directions,
-                                          schedule.agent_targets, 
-                                          [False] * len(schedule.agent_positions), 
-                                          [None] * len(schedule.agent_positions), # earliest_departure
-                                          [None] * len(schedule.agent_positions), # latest_arrival
+        return list(starmap(EnvAgent, zip(line.agent_positions,  # TODO : Dipam - Really want to change this way of loading agents
+                                          line.agent_directions,
+                                          line.agent_directions,
+                                          line.agent_targets, 
+                                          [False] * len(line.agent_positions), 
+                                          [None] * len(line.agent_positions), # earliest_departure
+                                          [None] * len(line.agent_positions), # latest_arrival
                                           speed_datas,
                                           malfunction_datas,
-                                          range(len(schedule.agent_positions)),
+                                          range(len(line.agent_positions)),
                                           speed_counters,
                                           )))
 

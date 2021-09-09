@@ -66,9 +66,8 @@ def check_action_on_agent(action, rail, position, direction):
     new_direction, transition_valid = check_action(action, position, direction, rail)
     new_position = get_new_position(position, new_direction)
 
-    cell_inside_grid = check_bounds(new_position, rail.height, rail.width)
-    cell_not_empty = rail.get_full_transitions(*new_position) > 0
-    new_cell_valid = cell_inside_grid and cell_not_empty
+    new_cell_valid = check_bounds(new_position, rail.height, rail.width) and \
+                     rail.get_full_transitions(*new_position) > 0
 
     # If transition validity hasn't been checked yet.
     if transition_valid is None:

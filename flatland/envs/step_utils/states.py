@@ -16,6 +16,15 @@ class TrainState(IntEnum):
     @staticmethod
     def is_malfunction_state(state):
         return state in [2, 5] # TODO: Can this be done with names instead?
+
+    @staticmethod
+    def off_map_state(state):
+        return state in [0, 1, 2]
+    
+    @staticmethod    
+    def on_map_state(state):
+        return state in [3, 4, 5]
+
     
 
 

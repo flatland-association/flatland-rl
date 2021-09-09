@@ -10,7 +10,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env import RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
 #from flatland.envs.sparse_rail_gen import SparseRailGen
-from flatland.envs.schedule_generators import sparse_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 
 
 def get_small_two_agent_env():
@@ -35,7 +35,7 @@ def get_small_two_agent_env():
                     1. / 3.: 0.25,  # Slow commuter train
                     1. / 4.: 0.25}  # Slow freight train
 
-    schedule_generator = sparse_schedule_generator(speed_ration_map)
+    line_generator = sparse_line_generator(speed_ration_map)
 
 
     stochastic_data = MalfunctionParameters(malfunction_rate=1/10000,  # Rate of malfunction occurence
@@ -48,7 +48,7 @@ def get_small_two_agent_env():
     env = RailEnv(width=width,
                 height=height,
                 rail_generator=rail_generator,
-                schedule_generator=schedule_generator,
+                line_generator=line_generator,
                 number_of_agents=nr_trains,
                 obs_builder_object=observation_builder,
                 #malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),

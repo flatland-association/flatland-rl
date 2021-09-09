@@ -17,7 +17,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import IntVector2D, position_to_coordinate
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_utils import Agent, EnvAgent, RailAgentStatus
+from flatland.envs.agent_utils import Agent, EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env_action import RailEnvActions
 
@@ -39,8 +39,7 @@ from gym.utils import seeding
 # from flatland.envs.line_generators import random_line_generator, LineGenerator
 
 
-# NEW : Imports 
-from flatland.envs.schedule_time_generators import schedule_time_generator
+from flatland.envs.timetable_generators import timetable_generator
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.step_utils.transition_utils import check_action
 
@@ -285,9 +284,9 @@ class RailEnv(Environment):
         True: Agent needs to provide an action
         False: Agent cannot provide an action
         """
-        return (agent.status == RailAgentStatus.READY_TO_DEPART or (
-            agent.status == RailAgentStatus.ACTIVE and fast_isclose(agent.speed_data['position_fraction'], 0.0,
-                                                                    rtol=1e-03)))
+        return agent.state == TrainState.READY_TO_DEPART or \
+               (TrainState.on_map_state(agent.state) and \
+                fast_isclose(agent.speed_data['position_fraction'], 0.0, rtol=1e-03) )
 
     def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
               random_seed: bool = None) -> Tuple[Dict, Dict]:
@@ -400,7 +399,7 @@ class RailEnv(Environment):
                 i: agent.malfunction_data['malfunction'] for i, agent in enumerate(self.agents)
             },
             'speed': {i: agent.speed_data['speed'] for i, agent in enumerate(self.agents)},
-            'status': {i: agent.status for i, agent in enumerate(self.agents)}
+            'state': {i: agent.state for i, agent in enumerate(self.agents)}
         }
         # Return the new observation vectors for each agent
         observation_dict: Dict = self._get_observations()
@@ -424,6 +423,8 @@ class RailEnv(Environment):
         st_signals['valid_movement_action_given'] = RailEnvActions.is_moving_action(preprocessed_action)
         st_signals['target_reached'] = fast_position_equal(agent.position, agent.target)
         st_signals['movement_conflict'] = (not movement_allowed) and agent.speed_counter.is_cell_exit # TODO: Modify motion check to provide proper conflict information
+
+        return st_signals
 
     def _handle_end_reward(self, agent: EnvAgent) -> int:
         '''
@@ -456,8 +457,7 @@ class RailEnv(Environment):
     def step(self, action_dict_: Dict[int, RailEnvActions]):
         """
         Updates rewards for the agents at a step.
-
-    def step(self, action_dict):
+        """
         self._elapsed_steps += 1
 
         # If we're done, set reward and info_dict and step() is done.
@@ -497,7 +497,7 @@ class RailEnv(Environment):
             agent.malfunction_handler.generate_malfunction(self.malfunction_generator, self.np_random)
 
             # Get action for the agent
-            action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
+            action = action_dict_.get(i_agent, RailEnvActions.DO_NOTHING)
             # TODO: Add the bottom stuff to separate function(s)
 
             # Preprocess action
@@ -509,7 +509,7 @@ class RailEnv(Environment):
             agent_not_on_map = current_position is None
             if agent_not_on_map: # Agent not added on map yet
                 current_position, current_direction = agent.initial_position, agent.initial_direction
-            action = preprocess_moving_action(action, agent.state, self.rail, current_position, current_direction)
+            action = preprocess_moving_action(action, self.rail, current_position, current_direction)
 
             # Save moving actions in not already saved
             agent.action_saver.save_action_if_allowed(action, agent.state)
@@ -519,6 +519,7 @@ class RailEnv(Environment):
             if agent_not_on_map and agent.action_saver.is_action_saved:
                 temp_new_position = agent.initial_position
                 temp_new_direction = agent.initial_direction
+                preprocessed_action = action
                 
             # When cell exit occurs apply saved action independent of other agents
             elif agent.speed_counter.is_cell_exit and agent.action_saver.is_action_saved:
@@ -526,11 +527,13 @@ class RailEnv(Environment):
                 # Apply action independent of other agents and get temporary new position and direction
                 temp_pd = self.apply_action_independent(saved_action, self.rail, agent.position, agent.direction)
                 temp_new_position, temp_new_direction = temp_pd
+                preprocessed_action = saved_action
             else:
                 temp_new_position, temp_new_direction = agent.position, agent.direction
+                preprocessed_action = action
 
             # TODO: Saving temporary positon shouldn't be needed if recheck of position is not needed later (see TAG#1)
-            temp_saved_data[i_agent] = temp_new_position, temp_new_direction, action
+            temp_saved_data[i_agent] = temp_new_position, temp_new_direction, preprocessed_action
             self.motionCheck.addAgent(i_agent, agent.position, temp_new_position)
 
         # Find conflicts
@@ -554,6 +557,10 @@ class RailEnv(Environment):
             else:
                 final_new_position = agent.position
                 final_new_direction = agent.direction
+            # if final_new_position and self.rail.grid[final_new_position] == 0:
+                # import pdb; pdb.set_trace()
+            # if final_new_position and not (final_new_position[0] >= 0 and final_new_position[1] >= 0 and final_new_position[0] < self.rail.height and final_new_position[1] < self.rail.width): # TODO: Remove this
+                # import pdb; pdb.set_trace()
             agent.position = final_new_position
             agent.direction = final_new_direction
 
@@ -580,49 +587,6 @@ class RailEnv(Environment):
         
         self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))} # TODO : Remove this
         return self._get_observations(), self.rewards_dict, self.dones, info_dict # TODO : Will need changes?
-
-    def _set_agent_to_initial_position(self, agent: EnvAgent, new_position: IntVector2D):
-        """
-        Sets the agent to its initial position. Updates the agent object and the position
-        of the agent inside the global agent_position numpy array
-
-        Parameters
-        -------
-        agent: EnvAgent object
-        new_position: IntVector2D
-        """
-        agent.position = new_position
-        self.agent_positions[agent.position] = agent.handle
-
-    def _move_agent_to_new_position(self, agent: EnvAgent, new_position: IntVector2D):
-        """
-        Move the agent to the a new position. Updates the agent object and the position
-        of the agent inside the global agent_position numpy array
-
-        Parameters
-        -------
-        agent: EnvAgent object
-        new_position: IntVector2D
-        """
-        agent.position = new_position
-        self.agent_positions[agent.old_position] = -1
-        self.agent_positions[agent.position] = agent.handle
-
-    def _remove_agent_from_scene(self, agent: EnvAgent):
-        """
-        Remove the agent from the scene. Updates the agent object and the position
-        of the agent inside the global agent_position numpy array
-
-        Parameters
-        -------
-        agent: EnvAgent object
-        """
-        self.agent_positions[agent.position] = -1
-        if self.remove_agents_at_target:
-            agent.position = None
-            # setting old_position to None here stops the DONE agents from appearing in the rendered image
-            agent.old_position = None
-            agent.status = RailAgentStatus.DONE_REMOVED
 
     def record_timestep(self, dActions):
         ''' Record the positions and orientations of all agents in memory, in the cur_episode

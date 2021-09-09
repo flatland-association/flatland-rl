@@ -20,8 +20,8 @@ def process_do_nothing(state: TrainState):
     return action
 
 
-def process_left_right(action, state, rail, position, direction):
-    if not check_valid_action(action, state, rail, position, direction):
+def process_left_right(action, rail, position, direction):
+    if not check_valid_action(action, rail, position, direction):
         action = RailEnvActions.MOVE_FORWARD
     return action
 
@@ -48,7 +48,7 @@ def preprocess_raw_action(action, state):
 
     return action
 
-def preprocess_moving_action(action, state, rail, position, direction):
+def preprocess_moving_action(action, rail, position, direction):
     """
     LEFT/RIGHT is converted to FORWARD if left/right is not available and train is moving
     FORWARD is converted to STOP_MOVING if leading to dead end?
