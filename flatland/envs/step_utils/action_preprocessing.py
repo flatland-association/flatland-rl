@@ -5,7 +5,7 @@ from flatland.envs.step_utils.transition_utils import check_valid_action
 
 
 def process_illegal_action(action: RailEnvActions):
-	if not RailEnvActions.check_valid_action(action): 
+	if not RailEnvActions.is_action_valid(action): 
 		return RailEnvActions.DO_NOTHING
 	else:
 		return RailEnvActions(action)

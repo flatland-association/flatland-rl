@@ -20,7 +20,7 @@ class RailEnvActions(IntEnum):
         }[a]
 
     @classmethod
-    def check_valid_action(cls, action):
+    def is_action_valid(cls, action):
         return action in cls._value2member_map_
 
     def is_moving_action(self):
