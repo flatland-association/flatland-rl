@@ -373,9 +373,13 @@ def test_rail_env_reset():
     env3 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
                    line_generator=line_from_file(file_name), number_of_agents=1,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-    env3.reset(False, True, False)
+    env3.reset(False, True)
     rails_loaded = env3.rail.grid
     agents_loaded = env3.agents
+    # override `earliest_departure` & `latest_arrival` since they aren't expected to be the same
+    for agent_initial, agent_loaded in zip(agents_initial, agents_loaded):
+        agent_loaded.earliest_departure = agent_initial.earliest_departure
+        agent_loaded.latest_arrival = agent_initial.latest_arrival
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
@@ -383,16 +387,21 @@ def test_rail_env_reset():
     env4 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
                    line_generator=line_from_file(file_name), number_of_agents=1,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-    env4.reset(True, False, False)
+    env4.reset(True, False)
     rails_loaded = env4.rail.grid
     agents_loaded = env4.agents
+    # override `earliest_departure` & `latest_arrival` since they aren't expected to be the same
+    for agent_initial, agent_loaded in zip(agents_initial, agents_loaded):
+        agent_loaded.earliest_departure = agent_initial.earliest_departure
+        agent_loaded.latest_arrival = agent_initial.latest_arrival
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
 
 
 def main():
-    test_rail_environment_single_agent(show=True)
+    # test_rail_environment_single_agent(show=True)
+    test_rail_env_reset()
 
 if __name__=="__main__":
     main()

@@ -72,6 +72,10 @@ def tests_rail_from_file():
     env.reset()
     rails_loaded = env.rail.grid
     agents_loaded = env.agents
+    # override `earliest_departure` & `latest_arrival` since they aren't expected to be the same
+    for agent_initial, agent_loaded in zip(agents_initial, agents_loaded):
+        agent_loaded.earliest_departure = agent_initial.earliest_departure
+        agent_loaded.latest_arrival = agent_initial.latest_arrival
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
@@ -85,7 +89,7 @@ def tests_rail_from_file():
     file_name_2 = "test_without_distance_map.pkl"
 
     env2 = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
-                   rail_generator=rail_from_grid_transition_map(rail), line_generator=sparse_line_generator(),
+                   rail_generator=rail_from_grid_transition_map(rail, optionals), line_generator=sparse_line_generator(),
                    number_of_agents=3, obs_builder_object=GlobalObsForRailEnv())
     env2.reset()
     #env2.save(file_name_2)
@@ -100,6 +104,10 @@ def tests_rail_from_file():
     env2.reset()
     rails_loaded_2 = env2.rail.grid
     agents_loaded_2 = env2.agents
+    # override `earliest_departure` & `latest_arrival` since they aren't expected to be the same
+    for agent_initial, agent_loaded in zip(agents_initial_2, agents_loaded_2):
+        agent_loaded.earliest_departure = agent_initial.earliest_departure
+        agent_loaded.latest_arrival = agent_initial.latest_arrival
 
     assert np.all(np.array_equal(rails_initial_2, rails_loaded_2))
     assert agents_initial_2 == agents_loaded_2
@@ -113,6 +121,10 @@ def tests_rail_from_file():
     env3.reset()
     rails_loaded_3 = env3.rail.grid
     agents_loaded_3 = env3.agents
+    # override `earliest_departure` & `latest_arrival` since they aren't expected to be the same
+    for agent_initial, agent_loaded in zip(agents_initial, agents_loaded_3):
+        agent_loaded.earliest_departure = agent_initial.earliest_departure
+        agent_loaded.latest_arrival = agent_initial.latest_arrival
 
     assert np.all(np.array_equal(rails_initial, rails_loaded_3))
     assert agents_initial == agents_loaded_3
@@ -130,7 +142,11 @@ def tests_rail_from_file():
     env4.reset()
     rails_loaded_4 = env4.rail.grid
     agents_loaded_4 = env4.agents
-
+    # override `earliest_departure` & `latest_arrival` since they aren't expected to be the same
+    for agent_initial, agent_loaded in zip(agents_initial_2, agents_loaded_4):
+        agent_loaded.earliest_departure = agent_initial.earliest_departure
+        agent_loaded.latest_arrival = agent_initial.latest_arrival
+        
     # Check that no distance map was saved
     assert not hasattr(env2.obs_builder, "distance_map")
     assert np.all(np.array_equal(rails_initial_2, rails_loaded_4))
@@ -139,3 +155,10 @@ def tests_rail_from_file():
     # Check that distance map was generated with correct shape
     assert env4.distance_map.get() is not None
     assert np.shape(env4.distance_map.get()) == dist_map_shape
+
+
+def main():
+    tests_rail_from_file()
+
+if __name__ == "__main__":
+    main()
