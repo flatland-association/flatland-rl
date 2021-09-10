@@ -121,7 +121,7 @@ class TrainStateMachine:
 
     def reset(self):
         self._state = self._initial_state
-        self.st_signals = {}
+        self.st_signals = StateTransitionSignals()
         self.clear_next_state()
 
     @property
@@ -134,6 +134,18 @@ class TrainStateMachine:
     
     def set_transition_signals(self, state_transition_signals):
         self.st_signals = state_transition_signals
+
+    def __repr__(self):
+        return f"\n \
+                 state: {str(self.state)} \n \
+                 st_signals: {self.st_signals}"
+
+    def to_dict(self):
+        return {"state": self._state}
+
+    def from_dict(self, load_dict):
+        self.set_state(load_dict['state'])
+
 
 
         

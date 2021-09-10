@@ -473,6 +473,12 @@ class RailEnv(Environment):
 
             self.dones["__all__"] = True
 
+    def handle_done_state(self, agent):
+        if agent.state == TrainState.DONE:
+            agent.arrival_time = self._elapsed_steps
+            if self.remove_agents_at_target:
+                agent.position = None
+
     def step(self, action_dict_: Dict[int, RailEnvActions]):
         """
         Updates rewards for the agents at a step.
@@ -547,7 +553,7 @@ class RailEnv(Environment):
             if movement_allowed:
                 agent.position = agent_transition_data.position
                 agent.direction = agent_transition_data.direction
-            
+                
             preprocessed_action = agent_transition_data.preprocessed_action
 
             ## Update states
@@ -555,9 +561,8 @@ class RailEnv(Environment):
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
 
-            # Remove agent is required
-            if self.remove_agents_at_target and agent.state == TrainState.DONE:
-                agent.position = None
+            # Handle done state actions, optionally remove agents
+            self.handle_done_state(agent)
             
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 

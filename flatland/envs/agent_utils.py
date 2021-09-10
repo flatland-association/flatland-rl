@@ -30,11 +30,30 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('old_position', Tuple[int, int]),
                              ('speed_counter', SpeedCounter),
                              ('action_saver', ActionSaver),
-                             ('state', TrainState),
                              ('state_machine', TrainStateMachine),
                              ('malfunction_handler', MalfunctionHandler),
                              ])
 
+
+def load_env_agent(agent_tuple: Agent):
+     return EnvAgent(
+                        initial_position = agent_tuple.initial_position,
+                        initial_direction = agent_tuple.initial_direction,
+                        direction = agent_tuple.direction,
+                        target = agent_tuple.target,
+                        moving = agent_tuple.moving,
+                        earliest_departure = agent_tuple.earliest_departure,
+                        latest_arrival = agent_tuple.latest_arrival,
+                        handle = agent_tuple.handle,
+                        position = agent_tuple.position,
+                        arrival_time = agent_tuple.arrival_time,
+                        old_direction = agent_tuple.old_direction,
+                        old_position = agent_tuple.old_position,
+                        speed_counter = agent_tuple.speed_counter,
+                        action_saver = agent_tuple.action_saver,
+                        state_machine = agent_tuple.state_machine,
+                        malfunction_handler = agent_tuple.malfunction_handler,
+                    )
 
 @attrs
 class EnvAgent:
@@ -105,13 +124,13 @@ class EnvAgent:
                      earliest_departure=self.earliest_departure, 
                      latest_arrival=self.latest_arrival, 
                      malfunction_data=self.malfunction_data, 
-                     handle=self.handle, 
-                     state=self.state,
+                     handle=self.handle,
                      position=self.position, 
                      old_direction=self.old_direction, 
                      old_position=self.old_position,
                      speed_counter=self.speed_counter,
                      action_saver=self.action_saver,
+                     arrival_time=self.arrival_time,
                      state_machine=self.state_machine,
                      malfunction_handler=self.malfunction_handler)
 
@@ -176,13 +195,13 @@ class EnvAgent:
 
     @classmethod
     def load_legacy_static_agent(cls, static_agents_data: Tuple):
-        raise NotImplementedError("Not implemented for Flatland 3")
         agents = []
         for i, static_agent in enumerate(static_agents_data):
             if len(static_agent) >= 6:
                 agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
                                 direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
-                                speed_data=static_agent[4], malfunction_data=static_agent[5], handle=i)
+                                speed_counter=SpeedCounter(static_agent[4]['speed']), malfunction_data=static_agent[5], 
+                                handle=i)
             else:
                 agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
                                 direction=static_agent[1], target=static_agent[2], 
@@ -205,7 +224,7 @@ class EnvAgent:
         return f"\n \
                  handle(agent index): {self.handle} \n \
                  initial_position: {self.initial_position}   initial_direction: {self.initial_direction} \n \
-                 position: {self.position}  direction: {self.position}  target: {self.target} \n \
+                 position: {self.position}  direction: {self.direction}  target: {self.target} \n \
                  earliest_departure: {self.earliest_departure}  latest_arrival: {self.latest_arrival} \n \
                  state: {str(self.state)} \n \
                  malfunction_data: {self.malfunction_data} \n \

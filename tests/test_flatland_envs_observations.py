@@ -50,7 +50,6 @@ def _step_along_shortest_path(env, obs_builder, rail):
     actions = {}
     expected_next_position = {}
     for agent in env.agents:
-        agent: EnvAgent
         shortest_distance = np.inf
 
         for exit_direction in range(4):
@@ -297,7 +296,6 @@ def test_reward_function_waiting(rendering=False):
 
         print(env.dones["__all__"])
         for agent in env.agents:
-            agent: EnvAgent
             print("[{}] agent {} at {}, target {} ".format(iteration + 1, agent.handle, agent.position, agent.target))
         print(np.all([np.array_equal(agent2.position, agent2.target) for agent2 in env.agents]))
         for agent in env.agents:

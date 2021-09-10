@@ -22,7 +22,7 @@ import time
 
 """Tests for `flatland` package."""
 
-
+@pytest.mark.skip("Msgpack serializing not supported")
 def test_load_env():
     #env = RailEnv(10, 10)
     #env.reset()
@@ -47,7 +47,7 @@ def test_save_load():
     agent_2_pos = env.agents[1].position
     agent_2_dir = env.agents[1].direction
     agent_2_tar = env.agents[1].target
-    
+
     os.makedirs("tmp", exist_ok=True)
 
     RailEnvPersister.save(env, "tmp/test_save.pkl")
@@ -65,7 +65,7 @@ def test_save_load():
     assert (agent_2_dir == env.agents[1].direction)
     assert (agent_2_tar == env.agents[1].target)
 
-
+@pytest.mark.skip("Msgpack serializing not supported")
 def test_save_load_mpk():
     env = RailEnv(width=30, height=30,
                   rail_generator=sparse_rail_generator(seed=1),

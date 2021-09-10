@@ -10,6 +10,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.utils.ordered_set import OrderedSet
 from flatland.envs.step_utils.states import TrainState
+from flatland.envs.step_utils import transition_utils
 
 
 class DummyPredictorForRailEnv(PredictionBuilder):
@@ -64,8 +65,8 @@ class DummyPredictorForRailEnv(PredictionBuilder):
 
                     continue
                 for action in action_priorities:
-                    cell_is_free, new_cell_isValid, new_direction, new_position, transition_isValid = \
-                        self.env._check_action_on_agent(action, agent)
+                    new_cell_isValid, new_direction, new_position, transition_isValid = \
+                        transition_utils.check_action_on_agent(action, self.env.rail, agent.position, agent.direction)
                     if all([new_cell_isValid, transition_isValid]):
                         # move and change direction to face the new_direction that was
                         # performed

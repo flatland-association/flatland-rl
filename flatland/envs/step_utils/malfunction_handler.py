@@ -40,6 +40,12 @@ class MalfunctionHandler:
         if self._malfunction_down_counter > 0:
             self._malfunction_down_counter -= 1
 
+    def to_dict(self):
+        return {"malfunction_down_counter": self._malfunction_down_counter}
+    
+    def from_dict(self, load_dict):
+        self._malfunction_down_counter = load_dict['malfunction_down_counter']
+
 
     
 

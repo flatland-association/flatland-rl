@@ -17,6 +17,7 @@ from flatland.utils.simple_rail import make_simple_rail, make_simple_rail2, make
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils.states import TrainState
 
+
 """Test predictions for `flatland` package."""
 
 

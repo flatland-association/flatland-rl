@@ -3,8 +3,7 @@ from flatland.envs.step_utils.states import TrainState
 
 class SpeedCounter:
     def __init__(self, speed):
-        self.speed = speed
-        self.max_count = int(1/speed) - 1
+        self._speed = speed
 
     def update_counter(self, state, old_position):
         # When coming onto the map, do no update speed counter
@@ -29,4 +28,18 @@ class SpeedCounter:
     @property
     def is_cell_exit(self):
         return self.counter == self.max_count
+
+    @property
+    def speed(self):
+        return self._speed
+
+    @property
+    def max_count(self):
+        return int(1/self._speed) - 1
+
+    def to_dict(self):
+        return {"speed": self._speed}
+    
+    def from_dict(self, load_dict):
+        self._speed = load_dict['speed']
 
