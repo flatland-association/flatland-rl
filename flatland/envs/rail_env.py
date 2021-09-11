@@ -261,7 +261,7 @@ class RailEnv(Environment):
         False: Agent cannot provide an action
         """
         return agent.state == TrainState.READY_TO_DEPART or \
-               (agent.state.is_on_map_state() and agent.speed_counter.is_cell_entry )
+               ( agent.state.is_on_map_state() and agent.speed_counter.is_cell_entry )
 
     def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
               random_seed: bool = None) -> Tuple[Dict, Dict]:
@@ -385,13 +385,14 @@ class RailEnv(Environment):
         st_signals.stop_action_given = (preprocessed_action == RailEnvActions.STOP_MOVING)
 
         # Valid Movement action Given
-        st_signals.valid_movement_action_given = preprocessed_action.is_moving_action()
+        st_signals.valid_movement_action_given = preprocessed_action.is_moving_action() and movement_allowed
 
         # Target Reached
         st_signals.target_reached = fast_position_equal(agent.position, agent.target)
 
         # Movement conflict - Multiple trains trying to move into same cell
-        st_signals.movement_conflict = (not movement_allowed) and agent.speed_counter.is_cell_exit # TODO: Modify motion check to provide proper conflict information
+        # If speed counter is not in cell exit, the train can enter the cell
+        st_signals.movement_conflict = (not movement_allowed) and agent.speed_counter.is_cell_exit
 
         return st_signals
 
@@ -499,6 +500,8 @@ class RailEnv(Environment):
         
         for agent in self.agents:
             i_agent = agent.handle
+            agent.old_position = agent.position
+            agent.old_direction = agent.direction
             # Generate malfunction
             agent.malfunction_handler.generate_malfunction(self.malfunction_generator, self.np_random)
 
@@ -542,8 +545,6 @@ class RailEnv(Environment):
             i_agent = agent.handle
             agent_transition_data = temp_transition_data[i_agent]
 
-            old_position = agent.position
-
             ## Update positions
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
@@ -561,6 +562,9 @@ class RailEnv(Environment):
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
 
+            if agent.state.is_on_map_state() and agent.position is None:
+                import pdb; pdb.set_trace()
+
             # Handle done state actions, optionally remove agents
             self.handle_done_state(agent)
             
@@ -570,7 +574,7 @@ class RailEnv(Environment):
             self.update_step_rewards(i_agent)
 
             ## Update counters (malfunction and speed)
-            agent.speed_counter.update_counter(agent.state, old_position)
+            agent.speed_counter.update_counter(agent.state, agent.old_position)
             agent.malfunction_handler.update_counter()
 
             # Clear old action when starting in new cell

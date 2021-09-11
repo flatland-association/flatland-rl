@@ -216,15 +216,12 @@ class EnvAgent:
             agents.append(agent)
         return agents
     
-    def _set_state(self, state):
-        warnings.warn("Not recommended to set the state with this function unless completely required")
-        self.state_machine.set_state(state)
-    
     def __str__(self):
         return f"\n \
                  handle(agent index): {self.handle} \n \
                  initial_position: {self.initial_position}   initial_direction: {self.initial_direction} \n \
                  position: {self.position}  direction: {self.direction}  target: {self.target} \n \
+                 old_position: {self.old_position} old_direction {self.old_direction} \n \
                  earliest_departure: {self.earliest_departure}  latest_arrival: {self.latest_arrival} \n \
                  state: {str(self.state)} \n \
                  malfunction_data: {self.malfunction_data} \n \
@@ -234,6 +231,14 @@ class EnvAgent:
     @property
     def state(self):
         return self.state_machine.state
+
+    @state.setter
+    def state(self, state):
+        self._set_state(state)
+    
+    def _set_state(self, state):
+        warnings.warn("Not recommended to set the state with this function unless completely required")
+        self.state_machine.set_state(state)
 
 
     

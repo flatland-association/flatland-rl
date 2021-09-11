@@ -108,8 +108,10 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             agent: EnvAgent = env.agents[a]
             replay = test_config.replay[step]
 
-            _assert(a, agent.position, replay.position, 'position')
-            _assert(a, agent.direction, replay.direction, 'direction')
+            print(agent.position, replay.position, agent.state, agent.speed_counter)
+            # import pdb; pdb.set_trace()
+            # _assert(a, agent.position, replay.position, 'position')
+            # _assert(a, agent.direction, replay.direction, 'direction')
             if replay.state is not None:
                 _assert(a, agent.state, replay.state, 'state')
 
@@ -130,7 +132,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 agent.malfunction_data['malfunction'] = replay.set_malfunction
                 agent.malfunction_data['moving_before_malfunction'] = agent.moving
                 agent.malfunction_data['fixed'] = False
-            _assert(a, agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
+            # _assert(a, agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
         print(step)
         _, rewards_dict, _, info_dict = env.step(action_dict)
         if rendering:
@@ -141,6 +143,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
             if not skip_reward_check:
                 _assert(a, rewards_dict[a], replay.reward, 'reward')
+    assert False
 
 
 def create_and_save_env(file_name: str, line_generator: LineGenerator, rail_generator: RailGenerator):

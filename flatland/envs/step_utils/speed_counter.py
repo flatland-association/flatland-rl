@@ -4,6 +4,8 @@ from flatland.envs.step_utils.states import TrainState
 class SpeedCounter:
     def __init__(self, speed):
         self._speed = speed
+        self.counter = None
+        self.reset_counter()
 
     def update_counter(self, state, old_position):
         # When coming onto the map, do no update speed counter
@@ -38,8 +40,13 @@ class SpeedCounter:
         return int(1/self._speed) - 1
 
     def to_dict(self):
-        return {"speed": self._speed}
+        return {"speed": self._speed,
+                "counter": self.counter}
     
     def from_dict(self, load_dict):
         self._speed = load_dict['speed']
+        self.counter = load_dict['counter']
+
+    def __eq__(self, other):
+        return self._speed == other._speed and self.counter == other.counter
 

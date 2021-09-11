@@ -6,6 +6,7 @@ class TrainStateMachine:
         self._state = initial_state
         self.st_signals = StateTransitionSignals()
         self.next_state = None
+        self.previous_state = None
     
     def _handle_waiting(self):
         """" Waiting state goes to ready to depart when earliest departure is reached"""
@@ -117,10 +118,12 @@ class TrainStateMachine:
     def set_state(self, state):
         if not TrainState.check_valid_state(state):
             raise ValueError(f"Cannot set invalid state {state}")
+        self.previous_state = self._state
         self._state = state
 
     def reset(self):
         self._state = self._initial_state
+        self.previous_state = None
         self.st_signals = StateTransitionSignals()
         self.clear_next_state()
 
@@ -137,15 +140,19 @@ class TrainStateMachine:
 
     def __repr__(self):
         return f"\n \
-                 state: {str(self.state)} \n \
+                 state: {str(self.state)}      previous_state {str(self.previous_state)} \n \
                  st_signals: {self.st_signals}"
 
     def to_dict(self):
-        return {"state": self._state}
+        return {"state": self._state,
+                "previous_state": self.previous_state}
 
     def from_dict(self, load_dict):
         self.set_state(load_dict['state'])
+        self.previous_state = load_dict['previous_state']
 
+    def __eq__(self, other):
+        return self._state == other._state and self.previous_state == other.previous_state
 
 
         

@@ -46,6 +46,8 @@ class MalfunctionHandler:
     def from_dict(self, load_dict):
         self._malfunction_down_counter = load_dict['malfunction_down_counter']
 
+    def __eq__(self, other):
+        return self._malfunction_down_counter == other._malfunction_down_counter
 
     
 

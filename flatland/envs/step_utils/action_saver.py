@@ -28,5 +28,8 @@ class ActionSaver:
     
     def from_dict(self, load_dict):
         self.saved_action = load_dict['saved_action']
+    
+    def __eq__(self, other):
+        return self.saved_action == other.saved_action
 
 
