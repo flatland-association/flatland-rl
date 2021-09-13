@@ -8,10 +8,12 @@ class SpeedCounter:
         self.reset_counter()
 
     def update_counter(self, state, old_position):
-        # When coming onto the map, do no update speed counter
+        # Can't start counting when adding train to the map
         if state == TrainState.MOVING and old_position is not None:
             self.counter += 1
             self.counter = self.counter % (self.max_count + 1)
+
+            
 
     def __repr__(self):
         return f"speed: {self.speed} \

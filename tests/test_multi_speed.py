@@ -406,26 +406,26 @@ def test_multispeed_actions_malfunction_no_blocking():
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
-            Replay(
+            Replay( # 0
                 position=(3, 9),  # east dead-end
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 reward=env.start_penalty + env.step_penalty * 0.5  # starting and running at speed 0.5
             ),
-            Replay(
+            Replay( # 1
                 position=(3, 9),
                 direction=Grid4TransitionsEnum.EAST,
                 action=None,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
-            Replay(
+            Replay( # 2
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_FORWARD,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             # add additional step in the cell
-            Replay(
+            Replay( # 3
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
@@ -434,26 +434,26 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.step_penalty * 0.5  # step penalty for speed 0.5 when malfunctioning
             ),
             # agent recovers in this step
-            Replay(
+            Replay( # 4
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
                 malfunction=1,
                 reward=env.step_penalty * 0.5  # recovered: running at speed 0.5
             ),
-            Replay(
+            Replay( # 5
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
-            Replay(
+            Replay( # 6
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_FORWARD,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
-            Replay(
+            Replay( # 7
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
@@ -462,57 +462,57 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.step_penalty * 0.5  # step penalty for speed 0.5 when malfunctioning
             ),
             # agent recovers in this step; since we're at the beginning, we provide a different action although we're broken!
-            Replay(
+            Replay( # 8
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
                 malfunction=1,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
-            Replay(
+            Replay( # 9
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
-            Replay(
+            Replay( # 10
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.STOP_MOVING,
                 reward=env.stop_penalty + env.step_penalty * 0.5  # stopping and step penalty for speed 0.5
             ),
-            Replay(
+            Replay( # 11
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.STOP_MOVING,
                 reward=env.step_penalty * 0.5  # step penalty for speed 0.5 while stopped
             ),
-            Replay(
+            Replay( # 12
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_FORWARD,
                 reward=env.start_penalty + env.step_penalty * 0.5  # starting and running at speed 0.5
             ),
-            Replay(
+            Replay( # 13
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             # DO_NOTHING keeps moving!
-            Replay(
+            Replay( # 14
                 position=(3, 5),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.DO_NOTHING,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
-            Replay(
+            Replay( # 15
                 position=(3, 5),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
-            Replay(
+            Replay( # 16
                 position=(3, 4),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_FORWARD,

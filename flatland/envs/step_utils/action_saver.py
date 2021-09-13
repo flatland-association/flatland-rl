@@ -10,10 +10,17 @@ class ActionSaver:
         return self.saved_action is not None
     
     def __repr__(self):
-        return f"is_action_saved: {self.is_action_saved}, saved_action: {self.saved_action}"
+        return f"is_action_saved: {self.is_action_saved}, saved_action: {str(self.saved_action)}"
 
 
     def save_action_if_allowed(self, action, state):
+        """
+        Save the action if all conditions are met
+            1. It is a movement based action -> Forward, Left, Right
+            2. Action is not already saved
+            3. Not in a malfunction state 
+            4. Agent is not already done
+        """
         if action.is_moving_action() and \
                not self.is_action_saved and \
                not state.is_malfunction_state() and \

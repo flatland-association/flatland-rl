@@ -373,7 +373,7 @@ class RailEnv(Environment):
         st_signals = StateTransitionSignals()
         
         # Malfunction starts when in_malfunction is set to true
-        st_signals.malfunction_onset = agent.malfunction_handler.in_malfunction
+        st_signals.in_malfunction = agent.malfunction_handler.in_malfunction
 
         # Malfunction counter complete - Malfunction ends next timestep
         st_signals.malfunction_counter_complete = agent.malfunction_handler.malfunction_counter_complete
@@ -519,8 +519,8 @@ class RailEnv(Environment):
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
                 
-            # When cell exit occurs apply saved action independent of other agents
-            elif agent.speed_counter.is_cell_exit and agent.action_saver.is_action_saved:
+            # If movement is allowed apply saved action independent of other agents
+            elif agent.action_saver.is_action_saved:
                 saved_action = agent.action_saver.saved_action
                 # Apply action independent of other agents and get temporary new position and direction
                 new_position, new_direction  = self.apply_action_independent(saved_action, 
@@ -551,7 +551,10 @@ class RailEnv(Environment):
             else:
                 movement_allowed = self.motionCheck.check_motion(i_agent, agent.position) # TODO: Remove final_new_postion from motioncheck
 
-            if movement_allowed:
+            # Position can be changed only if other cell is empty
+            # And either the speed counter completes or agent is being added to map
+            if movement_allowed and \
+               (agent.speed_counter.is_cell_exit or agent.position is None):
                 agent.position = agent_transition_data.position
                 agent.direction = agent_transition_data.direction
                 
@@ -576,6 +579,7 @@ class RailEnv(Environment):
 
             ## Update counters (malfunction and speed)
             agent.speed_counter.update_counter(agent.state, agent.old_position)
+                                            #    agent.state_machine.previous_state)
             agent.malfunction_handler.update_counter()
 
             # Clear old action when starting in new cell

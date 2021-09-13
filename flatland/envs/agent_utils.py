@@ -224,7 +224,7 @@ class EnvAgent:
                  old_position: {self.old_position} old_direction {self.old_direction} \n \
                  earliest_departure: {self.earliest_departure}  latest_arrival: {self.latest_arrival} \n \
                  state: {str(self.state)} \n \
-                 malfunction_data: {self.malfunction_data} \n \
+                 malfunction_handler: {self.malfunction_handler} \n \
                  action_saver: {self.action_saver} \n \
                  speed_counter: {self.speed_counter}"
 
