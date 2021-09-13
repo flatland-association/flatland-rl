@@ -17,14 +17,10 @@ class ActionSaver:
         """
         Save the action if all conditions are met
             1. It is a movement based action -> Forward, Left, Right
-            2. Action is not already saved
-            3. Not in a malfunction state 
-            4. Agent is not already done
+            2. Action is not already saved 
+            3. Agent is not already done
         """
-        if action.is_moving_action() and \
-               not self.is_action_saved and \
-               not state.is_malfunction_state() and \
-               not state == TrainState.DONE:
+        if action.is_moving_action() and not self.is_action_saved and not state == TrainState.DONE:
             self.saved_action = action
 
     def clear_saved_action(self):

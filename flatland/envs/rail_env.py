@@ -549,7 +549,7 @@ class RailEnv(Environment):
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position) # TODO: Remove final_new_postion from motioncheck
+                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position)
 
             # Position can be changed only if other cell is empty
             # And either the speed counter completes or agent is being added to map

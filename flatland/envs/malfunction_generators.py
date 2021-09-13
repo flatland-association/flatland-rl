@@ -253,7 +253,7 @@ def malfunction_from_params(parameters: MalfunctionParameters) -> Tuple[Malfunct
     min_number_of_steps_broken = parameters.min_duration
     max_number_of_steps_broken = parameters.max_duration
 
-    def generator(agent: EnvAgent = None, np_random: RandomState = None, reset=False) -> Optional[Malfunction]:
+    def generator(np_random: RandomState = None, reset=False) -> Optional[Malfunction]:
         """
         Generate malfunctions for agents
         Parameters
@@ -270,11 +270,10 @@ def malfunction_from_params(parameters: MalfunctionParameters) -> Tuple[Malfunct
         if reset:
             return Malfunction(0)
 
-        if agent.malfunction_data['malfunction'] < 1:
-            if np_random.rand() < _malfunction_prob(mean_malfunction_rate):
-                num_broken_steps = np_random.randint(min_number_of_steps_broken,
-                                                     max_number_of_steps_broken + 1) + 1
-                return Malfunction(num_broken_steps)
+        if np_random.rand() < _malfunction_prob(mean_malfunction_rate):
+            num_broken_steps = np_random.randint(min_number_of_steps_broken,
+                                                    max_number_of_steps_broken + 1)
+            return Malfunction(num_broken_steps)
         return Malfunction(0)
 
     return generator, MalfunctionProcessData(mean_malfunction_rate, min_number_of_steps_broken,

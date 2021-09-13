@@ -190,8 +190,9 @@ def test_malfunction_before_entry():
     # Test initial malfunction values for all agents
     # we want some agents to be malfuncitoning already and some to be working
     # we want different next_malfunction values for the agents
-    assert env.agents[0].malfunction_data['malfunction'] == 0
-    assert env.agents[1].malfunction_data['malfunction'] == 10
+    malfunction_values = [env.malfunction_generator(env.np_random).num_broken_steps for _ in range(1000)]
+    expected_value = (1 - np.exp(-0.5)) * 10
+    assert np.allclose(np.mean(malfunction_values), expected_value, rtol=0.1), "Mean values of malfunction don't match rate"
 
 
 def test_malfunction_values_and_behavior():
@@ -257,7 +258,7 @@ def test_initial_malfunction():
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
         replay=[
-            Replay(
+            Replay( # 0
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
@@ -265,7 +266,7 @@ def test_initial_malfunction():
                 malfunction=3,
                 reward=env.step_penalty  # full step penalty when malfunctioning
             ),
-            Replay(
+            Replay( # 1
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
@@ -274,7 +275,7 @@ def test_initial_malfunction():
             ),
             # malfunction stops in the next step and we're still at the beginning of the cell
             # --> if we take action MOVE_FORWARD, agent should restart and move to the next cell
-            Replay(
+            Replay( # 2
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
@@ -282,14 +283,14 @@ def test_initial_malfunction():
                 reward=env.step_penalty
 
             ),  # malfunctioning ends: starting and running at speed 1.0
-            Replay(
+            Replay( # 3
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.start_penalty + env.step_penalty * 1.0  # running at speed 1.0
             ),
-            Replay(
+            Replay( # 4
                 position=(3, 3),
                 direction=Grid4TransitionsEnum.EAST,
                 action=RailEnvActions.MOVE_FORWARD,
@@ -420,7 +421,7 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.DO_NOTHING,
                 malfunction=2,
                 reward=env.step_penalty,  # full step penalty while malfunctioning
-                state=TrainState.ACTIVE
+                state=TrainState.MOVING
             ),
             # malfunction stops in the next step and we're still at the beginning of the cell
             # --> if we take action DO_NOTHING, agent should restart without moving
@@ -431,7 +432,7 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.DO_NOTHING,
                 malfunction=1,
                 reward=env.step_penalty,  # full step penalty while stopped
-                state=TrainState.ACTIVE
+                state=TrainState.MOVING
             ),
             # we haven't started moving yet --> stay here
             Replay(
@@ -440,7 +441,7 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.DO_NOTHING,
                 malfunction=0,
                 reward=env.step_penalty,  # full step penalty while stopped
-                state=TrainState.ACTIVE
+                state=TrainState.MOVING
             ),
 
             Replay(
@@ -449,7 +450,7 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.start_penalty + env.step_penalty * 1.0,  # start penalty + step penalty for speed 1.0
-                state=TrainState.ACTIVE
+                state=TrainState.MOVING
             ),  # we start to move forward --> should go to next cell now
             Replay(
                 position=(3, 3),
@@ -457,7 +458,7 @@ def test_initial_malfunction_do_nothing():
                 action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
                 reward=env.step_penalty * 1.0,  # step penalty for speed 1.0
-                state=TrainState.ACTIVE
+                state=TrainState.MOVING
             )
         ],
         speed=env.agents[0].speed_counter.speed,
@@ -546,7 +547,7 @@ def test_last_malfunction_step():
     env.reset(False, False)
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position =  env.agents[a_idx].initial_position
-        env.agents[a_idx].state = TrainState.ACTIVE
+        env.agents[a_idx].state = TrainState.MOVING
     # Force malfunction to be off at beginning and next malfunction to happen in 2 steps
     env.agents[0].malfunction_data['next_malfunction'] = 2
     env.agents[0].malfunction_data['malfunction'] = 0
