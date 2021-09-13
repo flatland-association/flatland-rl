@@ -372,7 +372,7 @@ class RailEnv(Environment):
         """ Generate State Transitions Signals used in the state machine """
         st_signals = StateTransitionSignals()
         
-        # Malfunction onset - Malfunction starts
+        # Malfunction starts when in_malfunction is set to true
         st_signals.malfunction_onset = agent.malfunction_handler.in_malfunction
 
         # Malfunction counter complete - Malfunction ends next timestep
@@ -563,7 +563,8 @@ class RailEnv(Environment):
             agent.state_machine.step()
 
             if agent.state.is_on_map_state() and agent.position is None:
-                import pdb; pdb.set_trace()
+                raise ValueError("Agent ID {} Agent State {} not matching with Agent Position {} ".format(
+                                    agent.handle, str(agent.state), str(agent.position) ))
 
             # Handle done state actions, optionally remove agents
             self.handle_done_state(agent)

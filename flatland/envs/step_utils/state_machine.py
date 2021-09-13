@@ -13,7 +13,7 @@ class TrainStateMachine:
         # TODO: Important - The malfunction handling is not like proper state machine 
         #                   Both transition signals can happen at the same time
         #                   Atleast mention it in the diagram
-        if self.st_signals.malfunction_onset:  
+        if self.st_signals.in_malfunction:  
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
         elif self.st_signals.earliest_departure_reached:
             self.next_state = TrainState.READY_TO_DEPART
@@ -22,7 +22,7 @@ class TrainStateMachine:
 
     def _handle_ready_to_depart(self):
         """ Can only go to MOVING if a valid action is provided """
-        if self.st_signals.malfunction_onset:  
+        if self.st_signals.in_malfunction:  
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
         elif self.st_signals.valid_movement_action_given:
             self.next_state = TrainState.MOVING
@@ -39,7 +39,7 @@ class TrainStateMachine:
             self.next_state = TrainState.WAITING
     
     def _handle_moving(self):
-        if self.st_signals.malfunction_onset:
+        if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION
         elif self.st_signals.target_reached:
             self.next_state = TrainState.DONE
@@ -49,7 +49,7 @@ class TrainStateMachine:
             self.next_state = TrainState.MOVING
     
     def _handle_stopped(self):
-        if self.st_signals.malfunction_onset:
+        if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION
         elif self.st_signals.valid_movement_action_given:
             self.next_state = TrainState.MOVING

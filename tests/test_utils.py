@@ -107,11 +107,9 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         for a, test_config in enumerate(test_configs):
             agent: EnvAgent = env.agents[a]
             replay = test_config.replay[step]
-
             print(agent.position, replay.position, agent.state, agent.speed_counter)
-            # import pdb; pdb.set_trace()
-            # _assert(a, agent.position, replay.position, 'position')
-            # _assert(a, agent.direction, replay.direction, 'direction')
+            _assert(a, agent.position, replay.position, 'position')
+            _assert(a, agent.direction, replay.direction, 'direction')
             if replay.state is not None:
                 _assert(a, agent.state, replay.state, 'state')
 
@@ -129,10 +127,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 # As we force malfunctions on the agents we have to set a positive rate that the env
                 # recognizes the agent as potentially malfuncitoning
                 # We also set next malfunction to infitiy to avoid interference with our tests
-                agent.malfunction_data['malfunction'] = replay.set_malfunction
-                agent.malfunction_data['moving_before_malfunction'] = agent.moving
-                agent.malfunction_data['fixed'] = False
-            # _assert(a, agent.malfunction_data['malfunction'], replay.malfunction, 'malfunction')
+                env.agents[a].malfunction_handler._set_malfunction_down_counter(replay.set_malfunction)
+            _assert(a, agent.malfunction_handler.malfunction_down_counter, replay.malfunction, 'malfunction')
         print(step)
         _, rewards_dict, _, info_dict = env.step(action_dict)
         if rendering:
@@ -143,8 +139,6 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
             if not skip_reward_check:
                 _assert(a, rewards_dict[a], replay.reward, 'reward')
-    assert False
-
 
 def create_and_save_env(file_name: str, line_generator: LineGenerator, rail_generator: RailGenerator):
     stochastic_data = MalfunctionParameters(malfunction_rate=1000,  # Rate of malfunction occurence

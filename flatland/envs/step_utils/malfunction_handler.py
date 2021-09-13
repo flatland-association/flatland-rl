@@ -30,7 +30,9 @@ class MalfunctionHandler:
     def _set_malfunction_down_counter(self, val):
         if val < 0:
             raise ValueError("Cannot set a negative value to malfunction down counter")
-        self._malfunction_down_counter = val
+        # Only set new malfunction value if old malfunction is completed
+        if self._malfunction_down_counter == 0:
+            self._malfunction_down_counter = val
 
     def generate_malfunction(self, malfunction_generator, np_random):
         num_broken_steps = get_number_of_steps_to_break(malfunction_generator, np_random)
@@ -39,6 +41,10 @@ class MalfunctionHandler:
     def update_counter(self):
         if self._malfunction_down_counter > 0:
             self._malfunction_down_counter -= 1
+
+    def __repr__(self):
+        return f"malfunction_down_counter: {self._malfunction_down_counter} \
+                in_malfunction: {self.in_malfunction}"
 
     def to_dict(self):
         return {"malfunction_down_counter": self._malfunction_down_counter}
