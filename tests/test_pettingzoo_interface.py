@@ -30,7 +30,7 @@ def test_petting_zoo_interface_env():
     save = True
     np.random.seed(seed)
     experiment_name = "flatland_pettingzoo"
-    total_episodes = 1
+    total_episodes = 2
 
     if save:
         try:
@@ -48,12 +48,6 @@ def test_petting_zoo_interface_env():
     # For Shortest Path Action Wrapper, change action to 1
     # rail_env = ShortestPathActionWrapper(rail_env)  
     rail_env = SkipNoChoiceCellsWrapper(rail_env, accumulate_skipped_rewards=False, discounting=0.0)
-    
-    env_renderer = RenderTool(rail_env,
-                            agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                            show_debug=False,
-                            screen_height=600,  # Adjust these parameters to fit your resolution
-                            screen_width=800)  # Adjust these parameters to fit your resolution
 
     dones = {}
     dones['__all__'] = False
@@ -76,9 +70,7 @@ def test_petting_zoo_interface_env():
             # Do the environment step
 
         observations, rewards, dones, information = rail_env.step(action_dict)
-        image = env_renderer.render_env(show=False, show_observations=False, show_predictions=False,
-                                        return_image=True)
-        frame_list.append(PIL.Image.fromarray(image[:, :, :3]))
+        frame_list.append(PIL.Image.fromarray(rail_env.render(mode="rgb_array")))
 
         if dones['__all__']:
             completion = env_generators.perc_completion(rail_env)
@@ -88,16 +80,11 @@ def test_petting_zoo_interface_env():
                 frame_list[0].save(f"{experiment_name}{os.sep}out_{ep_no}.gif", save_all=True, 
                                    append_images=frame_list[1:], duration=3, loop=0)       
             frame_list = []
-            env_renderer = RenderTool(rail_env,
-                            agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                            show_debug=False,
-                            screen_height=600,  # Adjust these parameters to fit your resolution
-                            screen_width=800)  # Adjust these parameters to fit your resolution
             rail_env.reset(random_seed=seed+ep_no)
 
     
 #  __sphinx_doc_begin__
-    env = flatland_env.env(environment=rail_env, use_renderer=True)
+    env = flatland_env.env(environment=rail_env)
     seed = 11
     env.reset(random_seed=seed)
     step = 0

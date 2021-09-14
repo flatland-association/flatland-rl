@@ -4,3 +4,6 @@ id-mava[tf]
 supersuit
 stable-baselines3
 ray==1.5.2
+seaborn
+matplotlib
+pandas
