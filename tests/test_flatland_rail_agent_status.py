@@ -120,7 +120,8 @@ def test_initial_status():
         speed=0.5
     )
 
-    run_replay_config(env, [test_config], activate_agents=False, skip_reward_check=True)
+    run_replay_config(env, [test_config], activate_agents=False, skip_reward_check=True,
+                      set_ready_to_depart=True)
     assert env.agents[0].state == TrainState.DONE
 
 
@@ -236,5 +237,6 @@ def test_status_done_remove():
         speed=0.5
     )
 
-    run_replay_config(env, [test_config], activate_agents=False, skip_reward_check=True)
+    run_replay_config(env, [test_config], activate_agents=False, skip_reward_check=True,
+                      set_ready_to_depart=True)
     assert env.agents[0].state == TrainState.DONE

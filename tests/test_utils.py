@@ -43,7 +43,8 @@ def set_penalties_for_replay(env: RailEnv):
     env.invalid_action_penalty = -29
 
 
-def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False, activate_agents=True, skip_reward_check=False):
+def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False, activate_agents=True, 
+                      skip_reward_check=False, set_ready_to_depart=False, skip_action_required_check=False):
     """
     Runs the replay configs and checks assertions.
 
@@ -90,7 +91,14 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 agent.target = test_config.target
                 agent.speed_counter = SpeedCounter(speed=test_config.speed)
             env.reset(False, False)
-            if activate_agents:
+
+            if set_ready_to_depart:
+                # Set all agents to ready to depart
+                for i_agent in range(len(env.agents)):
+                    env.agents[i_agent].earliest_departure = 0
+                    env.agents[i_agent]._set_state(TrainState.READY_TO_DEPART)
+
+            elif activate_agents:
                 for a_idx in range(len(env.agents)):
                     env.agents[a_idx].position =  env.agents[a_idx].initial_position
                     env.agents[a_idx]._set_state(TrainState.MOVING)
@@ -113,12 +121,14 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 _assert(a, agent.state, replay.state, 'state')
 
             if replay.action is not None:
-                assert info_dict['action_required'][
+                if not skip_action_required_check:    
+                    assert info_dict['action_required'][
                            a] == True or agent.state == TrainState.READY_TO_DEPART, "[{}] agent {} expecting action_required={} or agent status READY_TO_DEPART".format(
                     step, a, True)
                 action_dict[a] = replay.action
             else:
-                assert info_dict['action_required'][
+                if not skip_action_required_check:
+                    assert info_dict['action_required'][
                            a] == False, "[{}] agent {} expecting action_required={}, but found {}".format(
                     step, a, False, info_dict['action_required'][a])
 

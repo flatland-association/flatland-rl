@@ -196,7 +196,7 @@ def test_multispeed_actions_no_malfunction_no_blocking():
         initial_direction=Grid4TransitionsEnum.EAST,
     )
 
-    run_replay_config(env, [test_config], skip_reward_check=True)
+    run_replay_config(env, [test_config], skip_reward_check=True, skip_action_required_check=True)
 
 
 def test_multispeed_actions_no_malfunction_blocking():
@@ -206,11 +206,6 @@ def test_multispeed_actions_no_malfunction_blocking():
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
-    
-    # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
-    for _ in range(max([agent.earliest_departure for agent in env.agents])):
-        env.step({}) # DO_NOTHING for all agents
-    
 
     set_penalties_for_replay(env)
     test_configs = [
