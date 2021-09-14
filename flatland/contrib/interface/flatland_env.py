@@ -13,6 +13,10 @@ from mava.wrappers.flatland import infer_observation_space, normalize_observatio
 from functools import partial
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+from PIL import Image
 
 """Adapted from 
 - https://github.com/PettingZoo-Team/PettingZoo/blob/HEAD/pettingzoo/butterfly/pistonball/pistonball.py
@@ -67,13 +71,9 @@ class raw_env(AECEnv, gym.Env):
             'video.frames_per_second': 10,
             'semantics.autoreset': False }
 
-    def __init__(self, environment = False, preprocessor = False, agent_info = False, use_renderer=False, *args, **kwargs):
+    def __init__(self, environment = False, preprocessor = False, agent_info = False, *args, **kwargs):
         # EzPickle.__init__(self, *args, **kwargs)
         self._environment = environment
-        self.use_renderer = use_renderer
-        self.renderer = None
-        if self.use_renderer:
-            self.initialize_renderer()
 
         n_agents = self.num_agents
         self._agents = [get_agent_keys(i) for i in range(n_agents)]
@@ -187,9 +187,6 @@ class raw_env(AECEnv, gym.Env):
     def reset(self, *args, **kwargs):
         self._reset_next_step = False
         self._agents = self.possible_agents[:]
-        if self.use_renderer:
-            if self.renderer: #TODO: Errors with RLLib with renderer as None.
-                self.renderer.reset()
         obs, info = self._environment.reset(*args, **kwargs)
         observations = self._collate_obs_and_info(obs, info)
         self._agent_selector.reinit(self.agents)
@@ -268,53 +265,40 @@ class raw_env(AECEnv, gym.Env):
         self.obs = observations
         return observations   
 
+    def set_probs(self, probs):
+        self.probs = probs
 
-    def render(self, mode='human'):
+    def render(self, mode='rgb_array'):
         """
         This methods provides the option to render the
-        environment's behavior to a window which should be
-        readable to the human eye if mode is set to 'human'.
+        environment's behavior as an image or to a window.
         """
-        if not self.use_renderer:
-            return
-
-        if not self.renderer:
-            self.initialize_renderer(mode=mode)
-
-        return self.update_renderer(mode=mode)
-
-    def initialize_renderer(self, mode="human"):
-        # Initiate the renderer
-        from flatland.utils.rendertools import RenderTool, AgentRenderVariant
-        self.renderer = RenderTool(self.environment, gl="PGL",  # gl="TKPILSVG",
-                                       agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                                       show_debug=False,
-                                       screen_height=600,  # Adjust these parameters to fit your resolution
-                                       screen_width=800)  # Adjust these parameters to fit your resolution
-        self.renderer.show = False
-
-    def update_renderer(self, mode='human'):
-        image = self.renderer.render_env(show=False, show_observations=False, show_predictions=False,
-                                             return_image=True)
-        return image[:,:,:3]
-
-    def set_renderer(self, renderer):
-        self.use_renderer = renderer
-        if self.use_renderer:
-            self.initialize_renderer(mode=self.use_renderer)
+        if mode == "rgb_array":
+            env_rgb_array = self._environment.render(mode)
+            if not hasattr(self, "image_shape "):
+                self.image_shape = env_rgb_array.shape
+            if not hasattr(self, "probs "):
+                self.probs = [[0., 0., 0., 0.]]
+            fig, ax = plt.subplots(figsize=(self.image_shape[1]/100, self.image_shape[0]/100),
+                                constrained_layout=True, dpi=100)
+            df = pd.DataFrame(np.array(self.probs).T)
+            sns.barplot(x=df.index, y=0, data=df, ax=ax)
+            ax.set(xlabel='actions', ylabel='probs')
+            fig.canvas.draw()
+            X = np.array(fig.canvas.renderer.buffer_rgba())
+            Image.fromarray(X)
+            # Image.fromarray(X)
+            rgb_image = np.array(Image.fromarray(X).convert('RGB'))
+            plt.close(fig)
+            q_value_rgb_array = rgb_image
+            return np.append(env_rgb_array, q_value_rgb_array, axis=1)
+        else:
+            return self._environment.render(mode)
 
     def close(self):
-        # self._environment.close()
-        if self.renderer:
-            try:
-                if self.renderer.show:
-                    self.renderer.close_window()
-            except Exception as e:
-                print("Could Not close window due to:",e)
-            self.renderer = None
+        self._environment.close()
 
-    def _obtain_preprocessor(
-        self, preprocessor):
+    def _obtain_preprocessor(self, preprocessor):
         """Obtains the actual preprocessor to be used based on the supplied
         preprocessor and the env's obs_builder object"""
         if not isinstance(self.obs_builder, GlobalObsForRailEnv):

@@ -24,7 +24,7 @@ for image_file in glob.glob(r'./docs/flatland*.rst'):
     remove_exists(image_file)
 remove_exists('docs/modules.rst')
 
-for md_file in glob.glob(r'./*.md') + glob.glob(r'./docs/specifications/*.md') + glob.glob(r'./docs/tutorials/*.md'):
+for md_file in glob.glob(r'./*.md') + glob.glob(r'./docs/specifications/*.md') + glob.glob(r'./docs/tutorials/*.md') + glob.glob(r'./docs/interface/*.md'):
     from m2r import parse_from_file
 
     rst_content = parse_from_file(md_file)

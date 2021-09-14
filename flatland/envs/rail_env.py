@@ -8,7 +8,7 @@ from typing import List, NamedTuple, Optional, Dict, Tuple
 
 import numpy as np
 
-
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
@@ -427,6 +427,8 @@ class RailEnv(Environment):
         }
         # Return the new observation vectors for each agent
         observation_dict: Dict = self._get_observations()
+        if hasattr(self, "renderer") and self.renderer is not None:
+            self.renderer = None
         return observation_dict, info_dict
 
     def _fix_agent_after_malfunction(self, agent: EnvAgent):
@@ -1155,3 +1157,78 @@ class RailEnv(Environment):
     def save(self, filename):
         print("deprecated call to env.save() - pls call RailEnvPersister.save()")
         persistence.RailEnvPersister.save(self, filename)
+
+    def render(self, mode="rgb_array", gl="PGL", agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+            show_debug=False, clear_debug_text=True, show=False,
+            screen_height=600, screen_width=800,
+            show_observations=False, show_predictions=False,
+            show_rowcols=False, return_image=True):
+        """
+        This methods provides the option to render the
+        environment's behavior as an image or to a window.
+        Parameters
+        ----------
+        mode
+
+        Returns
+        -------
+        Image if mode is rgb_array, opens a window otherwise
+        """
+        if not hasattr(self, "renderer") or self.renderer is None:
+            self.initialize_renderer(mode=mode, gl=gl,  # gl="TKPILSVG",
+                                    agent_render_variant=agent_render_variant,
+                                    show_debug=show_debug,
+                                    clear_debug_text=clear_debug_text,
+                                    show=show,
+                                    screen_height=screen_height,  # Adjust these parameters to fit your resolution
+                                    screen_width=screen_width)
+        return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
+                                    show_predictions=show_predictions,
+                                    show_rowcols=show_rowcols, return_image=return_image)
+
+    def initialize_renderer(self, mode, gl,
+                agent_render_variant,
+                show_debug,
+                clear_debug_text,
+                show,
+                screen_height,
+                screen_width):
+        # Initiate the renderer
+        self.renderer = RenderTool(self, gl=gl,  # gl="TKPILSVG",
+                                agent_render_variant=agent_render_variant,
+                                show_debug=show_debug,
+                                clear_debug_text=clear_debug_text,
+                                screen_height=screen_height,  # Adjust these parameters to fit your resolution
+                                screen_width=screen_width)  # Adjust these parameters to fit your resolution
+        self.renderer.show = show
+        self.renderer.reset()
+
+    def update_renderer(self, mode, show, show_observations, show_predictions,
+                    show_rowcols, return_image):
+        """
+        This method updates the render.
+        Parameters
+        ----------
+        mode
+
+        Returns
+        -------
+        Image if mode is rgb_array, None otherwise
+        """
+        image = self.renderer.render_env(show=show, show_observations=show_observations,
+                                show_predictions=show_predictions,
+                                show_rowcols=show_rowcols, return_image=return_image)
+        if mode == 'rgb_array':
+            return image[:, :, :3]
+
+    def close(self):
+        """
+        This methods closes any renderer window.
+        """
+        if hasattr(self, "renderer") and self.renderer is not None:
+            try:
+                if self.renderer.show:
+                    self.renderer.close_window()
+            except Exception as e:
+                print("Could Not close window due to:",e)
+            self.renderer = None
