@@ -80,6 +80,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://gitlab.aicrowd.com/flatland/flatland',
-    version='3.0.0',
+    version='3.0.0rc1',
     zip_safe=False,
 )
