@@ -431,7 +431,7 @@ class RailEnv(Environment):
             * Block all actions when in waiting state
             * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
         """
-        action = action_preprocessing.preprocess_raw_action(action, agent.state)
+        action = action_preprocessing.preprocess_raw_action(action, agent.state, agent.action_saver.saved_action)
         action = action_preprocessing.preprocess_action_when_waiting(action, agent.state)
 
         # Try moving actions on current position
@@ -440,7 +440,6 @@ class RailEnv(Environment):
             current_position, current_direction = agent.initial_position, agent.initial_direction
         
         action = action_preprocessing.preprocess_moving_action(action, self.rail, current_position, current_direction)
-
         return action
     
     def clear_rewards_dict(self):
@@ -513,6 +512,9 @@ class RailEnv(Environment):
             # Save moving actions in not already saved
             agent.action_saver.save_action_if_allowed(preprocessed_action, agent.state)
 
+            # Train's next position can change if current stopped in a fractional speed or train is at cell's exit
+            position_update_allowed = (agent.speed_counter.is_cell_exit or agent.state == TrainState.STOPPED)
+
             # Calculate new position
             # Add agent to the map if not on it yet
             if agent.position is None and agent.action_saver.is_action_saved:
@@ -520,7 +522,7 @@ class RailEnv(Environment):
                 new_direction = agent.initial_direction
                 
             # If movement is allowed apply saved action independent of other agents
-            elif agent.action_saver.is_action_saved:
+            elif agent.action_saver.is_action_saved and position_update_allowed:
                 saved_action = agent.action_saver.saved_action
                 # Apply action independent of other agents and get temporary new position and direction
                 new_position, new_direction  = self.apply_action_independent(saved_action, 
@@ -557,7 +559,7 @@ class RailEnv(Environment):
                (agent.speed_counter.is_cell_exit or agent.position is None):
                 agent.position = agent_transition_data.position
                 agent.direction = agent_transition_data.direction
-                
+
             preprocessed_action = agent_transition_data.preprocessed_action
 
             ## Update states
@@ -565,9 +567,8 @@ class RailEnv(Environment):
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
 
-            if agent.state.is_on_map_state() and agent.position is None:
-                raise ValueError("Agent ID {} Agent State {} not matching with Agent Position {} ".format(
-                                    agent.handle, str(agent.state), str(agent.position) ))
+            # Off map or on map state and position should match
+            state_position_sync_check(agent.state, agent.position, agent.handle)
 
             # Handle done state actions, optionally remove agents
             self.handle_done_state(agent)
@@ -583,7 +584,7 @@ class RailEnv(Environment):
             agent.malfunction_handler.update_counter()
 
             # Clear old action when starting in new cell
-            if agent.speed_counter.is_cell_entry:
+            if agent.speed_counter.is_cell_entry and agent.position is not None:
                 agent.action_saver.clear_saved_action()
         
         # Check if episode has ended and update rewards and dones
@@ -687,3 +688,11 @@ def fast_position_equal(pos_1: (int, int), pos_2: (int, int)) -> bool:
         return False
     else:
         return pos_1[0] == pos_2[0] and pos_1[1] == pos_2[1]
+
+def state_position_sync_check(state, position, i_agent):
+    if state.is_on_map_state() and position is None:
+        raise ValueError("Agent ID {} Agent State {} is on map Agent Position {} if off map ".format(
+                        i_agent, str(state), str(position) ))
+    elif state.is_off_map_state() and position is not None:
+        raise ValueError("Agent ID {} Agent State {} is off map Agent Position {} if on map ".format(
+                        i_agent, str(state), str(position) ))

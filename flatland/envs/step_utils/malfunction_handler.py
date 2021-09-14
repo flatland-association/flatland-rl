@@ -10,6 +10,7 @@ def get_number_of_steps_to_break(malfunction_generator, np_random):
 class MalfunctionHandler:
     def __init__(self):
         self._malfunction_down_counter = 0
+        self.num_malfunctions = 0
     
     @property
     def in_malfunction(self):
@@ -33,6 +34,7 @@ class MalfunctionHandler:
         # Only set new malfunction value if old malfunction is completed
         if self._malfunction_down_counter == 0:
             self._malfunction_down_counter = val
+            self.num_malfunctions += 1
 
     def generate_malfunction(self, malfunction_generator, np_random):
         num_broken_steps = get_number_of_steps_to_break(malfunction_generator, np_random)
@@ -44,16 +46,20 @@ class MalfunctionHandler:
 
     def __repr__(self):
         return f"malfunction_down_counter: {self._malfunction_down_counter} \
-                in_malfunction: {self.in_malfunction}"
+                in_malfunction: {self.in_malfunction} \
+                num_malfunctions: {self.num_malfunctions}"
 
     def to_dict(self):
-        return {"malfunction_down_counter": self._malfunction_down_counter}
+        return {"malfunction_down_counter": self._malfunction_down_counter,
+                "num_malfunctions": self.num_malfunctions}
     
     def from_dict(self, load_dict):
         self._malfunction_down_counter = load_dict['malfunction_down_counter']
+        self.num_malfunctions = load_dict['num_malfunctions']
 
     def __eq__(self, other):
-        return self._malfunction_down_counter == other._malfunction_down_counter
+        return self._malfunction_down_counter == other._malfunction_down_counter and \
+               self.num_malfunctions == other.num_malfunctions
 
     
 

@@ -11,9 +11,11 @@ def process_illegal_action(action: RailEnvActions):
 		return RailEnvActions(action)
 
 
-def process_do_nothing(state: TrainState):
+def process_do_nothing(state: TrainState, saved_action: RailEnvActions):
     if state == TrainState.MOVING:
         action = RailEnvActions.MOVE_FORWARD
+    elif saved_action:
+        action = saved_action
     else:
         action = RailEnvActions.STOP_MOVING
     return action
@@ -34,7 +36,7 @@ def preprocess_action_when_waiting(action, state):
     return action
 
 
-def preprocess_raw_action(action, state):
+def preprocess_raw_action(action, state, saved_action):
     """
     Preprocesses actions to handle different situations of usage of action based on context
         - DO_NOTHING is converted to FORWARD if train is moving
@@ -43,7 +45,7 @@ def preprocess_raw_action(action, state):
     action = process_illegal_action(action)
 
     if action == RailEnvActions.DO_NOTHING:
-        action = process_do_nothing(state)
+        action = process_do_nothing(state, saved_action)
 
     return action
 
@@ -55,6 +57,4 @@ def preprocess_moving_action(action, rail, position, direction):
     if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]:
         action = process_left_right(action, rail, position, direction)
 
-    if not check_valid_action(action, rail, position, direction):
-        action = RailEnvActions.STOP_MOVING
     return action

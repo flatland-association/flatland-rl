@@ -31,12 +31,21 @@ class TrainStateMachine:
     
     def _handle_malfunction_off_map(self):
         if self.st_signals.malfunction_counter_complete:
+            
             if self.st_signals.earliest_departure_reached:
-                self.next_state = TrainState.READY_TO_DEPART
+
+                if self.st_signals.valid_movement_action_given:
+                    self.next_state = TrainState.MOVING
+                elif self.st_signals.stop_action_given:
+                    self.next_state = TrainState.STOPPED
+                else:
+                    self.next_state = TrainState.READY_TO_DEPART
+                    
             else:
-                self.next_state = TrainState.STOPPED
+                self.next_state = TrainState.WAITING
+
         else:
-            self.next_state = TrainState.WAITING
+            self.next_state = TrainState.MALFUNCTION_OFF_MAP
     
     def _handle_moving(self):
         if self.st_signals.in_malfunction:
@@ -61,7 +70,7 @@ class TrainStateMachine:
            self.st_signals.valid_movement_action_given:
             self.next_state = TrainState.MOVING
         elif self.st_signals.malfunction_counter_complete and \
-             (self.st_signals.stop_action_given or self.st_signals.movement_conflict):
+                (self.st_signals.stop_action_given or self.st_signals.movement_conflict):
              self.next_state = TrainState.STOPPED
         else:
             self.next_state = TrainState.MALFUNCTION
