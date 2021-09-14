@@ -5,14 +5,11 @@ import random
 
 from typing import List, Optional, Dict, Tuple
 
-<<<<<<< HEAD
-from flatland.utils.rendertools import RenderTool, AgentRenderVariant
-=======
 import numpy as np
 from gym.utils import seeding
 from dataclasses import dataclass
 
->>>>>>> env-step-facelift
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
@@ -752,7 +749,7 @@ class RailEnv(Environment):
                 print("Could Not close window due to:",e)
             self.renderer = None
 
-            
+
 @dataclass(repr=True)
 class AgentTransitionData:
     """ Class for keeping track of temporary agent data for position update """
