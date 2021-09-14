@@ -84,11 +84,6 @@ class SparseLineGen(BaseLineGen):
         train_stations = hints['train_stations']
         city_positions = hints['city_positions']
         city_orientation = hints['city_orientations']
-        max_num_agents = hints['num_agents']
-        city_orientations = hints['city_orientations']
-        if num_agents > max_num_agents:
-            num_agents = max_num_agents
-            warnings.warn("Too many agents! Changes number of agents.")
         # Place agents and targets within available train stations
         agents_position = []
         agents_target = []
@@ -189,7 +184,7 @@ def line_from_file(filename, load_from_package=None) -> LineGenerator:
         #agents_direction = [a.direction for a in agents]
         agents_direction = [a.initial_direction for a in agents]
         agents_target = [a.target for a in agents]
-        agents_speed = [a.speed_data['speed'] for a in agents]
+        agents_speed = [a.speed_counter.speed for a in agents]
 
         # Malfunctions from here are not used.  They have their own generator.
         #agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]

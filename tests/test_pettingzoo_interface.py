@@ -1,25 +1,24 @@
-import numpy as np
-import os
-import PIL
-import shutil
-
-from flatland.contrib.interface import flatland_env
-from flatland.contrib.utils import env_generators
-
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-
-
-# First of all we import the Flatland rail environment
-from flatland.utils.rendertools import RenderTool, AgentRenderVariant
-
-from flatland.contrib.wrappers.flatland_wrappers import SkipNoChoiceCellsWrapper
-from flatland.contrib.wrappers.flatland_wrappers import ShortestPathActionWrapper  # noqa
 import pytest
-
 
 @pytest.mark.skip(reason="Only for testing pettingzoo interface and wrappers")
 def test_petting_zoo_interface_env():
+    import numpy as np
+    import os
+    import PIL
+    import shutil
+
+    from flatland.contrib.interface import flatland_env
+    from flatland.contrib.utils import env_generators
+
+    from flatland.envs.observations import TreeObsForRailEnv
+    from flatland.envs.predictions import ShortestPathPredictorForRailEnv
+
+
+    # First of all we import the Flatland rail environment
+    from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+
+    from flatland.contrib.wrappers.flatland_wrappers import SkipNoChoiceCellsWrapper
+    from flatland.contrib.wrappers.flatland_wrappers import ShortestPathActionWrapper  # noqa
 
     # Custom observation builder without predictor
     # observation_builder = GlobalObsForRailEnv()

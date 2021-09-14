@@ -31,7 +31,6 @@ class ControllerFromTrainrunsReplayer():
                     "before {}, agent {} at {}, expected {}".format(i, agent_id, agent.position,
                                                                     waypoint.position)
             actions = ctl.act(i)
-            print("actions for {}: {}".format(i, actions))
 
             obs, all_rewards, done, _ = env.step(actions)
 

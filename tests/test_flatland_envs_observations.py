@@ -5,7 +5,6 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.agent_utils import EnvAgent, RailAgentStatus
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
@@ -13,6 +12,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
+from flatland.envs.step_utils.states import TrainState
 
 """Tests for `flatland` package."""
 
@@ -50,7 +50,6 @@ def _step_along_shortest_path(env, obs_builder, rail):
     actions = {}
     expected_next_position = {}
     for agent in env.agents:
-        agent: EnvAgent
         shortest_distance = np.inf
 
         for exit_direction in range(4):
@@ -106,7 +105,7 @@ def test_reward_function_conflict(rendering=False):
     agent.initial_direction = 0  # north
     agent.target = (3, 9)  # east dead-end
     agent.moving = True
-    agent.status = RailAgentStatus.ACTIVE
+    agent._set_state(TrainState.MOVING)
 
     agent = env.agents[1]
     agent.position = (3, 8)  # east dead-end
@@ -115,13 +114,13 @@ def test_reward_function_conflict(rendering=False):
     agent.initial_direction = 3  # west
     agent.target = (6, 6)  # south dead-end
     agent.moving = True
-    agent.status = RailAgentStatus.ACTIVE
+    agent._set_state(TrainState.MOVING)
 
     env.reset(False, False)
     env.agents[0].moving = True
     env.agents[1].moving = True
-    env.agents[0].status = RailAgentStatus.ACTIVE
-    env.agents[1].status = RailAgentStatus.ACTIVE
+    env.agents[0]._set_state(TrainState.MOVING)
+    env.agents[1]._set_state(TrainState.MOVING)
     env.agents[0].position = (5, 6)
     env.agents[1].position = (3, 8)
     print("\n")
@@ -166,7 +165,7 @@ def test_reward_function_conflict(rendering=False):
         rewards = _step_along_shortest_path(env, obs_builder, rail)
 
         for agent in env.agents:
-            assert rewards[agent.handle] == -1
+            assert rewards[agent.handle] == 0
             expected_position = expected_positions[iteration + 1][agent.handle]
             assert agent.position == expected_position, "[{}] agent {} at {}, expected {}".format(iteration + 1,
                                                                                                   agent.handle,
@@ -195,7 +194,7 @@ def test_reward_function_waiting(rendering=False):
     agent.initial_direction = 3  # west
     agent.target = (3, 1)  # west dead-end
     agent.moving = True
-    agent.status = RailAgentStatus.ACTIVE
+    agent._set_state(TrainState.MOVING)
 
     agent = env.agents[1]
     agent.initial_position = (5, 6)  # south dead-end
@@ -204,13 +203,13 @@ def test_reward_function_waiting(rendering=False):
     agent.initial_direction = 0  # north
     agent.target = (3, 8)  # east dead-end
     agent.moving = True
-    agent.status = RailAgentStatus.ACTIVE
+    agent._set_state(TrainState.MOVING)
 
     env.reset(False, False)
     env.agents[0].moving = True
     env.agents[1].moving = True
-    env.agents[0].status = RailAgentStatus.ACTIVE
-    env.agents[1].status = RailAgentStatus.ACTIVE
+    env.agents[0]._set_state(TrainState.MOVING)
+    env.agents[1]._set_state(TrainState.MOVING)
     env.agents[0].position = (3, 8)
     env.agents[1].position = (5, 6)
 
@@ -225,14 +224,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 8),
                 1: (5, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         1: {
             'positions': {
                 0: (3, 7),
                 1: (4, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         # second agent has to wait for first, first can continue
         2: {
@@ -240,7 +239,7 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 6),
                 1: (4, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         # both can move again
         3: {
@@ -248,14 +247,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 5),
                 1: (3, 6),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         4: {
             'positions': {
                 0: (3, 4),
                 1: (3, 7),
             },
-            'rewards': [-1, -1],
+            'rewards': [0, 0],
         },
         # second reached target
         5: {
@@ -263,14 +262,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 3),
                 1: (3, 8),
             },
-            'rewards': [-1, 0],
+            'rewards': [0, 0],
         },
         6: {
             'positions': {
                 0: (3, 2),
                 1: (3, 8),
             },
-            'rewards': [-1, 0],
+            'rewards': [0, 0],
         },
         # first reaches, target too
         7: {
@@ -278,14 +277,14 @@ def test_reward_function_waiting(rendering=False):
                 0: (3, 1),
                 1: (3, 8),
             },
-            'rewards': [1, 1],
+            'rewards': [0, 0],
         },
         8: {
             'positions': {
                 0: (3, 1),
                 1: (3, 8),
             },
-            'rewards': [1, 1],
+            'rewards': [0, 0],
         },
     }
     while iteration < 7:
@@ -297,7 +296,6 @@ def test_reward_function_waiting(rendering=False):
 
         print(env.dones["__all__"])
         for agent in env.agents:
-            agent: EnvAgent
             print("[{}] agent {} at {}, target {} ".format(iteration + 1, agent.handle, agent.position, agent.target))
         print(np.all([np.array_equal(agent2.position, agent2.target) for agent2 in env.agents]))
         for agent in env.agents:

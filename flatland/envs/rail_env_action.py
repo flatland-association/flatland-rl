@@ -19,6 +19,13 @@ class RailEnvActions(IntEnum):
             4: 'S',
         }[a]
 
+    @classmethod
+    def is_action_valid(cls, action):
+        return action in cls._value2member_map_
+
+    def is_moving_action(self):
+        return self.value in [self.MOVE_RIGHT, self.MOVE_LEFT, self.MOVE_FORWARD]
+
 
 RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])
 RailEnvNextAction = NamedTuple('RailEnvNextAction', [('action', RailEnvActions), ('next_position', RailEnvGridPos),

@@ -2,28 +2,21 @@
 
 import pickle
 import msgpack
-import msgpack_numpy
 import numpy as np
+import msgpack_numpy
+msgpack_numpy.patch()
 
 from flatland.envs import rail_env 
 
-#from flatland.core.env import Environment
 from flatland.core.env_observation_builder import DummyObservationBuilder
-#from flatland.core.grid.grid4 import Grid4TransitionsEnum, Grid4Transitions
-#from flatland.core.grid.grid4_utils import get_new_position
-#from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_utils import Agent, EnvAgent, RailAgentStatus
-from flatland.envs.distance_map import DistanceMap
-
-#from flatland.envs.observations import GlobalObsForRailEnv
+from flatland.envs.agent_utils import EnvAgent, load_env_agent
 
 # cannot import objects / classes directly because of circular import
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
 
-msgpack_numpy.patch()
 
 class RailEnvPersister(object):
 
@@ -163,7 +156,8 @@ class RailEnvPersister(object):
             # remove the legacy key
             del env_dict["agents_static"]
         elif "agents" in env_dict:
-            env_dict["agents"] = [EnvAgent(*d[0:len(d)]) for d in env_dict["agents"]]
+            # env_dict["agents"] = [EnvAgent(*d[0:len(d)]) for d in env_dict["agents"]]
+            env_dict["agents"] = [load_env_agent(d) for d in env_dict["agents"]]
 
         return env_dict
 

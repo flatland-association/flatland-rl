@@ -5,11 +5,12 @@ Collection of environment-specific PredictionBuilder.
 import numpy as np
 
 from flatland.core.env_prediction_builder import PredictionBuilder
-from flatland.envs.agent_utils import RailAgentStatus
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.utils.ordered_set import OrderedSet
+from flatland.envs.step_utils.states import TrainState
+from flatland.envs.step_utils import transition_utils
 
 
 class DummyPredictorForRailEnv(PredictionBuilder):
@@ -48,7 +49,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
         prediction_dict = {}
 
         for agent in agents:
-            if agent.status != RailAgentStatus.ACTIVE:
+            if not agent.state.is_on_map_state():
                 # TODO make this generic
                 continue
             action_priorities = [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]
@@ -64,8 +65,8 @@ class DummyPredictorForRailEnv(PredictionBuilder):
 
                     continue
                 for action in action_priorities:
-                    cell_is_free, new_cell_isValid, new_direction, new_position, transition_isValid = \
-                        self.env._check_action_on_agent(action, agent)
+                    new_cell_isValid, new_direction, new_position, transition_isValid = \
+                        transition_utils.check_action_on_agent(action, self.env.rail, agent.position, agent.direction)
                     if all([new_cell_isValid, transition_isValid]):
                         # move and change direction to face the new_direction that was
                         # performed
@@ -126,13 +127,11 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
 
         prediction_dict = {}
         for agent in agents:
-            if agent.status == RailAgentStatus.WAITING:
+            if agent.state.is_off_map_state():
                 agent_virtual_position = agent.initial_position
-            elif agent.status == RailAgentStatus.READY_TO_DEPART:
-                agent_virtual_position = agent.initial_position
-            elif agent.status == RailAgentStatus.ACTIVE:
+            elif agent.state.is_on_map_state():
                 agent_virtual_position = agent.position
-            elif agent.status == RailAgentStatus.DONE:
+            elif agent.state == TrainState.DONE:
                 agent_virtual_position = agent.target
             else:
 
@@ -143,7 +142,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                 continue
 
             agent_virtual_direction = agent.direction
-            agent_speed = agent.speed_data["speed"]
+            agent_speed = agent.speed_counter.speed
             times_per_cell = int(np.reciprocal(agent_speed))
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
             prediction[0] = [0, *agent_virtual_position, agent_virtual_direction, 0]

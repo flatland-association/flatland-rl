@@ -7,7 +7,7 @@ import numpy as np
 from numpy import array
 from recordtype import recordtype
 
-from flatland.envs.agent_utils import RailAgentStatus
+from flatland.envs.step_utils.states import TrainState
 
 from flatland.utils.graphics_pil import PILGL, PILSVG
 from flatland.utils.graphics_pgl import PGLGL
@@ -741,9 +741,9 @@ class RenderLocal(RenderBase):
                         self.gl.set_cell_occupied(agent_idx, *(agent.position))
                     
                     if show_inactive_agents:
-                        show_this_agent=True
+                        show_this_agent = True
                     else:
-                        show_this_agent = agent.status == RailAgentStatus.ACTIVE
+                        show_this_agent = agent.state.is_on_map_state()
 
                     if show_this_agent:
                         self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, 

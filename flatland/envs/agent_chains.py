@@ -218,21 +218,21 @@ class MotionCheck(object):
         if "color" in dAttr:
             sColor = dAttr["color"]
             if sColor in [ "red", "purple" ]:
-                return (False, rcPos)
+                return False
 
         dSucc = self.G.succ[rcPos]
 
         # This should never happen - only the next cell of an agent has no successor
         if len(dSucc)==0:
             print(f"error condition - agent {iAgent} node {rcPos} has no successor")
-            return (False, rcPos)
+            return False
 
         # This agent has a successor
         rcNext = self.G.successors(rcPos).__next__()
         if rcNext == rcPos:  # the agent didn't want to move
-            return (False, rcNext)
+            return False
         # The agent wanted to move, and it can
-        return (True, rcNext)
+        return True
 
 
 
