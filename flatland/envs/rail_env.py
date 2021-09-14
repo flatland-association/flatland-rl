@@ -414,7 +414,7 @@ class RailEnv(Environment):
         # Agents not done (arrival_time is None)
         else:
             # CANCELLED check (never departed)
-            if (agent.state == TrainState.READY_TO_DEPART):
+            if (agent.state.is_off_map_state()):
                 reward = -1 * self.cancellation_factor * \
                     (agent.get_travel_time_on_shortest_path(self.distance_map) + self.cancellation_time_buffer)
 
