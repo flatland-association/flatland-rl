@@ -182,7 +182,7 @@ def test_reward_function_waiting(rendering=False):
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
-                  remove_agents_at_target=False)
+                  remove_agents_at_target=False, random_seed=1)
     obs_builder: TreeObsForRailEnv = env.obs_builder
     env.reset()
 

@@ -106,7 +106,7 @@ class RailEnv(Environment):
                  malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
                  malfunction_generator=None,
                  remove_agents_at_target=True,
-                 random_seed=1,
+                 random_seed=None,
                  record_steps=False,
                  ):
         """
@@ -161,7 +161,6 @@ class RailEnv(Environment):
         
         self.number_of_agents = number_of_agents
 
-        # self.rail_generator: RailGenerator = rail_generator
         if rail_generator is None:
             rail_generator = rail_gen.sparse_rail_generator()
         self.rail_generator = rail_generator
@@ -193,9 +192,7 @@ class RailEnv(Environment):
         self.action_space = [5]
 
         self._seed()
-        self._seed()
-        self.random_seed = random_seed
-        if self.random_seed:
+        if random_seed:
             self._seed(seed=random_seed)
 
         self.agent_positions = None
@@ -211,6 +208,14 @@ class RailEnv(Environment):
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         random.seed(seed)
+        self.random_seed = seed
+
+        # Keep track of all the seeds in order
+        if not hasattr(self, 'seed_history'):
+            self.seed_history = [seed]
+        if self.seed_history[-1] != seed:
+            self.seed_history.append(seed)
+
         return [seed]
 
     # no more agent_handles
@@ -252,7 +257,7 @@ class RailEnv(Environment):
                ( agent.state.is_on_map_state() and agent.speed_counter.is_cell_entry )
 
     def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
-              random_seed: bool = None) -> Tuple[Dict, Dict]:
+              random_seed: int = None) -> Tuple[Dict, Dict]:
         """
         reset(regenerate_rail, regenerate_schedule, activate_agents, random_seed)
 
@@ -264,7 +269,7 @@ class RailEnv(Environment):
             regenerate the rails
         regenerate_schedule : bool, optional
             regenerate the schedule and the static agents
-        random_seed : bool, optional
+        random_seed : int, optional
             random seed for environment
 
         Returns
@@ -355,10 +360,10 @@ class RailEnv(Environment):
         """ Update the agent_positions array for agents that changed positions """
         for agent in self.agents:
             if not ignore_old_positions or agent.old_position != agent.position:
-                self.agent_positions[agent.position] = agent.handle
+                if agent.position is not None:
+                    self.agent_positions[agent.position] = agent.handle
                 if agent.old_position is not None:
                     self.agent_positions[agent.old_position] = -1
-
     
     def generate_state_transition_signals(self, agent, preprocessed_action, movement_allowed):
         """ Generate State Transitions Signals used in the state machine """
@@ -597,7 +602,7 @@ class RailEnv(Environment):
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
 
-        self._update_agent_positions_map
+        self._update_agent_positions_map()
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict() 
 

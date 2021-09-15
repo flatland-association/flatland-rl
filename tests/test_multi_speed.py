@@ -22,13 +22,14 @@ class RandomAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
+        self.np_random = np.random.RandomState(seed=42)
 
     def act(self, state):
         """
         :param state: input is the observation of the agent
         :return: returns an action
         """
-        return np.random.choice([1, 2, 3])
+        return self.np_random.choice([1, 2, 3])
 
     def step(self, memories):
         """
@@ -63,6 +64,7 @@ def test_multi_speed_init():
     # Set all the different speeds
     # Reset environment and get initial observations for all agents
     env.reset(False, False)
+    env._max_episode_steps = 1000
 
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position =  env.agents[a_idx].initial_position
@@ -204,7 +206,8 @@ def test_multispeed_actions_no_malfunction_blocking():
     rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2,
-                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  random_seed=1)
     env.reset()
 
     set_penalties_for_replay(env)

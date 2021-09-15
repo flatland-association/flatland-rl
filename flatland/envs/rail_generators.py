@@ -163,7 +163,7 @@ def sparse_rail_generator(*args, **kwargs):
 class SparseRailGen(RailGen):
 
     def __init__(self, max_num_cities: int = 2, grid_mode: bool = False, max_rails_between_cities: int = 2,
-                          max_rail_pairs_in_city: int = 2, seed=0) -> RailGenerator:
+                          max_rail_pairs_in_city: int = 2, seed=None) -> RailGenerator:
         """
         Generates railway networks with cities and inner city rails
 
@@ -189,7 +189,7 @@ class SparseRailGen(RailGen):
         self.grid_mode = grid_mode
         self.max_rails_between_cities = max_rails_between_cities
         self.max_rail_pairs_in_city = max_rail_pairs_in_city
-        self.seed = seed # TODO: seed in constructor or generate?
+        self.seed = seed
 
 
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
@@ -217,8 +217,10 @@ class SparseRailGen(RailGen):
             'train_stations': locations of train stations for start and targets
             'city_orientations' : orientation of cities
         """
-        if np_random is None:
+        if self.seed is not None:
             np_random = RandomState(self.seed)
+        elif np_random is None:
+            np_random = RandomState(np.random.randint(2**32))
             
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
