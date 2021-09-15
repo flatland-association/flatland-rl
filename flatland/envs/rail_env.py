@@ -557,27 +557,36 @@ class RailEnv(Environment):
         
         for agent in self.agents:
             i_agent = agent.handle
-            agent_transition_data = temp_transition_data[i_agent]
 
             ## Update positions
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position)
+                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position) 
 
-            # Position can be changed only if other cell is empty
-            # And either the speed counter completes or agent is being added to map
-            if movement_allowed and \
-               (agent.speed_counter.is_cell_exit or agent.position is None):
-                agent.position = agent_transition_data.position
-                agent.direction = agent_transition_data.direction
 
+
+            # Fetch the saved transition data
+            agent_transition_data = temp_transition_data[i_agent]
             preprocessed_action = agent_transition_data.preprocessed_action
 
             ## Update states
             state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, movement_allowed)
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
+
+            # Needed when not removing agents at target
+            movement_allowed = movement_allowed and agent.state != TrainState.DONE
+
+            # Agent is being added to map
+            if agent.state.is_on_map_state() and agent.state_machine.previous_state.is_off_map_state():
+                agent.position = agent.initial_position
+                agent.direction = agent.initial_direction
+            # Speed counter completes
+            elif movement_allowed and (agent.speed_counter.is_cell_exit):
+                agent.position = agent_transition_data.position
+                agent.direction = agent_transition_data.direction
+                agent.state_machine.update_if_reached(agent.position, agent.target)
 
             # Off map or on map state and position should match
             env_utils.state_position_sync_check(agent.state, agent.position, agent.handle)

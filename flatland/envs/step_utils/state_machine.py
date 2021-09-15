@@ -1,4 +1,5 @@
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+from flatland.envs.step_utils import env_utils
 
 class TrainStateMachine:
     def __init__(self, initial_state=TrainState.WAITING):
@@ -135,6 +136,13 @@ class TrainStateMachine:
         self.previous_state = None
         self.st_signals = StateTransitionSignals()
         self.clear_next_state()
+    
+    def update_if_reached(self, position, target):
+        # Need to do this hacky fix for now, state machine needed speed related states for proper handling
+        self.st_signals.target_reached = env_utils.fast_position_equal(position, target)
+        if self.st_signals.target_reached:
+            self.next_state = TrainState.DONE
+            self.set_state(self.next_state)
 
     @property
     def state(self):

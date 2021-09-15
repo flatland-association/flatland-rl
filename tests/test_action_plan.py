@@ -21,7 +21,8 @@ def test_action_plan(rendering: bool = False):
                   line_generator=sparse_line_generator(seed=77),
                   number_of_agents=2,
                   obs_builder_object=GlobalObsForRailEnv(),
-                  remove_agents_at_target=True
+                  remove_agents_at_target=True,
+                  random_seed=1,
                   )
     env.reset()
     env.agents[0].initial_position = (3, 0)
