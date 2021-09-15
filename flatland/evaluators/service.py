@@ -22,7 +22,7 @@ import timeout_decorator
 
 import flatland
 from flatland.core.env_observation_builder import DummyObservationBuilder
-from flatland.envs.agent_utils import RailAgentStatus
+from flatland.envs.step_utils.states import TrainState
 from flatland.envs.malfunction_generators import malfunction_from_file
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
@@ -898,7 +898,7 @@ class FlatlandRemoteEvaluationService:
             complete = 0
             for i_agent in range(self.env.get_num_agents()):
                 agent = self.env.agents[i_agent]
-                if agent.status in [RailAgentStatus.DONE_REMOVED]:
+                if agent.state == TrainState.DONE:
                     complete += 1
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
