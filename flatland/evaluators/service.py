@@ -21,16 +21,10 @@ import redis
 import timeout_decorator
 
 import flatland
-from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.step_utils.states import TrainState
-from flatland.envs.malfunction_generators import malfunction_from_file
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import rail_from_file
-from flatland.envs.line_generators import line_from_file
 from flatland.evaluators import aicrowd_helpers
 from flatland.evaluators import messages
 from flatland.utils.rendertools import RenderTool
-from flatland.envs.rail_env_utils import load_flatland_environment_from_file
 from flatland.envs.persistence import RailEnvPersister
 
 use_signals_in_timeout = True
@@ -755,7 +749,6 @@ class FlatlandRemoteEvaluationService:
             _observation, _info = self.env.reset(
                 regenerate_rail=True,
                 regenerate_schedule=True,
-                activate_agents=False,
                 random_seed=RANDOM_SEED
             )
 
@@ -1131,7 +1124,7 @@ class FlatlandRemoteEvaluationService:
         # and then we compute the mean across each of the test_id groups
         #################################################################################
         #################################################################################
-        source_df = self.evaluation_metadata_df.dropna()
+        source_df = self.evaluation_metadata_df
         # grouped_df = source_df.groupby(['test_id']).mean()
 
         mean_reward = source_df["reward"].mean()

@@ -12,7 +12,7 @@ import numpy as np
 import redis
 
 import flatland
-from flatland.envs.malfunction_generators import malfunction_from_file
+from flatland.envs.malfunction_generators import FileMalfunctionGen
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
 from flatland.envs.line_generators import line_from_file
@@ -267,7 +267,7 @@ class FlatlandRemoteClient(object):
         self.current_env_path = test_env_file_path
         self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
                            line_generator=line_from_file(test_env_file_path),
-                           malfunction_generator_and_process_data=malfunction_from_file(test_env_file_path),
+                           malfunction_generator=FileMalfunctionGen(test_env_file_path),
                            obs_builder_object=obs_builder_object)
 
         time_start = time.time()
@@ -276,7 +276,6 @@ class FlatlandRemoteClient(object):
         local_observation, info = self.env.reset(
             regenerate_rail=True,
             regenerate_schedule=True,
-            activate_agents=False,
             random_seed=random_seed
         )
         time_diff = time.time() - time_start
