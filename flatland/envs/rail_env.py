@@ -28,6 +28,7 @@ from flatland.envs.observations import GlobalObsForRailEnv
 
 from flatland.envs.timetable_generators import timetable_generator
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+from flatland.envs.step_utils.transition_utils import check_valid_action
 from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 
@@ -437,6 +438,11 @@ class RailEnv(Environment):
             current_position, current_direction = agent.initial_position, agent.initial_direction
         
         action = action_preprocessing.preprocess_moving_action(action, self.rail, current_position, current_direction)
+
+        # Check transitions, bounts for executing the action in the given position and directon
+        if not check_valid_action(action, self.rail, current_position, current_direction):
+            action = RailEnvActions.STOP_MOVING
+
         return action
     
     def clear_rewards_dict(self):
@@ -579,14 +585,15 @@ class RailEnv(Environment):
             movement_allowed = movement_allowed and agent.state != TrainState.DONE
 
             # Agent is being added to map
-            if agent.state.is_on_map_state() and agent.state_machine.previous_state.is_off_map_state():
-                agent.position = agent.initial_position
-                agent.direction = agent.initial_direction
+            if agent.state.is_on_map_state():
+                if agent.state_machine.previous_state.is_off_map_state():
+                    agent.position = agent.initial_position
+                    agent.direction = agent.initial_direction
             # Speed counter completes
-            elif movement_allowed and (agent.speed_counter.is_cell_exit):
-                agent.position = agent_transition_data.position
-                agent.direction = agent_transition_data.direction
-                agent.state_machine.update_if_reached(agent.position, agent.target)
+                elif movement_allowed and (agent.speed_counter.is_cell_exit):
+                    agent.position = agent_transition_data.position
+                    agent.direction = agent_transition_data.direction
+                    agent.state_machine.update_if_reached(agent.position, agent.target)
 
             # Off map or on map state and position should match
             env_utils.state_position_sync_check(agent.state, agent.position, agent.handle)

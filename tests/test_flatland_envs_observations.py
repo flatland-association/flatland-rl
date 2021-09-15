@@ -86,7 +86,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
                             expected_next_position[agent.handle] = neighbour
                             print("   improved (action) -> {}".format(actions[agent.handle]))
     _, rewards, dones, _ = env.step(actions)
-    return rewards
+    return rewards, dones
 
 
 def test_reward_function_conflict(rendering=False):
@@ -162,8 +162,9 @@ def test_reward_function_conflict(rendering=False):
         },
     }
     while iteration < 5:
-        rewards = _step_along_shortest_path(env, obs_builder, rail)
-
+        rewards, dones = _step_along_shortest_path(env, obs_builder, rail)
+        if dones["__all__"]:
+            break
         for agent in env.agents:
             # assert rewards[agent.handle] == 0
             expected_position = expected_positions[iteration + 1][agent.handle]
@@ -289,7 +290,9 @@ def test_reward_function_waiting(rendering=False):
     }
     while iteration < 7:
 
-        rewards = _step_along_shortest_path(env, obs_builder, rail)
+        rewards, dones = _step_along_shortest_path(env, obs_builder, rail)
+        if dones["__all__"]:
+            break
 
         if rendering:
             renderer.render_env(show=True, show_observations=True)
