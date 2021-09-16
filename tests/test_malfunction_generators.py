@@ -109,5 +109,5 @@ def test_single_malfunction_generator():
                 break
         for agent in env.agents:
             # Go forward all the time
-            tot_malfunctions += agent.malfunction_data['nr_malfunctions']
+            tot_malfunctions += agent.malfunction_handler.num_malfunctions
         assert tot_malfunctions == 1

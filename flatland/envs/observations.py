@@ -99,8 +99,8 @@ class TreeObsForRailEnv(ObservationBuilder):
                 self.location_has_agent[tuple(_agent.position)] = 1
                 self.location_has_agent_direction[tuple(_agent.position)] = _agent.direction
                 self.location_has_agent_speed[tuple(_agent.position)] = _agent.speed_counter.speed
-                self.location_has_agent_malfunction[tuple(_agent.position)] = _agent.malfunction_data[
-                    'malfunction']
+                self.location_has_agent_malfunction[tuple(_agent.position)] = \
+                        _agent.malfunction_handler.malfunction_down_counter
 
             # [NIMISH] WHAT IS THIS
             if _agent.state.is_off_map_state() and \
@@ -220,7 +220,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                                                            (handle, *agent_virtual_position,
                                                             agent.direction)],
                                                        num_agents_same_direction=0, num_agents_opposite_direction=0,
-                                                       num_agents_malfunctioning=agent.malfunction_data['malfunction'],
+                                                       num_agents_malfunctioning=agent.malfunction_handler.malfunction_down_counter,
                                                        speed_min_fractional=agent.speed_counter.speed,
                                                        num_agents_ready_to_depart=0,
                                                        childs={})
@@ -603,7 +603,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
                 # second channel only for other agents
                 if i != handle:
                     obs_agents_state[other_agent.position][1] = other_agent.direction
-                obs_agents_state[other_agent.position][2] = other_agent.malfunction_data['malfunction']
+                obs_agents_state[other_agent.position][2] = other_agent.malfunction_handler.malfunction_down_counter
                 obs_agents_state[other_agent.position][3] = other_agent.speed_counter.speed
             # fifth channel: all ready to depart on this position
             if other_agent.state.is_off_map_state():

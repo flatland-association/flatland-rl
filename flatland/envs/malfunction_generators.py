@@ -219,7 +219,7 @@ def malfunction_from_file(filename: str, load_from_package=None) -> Tuple[Malfun
         if reset:
             return Malfunction(0)
 
-        if agent.malfunction_data['malfunction'] < 1:
+        if agent.malfunction_handler.malfunction_down_counter < 1:
             if np_random.rand() < _malfunction_prob(mean_malfunction_rate):
                 num_broken_steps = np_random.randint(min_number_of_steps_broken,
                                                      max_number_of_steps_broken + 1) + 1

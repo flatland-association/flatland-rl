@@ -253,7 +253,7 @@ class RailEnvPersister(object):
         #msgpack.packb(agent_data, use_bin_type=True)
 
         distance_map_data = self.distance_map.get()
-        malfunction_data: MalfunctionProcessData = self.malfunction_process_data
+        malfunction_data: mal_gen.MalfunctionProcessData = self.malfunction_process_data
         #msgpack.packb(distance_map_data, use_bin_type=True)  # does nothing
         msg_data = {
             "grid": grid_data,

@@ -688,7 +688,7 @@ class RenderLocal(RenderBase):
                             malfunction=False)
                     continue
 
-                is_malfunction = agent.malfunction_data["malfunction"] > 0
+                is_malfunction = agent.malfunction_handler.malfunction_down_counter > 0
 
                 if self.agent_render_variant == AgentRenderVariant.BOX_ONLY:
                     self.gl.set_cell_occupied(agent_idx, *(agent.position))

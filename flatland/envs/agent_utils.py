@@ -22,7 +22,6 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('moving', bool),
                              ('earliest_departure', int),
                              ('latest_arrival', int),
-                             ('malfunction_data', dict),
                              ('handle', int),
                              ('position', Tuple[int, int]),
                              ('arrival_time', int),
@@ -68,13 +67,6 @@ class EnvAgent:
     earliest_departure = attrib(default=None, type=int)  # default None during _from_line()
     latest_arrival = attrib(default=None, type=int)  # default None during _from_line()
 
-    # if broken>0, the agent's actions are ignored for 'broken' steps
-    # number of time the agent had to stop, since the last time it broke down
-    malfunction_data = attrib(
-        default=Factory(
-            lambda: dict({'malfunction': 0, 'malfunction_rate': 0, 'next_malfunction': 0, 'nr_malfunctions': 0,
-                          'moving_before_malfunction': False})))
-
     handle = attrib(default=None)
     # INIT TILL HERE IN _from_line()
 
@@ -106,10 +98,7 @@ class EnvAgent:
         self.old_direction = None
         self.moving = False
 
-        # Reset agent malfunction values
-        self.malfunction_data['malfunction'] = 0
-        self.malfunction_data['nr_malfunctions'] = 0
-        self.malfunction_data['moving_before_malfunction'] = False
+        self.malfunction_handler.reset()
 
         self.action_saver.clear_saved_action()
         self.speed_counter.reset_counter()
@@ -123,7 +112,6 @@ class EnvAgent:
                      moving=self.moving,
                      earliest_departure=self.earliest_departure, 
                      latest_arrival=self.latest_arrival, 
-                     malfunction_data=self.malfunction_data, 
                      handle=self.handle,
                      position=self.position, 
                      old_direction=self.old_direction, 
@@ -169,16 +157,6 @@ class EnvAgent:
         for i_agent in range(num_agents):
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
             
-            if line.agent_malfunction_rates is not None:
-                malfunction_rate = line.agent_malfunction_rates[i_agent]
-            else:
-                malfunction_rate = 0.
-            
-            malfunction_data = {'malfunction': 0,
-                                'malfunction_rate': malfunction_rate,
-                                'next_malfunction': 0,
-                                'nr_malfunctions': 0
-                               }
             agent = EnvAgent(initial_position = line.agent_positions[i_agent],
                             initial_direction = line.agent_directions[i_agent],
                             direction = line.agent_directions[i_agent],
@@ -186,7 +164,6 @@ class EnvAgent:
                             moving = False, 
                             earliest_departure = None,
                             latest_arrival = None,
-                            malfunction_data = malfunction_data,
                             handle = i_agent,
                             speed_counter = SpeedCounter(speed=speed))
             agent_list.append(agent)
@@ -200,17 +177,11 @@ class EnvAgent:
             if len(static_agent) >= 6:
                 agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
                                 direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
-                                speed_counter=SpeedCounter(static_agent[4]['speed']), malfunction_data=static_agent[5], 
-                                handle=i)
+                                speed_counter=SpeedCounter(static_agent[4]['speed']), handle=i)
             else:
                 agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
                                 direction=static_agent[1], target=static_agent[2], 
                                 moving=False,
-                                malfunction_data={
-                                            'malfunction': 0,
-                                            'nr_malfunctions': 0,
-                                            'moving_before_malfunction': False
-                                        },
                                 speed_counter=SpeedCounter(1.0),
                                 handle=i)
             agents.append(agent)
@@ -219,10 +190,15 @@ class EnvAgent:
     def __str__(self):
         return f"\n \
                  handle(agent index): {self.handle} \n \
-                 initial_position: {self.initial_position}   initial_direction: {self.initial_direction} \n \
-                 position: {self.position}  direction: {self.direction}  target: {self.target} \n \
-                 old_position: {self.old_position} old_direction {self.old_direction} \n \
-                 earliest_departure: {self.earliest_departure}  latest_arrival: {self.latest_arrival} \n \
+                 initial_position: {self.initial_position}  \n \
+                 initial_direction: {self.initial_direction} \n \
+                 position: {self.position}  \n \
+                 direction: {self.direction}  \n \
+                 target: {self.target} \n \
+                 old_position: {self.old_position} \n \
+                 old_direction {self.old_direction} \n \
+                 earliest_departure: {self.earliest_departure}  \n \
+                 latest_arrival: {self.latest_arrival} \n \
                  state: {str(self.state)} \n \
                  malfunction_handler: {self.malfunction_handler} \n \
                  action_saver: {self.action_saver} \n \
@@ -239,6 +215,14 @@ class EnvAgent:
     def _set_state(self, state):
         warnings.warn("Not recommended to set the state with this function unless completely required")
         self.state_machine.set_state(state)
+
+    @property
+    def malfunction_data(self):
+        raise ValueError("agent.malunction_data is deprecated, please use agent.malfunction_hander instead")
+
+    @property
+    def speed_data(self):
+        raise ValueError("agent.speed_data is deprecated, please use agent.speed_counter instead")
 
 
     

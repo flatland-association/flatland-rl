@@ -11,6 +11,10 @@ class MalfunctionHandler:
     def __init__(self):
         self._malfunction_down_counter = 0
         self.num_malfunctions = 0
+
+    def reset(self):
+        self._malfunction_down_counter = 0
+        self.num_malfunctions = 0
     
     @property
     def in_malfunction(self):

@@ -148,7 +148,7 @@ class SparseLineGen(BaseLineGen):
             timedelay_factor * alpha * (rail.width + rail.height + num_agents / len(city_positions)))
 
         return Line(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds, agent_malfunction_rates=None)
+                        agent_targets=agents_target, agent_speeds=speeds)
 
 
 def line_from_file(filename, load_from_package=None) -> LineGenerator:
@@ -186,11 +186,7 @@ def line_from_file(filename, load_from_package=None) -> LineGenerator:
         agents_target = [a.target for a in agents]
         agents_speed = [a.speed_counter.speed for a in agents]
 
-        # Malfunctions from here are not used.  They have their own generator.
-        #agents_malfunction = [a.malfunction_data['malfunction_rate'] for a in agents]
-
         return Line(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed, 
-                        agent_malfunction_rates=None)
+                        agent_targets=agents_target, agent_speeds=agents_speed)
 
     return generator

@@ -105,9 +105,9 @@ def test_get_global_observation():
                 for other_i, other_agent in enumerate(env.agents):
                     if other_agent.state in [TrainState.MOVING, TrainState.MALFUNCTION, TrainState.STOPPED,
                                               TrainState.DONE] and other_agent.position == (r, c):
-                        assert np.isclose(obs_agents_state[(r, c)][2], other_agent.malfunction_data['malfunction']), \
+                        assert np.isclose(obs_agents_state[(r, c)][2], other_agent.malfunction_handler.malfunction_down_counter), \
                             "agent {} in state {} at {} should see agent malfunction {}, found = {}" \
-                                .format(i, agent.state, (r, c), other_agent.malfunction_data['malfunction'],
+                                .format(i, agent.state, (r, c), other_agent.malfunction_handler.malfunction_down_counter,
                                         obs_agents_state[(r, c)][2])
                         assert np.isclose(obs_agents_state[(r, c)][3], other_agent.speed_counter.speed)
                         has_agent = True

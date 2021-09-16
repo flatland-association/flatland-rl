@@ -133,8 +133,8 @@ def test_seeding_and_malfunction():
                 action = np.random.randint(4)
                 action_dict[a] = action
                 # print("----------------------")
-                # print(env.agents[a].malfunction_data, env.agents[a].status)
-                # print(env2.agents[a].malfunction_data, env2.agents[a].status)
+                # print(env.agents[a].malfunction_handler, env.agents[a].status)
+                # print(env2.agents[a].malfunction_handler, env2.agents[a].status)
 
             _, reward1, done1, _ = env.step(action_dict)
             _, reward2, done2, _ = env2.step(action_dict)

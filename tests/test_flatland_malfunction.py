@@ -254,7 +254,7 @@ def test_initial_malfunction():
     # reset to initialize agents_static
     env.reset(False, False, random_seed=10)
     env._max_episode_steps = 1000
-    print(env.agents[0].malfunction_data)
+    print(env.agents[0].malfunction_handler)
     env.agents[0].target = (0, 5)
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
@@ -568,8 +568,8 @@ def test_last_malfunction_step():
         env.agents[a_idx].position =  env.agents[a_idx].initial_position
         env.agents[a_idx].state = TrainState.MOVING
     # Force malfunction to be off at beginning and next malfunction to happen in 2 steps
-    env.agents[0].malfunction_data['next_malfunction'] = 2
-    env.agents[0].malfunction_data['malfunction'] = 0
+    # env.agents[0].malfunction_data['next_malfunction'] = 2
+    env.agents[0].malfunction_handler.malfunction_down_counter = 0
     env_data = []
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
@@ -582,14 +582,14 @@ def test_last_malfunction_step():
             # Go forward all the time
             action_dict[agent.handle] = RailEnvActions(2)
 
-        if env.agents[0].malfunction_data['malfunction'] < 1:
+        if env.agents[0].malfunction_handler.malfunction_down_counter < 1:
             agent_can_move = True
         # Store the position before and after the step
         pre_position = env.agents[0].speed_counter.counter
         _, reward, _, _ = env.step(action_dict)
         # Check if the agent is still allowed to move in this step
 
-        if env.agents[0].malfunction_data['malfunction'] > 0:
+        if env.agents[0].malfunction_handler.malfunction_down_counter > 0:
             agent_can_move = False
         post_position = env.agents[0].speed_counter.counter
         # Assert that the agent moved while it was still allowed
