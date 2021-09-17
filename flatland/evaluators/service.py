@@ -867,7 +867,7 @@ class FlatlandRemoteEvaluationService:
             ))
 
         # We count the number of agents that malfunctioned by checking how many have 1 more steps left before recovery
-        num_malfunctioning = sum(agent.malfunction_data['malfunction'] == 1 for agent in self.env.agents)
+        num_malfunctioning = sum(agent.malfunction_handler._malfunction_down_counter == 1 for agent in self.env.agents)
 
         if self.verbose and num_malfunctioning > 0:
             print("Step {}: {} agents have malfunctioned and will recover next step".format(self.current_step, num_malfunctioning))
