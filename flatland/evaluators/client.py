@@ -267,7 +267,7 @@ class FlatlandRemoteClient(object):
         self.current_env_path = test_env_file_path
         self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
                            line_generator=line_from_file(test_env_file_path),
-                           malfunction_generator=FileMalfunctionGen(test_env_file_path),
+                           malfunction_generator=FileMalfunctionGen(filename=test_env_file_path),
                            obs_builder_object=obs_builder_object)
 
         time_start = time.time()

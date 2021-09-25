@@ -67,7 +67,7 @@ class FileMalfunctionGen(ParamMalfunctionGen):
         if env_dict is None:
              env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
 
-        if "malfunction" in env_dict:
+        if env_dict.get('malfunction') is not None:
             oMFP = MalfunctionParameters(*env_dict["malfunction"])
         else:
             oMFP = MalfunctionParameters(0,0,0)  # no malfunctions
@@ -184,7 +184,7 @@ def malfunction_from_file(filename: str, load_from_package=None) -> Tuple[Malfun
 
     env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
     # TODO: make this better by using namedtuple in the pickle file. See issue 282
-    if "malfunction" in env_dict:
+    if env_dict.get('malfunction') is not None:
         env_dict['malfunction'] = oMPD = MalfunctionProcessData._make(env_dict['malfunction'])
     else:
         oMPD = None
