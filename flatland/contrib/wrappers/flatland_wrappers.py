@@ -26,7 +26,6 @@ def possible_actions_sorted_by_distance(env: RailEnv, handle: int):
     else:
         print("no action possible!")
         print("agent status: ", agent.state)
-        #return None
         # NEW: if agent is at target, DO_NOTHING, and distance is zero.
         # NEW: (needs to be tested...)
         return [(RailEnvActions.DO_NOTHING, 0)] * 2
