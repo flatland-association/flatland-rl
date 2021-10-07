@@ -2,20 +2,14 @@ import numpy as np
 import os
 import PIL
 import shutil
-# MICHEL: my own imports
 import unittest
 import typing
 from collections import defaultdict
 from typing import Dict, Any, Optional, Set, List, Tuple
-
-
 from flatland.envs.observations import TreeObsForRailEnv,GlobalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.core.grid.grid4_utils import get_new_position
-
-# First of all we import the Flatland rail environment
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
-
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.rail_env import RailEnv, RailEnvActions
