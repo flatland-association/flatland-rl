@@ -25,7 +25,7 @@ def possible_actions_sorted_by_distance(env: RailEnv, handle: int):
         agent_virtual_position = agent.position
     else:
         print("no action possible!")
-        print("agent status: ", agent.state)
+        print("agent state: ", agent.state)
         # NEW: if agent is at target, DO_NOTHING, and distance is zero.
         # NEW: (needs to be tested...)
         return [(RailEnvActions.DO_NOTHING, 0)] * 2
@@ -215,7 +215,7 @@ class NoChoiceCellsSkipper:
         i["action_required"] = dict()
         i["malfunction"] = dict()
         i["speed"] = dict()
-        i["status"] = dict() # TODO: change to "state"
+        i["state"] = dict()
 
         while len(o) == 0:
             obs, reward, done, info = self.env.step(action_dict)
@@ -231,7 +231,7 @@ class NoChoiceCellsSkipper:
                     i["action_required"][agent_id] = info["action_required"][agent_id] 
                     i["malfunction"][agent_id] = info["malfunction"][agent_id]
                     i["speed"][agent_id] = info["speed"][agent_id]
-                    i["status"][agent_id] = info["status"][agent_id] # TODO: change to "state"
+                    i["state"][agent_id] = info["state"][agent_id]
                                                                   
                     if self.accumulate_skipped_rewards:
                         discounted_skipped_reward = r[agent_id]
