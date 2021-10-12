@@ -1,9 +1,4 @@
 import numpy as np
-import os
-import PIL
-import shutil
-import unittest
-import typing
 from collections import defaultdict
 from typing import Dict, Any, Optional, Set, List, Tuple
 from flatland.envs.observations import TreeObsForRailEnv,GlobalObsForRailEnv
