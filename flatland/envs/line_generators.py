@@ -67,6 +67,15 @@ class SparseLineGen(BaseLineGen):
     :param seed: Initiate random seed generator
     """
 
+    def decide_orientation(self, rail, start, target, possible_orientations, np_random: RandomState) -> int:
+        feasible_orientations = []
+
+        for orientation in possible_orientations:
+            if rail.check_path_exists(start[0], orientation, target[0]):
+                feasible_orientations.append(orientation)
+
+        return np_random.choice(feasible_orientations)
+
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict, num_resets: int,
                   np_random: RandomState) -> Line:
         """
@@ -116,7 +125,8 @@ class SparseLineGen(BaseLineGen):
                 agent_start = train_stations[city1][agent_start_idx]
                 agent_target = train_stations[city2][agent_target_idx]
 
-                agent_orientation = np_random.choice(city1_possible_orientations)
+                agent_orientation = self.decide_orientation(
+                    rail, agent_start, agent_target, city1_possible_orientations, np_random)
 
 
             else:
@@ -125,8 +135,9 @@ class SparseLineGen(BaseLineGen):
                 
                 agent_start = train_stations[city2][agent_start_idx]
                 agent_target = train_stations[city1][agent_target_idx]
-                            
-                agent_orientation = np_random.choice(city2_possible_orientations)
+                
+                agent_orientation = self.decide_orientation(
+                    rail, agent_start, agent_target, city2_possible_orientations, np_random)    
 
             
             # agent1 details
