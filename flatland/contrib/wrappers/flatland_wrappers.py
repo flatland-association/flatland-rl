@@ -13,7 +13,6 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 def possible_actions_sorted_by_distance(env: RailEnv, handle: int):
     agent = env.agents[handle]
     
-
     if agent.state == TrainState.READY_TO_DEPART:
         agent_virtual_position = agent.initial_position
     elif agent.state.is_on_map_state():
@@ -153,7 +152,6 @@ def find_all_cells_where_agent_can_choose(env: RailEnv):
     directions = list(range(4))
     for h in range(env.height):
         for w in range(env.width):
-
             pos = (h, w)
 
             is_switch = False
@@ -176,9 +174,7 @@ def find_all_cells_where_agent_can_choose(env: RailEnv):
     decision_cells = switches + switches_neighbors
     return tuple(map(set, (switches, switches_neighbors, decision_cells)))
 
-  
 
-    
 class SkipNoChoiceCellsWrapper(RailEnvWrapper):
   
     # env can be a real RailEnv, or anything that shares the same interface
@@ -206,15 +202,13 @@ class SkipNoChoiceCellsWrapper(RailEnvWrapper):
     def next_to_switch(self, agent: EnvAgent) -> bool:
       return agent.position in self.switches_neighbors
 
-
     def reset_cells(self) -> None:
       self.switches, self.switches_neighbors, self.decision_cells = find_all_cells_where_agent_can_choose(self.env)
-
 
     def step(self, action_dict: Dict[int, RailEnvActions]) -> Tuple[Dict, Dict, Dict, Dict]:
       o, r, d, i = {}, {}, {}, {}
     
-      # NEED TO INITIALIZE i["..."]
+      # need to initialize i["..."]
       # as we will access i["..."][agent_id]
       i["action_required"] = dict()
       i["malfunction"] = dict()
@@ -254,7 +248,6 @@ class SkipNoChoiceCellsWrapper(RailEnvWrapper):
 
       return o, r, d, i
         
-
 
     def reset(self, **kwargs) -> Tuple[Dict, Dict]:
       obs, info = self.env.reset(**kwargs)
