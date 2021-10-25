@@ -531,14 +531,17 @@ class RailEnv(Environment):
             agent.action_saver.save_action_if_allowed(preprocessed_action, agent.state)
 
             # Train's next position can change if current stopped in a fractional speed or train is at cell's exit
-            position_update_allowed = (agent.speed_counter.is_cell_exit or agent.state == TrainState.STOPPED)
+            position_update_allowed = (agent.speed_counter.is_cell_exit or agent.state == TrainState.STOPPED) and \
+                                        not agent.state.is_malfunction_state()
 
             # Calculate new position
+            # Keep agent in same place if already done
+            if agent.state == TrainState.DONE:
+                new_position, new_direction = agent.position, agent.direction
             # Add agent to the map if not on it yet
-            if agent.position is None and agent.action_saver.is_action_saved:
-                new_position = agent.initial_position
-                new_direction = agent.initial_direction
-                
+            elif agent.position is None and agent.action_saver.is_action_saved:
+                    new_position = agent.initial_position
+                    new_direction = agent.initial_direction
             # If movement is allowed apply saved action independent of other agents
             elif agent.action_saver.is_action_saved and position_update_allowed:
                 saved_action = agent.action_saver.saved_action
@@ -554,7 +557,7 @@ class RailEnv(Environment):
             temp_transition_data[i_agent] = env_utils.AgentTransitionData(position=new_position,
                                                                 direction=new_direction,
                                                                 preprocessed_action=preprocessed_action)
-            
+
             # This is for storing and later checking for conflicts of agents trying to occupy same cell                                                    
             self.motionCheck.addAgent(i_agent, agent.position, new_position)
 
@@ -569,8 +572,6 @@ class RailEnv(Environment):
                 movement_allowed = False
             else:
                 movement_allowed = self.motionCheck.check_motion(i_agent, agent.position) 
-
-
 
             # Fetch the saved transition data
             agent_transition_data = temp_transition_data[i_agent]
@@ -618,8 +619,15 @@ class RailEnv(Environment):
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
 
+        old_agent_positions = self.agent_positions.copy()
         self._update_agent_positions_map()
 
+        for ag in self.agents:
+            if ag.state == TrainState.READY_TO_DEPART and action_dict_.get(ag.handle, 0) in [1, 2, 3] and \
+                self.agent_positions[ag.initial_position] == -1 and ag.state_machine.previous_state == TrainState.READY_TO_DEPART:
+                print(old_agent_positions[ag.initial_position])
+                import pdb; pdb.set_trace()
+                
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict() 
 
     def record_timestep(self, dActions):
