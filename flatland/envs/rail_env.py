@@ -532,7 +532,7 @@ class RailEnv(Environment):
 
             # Train's next position can change if current stopped in a fractional speed or train is at cell's exit
             position_update_allowed = (agent.speed_counter.is_cell_exit or agent.state == TrainState.STOPPED) and \
-                                        not agent.state.is_malfunction_state()
+                                        not agent.malfunction_handler.malfunction_down_counter > 0
 
             # Calculate new position
             # Keep agent in same place if already done
@@ -619,14 +619,7 @@ class RailEnv(Environment):
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
 
-        old_agent_positions = self.agent_positions.copy()
         self._update_agent_positions_map()
-
-        for ag in self.agents:
-            if ag.state == TrainState.READY_TO_DEPART and action_dict_.get(ag.handle, 0) in [1, 2, 3] and \
-                self.agent_positions[ag.initial_position] == -1 and ag.state_machine.previous_state == TrainState.READY_TO_DEPART:
-                print(old_agent_positions[ag.initial_position])
-                import pdb; pdb.set_trace()
                 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict() 
 
