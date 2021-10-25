@@ -396,7 +396,7 @@ def test_multispeed_actions_malfunction_no_blocking():
     env.reset()
     
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
-    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+    for _ in range(max([agent.earliest_departure for agent in env.agents]) + 1):
         env.step({}) # DO_NOTHING for all agents
 
     env._max_episode_steps = 10000

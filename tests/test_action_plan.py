@@ -37,7 +37,7 @@ def test_action_plan(rendering: bool = False):
         print("[{}] {} -> {}".format(handle, agent.initial_position, agent.target))
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
-    for _ in range(max([agent.earliest_departure for agent in env.agents])):
+    for _ in range(max([agent.earliest_departure for agent in env.agents]) + 1):
         env.step({}) # DO_NOTHING for all agents
 
     chosen_path_dict = {0: [TrainrunWaypoint(scheduled_at=0, waypoint=Waypoint(position=(3, 0), direction=3)),

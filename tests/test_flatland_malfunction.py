@@ -151,8 +151,8 @@ def test_malfunction_process_statistically():
     env.agents[0].target = (0, 0)
     # Next line only for test generation
     agent_malfunction_list = [[] for i in range(2)]
-    agent_malfunction_list = [[0, 0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 2, 1, 0], 
-                              [0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 4, 3, 2, 1, 0, 4, 3, 2, 1, 0]]
+    agent_malfunction_list = [[0, 0, 0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 2, 1], 
+                              [0, 0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 4, 3, 2, 1, 0, 4, 3, 2, 1]]
     
     for step in range(20):
         action_dict: Dict[int, RailEnvActions] = {}

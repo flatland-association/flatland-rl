@@ -74,7 +74,10 @@ class SparseLineGen(BaseLineGen):
             if rail.check_path_exists(start[0], orientation, target[0]):
                 feasible_orientations.append(orientation)
 
-        return np_random.choice(feasible_orientations)
+        if len(feasible_orientations) > 0:
+            return np_random.choice(feasible_orientations)
+        else:
+            return 0
 
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict, num_resets: int,
                   np_random: RandomState) -> Line:
