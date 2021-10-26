@@ -540,8 +540,8 @@ class RailEnv(Environment):
                 new_position, new_direction = agent.position, agent.direction
             # Add agent to the map if not on it yet
             elif agent.position is None and agent.action_saver.is_action_saved:
-                    new_position = agent.initial_position
-                    new_direction = agent.initial_direction
+                new_position = agent.initial_position
+                new_direction = agent.initial_direction
             # If movement is allowed apply saved action independent of other agents
             elif agent.action_saver.is_action_saved and position_update_allowed:
                 saved_action = agent.action_saver.saved_action
@@ -553,7 +553,7 @@ class RailEnv(Environment):
                 preprocessed_action = saved_action
             else:
                 new_position, new_direction = agent.position, agent.direction
-
+            
             temp_transition_data[i_agent] = env_utils.AgentTransitionData(position=new_position,
                                                                 direction=new_direction,
                                                                 preprocessed_action=preprocessed_action)

@@ -17,7 +17,7 @@ def process_do_nothing(state: TrainState, saved_action: RailEnvActions):
     elif saved_action:
         action = saved_action
     else:
-        action = RailEnvActions.STOP_MOVING
+        action = RailEnvActions.DO_NOTHING
     return action
 
 
@@ -40,7 +40,6 @@ def preprocess_raw_action(action, state, saved_action):
     """
     Preprocesses actions to handle different situations of usage of action based on context
         - DO_NOTHING is converted to FORWARD if train is moving
-        - DO_NOTHING is converted to STOP_MOVING if train is moving
     """
     action = process_illegal_action(action)
 
