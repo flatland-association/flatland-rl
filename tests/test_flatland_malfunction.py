@@ -119,7 +119,7 @@ def test_malfunction_process():
         total_down_time += env.agents[0].malfunction_handler.malfunction_down_counter
     # Check that the appropriate number of malfunctions is achieved
     # Dipam: The number of malfunctions varies by seed
-    assert env.agents[0].malfunction_handler.num_malfunctions == 46, "Actual {}".format(
+    assert env.agents[0].malfunction_handler.num_malfunctions == 28, "Actual {}".format(
        env.agents[0].malfunction_handler.num_malfunctions)
 
     # Check that malfunctioning data was standing around
