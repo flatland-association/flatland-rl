@@ -440,7 +440,7 @@ class RailEnv(Environment):
         action = action_preprocessing.preprocess_moving_action(action, self.rail, current_position, current_direction)
 
         # Check transitions, bounts for executing the action in the given position and directon
-        if not check_valid_action(action, self.rail, current_position, current_direction):
+        if action.is_moving_action() and not check_valid_action(action, self.rail, current_position, current_direction):
             action = RailEnvActions.STOP_MOVING
 
         return action
