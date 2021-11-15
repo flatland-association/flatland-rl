@@ -530,9 +530,9 @@ class RailEnv(Environment):
             # Save moving actions in not already saved
             agent.action_saver.save_action_if_allowed(preprocessed_action, agent.state)
 
-            # Train's next position can change if current stopped in a fractional speed or train is at cell's exit
-            position_update_allowed = (agent.speed_counter.is_cell_exit or agent.state == TrainState.STOPPED) and \
-                                        not agent.malfunction_handler.malfunction_down_counter > 0
+            # Train's next position can change if train is at cell's exit and train is not in malfunction
+            position_update_allowed = agent.speed_counter.is_cell_exit and \
+                                      not agent.malfunction_handler.malfunction_down_counter > 0
 
             # Calculate new position
             # Keep agent in same place if already done
@@ -567,11 +567,15 @@ class RailEnv(Environment):
         for agent in self.agents:
             i_agent = agent.handle
 
+             
             ## Update positions
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position) 
+                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position)
+            
+            movement_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
+            movement_allowed = movement_allowed or movement_inside_cell
 
             # Fetch the saved transition data
             agent_transition_data = temp_transition_data[i_agent]
