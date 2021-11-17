@@ -499,7 +499,6 @@ class FlatlandRemoteEvaluationService:
             password=self.remote_password
         )
         self.redis_conn = redis.Redis(connection_pool=self.redis_pool)
-        self.redis_conn.flushall()
 
     def get_redis_connection(self):
         """
