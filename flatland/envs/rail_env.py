@@ -532,7 +532,8 @@ class RailEnv(Environment):
 
             # Train's next position can change if train is at cell's exit and train is not in malfunction
             position_update_allowed = agent.speed_counter.is_cell_exit and \
-                                      not agent.malfunction_handler.malfunction_down_counter > 0
+                                      not agent.malfunction_handler.malfunction_down_counter > 0 and \
+                                      not preprocessed_action == RailEnvActions.STOP_MOVING                            
 
             # Calculate new position
             # Keep agent in same place if already done
