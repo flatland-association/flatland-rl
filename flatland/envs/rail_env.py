@@ -568,7 +568,6 @@ class RailEnv(Environment):
         for agent in self.agents:
             i_agent = agent.handle
 
-             
             ## Update positions
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False

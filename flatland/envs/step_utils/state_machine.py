@@ -67,12 +67,11 @@ class TrainStateMachine:
             self.next_state = TrainState.STOPPED
     
     def _handle_malfunction(self):
-        if self.st_signals.malfunction_counter_complete and \
-           self.st_signals.valid_movement_action_given:
-            self.next_state = TrainState.MOVING
-        elif self.st_signals.malfunction_counter_complete and \
-                (self.st_signals.stop_action_given or self.st_signals.movement_conflict):
-             self.next_state = TrainState.STOPPED
+        if self.st_signals.malfunction_counter_complete:
+            if self.st_signals.valid_movement_action_given:
+                self.next_state = TrainState.MOVING
+            else:
+                self.next_state = TrainState.STOPPED
         else:
             self.next_state = TrainState.MALFUNCTION
 
