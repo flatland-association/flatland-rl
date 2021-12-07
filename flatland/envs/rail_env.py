@@ -494,6 +494,7 @@ class RailEnv(Environment):
         """ Any updates to agent to be made in Done state """
         if agent.state == TrainState.DONE and agent.arrival_time is None:
             agent.arrival_time = self._elapsed_steps
+            self.dones[agent.handle] = True
             if self.remove_agents_at_target:
                 agent.position = None
 
