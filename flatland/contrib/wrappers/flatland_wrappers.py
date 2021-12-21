@@ -8,6 +8,7 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.contrib.utils.deadlock_checker import Deadlock_Checker
 
 
 def possible_actions_sorted_by_distance(env: RailEnv, handle: int):
