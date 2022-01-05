@@ -8,6 +8,7 @@ import shutil
 import time
 import traceback
 import json
+import yaml
 import itertools
 import re
 
@@ -132,6 +133,8 @@ class FlatlandRemoteEvaluationService:
         self.action_dir = action_dir
         if action_dir and not os.path.exists(self.action_dir):
             os.makedirs(self.action_dir)
+            with open(os.path.join(self.action_dir, 'seed.yml'), 'w') as outfile:
+                yaml.dump({"RANDOM_SEED": RANDOM_SEED}, outfile, default_flow_style=False)
         self.episode_dir = episode_dir
         if episode_dir and not os.path.exists(self.episode_dir):
             os.makedirs(self.episode_dir)

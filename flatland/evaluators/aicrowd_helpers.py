@@ -109,6 +109,8 @@ def upload_folder_to_s3(folderpath):
                 file_target_key = f'analysis_logs/{get_submission_id()}/{path[path.find(next(filter(str.isalpha, path))):]}/{file}'
                 localpath = os.path.join(path, file)
 
+                print(f"[INFO] SAVING: {localpath}")
+
                 s3.put_object(
                     ACL=S3_BUCKET_ACL,
                     Bucket=S3_BUCKET,
