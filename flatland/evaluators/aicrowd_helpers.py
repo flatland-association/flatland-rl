@@ -20,15 +20,15 @@ import pathlib
 ###############################################################
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", False)
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", False)
-S3_BUCKET = os.getenv("S3_BUCKET", "aicrowd-production")
 S3_UPLOAD_PATH_TEMPLATE = os.getenv("S3_UPLOAD_PATH_TEMPLATE", "misc/flatland-rl-Media/{}")
-
+S3_BUCKET = os.getenv("S3_BUCKET", "aicrowd-production")
+S3_BUCKET_ACL = "public-read" if S3_BUCKET == "aicrowd-production" else ""
 
 def get_boto_client():
     if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
         raise Exception("AWS Credentials not provided..")
     try:
-        import boto3
+        import boto3  # type: ignore
     except ImportError:
         raise Exception(
             "boto3 is not installed. Please manually install by : ",
@@ -54,6 +54,11 @@ def is_grading():
            os.getenv("AICROWD_IS_GRADING", False)
 
 
+def get_submission_id():
+    submission_id = os.getenv("AICROWD_EVALUATION_NAME", f"testflatland-3-T12345-XXXX").split('-')[-2]
+    return submission_id
+
+
 def upload_random_frame_to_s3(frames_folder):
     all_frames = glob.glob(os.path.join(frames_folder, "*.png"))
     random_frame = random.choice(all_frames)
@@ -65,7 +70,7 @@ def upload_random_frame_to_s3(frames_folder):
 
     image_target_key = (S3_UPLOAD_PATH_TEMPLATE + ".png").format(str(uuid.uuid4()))
     s3.put_object(
-        ACL="public-read",
+        ACL=S3_BUCKET_ACL,
         Bucket=S3_BUCKET,
         Key=image_target_key,
         Body=open(random_frame, 'rb')
@@ -85,13 +90,31 @@ def upload_to_s3(localpath):
         str(uuid.uuid4())
     )
     s3.put_object(
-        ACL="public-read",
+        ACL=S3_BUCKET_ACL,
         Bucket=S3_BUCKET,
         Key=file_target_key,
         Body=open(localpath, 'rb')
     )
     return file_target_key
 
+
+def upload_folder_to_s3(folderpath):
+    s3 = get_boto_client()
+    if not S3_BUCKET:
+        raise Exception("S3_BUCKET not provided...")
+
+    for path, subdirs, files in os.walk(folderpath):
+        if len(files) != 0:
+            for file in files:
+                file_target_key = f'analysis_logs/{get_submission_id()}/{path[path.find(next(filter(str.isalpha, path))):]}/{file}'
+                localpath = os.path.join(path, file)
+
+                s3.put_object(
+                    ACL=S3_BUCKET_ACL,
+                    Bucket=S3_BUCKET,
+                    Key=file_target_key,
+                    Body=open(localpath, 'rb')
+                )
 
 def make_subprocess_call(command, shell=False):
     result = subprocess.run(
