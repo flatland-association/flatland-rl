@@ -1172,8 +1172,9 @@ class FlatlandRemoteEvaluationService:
         _command_response['type'] = messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE
         _payload = {}
         _payload['mean_reward'] = mean_reward
-        _payload['mean_normalized_reward'] = mean_normalized_reward
+        _payload['sum_normalized_reward'] = sum_normalized_reward
         _payload['mean_percentage_complete'] = mean_percentage_complete
+        _payload['mean_normalized_reward'] = mean_normalized_reward
         _command_response['payload'] = _payload
         self.send_response(_command_response, command)
 
@@ -1370,7 +1371,7 @@ class FlatlandRemoteEvaluationService:
                     """
 
                     print("Overall Message Queue Latency : ", np.array(MESSAGE_QUEUE_LATENCY).mean())
-                    self.handle_env_submit(command)
+                    return self.handle_env_submit(command)
 
                 else:
                     _error = self._error_template(
