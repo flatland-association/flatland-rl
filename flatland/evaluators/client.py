@@ -24,6 +24,12 @@ logger.setLevel(logging.INFO)
 m.patch()
 
 
+# CONSTANTS
+FLATLAND_RL_SERVICE_ID = os.getenv(
+    'AICROWD_SUBMISSION_ID',
+    'T12345')
+
+
 class TimeoutException(StopAsyncIteration):
     """ Custom exception for evaluation timeouts. """
     pass
@@ -46,11 +52,12 @@ class FlatlandRemoteClient(object):
     """
 
     def __init__(self,
+                 test_env_folder=None,
+                 flatland_rl_service_id=FLATLAND_RL_SERVICE_ID,
                  remote_host='127.0.0.1',
                  remote_port=6379,
                  remote_db=0,
                  remote_password=None,
-                 test_envs_root=None,
                  verbose=False,
                  use_pickle=False):
         self.use_pickle = use_pickle
@@ -66,21 +73,19 @@ class FlatlandRemoteClient(object):
         self.redis_conn = redis.Redis(connection_pool=self.redis_pool)
 
         self.namespace = "flatland-rl"
-        self.service_id = os.getenv(
-            'FLATLAND_RL_SERVICE_ID',
-            'FLATLAND_RL_SERVICE_ID'
-        )
+        self.service_id = flatland_rl_service_id
         self.command_channel = "{}::{}::commands".format(
             self.namespace,
             self.service_id
         )
-
         # for timeout messages sent out-of-band
         self.error_channel = "{}::{}::errors".format(
-            self.namespace, self.service_id)
+            self.namespace, 
+            self.service_id
+        )
 
-        if test_envs_root:
-            self.test_envs_root = test_envs_root
+        if test_env_folder:
+            self.test_envs_root = test_env_folder
         else:
             self.test_envs_root = os.getenv(
                 'AICROWD_TESTS_FOLDER',

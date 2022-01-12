@@ -44,6 +44,10 @@ m.patch()
 # CONSTANTS
 ########################################################
 
+FLATLAND_RL_SERVICE_ID = os.getenv(
+    'AICROWD_SUBMISSION_ID',
+    'T12345')
+
 # Don't proceed to next Test if the previous one didn't reach this mean completion percentage
 TEST_MIN_PERCENTAGE_COMPLETE_MEAN = float(os.getenv("TEST_MIN_PERCENTAGE_COMPLETE_MEAN", 0.25))
 
@@ -109,7 +113,7 @@ class FlatlandRemoteEvaluationService:
     def __init__(
         self,
         test_env_folder="/tmp",
-        flatland_rl_service_id='FLATLAND_RL_SERVICE_ID',
+        flatland_rl_service_id=FLATLAND_RL_SERVICE_ID,
         remote_host='127.0.0.1',
         remote_port=6379,
         remote_db=0,
