@@ -20,7 +20,7 @@ import pathlib
 ###############################################################
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", False)
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", False)
-S3_UPLOAD_PATH_TEMPLATE = os.getenv("S3_UPLOAD_PATH_TEMPLATE", "misc/flatland-rl-Media/{}")
+S3_UPLOAD_PATH_TEMPLATE = os.getenv("S3_UPLOAD_PATH_TEMPLATE", "misc/flatland-rl-Media/{}.mp4")
 S3_BUCKET = os.getenv("S3_BUCKET", "aicrowd-production")
 S3_BUCKET_ACL = "public-read" if S3_BUCKET == "aicrowd-production" else ""
 
@@ -55,7 +55,7 @@ def is_grading():
 
 
 def get_submission_id():
-    submission_id = os.getenv("AICROWD_EVALUATION_NAME", f"testflatland-3-T12345-XXXX").split('-')[-2]
+    submission_id = os.getenv("AICROWD_SUBMISSION_ID", "T12345")
     return submission_id
 
 
