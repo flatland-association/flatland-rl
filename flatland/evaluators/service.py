@@ -114,7 +114,7 @@ class FlatlandRemoteEvaluationService:
         self,
         test_env_folder="/tmp",
         flatland_rl_service_id=FLATLAND_RL_SERVICE_ID,
-        remote_host='127.0.0.1',
+        remote_host=os.getenv("redis_ip", '127.0.0.1'),
         remote_port=6379,
         remote_db=0,
         remote_password=None,
