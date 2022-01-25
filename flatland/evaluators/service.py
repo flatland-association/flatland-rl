@@ -33,7 +33,7 @@ if os.name == 'nt':
     """
     Windows doesnt support signals, hence
     timeout_decorators usually fall apart.
-    Hence forcing them to not using signals 
+    Hence forcing them to not using signals
     whenever using the timeout decorator.
     """
     use_signals_in_timeout = False
@@ -546,22 +546,22 @@ class FlatlandRemoteEvaluationService:
         """
         if self.previous_command['type'] == messages.FLATLAND_RL.ENV_CREATE:
             """
-            In case the previous command is an env_create, then leave 
+            In case the previous command is an env_create, then leave
             a but more time for the intial planning
             """
             COMMAND_TIMEOUT = INTIAL_PLANNING_TIMEOUT
         elif self.previous_command['type'] == messages.FLATLAND_RL.ENV_STEP:
             """
             Use the per_step_time for all timesteps between two env_step calls
-            # Corner Case : 
-                - Are there any reasons why a call between the last env_step call 
-                and the subsequent env_create call will take an excessively large 
+            # Corner Case :
+                - Are there any reasons why a call between the last env_step call
+                and the subsequent env_create call will take an excessively large
                 amount of time (>5s in this case)
             """
             COMMAND_TIMEOUT = PER_STEP_TIMEOUT
         elif self.previous_command['type'] == messages.FLATLAND_RL.ENV_SUBMIT:
             """
-            If the user has already done an env_submit call, then the timeout 
+            If the user has already done an env_submit call, then the timeout
             can be an arbitrarily large number.
             """
             COMMAND_TIMEOUT = 10 ** 6
@@ -686,7 +686,7 @@ class FlatlandRemoteEvaluationService:
 
         # Check if we have finished all the available envs
         print(" -- [DEBUG] [env_create] SIM COUNT: ", self.simulation_count + 1, len(self.env_file_paths))
-        
+
         if self.simulation_count >= len(self.env_file_paths):
             self.evaluation_done = True
             # Hack - just ensure these are set
@@ -717,7 +717,7 @@ class FlatlandRemoteEvaluationService:
 
         if self.simulation_count < len(self.env_file_paths) and not self.evaluation_done:
             """
-            There are still test envs left that are yet to be evaluated 
+            There are still test envs left that are yet to be evaluated
             """
 
             print("=" * 15)
@@ -866,9 +866,9 @@ class FlatlandRemoteEvaluationService:
         self.simulation_rewards[-1] += cumulative_reward
         self.simulation_steps[-1] += 1
         """
-        The normalized rewards normalize the reward for an 
-        episode by dividing the whole reward by max-time-steps 
-        allowed in that episode, and the number of agents present in 
+        The normalized rewards normalize the reward for an
+        episode by dividing the whole reward by max-time-steps
+        allowed in that episode, and the number of agents present in
         that episode
         """
         self.simulation_rewards_normalized[-1] += \
@@ -994,7 +994,7 @@ class FlatlandRemoteEvaluationService:
         print("env path: ", sfEnv, " sfEpisode:", sfEpisode)
         RailEnvPersister.save_episode(self.env, sfEpisode)
         # self.env.save_episode(sfEpisode)
-    
+
     def collect_analysis_data(self):
         '''
         Collect data at the END of an episode.
@@ -1014,7 +1014,7 @@ class FlatlandRemoteEvaluationService:
 
         for i_agent in range(self.env.get_num_agents()):
             agent = self.env.agents[i_agent]
-            
+
             agent_speeds.append(agent.speed_counter.speed)
             agent_states.append(agent.state)
             agent_earliest_departures.append(agent.earliest_departure)
@@ -1046,7 +1046,7 @@ class FlatlandRemoteEvaluationService:
 
         if not os.path.exists(os.path.dirname(sfData)):
             os.makedirs(os.path.dirname(sfData))
-        
+
         with open(sfData, "w") as fOut:
             json.dump(self.analysis_data, fOut)
 
@@ -1098,7 +1098,7 @@ class FlatlandRemoteEvaluationService:
 
         if len(self.simulation_rewards) != len(self.env_file_paths) and not self.evaluation_done:
             raise Exception(
-                """env.submit called before the agent had the chance 
+                """env.submit called before the agent had the chance
                 to operate on all the test environments.
                 """
             )
@@ -1137,7 +1137,7 @@ class FlatlandRemoteEvaluationService:
                 self.evaluation_state["meta"]["static_media_frame"] = static_thumbnail_s3_key
             else:
                 print("[WARNING] Ignoring uploading of video to S3")
-        
+
         #####################################################################
         # Save `data` and `action` directories
         #####################################################################
@@ -1146,7 +1146,7 @@ class FlatlandRemoteEvaluationService:
                 aicrowd_helpers.upload_folder_to_s3(self.action_dir)
             else:
                 print("[WARNING] Ignoring uploading action_dir to S3")
-            
+
 
         if self.analysis_data_dir:
             if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
@@ -1410,7 +1410,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Submit the result to AIcrowd')
     parser.add_argument('--service_id',
                         dest='service_id',
-                        default='FLATLAND_RL_SERVICE_ID',
+                        default=FLATLAND_RL_SERVICE_ID,
                         required=False)
     parser.add_argument('--test_folder',
                         dest='test_folder',

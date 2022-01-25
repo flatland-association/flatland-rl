@@ -11,7 +11,7 @@ import redis
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.line_generators import sparse_line_generator
-from flatland.evaluators.service import FlatlandRemoteEvaluationService
+from flatland.evaluators.service import FlatlandRemoteEvaluationService, FLATLAND_RL_SERVICE_ID
 from flatland.utils.rendertools import RenderTool
 
 
@@ -19,8 +19,8 @@ from flatland.utils.rendertools import RenderTool
 def demo(args=None):
     """Demo script to check installation"""
     env = RailEnv(
-        width=30, 
-        height=30, 
+        width=30,
+        height=30,
         rail_generator=sparse_rail_generator(
             max_num_cities=3,
             grid_mode=False,
@@ -28,7 +28,7 @@ def demo(args=None):
             max_rail_pairs_in_city=2,
             seed=0
         ),
-        line_generator=sparse_line_generator(), 
+        line_generator=sparse_line_generator(),
         number_of_agents=5)
 
     env._max_episode_steps = int(15 * (env.width + env.height))
@@ -53,7 +53,7 @@ def demo(args=None):
             show_predictions=False
         )
         time.sleep(0.1)
-        
+
     return 0
 
 
@@ -64,7 +64,7 @@ def demo(args=None):
               required=True
               )
 @click.option('--service_id',
-              default="FLATLAND_RL_SERVICE_ID",
+              default=FLATLAND_RL_SERVICE_ID,
               help="Evaluation Service ID. This has to match the service id on the client.",
               required=False
               )
