@@ -97,8 +97,37 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=60, height=60):
 USE_PROFILER = True
 
 PROFILE_CREATE = False
-PROFILE_RESET = True
-PROFILE_OBSERVATION = False
+PROFILE_RESET = False
+PROFILE_OBSERVATION = True
+
+
+def run_simulation(env_fast : RailEnv):
+
+    agent = RandomAgent(action_size=5)
+    max_steps = 50
+    env_renderer = RenderTool(env_fast,
+                              gl="PGL",
+                              show_debug=True,
+                              agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS)
+    env_renderer.set_new_rail()
+    env_renderer.reset()
+    for step in range(max_steps):
+
+        # Chose an action for each agent in the environment
+        for handle in range(env_fast.get_num_agents()):
+            action = agent.act(handle)
+            action_dict.update({handle: action})
+
+        next_obs, all_rewards, done, _ = env_fast.step(action_dict)
+
+        env_renderer.render_env(
+            show=True,
+            frames=False,
+            show_observations=True,
+            show_predictions=False
+        )
+    env_renderer.close_window()
+
 
 if __name__ == "__main__":
     print("Start ...")
@@ -149,28 +178,4 @@ if __name__ == "__main__":
 
     print("... end ")
 
-    agent = RandomAgent(action_size=5)
-    max_steps = 50
-    env_renderer = RenderTool(env_fast,
-                              gl="PGL",
-                              show_debug=True,
-                              agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS)
-    env_renderer.set_new_rail()
-
-    env_renderer.reset()
-    for step in range(max_steps):
-
-        # Chose an action for each agent in the environment
-        for handle in range(env_fast.get_num_agents()):
-            action = agent.act(handle)
-            action_dict.update({handle: action})
-
-        next_obs, all_rewards, done, _ = env_fast.step(action_dict)
-
-        env_renderer.render_env(
-            show=True,
-            frames=False,
-            show_observations=True,
-            show_predictions=False
-        )
-    env_renderer.close_window()
+    run_simulation(env_fast)
