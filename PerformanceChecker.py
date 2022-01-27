@@ -8,6 +8,7 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
 def get_rail_env(nAgents=70, use_dummy_obs=False, width=60, height=60):
@@ -94,7 +95,7 @@ if __name__ == "__main__":
     print("Create env ... ")
     if PROFILE_CREATE:
         profiler.enable()
-    env_fast = get_rail_env(nAgents=70, use_dummy_obs=True, width=300, height=300)
+    env_fast = get_rail_env(nAgents=70, use_dummy_obs=True, width=60, height=60)
     if PROFILE_CREATE:
         profiler.disable()
 
@@ -134,3 +135,21 @@ if __name__ == "__main__":
         stats.print_stats(200)
 
     print("... end ")
+
+    max_steps = 10
+    # Setup renderer
+    env_renderer = RenderTool(env_fast,
+                              gl="PGL",
+                              show_debug=True,
+                              agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS)
+    env_renderer.set_new_rail()
+
+    env_renderer.reset()
+    for step in range(max_steps):
+        env_renderer.render_env(
+            show=True,
+            frames=False,
+            show_observations=True,
+            show_predictions=False
+        )
+    env_renderer.close_window()
