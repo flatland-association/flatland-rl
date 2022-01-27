@@ -291,7 +291,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             # #############################
             # Modify here to compute any useful data required to build the end node's features. This code is called
             # for each cell visited between the previous branching node and the next switch / target / dead-end.
-            if position in self.location_has_agent:
+            if self.location_has_agent.get(position, 0) == 1:
                 if tot_dist < other_agent_encountered:
                     other_agent_encountered = tot_dist
 
@@ -318,7 +318,8 @@ class TreeObsForRailEnv(ObservationBuilder):
                 # Check number of possible transitions for agent and total number of transitions in cell (type)
             cell_transitions = self.env.rail.get_transitions(*position, direction)
             transition_bit = bin(self.env.rail.get_full_transitions(*position))
-            total_transitions = transition_bit.count("1")
+            total_transitions = fast_argmax(cell_transitions)
+
             crossing_found = False
             if int(transition_bit, 2) == int('1000010000100001', 2):
                 crossing_found = True

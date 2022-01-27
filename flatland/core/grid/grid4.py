@@ -85,7 +85,7 @@ class Grid4Transitions(Transitions):
             List of the validity of transitions in the cell.
 
         """
-        bits = (cell_transition >> ((3 - orientation) * 4))
+        bits = int(int(cell_transition) >> ((3 - int(orientation)) * 4))
         return ((bits >> 3) & 1, (bits >> 2) & 1, (bits >> 1) & 1, (bits) & 1)
 
     def set_transitions(self, cell_transition, orientation, new_transitions):
@@ -150,7 +150,8 @@ class Grid4Transitions(Transitions):
         """
         return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
 
-    def set_transition(self, cell_transition, orientation, direction, new_transition, remove_deadends=False):
+    def set_transition(self, cell_transition, orientation, direction, new_transition,
+                       remove_deadends=False):
         """
         Set the transition bit (1 value) that determines whether an agent
         oriented in direction `orientation` and inside a cell with transitions
@@ -216,7 +217,8 @@ class Grid4Transitions(Transitions):
             value = self.set_transitions(value, i, block_tuple)
 
         # Rotate the 4-bits blocks
-        value = ((value & (2 ** (rotation * 4) - 1)) << ((4 - rotation) * 4)) | (value >> (rotation * 4))
+        value = ((value & (2 ** (rotation * 4) - 1)) << ((4 - rotation) * 4)) | (
+                value >> (rotation * 4))
 
         cell_transition = value
         return cell_transition

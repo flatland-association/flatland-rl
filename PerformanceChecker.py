@@ -96,7 +96,7 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=60, height=60):
 
 def run_simulation(env_fast: RailEnv):
     agent = RandomAgent(action_size=5)
-    max_steps = 50
+    max_steps = 200
     env_renderer = RenderTool(env_fast,
                               gl="PGL",
                               show_debug=True,
@@ -127,7 +127,7 @@ PROFILE_CREATE = False
 PROFILE_RESET = False
 PROFILE_OBSERVATION = True
 
-RUN_SIMULATION = False
+RUN_SIMULATION = True
 
 if __name__ == "__main__":
     print("Start ...")
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     print("Create env ... ")
     if PROFILE_CREATE:
         profiler.enable()
-    env_fast = get_rail_env(nAgents=200, use_dummy_obs=False, width=60, height=60)
+    env_fast = get_rail_env(nAgents=5, use_dummy_obs=False, width=60, height=60)
     if PROFILE_CREATE:
         profiler.disable()
 
