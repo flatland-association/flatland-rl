@@ -1,4 +1,5 @@
 import cProfile
+import numpy as np
 import pstats
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
@@ -9,6 +10,18 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+
+
+class RandomAgent:
+    def __init__(self, action_size):
+        self.action_size = action_size
+
+    def act(self, state):
+        """
+        :param state: input is the observation of the agent
+        :return: returns an action
+        """
+        return np.random.choice(np.arange(self.action_size))
 
 
 def get_rail_env(nAgents=70, use_dummy_obs=False, width=60, height=60):
@@ -116,7 +129,7 @@ if __name__ == "__main__":
         profiler.enable()
 
     print("get observation ... ")
-    env_fast._get_observations()
+    obs = env_fast._get_observations()
 
     if PROFILE_OBSERVATION:
         profiler.disable()
@@ -136,8 +149,8 @@ if __name__ == "__main__":
 
     print("... end ")
 
-    max_steps = 10
-    # Setup renderer
+    agent = RandomAgent(action_size=5)
+    max_steps = 50
     env_renderer = RenderTool(env_fast,
                               gl="PGL",
                               show_debug=True,
@@ -146,6 +159,14 @@ if __name__ == "__main__":
 
     env_renderer.reset()
     for step in range(max_steps):
+
+        # Chose an action for each agent in the environment
+        for handle in range(env_fast.get_num_agents()):
+            action = agent.act(handle)
+            action_dict.update({handle: action})
+
+        next_obs, all_rewards, done, _ = env_fast.step(action_dict)
+
         env_renderer.render_env(
             show=True,
             frames=False,
