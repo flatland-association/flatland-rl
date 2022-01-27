@@ -94,7 +94,7 @@ if __name__ == "__main__":
     print("Create env ... ")
     if PROFILE_CREATE:
         profiler.enable()
-    env_fast = get_rail_env(nAgents=70, use_dummy_obs=True)
+    env_fast = get_rail_env(nAgents=70, use_dummy_obs=True, width=300, height=300)
     if PROFILE_CREATE:
         profiler.disable()
 
