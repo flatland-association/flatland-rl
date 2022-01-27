@@ -1,5 +1,6 @@
 from typing import Tuple
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero
 from flatland.envs.rail_env_action import RailEnvActions
 
 
@@ -21,7 +22,7 @@ def check_action(action, position, direction, rail):
     transition_valid = None
     possible_transitions = rail.get_transitions(*position, direction)
     num_transitions = fast_count_nonzero(possible_transitions)
-	
+
     new_direction = direction
     if action == RailEnvActions.MOVE_LEFT:
         new_direction = direction - 1
@@ -81,18 +82,6 @@ def check_valid_action(action, rail, position, direction):
 	action_is_valid = new_cell_valid and transition_valid
 	return action_is_valid
 
-def fast_argmax(possible_transitions: Tuple[int, int, int, int]) -> bool:
-    if possible_transitions[0] == 1:
-        return 0
-    if possible_transitions[1] == 1:
-        return 1
-    if possible_transitions[2] == 1:
-        return 2
-    return 3
-
-def fast_count_nonzero(possible_transitions: Tuple[int, int, int, int]):
-    return possible_transitions[0] + possible_transitions[1] + possible_transitions[2] + possible_transitions[3]
 
 def check_bounds(position, height, width):
     return position[0] >= 0 and position[1] >= 0 and position[0] < height and position[1] < width
- 

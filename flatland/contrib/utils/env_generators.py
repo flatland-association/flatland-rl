@@ -7,8 +7,9 @@ from flatland.envs.malfunction_generators import malfunction_from_params, Malfun
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.agent_utils import RailAgentStatus
+from flatland.envs.agent_utils import TrainState
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.fast_methods import fast_count_nonzero, fast_argmax
 
 MalfunctionParameters = NamedTuple('MalfunctionParameters', [('malfunction_rate', float), ('min_duration', int), ('max_duration', int)])
 
@@ -17,12 +18,12 @@ def get_shortest_path_action(env,handle):
     distance_map = env.distance_map.get()
 
     agent = env.agents[handle]
-
-    if agent.status == RailAgentStatus.READY_TO_DEPART:
+    if agent.status in [TrainState.WAITING, TrainState.READY_TO_DEPART,
+                        TrainState.MALFUNCTION_OFF_MAP]:
         agent_virtual_position = agent.initial_position
-    elif agent.status == RailAgentStatus.ACTIVE:
+    elif agent.status in [TrainState.MALFUNCTION, TrainState.MOVING, TrainState.STOPPED]:
         agent_virtual_position = agent.position
-    elif agent.status == RailAgentStatus.DONE:
+    elif agent.status == TrainState.DONE:
         agent_virtual_position = agent.target
     else:
         return None
@@ -34,8 +35,8 @@ def get_shortest_path_action(env,handle):
         possible_transitions = env.rail.get_transitions(
             *agent.initial_position, agent.direction)
 
-    num_transitions = np.count_nonzero(possible_transitions)                    
-    
+    num_transitions = fast_count_nonzero(possible_transitions)
+
     min_distances = []
     for direction in [(agent.direction + i) % 4 for i in range(-1, 2)]:
         if possible_transitions[direction]:
@@ -43,7 +44,7 @@ def get_shortest_path_action(env,handle):
                 agent_virtual_position, direction)
             min_distances.append(
                 distance_map[handle, new_position[0],
-                            new_position[1], direction])
+                             new_position[1], direction])
         else:
             min_distances.append(np.inf)
 
@@ -54,7 +55,7 @@ def get_shortest_path_action(env,handle):
         idx = np.argpartition(np.array(min_distances), 2)
         observation = [0, 0, 0]
         observation[idx[0]] = 1
-    return np.argmax(observation) + 1
+    return fast_argmax(observation) + 1
 
 
 def small_v0(random_seed, observation_builder, max_width = 35, max_height = 35):
@@ -83,7 +84,7 @@ def small_v0(random_seed, observation_builder, max_width = 35, max_height = 35):
     line_generator = sparse_line_generator(speed_ratio_map)
 
     malfunction_generator = no_malfunction_generator()
-    
+
     while width <= max_width and height <= max_height:
         try:
             env = RailEnv(width=width, height=height, rail_generator=rail_generator,
@@ -104,7 +105,7 @@ def small_v0(random_seed, observation_builder, max_width = 35, max_height = 35):
             height += 5
             logging.info("Try again with larger env: (w,h):", width, height)
     logging.error(f"Unable to generate env with seed={random_seed}, max_width={max_height}, max_height={max_height}")
-    return None    
+    return None
 
 
 def random_sparse_env_small(random_seed, observation_builder, max_width = 45, max_height = 45):
@@ -226,11 +227,11 @@ def perc_completion(env):
     tasks_finished = 0
     if hasattr(env, "agents_data"):
         agent_data = env.agents_data
-    else:        
+    else:
         agent_data = env.agents
     for current_agent in agent_data:
-        if current_agent.status == RailAgentStatus.DONE:
+        if current_agent.status == TrainState.DONE:
             tasks_finished += 1
 
     return 100 * np.mean(tasks_finished / max(
-                                1, len(agent_data))) 
+                                1, len(agent_data)))

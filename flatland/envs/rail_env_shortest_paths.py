@@ -9,6 +9,7 @@ from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.fast_methods import fast_count_nonzero
 from flatland.envs.rail_env_action import RailEnvActions, RailEnvNextAction
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.utils.ordered_set import OrderedSet
@@ -38,7 +39,7 @@ def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
     """
     valid_actions: Set[RailEnvNextAction] = OrderedSet()
     possible_transitions = rail.get_transitions(*agent_position, agent_direction)
-    num_transitions = np.count_nonzero(possible_transitions)
+    num_transitions = fast_count_nonzero(possible_transitions)
     # Start from the current orientation, and see which transitions are available;
     # organize them as [left, forward, right], relative to the current orientation
     # If only one transition is possible, the forward branch is aligned with it.
@@ -96,7 +97,7 @@ def get_new_position_for_action(
         row, column, direction
     """
     possible_transitions = rail.get_transitions(*agent_position, agent_direction)
-    num_transitions = np.count_nonzero(possible_transitions)
+    num_transitions = fast_count_nonzero(possible_transitions)
     # Start from the current orientation, and see which transitions are available;
     # organize them as [left, forward, right], relative to the current orientation
     # If only one transition is possible, the forward branch is aligned with it.
@@ -161,7 +162,7 @@ def get_action_for_move(
         the action (if direct transition possible) or None.
     """
     possible_transitions = rail.get_transitions(*agent_position, agent_direction)
-    num_transitions = np.count_nonzero(possible_transitions)
+    num_transitions = fast_count_nonzero(possible_transitions)
     # Start from the current orientation, and see which transitions are available;
     # organize them as [left, forward, right], relative to the current orientation
     # If only one transition is possible, the forward branch is aligned with it.

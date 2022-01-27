@@ -1,19 +1,17 @@
-import numpy as np
 from collections import defaultdict
-from typing import Dict, Any, Optional, Set, List, Tuple
-from flatland.envs.observations import TreeObsForRailEnv,GlobalObsForRailEnv
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.core.grid.grid4_utils import get_new_position
-from flatland.utils.rendertools import RenderTool, AgentRenderVariant
-from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.step_utils.states import TrainState
-from flatland.envs.rail_env import RailEnv, RailEnvActions
+from typing import Dict, Tuple
+
 from flatland.contrib.utils.deadlock_checker import Deadlock_Checker
+from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.fast_methods import fast_count_nonzero
+from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.step_utils.states import TrainState
 
 
 def possible_actions_sorted_by_distance(env: RailEnv, handle: int):
     agent = env.agents[handle]
-    
+
     if agent.state == TrainState.READY_TO_DEPART:
         agent_virtual_position = agent.initial_position
     elif agent.state.is_on_map_state():
@@ -42,8 +40,8 @@ def possible_actions_sorted_by_distance(env: RailEnv, handle: int):
                 if movement == (agent.direction + 2) % 4 or (movement == agent.direction - 2) % 4:
                     print("it seems that we are turning by 180 degrees. Turning in a dead end?")
 
-                action = RailEnvActions.MOVE_FORWARD             
-               
+                action = RailEnvActions.MOVE_FORWARD
+
             distance = distance_map[get_new_position(agent_virtual_position, movement) + (movement,)]
             possible_steps.append((action, distance))
     possible_steps = sorted(possible_steps, key=lambda step: step[1])
@@ -68,7 +66,7 @@ class RailEnvWrapper:
   # @property
   # def number_of_agents(self):
   #   return self.env.number_of_agents
-  
+
   # @property
   # def agents(self):
   #   return self.env.agents
@@ -92,11 +90,11 @@ class RailEnvWrapper:
   @property
   def rail(self):
     return self.env.rail
-  
+
   @property
   def width(self):
     return self.env.width
-  
+
   @property
   def height(self):
     return self.env.height
@@ -123,7 +121,7 @@ class ShortestPathActionWrapper(RailEnvWrapper):
 
     def __init__(self, env:RailEnv):
         super().__init__(env)
-        
+
     def step(self, action_dict: Dict[int, RailEnvActions]) -> Tuple[Dict, Dict, Dict, Dict]:
 
       # input: action dict with actions in [0, 1, 2].
@@ -159,7 +157,7 @@ def find_all_cells_where_agent_can_choose(env: RailEnv):
             # Check for switch: if there is more than one outgoing transition
             for orientation in directions:
                 possible_transitions = env.rail.get_transitions(*pos, orientation)
-                num_transitions = np.count_nonzero(possible_transitions)
+                num_transitions = fast_count_nonzero(possible_transitions)
                 if num_transitions > 1:
                     switches.append(pos)
                     is_switch = True
@@ -177,7 +175,7 @@ def find_all_cells_where_agent_can_choose(env: RailEnv):
 
 
 class SkipNoChoiceCellsWrapper(RailEnvWrapper):
-  
+
     # env can be a real RailEnv, or anything that shares the same interface
     # e.g. obs, rewards, dones, info = env.step(action_dict) and obs, info = env.reset(), and so on.
     def __init__(self, env:RailEnv, accumulate_skipped_rewards: bool, discounting: float) -> None:
@@ -208,7 +206,7 @@ class SkipNoChoiceCellsWrapper(RailEnvWrapper):
 
     def step(self, action_dict: Dict[int, RailEnvActions]) -> Tuple[Dict, Dict, Dict, Dict]:
       o, r, d, i = {}, {}, {}, {}
-    
+
       # need to initialize i["..."]
       # as we will access i["..."][agent_id]
       i["action_required"] = dict()
@@ -225,11 +223,11 @@ class SkipNoChoiceCellsWrapper(RailEnvWrapper):
             r[agent_id] = reward[agent_id]
             d[agent_id] = done[agent_id]
 
-            i["action_required"][agent_id] = info["action_required"][agent_id] 
+            i["action_required"][agent_id] = info["action_required"][agent_id]
             i["malfunction"][agent_id] = info["malfunction"][agent_id]
             i["speed"][agent_id] = info["speed"][agent_id]
             i["state"][agent_id] = info["state"][agent_id]
-                                                          
+
             if self.accumulate_skipped_rewards:
               discounted_skipped_reward = r[agent_id]
 
@@ -248,7 +246,7 @@ class SkipNoChoiceCellsWrapper(RailEnvWrapper):
         # end of while-loop
 
       return o, r, d, i
-        
+
 
     def reset(self, **kwargs) -> Tuple[Dict, Dict]:
       obs, info = self.env.reset(**kwargs)

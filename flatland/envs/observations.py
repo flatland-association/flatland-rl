@@ -12,6 +12,7 @@ from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import coordinate_to_position
 from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero, fast_position_equal
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.ordered_set import OrderedSet
 
@@ -207,7 +208,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             return None
 
         possible_transitions = self.env.rail.get_transitions(*agent_virtual_position, agent.direction)
-        num_transitions = np.count_nonzero(possible_transitions)
+        num_transitions = fast_count_nonzero(possible_transitions)
 
         # Here information about the agent itself is stored
         distance_map = self.env.distance_map.get()
@@ -234,7 +235,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         orientation = agent.direction
 
         if num_transitions == 1:
-            orientation = np.argmax(possible_transitions)
+            orientation = fast_argmax(possible_transitions)
 
         for i, branch_direction in enumerate([(orientation + i) % 4 for i in range(-1, 3)]):
 
@@ -381,7 +382,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             visited.add((position[0], position[1], direction))
 
             # If the target node is encountered, pick that as node. Also, no further branching is possible.
-            if np.array_equal(position, self.env.agents[handle].target):
+            if fast_position_equal(position, self.env.agents[handle].target):
                 last_is_target = True
                 break
 
@@ -389,7 +390,7 @@ class TreeObsForRailEnv(ObservationBuilder):
             if crossing_found:
                 # Treat the crossing as a straight rail cell
                 total_transitions = 2
-            num_transitions = np.count_nonzero(cell_transitions)
+            num_transitions = fast_count_nonzero(cell_transitions)
 
             exploring = False
 
@@ -408,7 +409,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                     # Keep walking through the tree along `direction`
                     exploring = True
                     # convert one-hot encoding to 0,1,2,3
-                    direction = np.argmax(cell_transitions)
+                    direction = fast_argmax(cell_transitions)
                     position = get_new_position(position, direction)
                     num_steps += 1
                     tot_dist += 1

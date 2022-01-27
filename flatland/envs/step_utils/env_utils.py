@@ -13,16 +13,6 @@ class AgentTransitionData:
     direction : Grid4Transitions
     preprocessed_action : RailEnvActions
 
-# Adrian Egli performance fix (the fast methods brings more than 50%)
-def fast_isclose(a, b, rtol):
-    return (a < (b + rtol)) or (a < (b - rtol))
-
-def fast_position_equal(pos_1: (int, int), pos_2: (int, int)) -> bool:
-    if pos_1 is None:
-        return False
-    else:
-        return pos_1[0] == pos_2[0] and pos_1[1] == pos_2[1]
-
 def apply_action_independent(action, rail, position, direction):
     """ Apply the action on the train regardless of locations of other trains
         Checks for valid cells to move and valid rail transitions
