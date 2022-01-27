@@ -127,6 +127,8 @@ PROFILE_CREATE = False
 PROFILE_RESET = False
 PROFILE_OBSERVATION = True
 
+RUN_SIMULATION = False
+
 if __name__ == "__main__":
     print("Start ...")
     if USE_PROFILER:
@@ -135,7 +137,7 @@ if __name__ == "__main__":
     print("Create env ... ")
     if PROFILE_CREATE:
         profiler.enable()
-    env_fast = get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300)
+    env_fast = get_rail_env(nAgents=200, use_dummy_obs=False, width=60, height=60)
     if PROFILE_CREATE:
         profiler.disable()
 
@@ -176,4 +178,5 @@ if __name__ == "__main__":
 
     print("... end ")
 
-    run_simulation(env_fast)
+    if RUN_SIMULATION:
+        run_simulation(env_fast)

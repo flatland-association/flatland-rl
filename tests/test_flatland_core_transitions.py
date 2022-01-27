@@ -225,7 +225,7 @@ def test_rail_env_has_deadend():
     transitions_all = ret.transitions_all
     for t in transitions_all:
         expected_has_deadend = t in deadends
-        actual_had_deadend = ret.has_deadend(t)
+        actual_had_deadend = Grid4Transitions.has_deadend(t)
         assert actual_had_deadend == expected_has_deadend, \
             "{} should be deadend = {}, actual = {}".format(t, )
 

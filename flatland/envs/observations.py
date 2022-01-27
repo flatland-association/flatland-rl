@@ -16,21 +16,20 @@ from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero, fast_pos
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.ordered_set import OrderedSet
 
-
-
 Node = collections.namedtuple('Node', 'dist_own_target_encountered '
-                                        'dist_other_target_encountered '
-                                        'dist_other_agent_encountered '
-                                        'dist_potential_conflict '
-                                        'dist_unusable_switch '
-                                        'dist_to_next_branch '
-                                        'dist_min_to_target '
-                                        'num_agents_same_direction '
-                                        'num_agents_opposite_direction '
-                                        'num_agents_malfunctioning '
-                                        'speed_min_fractional '
-                                        'num_agents_ready_to_depart '
-                                        'childs')
+                                      'dist_other_target_encountered '
+                                      'dist_other_agent_encountered '
+                                      'dist_potential_conflict '
+                                      'dist_unusable_switch '
+                                      'dist_to_next_branch '
+                                      'dist_min_to_target '
+                                      'num_agents_same_direction '
+                                      'num_agents_opposite_direction '
+                                      'num_agents_malfunctioning '
+                                      'speed_min_fractional '
+                                      'num_agents_ready_to_depart '
+                                      'childs')
+
 
 class TreeObsForRailEnv(ObservationBuilder):
     """
@@ -42,7 +41,6 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     For details about the features in the tree observation see the get() function.
     """
-
 
     tree_explored_actions_char = ['L', 'F', 'R', 'B']
 
@@ -101,15 +99,15 @@ class TreeObsForRailEnv(ObservationBuilder):
                 self.location_has_agent_direction[tuple(_agent.position)] = _agent.direction
                 self.location_has_agent_speed[tuple(_agent.position)] = _agent.speed_counter.speed
                 self.location_has_agent_malfunction[tuple(_agent.position)] = \
-                        _agent.malfunction_handler.malfunction_down_counter
+                    _agent.malfunction_handler.malfunction_down_counter
 
             # [NIMISH] WHAT IS THIS
             if _agent.state.is_off_map_state() and \
                 _agent.initial_position:
-                    self.location_has_agent_ready_to_depart.setdefault(tuple(_agent.initial_position), 0)
-                    self.location_has_agent_ready_to_depart[tuple(_agent.initial_position)] += 1
-                # self.location_has_agent_ready_to_depart[tuple(_agent.initial_position)] = \
-                #     self.location_has_agent_ready_to_depart.get(tuple(_agent.initial_position), 0) + 1
+                self.location_has_agent_ready_to_depart.setdefault(tuple(_agent.initial_position), 0)
+                self.location_has_agent_ready_to_depart[tuple(_agent.initial_position)] += 1
+            # self.location_has_agent_ready_to_depart[tuple(_agent.initial_position)] = \
+            #     self.location_has_agent_ready_to_depart.get(tuple(_agent.initial_position), 0) + 1
 
         observations = super().get_many(handles)
 
@@ -215,17 +213,17 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         # was referring to TreeObsForRailEnv.Node
         root_node_observation = Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
-                                                       dist_other_agent_encountered=0, dist_potential_conflict=0,
-                                                       dist_unusable_switch=0, dist_to_next_branch=0,
-                                                       dist_min_to_target=distance_map[
-                                                           (handle, *agent_virtual_position,
-                                                            agent.direction)],
-                                                       num_agents_same_direction=0, num_agents_opposite_direction=0,
-                                                       num_agents_malfunctioning=agent.malfunction_handler.malfunction_down_counter,
-                                                       speed_min_fractional=agent.speed_counter.speed,
-                                                       num_agents_ready_to_depart=0,
-                                                       childs={})
-        #print("root node type:", type(root_node_observation))
+                                     dist_other_agent_encountered=0, dist_potential_conflict=0,
+                                     dist_unusable_switch=0, dist_to_next_branch=0,
+                                     dist_min_to_target=distance_map[
+                                         (handle, *agent_virtual_position,
+                                          agent.direction)],
+                                     num_agents_same_direction=0, num_agents_opposite_direction=0,
+                                     num_agents_malfunctioning=agent.malfunction_handler.malfunction_down_counter,
+                                     speed_min_fractional=agent.speed_counter.speed,
+                                     num_agents_ready_to_depart=0,
+                                     childs={})
+        # print("root node type:", type(root_node_observation))
 
         visited = OrderedSet()
 
@@ -443,18 +441,18 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         # TreeObsForRailEnv.Node
         node = Node(dist_own_target_encountered=own_target_encountered,
-                                      dist_other_target_encountered=other_target_encountered,
-                                      dist_other_agent_encountered=other_agent_encountered,
-                                      dist_potential_conflict=potential_conflict,
-                                      dist_unusable_switch=unusable_switch,
-                                      dist_to_next_branch=dist_to_next_branch,
-                                      dist_min_to_target=dist_min_to_target,
-                                      num_agents_same_direction=other_agent_same_direction,
-                                      num_agents_opposite_direction=other_agent_opposite_direction,
-                                      num_agents_malfunctioning=malfunctioning_agent,
-                                      speed_min_fractional=min_fractional_speed,
-                                      num_agents_ready_to_depart=other_agent_ready_to_depart_encountered,
-                                      childs={})
+                    dist_other_target_encountered=other_target_encountered,
+                    dist_other_agent_encountered=other_agent_encountered,
+                    dist_potential_conflict=potential_conflict,
+                    dist_unusable_switch=unusable_switch,
+                    dist_to_next_branch=dist_to_next_branch,
+                    dist_min_to_target=dist_min_to_target,
+                    num_agents_same_direction=other_agent_same_direction,
+                    num_agents_opposite_direction=other_agent_opposite_direction,
+                    num_agents_malfunctioning=malfunctioning_agent,
+                    speed_min_fractional=min_fractional_speed,
+                    num_agents_ready_to_depart=other_agent_ready_to_depart_encountered,
+                    childs={})
 
         # #############################
         # #############################

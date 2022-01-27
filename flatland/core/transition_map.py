@@ -321,12 +321,8 @@ class GridTransitionMap(TransitionMap):
         boolean
             True if and only if the cell is a dead-end.
         """
-        nbits = 0
-        tmp = self.get_full_transitions(rcPos[0], rcPos[1])
-        while tmp > 0:
-            nbits += (tmp & 1)
-            tmp = tmp >> 1
-        return nbits == 1
+        cell_transition = self.get_full_transitions(rcPos[0], rcPos[1])
+        return Grid4Transitions.has_deadend(cell_transition)
 
     def is_simple_turn(self, rcPos: IntVector2DArray):
         """
