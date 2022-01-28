@@ -1,4 +1,5 @@
 from enum import IntEnum
+from functools import lru_cache
 from typing import Type, List
 
 import numpy as np
@@ -56,6 +57,9 @@ class Grid4Transitions(Transitions):
 
         # row,col delta for each direction
         self.gDir2dRC = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])
+
+        self.get_transitions = lru_cache(maxsize=16)(self.get_transitions)
+        self.get_transition = lru_cache(maxsize=16)(self.get_transition)
 
     # These bits represent all the possible dead ends
     @staticmethod
@@ -218,7 +222,7 @@ class Grid4Transitions(Transitions):
 
         # Rotate the 4-bits blocks
         value = ((value & (2 ** (rotation * 4) - 1)) << ((4 - rotation) * 4)) | (
-                value >> (rotation * 4))
+            value >> (rotation * 4))
 
         cell_transition = value
         return cell_transition
