@@ -24,7 +24,7 @@ class RandomAgent:
         return np.random.choice(np.arange(self.action_size))
 
 
-def get_rail_env(nAgents=70, use_dummy_obs=False, width=60, height=60):
+def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
     # Rail Generator:
 
     num_cities = 5  # Number of cities to place on the map
@@ -125,9 +125,10 @@ USE_PROFILER = True
 
 PROFILE_CREATE = False
 PROFILE_RESET = False
-PROFILE_OBSERVATION = True
+PROFILE_STEP = True
+PROFILE_OBSERVATION = False
 
-RUN_SIMULATION = True
+RUN_SIMULATION = False
 
 if __name__ == "__main__":
     print("Start ...")
@@ -137,7 +138,7 @@ if __name__ == "__main__":
     print("Create env ... ")
     if PROFILE_CREATE:
         profiler.enable()
-    env_fast = get_rail_env(nAgents=5, use_dummy_obs=False, width=60, height=60)
+    env_fast = get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300)
     if PROFILE_CREATE:
         profiler.disable()
 
@@ -152,7 +153,11 @@ if __name__ == "__main__":
     action_dict = {agent.handle: 0 for agent in env_fast.agents}
 
     print("Step env ... ")
+    if PROFILE_STEP:
+        profiler.enable()
     env_fast.step(action_dict)
+    if PROFILE_STEP:
+        profiler.disable()
 
     if PROFILE_OBSERVATION:
         profiler.enable()
