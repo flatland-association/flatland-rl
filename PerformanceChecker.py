@@ -1,6 +1,9 @@
 import cProfile
-import numpy as np
 import pstats
+import timeit
+from functools import lru_cache
+
+import numpy as np
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.line_generators import sparse_line_generator
@@ -11,6 +14,24 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
+
+# ---------------------------------------------------------------------------------------------------------------
+@lru_cache(typed=False)
+def fast_get_transition(env, cell_id, direction):
+    assert len(cell_id) == 3, 'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
+
+    cell_transition = env.rail.grid[cell_id[0]][cell_id[1]]
+    orientation = cell_id[2]
+
+    return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
+
+
+@lru_cache(typed=False)
+def fast_get_full_transitions(env, row, column):
+    return env.rail.grid[row][column]
+
+
+# ---------------------------------------------------------------------------------------------------------------
 
 class RandomAgent:
     def __init__(self, action_size):
@@ -129,6 +150,7 @@ PROFILE_STEP = True
 PROFILE_OBSERVATION = False
 
 RUN_SIMULATION = False
+CHECK_LRU = True
 
 if __name__ == "__main__":
     print("Start ...")
@@ -138,7 +160,7 @@ if __name__ == "__main__":
     print("Create env ... ")
     if PROFILE_CREATE:
         profiler.enable()
-    env_fast = get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300)
+    env_fast = get_rail_env(nAgents=70, use_dummy_obs=False, width=60, height=60)
     if PROFILE_CREATE:
         profiler.disable()
 
@@ -185,3 +207,19 @@ if __name__ == "__main__":
 
     if RUN_SIMULATION:
         run_simulation(env_fast)
+
+    if CHECK_LRU:
+        row, column = env_fast.agents[0].initial_position
+        direction = env_fast.agents[0].initial_direction
+        cell_id = (row, column, direction)
+
+        # fast_get_transition seems to be about 10x faster...
+        print('-------------------------------------------------')
+        print(timeit.timeit('env_fast.rail.get_transition(cell_id, direction)', globals=globals(), number=100000))
+        print(timeit.timeit('fast_get_transition(env_fast, cell_id, direction)', globals=globals(), number=100000))
+
+        # get_full_transitions seems to be about 2x faster...
+        print('-------------------------------------------------')
+        number = 100000
+        print(timeit.timeit('env_fast.rail.get_full_transitions(row, column)', globals=globals(), number=number))
+        print(timeit.timeit('fast_get_full_transitions(env_fast, row, column)', globals=globals(), number=number))
