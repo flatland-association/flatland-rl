@@ -192,20 +192,29 @@ if __name__ == "__main__":
 
     if CHECK_LRU:
         data = []
+        number = 100000
 
         np.random.seed(0)
 
+        row_list = np.random.choice(env_fast.width, number + 1)
+        col_list = np.random.choice(env_fast.width, number + 1)
+        global row_idx
+        global col_idx
 
         def rnd_row():
-            return np.random.choice(env_fast.width)
+            global row_idx
+            row_idx = row_idx + 1
+            return row_list[row_idx]
 
 
         def rnd_column():
-            return np.random.choice(env_fast.height)
+            global col_idx
+            col_idx = col_idx + 1
+            return col_list[col_idx]
 
 
         def rnd_cell_id():
-            direction = np.random.choice(4)
+            direction = 0
             # row, column = env_fast.agents[0].initial_position
             # env_fast.agents[0].initial_direction
             cell_id = (rnd_row(), rnd_column(), direction)
@@ -213,7 +222,7 @@ if __name__ == "__main__":
 
 
         def rnd_direction():
-            return np.random.choice(4)
+            return 0
 
 
         @lru_cache(typed=False)
@@ -231,13 +240,15 @@ if __name__ == "__main__":
             return env.rail.grid[row][column]
 
 
-        number = 100000
-
         # fast_get_transition seems to be about 10x faster...
         print('-------------------------------------------------')
+        row_idx = -1
+        col_idx = -1
         print('env_fast.rail.get_transition:',
               timeit.timeit('env_fast.rail.get_transition(rnd_cell_id(), rnd_direction())', globals=globals(),
                             number=number))
+        row_idx = -1
+        col_idx = -1
         print('fast_get_transition:',
               timeit.timeit('fast_get_transition(env_fast, rnd_cell_id(), rnd_direction())',
                             globals=globals(),
@@ -245,9 +256,13 @@ if __name__ == "__main__":
 
         # get_full_transitions seems to be about 2x faster...
         print('-------------------------------------------------')
+        row_idx = -1
+        col_idx = -1
         print('env_fast.rail.get_full_transitions:',
               timeit.timeit('env_fast.rail.get_full_transitions(rnd_row(), rnd_column())', globals=globals(),
                             number=number))
+        row_idx = -1
+        col_idx = -1
         print('fast_get_full_transitions:',
               timeit.timeit('fast_get_full_transitions(env_fast, rnd_row(), rnd_column())', globals=globals(),
                             number=number))
