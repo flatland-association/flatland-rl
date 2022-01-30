@@ -15,24 +15,6 @@ from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
-# ---------------------------------------------------------------------------------------------------------------
-@lru_cache(typed=False)
-def fast_get_transition(env, cell_id, direction):
-    assert len(cell_id) == 3, 'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
-
-    cell_transition = env.rail.grid[cell_id[0]][cell_id[1]]
-    orientation = cell_id[2]
-
-    return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
-
-
-@lru_cache(typed=False)
-def fast_get_full_transitions(env, row, column):
-    return env.rail.grid[row][column]
-
-
-# ---------------------------------------------------------------------------------------------------------------
-
 class RandomAgent:
     def __init__(self, action_size):
         self.action_size = action_size
@@ -209,18 +191,63 @@ if __name__ == "__main__":
         run_simulation(env_fast)
 
     if CHECK_LRU:
-        row, column = env_fast.agents[0].initial_position
-        direction = env_fast.agents[0].initial_direction
-        cell_id = (row, column, direction)
+        data = []
+
+        np.random.seed(0)
+
+
+        def rnd_row():
+            return np.random.choice(env_fast.width)
+
+
+        def rnd_column():
+            return np.random.choice(env_fast.height)
+
+
+        def rnd_cell_id():
+            direction = np.random.choice(4)
+            # row, column = env_fast.agents[0].initial_position
+            # env_fast.agents[0].initial_direction
+            cell_id = (rnd_row(), rnd_column(), direction)
+            return cell_id
+
+
+        def rnd_direction():
+            return np.random.choice(4)
+
+
+        @lru_cache(typed=False)
+        def fast_get_transition(env, cell_id, direction):
+            assert len(cell_id) == 3, 'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
+
+            cell_transition = env.rail.grid[cell_id[0]][cell_id[1]]
+            orientation = cell_id[2]
+
+            return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
+
+
+        @lru_cache(typed=False)
+        def fast_get_full_transitions(env, row, column):
+            return env.rail.grid[row][column]
+
 
         number = 100000
 
         # fast_get_transition seems to be about 10x faster...
         print('-------------------------------------------------')
-        print(timeit.timeit('env_fast.rail.get_transition(cell_id, direction)', globals=globals(), number=number))
-        print(timeit.timeit('fast_get_transition(env_fast, cell_id, direction)', globals=globals(), number=number))
+        print('env_fast.rail.get_transition:',
+              timeit.timeit('env_fast.rail.get_transition(rnd_cell_id(), rnd_direction())', globals=globals(),
+                            number=number))
+        print('fast_get_transition:',
+              timeit.timeit('fast_get_transition(env_fast, rnd_cell_id(), rnd_direction())',
+                            globals=globals(),
+                            number=number))
 
         # get_full_transitions seems to be about 2x faster...
         print('-------------------------------------------------')
-        print(timeit.timeit('env_fast.rail.get_full_transitions(row, column)', globals=globals(), number=number))
-        print(timeit.timeit('fast_get_full_transitions(env_fast, row, column)', globals=globals(), number=number))
+        print('env_fast.rail.get_full_transitions:',
+              timeit.timeit('env_fast.rail.get_full_transitions(rnd_row(), rnd_column())', globals=globals(),
+                            number=number))
+        print('fast_get_full_transitions:',
+              timeit.timeit('fast_get_full_transitions(env_fast, rnd_row(), rnd_column())', globals=globals(),
+                            number=number))
