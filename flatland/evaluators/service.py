@@ -887,6 +887,7 @@ class FlatlandRemoteEvaluationService:
 
         # record the actions before checking for done
         if self.action_dir is not None:
+            action = {key: int(val) for key, val in action.items()}
             self.episode_actions.append(action)
 
         # Is the episode over?
