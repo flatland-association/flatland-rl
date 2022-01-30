@@ -213,13 +213,14 @@ if __name__ == "__main__":
         direction = env_fast.agents[0].initial_direction
         cell_id = (row, column, direction)
 
+        number = 100000
+
         # fast_get_transition seems to be about 10x faster...
         print('-------------------------------------------------')
-        print(timeit.timeit('env_fast.rail.get_transition(cell_id, direction)', globals=globals(), number=100000))
-        print(timeit.timeit('fast_get_transition(env_fast, cell_id, direction)', globals=globals(), number=100000))
+        print(timeit.timeit('env_fast.rail.get_transition(cell_id, direction)', globals=globals(), number=number))
+        print(timeit.timeit('fast_get_transition(env_fast, cell_id, direction)', globals=globals(), number=number))
 
         # get_full_transitions seems to be about 2x faster...
         print('-------------------------------------------------')
-        number = 100000
         print(timeit.timeit('env_fast.rail.get_full_transitions(row, column)', globals=globals(), number=number))
         print(timeit.timeit('fast_get_full_transitions(env_fast, row, column)', globals=globals(), number=number))
