@@ -142,7 +142,7 @@ if __name__ == "__main__":
     print("Create env ... ")
     if PROFILE_CREATE:
         profiler.enable()
-    env_fast = get_rail_env(nAgents=70, use_dummy_obs=False, width=60, height=60)
+    env_fast = get_rail_env(nAgents=70, use_dummy_obs=False, width=100, height=100)
     if PROFILE_CREATE:
         profiler.disable()
 
@@ -226,7 +226,7 @@ if __name__ == "__main__":
             return 0
 
 
-        @lru_cache(maxsize=1,typed=False)
+        @lru_cache(maxsize=env_fast.width * env_fast.height * 4, typed=False)
         def fast_get_transition(env, cell_id, direction):
             assert len(cell_id) == 3, 'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
 
@@ -236,7 +236,7 @@ if __name__ == "__main__":
             return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
 
 
-        @lru_cache(maxsize=1,typed=False)
+        @lru_cache(maxsize=env_fast.width * env_fast.height, typed=False)
         def fast_get_full_transitions(env, row, column):
             return env.rail.grid[row][column]
 
