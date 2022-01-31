@@ -1,7 +1,5 @@
 import cProfile
 import pstats
-import timeit
-from functools import lru_cache
 
 import numpy as np
 
@@ -127,12 +125,11 @@ def run_simulation(env_fast: RailEnv):
 USE_PROFILER = True
 
 PROFILE_CREATE = False
-PROFILE_RESET = False
-PROFILE_STEP = True
+PROFILE_RESET = True
+PROFILE_STEP = False
 PROFILE_OBSERVATION = False
 
 RUN_SIMULATION = False
-CHECK_LRU = True
 
 if __name__ == "__main__":
     print("Start ...")
@@ -189,81 +186,3 @@ if __name__ == "__main__":
 
     if RUN_SIMULATION:
         run_simulation(env_fast)
-
-    if CHECK_LRU:
-        data = []
-        number = 100000
-
-        np.random.seed(0)
-
-        row_list = np.random.choice(env_fast.width, number + 1)
-        col_list = np.random.choice(env_fast.width, number + 1)
-        global row_idx
-        global col_idx
-
-
-        def rnd_row():
-            global row_idx
-            row_idx = row_idx + 1
-            return row_list[row_idx]
-
-
-        def rnd_column():
-            global col_idx
-            col_idx = col_idx + 1
-            return col_list[col_idx]
-
-
-        def rnd_cell_id():
-            direction = 0
-            # row, column = env_fast.agents[0].initial_position
-            # env_fast.agents[0].initial_direction
-            cell_id = (rnd_row(), rnd_column(), direction)
-            return cell_id
-
-
-        def rnd_direction():
-            return 0
-
-
-        @lru_cache(maxsize=env_fast.width * env_fast.height * 4, typed=False)
-        def fast_get_transition(env, cell_id, direction):
-            assert len(cell_id) == 3, 'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
-
-            cell_transition = env.rail.grid[cell_id[0]][cell_id[1]]
-            orientation = cell_id[2]
-
-            return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
-
-
-        @lru_cache(maxsize=env_fast.width * env_fast.height, typed=False)
-        def fast_get_full_transitions(env, row, column):
-            return env.rail.grid[row][column]
-
-
-        # fast_get_transition seems to be about 10x faster...
-        print('-------------------------------------------------')
-        row_idx = -1
-        col_idx = -1
-        print('env_fast.rail.get_transition:',
-              timeit.timeit('env_fast.rail.get_transition(rnd_cell_id(), rnd_direction())', globals=globals(),
-                            number=number))
-        row_idx = -1
-        col_idx = -1
-        print('fast_get_transition:',
-              timeit.timeit('fast_get_transition(env_fast, rnd_cell_id(), rnd_direction())',
-                            globals=globals(),
-                            number=number))
-
-        # get_full_transitions seems to be about 2x faster...
-        print('-------------------------------------------------')
-        row_idx = -1
-        col_idx = -1
-        print('env_fast.rail.get_full_transitions:',
-              timeit.timeit('env_fast.rail.get_full_transitions(rnd_row(), rnd_column())', globals=globals(),
-                            number=number))
-        row_idx = -1
-        col_idx = -1
-        print('fast_get_full_transitions:',
-              timeit.timeit('fast_get_full_transitions(env_fast, rnd_row(), rnd_column())', globals=globals(),
-                            number=number))

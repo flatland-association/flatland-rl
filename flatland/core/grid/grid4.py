@@ -1,4 +1,5 @@
 from enum import IntEnum
+from functools import lru_cache
 from typing import Type, List
 
 import numpy as np
@@ -56,6 +57,14 @@ class Grid4Transitions(Transitions):
 
         # row,col delta for each direction
         self.gDir2dRC = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])
+
+        # maxsize=None can be used because the number of possible transition is limited (16 bit encoded) and the
+        # direction/orientation is also limited (2bit). Where the 16bit are only sparse used = number of rail types
+        # Those methods can be cached -> the are independant of the railways (env)
+        self.get_transitions = lru_cache(maxsize=None, typed=False)(self.get_transitions)
+        self.get_transition = lru_cache(maxsize=None, typed=False)(self.get_transition)
+        self.rotate_transition = lru_cache(maxsize=None, typed=False)(self.rotate_transition)
+        self.remove_deadends = lru_cache(maxsize=None, typed=False)(self.remove_deadends)
 
     # These bits represent all the possible dead ends
     @staticmethod
