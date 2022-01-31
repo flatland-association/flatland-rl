@@ -201,6 +201,7 @@ if __name__ == "__main__":
         global row_idx
         global col_idx
 
+
         def rnd_row():
             global row_idx
             row_idx = row_idx + 1
@@ -225,7 +226,7 @@ if __name__ == "__main__":
             return 0
 
 
-        @lru_cache(typed=False)
+        @lru_cache(maxsize=1,typed=False)
         def fast_get_transition(env, cell_id, direction):
             assert len(cell_id) == 3, 'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
 
@@ -235,7 +236,7 @@ if __name__ == "__main__":
             return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
 
 
-        @lru_cache(typed=False)
+        @lru_cache(maxsize=1,typed=False)
         def fast_get_full_transitions(env, row, column):
             return env.rail.grid[row][column]
 
