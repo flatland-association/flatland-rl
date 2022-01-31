@@ -594,7 +594,6 @@ class FlatlandRemoteEvaluationService:
                 command,
                 object_hook=m.decode,
                 strict_map_key=False,  # msgpack 1.0
-                encoding="utf8"  # msgpack 1.0
             )
         if self.verbose:
             print("Received Request : ", command)
