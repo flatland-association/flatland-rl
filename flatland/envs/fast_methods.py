@@ -1,11 +1,11 @@
 from typing import Tuple
 
-# Adrian Egli performance fix (the fast methods brings more than 50%)
+# Adrian Egli / Michel Marti performance fix (the fast methods brings more than 50%)
 def fast_isclose(a, b, rtol):
     return (a < (b + rtol)) or (a < (b - rtol))
 
 
-def fast_clip(position: Tuple[int, int], min_value:  Tuple[int, int], max_value:  Tuple[int, int]) -> bool:
+def fast_clip(position: Tuple[int, int], min_value: Tuple[int, int], max_value: Tuple[int, int]) -> bool:
     return (
         max(min_value[0], min(position[0], max_value[0])),
         max(min_value[1], min(position[1], max_value[1]))

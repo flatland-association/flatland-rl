@@ -334,9 +334,9 @@ class TreeObsForRailEnv(ObservationBuilder):
                     post_step = min(self.max_prediction_depth - 1, predicted_time + 1)
 
                     # Look for conflicting paths at distance tot_dist
-                    if int_position in np.delete(self.predicted_pos[predicted_time], handle, 0):
-                        conflicting_agent = np.where(self.predicted_pos[predicted_time] == int_position)
-                        for ca in conflicting_agent[0]:
+                    conflicting_agent = np.where(self.predicted_pos[predicted_time] == int_position[0])[0]
+                    if handle not in conflicting_agent:
+                        for ca in conflicting_agent:
                             if direction != self.predicted_dir[predicted_time][ca] and cell_transitions[
                                 self._reverse_dir(
                                     self.predicted_dir[predicted_time][ca])] == 1 and tot_dist < potential_conflict:
@@ -345,26 +345,29 @@ class TreeObsForRailEnv(ObservationBuilder):
                                 potential_conflict = tot_dist
 
                     # Look for conflicting paths at distance num_step-1
-                    elif int_position in np.delete(self.predicted_pos[pre_step], handle, 0):
-                        conflicting_agent = np.where(self.predicted_pos[pre_step] == int_position)
-                        for ca in conflicting_agent[0]:
-                            if direction != self.predicted_dir[pre_step][ca] \
-                                and cell_transitions[self._reverse_dir(self.predicted_dir[pre_step][ca])] == 1 \
-                                and tot_dist < potential_conflict:  # noqa: E125
-                                potential_conflict = tot_dist
-                            if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
-                                potential_conflict = tot_dist
+                    else:
+                        conflicting_agent = np.where(self.predicted_pos[pre_step] == int_position[0])[0]
+                        if handle not in conflicting_agent:
+                            for ca in conflicting_agent:
+                                if direction != self.predicted_dir[pre_step][ca] \
+                                    and cell_transitions[self._reverse_dir(self.predicted_dir[pre_step][ca])] == 1 \
+                                    and tot_dist < potential_conflict:  # noqa: E125
+                                    potential_conflict = tot_dist
+                                if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
+                                    potential_conflict = tot_dist
 
-                    # Look for conflicting paths at distance num_step+1
-                    elif int_position in np.delete(self.predicted_pos[post_step], handle, 0):
-                        conflicting_agent = np.where(self.predicted_pos[post_step] == int_position)
-                        for ca in conflicting_agent[0]:
-                            if direction != self.predicted_dir[post_step][ca] and cell_transitions[self._reverse_dir(
-                                self.predicted_dir[post_step][ca])] == 1 \
-                                and tot_dist < potential_conflict:  # noqa: E125
-                                potential_conflict = tot_dist
-                            if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
-                                potential_conflict = tot_dist
+                        # Look for conflicting paths at distance num_step+1
+                        else:
+                            conflicting_agent = np.where(self.predicted_pos[post_step] == int_position[0])[0]
+                            if handle not in conflicting_agent:
+                                for ca in conflicting_agent:
+                                    if direction != self.predicted_dir[post_step][ca] and cell_transitions[
+                                        self._reverse_dir(
+                                            self.predicted_dir[post_step][ca])] == 1 \
+                                        and tot_dist < potential_conflict:  # noqa: E125
+                                        potential_conflict = tot_dist
+                                    if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
+                                        potential_conflict = tot_dist
 
             if position in self.location_has_target and position != agent.target:
                 if tot_dist < other_target_encountered:

@@ -125,8 +125,8 @@ def run_simulation(env_fast: RailEnv):
 USE_PROFILER = True
 
 PROFILE_CREATE = False
-PROFILE_RESET = True
-PROFILE_STEP = False
+PROFILE_RESET = False
+PROFILE_STEP = True
 PROFILE_OBSERVATION = False
 
 RUN_SIMULATION = False
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     print("Create env ... ")
     if PROFILE_CREATE:
         profiler.enable()
-    env_fast = get_rail_env(nAgents=70, use_dummy_obs=False, width=100, height=100)
+    env_fast = get_rail_env(nAgents=200, use_dummy_obs=False, width=100, height=100)
     if PROFILE_CREATE:
         profiler.disable()
 
@@ -156,7 +156,8 @@ if __name__ == "__main__":
     print("Step env ... ")
     if PROFILE_STEP:
         profiler.enable()
-    env_fast.step(action_dict)
+    for i in range(1):
+        env_fast.step(action_dict)
     if PROFILE_STEP:
         profiler.disable()
 
@@ -170,17 +171,20 @@ if __name__ == "__main__":
         profiler.disable()
 
     if USE_PROFILER:
-        print("---- tottime")
-        stats = pstats.Stats(profiler).sort_stats('tottime')  # ncalls, 'cumtime'...
-        stats.print_stats(20)
+        if False:
+            print("---- tottime")
+            stats = pstats.Stats(profiler).sort_stats('tottime')  # ncalls, 'cumtime'...
+            stats.print_stats(20)
 
-        print("---- cumtime")
-        stats = pstats.Stats(profiler).sort_stats('cumtime')  # ncalls, 'cumtime'...
-        stats.print_stats(20)
+        if True:
+            print("---- cumtime")
+            stats = pstats.Stats(profiler).sort_stats('cumtime')  # ncalls, 'cumtime'...
+            stats.print_stats(200)
 
-        print("---- ncalls")
-        stats = pstats.Stats(profiler).sort_stats('ncalls')  # ncalls, 'cumtime'...
-        stats.print_stats(200)
+        if False:
+            print("---- ncalls")
+            stats = pstats.Stats(profiler).sort_stats('ncalls')  # ncalls, 'cumtime'...
+            stats.print_stats(200)
 
     print("... end ")
 

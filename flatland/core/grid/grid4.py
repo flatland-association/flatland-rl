@@ -63,7 +63,6 @@ class Grid4Transitions(Transitions):
         # Those methods can be cached -> the are independant of the railways (env)
         self.get_transitions = lru_cache(maxsize=None, typed=False)(self.get_transitions)
         self.get_transition = lru_cache(maxsize=None, typed=False)(self.get_transition)
-        self.rotate_transition = lru_cache(maxsize=None, typed=False)(self.rotate_transition)
         self.remove_deadends = lru_cache(maxsize=None, typed=False)(self.remove_deadends)
 
     # These bits represent all the possible dead ends
