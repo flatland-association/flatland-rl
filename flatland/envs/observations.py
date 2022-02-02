@@ -274,7 +274,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         visited = OrderedSet()
         agent = self.env.agents[handle]
-        time_per_cell = np.reciprocal(agent.speed_counter.speed)
+        time_per_cell = 1.0 / agent.speed_counter.speed
         own_target_encountered = np.inf
         other_agent_encountered = np.inf
         other_target_encountered = np.inf
