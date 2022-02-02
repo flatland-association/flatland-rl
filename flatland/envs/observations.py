@@ -273,7 +273,10 @@ class TreeObsForRailEnv(ObservationBuilder):
         last_is_target = False
 
         visited = OrderedSet()
+
         agent = self.env.agents[handle]
+        distance_map_handle = self.env.distance_map.get()[handle]
+
         time_per_cell = 1.0 / agent.speed_counter.speed
         own_target_encountered = np.inf
         other_agent_encountered = np.inf
@@ -433,10 +436,10 @@ class TreeObsForRailEnv(ObservationBuilder):
             dist_min_to_target = 0
         elif last_is_terminal:
             dist_to_next_branch = np.inf
-            dist_min_to_target = self.env.distance_map.get()[handle, position[0], position[1], direction]
+            dist_min_to_target = distance_map_handle[position[0], position[1], direction]
         else:
             dist_to_next_branch = tot_dist
-            dist_min_to_target = self.env.distance_map.get()[handle, position[0], position[1], direction]
+            dist_min_to_target = distance_map_handle[position[0], position[1], direction]
 
         # TreeObsForRailEnv.Node
         node = Node(dist_own_target_encountered=own_target_encountered,
