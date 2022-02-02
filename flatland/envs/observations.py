@@ -336,29 +336,27 @@ class TreeObsForRailEnv(ObservationBuilder):
                     # Look for conflicting paths at distance tot_dist
                     if int_position in fast_delete(self.predicted_pos[predicted_time], handle):
                         conflicting_agent = fast_where(self.predicted_pos[predicted_time] == int_position)
-                        for ca in conflicting_agent[0]:
+                        for ca in conflicting_agent:
                             if direction != self.predicted_dir[predicted_time][ca] and cell_transitions[
                                 self._reverse_dir(
                                     self.predicted_dir[predicted_time][ca])] == 1 and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
                             if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
-
                     # Look for conflicting paths at distance num_step-1
                     elif int_position in fast_delete(self.predicted_pos[pre_step], handle):
                         conflicting_agent = fast_where(self.predicted_pos[pre_step] == int_position)
-                        for ca in conflicting_agent[0]:
+                        for ca in conflicting_agent:
                             if direction != self.predicted_dir[pre_step][ca] \
                                 and cell_transitions[self._reverse_dir(self.predicted_dir[pre_step][ca])] == 1 \
                                 and tot_dist < potential_conflict:  # noqa: E125
                                 potential_conflict = tot_dist
                             if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
-
                     # Look for conflicting paths at distance num_step+1
                     elif int_position in fast_delete(self.predicted_pos[post_step], handle):
                         conflicting_agent = fast_where(self.predicted_pos[post_step] == int_position)
-                        for ca in conflicting_agent[0]:
+                        for ca in conflicting_agent:
                             if direction != self.predicted_dir[post_step][ca] and cell_transitions[self._reverse_dir(
                                 self.predicted_dir[post_step][ca])] == 1 \
                                 and tot_dist < potential_conflict:  # noqa: E125
