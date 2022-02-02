@@ -1,5 +1,6 @@
 from typing import Tuple
 
+
 # Adrian Egli / Michel Marti performance fix (the fast methods brings more than 50%)
 def fast_isclose(a, b, rtol):
     return (a < (b + rtol)) or (a < (b - rtol))
@@ -32,3 +33,13 @@ def fast_position_equal(pos_1: (int, int), pos_2: (int, int)) -> bool:
 
 def fast_count_nonzero(possible_transitions: (int, int, int, int)):
     return possible_transitions[0] + possible_transitions[1] + possible_transitions[2] + possible_transitions[3]
+
+
+def fast_delete(lis: list, index) -> list:
+    new_list = lis.copy()
+    new_list.pop(index)
+    return new_list
+
+def fast_where(binary_iterable):
+    return [index for index, element in enumerate(binary_iterable) if element != 0]
+
