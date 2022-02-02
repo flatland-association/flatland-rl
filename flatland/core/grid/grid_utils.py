@@ -1,3 +1,4 @@
+from math import isnan
 from typing import Tuple, Callable, List, Type
 
 import numpy as np
@@ -281,15 +282,12 @@ def coordinate_to_position(depth, coords):
     :param coords:
     :return:
     """
-    position = np.empty(len(coords), dtype=int)
-    idx = 0
-    for t in coords:
-        # Set None type coordinates off the grid
-        if np.isnan(t[0]):
-            position[idx] = -1
+    position = list(range(len(coords)))
+    for index, t in enumerate(coords):
+        if isnan(t[0]):
+            position[index] = -1
         else:
-            position[idx] = int(t[1] * depth + t[0])
-        idx += 1
+            position[index] = int(t[1] * depth + t[0])
     return position
 
 
