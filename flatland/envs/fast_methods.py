@@ -40,6 +40,6 @@ def fast_delete(lis: list, index) -> list:
     new_list.pop(index)
     return new_list
 
+
 def fast_where(binary_iterable):
     return [index for index, element in enumerate(binary_iterable) if element != 0]
-
