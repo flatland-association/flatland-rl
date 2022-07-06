@@ -73,7 +73,7 @@ class EnvAgent:
     # Env step facelift
     speed_counter = attrib(default = Factory(lambda: SpeedCounter(1.0)), type=SpeedCounter)
     action_saver = attrib(default = Factory(lambda: ActionSaver()), type=ActionSaver)
-    state_machine = attrib(default= Factory(lambda: TrainStateMachine(initial_state=TrainState.WAITING)) , 
+    state_machine = attrib(default= Factory(lambda: TrainStateMachine(initial_state=TrainState.WAITING)) ,
                            type=TrainStateMachine)
     malfunction_handler = attrib(default = Factory(lambda: MalfunctionHandler()), type=MalfunctionHandler)
 
@@ -97,6 +97,7 @@ class EnvAgent:
         self.old_position = None
         self.old_direction = None
         self.moving = False
+        self.arrival_time = None
 
         self.malfunction_handler.reset()
 
@@ -105,16 +106,16 @@ class EnvAgent:
         self.state_machine.reset()
 
     def to_agent(self) -> Agent:
-        return Agent(initial_position=self.initial_position, 
+        return Agent(initial_position=self.initial_position,
                      initial_direction=self.initial_direction,
                      direction=self.direction,
                      target=self.target,
                      moving=self.moving,
-                     earliest_departure=self.earliest_departure, 
-                     latest_arrival=self.latest_arrival, 
+                     earliest_departure=self.earliest_departure,
+                     latest_arrival=self.latest_arrival,
                      handle=self.handle,
-                     position=self.position, 
-                     old_direction=self.old_direction, 
+                     position=self.position,
+                     old_direction=self.old_direction,
                      old_position=self.old_position,
                      speed_counter=self.speed_counter,
                      action_saver=self.action_saver,
@@ -125,7 +126,7 @@ class EnvAgent:
     def get_shortest_path(self, distance_map) -> List[Waypoint]:
         from flatland.envs.rail_env_shortest_paths import get_shortest_paths # Circular dep fix
         return get_shortest_paths(distance_map=distance_map, agent_handle=self.handle)[self.handle]
-        
+
     def get_travel_time_on_shortest_path(self, distance_map) -> int:
         shortest_path = self.get_shortest_path(distance_map)
         if shortest_path is not None:
@@ -152,16 +153,16 @@ class EnvAgent:
         """ Create a list of EnvAgent from lists of positions, directions and targets
         """
         num_agents = len(line.agent_positions)
-        
+
         agent_list = []
         for i_agent in range(num_agents):
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
-            
+
             agent = EnvAgent(initial_position = line.agent_positions[i_agent],
                             initial_direction = line.agent_directions[i_agent],
                             direction = line.agent_directions[i_agent],
-                            target = line.agent_targets[i_agent], 
-                            moving = False, 
+                            target = line.agent_targets[i_agent],
+                            moving = False,
                             earliest_departure = None,
                             latest_arrival = None,
                             handle = i_agent,
@@ -180,13 +181,13 @@ class EnvAgent:
                                 speed_counter=SpeedCounter(static_agent[4]['speed']), handle=i)
             else:
                 agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
-                                direction=static_agent[1], target=static_agent[2], 
+                                direction=static_agent[1], target=static_agent[2],
                                 moving=False,
                                 speed_counter=SpeedCounter(1.0),
                                 handle=i)
             agents.append(agent)
         return agents
-    
+
     def __str__(self):
         return f"\n \
                  handle(agent index): {self.handle} \n \
@@ -211,7 +212,7 @@ class EnvAgent:
     @state.setter
     def state(self, state):
         self._set_state(state)
-    
+
     def _set_state(self, state):
         warnings.warn("Not recommended to set the state with this function unless completely required")
         self.state_machine.set_state(state)
@@ -225,5 +226,5 @@ class EnvAgent:
         raise ValueError("agent.speed_data is deprecated, please use agent.speed_counter instead")
 
 
-    
+
 
