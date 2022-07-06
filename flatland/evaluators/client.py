@@ -175,7 +175,6 @@ class FlatlandRemoteClient(object):
                     error_bytes,
                     object_hook=m.decode,
                     strict_map_key=False,  # new for msgpack 1.0?
-                    encoding="utf8"  # remove for msgpack 1.0
                 )
             print("Error received: ", error_dict)
             raise TimeoutException(error_dict["type"])
@@ -200,7 +199,6 @@ class FlatlandRemoteClient(object):
                     _response,
                     object_hook=m.decode,
                     strict_map_key=False,  # new for msgpack 1.0?
-                    encoding="utf8"  # remove for msgpack 1.0
                 )
             if _response['type'] == messages.FLATLAND_RL.ERROR:
                 raise Exception(str(_response["payload"]))

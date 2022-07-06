@@ -594,7 +594,6 @@ class FlatlandRemoteEvaluationService:
                 command,
                 object_hook=m.decode,
                 strict_map_key=False,  # msgpack 1.0
-                encoding="utf8"  # msgpack 1.0
             )
         if self.verbose:
             print("Received Request : ", command)
@@ -887,6 +886,7 @@ class FlatlandRemoteEvaluationService:
 
         # record the actions before checking for done
         if self.action_dir is not None:
+            action = {key: int(val) for key, val in action.items()}
             self.episode_actions.append(action)
 
         # Is the episode over?
@@ -1022,7 +1022,9 @@ class FlatlandRemoteEvaluationService:
             agent_arrival_times.append(agent.arrival_time)
 
             if (agent.state != TrainState.DONE):
-                agent_shortest_paths.append(len(agent.get_shortest_path(self.env.distance_map)))
+                sp = agent.get_shortest_path(self.env.distance_map)
+                len_sp = len(sp) if sp is not None else -1
+                agent_shortest_paths.append(len_sp)
                 agent_current_delays.append(agent.get_current_delay(self.env._elapsed_steps, self.env.distance_map))
             else:
                 agent_shortest_paths.append(None)
