@@ -6,7 +6,7 @@ import numpy as np
 import msgpack_numpy
 msgpack_numpy.patch()
 
-from flatland.envs import rail_env 
+from flatland.envs import rail_env
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.transition_map import GridTransitionMap
@@ -42,7 +42,7 @@ class RailEnvPersister(object):
 
 
         if save_distance_maps is True:
-            oDistMap = env.distance_map.get() 
+            oDistMap = env.distance_map.get()
             if oDistMap is not None:
                 if len(oDistMap) > 0:
                     env_dict["distance_map"] = oDistMap
@@ -55,15 +55,15 @@ class RailEnvPersister(object):
 
             if filename.endswith("mpk"):
                 data = msgpack.packb(env_dict)
-                
-                
+
+
             elif filename.endswith("pkl"):
                 data = pickle.dumps(env_dict)
                 #pickle.dump(env_dict, file_out)
 
             file_out.write(data)
 
-        # We have an unresovled problem with msgpack loading the list of Agents 
+        # We have an unresovled problem with msgpack loading the list of Agents
         # with open(filename, "rb") as file_in:
         # if filename.endswith("mpk"):
             # bytes_in = file_in.read()
@@ -71,7 +71,7 @@ class RailEnvPersister(object):
             # print(f"msgpack check - {dIn.keys()}")
             # print(f"msgpack check - {dIn['agents'][0]}")
 
-                
+
 
     @classmethod
     def save_episode(cls, env, filename):
@@ -113,7 +113,7 @@ class RailEnvPersister(object):
         # TODO: inefficient - each one of these generators loads the complete env file.
         env = rail_env.RailEnv(#width=1, height=1,
                 width=width, height=height,
-                rail_generator=rail_gen.rail_from_file(filename, 
+                rail_generator=rail_gen.rail_from_file(filename,
                     load_from_package=load_from_package),
                     line_generator=line_gen.line_from_file(filename,
                     load_from_package=load_from_package),
@@ -123,7 +123,7 @@ class RailEnvPersister(object):
                 obs_builder_object=DummyObservationBuilder(),
                 record_steps=True)
 
-        env.rail = GridTransitionMap(1,1) # dummy        
+        env.rail = GridTransitionMap(1,1) # dummy
 
         cls.set_full_state(env, env_dict)
         return env, env_dict
@@ -139,17 +139,17 @@ class RailEnvPersister(object):
                 load_data = file_in.read()
 
         if filename.endswith("mpk"):
-            env_dict = msgpack.unpackb(load_data, use_list=False, encoding="utf-8")
+            env_dict = msgpack.unpackb(load_data, use_list=False, raw=False)
         elif filename.endswith("pkl"):
             try:
                 env_dict = pickle.loads(load_data)
             except ValueError:
                 print("pickle failed to load file:", filename, " trying msgpack (deprecated)...")
-                env_dict = msgpack.unpackb(load_data, use_list=False, encoding="utf-8")
+                env_dict = msgpack.unpackb(load_data, use_list=False, raw=False)
         else:
             print(f"filename {filename} must end with either pkl or mpk")
             env_dict = {}
-        
+
         # Replace the agents tuple with EnvAgent objects
         if "agents_static" in env_dict:
             env_dict["agents"] = EnvAgent.load_legacy_static_agent(env_dict["agents_static"])
@@ -173,7 +173,7 @@ class RailEnvPersister(object):
         #    env_dict = pickle.loads(load_data)
         #elif resource.endswith("mpk"):
         #    env_dict = msgpack.unpackb(load_data, encoding="utf-8")
-        
+
         #cls.set_full_state(env, env_dict)
 
         return cls.load_new(resource, load_from_package=package)
@@ -181,7 +181,7 @@ class RailEnvPersister(object):
     @classmethod
     def set_full_state(cls, env, env_dict):
         """
-        Sets environment state from env_dict 
+        Sets environment state from env_dict
 
         Parameters
         -------

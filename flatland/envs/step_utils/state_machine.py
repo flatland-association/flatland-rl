@@ -1,3 +1,4 @@
+from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils import env_utils
 
@@ -8,13 +9,13 @@ class TrainStateMachine:
         self.st_signals = StateTransitionSignals()
         self.next_state = None
         self.previous_state = None
-    
+
     def _handle_waiting(self):
         """" Waiting state goes to ready to depart when earliest departure is reached"""
-        # TODO: Important - The malfunction handling is not like proper state machine 
+        # TODO: Important - The malfunction handling is not like proper state machine
         #                   Both transition signals can happen at the same time
         #                   Atleast mention it in the diagram
-        if self.st_signals.in_malfunction:  
+        if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
         elif self.st_signals.earliest_departure_reached:
             self.next_state = TrainState.READY_TO_DEPART
@@ -23,16 +24,16 @@ class TrainStateMachine:
 
     def _handle_ready_to_depart(self):
         """ Can only go to MOVING if a valid action is provided """
-        if self.st_signals.in_malfunction:  
+        if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
         elif self.st_signals.valid_movement_action_given:
             self.next_state = TrainState.MOVING
         else:
             self.next_state = TrainState.READY_TO_DEPART
-    
+
     def _handle_malfunction_off_map(self):
         if self.st_signals.malfunction_counter_complete:
-            
+
             if self.st_signals.earliest_departure_reached:
 
                 if self.st_signals.valid_movement_action_given:
@@ -41,13 +42,13 @@ class TrainStateMachine:
                     self.next_state = TrainState.STOPPED
                 else:
                     self.next_state = TrainState.READY_TO_DEPART
-                    
+
             else:
                 self.next_state = TrainState.WAITING
 
         else:
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
-    
+
     def _handle_moving(self):
         if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION
@@ -57,7 +58,7 @@ class TrainStateMachine:
             self.next_state = TrainState.STOPPED
         else:
             self.next_state = TrainState.MOVING
-    
+
     def _handle_stopped(self):
         if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION
@@ -65,7 +66,7 @@ class TrainStateMachine:
             self.next_state = TrainState.MOVING
         else:
             self.next_state = TrainState.STOPPED
-    
+
     def _handle_malfunction(self):
         if self.st_signals.malfunction_counter_complete:
             if self.st_signals.valid_movement_action_given:
@@ -87,7 +88,7 @@ class TrainStateMachine:
 
         elif current_state == TrainState.READY_TO_DEPART:
             self._handle_ready_to_depart()
-        
+
         elif current_state == TrainState.MALFUNCTION_OFF_MAP:
             self._handle_malfunction_off_map()
 
@@ -135,10 +136,10 @@ class TrainStateMachine:
         self.previous_state = None
         self.st_signals = StateTransitionSignals()
         self.clear_next_state()
-    
+
     def update_if_reached(self, position, target):
         # Need to do this hacky fix for now, state machine needed speed related states for proper handling
-        self.st_signals.target_reached = env_utils.fast_position_equal(position, target)
+        self.st_signals.target_reached = fast_position_equal(position, target)
         if self.st_signals.target_reached:
             self.next_state = TrainState.DONE
             self.set_state(self.next_state)
@@ -146,11 +147,11 @@ class TrainStateMachine:
     @property
     def state(self):
         return self._state
-    
+
     @property
     def state_transition_signals(self):
         return self.st_signals
-    
+
     def set_transition_signals(self, state_transition_signals):
         self.st_signals = state_transition_signals
 
@@ -171,4 +172,4 @@ class TrainStateMachine:
         return self._state == other._state and self.previous_state == other.previous_state
 
 
-        
+
