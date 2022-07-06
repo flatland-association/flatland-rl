@@ -44,6 +44,16 @@ test-py37:
     script:
         - xvfb-run tox -v --recreate -e py37
 
+test-py38:
+    <<: *test-setup
+    script:
+        - xvfb-run tox -v --recreate -e py38
+
+test-py39:
+    <<: *test-setup
+    script:
+        - xvfb-run tox -v --recreate -e py39
+
 test-examples:
     <<: *test-setup
     script:
@@ -117,6 +127,8 @@ profiling:
 
 benchmarks:
     dependencies:
+        - test-py39
+        - test-py38
         - test-py36
         - test-py37
         - test-examples
