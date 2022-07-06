@@ -259,7 +259,7 @@ class Grid4Transitions(Transitions):
         Remove all turn-arounds (e.g. N-S, S-N, E-W,...).
         """
         maskDeadEnds = Grid4Transitions.maskDeadEnds()
-        cell_transition &= cell_transition & (~self.maskDeadEnds) & 0xffff
+        cell_transition &= cell_transition & (~maskDeadEnds) & 0xffff
         return cell_transition
 
     @staticmethod
