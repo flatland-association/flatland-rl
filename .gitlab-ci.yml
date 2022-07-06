@@ -92,6 +92,8 @@ build_and_deploy_docs:
 
 profiling:
     dependencies:
+        - test-py39
+        - test-py38
         - test-py36
         - test-py37
         - test-examples
