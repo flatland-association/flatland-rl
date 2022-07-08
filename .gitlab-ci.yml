@@ -34,10 +34,10 @@ before_script:
         - conda update -n root conda -y
         - conda install -c conda-forge tox-conda -y
 
-# test-py36:
-#     <<: *test-setup
-#     script:
-#         - xvfb-run tox -v --recreate -e py36
+## test-py36:
+##     <<: *test-setup
+##     script:
+##         - xvfb-run tox -v --recreate -e py36
 
 test-py37:
     <<: *test-setup
@@ -59,10 +59,10 @@ test-examples:
     script:
         - xvfb-run tox -v --recreate -e examples
 
-# test-notebooks:
-#     <<: *test-setup
-#     script:
-#         - xvfb-run tox -v --recreate -e notebooks
+## test-notebooks:
+##     <<: *test-setup
+##     script:
+##         - xvfb-run tox -v --recreate -e notebooks
 
 test-docs:
     <<: *test-setup
