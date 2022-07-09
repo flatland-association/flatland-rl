@@ -1,38 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import numpy as np
 import os
+import time
+
+import numpy as np
+import pytest
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
+from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
-from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.line_generators import sparse_line_generator, line_from_file
-from flatland.utils.simple_rail import make_simple_rail
-from flatland.envs.persistence import RailEnvPersister
+from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
 from flatland.utils.rendertools import RenderTool
-
-import pytest
-import time
-
+from flatland.utils.simple_rail import make_simple_rail
 
 """Tests for `flatland` package."""
-
-@pytest.mark.skip("Msgpack serializing not supported")
-def test_load_env():
-    #env = RailEnv(10, 10)
-    #env.reset()
-    # env.load_resource('env_data.tests', 'test-10x10.mpk')
-    env, env_dict = RailEnvPersister.load_resource("env_data.tests", "test-10x10.mpk")
-    #env, env_dict = RailEnvPersister.load_new("./env_data/tests/test-10x10.mpk")
-
-    agent_static = EnvAgent((0, 0), 2, (5, 5), False)
-    env.add_agent(agent_static)
-    assert env.get_num_agents() == 1
 
 
 def test_save_load():
@@ -53,7 +40,7 @@ def test_save_load():
     RailEnvPersister.save(env, "tmp/test_save.pkl")
     env.save("tmp/test_save_2.pkl")
 
-    #env.load("test_save.dat")
+    # env.load("test_save.dat")
     env, env_dict = RailEnvPersister.load_new("tmp/test_save.pkl")
     assert (env.width == 30)
     assert (env.height == 30)
@@ -64,6 +51,7 @@ def test_save_load():
     assert (agent_2_pos == env.agents[1].position)
     assert (agent_2_dir == env.agents[1].direction)
     assert (agent_2_tar == env.agents[1].target)
+
 
 @pytest.mark.skip("Msgpack serializing not supported")
 def test_save_load_mpk():
@@ -76,16 +64,16 @@ def test_save_load_mpk():
 
     RailEnvPersister.save(env, "tmp/test_save.mpk")
 
-    #env.load("test_save.dat")
+    # env.load("test_save.dat")
     env2, env_dict = RailEnvPersister.load_new("tmp/test_save.mpk")
     assert (env.width == env2.width)
     assert (env.height == env2.height)
     assert (len(env2.agents) == len(env.agents))
-    
+
     for agent1, agent2 in zip(env.agents, env2.agents):
-        assert(agent1.position == agent2.position)
-        assert(agent1.direction == agent2.direction)
-        assert(agent1.target == agent2.target)
+        assert (agent1.position == agent2.position)
+        assert (agent1.direction == agent2.direction)
+        assert (agent1.target == agent2.target)
 
 
 @pytest.mark.skip(reason="Old file used to create env, not sure how to regenerate")
@@ -97,9 +85,7 @@ def test_rail_environment_single_agent(show=False):
     # \_/\_/
 
     transitions = RailEnvTransitions()
-    
-    
-    
+
     if False:
         # This env creation doesn't quite work right.
         cells = transitions.transition_list
@@ -112,21 +98,21 @@ def test_rail_environment_single_agent(show=False):
         north_west_turn = transitions.rotate_transition(south_east_turn, 180)
 
         rail_map = np.array([[south_east_turn, south_symmetrical_switch,
-                            south_west_turn],
-                            [vertical_line, vertical_line, vertical_line],
-                            [north_east_turn, north_symmetrical_switch,
-                            north_west_turn]],
+                              south_west_turn],
+                             [vertical_line, vertical_line, vertical_line],
+                             [north_east_turn, north_symmetrical_switch,
+                              north_west_turn]],
                             dtype=np.uint16)
 
         rail = GridTransitionMap(width=3, height=3, transitions=transitions)
         rail.grid = rail_map
         rail_env = RailEnv(width=3, height=3, rail_generator=rail_from_grid_transition_map(rail),
-                        line_generator=sparse_line_generator(), number_of_agents=1,
-                        obs_builder_object=GlobalObsForRailEnv())
+                           line_generator=sparse_line_generator(), number_of_agents=1,
+                           obs_builder_object=GlobalObsForRailEnv())
     else:
         rail_env, env_dict = RailEnvPersister.load_new("test_env_loop.pkl", "env_data.tests")
         rail_map = rail_env.rail.grid
-    
+
     rail_env._max_episode_steps = 1000
 
     _ = rail_env.reset(False, False, True)
@@ -135,11 +121,11 @@ def test_rail_environment_single_agent(show=False):
 
     env_renderer = RenderTool(rail_env)
 
-    #RailEnvPersister.save(rail_env, "test_env_figure8.pkl")
-    
+    # RailEnvPersister.save(rail_env, "test_env_figure8.pkl")
+
     for _ in range(5):
 
-        #rail_env.agents[0].initial_position = (1,2)
+        # rail_env.agents[0].initial_position = (1,2)
         _ = rail_env.reset(False, False, True)
 
         # We do not care about target for the moment
@@ -153,17 +139,17 @@ def test_rail_environment_single_agent(show=False):
             print("After reset - agent pos:", agent.position, "dir: ", agent.direction)
             print(transitions.get_transitions(rail_map[agent.position], agent.direction))
 
-        #assert (transitions.get_transitions(
+        # assert (transitions.get_transitions(
         #    rail_map[agent.position],
         #    agent.direction) != (0, 0, 0, 0))
 
         # HACK - force the direction to one we know is good.
-        #agent.initial_position = agent.position = (2,3)
+        # agent.initial_position = agent.position = (2,3)
         agent.initial_direction = agent.direction = 0
 
         if show:
-            print ("handle:", agent.handle)
-        #agent.initial_position = initial_pos = agent.position
+            print("handle:", agent.handle)
+        # agent.initial_position = initial_pos = agent.position
 
         valid_active_actions_done = 0
         pos = agent.position
@@ -176,7 +162,7 @@ def test_rail_environment_single_agent(show=False):
         while valid_active_actions_done < 6:
             # We randomly select an action
             action = np.random.choice(liActions)
-            #action = RailEnvActions.MOVE_FORWARD
+            # action = RailEnvActions.MOVE_FORWARD
 
             _, _, dict_done, _ = rail_env.step({0: action})
 
@@ -188,7 +174,7 @@ def test_rail_environment_single_agent(show=False):
             if prev_pos != pos:
                 valid_active_actions_done += 1
             iStep += 1
-            
+
             if show:
                 env_renderer.render_env(show=show, show_agents=True, step=iStep)
                 time.sleep(0.01)
@@ -196,7 +182,7 @@ def test_rail_environment_single_agent(show=False):
 
         # After 6 movements on this railway network, the train should be back
         # to its original height on the map.
-        #assert (initial_pos[0] == agent.position[0])
+        # assert (initial_pos[0] == agent.position[0])
 
         # We check that the train always attains its target after some time
         for _ in range(10):
@@ -205,7 +191,7 @@ def test_rail_environment_single_agent(show=False):
             rail_env.agents[0].direction = 0
 
             # JW - to avoid problem with sparse_line_generator.
-            #rail_env.agents[0].position = (1,2)
+            # rail_env.agents[0].position = (1,2)
 
             iStep = 0
             while iStep < 100:
@@ -216,7 +202,7 @@ def test_rail_environment_single_agent(show=False):
                 done = dones['__all__']
                 if done:
                     break
-                iStep +=1
+                iStep += 1
                 assert iStep < 100, "agent should have finished by now"
                 env_renderer.render_env(show=show)
 
@@ -248,15 +234,15 @@ def test_dead_end():
 
     city_positions = [(0, 0), (0, 3)]
     train_stations = [
-                      [( (0, 0), 0 ) ], 
-                      [( (0, 0), 0 ) ],
-                     ]
+        [((0, 0), 0)],
+        [((0, 0), 0)],
+    ]
     city_orientations = [0, 2]
     agents_hints = {'num_agents': 2,
-                   'city_positions': city_positions,
-                   'train_stations': train_stations,
-                   'city_orientations': city_orientations
-                  }
+                    'city_positions': city_positions,
+                    'train_stations': train_stations,
+                    'city_orientations': city_orientations
+                    }
     optionals = {'agents_hints': agents_hints}
 
     rail_env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
@@ -283,15 +269,15 @@ def test_dead_end():
 
     city_positions = [(0, 0), (0, 3)]
     train_stations = [
-                      [( (0, 0), 0 ) ], 
-                      [( (0, 0), 0 ) ],
-                     ]
+        [((0, 0), 0)],
+        [((0, 0), 0)],
+    ]
     city_orientations = [0, 2]
     agents_hints = {'num_agents': 2,
-                   'city_positions': city_positions,
-                   'train_stations': train_stations,
-                   'city_orientations': city_orientations
-                  }
+                    'city_positions': city_positions,
+                    'train_stations': train_stations,
+                    'city_orientations': city_orientations
+                    }
     optionals = {'agents_hints': agents_hints}
 
     rail.grid = rail_map
@@ -311,7 +297,8 @@ def test_dead_end():
 
 def test_get_entry_directions():
     rail, rail_map, optionals = make_simple_rail()
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
@@ -346,22 +333,23 @@ def test_rail_env_reset():
 
     rail, rail_map, optionals = make_simple_rail()
 
-    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
 
-    #env.save(file_name)
+    # env.save(file_name)
     RailEnvPersister.save(env, file_name)
 
     dist_map_shape = np.shape(env.distance_map.get())
     rails_initial = env.rail.grid
     agents_initial = env.agents
 
-    #env2 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
+    # env2 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
     #               line_generator=line_from_file(file_name), number_of_agents=1,
     #               obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-    #env2.reset(False, False, False)
+    # env2.reset(False, False, False)
     env2, env2_dict = RailEnvPersister.load_new(file_name)
 
     rails_loaded = env2.rail.grid
@@ -403,5 +391,6 @@ def main():
     # test_rail_environment_single_agent(show=True)
     test_rail_env_reset()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()
