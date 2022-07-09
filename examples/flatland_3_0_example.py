@@ -4,10 +4,11 @@ import numpy as np
 
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
+from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
-from flatland.envs.schedule_generators import sparse_schedule_generator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 np.random.seed(1)
@@ -22,31 +23,27 @@ stochastic_data = MalfunctionParameters(malfunction_rate=30,  # Rate of malfunct
                                         )
 # Custom observation builder
 TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
+nAgents = 3
+n_cities = 2
+max_rails_between_cities = 2
+max_rails_in_city = 4
+seed = 0
+env = RailEnv(
+        width=20,
+        height=30,
+        rail_generator=sparse_rail_generator(
+            max_num_cities=n_cities,
+            seed=seed,
+            grid_mode=True,
+            max_rails_between_cities=max_rails_between_cities,
+            max_rail_pairs_in_city=max_rails_in_city
+        ),
+        line_generator=sparse_line_generator(),
+        number_of_agents=nAgents,
+        obs_builder_object=TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv())
+    )
 
-# Different agent types (trains) with different speeds.
-speed_ration_map = {1.: 0.25,  # Fast passenger train
-                    1. / 2.: 0.25,  # Fast freight train
-                    1. / 3.: 0.25,  # Slow commuter train
-                    1. / 4.: 0.25}  # Slow freight train
-
-env = RailEnv(width=100,
-              height=100,
-              rail_generator=sparse_rail_generator(max_num_cities=30,
-                                                   # Number of cities in map (where train stations are)
-                                                   seed=14,  # Random seed
-                                                   grid_mode=False,
-                                                   max_rails_between_cities=2,
-                                                   max_rails_in_city=8,
-                                                   ),
-              schedule_generator=sparse_schedule_generator(speed_ration_map),
-              number_of_agents=100,
-              malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
-              # Malfunction data generator
-              obs_builder_object=GlobalObsForRailEnv(),
-              remove_agents_at_target=True,
-              record_steps=True
-              )
-
+init_observation = env.reset()
 # RailEnv.DEPOT_POSITION = lambda agent, agent_handle : (agent_handle % env.height,0)
 
 env_renderer = RenderTool(env, gl="PILSVG",
@@ -133,4 +130,4 @@ for step in range(500):
         break
 
 print('Episode: Steps {}\t Score = {}'.format(step, score))
-env.save_episode("saved_episode_2.mpk")
+RailEnvPersister.save(env, "saved_episode_2.pkl")
