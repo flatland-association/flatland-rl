@@ -2,6 +2,7 @@ from typing import List, NamedTuple
 
 from IPython import display
 from ipycanvas import canvas
+
 from flatland.envs.rail_env import RailEnvActions
 from flatland.utils.rendertools import RenderTool
 
@@ -110,7 +111,7 @@ class EnvCanvas():
 
     def render(self):
         self.oRT.render_env(show_rowcols=True, show_inactive_agents=False, show_observations=False)
-        self.oCan.put_image_data(self.oRT.get_image()[:,:,0:3])
+        self.oCan.put_image_data(self.oRT.get_image()[:, :, 0:3])
 
     def step(self):
         dAction = self.behaviour.getActions()
