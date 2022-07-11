@@ -44,6 +44,11 @@ test-py38:
     script:
         - xvfb-run tox -v --recreate -e py38
 
+test-notebooks:
+    <<: *test-setup
+    script:
+        - xvfb-run tox -v --recreate -e notebooks
+
 test-examples:
     <<: *test-setup
     script:
@@ -89,6 +94,7 @@ profiling:
     dependencies:
         - test-py38
         - test-py37
+        - test-notebooks
         - test-examples
         - test-coverage
     stage: profiling
@@ -111,6 +117,7 @@ benchmarks:
     dependencies:
         - test-py38
         - test-py37
+        - test-notebooks
         - test-examples
         - test-coverage
     stage: benchmarks
