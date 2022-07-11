@@ -1,5 +1,6 @@
 from typing import List, NamedTuple
 
+import numpy as np
 from IPython import display
 from ipycanvas import canvas
 
@@ -111,7 +112,12 @@ class EnvCanvas():
 
     def render(self):
         self.oRT.render_env(show_rowcols=True, show_inactive_agents=False, show_observations=False)
-        self.oCan.put_image_data(self.oRT.get_image()[:, :, 0:3])
+        gIm = self.oRT.get_image()
+        red_channel = gIm[:, :, 0]
+        blue_channel = gIm[:, :, 1]
+        green_channel = gIm[:, :, 2]
+        image_data = np.stack((red_channel, blue_channel, green_channel), axis=2)
+        self.oCan.put_image_data(image_data)
 
     def step(self):
         dAction = self.behaviour.getActions()
