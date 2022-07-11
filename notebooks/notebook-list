@@ -4,6 +4,5 @@ simple_rendering_demo.ipynb
 flatland_animate.ipynb
 render_episode.ipynb
 scene_editor.ipynb
-test_collision.ipynb
 test_saved_envs.ipynb
 test_service.ipynb
