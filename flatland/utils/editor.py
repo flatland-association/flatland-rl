@@ -11,9 +11,11 @@ from numpy import array
 import flatland.utils.rendertools as rt
 from flatland.core.grid.grid4_utils import mirror
 from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import complex_rail_generator, empty_rail_generator, random_rail_generator
+from flatland.envs.rail_generators import sparse_rail_generator, empty_rail_generator
 from flatland.envs.persistence import RailEnvPersister
 
 class EditorMVC(object):
@@ -24,8 +26,25 @@ class EditorMVC(object):
         """ Create an Editor MVC assembly around a railenv, or create one if None.
         """
         if env is None:
-            env = RailEnv(width=10, height=10, rail_generator=empty_rail_generator(), number_of_agents=0,
-                          obs_builder_object=TreeObsForRailEnv(max_depth=2))
+            nAgents = 3
+            n_cities = 2
+            max_rails_between_cities = 2
+            max_rails_in_city = 4
+            seed = 0
+            env = RailEnv(
+                width=20,
+                height=30,
+                rail_generator=sparse_rail_generator(
+                    max_num_cities=n_cities,
+                    seed=seed,
+                    grid_mode=True,
+                    max_rails_between_cities=max_rails_between_cities,
+                    max_rail_pairs_in_city=max_rails_in_city
+                ),
+                line_generator=sparse_line_generator(),
+                number_of_agents=nAgents,
+                obs_builder_object=TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv())
+            )
 
         env.reset()
 
@@ -93,7 +112,7 @@ class View(object):
         # Number of Agents when regenerating
         self.regen_n_agents = IntSlider(value=1, min=0, max=5, step=1, description="# Agents",
                                         tip="Click regenerate or reset after changing this")
-        self.regen_method = RadioButtons(description="Regen\nMethod", options=["Empty", "Random Cell"])
+        self.regen_method = RadioButtons(description="Regen\nMethod", options=["Empty", "Sparse"])
 
         self.replace_agents = Checkbox(value=True, description="Replace Agents")
 
@@ -456,7 +475,7 @@ class EditorModel(object):
             # Convert the array to a list of tuples
             lrcInterp = list(map(tuple, g2Interp))
         return lrcInterp
-    
+
     def interpolate_path(self, lrcPath):
         lrcPath2 = []  # interpolated version of the path
         rcLast = None
@@ -674,10 +693,8 @@ class EditorModel(object):
 
         if method is None or method == "Empty":
             fnMethod = empty_rail_generator()
-        elif method == "Random Cell":
-            fnMethod = random_rail_generator(cell_type_relative_proportion=[1] * 11)
         else:
-            fnMethod = complex_rail_generator(nr_start_goal=nAgents, nr_extra=20, min_dist=12, seed=int(time.time()))
+            fnMethod = sparse_rail_generator(nr_start_goal=nAgents, nr_extra=20, min_dist=12, seed=int(time.time()))
 
         if env is None:
             self.env = RailEnv(width=self.regen_size_width, height=self.regen_size_height, rail_generator=fnMethod,
@@ -731,9 +748,9 @@ class EditorModel(object):
             if self.selected_agent is None:
                 # Create a new agent and select it.
                 agent = EnvAgent(initial_position=tuple(cell_row_col),
-                    initial_direction=0, 
+                    initial_direction=0,
                     direction=0,
-                    target=tuple(cell_row_col), 
+                    target=tuple(cell_row_col),
                     moving=False,
                     )
                 self.selected_agent = self.env.add_agent(agent)

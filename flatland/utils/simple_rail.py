@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Dict
 
 import numpy as np
 
@@ -44,7 +44,7 @@ def make_simple_rail() -> Tuple[GridTransitionMap, np.array]:
     rail.grid = rail_map
     city_positions = [(0,3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ], 
+                      [( (0, 3), 0 ) ],
                       [( (6, 6), 0 ) ],
                      ]
     city_orientations = [0, 2]
@@ -95,7 +95,7 @@ def make_disconnected_simple_rail() -> Tuple[GridTransitionMap, np.array]:
     rail.grid = rail_map
     city_positions = [(0,3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ], 
+                      [( (0, 3), 0 ) ],
                       [( (6, 6), 0 ) ],
                      ]
     city_orientations = [0, 2]
@@ -143,7 +143,7 @@ def make_simple_rail2() -> Tuple[GridTransitionMap, np.array]:
     rail.grid = rail_map
     city_positions = [(0,3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ], 
+                      [( (0, 3), 0 ) ],
                       [( (6, 6), 0 ) ],
                      ]
     city_orientations = [0, 2]
@@ -192,7 +192,7 @@ def make_simple_rail_unconnected() -> Tuple[GridTransitionMap, np.array]:
     rail.grid = rail_map
     city_positions = [(0,3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ], 
+                      [( (0, 3), 0 ) ],
                       [( (6, 6), 0 ) ],
                      ]
     city_orientations = [0, 2]
@@ -247,7 +247,7 @@ def make_simple_rail_with_alternatives() -> Tuple[GridTransitionMap, np.array]:
     rail.grid = rail_map
     city_positions = [(0,3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ], 
+                      [( (0, 3), 0 ) ],
                       [( (6, 6), 0 ) ],
                      ]
     city_orientations = [0, 2]
@@ -257,10 +257,10 @@ def make_simple_rail_with_alternatives() -> Tuple[GridTransitionMap, np.array]:
                    }
     optionals = {'agents_hints': agents_hints}
     return rail, rail_map, optionals
-    
 
 
-def make_invalid_simple_rail() -> Tuple[GridTransitionMap, np.array]:
+
+def make_invalid_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict[str, str]]:
     # We instantiate a very simple rail network on a 7x10 grid:
     #        |
     #        |
@@ -297,7 +297,7 @@ def make_invalid_simple_rail() -> Tuple[GridTransitionMap, np.array]:
     rail.grid = rail_map
     city_positions = [(0,3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ], 
+                      [( (0, 3), 0 ) ],
                       [( (6, 6), 0 ) ],
                      ]
     city_orientations = [0, 2]
@@ -311,7 +311,7 @@ def make_invalid_simple_rail() -> Tuple[GridTransitionMap, np.array]:
 def make_oval_rail() -> Tuple[GridTransitionMap, np.array]:
     transitions = RailEnvTransitions()
     cells = transitions.transition_list
-    
+
     empty = cells[0]
     vertical_straight = cells[1]
     horizontal_straight = transitions.rotate_transition(vertical_straight, 90)

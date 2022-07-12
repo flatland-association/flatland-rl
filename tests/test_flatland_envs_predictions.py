@@ -140,7 +140,7 @@ def test_shortest_path_predictor(rendering=False):
 
     env.reset(False, False)
     env.distance_map._compute(env.agents, env.rail)
-    
+
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
     for _ in range(max([agent.earliest_departure for agent in env.agents])):
         env.step({}) # DO_NOTHING for all agents
@@ -252,7 +252,7 @@ def test_shortest_path_predictor(rendering=False):
         "directions {}, expected {}".format(directions, expected_directions)
 
 
-def test_shortest_path_predictor_conflicts(rendering=False):
+def test_shortest_path_predictor_conflicts(rendering=True):
     rail, rail_map, optionals = make_invalid_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
@@ -290,7 +290,6 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     env.agents[1]._set_state(TrainState.MOVING)
 
     observations = env._get_observations()
-
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")

@@ -1,5 +1,4 @@
 """Rail generators (infrastructure manager, "Infrastrukturbetreiber")."""
-import sys
 import warnings
 from typing import Callable, Tuple, Optional, Dict, List
 
@@ -7,16 +6,14 @@ import numpy as np
 from numpy.random.mtrand import RandomState
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.grid4_utils import get_direction, mirror, direction_to_point
-from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
-from flatland.core.grid.grid_utils import distance_on_rail, IntVector2DArray, IntVector2D, \
+from flatland.core.grid.grid4_utils import direction_to_point
+from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D, \
     Vec2dOperations
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs import persistence
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes, align_cell_to_city
-from flatland.envs import persistence
-
 
 RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
 """ A rail generator returns a RailGenerator Product, which is just
@@ -28,28 +25,27 @@ RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
 
 class RailGen(object):
     """ Base class for RailGen(erator) replacement
-    
+
         WIP to replace bare generators with classes / objects without unnamed local variables
         which prevent pickling.
-    """ 
+    """
+
     def __init__(self, *args, **kwargs):
         """ constructor to record any state to be reused in each "generation"
         """
         pass
 
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                  np_random: RandomState = None) -> RailGeneratorProduct:
+                 np_random: RandomState = None) -> RailGeneratorProduct:
         pass
 
     def __call__(self, *args, **kwargs) -> RailGeneratorProduct:
         return self.generate(*args, **kwargs)
 
 
-
-
-
 def empty_rail_generator() -> RailGenerator:
     return EmptyRailGen()
+
 
 class EmptyRailGen(RailGen):
     """
@@ -58,58 +54,13 @@ class EmptyRailGen(RailGen):
     """
 
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                  np_random: RandomState = None) -> RailGenerator:
+                 np_random: RandomState = None) -> RailGenerator:
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         rail_array = grid_map.grid
         rail_array.fill(0)
 
         return grid_map, None
-
-
-def rail_from_manual_specifications_generator(rail_spec, optionals):
-    """
-    Utility to convert a rail given by manual specification as a map of tuples
-    (cell_type, rotation), to a transition map with the correct 16-bit
-    transitions specifications.
-
-    Parameters
-    ----------
-    rail_spec : list of list of tuples
-        List (rows) of lists (columns) of tuples, each specifying a rail_spec_of_cell for
-        the RailEnv environment as (cell_type, rotation), with rotation being
-        clock-wise and in [0, 90, 180, 270].
-
-    Returns
-    -------
-    function
-        Generator function that always returns a GridTransitionMap object with
-        the matrix of correct 16-bit bitmaps for each rail_spec_of_cell.
-    """
-
-    def generator(width: int, height: int, num_agents: int, num_resets: int = 0,
-                  np_random: RandomState = None) -> RailGenerator:
-        rail_env_transitions = RailEnvTransitions()
-
-        height = len(rail_spec)
-        width = len(rail_spec[0])
-        rail = GridTransitionMap(width=width, height=height, transitions=rail_env_transitions)
-
-        for r in range(height):
-            for c in range(width):
-                rail_spec_of_cell = rail_spec[r][c]
-                index_basic_type_of_cell_ = rail_spec_of_cell[0]
-                rotation_cell_ = rail_spec_of_cell[1]
-                if index_basic_type_of_cell_ < 0 or index_basic_type_of_cell_ >= len(rail_env_transitions.transitions):
-                    print("ERROR - invalid rail_spec_of_cell type=", index_basic_type_of_cell_)
-                    return []
-                basic_type_of_cell_ = rail_env_transitions.transitions[index_basic_type_of_cell_]
-                effective_transition_cell = rail_env_transitions.rotate_transition(basic_type_of_cell_, rotation_cell_)
-                rail.set_transitions((r, c), effective_transition_cell)
-
-        return [rail, optionals]
-
-    return generator
 
 
 def rail_from_file(filename, load_from_package=None) -> RailGenerator:
@@ -143,13 +94,14 @@ def rail_from_file(filename, load_from_package=None) -> RailGenerator:
 
     return generator
 
+
 class RailFromGridGen(RailGen):
     def __init__(self, rail_map, optionals=None):
         self.rail_map = rail_map
         self.optionals = optionals
 
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                  np_random: RandomState = None) -> RailGenerator:
+                 np_random: RandomState = None) -> RailGeneratorProduct:
         return self.rail_map, self.optionals
 
 
@@ -160,10 +112,11 @@ def rail_from_grid_transition_map(rail_map, optionals=None) -> RailGenerator:
 def sparse_rail_generator(*args, **kwargs):
     return SparseRailGen(*args, **kwargs)
 
+
 class SparseRailGen(RailGen):
 
     def __init__(self, max_num_cities: int = 2, grid_mode: bool = False, max_rails_between_cities: int = 2,
-                          max_rail_pairs_in_city: int = 2, seed=None) -> RailGenerator:
+                 max_rail_pairs_in_city: int = 2, seed=None) -> RailGenerator:
         """
         Generates railway networks with cities and inner city rails
 
@@ -191,9 +144,8 @@ class SparseRailGen(RailGen):
         self.max_rail_pairs_in_city = max_rail_pairs_in_city
         self.seed = seed
 
-
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                  np_random: RandomState = None) -> RailGenerator:
+                 np_random: RandomState = None) -> RailGenerator:
         """
 
         Parameters
@@ -220,29 +172,30 @@ class SparseRailGen(RailGen):
         if self.seed is not None:
             np_random = RandomState(self.seed)
         elif np_random is None:
-            np_random = RandomState(np.random.randint(2**32))
-            
+            np_random = RandomState(np.random.randint(2 ** 32))
+
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
 
         # NEW : SCHED CONST (Pairs of rails (1,2,3 pairs))
-        min_nr_rail_pairs_in_city = 1 # (min pair must be 1)
-        rail_pairs_in_city = min_nr_rail_pairs_in_city if self.max_rail_pairs_in_city < min_nr_rail_pairs_in_city else self.max_rail_pairs_in_city # (pairs can be 1,2,3)
-        rails_between_cities = (rail_pairs_in_city*2) if self.max_rails_between_cities > (rail_pairs_in_city*2) else self.max_rails_between_cities
+        min_nr_rail_pairs_in_city = 1  # (min pair must be 1)
+        rail_pairs_in_city = min_nr_rail_pairs_in_city if self.max_rail_pairs_in_city < min_nr_rail_pairs_in_city else self.max_rail_pairs_in_city  # (pairs can be 1,2,3)
+        rails_between_cities = (rail_pairs_in_city * 2) if self.max_rails_between_cities > (
+                rail_pairs_in_city * 2) else self.max_rails_between_cities
 
         # We compute the city radius by the given max number of rails it can contain.
         # The radius is equal to the number of tracks divided by 2
         # We add 2 cells to avoid that track lenght is to short
         city_padding = 2
         # We use ceil if we get uneven numbers of city radius. This is to guarantee that all rails fit within the city.
-        city_radius = int(np.ceil((rail_pairs_in_city*2) / 2)) + city_padding
+        city_radius = int(np.ceil((rail_pairs_in_city * 2) / 2)) + city_padding
         vector_field = np.zeros(shape=(height, width)) - 1.
 
         # Calculate the max number of cities allowed
         # and reduce the number of cities to build to avoid problems
         max_feasible_cities = min(self.max_num_cities,
                                   ((height - 2) // (2 * (city_radius + 1))) * ((width - 2) // (2 * (city_radius + 1))))
-        
+
         if max_feasible_cities < 2:
             # sys.exit("[ABORT] Cannot fit more than one city in this map, no feasible environment possible! Aborting.")
             raise ValueError("ERROR: Cannot fit more than one city in this map, no feasible environment possible!")
@@ -250,18 +203,18 @@ class SparseRailGen(RailGen):
         # Evenly distribute cities
         if self.grid_mode:
             city_positions = self._generate_evenly_distr_city_positions(max_feasible_cities, city_radius, width,
-                                                                   height)
+                                                                        height)
         # Distribute cities randomlz
         else:
             city_positions = self._generate_random_city_positions(max_feasible_cities, city_radius, width, height,
-                                                             np_random=np_random)
+                                                                  np_random=np_random)
         # reduce num_cities if less were generated in random mode
         num_cities = len(city_positions)
         # If random generation failed just put the cities evenly
         if num_cities < 2:
             warnings.warn("[WARNING] Changing to Grid mode to place at least 2 cities.")
             city_positions = self._generate_evenly_distr_city_positions(max_feasible_cities, city_radius, width,
-                                                                   height)
+                                                                        height)
         num_cities = len(city_positions)
         # Set up connection points for all cities
         inner_connection_points, outer_connection_points, city_orientations, city_cells = \
@@ -271,13 +224,13 @@ class SparseRailGen(RailGen):
 
         # Connect the cities through the connection points
         inter_city_lines = self._connect_cities(city_positions, outer_connection_points, city_cells,
-                                           rail_trans, grid_map)
+                                                rail_trans, grid_map)
 
         # Build inner cities
         free_rails = self._build_inner_cities(city_positions, inner_connection_points,
-                                         outer_connection_points,
-                                         rail_trans,
-                                         grid_map)
+                                              outer_connection_points,
+                                              rail_trans,
+                                              grid_map)
 
         # Populate cities
         train_stations = self._set_trainstation_positions(city_positions, city_radius, free_rails)
@@ -332,15 +285,15 @@ class SparseRailGen(RailGen):
             point_index = np_random.randint(num_allowed_points)
             row = int(allowed_indexes[0][point_index])
             col = int(allowed_indexes[1][point_index])
-                                    
-            # Need to block city radius and extra margin so that next sampling is correct                                    
+
+            # Need to block city radius and extra margin so that next sampling is correct
             # Clipping handles the case for negative indexes being generated
-            row_start = max(0, row - 2 * city_radius_pad1)                
+            row_start = max(0, row - 2 * city_radius_pad1)
             col_start = max(0, col - 2 * city_radius_pad1)
             row_end = row + 2 * city_radius_pad1 + 1
             col_end = col + 2 * city_radius_pad1 + 1
 
-            allowed_grid[row_start : row_end, col_start : col_end] = 0
+            allowed_grid[row_start: row_end, col_start: col_end] = 0
 
             city_positions.append((row, col))
 
@@ -543,9 +496,9 @@ class SparseRailGen(RailGen):
         for current_city_idx in np.arange(len(city_positions)):
             closest_neighbours = self._closest_neighbour_in_grid4_directions(current_city_idx, city_positions)
             for out_direction in grid4_directions:
-                
+
                 neighbour_idx = self.get_closest_neighbour_for_direction(closest_neighbours, out_direction)
-                
+
                 for city_out_connection_point in connection_points[current_city_idx][out_direction]:
 
                     min_connection_dist = np.inf
@@ -563,7 +516,7 @@ class SparseRailGen(RailGen):
                                                         avoid_rail=True,
                                                         forbidden_cells=city_cells)
                     if len(new_line) == 0:
-                        warnings.warn("[WARNING] No line added between stations")                                                    
+                        warnings.warn("[WARNING] No line added between stations")
                     elif new_line[-1] != neighbour_connection_point or new_line[0] != city_out_connection_point:
                         warnings.warn("[WARNING] Unable to connect requested stations")
                     all_paths.extend(new_line)
@@ -606,9 +559,11 @@ class SparseRailGen(RailGen):
 
         return closest_neighbours[(out_direction + 2) % 4]  # clockwise
 
-    def _build_inner_cities(self, city_positions: IntVector2DArray, inner_connection_points: List[List[List[IntVector2D]]],
+    def _build_inner_cities(self, city_positions: IntVector2DArray,
+                            inner_connection_points: List[List[List[IntVector2D]]],
                             outer_connection_points: List[List[List[IntVector2D]]], rail_trans: RailEnvTransitions,
-                            grid_map: GridTransitionMap) -> Tuple[List[IntVector2DArray], List[List[List[IntVector2D]]]]:
+                            grid_map: GridTransitionMap) -> Tuple[
+        List[IntVector2DArray], List[List[List[IntVector2D]]]]:
         """
         Set the parallel tracks within the city. The center track of the city is of the length of the city, the lenght
         of the tracks decrease by 2 for every parallel track away from the center
@@ -742,7 +697,8 @@ class SparseRailGen(RailGen):
         for cell in range(rails_to_fix_cnt):
             grid_map.fix_transitions((rails_to_fix[3 * cell], rails_to_fix[3 * cell + 1]), rails_to_fix[3 * cell + 2])
 
-    def _closest_neighbour_in_grid4_directions(self, current_city_idx: int, city_positions: IntVector2DArray) -> List[int]:
+    def _closest_neighbour_in_grid4_directions(self, current_city_idx: int, city_positions: IntVector2DArray) -> List[
+        int]:
         """
         Finds the closest city in each direction of the current city
         Parameters
@@ -850,4 +806,3 @@ class SparseRailGen(RailGen):
         Returns True if the cities overlap and False otherwise
         """
         return np.abs(center_1[0] - center_2[0]) < radius and np.abs(center_1[1] - center_2[1]) < radius
-

@@ -62,6 +62,7 @@ class Grid4Transitions(Transitions):
         # direction/orientation is also limited (2bit). Where the 16bit are only sparse used = number of rail types
         # Those methods can be cached -> the are independant of the railways (env)
         maxsize_allowed = 128  # if NONE -> unlimted cache size will be used
+        '''
         self.get_transitions = \
             lru_cache(maxsize=maxsize_allowed, typed=False)(self.get_transitions)
         self.get_transition = \
@@ -72,10 +73,11 @@ class Grid4Transitions(Transitions):
             lru_cache(maxsize=maxsize_allowed, typed=False)(self.remove_deadends)
         self.rotate_transition = \
             lru_cache(maxsize=maxsize_allowed, typed=False)(self.rotate_transition)
+        '''
 
     # These bits represent all the possible dead ends
     @staticmethod
-    @lru_cache()
+    #@lru_cache()
     def maskDeadEnds():
         return 0b0010000110000100
 
@@ -244,7 +246,7 @@ class Grid4Transitions(Transitions):
         return Grid4TransitionsEnum
 
     @staticmethod
-    @lru_cache()
+    #@lru_cache()
     def has_deadend(cell_transition):
         """
         Checks if one entry can only by exited by a turn-around.
@@ -263,6 +265,6 @@ class Grid4Transitions(Transitions):
         return cell_transition
 
     @staticmethod
-    @lru_cache()
+    #@lru_cache()
     def get_entry_directions(cell_transition) -> List[int]:
         return [(cell_transition >> ((3 - orientation) * 4)) & 15 > 0 for orientation in range(4)]

@@ -34,25 +34,25 @@ before_script:
         - conda update -n root conda -y
         - conda install -c conda-forge tox-conda -y
 
-test-py36:
-    <<: *test-setup
-    script:
-        - xvfb-run tox -v --recreate -e py36
-
 test-py37:
     <<: *test-setup
     script:
         - xvfb-run tox -v --recreate -e py37
 
-test-examples:
+test-py38:
     <<: *test-setup
     script:
-        - xvfb-run tox -v --recreate -e examples
+        - xvfb-run tox -v --recreate -e py38
 
 test-notebooks:
     <<: *test-setup
     script:
         - xvfb-run tox -v --recreate -e notebooks
+
+test-examples:
+    <<: *test-setup
+    script:
+        - xvfb-run tox -v --recreate -e examples
 
 test-docs:
     <<: *test-setup
@@ -92,10 +92,10 @@ build_and_deploy_docs:
 
 profiling:
     dependencies:
-        - test-py36
+        - test-py38
         - test-py37
-        - test-examples
         - test-notebooks
+        - test-examples
         - test-coverage
     stage: profiling
     only:
@@ -115,10 +115,10 @@ profiling:
 
 benchmarks:
     dependencies:
-        - test-py36
+        - test-py38
         - test-py37
-        - test-examples
         - test-notebooks
+        - test-examples
         - test-coverage
     stage: benchmarks
     only:
