@@ -321,8 +321,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 # Check number of possible transitions for agent and total number of transitions in cell (type)
             cell_transitions = self.env.rail.get_transitions(*position, direction)
             transition_bit = bin(self.env.rail.get_full_transitions(*position))
-            total_transitions = fast_argmax(cell_transitions)
-
+            total_transitions = transition_bit.count("1")
             crossing_found = False
             if int(transition_bit, 2) == int('1000010000100001', 2):
                 crossing_found = True

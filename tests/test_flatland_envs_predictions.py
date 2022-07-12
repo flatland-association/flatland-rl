@@ -5,18 +5,17 @@ import pprint
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.step_utils.states import TrainState
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail, make_simple_rail2, make_invalid_simple_rail
-from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.step_utils.states import TrainState
-
 
 """Test predictions for `flatland` package."""
 
@@ -143,7 +142,7 @@ def test_shortest_path_predictor(rendering=False):
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
     for _ in range(max([agent.earliest_departure for agent in env.agents])):
-        env.step({}) # DO_NOTHING for all agents
+        env.step({})  # DO_NOTHING for all agents
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
@@ -252,7 +251,7 @@ def test_shortest_path_predictor(rendering=False):
         "directions {}, expected {}".format(directions, expected_directions)
 
 
-def test_shortest_path_predictor_conflicts(rendering=True):
+def test_shortest_path_predictor_conflicts(rendering=False):
     rail, rail_map, optionals = make_invalid_simple_rail()
     env = RailEnv(width=rail_map.shape[1],
                   height=rail_map.shape[0],
