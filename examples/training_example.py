@@ -1,3 +1,6 @@
+import getopt
+import sys
+
 import numpy as np
 
 from flatland.envs.line_generators import sparse_line_generator
@@ -5,6 +8,7 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
+from flatland.utils.misc import str2bool
 from flatland.utils.rendertools import RenderTool
 
 
@@ -29,16 +33,6 @@ def create_env():
         obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
     )
     return env
-
-
-np.random.seed(1)
-
-# Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
-# Training on simple small tasks is the best way to get familiar with the environment
-env = create_env()
-env.reset()
-
-env_renderer = RenderTool(env)
 
 
 # Import your own Agent or use RLlib to train agents on Flatland
@@ -76,42 +70,85 @@ class RandomAgent:
         return
 
 
-# Initialize the agent with the parameters corresponding to the environment and observation_builder
-agent = RandomAgent(218, 5)
-n_trials = 5
+def training_example(sleep_for_animation, do_rendering):
+    np.random.seed(1)
 
-# Empty dictionary for all agent action
-action_dict = dict()
-print("Starting Training...")
+    # Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
+    # Training on simple small tasks is the best way to get familiar with the environment
+    env = create_env()
+    env.reset()
 
-for trials in range(1, n_trials + 1):
+    env_renderer = None
+    if do_rendering:
+        env_renderer = RenderTool(env)
 
-    # Reset environment and get initial observations for all agents
-    obs, info = env.reset()
-    for idx in range(env.get_num_agents()):
-        tmp_agent = env.agents[idx]
-        tmp_agent.speed_data["speed"] = 1 / (idx + 1)
-    env_renderer.reset()
-    # Here you can also further enhance the provided observation by means of normalization
-    # See training navigation example in the baseline repository
+    # Initialize the agent with the parameters corresponding to the environment and observation_builder
+    agent = RandomAgent(218, 5)
+    n_trials = 5
 
-    score = 0
-    # Run episode
-    for step in range(500):
-        # Chose an action for each agent in the environment
-        for a in range(env.get_num_agents()):
-            action = agent.act(obs[a])
-            action_dict.update({a: action})
-        # Environment step which returns the observations for all agents, their corresponding
-        # reward and whether their are done
-        next_obs, all_rewards, done, _ = env.step(action_dict)
-        env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
+    # Empty dictionary for all agent action
+    action_dict = dict()
+    print("Starting Training...")
 
-        # Update replay buffer and train agent
-        for a in range(env.get_num_agents()):
-            agent.step((obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a]))
-            score += all_rewards[a]
-        obs = next_obs.copy()
-        if done['__all__']:
-            break
-    print('Episode Nr. {}\t Score = {}'.format(trials, score))
+    for trials in range(1, n_trials + 1):
+
+        # Reset environment and get initial observations for all agents
+        obs, info = env.reset()
+
+        if env_renderer is not None:
+            env_renderer.reset()
+
+        # Here you can also further enhance the provided observation by means of normalization
+        # See training navigation example in the baseline repository
+
+        score = 0
+        # Run episode
+        for step in range(500):
+            # Chose an action for each agent in the environment
+            for a in range(env.get_num_agents()):
+                action = agent.act(obs[a])
+                action_dict.update({a: action})
+            # Environment step which returns the observations for all agents, their corresponding
+            # reward and whether their are done
+            next_obs, all_rewards, done, _ = env.step(action_dict)
+            if env_renderer is not None:
+                env_renderer.render_env(show=True, show_observations=True, show_predictions=False)
+
+            # Update replay buffer and train agent
+            for a in range(env.get_num_agents()):
+                agent.step((obs[a], action_dict[a], all_rewards[a], next_obs[a], done[a]))
+                score += all_rewards[a]
+            obs = next_obs.copy()
+            if done['__all__']:
+                break
+        print('Episode Nr. {}\t Score = {}'.format(trials, score))
+
+    if env_renderer is not None:
+        env_renderer.close_window()
+
+
+def main(args):
+    try:
+        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", "do_rendering=", ""])
+    except getopt.GetoptError as err:
+        print(str(err))  # will print something like "option -a not recognized"
+        sys.exit(2)
+    sleep_for_animation = True
+    do_rendering = True
+    for o, a in opts:
+        if o in ("--sleep-for-animation"):
+            sleep_for_animation = str2bool(a)
+        elif o in ("--do_rendering"):
+            do_rendering = str2bool(a)
+        else:
+            assert False, "unhandled option"
+
+    # execute example
+    training_example(sleep_for_animation, do_rendering)
+
+
+if __name__ == '__main__':
+    if 'argv' in globals():
+        main(argv)
+    else:
+        main(sys.argv[1:])

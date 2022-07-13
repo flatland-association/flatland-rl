@@ -125,19 +125,7 @@ def create_env(custom_obs_builder):
     return env
 
 
-def main(args):
-    try:
-        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", ""])
-    except getopt.GetoptError as err:
-        print(str(err))  # will print something like "option -a not recognized"
-        sys.exit(2)
-    sleep_for_animation = True
-    for o, a in opts:
-        if o in ("--sleep-for-animation"):
-            sleep_for_animation = str2bool(a)
-        else:
-            assert False, "unhandled option"
-
+def custom_observation_example_03_ObservePredictions(sleep_for_animation, do_rendering):
     # Initiate the Predictor
     custom_predictor = ShortestPathPredictorForRailEnv(10)
 
@@ -147,10 +135,12 @@ def main(args):
     # Initiate Environment
     env = create_env(custom_obs_builder)
     obs, info = env.reset()
-    env_renderer = RenderTool(env)
 
-    # We render the initial step and show the obsered cells as colored boxes
-    env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
+    env_renderer = None
+    if do_rendering:
+        env_renderer = RenderTool(env)
+        # We render the initial step and show the obsered cells as colored boxes
+        env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
 
     action_dict = {}
     for step in range(100):
@@ -159,7 +149,8 @@ def main(args):
             action_dict[a] = action
         obs, all_rewards, done, _ = env.step(action_dict)
         print("Rewards: ", all_rewards, "  [done=", done, "]")
-        env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
+        if env_renderer is not None:
+            env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
         if sleep_for_animation:
             time.sleep(0.5)
 
@@ -167,6 +158,28 @@ def main(args):
             print("All done!")
             break
 
+    if env_renderer is not None:
+        env_renderer.close_window()
+
+
+def main(args):
+    try:
+        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", "do_rendering=", ""])
+    except getopt.GetoptError as err:
+        print(str(err))  # will print something like "option -a not recognized"
+        sys.exit(2)
+    sleep_for_animation = True
+    do_rendering = True
+    for o, a in opts:
+        if o in ("--sleep-for-animation"):
+            sleep_for_animation = str2bool(a)
+        elif o in ("--do_rendering"):
+            do_rendering = str2bool(a)
+        else:
+            assert False, "unhandled option"
+
+    # execute example
+    custom_observation_example_03_ObservePredictions(sleep_for_animation, do_rendering)
 
 if __name__ == '__main__':
     if 'argv' in globals():

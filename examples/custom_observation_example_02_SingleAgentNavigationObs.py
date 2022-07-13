@@ -86,33 +86,48 @@ def create_env():
     return env
 
 
-def main(args):
-    try:
-        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", ""])
-    except getopt.GetoptError as err:
-        print(str(err))  # will print something like "option -a not recognized"
-        sys.exit(2)
-    sleep_for_animation = True
-    for o, a in opts:
-        if o in ("--sleep-for-animation"):
-            sleep_for_animation = str2bool(a)
-        else:
-            assert False, "unhandled option"
-
+def custom_observation_example_02_SingleAgentNavigationObs(sleep_for_animation, do_rendering):
     env = create_env()
     obs, info = env.reset()
-    env_renderer = RenderTool(env)
-    env_renderer.render_env(show=True, frames=True, show_observations=True)
+
+    env_renderer = None
+    if do_rendering:
+        env_renderer = RenderTool(env)
+        env_renderer.render_env(show=True, frames=True, show_observations=False)
+
     for step in range(100):
         action = np.argmax(obs[0]) + 1
         obs, all_rewards, done, _ = env.step({0: action})
         print("Rewards: ", all_rewards, "  [done=", done, "]")
-        env_renderer.render_env(show=True, frames=True, show_observations=True)
+
+        if env_renderer is not None:
+            env_renderer.render_env(show=True, frames=True, show_observations=True)
         if sleep_for_animation:
             time.sleep(0.1)
         if done["__all__"]:
             break
-    env_renderer.close_window()
+    if env_renderer is not None:
+        env_renderer.close_window()
+
+
+def main(args):
+    try:
+        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", "do_rendering=", ""])
+    except getopt.GetoptError as err:
+        print(str(err))  # will print something like "option -a not recognized"
+        sys.exit(2)
+    sleep_for_animation = True
+    do_rendering = True
+    for o, a in opts:
+        if o in ("--sleep-for-animation"):
+            sleep_for_animation = str2bool(a)
+        elif o in ("--do_rendering"):
+            do_rendering = str2bool(a)
+        else:
+            assert False, "unhandled option"
+
+    # execute example
+    custom_observation_example_02_SingleAgentNavigationObs(sleep_for_animation, do_rendering)
 
 
 if __name__ == '__main__':

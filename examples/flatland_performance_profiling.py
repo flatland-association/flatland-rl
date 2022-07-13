@@ -95,15 +95,18 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
     return env
 
 
-def run_simulation(env_fast: RailEnv):
+def run_simulation(env_fast: RailEnv, do_rendering):
     agent = RandomAgent(action_size=5)
     max_steps = 200
-    env_renderer = RenderTool(env_fast,
-                              gl="PGL",
-                              show_debug=True,
-                              agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS)
-    env_renderer.set_new_rail()
-    env_renderer.reset()
+
+    env_renderer = None
+    if do_rendering:
+        env_renderer = RenderTool(env_fast,
+                                  gl="PGL",
+                                  show_debug=True,
+                                  agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS)
+        env_renderer.set_new_rail()
+        env_renderer.reset()
     for step in range(max_steps):
 
         # Chose an action for each agent in the environment
@@ -112,14 +115,16 @@ def run_simulation(env_fast: RailEnv):
             action_dict.update({handle: action})
 
         next_obs, all_rewards, done, _ = env_fast.step(action_dict)
+        if env_renderer is not None:
+            env_renderer.render_env(
+                show=True,
+                frames=False,
+                show_observations=True,
+                show_predictions=False
+            )
 
-        env_renderer.render_env(
-            show=True,
-            frames=False,
-            show_observations=True,
-            show_predictions=False
-        )
-    env_renderer.close_window()
+    if env_renderer is not None:
+        env_renderer.close_window()
 
 
 USE_PROFILER = True
@@ -130,6 +135,7 @@ PROFILE_STEP = True
 PROFILE_OBSERVATION = False
 
 RUN_SIMULATION = False
+DO_RENDERING = False
 
 if __name__ == "__main__":
     print("Start ...")
@@ -189,4 +195,4 @@ if __name__ == "__main__":
     print("... end ")
 
     if RUN_SIMULATION:
-        run_simulation(env_fast)
+        run_simulation(env_fast, DO_RENDERING)

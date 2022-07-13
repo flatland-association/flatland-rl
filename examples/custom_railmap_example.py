@@ -1,4 +1,6 @@
+import getopt
 import random
+import sys
 import time
 from typing import Tuple
 
@@ -10,10 +12,8 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.utils.misc import str2bool
 from flatland.utils.rendertools import RenderTool
-
-random.seed(100)
-np.random.seed(100)
 
 
 def custom_rail_map() -> Tuple[GridTransitionMap, np.array]:
@@ -57,16 +57,16 @@ def custom_rail_map() -> Tuple[GridTransitionMap, np.array]:
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    city_positions = [(0,3), (6, 6)]
+    city_positions = [(0, 3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ],
-                      [( (6, 6), 0 ) ],
-                     ]
+        [((0, 3), 0)],
+        [((6, 6), 0)],
+    ]
     city_orientations = [0, 2]
     agents_hints = {'city_positions': city_positions,
                     'train_stations': train_stations,
                     'city_orientations': city_orientations
-                   }
+                    }
     optionals = {'agents_hints': agents_hints}
     return rail, rail_map, optionals
 
@@ -83,11 +83,47 @@ def create_env():
     return env
 
 
-env = create_env()
-env.reset()
-env_renderer = RenderTool(env)
-env_renderer.render_env(show=True, show_observations=False)
-time.sleep(1)
+def custom_railmap_example(sleep_for_animation, do_rendering):
+    random.seed(100)
+    np.random.seed(100)
 
-# uncomment to keep the renderer open
-# input("Press Enter to continue...")
+    env = create_env()
+    env.reset()
+
+    if do_rendering:
+        env_renderer = RenderTool(env)
+        env_renderer.render_env(show=True, show_observations=False)
+        env_renderer.close_window()
+
+    if sleep_for_animation:
+        time.sleep(1)
+
+    # uncomment to keep the renderer open
+    # input("Press Enter to continue...")
+
+
+def main(args):
+    try:
+        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", "do_rendering=", ""])
+    except getopt.GetoptError as err:
+        print(str(err))  # will print something like "option -a not recognized"
+        sys.exit(2)
+    sleep_for_animation = True
+    do_rendering = True
+    for o, a in opts:
+        if o in ("--sleep-for-animation"):
+            sleep_for_animation = str2bool(a)
+        elif o in ("--do_rendering"):
+            do_rendering = str2bool(a)
+        else:
+            assert False, "unhandled option"
+
+    # execute example
+    custom_railmap_example(sleep_for_animation, do_rendering)
+
+
+if __name__ == '__main__':
+    if 'argv' in globals():
+        main(argv)
+    else:
+        main(sys.argv[1:])

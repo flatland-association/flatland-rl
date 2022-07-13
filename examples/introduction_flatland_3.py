@@ -1,19 +1,17 @@
-import numpy as np
 import os
 
+import numpy as np
+
+from flatland.envs.line_generators import sparse_line_generator
 # In Flatland you can use custom observation builders and predicitors
 # Observation builders generate the observation needed by the controller
 # Preditctors can be used to do short time prediction which can help in avoiding conflicts in the network
-from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters, ParamMalfunctionGen
-
+from flatland.envs.malfunction_generators import MalfunctionParameters, ParamMalfunctionGen
 from flatland.envs.observations import GlobalObsForRailEnv
-
 # First of all we import the Flatland rail environment
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env import RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
-from flatland.envs.line_generators import sparse_line_generator
-
 # We also include a renderer because we want to visualize what is going on in the environment
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
@@ -33,6 +31,8 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 # The railway infrastructure can be build using any of the provided generators in env/rail_generators.py
 # Here we use the sparse_rail_generator with the following parameters
 
+DO_RENDERING = False
+
 width = 16 * 7  # With of map
 height = 9 * 7  # Height of map
 nr_trains = 50  # Number of trains that have an assigned task in the env
@@ -49,7 +49,7 @@ rail_generator = sparse_rail_generator(max_num_cities=cities_in_map,
                                        max_rail_pairs_in_city=max_rail_in_cities,
                                        )
 
-#rail_generator = SparseRailGen(max_num_cities=cities_in_map,
+# rail_generator = SparseRailGen(max_num_cities=cities_in_map,
 #                                       seed=seed,
 #                                       grid_mode=grid_distribution_of_cities,
 #                                       max_rails_between_cities=max_rails_between_cities,
@@ -74,7 +74,7 @@ line_generator = sparse_line_generator(speed_ration_map)
 # We can furthermore pass stochastic data to the RailEnv constructor which will allow for stochastic malfunctions
 # during an episode.
 
-stochastic_data = MalfunctionParameters(malfunction_rate=1/10000,  # Rate of malfunction occurence
+stochastic_data = MalfunctionParameters(malfunction_rate=1 / 10000,  # Rate of malfunction occurence
                                         min_duration=15,  # Minimal duration of malfunction
                                         max_duration=50  # Max duration of malfunction
                                         )
@@ -97,11 +97,13 @@ env = RailEnv(width=width,
 env.reset()
 
 # Initiate the renderer
-env_renderer = RenderTool(env,
-                          agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                          show_debug=False,
-                          screen_height=600,  # Adjust these parameters to fit your resolution
-                          screen_width=800)  # Adjust these parameters to fit your resolution
+env_renderer = None
+if DO_RENDERING:
+    env_renderer = RenderTool(env,
+                              agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+                              show_debug=False,
+                              screen_height=600,  # Adjust these parameters to fit your resolution
+                              screen_width=800)  # Adjust these parameters to fit your resolution
 
 
 # The first thing we notice is that some agents don't have feasible paths to their target.
@@ -210,7 +212,7 @@ print("=========================================")
 for agent_idx, agent in enumerate(env.agents):
     print(
         "Agent {} speed is: {:.2f} with the current fractional position being {}/{}".format(
-            agent_idx, agent.speed_counter.speed, agent.speed_counter.counter,agent.speed_counter.max_count))
+            agent_idx, agent.speed_counter.speed, agent.speed_counter.counter, agent.speed_counter.max_count))
 
 # New the agents can also have stochastic malfunctions happening which will lead to them being unable to move
 # for a certain amount of time steps. The malfunction data of the agents can easily be accessed as follows
@@ -246,7 +248,8 @@ for info in information['action_required']:
 print("\nStart episode...")
 
 # Reset the rendering system
-env_renderer.reset()
+if env_renderer is not None:
+    env_renderer.reset()
 
 # Here you can also further enhance the provided observation by means of normalization
 # See training navigation example in the baseline repository
@@ -269,8 +272,10 @@ for step in range(200):
 
     next_obs, all_rewards, done, _ = env.step(action_dict)
 
-    env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
-    env_renderer.gl.save_image('tmp/frames/flatland_frame_{:04d}.png'.format(step))
+    if env_renderer is not None:
+        env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
+        env_renderer.gl.save_image('tmp/frames/flatland_frame_{:04d}.png'.format(step))
+
     frame_step += 1
     # Update replay buffer and train agent
     for a in range(env.get_num_agents()):
@@ -281,3 +286,7 @@ for step in range(200):
     if done['__all__']:
         break
     print('Episode: Steps {}\t Score = {}'.format(step, score))
+
+# close the renderer / rendering window
+if env_renderer is not None:
+    env_renderer.close_window()
