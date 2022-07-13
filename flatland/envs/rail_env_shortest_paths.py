@@ -37,7 +37,7 @@ def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
         Possible move actions (forward,left,right) and the next position/direction they lead to.
         It is not checked that the next cell is free.
     """
-    valid_actions: Set[RailEnvNextAction] = OrderedSet()
+    valid_actions: Set[RailEnvNextAction] = []
     possible_transitions = rail.get_transitions(*agent_position, agent_direction)
     num_transitions = fast_count_nonzero(possible_transitions)
     # Start from the current orientation, and see which transitions are available;
@@ -48,13 +48,13 @@ def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
         exit_direction = (agent_direction + 2) % 4
         if possible_transitions[exit_direction]:
             new_position = get_new_position(agent_position, exit_direction)
-            valid_actions.add(RailEnvNextAction(action, new_position, exit_direction))
+            valid_actions = [(RailEnvNextAction(action, new_position, exit_direction))]
     elif num_transitions == 1:
         action = RailEnvActions.MOVE_FORWARD
         for new_direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
             if possible_transitions[new_direction]:
                 new_position = get_new_position(agent_position, new_direction)
-                valid_actions.add(RailEnvNextAction(action, new_position, new_direction))
+                valid_actions = [(RailEnvNextAction(action, new_position, new_direction))]
     else:
         for new_direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
             if possible_transitions[new_direction]:
@@ -68,7 +68,7 @@ def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
                     raise Exception("Illegal state")
 
                 new_position = get_new_position(agent_position, new_direction)
-                valid_actions.add(RailEnvNextAction(action, new_position, new_direction))
+                valid_actions.append(RailEnvNextAction(action, new_position, new_direction))
     return valid_actions
 
 

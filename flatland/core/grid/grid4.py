@@ -1,9 +1,67 @@
 from enum import IntEnum
+from functools import lru_cache
 from typing import Type, List
 
 import numpy as np
 
 from flatland.core.transitions import Transitions
+
+
+# maxsize=None can be used because the number of possible transition is limited (16 bit encoded) and the
+# direction/orientation is also limited (2bit). Where the 16bit are only sparse used = number of rail types
+# Those methods can be cached -> the are independant of the railways (env)
+@lru_cache(maxsize=128)
+def fast_grid4_get_transitions(cell_transition, orientation):
+    bits = (cell_transition >> ((3 - orientation) * 4))
+    return ((bits >> 3) & 1, (bits >> 2) & 1, (bits >> 1) & 1, (bits) & 1)
+
+
+@lru_cache(maxsize=128)
+def fast_grid4_get_transition(cell_transition, orientation, direction):
+    return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
+
+
+@lru_cache(maxsize=128)
+def fast_grid4_set_transitions(cell_transition, orientation, new_transitions):
+    mask = (1 << ((4 - orientation) * 4)) - (1 << ((3 - orientation) * 4))
+    negmask = ~mask
+
+    new_transitions = \
+        (new_transitions[0] & 1) << 3 | \
+        (new_transitions[1] & 1) << 2 | \
+        (new_transitions[2] & 1) << 1 | \
+        (new_transitions[3] & 1)
+
+    cell_transition = (cell_transition & negmask) | (new_transitions << ((3 - orientation) * 4))
+
+    return cell_transition
+
+
+@lru_cache(maxsize=128)
+def fast_grid4_remove_deadends(cell_transition):
+    """
+    Remove all turn-arounds (e.g. N-S, S-N, E-W,...).
+    """
+    maskDeadEnds = Grid4Transitions.maskDeadEnds()
+    cell_transition &= cell_transition & (~maskDeadEnds) & 0xffff
+    return cell_transition
+
+
+@lru_cache(maxsize=128)
+def fast_grid4_rotate_transition(cell_transition, rotation=0):
+    value = cell_transition
+    rotation = rotation // 90
+    for i in range(4):
+        block_tuple = fast_grid4_get_transitions(value, i)
+        block_tuple = block_tuple[(4 - rotation):] + block_tuple[:(4 - rotation)]
+        value = fast_grid4_set_transitions(value, i, block_tuple)
+
+    # Rotate the 4-bits blocks
+    value = ((value & (2 ** (rotation * 4) - 1)) << ((4 - rotation) * 4)) | (
+        value >> (rotation * 4))
+
+    cell_transition = value
+    return cell_transition
 
 
 class Grid4TransitionsEnum(IntEnum):
@@ -57,8 +115,11 @@ class Grid4Transitions(Transitions):
         # row,col delta for each direction
         self.gDir2dRC = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])
 
-        # These bits represent all the possible dead ends
-        self.maskDeadEnds = 0b0010000110000100
+    # These bits represent all the possible dead ends
+    @staticmethod
+    @lru_cache()
+    def maskDeadEnds():
+        return 0b0010000110000100
 
     def get_type(self):
         return np.uint16
@@ -83,8 +144,7 @@ class Grid4Transitions(Transitions):
             List of the validity of transitions in the cell.
 
         """
-        bits = (cell_transition >> ((3 - orientation) * 4))
-        return ((bits >> 3) & 1, (bits >> 2) & 1, (bits >> 1) & 1, (bits) & 1)
+        return fast_grid4_get_transitions(cell_transition, orientation)
 
     def set_transitions(self, cell_transition, orientation, new_transitions):
         """
@@ -111,18 +171,7 @@ class Grid4Transitions(Transitions):
             `orientation`.
 
         """
-        mask = (1 << ((4 - orientation) * 4)) - (1 << ((3 - orientation) * 4))
-        negmask = ~mask
-
-        new_transitions = \
-            (new_transitions[0] & 1) << 3 | \
-            (new_transitions[1] & 1) << 2 | \
-            (new_transitions[2] & 1) << 1 | \
-            (new_transitions[3] & 1)
-
-        cell_transition = (cell_transition & negmask) | (new_transitions << ((3 - orientation) * 4))
-
-        return cell_transition
+        return fast_grid4_set_transitions(cell_transition, orientation, new_transitions)
 
     def get_transition(self, cell_transition, orientation, direction):
         """
@@ -146,9 +195,10 @@ class Grid4Transitions(Transitions):
             Validity of the requested transition: 0/1 allowed/not allowed.
 
         """
-        return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
+        return fast_grid4_get_transition(cell_transition, orientation, direction)
 
-    def set_transition(self, cell_transition, orientation, direction, new_transition, remove_deadends=False):
+    def set_transition(self, cell_transition, orientation, direction, new_transition,
+                       remove_deadends=False):
         """
         Set the transition bit (1 value) that determines whether an agent
         oriented in direction `orientation` and inside a cell with transitions
@@ -181,7 +231,7 @@ class Grid4Transitions(Transitions):
             cell_transition &= ~(1 << ((4 - 1 - orientation) * 4 + (4 - 1 - direction)))
 
         if remove_deadends:
-            cell_transition = self.remove_deadends(cell_transition)
+            cell_transition = fast_grid4_remove_deadends(cell_transition)
 
         return cell_transition
 
@@ -206,27 +256,18 @@ class Grid4Transitions(Transitions):
 
         """
         # Rotate the individual bits in each block
-        value = cell_transition
-        rotation = rotation // 90
-        for i in range(4):
-            block_tuple = self.get_transitions(value, i)
-            block_tuple = block_tuple[(4 - rotation):] + block_tuple[:(4 - rotation)]
-            value = self.set_transitions(value, i, block_tuple)
-
-        # Rotate the 4-bits blocks
-        value = ((value & (2 ** (rotation * 4) - 1)) << ((4 - rotation) * 4)) | (value >> (rotation * 4))
-
-        cell_transition = value
-        return cell_transition
+        return fast_grid4_rotate_transition(cell_transition, rotation)
 
     def get_direction_enum(self) -> Type[Grid4TransitionsEnum]:
         return Grid4TransitionsEnum
 
-    def has_deadend(self, cell_transition):
+    @staticmethod
+    @lru_cache()
+    def has_deadend(cell_transition):
         """
         Checks if one entry can only by exited by a turn-around.
         """
-        if cell_transition & self.maskDeadEnds > 0:
+        if cell_transition & Grid4Transitions.maskDeadEnds() > 0:
             return True
         else:
             return False
@@ -235,9 +276,9 @@ class Grid4Transitions(Transitions):
         """
         Remove all turn-arounds (e.g. N-S, S-N, E-W,...).
         """
-        cell_transition &= cell_transition & (~self.maskDeadEnds) & 0xffff
-        return cell_transition
+        return fast_grid4_remove_deadends(cell_transition)
 
     @staticmethod
+    @lru_cache()
     def get_entry_directions(cell_transition) -> List[int]:
         return [(cell_transition >> ((3 - orientation) * 4)) & 15 > 0 for orientation in range(4)]

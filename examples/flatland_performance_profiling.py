@@ -1,6 +1,8 @@
 import cProfile
 import pstats
 
+import numpy as np
+
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import MalfunctionParameters, ParamMalfunctionGen
@@ -8,9 +10,22 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
-def get_rail_env(nAgents=70, use_dummy_obs=False, width=60, height=60):
+class RandomAgent:
+    def __init__(self, action_size):
+        self.action_size = action_size
+
+    def act(self, state):
+        """
+        :param state: input is the observation of the agent
+        :return: returns an action
+        """
+        return np.random.choice(np.arange(self.action_size))
+
+
+def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
     # Rail Generator:
 
     num_cities = 5  # Number of cities to place on the map
@@ -80,11 +95,47 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=60, height=60):
     return env
 
 
+def run_simulation(env_fast: RailEnv, do_rendering):
+    agent = RandomAgent(action_size=5)
+    max_steps = 200
+
+    env_renderer = None
+    if do_rendering:
+        env_renderer = RenderTool(env_fast,
+                                  gl="PGL",
+                                  show_debug=True,
+                                  agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS)
+        env_renderer.set_new_rail()
+        env_renderer.reset()
+    for step in range(max_steps):
+
+        # Chose an action for each agent in the environment
+        for handle in range(env_fast.get_num_agents()):
+            action = agent.act(handle)
+            action_dict.update({handle: action})
+
+        next_obs, all_rewards, done, _ = env_fast.step(action_dict)
+        if env_renderer is not None:
+            env_renderer.render_env(
+                show=True,
+                frames=False,
+                show_observations=True,
+                show_predictions=False
+            )
+
+    if env_renderer is not None:
+        env_renderer.close_window()
+
+
 USE_PROFILER = True
 
 PROFILE_CREATE = False
-PROFILE_RESET = True
+PROFILE_RESET = False
+PROFILE_STEP = True
 PROFILE_OBSERVATION = False
+
+RUN_SIMULATION = False
+DO_RENDERING = False
 
 if __name__ == "__main__":
     print("Start ...")
@@ -94,7 +145,7 @@ if __name__ == "__main__":
     print("Create env ... ")
     if PROFILE_CREATE:
         profiler.enable()
-    env_fast = get_rail_env(nAgents=70, use_dummy_obs=True)
+    env_fast = get_rail_env(nAgents=200, use_dummy_obs=False, width=100, height=100)
     if PROFILE_CREATE:
         profiler.disable()
 
@@ -109,28 +160,39 @@ if __name__ == "__main__":
     action_dict = {agent.handle: 0 for agent in env_fast.agents}
 
     print("Step env ... ")
-    env_fast.step(action_dict)
+    if PROFILE_STEP:
+        profiler.enable()
+    for i in range(1):
+        env_fast.step(action_dict)
+    if PROFILE_STEP:
+        profiler.disable()
 
     if PROFILE_OBSERVATION:
         profiler.enable()
 
     print("get observation ... ")
-    env_fast._get_observations()
+    obs = env_fast._get_observations()
 
     if PROFILE_OBSERVATION:
         profiler.disable()
 
     if USE_PROFILER:
-        print("---- tottime")
-        stats = pstats.Stats(profiler).sort_stats('tottime')  # ncalls, 'cumtime'...
-        stats.print_stats(20)
+        if False:
+            print("---- tottime")
+            stats = pstats.Stats(profiler).sort_stats('tottime')  # ncalls, 'cumtime'...
+            stats.print_stats(20)
 
-        print("---- cumtime")
-        stats = pstats.Stats(profiler).sort_stats('cumtime')  # ncalls, 'cumtime'...
-        stats.print_stats(20)
+        if True:
+            print("---- cumtime")
+            stats = pstats.Stats(profiler).sort_stats('cumtime')  # ncalls, 'cumtime'...
+            stats.print_stats(200)
 
-        print("---- ncalls")
-        stats = pstats.Stats(profiler).sort_stats('ncalls')  # ncalls, 'cumtime'...
-        stats.print_stats(200)
+        if False:
+            print("---- ncalls")
+            stats = pstats.Stats(profiler).sort_stats('ncalls')  # ncalls, 'cumtime'...
+            stats.print_stats(200)
 
     print("... end ")
+
+    if RUN_SIMULATION:
+        run_simulation(env_fast, DO_RENDERING)

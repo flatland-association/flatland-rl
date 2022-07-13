@@ -9,10 +9,10 @@ import numpy as np
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_utils import coordinate_to_position
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import complex_rail_generator
-from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.utils.misc import str2bool
 from flatland.utils.ordered_set import OrderedSet
 from flatland.utils.rendertools import RenderTool
@@ -102,19 +102,30 @@ class ObservePredictions(ObservationBuilder):
             self.predictor.set_env(self.env)
 
 
-def main(args):
-    try:
-        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", ""])
-    except getopt.GetoptError as err:
-        print(str(err))  # will print something like "option -a not recognized"
-        sys.exit(2)
-    sleep_for_animation = True
-    for o, a in opts:
-        if o in ("--sleep-for-animation"):
-            sleep_for_animation = str2bool(a)
-        else:
-            assert False, "unhandled option"
+def create_env(custom_obs_builder):
+    nAgents = 3
+    n_cities = 2
+    max_rails_between_cities = 4
+    max_rails_in_city = 2
+    seed = 0
+    env = RailEnv(
+        width=30,
+        height=30,
+        rail_generator=sparse_rail_generator(
+            max_num_cities=n_cities,
+            seed=seed,
+            grid_mode=True,
+            max_rails_between_cities=max_rails_between_cities,
+            max_rail_pairs_in_city=max_rails_in_city
+        ),
+        line_generator=sparse_line_generator(),
+        number_of_agents=nAgents,
+        obs_builder_object=custom_obs_builder
+    )
+    return env
 
+
+def custom_observation_example_03_ObservePredictions(sleep_for_animation, do_rendering):
     # Initiate the Predictor
     custom_predictor = ShortestPathPredictorForRailEnv(10)
 
@@ -122,16 +133,14 @@ def main(args):
     custom_obs_builder = ObservePredictions(custom_predictor)
 
     # Initiate Environment
-    env = RailEnv(width=10, height=10,
-                  rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999,
-                                                        seed=1), schedule_generator=complex_schedule_generator(),
-                  number_of_agents=3, obs_builder_object=custom_obs_builder)
-
+    env = create_env(custom_obs_builder)
     obs, info = env.reset()
-    env_renderer = RenderTool(env)
 
-    # We render the initial step and show the obsered cells as colored boxes
-    env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
+    env_renderer = None
+    if do_rendering:
+        env_renderer = RenderTool(env)
+        # We render the initial step and show the obsered cells as colored boxes
+        env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
 
     action_dict = {}
     for step in range(100):
@@ -140,7 +149,8 @@ def main(args):
             action_dict[a] = action
         obs, all_rewards, done, _ = env.step(action_dict)
         print("Rewards: ", all_rewards, "  [done=", done, "]")
-        env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
+        if env_renderer is not None:
+            env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
         if sleep_for_animation:
             time.sleep(0.5)
 
@@ -148,6 +158,28 @@ def main(args):
             print("All done!")
             break
 
+    if env_renderer is not None:
+        env_renderer.close_window()
+
+
+def main(args):
+    try:
+        opts, args = getopt.getopt(args, "", ["sleep-for-animation=", "do_rendering=", ""])
+    except getopt.GetoptError as err:
+        print(str(err))  # will print something like "option -a not recognized"
+        sys.exit(2)
+    sleep_for_animation = True
+    do_rendering = True
+    for o, a in opts:
+        if o in ("--sleep-for-animation"):
+            sleep_for_animation = str2bool(a)
+        elif o in ("--do_rendering"):
+            do_rendering = str2bool(a)
+        else:
+            assert False, "unhandled option"
+
+    # execute example
+    custom_observation_example_03_ObservePredictions(sleep_for_animation, do_rendering)
 
 if __name__ == '__main__':
     if 'argv' in globals():

@@ -136,11 +136,11 @@ class PILGL(GraphicsLayer):
     def draw_image_xy(self, pil_img, xyPixLeftTop, layer=RAIL_LAYER, ):
 
         # Resize all PIL images just before drawing them
-        # to ensure that resizing doesnt affect the 
+        # to ensure that resizing doesnt affect the
         # recolorizing strategies in place
-        # 
-        # That said : All the code in this file needs 
-        # some serious refactoring -_- to ensure the 
+        #
+        # That said : All the code in this file needs
+        # some serious refactoring -_- to ensure the
         # code style and structure is consitent.
         #                               - Mohanty
         pil_img = pil_img.resize(
@@ -151,7 +151,7 @@ class PILGL(GraphicsLayer):
             pil_mask = pil_img
         else:
             pil_mask = None
-        
+
         self.layers[layer].paste(pil_img, xyPixLeftTop, pil_mask)
 
     def draw_image_row_col(self, pil_img, rcTopLeft, layer=RAIL_LAYER, ):
@@ -550,7 +550,8 @@ class PILSVG(PILGL):
 
             self.draw_image_row_col(pil_track, (row, col), layer=PILGL.RAIL_LAYER)
         else:
-            print("Illegal rail:", row, col, format(binary_trans, "#018b")[2:], binary_trans)
+            print("Can't render - illegal rail or SVG element is undefined:", row, col,
+                  format(binary_trans, "#018b")[2:], binary_trans)
 
         if target is not None:
             if is_selected:
@@ -567,7 +568,7 @@ class PILSVG(PILGL):
                 xy_color_mask = np.all(rgbaImg[:, :, 0:3] - a3BaseColor != 0, axis=2)
             else:
                 xy_color_mask = np.all(rgbaImg[:, :, 0:3] - a3BaseColor == 0, axis=2)
-            
+
             rgbaImg2 = np.copy(rgbaImg)
 
             # Repaint the base color with the new color

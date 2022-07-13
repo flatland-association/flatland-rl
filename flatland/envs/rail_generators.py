@@ -101,7 +101,7 @@ class RailFromGridGen(RailGen):
         self.optionals = optionals
 
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                 np_random: RandomState = None) -> RailGenerator:
+                 np_random: RandomState = None) -> RailGeneratorProduct:
         return self.rail_map, self.optionals
 
 

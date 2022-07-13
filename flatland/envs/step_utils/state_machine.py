@@ -1,6 +1,7 @@
 from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils import env_utils
+from flatland.envs.fast_methods import fast_position_equal
 
 class TrainStateMachine:
     def __init__(self, initial_state=TrainState.WAITING):
