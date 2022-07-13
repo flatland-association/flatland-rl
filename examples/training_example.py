@@ -1,22 +1,41 @@
 import numpy as np
 
-from flatland.envs.observations import TreeObsForRailEnv, LocalObsForRailEnv
+from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import complex_rail_generator
-from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.utils.rendertools import RenderTool
+
+
+def create_env():
+    nAgents = 1
+    n_cities = 2
+    max_rails_between_cities = 2
+    max_rails_in_city = 4
+    seed = 0
+    env = RailEnv(
+        width=30,
+        height=40,
+        rail_generator=sparse_rail_generator(
+            max_num_cities=n_cities,
+            seed=seed,
+            grid_mode=True,
+            max_rails_between_cities=max_rails_between_cities,
+            max_rail_pairs_in_city=max_rails_in_city
+        ),
+        line_generator=sparse_line_generator(),
+        number_of_agents=nAgents,
+        obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
+    )
+    return env
+
 
 np.random.seed(1)
 
 # Use the complex_rail_generator to generate feasible network configurations with corresponding tasks
 # Training on simple small tasks is the best way to get familiar with the environment
-
-TreeObservation = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
-LocalGridObs = LocalObsForRailEnv(view_height=10, view_width=2, center=2)
-env = RailEnv(width=20, height=20,
-              rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=2, min_dist=8, max_dist=99999, seed=1),
-              schedule_generator=complex_schedule_generator(), number_of_agents=3, obs_builder_object=TreeObservation)
+env = create_env()
 env.reset()
 
 env_renderer = RenderTool(env)

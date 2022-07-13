@@ -7,12 +7,13 @@ import os
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters, ParamMalfunctionGen
 
 from flatland.envs.observations import GlobalObsForRailEnv
+
 # First of all we import the Flatland rail environment
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env import RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
-#from flatland.envs.sparse_rail_gen import SparseRailGen
 from flatland.envs.line_generators import sparse_line_generator
+
 # We also include a renderer because we want to visualize what is going on in the environment
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
@@ -77,6 +78,7 @@ stochastic_data = MalfunctionParameters(malfunction_rate=1/10000,  # Rate of mal
                                         min_duration=15,  # Minimal duration of malfunction
                                         max_duration=50  # Max duration of malfunction
                                         )
+
 # Custom observation builder without predictor
 observation_builder = GlobalObsForRailEnv()
 
@@ -90,7 +92,6 @@ env = RailEnv(width=width,
               line_generator=line_generator,
               number_of_agents=nr_trains,
               obs_builder_object=observation_builder,
-              #malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
               malfunction_generator=ParamMalfunctionGen(stochastic_data),
               remove_agents_at_target=True)
 env.reset()
@@ -159,7 +160,7 @@ print("\n Their current statuses are:")
 print("============================")
 
 for agent_idx, agent in enumerate(env.agents):
-    print("Agent {} status is: {} with its current position being {}".format(agent_idx, str(agent.status),
+    print("Agent {} status is: {} with its current position being {}".format(agent_idx, str(agent.state),
                                                                              str(agent.position)))
 
 # The agent needs to take any action [1,2,3] except do_nothing or stop to enter the level
@@ -191,7 +192,7 @@ print("========================================================")
 for agent_id in agents_with_same_start:
     print(
         "Agent {} status is: {} with the current position being {}.".format(
-            agent_id, str(env.agents[agent_id].status),
+            agent_id, str(env.agents[agent_id].state),
             str(env.agents[agent_id].position)))
 
 # As you see only the agents with lower indexes moved. As soon as the cell is free again the agents can attempt
@@ -208,8 +209,8 @@ print("=========================================")
 
 for agent_idx, agent in enumerate(env.agents):
     print(
-        "Agent {} speed is: {:.2f} with the current fractional position being {}".format(
-            agent_idx, agent.speed_data['speed'], agent.speed_data['position_fraction']))
+        "Agent {} speed is: {:.2f} with the current fractional position being {}/{}".format(
+            agent_idx, agent.speed_counter.speed, agent.speed_counter.counter,agent.speed_counter.max_count))
 
 # New the agents can also have stochastic malfunctions happening which will lead to them being unable to move
 # for a certain amount of time steps. The malfunction data of the agents can easily be accessed as follows
@@ -219,7 +220,7 @@ print("========================================")
 for agent_idx, agent in enumerate(env.agents):
     print(
         "Agent {} is OK = {}".format(
-            agent_idx, agent.malfunction_data['malfunction'] < 1))
+            agent_idx, agent.malfunction_handler.in_malfunction))
 
 # Now that you have seen these novel concepts that were introduced you will realize that agents don't need to take
 # an action at every time step as it will only change the outcome when actions are chosen at cell entry.
@@ -257,7 +258,7 @@ frame_step = 0
 
 os.makedirs("tmp/frames", exist_ok=True)
 
-for step in range(500):
+for step in range(200):
     # Chose an action for each agent in the environment
     for a in range(env.get_num_agents()):
         action = controller.act(observations[a])

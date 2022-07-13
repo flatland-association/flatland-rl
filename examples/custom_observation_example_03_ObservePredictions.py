@@ -9,10 +9,10 @@ import numpy as np
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_utils import coordinate_to_position
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import complex_rail_generator
-from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.utils.misc import str2bool
 from flatland.utils.ordered_set import OrderedSet
 from flatland.utils.rendertools import RenderTool
@@ -102,6 +102,29 @@ class ObservePredictions(ObservationBuilder):
             self.predictor.set_env(self.env)
 
 
+def create_env(custom_obs_builder):
+    nAgents = 3
+    n_cities = 2
+    max_rails_between_cities = 4
+    max_rails_in_city = 2
+    seed = 0
+    env = RailEnv(
+        width=30,
+        height=30,
+        rail_generator=sparse_rail_generator(
+            max_num_cities=n_cities,
+            seed=seed,
+            grid_mode=True,
+            max_rails_between_cities=max_rails_between_cities,
+            max_rail_pairs_in_city=max_rails_in_city
+        ),
+        line_generator=sparse_line_generator(),
+        number_of_agents=nAgents,
+        obs_builder_object=custom_obs_builder
+    )
+    return env
+
+
 def main(args):
     try:
         opts, args = getopt.getopt(args, "", ["sleep-for-animation=", ""])
@@ -122,11 +145,7 @@ def main(args):
     custom_obs_builder = ObservePredictions(custom_predictor)
 
     # Initiate Environment
-    env = RailEnv(width=10, height=10,
-                  rail_generator=complex_rail_generator(nr_start_goal=5, nr_extra=1, min_dist=8, max_dist=99999,
-                                                        seed=1), schedule_generator=complex_schedule_generator(),
-                  number_of_agents=3, obs_builder_object=custom_obs_builder)
-
+    env = create_env(custom_obs_builder)
     obs, info = env.reset()
     env_renderer = RenderTool(env)
 

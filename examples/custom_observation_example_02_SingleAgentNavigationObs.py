@@ -8,9 +8,9 @@ import numpy as np
 
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import complex_rail_generator
-from flatland.envs.schedule_generators import complex_schedule_generator
+from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.utils.misc import str2bool
 from flatland.utils.rendertools import RenderTool
 
@@ -63,6 +63,29 @@ class SingleAgentNavigationObs(ObservationBuilder):
         return observation
 
 
+def create_env():
+    nAgents = 1
+    n_cities = 2
+    max_rails_between_cities = 2
+    max_rails_in_city = 4
+    seed = 0
+    env = RailEnv(
+        width=30,
+        height=40,
+        rail_generator=sparse_rail_generator(
+            max_num_cities=n_cities,
+            seed=seed,
+            grid_mode=True,
+            max_rails_between_cities=max_rails_between_cities,
+            max_rail_pairs_in_city=max_rails_in_city
+        ),
+        line_generator=sparse_line_generator(),
+        number_of_agents=nAgents,
+        obs_builder_object=SingleAgentNavigationObs()
+    )
+    return env
+
+
 def main(args):
     try:
         opts, args = getopt.getopt(args, "", ["sleep-for-animation=", ""])
@@ -76,11 +99,7 @@ def main(args):
         else:
             assert False, "unhandled option"
 
-    env = RailEnv(width=7, height=7,
-                  rail_generator=complex_rail_generator(nr_start_goal=10, nr_extra=1, min_dist=5, max_dist=99999,
-                                                        seed=1), schedule_generator=complex_schedule_generator(),
-                  number_of_agents=1, obs_builder_object=SingleAgentNavigationObs())
-
+    env = create_env()
     obs, info = env.reset()
     env_renderer = RenderTool(env)
     env_renderer.render_env(show=True, frames=True, show_observations=True)
