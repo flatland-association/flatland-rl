@@ -62,8 +62,8 @@ class RailEnv(Environment):
     It costs each agent a step_penalty for every time-step taken in the environment. Independent of the movement
     of the agent. Currently all other penalties such as penalty for stopping, starting and invalid actions are set to 0.
 
-    alpha = 1
-    beta = 1
+    alpha = 0
+    beta = 0
     Reward function parameters:
 
     - invalid_action_penalty = 0
