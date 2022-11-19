@@ -2,7 +2,7 @@
 import networkx as nx
 import numpy as np
 
-from typing import List, Tuple
+from typing import List, Tuple, Set
 import graphviz as gv
 
 class MotionCheck(object):
@@ -114,6 +114,20 @@ class MotionCheck(object):
         svSwaps = { v for lvSwap in llvSwaps for v in lvSwap }
         return svSwaps
 
+    def find_swaps2(self) -> Set[Tuple[int, int]]:
+        svSwaps = set()
+        sEdges = self.G.edges()
+
+        for u,v in sEdges:
+            if u == v:
+                #print("self loop", u, v)
+                pass
+            else:
+                if (v, u) in sEdges:
+                    #print("swap", uv)
+                    svSwaps.update([u, v])
+        return svSwaps
+
     def find_same_dest(self):
         """ find groups of agents which are trying to land on the same cell.
             ie there is a gap of one cell between them and they are both landing on it.
@@ -149,7 +163,8 @@ class MotionCheck(object):
 
     def find_conflicts(self):
         svStops = self.find_stops2()  # voluntarily stopped agents - have self-loops
-        svSwaps = self.find_swaps()   # deadlocks - adjacent head-on collisions
+        #svSwaps = self.find_swaps()   # deadlocks - adjacent head-on collisions
+        svSwaps = self.find_swaps2()   # faster version of find_swaps
 
         # Block all swaps and their tree of predessors
         self.svDeadlocked = self.block_preds(svSwaps, color="purple")
