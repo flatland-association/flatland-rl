@@ -4,6 +4,8 @@ from flatland.core.grid.grid_utils import position_to_coordinate
 from flatland.envs.agent_utils import TrainState
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.utils.decorators import enable_infrastructure_lru_cache
+
 
 @lru_cache(maxsize=8)
 def process_illegal_action(action: RailEnvActions):
@@ -22,13 +24,14 @@ def process_do_nothing(state: TrainState, saved_action: RailEnvActions):
         action = RailEnvActions.DO_NOTHING
     return action
 
-
+@enable_infrastructure_lru_cache()
 def process_left_right(action, rail, position, direction):
     if not check_valid_action(action, rail, position, direction):
         action = RailEnvActions.MOVE_FORWARD
     return action
 
 
+@enable_infrastructure_lru_cache()
 def preprocess_action_when_waiting(action, state):
     """
     Set action to DO_NOTHING if in waiting state
@@ -38,6 +41,7 @@ def preprocess_action_when_waiting(action, state):
     return action
 
 
+@enable_infrastructure_lru_cache()
 def preprocess_raw_action(action, state, saved_action):
     """
     Preprocesses actions to handle different situations of usage of action based on context
@@ -50,6 +54,7 @@ def preprocess_raw_action(action, state, saved_action):
 
     return action
 
+@enable_infrastructure_lru_cache()
 def preprocess_moving_action(action, rail, position, direction):
     """
     LEFT/RIGHT is converted to FORWARD if left/right is not available and train is moving

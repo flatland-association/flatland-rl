@@ -1,4 +1,5 @@
 from enum import IntEnum
+from functools import lru_cache
 from typing import NamedTuple
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 
@@ -23,6 +24,8 @@ class RailEnvActions(IntEnum):
     def is_action_valid(cls, action):
         return action in cls._value2member_map_
 
+
+    @lru_cache()
     def is_moving_action(self):
         return self.value in [self.MOVE_RIGHT, self.MOVE_LEFT, self.MOVE_FORWARD]
 

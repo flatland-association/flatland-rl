@@ -1,4 +1,3 @@
-
 import networkx as nx
 import numpy as np
 
@@ -14,7 +13,7 @@ class MotionCheck(object):
         self.G = nx.DiGraph()
         self.nDeadlocks = 0
         self.svDeadlocked = set()
-    
+
 
     def addAgent(self, iAg, rc1, rc2, xlabel=None):
         """ add an agent and its motion as row,col tuples of current and next position.
@@ -77,22 +76,24 @@ class MotionCheck(object):
         lWCC = list(nx.algorithms.components.weakly_connected_components(self.G))
 
         svBlocked = set()
+        reversed_G = None
 
         for oWCC in lWCC:
             #print("Component:", oWCC)
             # Get the node details for this WCC in a subgraph
             Gwcc = self.G.subgraph(oWCC)
-            
+
             # Find all the stops in this chain or tree
             svCompStops = svStops.intersection(Gwcc)
             #print(svCompStops)
 
             if len(svCompStops) > 0:
+                if reversed_G is None:
+                    reversed_G = self.G.reverse()
 
                 # We need to traverse it in reverse - back up the movement edges
-                Gwcc_rev = Gwcc.reverse()
+                Gwcc_rev = reversed_G.subgraph(oWCC)#Gwcc.reverse()
                 for vStop in svCompStops:
-
                     # Find all the agents stopped by vStop by following the (reversed) edges
                     # This traverses a tree - dfs = depth first seearch
                     iter_stops = nx.algorithms.traversal.dfs_postorder_nodes(Gwcc_rev, vStop)
@@ -146,7 +147,7 @@ class MotionCheck(object):
         # The reversed graph allows us to follow directed edges to find affected agents.
         Grev = self.G.reverse()
         for v in svStops:
-            
+
             # Use depth-first-search to find a tree of agents heading toward the blocked cell.
             lvPred = list(nx.traversal.dfs_postorder_nodes(Grev, source=v))
             svBlocked |= set(lvPred)
@@ -159,7 +160,6 @@ class MotionCheck(object):
                     iCount += 1
 
         return svBlocked
-
 
     def find_conflicts(self):
         svStops = self.find_stops2()  # voluntarily stopped agents - have self-loops
@@ -449,8 +449,8 @@ def test_agent_following():
             for v in lvCells ]
     dPos = dict(zip(lvCells, lvCells))
 
-    nx.draw(omc.G, 
-        with_labels=True, arrowsize=20, 
+    nx.draw(omc.G,
+        with_labels=True, arrowsize=20,
         pos=dPos,
         node_color = lColours)
 

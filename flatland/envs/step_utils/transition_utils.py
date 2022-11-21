@@ -2,8 +2,10 @@ from typing import Tuple
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 
+@enable_infrastructure_lru_cache(maxsize=1_000_000)
 def check_action(action, position, direction, rail):
     """
 
@@ -45,6 +47,7 @@ def check_action(action, position, direction, rail):
     return new_direction, transition_valid
 
 
+@enable_infrastructure_lru_cache(maxsize=1_000_000)
 def check_action_on_agent(action, rail, position, direction):
     """
     Parameters

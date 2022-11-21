@@ -12,9 +12,11 @@ from flatland.envs.distance_map import DistanceMap
 from flatland.envs.fast_methods import fast_count_nonzero
 from flatland.envs.rail_env_action import RailEnvActions, RailEnvNextAction
 from flatland.envs.rail_trainrun_data_structures import Waypoint
+from flatland.utils.decorators import enable_infrastructure_lru_cache
 from flatland.utils.ordered_set import OrderedSet
 
 
+@enable_infrastructure_lru_cache()
 def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
                             agent_position: Tuple[int, int],
                             rail: GridTransitionMap) -> Set[RailEnvNextAction]:
@@ -72,6 +74,7 @@ def get_valid_move_actions_(agent_direction: Grid4TransitionsEnum,
     return valid_actions
 
 
+@enable_infrastructure_lru_cache()
 def get_new_position_for_action(
     agent_position: Tuple[int, int],
     agent_direction: Grid4TransitionsEnum,
@@ -135,6 +138,7 @@ def get_new_position_for_action(
                         return new_position, new_direction
 
 
+@enable_infrastructure_lru_cache()
 def get_action_for_move(
     agent_position: Tuple[int, int],
     agent_direction: Grid4TransitionsEnum,

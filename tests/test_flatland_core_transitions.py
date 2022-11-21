@@ -6,6 +6,7 @@ from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid8 import Grid8Transitions
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 
 
 # remove whitespace in string; keep whitespace below for easier reading
@@ -126,22 +127,27 @@ def test_adding_new_valid_transition():
     assert (grid_map.validate_new_transition((5, 6), (5, 5), (5, 6), (10, 10)) is True)
 
     # adding invalid turn
+    send_infrastructure_data_change_signal_to_reset_lru_cache()
     grid_map.grid[(5, 5)] = rail_trans.transitions[2]
     assert (grid_map.validate_new_transition((4, 5), (5, 5), (5, 6), (10, 10)) is False)
 
     # should create #4 -> valid
+    send_infrastructure_data_change_signal_to_reset_lru_cache()
     grid_map.grid[(5, 5)] = rail_trans.transitions[3]
     assert (grid_map.validate_new_transition((4, 5), (5, 5), (5, 6), (10, 10)) is True)
 
     # adding invalid turn
+    send_infrastructure_data_change_signal_to_reset_lru_cache()
     grid_map.grid[(5, 5)] = rail_trans.transitions[7]
     assert (grid_map.validate_new_transition((4, 5), (5, 5), (5, 6), (10, 10)) is False)
 
     # test path start condition
+    send_infrastructure_data_change_signal_to_reset_lru_cache()
     grid_map.grid[(5, 5)] = rail_trans.transitions[0]
     assert (grid_map.validate_new_transition(None, (5, 5), (5, 6), (10, 10)) is True)
 
     # test path end condition
+    send_infrastructure_data_change_signal_to_reset_lru_cache()
     grid_map.grid[(5, 5)] = rail_trans.transitions[0]
     assert (grid_map.validate_new_transition((5, 4), (5, 5), (6, 5), (6, 5)) is True)
 

@@ -5,6 +5,8 @@ from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.step_utils import transition_utils
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.utils.decorators import enable_infrastructure_lru_cache
+
 
 @dataclass(repr=True)
 class AgentTransitionData:
@@ -13,6 +15,7 @@ class AgentTransitionData:
     direction : Grid4Transitions
     preprocessed_action : RailEnvActions
 
+@enable_infrastructure_lru_cache(maxsize=1_000_000)
 def apply_action_independent(action, rail, position, direction):
     """ Apply the action on the train regardless of locations of other trains
         Checks for valid cells to move and valid rail transitions

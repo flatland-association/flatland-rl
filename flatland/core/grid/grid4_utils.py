@@ -1,7 +1,10 @@
+from functools import lru_cache
+
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid_utils import IntVector2D
+from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 
 def get_direction(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
@@ -22,12 +25,18 @@ def get_direction(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
     raise Exception("Could not determine direction {}->{}".format(pos1, pos2))
 
 
+@lru_cache(maxsize=4)
 def mirror(dir):
     return (dir + 2) % 4
 
+
 MOVEMENT_ARRAY = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+
+
+@enable_infrastructure_lru_cache(maxsize=1_000_000)
 def get_new_position(position, movement):
-	return (position[0] + MOVEMENT_ARRAY[movement][0], position[1] + MOVEMENT_ARRAY[movement][1])
+    m = MOVEMENT_ARRAY[movement]
+    return (position[0] + m[0], position[1] + m[1])
 
 
 def direction_to_point(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:

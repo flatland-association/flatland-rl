@@ -63,10 +63,12 @@ class DistanceMap:
 
         """
         self.agents_previous_computation = self.agents
-        self.distance_map = np.inf * np.ones(shape=(len(agents),
-                                                    self.env_height,
-                                                    self.env_width,
-                                                    4))
+        self.distance_map = np.full(shape=(len(agents),
+                                           self.env_height,
+                                           self.env_width,
+                                           4),
+                                    fill_value=np.inf
+                                    )
 
         computed_targets = []
         for i, agent in enumerate(agents):

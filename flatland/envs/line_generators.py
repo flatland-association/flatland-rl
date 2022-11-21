@@ -10,6 +10,7 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.timetable_utils import Line
 from flatland.envs import persistence
+from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 AgentPosition = Tuple[int, int]
 LineGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[int]], Line]
@@ -135,14 +136,14 @@ class SparseLineGen(BaseLineGen):
             else:
                 agent_start_idx = ((2 * np_random.randint(0, 10))) % city2_num_stations
                 agent_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city1_num_stations
-                
+
                 agent_start = train_stations[city2][agent_start_idx]
                 agent_target = train_stations[city1][agent_target_idx]
-                
-                agent_orientation = self.decide_orientation(
-                    rail, agent_start, agent_target, city2_possible_orientations, np_random)    
 
-            
+                agent_orientation = self.decide_orientation(
+                    rail, agent_start, agent_target, city2_possible_orientations, np_random)
+
+
             # agent1 details
             agents_position.append((agent_start[0][0], agent_start[0][1]))
             agents_target.append((agent_target[0][0], agent_target[0][1]))
@@ -188,9 +189,9 @@ def line_from_file(filename, load_from_package=None) -> LineGenerator:
         if (max_episode_steps==0):
             print("This env file has no max_episode_steps (deprecated) - setting to 100")
             max_episode_steps = 100
-            
+
         agents = env_dict["agents"]
-        
+
         # setup with loaded data
         agents_position = [a.initial_position for a in agents]
 
