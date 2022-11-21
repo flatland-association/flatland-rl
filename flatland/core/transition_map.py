@@ -159,7 +159,7 @@ class GridTransitionMap(TransitionMap):
             The cell content int the format of this map's Transitions.
 
         """
-        return self.grid[row][column]
+        return self.grid[(row, column)]
 
     def get_transitions(self, row, column, orientation):
         """
@@ -182,7 +182,7 @@ class GridTransitionMap(TransitionMap):
             List of the validity of transitions in the cell as given by the maps transitions.
 
         """
-        return self.transitions.get_transitions(self.grid[row][column], orientation)
+        return self.transitions.get_transitions(self.grid[(row, column)], orientation)
 
     def set_transitions(self, cell_id, new_transitions):
         """
@@ -204,11 +204,11 @@ class GridTransitionMap(TransitionMap):
         assert len(cell_id) in (2, 3), \
             'GridTransitionMap.set_transitions() ERROR: cell_id tuple must have length 2 or 3.'
         if len(cell_id) == 3:
-            self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transitions(self.grid[cell_id[0]][cell_id[1]],
+            self.grid[cell_id[0:2]] = self.transitions.set_transitions(self.grid[cell_id[0:2]],
                                                                                  cell_id[2],
                                                                                  new_transitions)
         elif len(cell_id) == 2:
-            self.grid[cell_id[0]][cell_id[1]] = new_transitions
+            self.grid[cell_id] = new_transitions
 
     def get_transition(self, cell_id, transition_index):
         """
@@ -236,7 +236,7 @@ class GridTransitionMap(TransitionMap):
 
         assert len(cell_id) == 3, \
             'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
-        return self.transitions.get_transition(self.grid[cell_id[0]][cell_id[1]], cell_id[2], transition_index)
+        return self.transitions.get_transition(self.grid[cell_id[0:2]], cell_id[2], transition_index)
 
     def set_transition(self, cell_id, transition_index, new_transition, remove_deadends=False):
         """
@@ -261,7 +261,7 @@ class GridTransitionMap(TransitionMap):
         assert len(cell_id) == 3, \
             'GridTransitionMap.set_transition() ERROR: cell_id tuple must have length 3.'
         self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transition(
-            self.grid[cell_id[0]][cell_id[1]],
+            self.grid[cell_id[0:2]],
             cell_id[2],
             transition_index,
             new_transition,
