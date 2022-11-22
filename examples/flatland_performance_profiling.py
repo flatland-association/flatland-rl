@@ -1,8 +1,10 @@
 import cProfile
 import pstats
+from typing import Union
 
 import numpy as np
 
+from examples.Timer import Timer
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import MalfunctionParameters, ParamMalfunctionGen
@@ -16,13 +18,17 @@ from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 class RandomAgent:
     def __init__(self, action_size):
         self.action_size = action_size
+        self.rnd_size = 10000000
+        self.random_actions = np.random.choice(np.arange(self.action_size), size=self.rnd_size)
+        self.rnd_cnt = 0
 
     def act(self, state):
         """
         :param state: input is the observation of the agent
         :return: returns an action
         """
-        return np.random.choice(np.arange(self.action_size))
+        self.rnd_cnt += 1
+        return self.random_actions[self.rnd_cnt % self.rnd_size]
 
 
 def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
@@ -107,6 +113,8 @@ def run_simulation(env_fast: RailEnv, do_rendering):
                                   agent_render_variant=AgentRenderVariant.AGENT_SHOWS_OPTIONS)
         env_renderer.set_new_rail()
         env_renderer.reset()
+
+    action_dict = {}
     for step in range(max_steps):
 
         # Chose an action for each agent in the environment
@@ -127,72 +135,61 @@ def run_simulation(env_fast: RailEnv, do_rendering):
         env_renderer.close_window()
 
 
-USE_PROFILER = True
+USE_TIME_PROFILER = True
 
-PROFILE_CREATE = False
-PROFILE_RESET = False
-PROFILE_STEP = True
-PROFILE_OBSERVATION = False
-
-RUN_SIMULATION = False
+RUN_SIMULATION = True
 DO_RENDERING = False
+
+USE_DUMMY_OBS = True
+
+N_AGENTS = 200
+WIDTH = 100
+HEIGHT = 100
+
+
+def start_timer() -> Union[Timer, None]:
+    if USE_TIME_PROFILER:
+        time_profiler = Timer()
+        time_profiler.start()
+        return time_profiler
+    return None
+
+
+def end_timer(label: str, time_profiler: Timer):
+    if time_profiler is None:
+        return
+    print('{:>20} \t {:7.5f}ms'.format(label, time_profiler.end()))
+
+
+def execute_common_flatland():
+    time_profiler = start_timer()
+    env_fast = get_rail_env(nAgents=N_AGENTS, use_dummy_obs=USE_DUMMY_OBS, width=WIDTH, height=HEIGHT)
+    end_timer('Create env', time_profiler)
+
+    time_profiler = start_timer()
+    env_fast.reset(random_seed=1)
+    end_timer('Reset env', time_profiler)
+
+    time_profiler = start_timer()
+    action_dict = {agent.handle: 0 for agent in env_fast.agents}
+    end_timer('Build actions', time_profiler)
+
+    time_profiler = start_timer()
+    for i in range(1):
+        env_fast.step(action_dict)
+    end_timer('Step env', time_profiler)
+
+    time_profiler = start_timer()
+    obs = env_fast._get_observations()
+    end_timer('get observations', time_profiler)
+
+    if RUN_SIMULATION:
+        time_profiler = start_timer()
+        run_simulation(env_fast, DO_RENDERING)
+        end_timer('run simulation', time_profiler)
+
 
 if __name__ == "__main__":
     print("Start ...")
-    if USE_PROFILER:
-        profiler = cProfile.Profile()
-
-    print("Create env ... ")
-    if PROFILE_CREATE:
-        profiler.enable()
-    env_fast = get_rail_env(nAgents=200, use_dummy_obs=False, width=100, height=100)
-    if PROFILE_CREATE:
-        profiler.disable()
-
-    print("Reset env ... ")
-    if PROFILE_RESET:
-        profiler.enable()
-    env_fast.reset(random_seed=1)
-    if PROFILE_RESET:
-        profiler.disable()
-
-    print("Make actions ... ")
-    action_dict = {agent.handle: 0 for agent in env_fast.agents}
-
-    print("Step env ... ")
-    if PROFILE_STEP:
-        profiler.enable()
-    for i in range(1):
-        env_fast.step(action_dict)
-    if PROFILE_STEP:
-        profiler.disable()
-
-    if PROFILE_OBSERVATION:
-        profiler.enable()
-
-    print("get observation ... ")
-    obs = env_fast._get_observations()
-
-    if PROFILE_OBSERVATION:
-        profiler.disable()
-
-    if USE_PROFILER:
-        if False:
-            print("---- tottime")
-            stats = pstats.Stats(profiler).sort_stats('tottime')  # ncalls, 'cumtime'...
-            stats.print_stats(20)
-
-        if True:
-            print("---- cumtime")
-            stats = pstats.Stats(profiler).sort_stats('cumtime')  # ncalls, 'cumtime'...
-            stats.print_stats(200)
-
-        if False:
-            print("---- ncalls")
-            stats = pstats.Stats(profiler).sort_stats('ncalls')  # ncalls, 'cumtime'...
-            stats.print_stats(200)
-
-    print("... end ")
-
-    if RUN_SIMULATION:
-        run_simulation(env_fast, DO_RENDERING)
+    execute_common_flatland()
+    print("... end.")
