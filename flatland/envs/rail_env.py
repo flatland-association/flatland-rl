@@ -8,7 +8,8 @@ from typing import List, Optional, Dict, Tuple
 import numpy as np
 from gym.utils import seeding
 
-from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
+from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
+    enable_infrastructure_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -243,7 +244,8 @@ class RailEnv(Environment):
             agent.reset()
         self.active_agents = [i for i in range(len(self.agents))]
 
-    def action_required(self, agent):
+    @enable_infrastructure_lru_cache()
+    def action_required(self, agent_state, is_cell_entry):
         """
         Check if an agent needs to provide an action
 
@@ -257,8 +259,8 @@ class RailEnv(Environment):
         True: Agent needs to provide an action
         False: Agent cannot provide an action
         """
-        return agent.state == TrainState.READY_TO_DEPART or \
-               (agent.state.is_on_map_state() and agent.speed_counter.is_cell_entry)
+        return agent_state == TrainState.READY_TO_DEPART or \
+               (agent_state.is_on_map_state() and is_cell_entry)
 
     def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
               random_seed: int = None) -> Tuple[Dict, Dict]:
@@ -462,7 +464,8 @@ class RailEnv(Environment):
                     state - State from the trains's state machine
         """
         info_dict = {
-            'action_required': {i: self.action_required(agent) for i, agent in enumerate(self.agents)},
+            'action_required': {i: self.action_required(agent.state, agent.speed_counter.is_cell_entry)
+                                for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
             },
