@@ -1,5 +1,5 @@
 """Malfunction generators for rail systems"""
-
+from functools import lru_cache
 from typing import Callable, NamedTuple, Optional, Tuple
 
 import numpy as np
@@ -8,7 +8,6 @@ from numpy.random.mtrand import RandomState
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs import persistence
-
 
 # why do we have both MalfunctionParameters and MalfunctionProcessData - they are both the same!
 MalfunctionParameters = NamedTuple('MalfunctionParameters',
@@ -21,6 +20,10 @@ Malfunction = NamedTuple('Malfunction', [('num_broken_steps', int)])
 # Why is the return value Optional?  We always return a Malfunction.
 MalfunctionGenerator = Callable[[RandomState, bool], Malfunction]
 
+NBR_CHACHED_RAND = 1_000_000
+
+
+@lru_cache()
 def _malfunction_prob(rate: float) -> float:
     """
     Probability of a single agent to break. According to Poisson process with given rate
@@ -32,25 +35,41 @@ def _malfunction_prob(rate: float) -> float:
     else:
         return 1 - np.exp(-rate)
 
+
+@lru_cache()
+def _make_Malfunction_object(nbr) -> Malfunction:
+    return Malfunction(nbr)
+
+
 class ParamMalfunctionGen(object):
     """ Preserving old behaviour of using MalfunctionParameters for constructor,
-        but returning MalfunctionProcessData in get_process_data.  
+        but returning MalfunctionProcessData in get_process_data.
         Data structure and content is the same.
     """
+
     def __init__(self, parameters: MalfunctionParameters):
-        #self.mean_malfunction_rate = parameters.malfunction_rate
-        #self.min_number_of_steps_broken = parameters.min_duration
-        #self.max_number_of_steps_broken = parameters.max_duration
+        # self.mean_malfunction_rate = parameters.malfunction_rate
+        # self.min_number_of_steps_broken = parameters.min_duration
+        # self.max_number_of_steps_broken = parameters.max_duration
         self.MFP = parameters
 
-    def generate(self, np_random: RandomState) -> Malfunction:
+        self._cached_rand = []
+        self._rand_idx = 0
 
-        if np_random.rand() < _malfunction_prob(self.MFP.malfunction_rate):
+    def generate_rand_numbers(self, np_random: RandomState):
+        if len(self._cached_rand) == 0:
+            self._cached_rand = np_random.rand(NBR_CHACHED_RAND)
+        self._rand_idx += 1
+        rnd = self._cached_rand[self._rand_idx % NBR_CHACHED_RAND]
+        return rnd
+
+    def generate(self, np_random: RandomState) -> Malfunction:
+        if self.generate_rand_numbers(np_random) < _malfunction_prob(self.MFP.malfunction_rate):
             num_broken_steps = np_random.randint(self.MFP.min_duration,
                                                     self.MFP.max_duration + 1) + 1
         else:
             num_broken_steps = 0
-        return Malfunction(num_broken_steps)
+        return _make_Malfunction_object(num_broken_steps)
 
     def get_process_data(self):
         return MalfunctionProcessData(*self.MFP)
@@ -58,19 +77,20 @@ class ParamMalfunctionGen(object):
 
 class NoMalfunctionGen(ParamMalfunctionGen):
     def __init__(self):
-        super().__init__(MalfunctionParameters(0,0,0))
+        super().__init__(MalfunctionParameters(0, 0, 0))
+
 
 class FileMalfunctionGen(ParamMalfunctionGen):
     def __init__(self, env_dict=None, filename=None, load_from_package=None):
         """ uses env_dict if populated, otherwise tries to load from file / package.
         """
         if env_dict is None:
-             env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
+            env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
 
         if env_dict.get('malfunction') is not None:
             oMFP = MalfunctionParameters(*env_dict["malfunction"])
         else:
-            oMFP = MalfunctionParameters(0,0,0)  # no malfunctions
+            oMFP = MalfunctionParameters(0, 0, 0)  # no malfunctions
         super().__init__(oMFP)
 
 
@@ -102,7 +122,6 @@ def no_malfunction_generator() -> Tuple[MalfunctionGenerator, MalfunctionProcess
 
     return generator, MalfunctionProcessData(mean_malfunction_rate, min_number_of_steps_broken,
                                              max_number_of_steps_broken)
-
 
 
 def single_malfunction_generator(earlierst_malfunction: int, malfunction_duration: int) -> Tuple[
@@ -157,7 +176,7 @@ def single_malfunction_generator(earlierst_malfunction: int, malfunction_duratio
 
         # Break an agent that is active at the time of the malfunction
         if (agent.state == TrainState.MOVING or agent.state == TrainState.STOPPED) \
-            and malfunction_calls[agent.handle] >= earlierst_malfunction: #TODO : Dipam : Is this needed?
+            and malfunction_calls[agent.handle] >= earlierst_malfunction:  # TODO : Dipam : Is this needed?
             global_nr_malfunctions += 1
             return Malfunction(malfunction_duration)
         else:
@@ -246,7 +265,7 @@ def malfunction_from_params(parameters: MalfunctionParameters) -> Tuple[Malfunct
     -------
     generator, Tuple[float, int, int] with mean_malfunction_rate, min_number_of_steps_broken, max_number_of_steps_broken
     """
-    
+
     print("DEPRECATED - use ParamMalfunctionGen instead of malfunction_from_params")
 
     mean_malfunction_rate = parameters.malfunction_rate
@@ -272,10 +291,9 @@ def malfunction_from_params(parameters: MalfunctionParameters) -> Tuple[Malfunct
 
         if np_random.rand() < _malfunction_prob(mean_malfunction_rate):
             num_broken_steps = np_random.randint(min_number_of_steps_broken,
-                                                    max_number_of_steps_broken + 1)
+                                                 max_number_of_steps_broken + 1)
             return Malfunction(num_broken_steps)
         return Malfunction(0)
 
     return generator, MalfunctionProcessData(mean_malfunction_rate, min_number_of_steps_broken,
                                              max_number_of_steps_broken)
-
