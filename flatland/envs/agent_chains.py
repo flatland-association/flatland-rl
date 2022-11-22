@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Union
 import graphviz as gv
 
 
@@ -15,6 +15,15 @@ class MotionCheck(object):
         self.G = nx.DiGraph()
         self.nDeadlocks = 0
         self.svDeadlocked = set()
+        self._G_reversed: Union[nx.DiGraph, None] = None
+
+    def get_G_reversed(self):
+        if self._G_reversed is None:
+            self._G_reversed = self.G.reverse()
+        return self._G_reversed
+
+    def reset_G_reversed(self):
+        self._G_reversed = None
 
     def addAgent(self, iAg, rc1, rc2, xlabel=None):
         """ add an agent and its motion as row,col tuples of current and next position.
@@ -90,7 +99,7 @@ class MotionCheck(object):
 
             if len(svCompStops) > 0:
                 if reversed_G is None:
-                    reversed_G = self.G.reverse()
+                    reversed_G = self.get_G_reversed()
 
                 # We need to traverse it in reverse - back up the movement edges
                 Gwcc_rev = reversed_G.subgraph(oWCC)  # Gwcc.reverse()
@@ -145,8 +154,11 @@ class MotionCheck(object):
         """
         iCount = 0
         svBlocked = set()
+        if len(svStops) == 0:
+            return svBlocked
+
         # The reversed graph allows us to follow directed edges to find affected agents.
-        Grev = self.G.reverse()
+        Grev = self.get_G_reversed()
         for v in svStops:
 
             # Use depth-first-search to find a tree of agents heading toward the blocked cell.
@@ -163,6 +175,8 @@ class MotionCheck(object):
         return svBlocked
 
     def find_conflicts(self):
+        self.reset_G_reversed()
+
         svStops = self.find_stops2()  # voluntarily stopped agents - have self-loops
         # svSwaps = self.find_swaps()   # deadlocks - adjacent head-on collisions
         svSwaps = self.find_swaps2()  # faster version of find_swaps
@@ -173,7 +187,7 @@ class MotionCheck(object):
         # Take the union of the above, and find all the predecessors
         # svBlocked = self.find_stop_preds(svStops.union(svSwaps))
 
-        # Just look for the the tree of preds for each voluntarily stopped agent
+        # Just look for the tree of preds for each voluntarily stopped agent
         svBlocked = self.find_stop_preds(svStops)
 
         # iterate the nodes v with their predecessors dPred (dict of nodes->{})
