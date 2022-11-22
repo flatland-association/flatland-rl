@@ -138,7 +138,7 @@ def get_new_position_for_action(
                         return new_position, new_direction
 
 
-@enable_infrastructure_lru_cache()
+@enable_infrastructure_lru_cache(maxsize=4_000_000)
 def get_action_for_move(
     agent_position: Tuple[int, int],
     agent_direction: Grid4TransitionsEnum,

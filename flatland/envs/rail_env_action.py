@@ -3,6 +3,12 @@ from functools import lru_cache
 from typing import NamedTuple
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 
+
+@lru_cache()
+def _is_moving_action(value):
+    return value in [RailEnvActions.MOVE_RIGHT, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD]
+
+
 class RailEnvActions(IntEnum):
     DO_NOTHING = 0  # implies change of direction in a dead-end!
     MOVE_LEFT = 1
@@ -24,10 +30,8 @@ class RailEnvActions(IntEnum):
     def is_action_valid(cls, action):
         return action in cls._value2member_map_
 
-
-    @lru_cache()
     def is_moving_action(self):
-        return self.value in [self.MOVE_RIGHT, self.MOVE_LEFT, self.MOVE_FORWARD]
+        return _is_moving_action(self.value)
 
 
 RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])

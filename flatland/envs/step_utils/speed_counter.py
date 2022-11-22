@@ -1,5 +1,13 @@
+from functools import lru_cache
+
 import numpy as np
 from flatland.envs.step_utils.states import TrainState
+
+
+@lru_cache()
+def _calc_max_count(speed):
+    return int(1.0 / speed) - 1
+
 
 class SpeedCounter:
     def __init__(self, speed):
@@ -12,8 +20,6 @@ class SpeedCounter:
         if state == TrainState.MOVING and old_position is not None:
             self.counter += 1
             self.counter = self.counter % (self.max_count + 1)
-
-            
 
     def __repr__(self):
         return f"speed: {self.speed} \
@@ -39,16 +45,15 @@ class SpeedCounter:
 
     @property
     def max_count(self):
-        return int(1/self._speed) - 1
+        return _calc_max_count(self._speed)
 
     def to_dict(self):
         return {"speed": self._speed,
                 "counter": self.counter}
-    
+
     def from_dict(self, load_dict):
         self._speed = load_dict['speed']
         self.counter = load_dict['counter']
 
     def __eq__(self, other):
         return self._speed == other._speed and self.counter == other.counter
-
