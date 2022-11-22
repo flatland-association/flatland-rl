@@ -53,11 +53,11 @@ class ParamMalfunctionGen(object):
         # self.max_number_of_steps_broken = parameters.max_duration
         self.MFP = parameters
 
-        self._cached_rand = []
+        self._cached_rand = None
         self._rand_idx = 0
 
     def generate_rand_numbers(self, np_random: RandomState):
-        if len(self._cached_rand) == 0:
+        if self._cached_rand is None:
             self._cached_rand = np_random.rand(NBR_CHACHED_RAND)
         self._rand_idx += 1
         rnd = self._cached_rand[self._rand_idx % NBR_CHACHED_RAND]
@@ -66,7 +66,7 @@ class ParamMalfunctionGen(object):
     def generate(self, np_random: RandomState) -> Malfunction:
         if self.generate_rand_numbers(np_random) < _malfunction_prob(self.MFP.malfunction_rate):
             num_broken_steps = np_random.randint(self.MFP.min_duration,
-                                                    self.MFP.max_duration + 1) + 1
+                                                 self.MFP.max_duration + 1) + 1
         else:
             num_broken_steps = 0
         return _make_Malfunction_object(num_broken_steps)
@@ -118,7 +118,7 @@ def no_malfunction_generator() -> Tuple[MalfunctionGenerator, MalfunctionProcess
     max_number_of_steps_broken = 0
 
     def generator(np_random: RandomState = None) -> Malfunction:
-        return Malfunction(0)
+        return _make_Malfunction_object(0)
 
     return generator, MalfunctionProcessData(mean_malfunction_rate, min_number_of_steps_broken,
                                              max_number_of_steps_broken)
@@ -162,11 +162,11 @@ def single_malfunction_generator(earlierst_malfunction: int, malfunction_duratio
             nonlocal malfunction_calls
             global_nr_malfunctions = 0
             malfunction_calls = dict()
-            return Malfunction(0)
+            return _make_Malfunction_object(0)
 
         # No more malfunctions if we already had one, ignore all updates
         if global_nr_malfunctions > 0:
-            return Malfunction(0)
+            return _make_Malfunction_object(0)
 
         # Update number of calls per agent
         if agent.handle in malfunction_calls:
@@ -178,9 +178,9 @@ def single_malfunction_generator(earlierst_malfunction: int, malfunction_duratio
         if (agent.state == TrainState.MOVING or agent.state == TrainState.STOPPED) \
             and malfunction_calls[agent.handle] >= earlierst_malfunction:  # TODO : Dipam : Is this needed?
             global_nr_malfunctions += 1
-            return Malfunction(malfunction_duration)
+            return _make_Malfunction_object(malfunction_duration)
         else:
-            return Malfunction(0)
+            return _make_Malfunction_object(0)
 
     return generator, MalfunctionProcessData(mean_malfunction_rate, min_number_of_steps_broken,
                                              max_number_of_steps_broken)
@@ -236,14 +236,14 @@ def malfunction_from_file(filename: str, load_from_package=None) -> Tuple[Malfun
 
         # Dummy reset function as we don't implement specific seeding here
         if reset:
-            return Malfunction(0)
+            return _make_Malfunction_object(0)
 
         if agent.malfunction_handler.malfunction_down_counter < 1:
             if np_random.rand() < _malfunction_prob(mean_malfunction_rate):
                 num_broken_steps = np_random.randint(min_number_of_steps_broken,
                                                      max_number_of_steps_broken + 1) + 1
-                return Malfunction(num_broken_steps)
-        return Malfunction(0)
+                return _make_Malfunction_object(num_broken_steps)
+        return _make_Malfunction_object(0)
 
     return generator, MalfunctionProcessData(mean_malfunction_rate, min_number_of_steps_broken,
                                              max_number_of_steps_broken)
@@ -287,13 +287,13 @@ def malfunction_from_params(parameters: MalfunctionParameters) -> Tuple[Malfunct
 
         # Dummy reset function as we don't implement specific seeding here
         if reset:
-            return Malfunction(0)
+            return _make_Malfunction_object(0)
 
         if np_random.rand() < _malfunction_prob(mean_malfunction_rate):
             num_broken_steps = np_random.randint(min_number_of_steps_broken,
                                                  max_number_of_steps_broken + 1)
-            return Malfunction(num_broken_steps)
-        return Malfunction(0)
+            return _make_Malfunction_object(num_broken_steps)
+        return _make_Malfunction_object(0)
 
     return generator, MalfunctionProcessData(mean_malfunction_rate, min_number_of_steps_broken,
                                              max_number_of_steps_broken)
