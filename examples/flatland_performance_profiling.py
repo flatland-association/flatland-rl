@@ -1,10 +1,8 @@
-import cProfile
-import pstats
 from typing import Union
 
 import numpy as np
 
-from examples.Timer import Timer
+from flatland.utils.Timer import Timer
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import MalfunctionParameters, ParamMalfunctionGen
