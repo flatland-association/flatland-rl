@@ -161,7 +161,7 @@ def end_timer(label: str, time_profiler: Timer):
     print('{:>20} \t {:7.5f}ms'.format(label, time_profiler.end()))
 
 
-def execute_common_flatland():
+def execute_standard_flatland_application():
     time_profiler = start_timer()
     env_fast = get_rail_env(nAgents=N_AGENTS, use_dummy_obs=USE_DUMMY_OBS, width=WIDTH, height=HEIGHT)
     end_timer('Create env', time_profiler)
@@ -191,5 +191,5 @@ def execute_common_flatland():
 
 if __name__ == "__main__":
     print("Start ...")
-    execute_common_flatland()
+    execute_standard_flatland_application()
     print("... end.")
