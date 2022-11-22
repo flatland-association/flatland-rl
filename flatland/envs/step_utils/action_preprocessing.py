@@ -7,12 +7,12 @@ from flatland.envs.step_utils.transition_utils import check_valid_action
 from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 
-@lru_cache(maxsize=8)
+@lru_cache()
 def process_illegal_action(action: RailEnvActions):
-	if not RailEnvActions.is_action_valid(action):
-		return RailEnvActions.DO_NOTHING
-	else:
-		return RailEnvActions(action)
+    if not RailEnvActions.is_action_valid(action):
+        return RailEnvActions.DO_NOTHING
+    else:
+        return RailEnvActions(action)
 
 
 def process_do_nothing(state: TrainState, saved_action: RailEnvActions):
@@ -24,7 +24,8 @@ def process_do_nothing(state: TrainState, saved_action: RailEnvActions):
         action = RailEnvActions.DO_NOTHING
     return action
 
-@enable_infrastructure_lru_cache()
+
+@enable_infrastructure_lru_cache(maxsize=1_000_000)
 def process_left_right(action, rail, position, direction):
     if not check_valid_action(action, rail, position, direction):
         action = RailEnvActions.MOVE_FORWARD
@@ -53,6 +54,7 @@ def preprocess_raw_action(action, state, saved_action):
         action = process_do_nothing(state, saved_action)
 
     return action
+
 
 @enable_infrastructure_lru_cache()
 def preprocess_moving_action(action, rail, position, direction):
