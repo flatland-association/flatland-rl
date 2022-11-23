@@ -89,7 +89,9 @@ class MotionCheck(object):
         reversed_G = None
 
         for oWCC in lWCC:
-            # print("Component:", oWCC)
+            if (len(oWCC) == 1):
+                continue
+            # print("Component:", len(oWCC), oWCC)
             # Get the node details for this WCC in a subgraph
             Gwcc = self.G.subgraph(oWCC)
 
