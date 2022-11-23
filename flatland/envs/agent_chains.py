@@ -13,14 +13,17 @@ class MotionCheck(object):
 
     def __init__(self):
         self.G = nx.DiGraph()
+        self.Grev = nx.DiGraph()  # reversed graph for finding predecessors
         self.nDeadlocks = 0
         self.svDeadlocked = set()
         self._G_reversed: Union[nx.DiGraph, None] = None
+        
 
     def get_G_reversed(self):
-        if self._G_reversed is None:
-            self._G_reversed = self.G.reverse()
-        return self._G_reversed
+        #if self._G_reversed is None:
+        #    self._G_reversed = self.G.reverse()
+        #return self._G_reversed
+        return self.Grev
 
     def reset_G_reversed(self):
         self._G_reversed = None
@@ -44,6 +47,7 @@ class MotionCheck(object):
         if xlabel:
             self.G.nodes[rc1]["xlabel"] = xlabel
         self.G.add_edge(rc1, rc2)
+        self.Grev.add_edge(rc2, rc1)
 
     def find_stops(self):
         """ find all the stopped agents as a set of rc position nodes
