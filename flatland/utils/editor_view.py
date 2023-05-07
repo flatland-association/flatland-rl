@@ -83,7 +83,7 @@ class View(AbstractView):
     def init_widgets(self):
         # Debug checkbox - enable logging in the Output widget
         self.wDebug = ipywidgets.Checkbox(description="Debug")
-        self.wDebug.value = True
+        self.wDebug.value = False # Change to True to make debugging easier - or click the checkbox
         self.wDebug.observe(self.controller.set_debug, names="value")
 
         # Separate checkbox for mouse move events - they are very verbose
