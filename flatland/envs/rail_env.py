@@ -2,38 +2,33 @@
 Definition of the RailEnv environment.
 """
 import random
-
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
 from gym.utils import seeding
 
-from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
-    enable_infrastructure_lru_cache
-from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs import agent_chains as ac
+from flatland.envs import line_generators as line_gen
+from flatland.envs import malfunction_generators as mal_gen
+from flatland.envs import persistence
+from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.rail_env_action import RailEnvActions
-
-from flatland.envs import malfunction_generators as mal_gen
-from flatland.envs import rail_generators as rail_gen
-from flatland.envs import line_generators as line_gen
-from flatland.envs.timetable_generators import timetable_generator
-from flatland.envs import persistence
-from flatland.envs import agent_chains as ac
 from flatland.envs.fast_methods import fast_position_equal
-
 from flatland.envs.observations import GlobalObsForRailEnv
-
-from flatland.envs.timetable_generators import timetable_generator
-from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
-from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
+from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.envs.timetable_generators import timetable_generator
+from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
+    enable_infrastructure_lru_cache
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
 class RailEnv(Environment):
@@ -196,9 +191,7 @@ class RailEnv(Environment):
 
         self.action_space = [5]
 
-        self._seed()
-        if random_seed:
-            self._seed(seed=random_seed)
+        self._seed(seed=random_seed)
 
         self.agent_positions = None
 
@@ -210,7 +203,7 @@ class RailEnv(Environment):
 
         self.motionCheck = ac.MotionCheck()
 
-    def _seed(self, seed=None):
+    def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
         random.seed(seed)
         self.random_seed = seed
@@ -260,7 +253,7 @@ class RailEnv(Environment):
         False: Agent cannot provide an action
         """
         return agent_state == TrainState.READY_TO_DEPART or \
-               (agent_state.is_on_map_state() and is_cell_entry)
+            (agent_state.is_on_map_state() and is_cell_entry)
 
     def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
               random_seed: int = None) -> Tuple[Dict, Dict]:
