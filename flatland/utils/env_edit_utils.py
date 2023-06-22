@@ -82,6 +82,16 @@ ddEnvSpecs = {
         "liDirs": [1, 3]
     },
 
+        # opposing stations with single alternative path
+        "alternative_needs_pause":{
+            "llrcPaths":  [
+                [(1,0), (1,18), (7,18)],  # across the top
+                [(1,2), (1,4), (3,4), (3, 8), (1,8), (1,12)], # alternative loop below
+                ],
+            "lrcStarts": [ (1,2), (6,18) ],
+            "lrcTargs" : [(6,18), (1,2)],
+            "liDirs" : [1,0]
+            },
     # single spur so one agent needs to wait
     "single_spur": {
         "llrcPaths": [
