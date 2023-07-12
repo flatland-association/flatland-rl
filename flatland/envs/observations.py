@@ -53,6 +53,11 @@ class TreeObsForRailEnv(ObservationBuilder):
         self.predictor = predictor
         self.location_has_target = None
 
+
+    def _transform_observation(self, obs):
+        return obs
+
+
     def reset(self):
         self.location_has_target = {tuple(agent.target): 1 for agent in self.env.agents}
 
@@ -203,7 +208,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         elif agent.state == TrainState.DONE:
             agent_virtual_position = agent.target
         else:
-            return None
+            return self._transform_observation(None)
 
         possible_transitions = self.env.rail.get_transitions(*agent_virtual_position, agent.direction)
         num_transitions = fast_count_nonzero(possible_transitions)
@@ -250,7 +255,7 @@ class TreeObsForRailEnv(ObservationBuilder):
                 root_node_observation.childs[self.tree_explored_actions_char[i]] = -np.inf
         self.env.dev_obs_dict[handle] = visited
 
-        return root_node_observation
+        return self._transform_observation(root_node_observation)
 
     def _explore_branch(self, handle, position, direction, tot_dist, depth):
         """
