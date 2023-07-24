@@ -16,6 +16,27 @@ import copy
 
 from flatland.envs.rail_env import RailEnvActions as REA
 
+"""
+    graph_utils.py - Flatland Graph Representation Utilities
+
+    This uses the following graph representation:
+    - Nodes are either grid nodes or rail nodes
+    - Edges are either grid edges, hold edges or dir edges
+    - Grid nodes are the grid of cells in the RailEnv
+    - Rail nodes are the nodes representing the entry direction to a cell
+    - Grid edges are the edges between grid nodes, to give the grid structure
+    - Hold edges are the edges between grid nodes and rail nodes, to hold a rail to a grid point,
+        and to represent the resource occupied by an agent moving in any direction
+    - Dir edges are the edges between rail nodes, to represent the direction of travel
+
+    So a RailEnv cell has a grid node showing its location, and two or more rail nodes, eg for N or S entry.
+    eg (2,3,0) means row 2, col 3, entry direction north (ie from the south)
+
+    See the notebook "Simple-graph-plot-2022.ipynb" for a simple example.
+
+"""
+
+
 PathInfo = namedtuple("PathInfo", [
     "nStart",
     "nTarget",
@@ -26,14 +47,19 @@ PathInfo = namedtuple("PathInfo", [
 #PathReservation = namedtuple("PathReservation", "nStart nTarget nGridStart nGridTarget lnStep lnPause lnPath lnGridPath lnGridStep")
 
 
-# turn a transition into a string of binary
+
 def trans_int_to_binstr(intTrans):
-    sbinTrans = format(intTrans, "#018b")[2:]
+    """ turn a 16 bit transition int into a string of binary with NESW labels;
+        eg. intTrans=0b1001000000000000
+        returns "N1001_E0000_S0000_W0000"
+    """
+    sbinTrans = format(intTrans, "#018b")[2:] # 18 bits, eg 0b100000000000000001, remove the 0b
     return "_".join(["NESW"[i] + sbinTrans[i*4:(i*4 + 4)] for i in range(0, 4)])
 
 
-# Turn a transition into a 4x4 array of 0s and 1s
+
 def trans_int_to_4x4(intTrans):
+    """ Turn a transition into a 4x4 array of 0s and 1s """
     arrBytes = np.array([intTrans >> 8, intTrans & 0xff], dtype=np.uint8)
     #print(arrBytes)
     arrBool = np.array(np.zeros((4,4)), dtype=bool)
@@ -41,8 +67,9 @@ def trans_int_to_4x4(intTrans):
     arrBool4x4 = arrBool.reshape((4,4))
     return arrBool4x4
 
-# Turn a transition int into a string list, eg EE, EN, SW, WW
+
 def trans_int_to_nesw(intTrans):
+    """ Turn a transition int into a string list, eg EE, EN, SW, WW """
     astrNESW = np.array(list("NESW"))
     a2Trans = trans_int_to_4x4(intTrans)
     lstrTrans = [ 
@@ -52,6 +79,7 @@ def trans_int_to_nesw(intTrans):
     return ",".join(list(np.concatenate(lstrTrans)))
 
 def get_rail_transitions_df(env):
+    """ Unused """
     ll = []
     for rowcol, iTrans in np.ndenumerate(env.rail.grid):
         ll.append([rowcol, iTrans, trans_int_to_binstr(iTrans), trans_int_to_nesw(iTrans)])
@@ -211,7 +239,8 @@ def plotGraphEnv(G, env:RailEnv, aImg, space=0.3, figsize=(8,8),
             edge_color=[edge_colors[deDat[(u,v)]["type"]] for u,v in edgelist],
             nodelist=nodelist,
             node_size=node_size,
-            arrowsize=arrowsize
+            arrowsize=arrowsize,
+            font_size=8,
             )
 
     if show_edge_weights:
