@@ -20,11 +20,15 @@ class ObservationBuilder:
     ObservationBuilder base class.
     """
 
-    def __init__(self):
+    def __init__(self, standardized_observation: Optional[bool] = False):
         self.env = None
+        self.standardize = standardized_observation
 
     def set_env(self, env: Environment):
         self.env: Environment = env
+
+    def set_standardize_observation(self, standardized_observation: bool):
+        self.standardize = standardized_observation
 
     def reset(self):
         """
@@ -60,6 +64,12 @@ class ObservationBuilder:
         Called whenever an observation has to be computed for the `env` environment, possibly
         for each agent independently (agent id `handle`).
 
+        Can make use of the boolean class variable `standardize` to return the observation either
+        in a freely defined structure or in a standardized form (a 1-dimensional array).
+
+        To transform an observation to the standardized form, override the dummy-implementation
+        of the class method `_standardize_observation(self, obs)`.
+
         Parameters
         ----------
         handle : int, optional
@@ -71,6 +81,24 @@ class ObservationBuilder:
             An observation structure, specific to the corresponding environment.
         """
         raise NotImplementedError()
+
+    def _standardize_observation(self, obs):
+        """
+        Transforms the observation to a standardized form. Should be called from within the class method `get` in
+        case the class variable `standardize` is set to True.
+
+        Parameters
+        ----------
+        obs : Any
+            An observation structure
+
+        Returns
+        -------
+        function
+            The observation flattend to a 1-dimensional array.
+        """
+
+        return obs
 
     def _get_one_hot_for_agent_direction(self, agent):
         """Retuns the agent's direction to one-hot encoding."""

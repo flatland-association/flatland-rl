@@ -123,8 +123,8 @@ class SparseLineGen(BaseLineGen):
                                                 (city_orientation[city2] + 2) % 4]
 
                 # Agent 1 : city1 > city2, Agent 2: city2 > city1
-                agent_start_idx = ((2 * np_random.randint(0, 10))) % city1_num_stations
-                agent_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city2_num_stations
+                agent_start_idx = ((2 * np_random.integers(0, 10))) % city1_num_stations
+                agent_target_idx = ((2 * np_random.integers(0, 10)) + 1) % city2_num_stations
 
                 agent_start = train_stations[city1][agent_start_idx]
                 agent_target = train_stations[city2][agent_target_idx]
@@ -134,8 +134,8 @@ class SparseLineGen(BaseLineGen):
 
 
             else:
-                agent_start_idx = ((2 * np_random.randint(0, 10))) % city2_num_stations
-                agent_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city1_num_stations
+                agent_start_idx = ((2 * np_random.integers(0, 10))) % city2_num_stations
+                agent_target_idx = ((2 * np_random.integers(0, 10)) + 1) % city1_num_stations
 
                 agent_start = train_stations[city2][agent_start_idx]
                 agent_target = train_stations[city1][agent_target_idx]

@@ -58,14 +58,14 @@ class ParamMalfunctionGen(object):
 
     def generate_rand_numbers(self, np_random: RandomState):
         if self._cached_rand is None:
-            self._cached_rand = np_random.rand(NBR_CHACHED_RAND)
+            self._cached_rand = np_random.random(NBR_CHACHED_RAND)
         self._rand_idx += 1
         rnd = self._cached_rand[self._rand_idx % NBR_CHACHED_RAND]
         return rnd
 
     def generate(self, np_random: RandomState) -> Malfunction:
         if self.generate_rand_numbers(np_random) < _malfunction_prob(self.MFP.malfunction_rate):
-            num_broken_steps = np_random.randint(self.MFP.min_duration,
+            num_broken_steps = np_random.integers(self.MFP.min_duration,
                                                  self.MFP.max_duration + 1) + 1
         else:
             num_broken_steps = 0

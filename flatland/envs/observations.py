@@ -16,6 +16,10 @@ from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero, fast_pos
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.ordered_set import OrderedSet
 
+from flatland.envs.obs_standardization.flatten_tree_observation_for_rail_env import TreeObsStandardizer
+from flatland.envs.obs_standardization.flatten_global_observation_for_rail_env import GlobalObsStandardizer
+from flatland.envs.obs_standardization.flatten_local_observation_for_rail_env import LocalObsStandardizer
+
 Node = collections.namedtuple('Node', 'dist_own_target_encountered '
                                       'dist_other_target_encountered '
                                       'dist_other_agent_encountered '
@@ -44,8 +48,8 @@ class TreeObsForRailEnv(ObservationBuilder):
 
     tree_explored_actions_char = ['L', 'F', 'R', 'B']
 
-    def __init__(self, max_depth: int, predictor: PredictionBuilder = None):
-        super().__init__()
+    def __init__(self, max_depth: int, predictor: PredictionBuilder = None, standardized_observation: Optional[bool] = False):
+        super().__init__(standardized_observation=standardized_observation)
         self.max_depth = max_depth
         self.observation_dim = 11
         self.location_has_agent = {}
@@ -250,7 +254,14 @@ class TreeObsForRailEnv(ObservationBuilder):
                 root_node_observation.childs[self.tree_explored_actions_char[i]] = -np.inf
         self.env.dev_obs_dict[handle] = visited
 
+        if self.standardize:
+            root_node_observation = self._standardize_observation(root_node_observation)
+
         return root_node_observation
+
+    def _standardize_observation(self, obs):
+
+        return TreeObsStandardizer().standardize_tree_observation(obs, tree_depth=self.max_depth, observation_radius=2)
 
     def _explore_branch(self, handle, position, direction, tot_dist, depth):
         """
@@ -551,8 +562,8 @@ class GlobalObsForRailEnv(ObservationBuilder):
          target and the positions of the other agents targets (flag only, no counter!).
     """
 
-    def __init__(self):
-        super(GlobalObsForRailEnv, self).__init__()
+    def __init__(self, standardized_observation: Optional[bool] = False):
+        super(GlobalObsForRailEnv, self).__init__(standardized_observation=standardized_observation)
 
     def set_env(self, env: Environment):
         super().set_env(env)
@@ -608,8 +619,15 @@ class GlobalObsForRailEnv(ObservationBuilder):
             # fifth channel: all ready to depart on this position
             if other_agent.state.is_off_map_state():
                 obs_agents_state[other_agent.initial_position][4] += 1
-        return self.rail_obs, obs_agents_state, obs_targets
 
+        if self.standardize:
+            return self._standardize_observation((self.rail_obs, obs_agents_state, obs_targets))
+        else:
+            return self.rail_obs, obs_agents_state, obs_targets
+
+    def _standardize_observation(self, obs):
+
+        return GlobalObsStandardizer().standardize_global_observation(obs[0], obs[1], obs[2], self.env.width, self.env.height)
 
 class LocalObsForRailEnv(ObservationBuilder):
     """
@@ -636,9 +654,9 @@ class LocalObsForRailEnv(ObservationBuilder):
     .. deprecated:: 2.0.0
     """
 
-    def __init__(self, view_width, view_height, center):
+    def __init__(self, view_width, view_height, center, standardized_observation: Optional[bool] = False):
 
-        super(LocalObsForRailEnv, self).__init__()
+        super(LocalObsForRailEnv, self).__init__(standardized_observation=standardized_observation)
         self.view_width = view_width
         self.view_height = view_height
         self.center = center
@@ -664,14 +682,17 @@ class LocalObsForRailEnv(ObservationBuilder):
         # agent_rel_pos[0] = agent.position[0] + self.max_padding
         # agent_rel_pos[1] = agent.position[1] + self.max_padding
 
+        # make sure that the agent position passed to field_of_view ist not None (as it is in the beginning)
+        agent_position = agent.position if agent.position is not None else agent.initial_position
+
         # Collect visible cells as set to be plotted
-        visited, rel_coords = self.field_of_view(agent.position, agent.direction, )
+        visited, rel_coords = self.field_of_view(agent_position, agent.direction, )
         local_rail_obs = None
 
         # Add the visible cells to the observed cells
         self.env.dev_obs_dict[handle] = set(visited)
 
-        # Locate observed agents and their coresponding targets
+        # Locate observed agents and their corresponding targets
         local_rail_obs = np.zeros((self.view_height, 2 * self.view_width + 1, 16))
         obs_map_state = np.zeros((self.view_height, 2 * self.view_width + 1, 2))
         obs_other_agents_state = np.zeros((self.view_height, 2 * self.view_width + 1, 4))
@@ -694,7 +715,15 @@ class LocalObsForRailEnv(ObservationBuilder):
             _idx += 1
 
         direction = np.identity(4)[agent.direction]
-        return local_rail_obs, obs_map_state, obs_other_agents_state, direction
+        if self.standardize:
+            return self._standardize_observation((local_rail_obs, obs_map_state, obs_other_agents_state, direction))
+        else:
+            return local_rail_obs, obs_map_state, obs_other_agents_state, direction
+
+    def _standardize_observation(self, obs):
+        return LocalObsStandardizer().standardize_local_observation(obs[0], obs[1], obs[2], obs[3],
+                                                                    self.view_height*(2*self.view_width+1))
+
 
     def get_many(self, handles: Optional[List[int]] = None) -> Dict[
         int, Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
@@ -707,6 +736,7 @@ class LocalObsForRailEnv(ObservationBuilder):
 
     def field_of_view(self, position, direction, state=None):
         # Compute the local field of view for an agent in the environment
+
         data_collection = False
         if state is not None:
             temp_visible_data = np.zeros(shape=(self.view_height, 2 * self.view_width + 1, 16))
