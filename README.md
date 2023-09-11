@@ -8,8 +8,8 @@
 Flatland is a open-source toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (
 or ridiculously large!) gridworlds.
 
-[The official documentation](http://flatland.aicrowd.com/) contains full details about the environment and problem
-statement
+[The official website](https://www.flatland-association.org/) contains full details about the environment and problem
+statement.
 
 Flatland is tested with Python 3.7, 3.8 and 3.9 on modern versions of macOS, Linux and Windows. You may encounter
 problems with graphical rendering if you use WSL.
