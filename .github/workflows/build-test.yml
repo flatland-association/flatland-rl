@@ -1,4 +1,4 @@
-name: Build & Test
+name: Checks
 
 on:
     pull_request:
@@ -9,7 +9,7 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
-    build:
+    test:
         runs-on: ubuntu-22.04
         strategy:
             fail-fast: false
