@@ -13,7 +13,6 @@ statement
 
 Flatland is tested with Python 3.7, 3.8 and 3.9 on modern versions of macOS, Linux and Windows. You may encounter
 problems with graphical rendering if you use WSL.
-Your [contribution is welcome](https://flatland.aicrowd.com/misc/contributing.html) if you can help with this!
 
 🏆 Challenges
 ---
