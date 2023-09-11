@@ -50,7 +50,9 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     git clone git@github.com:flatland-association/flatland-rl.git
     ```
 
-2. Setup a virtual environment using your preferred method (e.g., venv) and activate it.
+2. Setup a virtual environment using your preferred method (e.g. venv) and activate it. Make sure python 3.7, 3.8 and
+   3.9 interpreters are available. Note that if you are using an Apple Macbook with an M1 or M2 processor, you need to
+   use python 3.8 or 3.9.
 
 3. Install the software dependencies using pip:
 
