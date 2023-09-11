@@ -22,14 +22,9 @@ This library was developed specifically for the AIcrowd [Flatland challenges](ht
 📦 Setup
 ---
 
-### Prerequisites (optional)
+### Setup virtual environment (optional)
 
-Install [Anaconda](https://www.anaconda.com/distribution/) and create a new conda environment:
-
-```console
-$ conda create python=3.7 --name flatland-rl
-$ conda activate flatland-rl
-```
+Setup a virtual environment using you preferred method (e.g. venv) and activate it.
 
 ### Stable release
 
