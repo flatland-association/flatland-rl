@@ -23,7 +23,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run lint checks
-                run: tox -e flake8
+                run: tox run -e flake8
 
     test:
         runs-on: ubuntu-22.04
@@ -57,7 +57,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run notebooks
-                run: tox -e notebooks
+                run: tox run -e notebooks
 
     examples:
         runs-on: ubuntu-22.04
@@ -72,7 +72,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run examples
-                run: tox -e examples
+                run: tox run -e examples
 
     docs:
         runs-on: ubuntu-22.04
@@ -87,7 +87,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run docs
-                run: tox -e docs
+                run: tox run -e docs
 
     profiling:
         runs-on: ubuntu-22.04
@@ -102,7 +102,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run profiling
-                run: tox -e profiling
+                run: tox run -e profiling
 
     benchmarks:
         runs-on: ubuntu-22.04
@@ -117,7 +117,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run benchmarks
-                run: tox -e benchmarks
+                run: tox run -e benchmarks
 
 
 
