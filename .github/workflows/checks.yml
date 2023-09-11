@@ -93,7 +93,7 @@ jobs:
                 uses: actions/upload-artifact@v3
                 with:
                     name: docs
-                    path: docs/_build/**/*
+                    path: docs/_build/html
 
     profiling:
         runs-on: ubuntu-22.04
