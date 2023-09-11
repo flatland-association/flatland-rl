@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
     lint:
-        if: ${{ false }}  # disable for now, hasn't run in a while resulting in countless issues
+        if: ${{ false }}  # disabled for now, hasn't run in a while resulting in countless issues
         runs-on: ubuntu-22.04
         steps:
             -   uses: actions/checkout@v3
@@ -45,6 +45,7 @@ jobs:
                 run: tox
 
     notebooks:
+        if: ${{ false }}  # disabled for now, some need custom kernel
         runs-on: ubuntu-22.04
         steps:
             -   uses: actions/checkout@v3
