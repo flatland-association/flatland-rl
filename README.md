@@ -5,18 +5,23 @@
 
 [![Main](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml/badge.svg)](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml)
 
-Flatland is a open-source toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (or ridiculously large!) gridworlds.
+Flatland is a open-source toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (
+or ridiculously large!) gridworlds.
 
-[The official documentation](http://flatland.aicrowd.com/) contains full details about the environment and problem statement
+[The official website](https://www.flatland-association.org/) contains full details about the environment and problem
+statement.
 
-Flatland is tested with Python 3.7, 3.8 and 3.9 on modern versions of macOS, Linux and Windows. You may encounter problems with graphical rendering if you use WSL. Your [contribution is welcome](https://flatland.aicrowd.com/misc/contributing.html) if you can help with this!
+Flatland is tested with Python 3.7, 3.8 and 3.9 on modern versions of macOS, Linux and Windows. You may encounter
+problems with graphical rendering if you use WSL.
 
 🏆 Challenges
 ---
 
-This library was developed specifically for the AIcrowd [Flatland challenges](http://flatland.aicrowd.com/research/top-challenge-solutions.html) in which we strongly encourage you to take part in!
+This library was developed specifically for the
+AIcrowd [Flatland challenges](http://flatland.aicrowd.com/research/top-challenge-solutions.html) in which we strongly
+encourage you to take part in!
 
-- [Flatland 3 Challenge](https://www.aicrowd.com/challenges/flatland-3) - ONGOING!
+- [Flatland 3 Challenge](https://www.aicrowd.com/challenges/flatland-3)
 - [AMLD 2021 Challenge](https://www.aicrowd.com/challenges/flatland)
 - [NeurIPS 2020 Challenge](https://www.aicrowd.com/challenges/neurips-2020-flatland-challenge/)
 - [2019 Challenge](https://www.aicrowd.com/challenges/flatland-challenge)
@@ -32,56 +37,28 @@ Setup a virtual environment using your preferred method (e.g. venv) and activate
 
 Install Flatland from pip:
 
-```console
+```shell
 pip install flatland-rl
 ```
 
 This is the preferred method to install Flatland, as it will always install the most recent stable release.
 
-### From sources
-
-The Flatland code source is available on [Github](https://github.com/flatland-association/flatland-rl).
-
-Clone the public repository:
-
-```console
-git clone git@github.com:flatland-association/flatland-rl.git
-```
-
-Once you have a copy of the source, install it with:
-
-```console
-pip install -e .
-```
-
-### Test installation
-
-Test that the installation works:
-
-```console
-flatland-demo
-```
-
-You can also run the full test suite:
-
-```console
-python setup.py test
-```
-
 👥 Credits
 ---
 
-This library was developed by [SBB](https://www.sbb.ch/en/), [Deutsche Bahn](https://www.deutschebahn.com/), [SNCF](https://www.sncf.com/en), [AIcrowd](https://www.aicrowd.com/) and [numerous contributors](http://flatland.aicrowd.com/misc/credits.html) and AIcrowd research fellows from the AIcrowd community.
+This library was developed
+by [SBB](https://www.sbb.ch/en/), [Deutsche Bahn](https://www.deutschebahn.com/), [SNCF](https://www.sncf.com/en), [AIcrowd](https://www.aicrowd.com/)
+and [numerous contributors](http://flatland.aicrowd.com/misc/credits.html) and AIcrowd research fellows from the AIcrowd
+community.
 
 ➕ Contributions
 ---
-Please follow the [Contribution Guidelines](https://flatland.aicrowd.com/misc/contributing.html) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions!
+Please follow the [Contribution Guidelines](./CONTRIBUTING.md) for more details on how you can successfully contribute
+to the project. We enthusiastically look forward to your contributions!
 
 💬 Communication
 ---
 
-* [Discord Channel](https://discord.com/invite/hCR3CZG)
-* [Discussion Forum](https://discourse.aicrowd.com/c/neurips-2020-flatland-challenge)
 * [Issue Tracker](https://github.com/flatland-association/flatland-rl/issues/)
 
 🔗 Partners
