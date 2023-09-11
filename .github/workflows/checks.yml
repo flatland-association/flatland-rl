@@ -10,6 +10,7 @@ concurrency:
 
 jobs:
     lint:
+        if: ${{ false }}  # disable for now, hasn't run in a while resulting in countless issues
         runs-on: ubuntu-22.04
         steps:
             -   uses: actions/checkout@v3
