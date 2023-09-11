@@ -22,21 +22,16 @@ This library was developed specifically for the AIcrowd [Flatland challenges](ht
 📦 Setup
 ---
 
-### Prerequisites (optional)
+### Setup virtual environment (optional)
 
-Install [Anaconda](https://www.anaconda.com/distribution/) and create a new conda environment:
-
-```console
-$ conda create python=3.7 --name flatland-rl
-$ conda activate flatland-rl
-```
+Setup a virtual environment using your preferred method (e.g. venv) and activate it.
 
 ### Stable release
 
 Install Flatland from pip:
 
 ```console
-$ pip install flatland-rl
+pip install flatland-rl
 ```
 
 This is the preferred method to install Flatland, as it will always install the most recent stable release.
@@ -48,13 +43,13 @@ The Flatland code source is available on [Github](https://github.com/flatland-as
 Clone the public repository:
 
 ```console
-$ git clone git@github.com:flatland-association/flatland-rl.git
+git clone git@github.com:flatland-association/flatland-rl.git
 ```
 
 Once you have a copy of the source, install it with:
 
 ```console
-$ pip install -e .
+pip install -e .
 ```
 
 ### Test installation
@@ -62,7 +57,7 @@ $ pip install -e .
 Test that the installation works:
 
 ```console
-$ flatland-demo
+flatland-demo
 ```
 
 You can also run the full test suite:
