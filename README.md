@@ -5,16 +5,22 @@
 
 [![Main](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml/badge.svg)](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml)
 
-Flatland is a open-source toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (or ridiculously large!) gridworlds.
+Flatland is a open-source toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (
+or ridiculously large!) gridworlds.
 
-[The official documentation](http://flatland.aicrowd.com/) contains full details about the environment and problem statement
+[The official documentation](http://flatland.aicrowd.com/) contains full details about the environment and problem
+statement
 
-Flatland is tested with Python 3.7, 3.8 and 3.9 on modern versions of macOS, Linux and Windows. You may encounter problems with graphical rendering if you use WSL. Your [contribution is welcome](https://flatland.aicrowd.com/misc/contributing.html) if you can help with this!
+Flatland is tested with Python 3.7, 3.8 and 3.9 on modern versions of macOS, Linux and Windows. You may encounter
+problems with graphical rendering if you use WSL.
+Your [contribution is welcome](https://flatland.aicrowd.com/misc/contributing.html) if you can help with this!
 
 🏆 Challenges
 ---
 
-This library was developed specifically for the AIcrowd [Flatland challenges](http://flatland.aicrowd.com/research/top-challenge-solutions.html) in which we strongly encourage you to take part in!
+This library was developed specifically for the
+AIcrowd [Flatland challenges](http://flatland.aicrowd.com/research/top-challenge-solutions.html) in which we strongly
+encourage you to take part in!
 
 - [Flatland 3 Challenge](https://www.aicrowd.com/challenges/flatland-3)
 - [AMLD 2021 Challenge](https://www.aicrowd.com/challenges/flatland)
@@ -41,11 +47,15 @@ This is the preferred method to install Flatland, as it will always install the 
 👥 Credits
 ---
 
-This library was developed by [SBB](https://www.sbb.ch/en/), [Deutsche Bahn](https://www.deutschebahn.com/), [SNCF](https://www.sncf.com/en), [AIcrowd](https://www.aicrowd.com/) and [numerous contributors](http://flatland.aicrowd.com/misc/credits.html) and AIcrowd research fellows from the AIcrowd community.
+This library was developed
+by [SBB](https://www.sbb.ch/en/), [Deutsche Bahn](https://www.deutschebahn.com/), [SNCF](https://www.sncf.com/en), [AIcrowd](https://www.aicrowd.com/)
+and [numerous contributors](http://flatland.aicrowd.com/misc/credits.html) and AIcrowd research fellows from the AIcrowd
+community.
 
 ➕ Contributions
 ---
-Please follow the [Contribution Guidelines](./CONTRIBUTING.md) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions!
+Please follow the [Contribution Guidelines](./CONTRIBUTING.md) for more details on how you can successfully contribute
+to the project. We enthusiastically look forward to your contributions!
 
 💬 Communication
 ---
