@@ -63,3 +63,64 @@ jobs:
                 with:
                     name: docs
                     path: docs/_build/html
+
+    notebooks:
+        if: ${{ false }}  # disabled for now, some need custom kernel
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.7"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run notebooks
+                run: tox run -e notebooks
+
+    examples:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.7"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run examples
+                run: tox run -e examples
+
+    profiling:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.7"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run profiling
+                run: tox run -e profiling
+
+    benchmarks:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.7"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run benchmarks
+                run: tox run -e benchmarks
