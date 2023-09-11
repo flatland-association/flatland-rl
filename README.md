@@ -38,36 +38,6 @@ pip install flatland-rl
 
 This is the preferred method to install Flatland, as it will always install the most recent stable release.
 
-### From sources
-
-The Flatland code source is available on [Github](https://github.com/flatland-association/flatland-rl).
-
-Clone the public repository:
-
-```console
-git clone git@github.com:flatland-association/flatland-rl.git
-```
-
-Once you have a copy of the source, install it with:
-
-```console
-pip install -e .
-```
-
-### Test installation
-
-Test that the installation works:
-
-```console
-flatland-demo
-```
-
-You can also run the full test suite:
-
-```console
-python setup.py test
-```
-
 👥 Credits
 ---
 
@@ -75,13 +45,11 @@ This library was developed by [SBB](https://www.sbb.ch/en/), [Deutsche Bahn](htt
 
 ➕ Contributions
 ---
-Please follow the [Contribution Guidelines](https://flatland.aicrowd.com/misc/contributing.html) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions!
+Please follow the [Contribution Guidelines](./CONTRIBUTING.rst) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions!
 
 💬 Communication
 ---
 
-* [Discord Channel](https://discord.com/invite/hCR3CZG)
-* [Discussion Forum](https://discourse.aicrowd.com/c/neurips-2020-flatland-challenge)
 * [Issue Tracker](https://github.com/flatland-association/flatland-rl/issues/)
 
 🔗 Partners
