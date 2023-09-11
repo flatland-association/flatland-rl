@@ -4,6 +4,10 @@ on:
     pull_request:
         branches: [ "main" ]
 
+concurrency:
+    group: ${{ github.head_ref }}
+    cancel-in-progress: true
+
 jobs:
     build:
         runs-on: ubuntu-22.04
