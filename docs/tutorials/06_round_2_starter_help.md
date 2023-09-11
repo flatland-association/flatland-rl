@@ -27,6 +27,6 @@ The `sparse_schedule_generator` produces tasks for the agents by selecting a sta
 In the future we will update how these schedules are generated to allow for more complex tasks
 
 ## Observations
-Observations have been updated to reflect the novel features and behaviors of Flatland. Have a look at [observation](https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/observations.py) or the documentation for more details on the observations.
+Observations have been updated to reflect the novel features and behaviors of Flatland. Have a look at [observation](https://github.com/flatland-association/flatland-rl/tree/main/flatland/envs/observations.py) or the documentation for more details on the observations.
 
 ## Predicitons

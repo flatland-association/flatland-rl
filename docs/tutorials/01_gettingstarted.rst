@@ -113,8 +113,8 @@ following code. Also, tree observation data is displayed by RenderTool by defaul
 
 The complete code for this part of the Getting Started guide can be found in
 
-* `examples/simple_example_1.py <https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/simple_example_1.py>`_
-* `examples/simple_example_2.py <https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/simple_example_2.py>`_
+* `examples/simple_example_1.py <https://github.com/flatland-association/flatland-rl/tree/main/examples/simple_example_1.py>`_
+* `examples/simple_example_2.py <https://github.com/flatland-association/flatland-rl/tree/main/examples/simple_example_2.py>`_
 
 
 Part 2 : Training a Simple an Agent on Flatland
@@ -187,4 +187,4 @@ This dictionary is then passed to the environment which checks the validity of a
 The environment returns an array of new observations, reward dictionary for all agents as well as a flag for which agents are done.
 This information can be used to update the policy of your agent and if done['__all__'] == True the episode terminates.
 
-The full source code of this example can be found in `examples/training_example.py <https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/training_example.py>`_.
+The full source code of this example can be found in `examples/training_example.py <https://github.com/flatland-association/flatland-rl/tree/main/examples/training_example.py>`_.

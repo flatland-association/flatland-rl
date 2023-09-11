@@ -73,7 +73,7 @@ ScheduleGenerator = Callable[[GridTransitionMap, int, Optional[Any]], ScheduleGe
     - Multi-speed introduces the challenge of ordering the trains correctly when traveling in the same direction.
 - Agents always travel at their full speed when moving.
 
-To set up multiple speeds you have to modify the `agent.speed_data` within your `schedule_generator`. See [this file](https://gitlab.aicrowd.com/flatland/flatland/blob/master/flatland/envs/schedule_generators.py#L59) for a good example.
+To set up multiple speeds you have to modify the `agent.speed_data` within your `schedule_generator`. See [this file](https://github.com/flatland-association/flatland-rl/tree/main/flatland/envs/schedule_generators.py#L59) for a good example.
 
 **ATTENTION** multi speed means that the agents actions are not registered on every time step. Only at new cell entry can new actions be chosen! Beware to respect this with your controller as actions are only important at the specific time steps! This is shown as an example in the [navigation training](https://gitlab.aicrowd.com/flatland/baselines/blob/master/torch_training/training_navigation.py#L163)
 

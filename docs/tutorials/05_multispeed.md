@@ -130,4 +130,4 @@ The environment's `reset` takes care of applying the two generators:
 
 ## Example code
 
-To see all the changes in action you can just run the `flatland_example_2_0.py` file in the examples folder. The file can be found [here](https://gitlab.aicrowd.com/flatland/flatland/blob/master/examples/flatland_2_0_example.py).
+To see all the changes in action you can just run the `flatland_example_3_0.py` file in the examples folder. The file can be found [here](https://github.com/flatland-association/flatland-rl/tree/main/examples/flatland_3_0_example.py).
