@@ -45,7 +45,7 @@ This library was developed by [SBB](https://www.sbb.ch/en/), [Deutsche Bahn](htt
 
 ➕ Contributions
 ---
-Please follow the [Contribution Guidelines](./CONTRIBUTING.rst) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions!
+Please follow the [Contribution Guidelines](./CONTRIBUTING.md) for more details on how you can successfully contribute to the project. We enthusiastically look forward to your contributions!
 
 💬 Communication
 ---
