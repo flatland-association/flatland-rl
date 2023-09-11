@@ -16,7 +16,7 @@ Flatland is tested with Python 3.7, 3.8 and 3.9 on modern versions of macOS, Lin
 
 This library was developed specifically for the AIcrowd [Flatland challenges](http://flatland.aicrowd.com/research/top-challenge-solutions.html) in which we strongly encourage you to take part in!
 
-- [Flatland 3 Challenge](https://www.aicrowd.com/challenges/flatland-3) - ONGOING!
+- [Flatland 3 Challenge](https://www.aicrowd.com/challenges/flatland-3)
 - [AMLD 2021 Challenge](https://www.aicrowd.com/challenges/flatland)
 - [NeurIPS 2020 Challenge](https://www.aicrowd.com/challenges/neurips-2020-flatland-challenge/)
 - [2019 Challenge](https://www.aicrowd.com/challenges/flatland-challenge)
