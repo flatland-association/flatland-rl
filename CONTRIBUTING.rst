@@ -15,13 +15,9 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://gitlab.aicrowd.com/flatland/flatland/issues.
+Report bugs at https://github.com/flatland-association/flatland-rl/issues.
 
-If you are reporting a bug, please include:
-
-* Your operating system name and version.
-* Any details about your local setup that might be helpful in troubleshooting.
-* Detailed steps to reproduce the bug.
+If you are reporting a bug, please make sure to fill out the appropriate issue template.
 
 Fix Bugs
 ~~~~~~~~
@@ -45,7 +41,7 @@ articles, and such. A quick reference for writing good docstrings is available a
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://gitlab.aicrowd.com/flatland/flatland/issues.
+The best way to send feedback is to file an issue at https://github.com/flatland-association/flatland-rl/issues.
 
 If you are proposing a feature:
 
@@ -59,12 +55,11 @@ Get Started!
 
 Ready to contribute? Here's how to set up `flatland` for local development.
 
-1. Fork the `flatland` repo on https://gitlab.aicrowd.com/flatland/flatland .
-2. Clone your fork locally::
+1. Clone the `flatland` repo::
 
-    $ git clone git@gitlab.aicrowd.com:flatland/flatland.git
+    $ git clone git@github.com:flatland-association/flatland-rl.git
 
-3. Install the software dependencies via Anaconda-3 or Miniconda-3. (This assumes you have Anaconda installed by following the instructions `here <https://www.anaconda.com/distribution>`_)
+2. Install the software dependencies via Anaconda-3 or Miniconda-3. (This assumes you have Anaconda installed by following the instructions `here <https://www.anaconda.com/distribution>`_)
 
     $ conda install -c conda-forge tox-conda
     $ conda install tox
@@ -79,13 +74,13 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     from Anaconda prompt.
 
 
-4. Create a branch for local development::
+3. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass flake8 and the
+4. When you're done making changes, check that your changes pass flake8 and the
    tests, including testing other Python versions with tox::
 
     $ flake8 flatland tests examples benchmarks
@@ -94,38 +89,28 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 
    To get flake8 and tox, just pip install them into your virtualenv.
 
-6. Commit your changes and push your branch to Gitlab::
+5. Commit your changes and push your branch to Github::
 
     $ git add .
     $ git commit -m "Addresses #<issue-number> Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
-7. Submit a merge request through the Gitlab repository website.
+6. Open a pull request on Github targeting the `main` branch.
 
-Merge Request Guidelines
+Pull Request Guidelines
 -------------------------
 
-Before you submit a merge request, check that it meets these guidelines:
+Before you submit a pull request, check that it meets these guidelines:
 
-1. The merge request should include tests.
-2. The code must be formatted (PyCharm)
-3. If the merge request adds functionality, the docs should be updated. Put
+1. The pull request should include tests.
+2. The code must be formatted (using an IDE like PyCharm can do this for you).
+3. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
-4. The merge request should work for Python 3.6, 3.7 and for PyPy. Check
-   https://gitlab.aicrowd.com/flatland/flatland/pipelines
-   and make sure that the tests pass for all supported Python versions.
-   We force pipelines to be run successfully for merge requests to be merged.
-5. Although we cannot enforce it technically, we ask for merge requests to be reviewed by at least one core member
-   in order to ensure that the Technical Guidelines below are respected and that the code is well tested:
-
-5.1.  The remarks from the review should be resolved/implemented and communicated using the 'discussions resolved':
-
-.. image:: images/DiscussionsResolved.png
-
-5.2.  When a merge request is merged, source branches should be deleted and commits squashed:
-
-.. image:: images/SourceBranchSquash.png
+4. The pull request should work for Python 3.6, 3.7 and for PyPy. We force pipelines to be run successfully
+   for pull requests to be merged.
+5. Pull requests must be approved by at least one member of the core team. This is to ensure that the
+   Technical Guidelines below are respected and that the code is well tested.
 
 Tips
 ----
@@ -239,7 +224,7 @@ Docstrings should be formatted using numpydoc_.
 .. _numpydoc: https://numpydoc.readthedocs.io/en/latest/format.html
 
 
-Acessing resources
+Accessing resources
 ~~~~~~~~~~~~~~~~~~
 
 We use `importlib-resources <https://importlib-resources.readthedocs.io/en/latest/>`_ to read from local files.
@@ -294,7 +279,7 @@ We use Type Hints (`PEP 484 <https://www.python.org/dev/peps/pep-0484/>`_) for b
 
 Have a look at the `Type Hints Cheat Sheet <https://mypy.readthedocs.io/en/latest/cheat_sheet_py3.html>`_ to get started with Type Hints.
 
-Caveat: We discourage the usage of Type Aliases for structured data since its members remain unnamed (see `Issue #284 <https://gitlab.aicrowd.com/flatland/flatland/issues/284/>`_).
+Caveat: We discourage the usage of Type Aliases for structured data since its members remain unnamed.
 
     .. code-block:: python
         # Discouraged: Type Alias with unnamed members
@@ -406,7 +391,7 @@ Currying
 We discourage currying to encapsulate state since we often want the stateful object to have multiple methods
 (but the curried function has only its signature and abusing params to switch behaviour is not very readable).
 
-Thus, we should refactor our generators and use classes instead (see `Issue #283 <https://gitlab.aicrowd.com/flatland/flatland/issues/283>`_).
+Thus, we should refactor our generators and use classes instead.
 
     .. code-block:: python
         # Type Alias

@@ -79,7 +79,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://gitlab.aicrowd.com/flatland/flatland',
+    url='https://github.com/flatland-association/flatland-rl',
     version='3.0.15',
     zip_safe=False,
 )

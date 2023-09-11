@@ -92,7 +92,7 @@ class EnvAgent:
         Resets the agents to their initial values of the episode. Called after ScheduleTime generation.
         """
         self.position = None
-        # TODO: set direction to None: https://gitlab.aicrowd.com/flatland/flatland/issues/280
+        # TODO: set direction to None
         self.direction = self.initial_direction
         self.old_position = None
         self.old_direction = None

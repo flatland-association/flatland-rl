@@ -3,16 +3,11 @@
 
 ![Flatland](https://i.imgur.com/0rnbSLY.gif)
 
-<p style="text-align:center">
-<img alt="repository" src="https://gitlab.aicrowd.com/flatland/flatland/badges/master/pipeline.svg">
-<img alt="coverage" src="https://gitlab.aicrowd.com/flatland/flatland/badges/master/coverage.svg">
-</p>
-
 Flatland is a open-source toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (or ridiculously large!) gridworlds.
 
 [The official documentation](http://flatland.aicrowd.com/) contains full details about the environment and problem statement
 
-Flatland is tested with Python 3.6, 3.7 and 3.8 on modern versions of macOS, Linux and Windows. You may encounter problems with graphical rendering if you use WSL. Your [contribution is welcome](https://flatland.aicrowd.com/misc/contributing.html) if you can help with this!  
+Flatland is tested with Python 3.6, 3.7 and 3.8 on modern versions of macOS, Linux and Windows. You may encounter problems with graphical rendering if you use WSL. Your [contribution is welcome](https://flatland.aicrowd.com/misc/contributing.html) if you can help with this!
 
 🏆 Challenges
 ---
@@ -48,12 +43,12 @@ This is the preferred method to install Flatland, as it will always install the 
 
 ### From sources
 
-The Flatland code source is available from [AIcrowd gitlab](https://gitlab.aicrowd.com/flatland/flatland).
+The Flatland code source is available on [Github](https://github.com/flatland-association/flatland-rl).
 
 Clone the public repository:
 
 ```console
-$ git clone git@gitlab.aicrowd.com:flatland/flatland.git
+$ git clone git@github.com:flatland-association/flatland-rl.git
 ```
 
 Once you have a copy of the source, install it with:
@@ -90,12 +85,12 @@ Please follow the [Contribution Guidelines](https://flatland.aicrowd.com/misc/co
 
 * [Discord Channel](https://discord.com/invite/hCR3CZG)
 * [Discussion Forum](https://discourse.aicrowd.com/c/neurips-2020-flatland-challenge)
-* [Issue Tracker](https://gitlab.aicrowd.com/flatland/flatland/issues/)
+* [Issue Tracker](https://github.com/flatland-association/flatland-rl/issues/)
 
 🔗 Partners
 ---
 
-<a href="https://sbb.ch" target="_blank" style="margin-right:30px"><img src="https://annpr2020.ch/wp-content/uploads/2020/06/SBB.png" alt="SBB" width="140"/></a> 
+<a href="https://sbb.ch" target="_blank" style="margin-right:30px"><img src="https://annpr2020.ch/wp-content/uploads/2020/06/SBB.png" alt="SBB" width="140"/></a>
 <a href="https://www.deutschebahn.com/" target="_blank" style="margin-right:30px"><img src="https://i.imgur.com/pjTki15.png" alt="DB"  width="140"/></a>
 <a href="https://www.sncf.com/en" target="_blank" style="margin-right:30px"><img src="https://iconape.com/wp-content/png_logo_vector/logo-sncf.png" alt="SNCF"  width="140"/></a>
 <a href="https://www.aicrowd.com" target="_blank"><img src="https://i.imgur.com/kBZQGI9.png" alt="AIcrowd"  width="140"/></a>
