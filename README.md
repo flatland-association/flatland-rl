@@ -3,11 +3,6 @@
 
 ![Flatland](https://i.imgur.com/0rnbSLY.gif)
 
-<p style="text-align:center">
-<img alt="repository" src="https://gitlab.aicrowd.com/flatland/flatland/badges/master/pipeline.svg">
-<img alt="coverage" src="https://gitlab.aicrowd.com/flatland/flatland/badges/master/coverage.svg">
-</p>
-
 Flatland is a open-source toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (or ridiculously large!) gridworlds.
 
 [The official documentation](http://flatland.aicrowd.com/) contains full details about the environment and problem statement
