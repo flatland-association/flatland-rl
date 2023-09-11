@@ -43,3 +43,81 @@ jobs:
                   pip install tox tox-gh-actions
             - name: Run tests
               run: tox
+
+    notebooks:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.7"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run examples
+                run: tox -e examples
+
+    examples:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.7"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run examples
+                run: tox -e examples
+
+    docs:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.7"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run docs
+                run: tox -e docs
+
+    profiling:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.7"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run profiling
+                run: tox -e profiling
+
+    benchmarks:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.7"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run benchmarks
+                run: tox -e benchmarks
+
+
+
