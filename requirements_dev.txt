@@ -1,5 +1,5 @@
 tox>=3.5.2
-pytest>=3.8.2,<5
+pytest>=3.8.2
 pytest-runner>=4.2
 Click>=7.0
 crowdai-api>=0.1.21
