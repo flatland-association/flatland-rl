@@ -89,11 +89,6 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Run docs
                 run: tox run -e docs
-            -   name: Archive docs
-                uses: actions/upload-artifact@v3
-                with:
-                    name: docs
-                    path: docs/_build/html
 
     profiling:
         runs-on: ubuntu-22.04
