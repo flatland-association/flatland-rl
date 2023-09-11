@@ -33,14 +33,15 @@ setup_requirements = install_reqs
 test_requirements = install_reqs
 
 setup(
-    author="S.P. Mohanty",
-    author_email='mohanty@aicrowd.com',
+    author="Flatland Association",
+    author_email='contact@flatland-association.org',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
     description="Multi Agent Reinforcement Learning on Trains",
     entry_points={
