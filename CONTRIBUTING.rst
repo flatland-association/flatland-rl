@@ -57,43 +57,30 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 
 1. Clone the `flatland` repo::
 
-    $ git clone git@github.com:flatland-association/flatland-rl.git
+    git clone git@github.com:flatland-association/flatland-rl.git
 
-2. Install the software dependencies via Anaconda-3 or Miniconda-3. (This assumes you have Anaconda installed by following the instructions `here <https://www.anaconda.com/distribution>`_)
+2. Setup a virtual environment using your preferred method (e.g. venv) and activate it.
 
-    $ conda install -c conda-forge tox-conda
-    $ conda install tox
-    $ tox -v --recreate
+2. Install the software dependencies using pip::
 
-    This will create a virtual env you can then use.
-
-    These steps are performed if you run
-
-    $ getting_started/getting_started.bat/.sh
-
-    from Anaconda prompt.
-
+   pip install -r requirements_dev.txt
 
 3. Create a branch for local development::
 
-    $ git checkout -b name-of-your-bugfix-or-feature
+   git checkout -b name-of-your-bugfix-or-feature
 
    Now you can make your changes locally.
 
-4. When you're done making changes, check that your changes pass flake8 and the
-   tests, including testing other Python versions with tox::
+4. When you're done making changes, check that your changes pass the tests.
+   Use tox to run them as it will automatically test on all supported python versions::
 
-    $ flake8 flatland tests examples benchmarks
-    $ python setup.py test or py.test
-    $ tox
-
-   To get flake8 and tox, just pip install them into your virtualenv.
+   tox
 
 5. Commit your changes and push your branch to Github::
 
-    $ git add .
-    $ git commit -m "Addresses #<issue-number> Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
+   git add .
+   git commit -m "Addresses #<issue-number> Your detailed description of your changes."
+   git push origin name-of-your-bugfix-or-feature
 
 6. Open a pull request on Github targeting the `main` branch.
 
@@ -107,7 +94,7 @@ Before you submit a pull request, check that it meets these guidelines:
 3. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
-4. The pull request should work for Python 3.6, 3.7 and for PyPy. We force pipelines to be run successfully
+4. The pull request should work for Python 3.7, 3.8, 3.9. We force pipelines to be run successfully
    for pull requests to be merged.
 5. Pull requests must be approved by at least one member of the core team. This is to ensure that the
    Technical Guidelines below are respected and that the code is well tested.
@@ -118,21 +105,6 @@ Tips
 To run a subset of tests::
 
 $ py.test tests.test_flatland
-
-
-Deploying
----------
-
-A reminder for the maintainers on how to deploy.
-Make sure all your changes are committed .
-Then run::
-
-$ bumpversion patch # possible: major / minor / patch
-$ git push
-$ git push --tags
-
-TODO: Travis will then deploy to PyPI if tests pass. (To be configured properly by Mohanty)
-
 
 Local Evaluation
 ----------------
