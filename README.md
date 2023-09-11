@@ -32,7 +32,7 @@ Setup a virtual environment using your preferred method (e.g. venv) and activate
 
 Install Flatland from pip:
 
-```console
+```shell
 pip install flatland-rl
 ```
 
