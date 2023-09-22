@@ -2,7 +2,9 @@ name: Main
 
 on:
     push:
-        branches: [ "main" ]
+        branches: 
+            - "main"
+            - "iss-032-python310" # temporary branch for testing Python 3.10
 
 concurrency:
     group: ${{ github.ref }}
