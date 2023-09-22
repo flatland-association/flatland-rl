@@ -266,9 +266,38 @@ class GridTransitionMap(TransitionMap):
         send_infrastructure_data_change_signal_to_reset_lru_cache()
         #assert len(cell_id) == 3, \
         #    'GridTransitionMap.set_transition() ERROR: cell_id tuple must have length 3.'
+        
+        nDir = cell_id[2]
+        #print(cell_id, type(nDir))
+        if type(nDir) == np.ndarray:
+            # I can't work out how to dump a complete backtrace here
+            #import traceback
+            #try:
+            #    assert type(nDir)==int, "cell direction is not an int"
+            #except Exception as e:
+            #    traceback.print_exception(e)
+            #    traceback.print_tb(e.__traceback__)
+            #    print(traceback.format_exc())
+            print("fixing nDir:", cell_id, nDir)
+            nDir = int(nDir[0])
+
+        if type(transition_index) is not int:
+            print("fixing transition_index:", cell_id, transition_index)
+            if type(transition_index) == np.ndarray:
+                transition_index = int(transition_index[0])
+            else:
+                print("transition_index type:", type(transition_index))
+                transition_index = int(transition_index)
+            
+        if type(new_transition) is not int:
+            print("fixing new_transition:", cell_id, new_transition)
+            new_transition = int(new_transition[0])
+
+        #print("fixed:", cell_id, type(nDir), transition_index, new_transition, remove_deadends)
+
         self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transition(
             self.grid[cell_id[0:2]],
-            cell_id[2],
+            nDir, # cell_id[2],
             transition_index,
             new_transition,
             remove_deadends)
