@@ -113,17 +113,14 @@ def test_get_shortest_paths():
             Waypoint(position=(2, 4), direction=3),
             Waypoint(position=(2, 3), direction=3),
             Waypoint(position=(2, 2), direction=3),
-
-            # Change a point to test the assertion works :)
             Waypoint(position=(2, 1), direction=3)
-            #Waypoint(position=(2, 2), direction=3)
             ]
     }
 
     for iA, lWP in expected.items():
-        _compare_paths(iA, actual[iA], lWP)
+        _assert_paths_equal(iA, actual[iA], lWP)
 
-def _compare_paths(iAgent:int, actual:List[Waypoint], expected:List[Waypoint]):
+def _assert_paths_equal(iAgent:int, actual:List[Waypoint], expected:List[Waypoint]):
     assert len(actual) == len(expected), f"Lengths differ: actual={len(actual)}, expected={len(expected)}"
     for iWP, (wpA, wpE) in enumerate(zip(actual, expected)):
         assert wpA.position == wpE.position, f"Agent {iAgent} Waypoints at step {iWP} differ: actual={wpA.position}, expected={wpE.position}"
@@ -148,7 +145,7 @@ def test_get_shortest_paths_max_depth():
     }
 
     for iA, lWP in expected.items():
-        _compare_paths(iA, actual[iA], lWP)
+        _assert_paths_equal(iA, actual[iA], lWP)
 
 
 
@@ -238,7 +235,7 @@ def test_get_shortest_paths_agent_handle():
                      ]}
 
     for iA, lWP in expected.items():
-        _compare_paths(iA, actual[iA], lWP)
+        _assert_paths_equal(iA, actual[iA], lWP)
 
 
 def test_get_k_shortest_paths(rendering=False):
