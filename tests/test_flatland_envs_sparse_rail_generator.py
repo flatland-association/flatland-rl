@@ -1430,6 +1430,27 @@ def test_sparse_generator_changes_to_grid_mode():
         grid_mode=False
     ), line_generator=sparse_line_generator(), number_of_agents=10,
                        obs_builder_object=GlobalObsForRailEnv())
+
+    # Catch warnings and check that a warning *IS* raised
     with warnings.catch_warnings(record=True) as w:
         rail_env.reset(True, True, random_seed=15)
         assert "[WARNING]" in str(w[-1].message)
+    
+
+
+def main():
+    # Make warnings into errors, to generate stack backtraces
+    warnings.simplefilter("error",) #  category=DeprecationWarning)
+
+    # Then run selected tests.
+    test_sparse_rail_generator()
+    #test_sparse_rail_generator_deterministic()
+    #test_rail_env_action_required_info()
+    #test_rail_env_malfunction_speed_info()
+    #test_sparse_generator_with_too_man_cities_does_not_break_down()
+    #test_sparse_generator_with_illegal_params_aborts()
+    #test_sparse_generator_changes_to_grid_mode()
+
+if __name__ == "__main__":
+    main()
+

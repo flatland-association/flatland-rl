@@ -14,6 +14,7 @@ from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_disconnected_simple_rail, make_simple_rail_with_alternatives
 from flatland.envs.persistence import RailEnvPersister
 
+from typing import List
 
 def test_get_shortest_paths_unreachable():
     rail, rail_map, optionals = make_disconnected_simple_rail()
@@ -112,13 +113,18 @@ def test_get_shortest_paths():
             Waypoint(position=(2, 4), direction=3),
             Waypoint(position=(2, 3), direction=3),
             Waypoint(position=(2, 2), direction=3),
-            Waypoint(position=(2, 1), direction=3)]
+            Waypoint(position=(2, 1), direction=3)
+            ]
     }
 
-    for agent_handle in expected:
-        assert np.array_equal(actual[agent_handle], expected[agent_handle]), \
-            "[{}] actual={},expected={}".format(agent_handle, actual[agent_handle], expected[agent_handle])
+    for iA, lWP in expected.items():
+        _assert_paths_equal(iA, actual[iA], lWP)
 
+def _assert_paths_equal(iAgent:int, actual:List[Waypoint], expected:List[Waypoint]):
+    assert len(actual) == len(expected), f"Lengths differ: actual={len(actual)}, expected={len(expected)}"
+    for iWP, (wpA, wpE) in enumerate(zip(actual, expected)):
+        assert wpA.position == wpE.position, f"Agent {iAgent} Waypoints at step {iWP} differ: actual={wpA.position}, expected={wpE.position}"
+        assert wpA.direction == wpE.direction, f"Agent {iAgent} Waypoint directions at step {iWP} differ:actual={wpA.direction}, expected={wpE.direction}"
 
 # todo file test_002.pkl has to be generated automatically
 def test_get_shortest_paths_max_depth():
@@ -138,9 +144,9 @@ def test_get_shortest_paths_max_depth():
         ]
     }
 
-    for agent_handle in expected:
-        assert np.array_equal(actual[agent_handle], expected[agent_handle]), \
-            "[{}] actual={},expected={}".format(agent_handle, actual[agent_handle], expected[agent_handle])
+    for iA, lWP in expected.items():
+        _assert_paths_equal(iA, actual[iA], lWP)
+
 
 
 # todo file Level_distance_map_shortest_path.pkl has to be generated automatically
@@ -228,9 +234,8 @@ def test_get_shortest_paths_agent_handle():
                               direction=3)
                      ]}
 
-    for agent_handle in expected:
-        assert np.array_equal(actual[agent_handle], expected[agent_handle]), \
-            "[{}] actual={},expected={}".format(agent_handle, actual[agent_handle], expected[agent_handle])
+    for iA, lWP in expected.items():
+        _assert_paths_equal(iA, actual[iA], lWP)
 
 
 def test_get_k_shortest_paths(rendering=False):
@@ -310,7 +315,7 @@ def test_get_k_shortest_paths(rendering=False):
             Waypoint(position=(3, 9), direction=0))
     ])
 
-    assert actual == expected, "actual={},expected={}".format(actual, expected)
+    assert actual == expected, "Sets are different:\nactual={},\nexpected={}".format(actual, expected)
 
 def main():
     test_get_shortest_paths()
