@@ -281,17 +281,19 @@ class GridTransitionMap(TransitionMap):
             print("fixing nDir:", cell_id, nDir)
             nDir = int(nDir[0])
 
-        if type(transition_index) is not int:
-            print("fixing transition_index:", cell_id, transition_index)
+        #if type(transition_index) not in (int, np.int64):
+        if isinstance(transition_index, np.ndarray):
+            #print("fixing transition_index:", cell_id, transition_index)
             if type(transition_index) == np.ndarray:
-                transition_index = int(transition_index[0])
+                transition_index = int(transition_index.ravel()[0])
             else:
-                print("transition_index type:", type(transition_index))
+                # print("transition_index type:", type(transition_index))
                 transition_index = int(transition_index)
             
-        if type(new_transition) is not int:
-            print("fixing new_transition:", cell_id, new_transition)
-            new_transition = int(new_transition[0])
+        #if type(new_transition) not in (int, bool):
+        if isinstance(new_transition, np.ndarray):
+            #print("fixing new_transition:", cell_id, new_transition)
+            new_transition = int(new_transition.ravel()[0])
 
         #print("fixed:", cell_id, type(nDir), transition_index, new_transition, remove_deadends)
 

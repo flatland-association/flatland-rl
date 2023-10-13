@@ -202,7 +202,11 @@ def plotGraphEnv(G, env:RailEnv, aImg, space=0.3, figsize=(8,8),
                  lvHighlight=None,
                  arrowsize=10):
 
+    # NESW directions in xy coords
     xyDir = array([[0,1], [1,0], [0,-1], [-1,0]])
+
+    # Rotate the xyDir 90 deg to create visual offsets for the rail nodes, 
+    # eg for a N dir node, the offset needs to be E of the grid node.
     xy2 = array([xyDir[(i+1) % 4,:] for i in range(4)])
     
     if figsize is not None:
@@ -466,6 +470,8 @@ def plotResourceUsage(G, llnPaths,
     """ Create two reservation tables:
         - dResource - dict[grid node] -> resource usage at step t (0,1,...)
         - dg2Dirs - dict[grid node] -> NESW x bool usage at step t (0 or 1)
+
+        Plots an Ibry (or Ibry-Serjev?) diagram of resource usage through time.
 
     """
     # Infer the grid paths for the rail paths
