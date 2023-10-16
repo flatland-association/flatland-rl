@@ -23,3 +23,7 @@ ipycanvas
 graphviz
 imageio
 dataclasses
+# for plotting graphs in jupyter notebook
+ipycytoscape
+# seems to be needed for test_env_edit_utils.py
+ipyevents
