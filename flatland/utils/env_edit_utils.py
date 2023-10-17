@@ -7,7 +7,7 @@ from flatland.envs.line_generators import BaseLineGen
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.timetable_utils import Line
 from flatland.utils import editor
-
+import flatland.envs.timetable_generators as ttg
 
 # Start and end all agents at the same place
 class SchedGen2(BaseLineGen):
@@ -59,7 +59,8 @@ def makeEnv2(nAg=2, shape=(20, 10), llrcPaths=[], lrcStarts=[], lrcTargs=[], liD
                   line_generator=oSG,
                   obs_builder_object=obs.TreeObsForRailEnv(max_depth=1),
                   remove_agents_at_target=remove_agents_at_target,
-                  record_steps=True)
+                  record_steps=True,
+                  timetable_generator=ttg.ttgen_flatland2)
 
     envModel = editor.EditorModel(env)
     env.reset()

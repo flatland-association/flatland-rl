@@ -27,3 +27,5 @@ dataclasses
 ipycytoscape
 # seems to be needed for test_env_edit_utils.py
 ipyevents
+# to permit running notebooks with pytest --nbmake:
+nbmake
