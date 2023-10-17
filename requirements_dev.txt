@@ -21,6 +21,7 @@ gym==0.14.0
 networkx
 ipycanvas
 graphviz
+pygraphviz
 imageio
 dataclasses
 # for plotting graphs in jupyter notebook
