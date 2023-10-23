@@ -104,20 +104,20 @@ the [navigation training](https://gitlab.aicrowd.com/flatland/baselines/blob/mas
 
 ### Stochastic events
 
-Just like in real-worl transportation systems we introduced stochastic events to disturb normal traffic flow. Currently
-we implemented a malfunction process that stops agents at random time intervalls for a random time of duration.
+Just like in real-world transportation systems we introduced stochastic events to disturb normal traffic flow. Currently
+we implemented a malfunction process that stops agents at random time intervals for a random time of duration.
 Currently the Flatland environment can be initiated with the following poisson process parameters:
 
 ```python
 # Use a the malfunction generator to break agents from time to time
 stochastic_data = {'prop_malfunction': 0.1,  # Percentage of defective agents
-                   'malfunction_rate': 30,  # Rate of malfunction occurence
+                   'malfunction_rate': 30,  # Rate of malfunction occurrence
                    'min_duration': 3,  # Minimal duration of malfunction
                    'max_duration': 20  # Max duration of malfunction
                    }
 ```
 
-The duration of a malfunction is uniformly drawn from the intervall `[min_duration,max_duration0]` and the occurance of
+The duration of a malfunction is uniformly drawn from the intervall `[min_duration,max_duration0]` and the occurrence of
 malfunctions follows a point poisson process with mean rate `malfunctin_rate`.
 
 **!!!!IMPORTANT!!!!** Once a malfunction duration has finished, the agent will **automatically** resume movement. This
@@ -138,7 +138,7 @@ Changes since Flatland 0.2
 Please list all major changes since the last version:
 
 - Refactoring of rendering code: CamelCase functions changed to snake_case
-- Tree Observation Added a new Featuer: `unusable_switch` which indicates switches that are not branchingpoints for the
+- Tree Observation Added a new Featuer: `unusable_switch` which indicates switches that are not branching points for the
   observing agent
 - Updated the shortest path predictor
 - Updated conflict detection with predictor

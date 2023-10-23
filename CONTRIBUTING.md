@@ -15,19 +15,18 @@ If you are reporting a bug, please make sure to fill out the appropriate issue t
 
 ### Fix Bugs
 
-Look through the Repository Issue Tracker for bugs. Anything tagged with "bug" and "help wanted" is open to whoever
+Look through the repository issue tracker for bugs. Anything tagged with "bug" and "help wanted" is open to whoever
 wants to implement it.
 
 ### Implement Features
 
-Look through the Repository Issue Tracker for features. Anything tagged with "enhancement" and "help wanted" is open to
+Look through the repository issue tracker for features. Anything tagged with "enhancement" and "help wanted" is open to
 whoever wants to implement it.
 
 ### Write Documentation
 
-flatland could always use more documentation, whether as part of the
-official flatland docs, in docstrings, or even on the web in blog posts,
-articles, and such. A quick reference for writing good docstrings is available
+flatland could always use more documentation, whether as part of the official flatland docs, in docstrings, or even on
+the web in blog posts, articles, and such. A quick reference for writing good docstrings is available
 at [writing-docstrings](https://docs.python-guide.org/writing/documentation/#writing-docstrings).
 
 ### Submit Feedback
@@ -50,14 +49,14 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     git clone git@github.com:flatland-association/flatland-rl.git
     ```
 
-2. Setup a virtual environment using your preferred method (e.g. venv) and activate it. Make sure python 3.7, 3.8 and
-   3.9 interpreters are available. Note that if you are using an Apple Macbook with an M1 or M2 processor, you need to
-   use python 3.8 or 3.9.
+2. Set up a virtual environment using your preferred method (e.g. venv) and activate it. Make sure one of the supported
+   python interpreters (3.7, 3.8, 3.9, 3.10) is available. Note that if you are using an Apple Macbook with Apple
+   Silicon (e.g. M1 or M2), you need to use at least python 3.8.
 
 3. Install the software dependencies using pip:
 
     ```shell
-    pip install -r requirements_dev.txt
+    pip install -r requirements-dev.txt
     ```
 
 4. Create a branch for local development:
@@ -83,7 +82,7 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     git push origin name-of-your-bugfix-or-feature
     ```
 
-7. Open a pull request on Github targeting the `main` branch.
+7. Open a pull request on github targeting the `main` branch.
 
 ## Pull Request Guidelines
 
@@ -92,18 +91,18 @@ Before you submit a pull request, check that it meets these guidelines:
 1. The pull request should include tests.
 2. The code must be formatted (using an IDE like PyCharm can do this for you).
 3. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a
-   docstring, and add the feature to the list in README.rst.
-4. The pull request should work for Python 3.7, 3.8, 3.9. We force pipelines to be run successfully for pull requests to
-   be merged.
-5. Pull requests must be approved by at least one member of the core team. This is to ensure that the Technical
-   Guidelines below are respected and that the code is well tested.
+   docstring, and add the feature to the list in `README.md`.
+4. The pull request should work for Python 3.7, 3.8, 3.9, 3.10. We force pipelines to be run successfully for pull
+   requests to be merged.
+5. Pull requests must be approved by at least one member of the core team. This is to ensure that the
+   [Technical Guidelines](#technical-guidelines) are respected and that the code is well tested.
 
 ## Technical Guidelines
 
 ### Clean Code
 
 Please adhere to the general [Clean Code](https://www.planetgeek.ch/wp-content/uploads/2014/11/Clean-Code-V2.4.pdf)
-principles, for instance, we write short and concise functions and use appropriate naming to ensure readability.
+principles. For instance, we write short and concise functions and use appropriate naming to ensure readability.
 
 ### Naming Conventions
 
