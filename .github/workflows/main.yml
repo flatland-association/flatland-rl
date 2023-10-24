@@ -126,6 +126,7 @@ jobs:
                 run: tox run -e benchmarks
 
     publish:
+        if: ${{ false }}  # disabled until decided when it should run exactly
         runs-on: ubuntu-22.04
         steps:
             -   uses: actions/checkout@v3
