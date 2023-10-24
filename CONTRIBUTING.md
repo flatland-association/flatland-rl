@@ -2,8 +2,6 @@
 
 Contributions are welcome, and they are greatly appreciated! Every little bit helps, and credit will always be given.
 
-You can contribute in many ways:
-
 ## Types of Contributions
 
 ### Report Bugs
@@ -49,7 +47,7 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     ```
 
 2. Set up a virtual environment using your preferred method (we suggest the built-in venv) and activate it. Make sure
-   all the supported python interpreters (3.8, 3.9, 3.10) is available. This is important because you want to run the
+   all the supported Python interpreters (3.8, 3.9, 3.10) is available. This is important because you want to run the
    test with all supported versions.
 
 3. Install dependencies required for development using pip:
@@ -67,7 +65,7 @@ Ready to contribute? Here's how to set up `flatland` for local development.
    Now you can make your changes locally.
 
 5. When you're done making changes, check that your changes pass the tests. Use `tox` to run them as it will
-   automatically test on all supported python versions:
+   automatically test on all supported Python versions:
 
     ```shell
     tox
@@ -78,28 +76,18 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     ```shell
     git add .
     git commit
-    # Your favorite editor will open, allowing you to enter a message that describes your changes. The first line is the
+    # Your favorite editor opens, allowing you to enter a message that describes your changes. The first line is the
     # subject line. Use sentence capitalisation (but don't end with a period) and limit it to 50 characters. It's good
     # practice to use imperative mood, e.g. "Add new feature that does X". If you need more space to describe your
     # changes (focus on the what and why, less on the how), add an empty line and then continue with the body. Try to
-    # keep every line at 72 characters.
+    # limit every line in body to 72 characters.
     git push origin name-of-your-bugfix-or-feature
     ```
 
-7. Open a pull request on GitHub targeting the `main` branch.
-
-## Pull Request Guidelines
-
-Before you submit a pull request, check that it meets these guidelines:
-
-1. Include tests to verify correct behaviour.
-2. Format the code according to PEP 8 (an IDE like PyCharm can do this for you).
-3. Update the docs if you add new functionality. Put your new functionality into a function with a docstring, and add
-   the feature to the list in `README.md`.
-4. Make sure your changes work with Python 3.8, 3.9 and 3.10. We force pipelines to be run successfully for pull
-   requests to be merged.
-5. Get an approval from at least one member of the core team. This is to ensure that
-   the [Technical Guidelines](#technical-guidelines) are respected and that the code is well tested.
+7. Open a pull request on GitHub targeting the `main` branch. Make sure to fill out the template. A review from a core
+   team member is automatically requested. At least one approval is required to merge.
+8. Once successfully reviewed, squash-merge the PR. This collapses all the commits into one and merges it into
+   the `main` branch. Please adjust the subject line and body of the commit to accurately reflect your changes.
 
 ## Technical Guidelines
 
