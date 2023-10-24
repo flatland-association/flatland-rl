@@ -35,7 +35,7 @@ Setup a virtual environment using your preferred method (we suggest the built-in
 
 ### Stable release
 
-Install Flatland from pip:
+Install Flatland using pip:
 
 ```shell
 pip install flatland-rl
