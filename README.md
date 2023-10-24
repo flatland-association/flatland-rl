@@ -29,7 +29,7 @@ encourage you to take part in!
 📦 Setup
 ---
 
-### Setup virtual environment (optional)
+### Setup virtual environment
 
 Setup a virtual environment using your preferred method (we suggest the built-in venv) and activate it.
 
