@@ -8,7 +8,7 @@ include requirements-dev.txt
 graft flatland/png
 graft env_data
 
-recursive-exclude * __pycache__
-recursive-exclude * *.py[co]
+prune __pycache__
+global-exclude *.py[cod]
 
 recursive-include docs *.rst *.md conf.py *.jpg *.png *.gif
