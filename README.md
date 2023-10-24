@@ -5,13 +5,13 @@
 
 [![Main](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml/badge.svg)](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml)
 
-Flatland is a open-source toolkit for developing and comparing Multi Agent Reinforcement Learning algorithms in little (
-or ridiculously large!) gridworlds.
+Flatland is a open-source toolkit for developing and comparing Multi-Agent Reinforcement Learning algorithms in little
+(or ridiculously large!) gridworlds.
 
 [The official website](https://www.flatland-association.org/) contains full details about the environment and problem
 statement.
 
-Flatland is tested with Python 3.7, 3.8 and 3.9 on modern versions of macOS, Linux and Windows. You may encounter
+Flatland is tested with Python 3.8, 3.9 and 3.10 on modern versions of macOS, Linux and Windows. You may encounter
 problems with graphical rendering if you use WSL.
 
 🏆 Challenges
@@ -29,13 +29,19 @@ encourage you to take part in!
 📦 Setup
 ---
 
-### Setup virtual environment (optional)
+### Setup virtual environment
 
-Setup a virtual environment using your preferred method (e.g. venv) and activate it.
+Set up a virtual environment using your preferred method (we suggest the built-in venv) and activate it.
+You can use your IDE to do this or by using the command line:
+
+```shell
+python -m venv .venv
+source .venv/bin/activate
+```
 
 ### Stable release
 
-Install Flatland from pip:
+Install Flatland using pip:
 
 ```shell
 pip install flatland-rl
@@ -47,9 +53,9 @@ This is the preferred method to install Flatland, as it will always install the 
 ---
 
 This library was developed
-by [SBB](https://www.sbb.ch/en/), [Deutsche Bahn](https://www.deutschebahn.com/), [SNCF](https://www.sncf.com/en), [AIcrowd](https://www.aicrowd.com/)
-and [numerous contributors](http://flatland.aicrowd.com/misc/credits.html) and AIcrowd research fellows from the AIcrowd
-community.
+by [SBB](https://www.sbb.ch/en/), [Deutsche Bahn](https://www.deutschebahn.com/), [SNCF](https://www.sncf.com/en),
+[AIcrowd](https://www.aicrowd.com/) and [numerous contributors](http://flatland.aicrowd.com/misc/credits.html) from the
+flatland community.
 
 ➕ Contributions
 ---

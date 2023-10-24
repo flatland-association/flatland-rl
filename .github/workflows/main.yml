@@ -17,7 +17,7 @@ jobs:
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v3
                 with:
-                    python-version: "3.7"
+                    python-version: "3.8"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -30,7 +30,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+                python-version: [ "3.8", "3.9", "3.10" ]
         steps:
             -   uses: actions/checkout@v3
             -   name: Set up Python ${{ matrix.python-version }}
@@ -51,7 +51,7 @@ jobs:
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v3
                 with:
-                    python-version: "3.7"
+                    python-version: "3.8"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -72,7 +72,7 @@ jobs:
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v3
                 with:
-                    python-version: "3.7"
+                    python-version: "3.8"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -87,7 +87,7 @@ jobs:
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v3
                 with:
-                    python-version: "3.7"
+                    python-version: "3.8"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -102,7 +102,7 @@ jobs:
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v3
                 with:
-                    python-version: "3.7"
+                    python-version: "3.8"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -117,10 +117,26 @@ jobs:
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v3
                 with:
-                    python-version: "3.7"
+                    python-version: "3.8"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e benchmarks
+
+    publish:
+        if: ${{ false }}  # disabled until decided when it should run exactly
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v3
+                with:
+                    python-version: "3.8"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Publish new package version
+                run: tox run -e publish
