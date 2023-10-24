@@ -1,4 +1,4 @@
-.PHONY: help, docs
+.PHONY: help, install-deps, lint, test, coverage, docs
 .DEFAULT_GOAL := help
 
 help: ## display this help section
