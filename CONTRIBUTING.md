@@ -1,7 +1,6 @@
 # Contributing
 
-Contributions are welcome, and they are greatly appreciated! Every little bit
-helps, and credit will always be given.
+Contributions are welcome, and they are greatly appreciated! Every little bit helps, and credit will always be given.
 
 You can contribute in many ways:
 
@@ -49,11 +48,11 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     git clone git@github.com:flatland-association/flatland-rl.git
     ```
 
-2. Set up a virtual environment using your preferred method (e.g. venv) and activate it. Make sure one of the supported
-   python interpreters (3.7, 3.8, 3.9, 3.10) is available. Note that if you are using an Apple Macbook with Apple
-   Silicon (e.g. M1 or M2), you need to use at least python 3.8.
+2. Set up a virtual environment using your preferred method (we suggest the built-in venv) and activate it. Make sure
+   all the supported python interpreters (3.8, 3.9, 3.10) is available. This is important because you want to run the
+   test with all supported versions.
 
-3. Install the software dependencies using pip:
+3. Install dependencies required for development using pip:
 
     ```shell
     pip install -r requirements-dev.txt
@@ -67,35 +66,40 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass the tests. Use tox to run them as it will automatically
-   test on all supported python versions:
+5. When you're done making changes, check that your changes pass the tests. Use `tox` to run them as it will
+   automatically test on all supported python versions:
 
     ```shell
     tox
     ```
 
-6. Commit your changes and push your branch to Github:
+6. Whenever you feel like you completed an iteration of your changes, commit and push them to GitHub:
 
     ```shell
     git add .
-    git commit -m "Addresses #<issue-number> Your detailed description of your changes."
+    git commit
+    # Your favorite editor will open, allowing you to enter a message that describes your changes. The first line is the
+    # subject line. Use sentence capitalisation (but don't end with a period) and limit it to 50 characters. It's good
+    # practice to use imperative mood, e.g. "Add new feature that does X". If you need more space to describe your
+    # changes (focus on the what and why, less on the how), add an empty line and then continue with the body. Try to
+    # keep every line at 72 characters.
     git push origin name-of-your-bugfix-or-feature
     ```
 
-7. Open a pull request on github targeting the `main` branch.
+7. Open a pull request on GitHub targeting the `main` branch.
 
 ## Pull Request Guidelines
 
 Before you submit a pull request, check that it meets these guidelines:
 
-1. The pull request should include tests.
-2. The code must be formatted (using an IDE like PyCharm can do this for you).
-3. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a
-   docstring, and add the feature to the list in `README.md`.
-4. The pull request should work for Python 3.7, 3.8, 3.9, 3.10. We force pipelines to be run successfully for pull
+1. Include tests to verify correct behaviour.
+2. Format the code according to PEP 8 (an IDE like PyCharm can do this for you).
+3. Update the docs if you add new functionality. Put your new functionality into a function with a docstring, and add
+   the feature to the list in `README.md`.
+4. Make sure your changes work with Python 3.8, 3.9 and 3.10. We force pipelines to be run successfully for pull
    requests to be merged.
-5. Pull requests must be approved by at least one member of the core team. This is to ensure that the
-   [Technical Guidelines](#technical-guidelines) are respected and that the code is well tested.
+5. Get an approval from at least one member of the core team. This is to ensure that
+   the [Technical Guidelines](#technical-guidelines) are respected and that the code is well tested.
 
 ## Technical Guidelines
 
@@ -124,7 +128,7 @@ We use the pylint naming conventions:
 
 Docstrings should be formatted using [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html).
 
-### Accessing resources
+### Accessing Resources
 
 We use [importlib-resources](https://importlib-resources.readthedocs.io/en/latest/) to read from local files.
 
@@ -154,7 +158,7 @@ renderer.gl.save_image("filename.bmp")
 
 ## Type Hints
 
-We use Type Hints ([PEP 484](https://www.python.org/dev/peps/pep-0484/)) for better readability and better IDE support:
+We use type hints ([PEP 484](https://www.python.org/dev/peps/pep-0484/)) for better readability and better IDE support:
 
 ```python
 # This is how you declare the type of a variable type in Python 3.6
@@ -171,11 +175,11 @@ else:
     child = False
 ```
 
-To get started with Type Hints, you can have a look at
+To get started with type hints, you can have a look at
 the [Type Hints Cheat Sheet](https://mypy.readthedocs.io/en/latest/cheat_sheet_py3.html).
 
-Caveat: We discourage the usage of Type Aliases for structured data since its members remain unnamed. Instead, consider
-using NamedTuple:
+Caveat: We discourage the usage of type aliases for structured data since its members remain unnamed. Instead, consider
+using `NamedTuple`:
 
 ```python
 # Discouraged: Type Alias with unnamed members
