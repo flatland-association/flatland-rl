@@ -4,7 +4,6 @@
 help: ## display this help section
 	@awk 'BEGIN {FS = ":.*?## "}; /^[a-zA-Z_-]+:.*?##/ {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-
 install-deps: ## install the package-s dev dependencies
 	python -m pip install -r requirements-dev.txt
 
