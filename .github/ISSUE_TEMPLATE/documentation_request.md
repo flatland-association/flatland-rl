@@ -1,5 +1,5 @@
 ---
-name: Documentation
+name: Documentation request
 about: Report missing documentation or suggest improvements of existing one
 title: ''
 labels: documentation

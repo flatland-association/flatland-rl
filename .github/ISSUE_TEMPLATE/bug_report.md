@@ -12,10 +12,8 @@ Describe the bug in a clear and concise manner.
 
 **To Reproduce**
 List the steps needed to reproduce the behavior:
-1. Go to '...'
-2. Click on '...'
-3. Scroll down to '...'
-4. See error
+1. '...'
+2. '...'
 
 **Expected behavior**
 Describe what you expected to happen in a clear and concise manner.
