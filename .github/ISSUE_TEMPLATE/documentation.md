@@ -1,6 +1,6 @@
 ---
 name: Documentation
-about: For missing documentation or improvements of existing documentation
+about: Missing documentation or improvements of existing documentation
 title: ''
 labels: documentation
 assignees: ''
@@ -9,7 +9,7 @@ assignees: ''
 
 ### Target
 What feature(s) or functionality should be documented:
-- …
+- [ ] …
 
 ### Source code
 What methods, classes etc. should be documented:
