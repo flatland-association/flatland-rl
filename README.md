@@ -31,7 +31,7 @@ encourage you to take part in!
 
 ### Setup virtual environment
 
-Set up a virtual environment using your preferred method (we suggest the built-in venv) and activate it.
+Set up a virtual environment using your preferred method (we suggest the built-in `venv`) and activate it.
 You can use your IDE to do this or by using the command line:
 
 ```shell
@@ -44,7 +44,7 @@ source .venv/bin/activate
 Install Flatland using pip:
 
 ```shell
-pip install flatland-rl
+python -m pip install flatland-rl
 ```
 
 This is the preferred method to install Flatland, as it will always install the most recent stable release.
