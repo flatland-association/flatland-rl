@@ -1,14 +1,3 @@
-include AUTHORS.md
-include CONTRIBUTING.md
-include CHANGELOG.md
-
-include requirements.txt
-include requirements-dev.txt
-
-graft flatland/png
-graft env_data
-
+prune build
 prune __pycache__
-global-exclude *.py[cod]
-
-recursive-include docs *.rst *.md conf.py *.jpg *.png *.gif
+global-exclude *.pyc *.o
