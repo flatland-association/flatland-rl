@@ -22,7 +22,7 @@ Describe what you expected to happen in a clear and concise manner.
 Describe the machine and software you are using:
  - OS: [e.g. Mac]
  - Python version [e.g. 3.8]
- - Package version [e.g. 3.0.5]
+ - Package version [e.g. 3.0.15]
 
 **Additional context**
 Add any other context about the problem here.
