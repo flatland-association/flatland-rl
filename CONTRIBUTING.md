@@ -40,7 +40,7 @@ If you are proposing a feature:
 
 Ready to contribute? Here's how to set up `flatland` for local development.
 
-1. Make sure all supported Python interpreters (3.8, 3.9, 3.10) is available.
+1. Make sure all supported Python interpreters (3.8, 3.9, 3.10) are available.
    This is important because you want to be able to run the test with all supported versions.
    We can recommend [pyenv](https://github.com/pyenv/pyenv) to manage Python versions.
    See their docs for installation instructions.
