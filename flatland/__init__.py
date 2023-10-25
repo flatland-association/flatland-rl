@@ -5,6 +5,6 @@
 from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = version("package-name")
+    __version__ = version("flatland")
 except PackageNotFoundError:
     pass
