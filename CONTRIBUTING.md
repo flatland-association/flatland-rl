@@ -40,23 +40,32 @@ If you are proposing a feature:
 
 Ready to contribute? Here's how to set up `flatland` for local development.
 
-1. Clone the `flatland` repo:
+1. Make sure all supported Python interpreters (3.8, 3.9, 3.10) is available.
+   This is important because you want to be able to run the test with all supported versions.
+   We can recommend [pyenv](https://github.com/pyenv/pyenv) to manage Python versions.
+   See their docs for installation instructions.
+
+2. Clone the `flatland` repo:
 
     ```shell
     git clone git@github.com:flatland-association/flatland-rl.git
     ```
 
-2. Set up a virtual environment using your preferred method (we suggest the built-in venv) and activate it. Make sure
-   all the supported Python interpreters (3.8, 3.9, 3.10) is available. This is important because you want to run the
-   test with all supported versions.
+3. Set up a virtual environment using your preferred method (we suggest the built-in venv) and activate it.
+   You can use your IDE to do this or by using the command line:
 
-3. Install dependencies required for development using pip:
+    ```shell
+    python -m venv .venv
+    source .venv/bin/activate
+    ```
+
+4. Install dependencies required for development using pip:
 
     ```shell
     pip install -r requirements-dev.txt
     ```
 
-4. Create a branch for local development:
+5. Create a branch for local development:
 
     ```shell
     git checkout -b name-of-your-bugfix-or-feature
@@ -64,14 +73,14 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass the tests. Use `tox` to run them as it will
+6. When you're done making changes, check that your changes pass the tests. Use `tox` to run them as it will
    automatically test on all supported Python versions:
 
     ```shell
     tox
     ```
 
-6. Whenever you feel like you completed an iteration of your changes, commit and push them to GitHub:
+7. Whenever you feel like you completed an iteration of your changes, commit and push them to GitHub:
 
     ```shell
     git add .
@@ -84,9 +93,9 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     git push origin name-of-your-bugfix-or-feature
     ```
 
-7. Open a pull request on GitHub targeting the `main` branch. Make sure to fill out the template. A review from a core
+8. Open a pull request on GitHub targeting the `main` branch. Make sure to fill out the template. A review from a core
    team member is automatically requested. At least one approval is required to merge.
-8. Once successfully reviewed, squash-merge the PR. This collapses all the commits into one and merges it into
+9. Once successfully reviewed, squash-merge the PR. This collapses all the commits into one and merges it into
    the `main` branch. Please adjust the subject line and body of the commit to accurately reflect your changes.
 
 ## Technical Guidelines
