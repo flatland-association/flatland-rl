@@ -170,7 +170,7 @@ Renders the scene into a image (screenshot):
 renderer.gl.save_image("filename.bmp")
 ```
 
-## Type Hints
+### Type Hints
 
 We use type hints ([PEP 484](https://www.python.org/dev/peps/pep-0484/)) for better readability and better IDE support:
 
@@ -208,7 +208,7 @@ Position = NamedTuple('Position', [
 ])
 ```
 
-## NamedTuple
+### NamedTuple
 
 For structured data containers for which we do not write additional methods, we use `NamedTuple` instead of plain `Dict`
 to ensure better readability:
@@ -225,7 +225,7 @@ RailEnvNextAction = NamedTuple('RailEnvNextAction', [
 
 Members of NamedTuple can then be accessed through `.<member>` instead of `['<key>']`.
 
-## Class Attributes
+### Class Attributes
 
 We use classes for data structures if we need to write methods that ensure (class) invariants over multiple members, for
 instance, `o.A` always changes at the same time as `o.B`. We use the [attrs](https://github.com/python-attrs/attrs)
@@ -237,7 +237,7 @@ class Replay(object):
     position = attrib(type=Tuple[int, int])
 ```
 
-## Abstract Base Classes
+### Abstract Base Classes
 
 We use the [abc](https://pymotw.com/3/abc/) class decorator and a way to declaratively define the attributes on that
 class:
@@ -283,7 +283,7 @@ if __name__ == '__main__':
                                   PluginBase))
 ```
 
-## Currying
+### Currying
 
 We discourage currying to encapsulate state since we often want the stateful object to have multiple methods (but the
 curried function has only its signature, and abusing params to switch behavior is not very readable). Thus, we should
