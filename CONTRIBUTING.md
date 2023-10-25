@@ -302,3 +302,10 @@ def complex_rail_generator(nr_start_goal=1,
                            max_dist=99999,
                            seed=1) -> RailGenerator:
 ```
+
+## Publishing
+To publish a new version of the package, publish a new release on GitHub.
+Make sure to create a new tag reflecting the new version number prefixed with a "v", e.g. "v4.0.0".
+This project follows semantic versioning, hence chose the version number wisely.
+A GitHub action will pick up the new release and build and publish the new version of the package.
+
