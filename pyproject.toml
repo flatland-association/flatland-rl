@@ -1,10 +1,9 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "flatland-rl"
-version = "3.0.15"
 description = "Multi Agent Reinforcement Learning on Trains"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -52,11 +51,13 @@ dependencies = [
     "timeout_decorator",
     "wandb",
 ]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
     "pip-tools",
     "tox",
+    "twine",
     "pytest",
     "coverage",
     "flake8",
@@ -86,3 +87,5 @@ evaluator = "flatland.cli:evaluator"
 
 [tool.setuptools.packages]
 find = { }
+
+[tool.setuptools_scm]
