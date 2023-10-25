@@ -9,4 +9,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Removed
 
-- Support for Python 3.7
+- Dropped support for Python 3.7 because it's end of life.
