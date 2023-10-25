@@ -55,25 +55,25 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-    "pip-tools",
-    "tox",
-    "twine",
-    "pytest",
+    "benchmarker",
     "coverage",
     "flake8",
     "flake8-eradicate",
-    "twine",
-    "numpydoc",
     "ipycytoscape",
-    "benchmarker",
+    "jupyter",
+    "Jupyter-Canvas-Widget@git+https://github.com/who8mylunch/Jupyter_Canvas_Widget.git@bd151ae1509c50b5809944dd3294f58b7b069c86",
+    "jupyter-contrib-nbextensions",
+    "jupyter-core",
+    "m2r",
+    "notebook",
+    "numpydoc",
+    "pip-tools",
+    "pytest",
     "sphinx",
     "sphinx-rtd-theme",
-    "jupyter",
-    "jupyter-core",
-    "jupyter-contrib-nbextensions",
-    "notebook",
-    "Jupyter-Canvas-Widget@git+https://github.com/who8mylunch/Jupyter_Canvas_Widget.git@bd151ae1509c50b5809944dd3294f58b7b069c86",
-    "m2r",
+    "tox",
+    "twine",
+    "twine",
 ]
 
 [project.urls]
