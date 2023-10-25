@@ -46,7 +46,7 @@ subprocess.call(['sphinx-apidoc', '--force', '-a', '-e', '-o', 'docs/', 'flatlan
                  '05_apidoc'])
 
 os.environ["SPHINXPROJ"] = "Flatland"
-os.chdir('../docs')
+os.chdir('docs')
 subprocess.call(['python', '-msphinx', '-M', 'clean', '.', '_build'])
 img_dest = '_build/html/img'
 if not os.path.exists(img_dest):
