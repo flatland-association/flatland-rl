@@ -45,13 +45,19 @@ Ready to contribute? Here's how to set up `flatland` for local development.
    We can recommend [pyenv](https://github.com/pyenv/pyenv) to manage Python versions.
    See their docs for installation instructions.
 
-2. Clone the `flatland` repo:
+2. Open up a terminal, clone the `flatland` repository and open it:
 
     ```shell
     git clone git@github.com:flatland-association/flatland-rl.git
+    cd flatland-rl
     ```
+3. When using `pyenv`, set the local Python versions:
 
-3. Set up a virtual environment using your preferred method (we suggest the built-in venv) and activate it.
+   ```shell
+   pyenv local 3.8 3.9 3.10
+   ```
+
+4. Set up a virtual environment using your preferred method (we suggest the built-in `venv`) and activate it.
    You can use your IDE to do this or by using the command line:
 
     ```shell
@@ -59,28 +65,35 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     source .venv/bin/activate
     ```
 
-4. Install dependencies required for development using pip:
+5. Install dependencies required for development using pip:
 
     ```shell
-    pip install -r requirements-dev.txt
+    python -m pip install -r requirements-dev.txt
     ```
 
-5. Create a branch for local development:
+6. Create a branch for local development:
 
     ```shell
     git checkout -b name-of-your-bugfix-or-feature
     ```
 
-   Now you can make your changes locally.
+7. Make all the changes you want to make!
 
-6. When you're done making changes, check that your changes pass the tests. Use `tox` to run them as it will
-   automatically test on all supported Python versions:
+8. When you're done making changes, check that your changes pass the tests.
+   Use `tox` to run them as it will automatically test on all supported Python versions:
 
     ```shell
     tox
     ```
+9. If you used a Python package not yet used before in the project, add it to the `dependencies` section of
+   the `pyproject.toml` file.
+   Make sure to re-generate the requirement files:
 
-7. Whenever you feel like you completed an iteration of your changes, commit and push them to GitHub:
+    ```shell
+    tox -e requirements
+    ```
+
+10. Whenever you feel like you completed an iteration of your changes, commit and push them to GitHub:
 
     ```shell
     git add .
@@ -90,13 +103,17 @@ Ready to contribute? Here's how to set up `flatland` for local development.
     # practice to use imperative mood, e.g. "Add new feature that does X". If you need more space to describe your
     # changes (focus on the what and why, less on the how), add an empty line and then continue with the body. Try to
     # limit every line in body to 72 characters.
-    git push origin name-of-your-bugfix-or-feature
+    git push --set-upstream origin name-of-your-bugfix-or-feature
+    # After the first time, a simple `git push` will do the trick.
     ```
 
-8. Open a pull request on GitHub targeting the `main` branch. Make sure to fill out the template. A review from a core
-   team member is automatically requested. At least one approval is required to merge.
-9. Once successfully reviewed, squash-merge the PR. This collapses all the commits into one and merges it into
-   the `main` branch. Please adjust the subject line and body of the commit to accurately reflect your changes.
+11. Open a pull request on GitHub targeting the `main` branch.
+    Make sure to fill out the template.
+    A review from a core team member is automatically requested.
+    At least one approval is required to merge.
+12. Once successfully reviewed, squash-merge the PR.
+    This collapses all the commits into one and merges it into the `main` branch.
+    Please adjust the subject line and body of the commit to accurately reflect your changes.
 
 ## Technical Guidelines
 
@@ -185,11 +202,10 @@ Tuple[int, int]
 # Better: use NamedTuple
 from typing import NamedTuple
 
-Position = NamedTuple('Position',
-                      [
-                          ('r', int),
-                          ('c', int)
-                      ])
+Position = NamedTuple('Position', [
+    ('r', int),
+    ('c', int)
+])
 ```
 
 ## NamedTuple
@@ -200,12 +216,11 @@ to ensure better readability:
 ```python
 from typing import NamedTuple
 
-RailEnvNextAction = NamedTuple('RailEnvNextAction',
-                               [
-                                   ('action', RailEnvActions),
-                                   ('next_position', RailEnvGridPos),
-                                   ('next_direction', Grid4TransitionsEnum)
-                               ])
+RailEnvNextAction = NamedTuple('RailEnvNextAction', [
+    ('action', RailEnvActions),
+    ('next_position', RailEnvGridPos),
+    ('next_direction', Grid4TransitionsEnum)
+])
 ```
 
 Members of NamedTuple can then be accessed through `.<member>` instead of `['<key>']`.
@@ -249,7 +264,6 @@ And then:
 ```python
 # abc_subclass.py
 
-import abc
 from abc_base import PluginBase
 
 
