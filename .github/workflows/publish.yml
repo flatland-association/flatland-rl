@@ -52,7 +52,6 @@ jobs:
             -   name: Build new package
                 run: tox run -e build
             -   name: Publish package to PyPI
-                if: ${{ false }} # disable until we are confident that this works
                 uses: pypa/gh-action-pypi-publish@release/v1
                 with:
                     password: ${{ secrets.PYPI_API_TOKEN }}
