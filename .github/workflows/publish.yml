@@ -48,8 +48,19 @@ jobs:
                 run: |
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
+            -   name: Pick version tag
+                id: pick_version
+                run: |
+                    if [[ $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
+                      echo "Workflow triggered manually."
+                      VERSION=${{ inputs.version }}
+                    elif [[ $GITHUB_EVENT_NAME == 'pull_request' ]]; then
+                      echo "Workflow triggered by pull_request close event."
+                      VERSION=$(echo $GITHUB_REF | sed 's/release\///')
+                    fi
+                    echo "::set-output name=version::$VERSION"
             -   name: Add version tag
-                run: git tag v${{ inputs.version }}
+                run: git tag v${{ steps.pick_version.outputs.version }}
             -   name: Build new package
                 run: tox run -e build
             -   name: Publish package to PyPI
