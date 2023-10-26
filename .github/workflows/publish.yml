@@ -44,10 +44,7 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Pick version tag
                 id: pick-version
-                run: |
-                    VERSION=$(echo "$GITHUB_HEAD_REF" | sed 's/release\///')
-                    echo "New release version is $VERSION"
-                    echo "{version}={$VERSION}" >> $GITHUB_OUTPUT
+                run: echo "{version}={$(echo "$GITHUB_HEAD_REF" | sed 's/release\///')}" >> $GITHUB_OUTPUT
             -   name: Add version tag
                 env:
                     VERSION: ${{ steps.pick-version.outputs.version }}
