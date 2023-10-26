@@ -304,8 +304,13 @@ def complex_rail_generator(nr_start_goal=1,
 ```
 
 ## Publishing
-To publish a new version of the package, publish a new release on GitHub.
-Make sure to create a new tag reflecting the new version number prefixed with a "v", e.g. "v4.0.0".
-This project follows semantic versioning, hence chose the version number wisely.
-A GitHub action will pick up the new release and build and publish the new version of the package.
+
+To publish a new version of the package:
+
+1. Pick an appropriate version number (this project follows semantic versioning, hence chose wisely) and
+   update `CHANGELOG.md` accordingly.
+2. Create a branch using the naming convention `release/<version-number>`, e.g. `release/4.0.0`.
+3. Commit your changes to `CHANGELOG.md`.
+4. Push the branch and open a PR targeting `main` and get it approved by a core team member.
+5. Merge the PR, a GitHub action will pick it up and release the new version.
 
