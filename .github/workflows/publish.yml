@@ -52,11 +52,11 @@ jobs:
                 id: pick_version
                 run: |
                     if [[ $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
-                      echo "Workflow triggered manually."
                       VERSION=${{ inputs.version }}
+                      echo "Triggered manually, version is $VERSION"
                     elif [[ $GITHUB_EVENT_NAME == 'pull_request' ]]; then
-                      echo "Workflow triggered by pull_request close event."
-                      VERSION=$(echo $GITHUB_HEAD_REF | sed 's/release\///')
+                      VERSION=$(echo "$GITHUB_HEAD_REF" | sed 's/release\///')
+                      echo "Triggered by pull_request close event, version is $VERSION"
                     fi
                     echo "::set-output name=version::$VERSION"
             -   name: Add version tag
