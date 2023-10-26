@@ -7,6 +7,7 @@ on:
                 description: "Version number"
                 required: true
                 type: string
+    push:
 
 jobs:
     publish:
