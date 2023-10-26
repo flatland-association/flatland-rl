@@ -57,6 +57,8 @@ jobs:
                 uses: pypa/gh-action-pypi-publish@release/v1
                 with:
                     password: ${{ secrets.PYPI_API_TOKEN }}
+            -   name: Push version tag
+                run: git push --tags
             -   name: Archive package
                 uses: actions/upload-artifact@v3
                 with:
