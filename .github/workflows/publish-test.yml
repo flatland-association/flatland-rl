@@ -10,7 +10,7 @@ on:
 
 jobs:
     publish:
-        if: ${{ github.event_name == 'workflow_dispatch' && github.actor == 'fnberta' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         runs-on: ubuntu-22.04
         steps:
             -   name: Checkout
