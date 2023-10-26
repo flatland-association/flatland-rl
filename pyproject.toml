@@ -61,7 +61,6 @@ dev = [
     "flake8-eradicate",
     "ipycytoscape",
     "jupyter",
-    "Jupyter-Canvas-Widget@git+https://github.com/who8mylunch/Jupyter_Canvas_Widget.git@bd151ae1509c50b5809944dd3294f58b7b069c86",
     "jupyter-contrib-nbextensions",
     "jupyter-core",
     "m2r",
