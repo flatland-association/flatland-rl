@@ -49,7 +49,9 @@ jobs:
                     echo "New release version is $VERSION"
                     echo "{version}={$VERSION}" >> $GITHUB_OUTPUT
             -   name: Add version tag
-                run: git tag v${{ steps.pick-version.outputs.version }}
+                env:
+                    VERSION: ${{ steps.pick-version.outputs.version }}
+                run: git tag v$VERSION
             -   name: Build new package
                 run: tox run -e build
             -   name: Publish package to PyPI
