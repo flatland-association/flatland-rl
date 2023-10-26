@@ -56,7 +56,7 @@ jobs:
                       VERSION=${{ inputs.version }}
                     elif [[ $GITHUB_EVENT_NAME == 'pull_request' ]]; then
                       echo "Workflow triggered by pull_request close event."
-                      VERSION=$(echo $GITHUB_REF | sed 's/release\///')
+                      VERSION=$(echo $GITHUB_HEAD_REF | sed 's/release\///')
                     fi
                     echo "::set-output name=version::$VERSION"
             -   name: Add version tag
