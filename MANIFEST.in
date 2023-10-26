@@ -1,3 +1,0 @@
-prune build
-prune __pycache__
-global-exclude *.pyc *.o
