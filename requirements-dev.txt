@@ -166,8 +166,6 @@ idna==3.4
     #   anyio
     #   jsonschema
     #   requests
-image-attendant==2020.7.29
-    # via jupyter-canvas-widget
 imagesize==1.4.1
     # via sphinx
 importlib-metadata==6.8.0
@@ -219,7 +217,6 @@ ipywidgets==8.1.1
     #   ipycytoscape
     #   ipyevents
     #   jupyter
-    #   jupyter-canvas-widget
 isoduration==20.11.0
     # via jsonschema
 jaraco-classes==3.3.0
@@ -252,8 +249,6 @@ jsonschema[format-nongpl]==4.19.1
 jsonschema-specifications==2023.7.1
     # via jsonschema
 jupyter==1.0.0
-    # via flatland-rl (pyproject.toml)
-jupyter-canvas-widget @ git+https://github.com/who8mylunch/Jupyter_Canvas_Widget.git@bd151ae1509c50b5809944dd3294f58b7b069c86
     # via flatland-rl (pyproject.toml)
 jupyter-client==8.4.0
     # via
@@ -394,9 +389,7 @@ numpy==1.24.4
     #   flatland-rl (pyproject.toml)
     #   gym
     #   gymnasium
-    #   image-attendant
     #   ipycanvas
-    #   jupyter-canvas-widget
     #   matplotlib
     #   msgpack-numpy
     #   pandas
@@ -447,7 +440,6 @@ pickleshare==0.7.5
 pillow==10.1.0
     # via
     #   flatland-rl (pyproject.toml)
-    #   image-attendant
     #   ipycanvas
     #   matplotlib
 pip-tools==7.3.0
@@ -563,7 +555,6 @@ referencing==0.30.2
 requests==2.31.0
     # via
     #   crowdai-api
-    #   image-attendant
     #   jupyterlab-server
     #   python-gitlab
     #   ray
