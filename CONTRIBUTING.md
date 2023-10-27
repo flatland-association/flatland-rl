@@ -1,9 +1,6 @@
 # Contributing
 
-Contributions are welcome, and they are greatly appreciated! Every little bit
-helps, and credit will always be given.
-
-You can contribute in many ways:
+Contributions are welcome, and they are greatly appreciated! Every little bit helps, and credit will always be given.
 
 ## Types of Contributions
 
@@ -15,19 +12,18 @@ If you are reporting a bug, please make sure to fill out the appropriate issue t
 
 ### Fix Bugs
 
-Look through the Repository Issue Tracker for bugs. Anything tagged with "bug" and "help wanted" is open to whoever
+Look through the repository issue tracker for bugs. Anything tagged with "bug" and "help wanted" is open to whoever
 wants to implement it.
 
 ### Implement Features
 
-Look through the Repository Issue Tracker for features. Anything tagged with "enhancement" and "help wanted" is open to
+Look through the repository issue tracker for features. Anything tagged with "enhancement" and "help wanted" is open to
 whoever wants to implement it.
 
 ### Write Documentation
 
-flatland could always use more documentation, whether as part of the
-official flatland docs, in docstrings, or even on the web in blog posts,
-articles, and such. A quick reference for writing good docstrings is available
+flatland could always use more documentation, whether as part of the official flatland docs, in docstrings, or even on
+the web in blog posts, articles, and such. A quick reference for writing good docstrings is available
 at [writing-docstrings](https://docs.python-guide.org/writing/documentation/#writing-docstrings).
 
 ### Submit Feedback
@@ -44,66 +40,87 @@ If you are proposing a feature:
 
 Ready to contribute? Here's how to set up `flatland` for local development.
 
-1. Clone the `flatland` repo:
+1. Make sure all supported Python interpreters (3.8, 3.9, 3.10) are available.
+   This is important because you want to be able to run the test with all supported versions.
+   We recommend [pyenv](https://github.com/pyenv/pyenv) to manage Python versions.
+   See their docs for installation instructions.
+
+2. Open up a terminal, clone the `flatland` repository and open it:
 
     ```shell
     git clone git@github.com:flatland-association/flatland-rl.git
+    cd flatland-rl
     ```
+3. When using `pyenv`, set the local Python versions:
 
-2. Setup a virtual environment using your preferred method (e.g. venv) and activate it. Make sure python 3.7, 3.8 and
-   3.9 interpreters are available. Note that if you are using an Apple Macbook with an M1 or M2 processor, you need to
-   use python 3.8 or 3.9.
+   ```shell
+   pyenv local 3.8 3.9 3.10
+   ```
 
-3. Install the software dependencies using pip:
+4. Set up a virtual environment using your preferred method (we suggest the built-in `venv`) and activate it.
+   You can use your IDE to do this or by using the command line:
 
     ```shell
-    pip install -r requirements_dev.txt
+    python -m venv .venv
+    source .venv/bin/activate
     ```
 
-4. Create a branch for local development:
+5. Install dependencies required for development using pip:
+
+    ```shell
+    python -m pip install -r requirements-dev.txt
+    ```
+
+6. Create a branch for local development:
 
     ```shell
     git checkout -b name-of-your-bugfix-or-feature
     ```
 
-   Now you can make your changes locally.
+7. Make all the changes you want to make!
 
-5. When you're done making changes, check that your changes pass the tests. Use tox to run them as it will automatically
-   test on all supported python versions:
+8. When you're done making changes, check that your changes pass the tests.
+   Use `tox` to run them as it will automatically test on all supported Python versions:
 
     ```shell
     tox
     ```
+9. If you used a Python package not yet used before in the project, add it to the `dependencies` section of
+   the `pyproject.toml` file.
+   Make sure to re-generate the requirement files:
 
-6. Commit your changes and push your branch to Github:
+    ```shell
+    tox -e requirements
+    ```
+
+10. Whenever you feel like you completed an iteration of your changes, commit and push them to GitHub:
 
     ```shell
     git add .
-    git commit -m "Addresses #<issue-number> Your detailed description of your changes."
-    git push origin name-of-your-bugfix-or-feature
+    git commit
+    # Your favorite editor opens, allowing you to enter a message that describes your changes. The first line is the
+    # subject line. Use sentence capitalisation (but don't end with a period) and limit it to 50 characters. It's good
+    # practice to use imperative mood, e.g. "Add new feature that does X". If you need more space to describe your
+    # changes (focus on the what and why, less on the how), add an empty line and then continue with the body. Try to
+    # limit every line in body to 72 characters.
+    git push --set-upstream origin name-of-your-bugfix-or-feature
+    # After the first time, a simple `git push` will do the trick.
     ```
 
-7. Open a pull request on Github targeting the `main` branch.
-
-## Pull Request Guidelines
-
-Before you submit a pull request, check that it meets these guidelines:
-
-1. The pull request should include tests.
-2. The code must be formatted (using an IDE like PyCharm can do this for you).
-3. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a
-   docstring, and add the feature to the list in README.rst.
-4. The pull request should work for Python 3.7, 3.8, 3.9. We force pipelines to be run successfully for pull requests to
-   be merged.
-5. Pull requests must be approved by at least one member of the core team. This is to ensure that the Technical
-   Guidelines below are respected and that the code is well tested.
+11. Open a pull request on GitHub targeting the `main` branch.
+    Make sure to fill out the template.
+    A review from a core team member is automatically requested.
+    At least one approval is required to merge.
+12. Once successfully reviewed, squash-merge the PR.
+    This collapses all the commits into one and merges it into the `main` branch.
+    Please adjust the subject line and body of the commit to accurately reflect your changes.
 
 ## Technical Guidelines
 
 ### Clean Code
 
 Please adhere to the general [Clean Code](https://www.planetgeek.ch/wp-content/uploads/2014/11/Clean-Code-V2.4.pdf)
-principles, for instance, we write short and concise functions and use appropriate naming to ensure readability.
+principles. For instance, we write short and concise functions and use appropriate naming to ensure readability.
 
 ### Naming Conventions
 
@@ -125,7 +142,7 @@ We use the pylint naming conventions:
 
 Docstrings should be formatted using [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html).
 
-### Accessing resources
+### Accessing Resources
 
 We use [importlib-resources](https://importlib-resources.readthedocs.io/en/latest/) to read from local files.
 
@@ -153,9 +170,9 @@ Renders the scene into a image (screenshot):
 renderer.gl.save_image("filename.bmp")
 ```
 
-## Type Hints
+### Type Hints
 
-We use Type Hints ([PEP 484](https://www.python.org/dev/peps/pep-0484/)) for better readability and better IDE support:
+We use type hints ([PEP 484](https://www.python.org/dev/peps/pep-0484/)) for better readability and better IDE support:
 
 ```python
 # This is how you declare the type of a variable type in Python 3.6
@@ -172,11 +189,11 @@ else:
     child = False
 ```
 
-To get started with Type Hints, you can have a look at
+To get started with type hints, you can have a look at
 the [Type Hints Cheat Sheet](https://mypy.readthedocs.io/en/latest/cheat_sheet_py3.html).
 
-Caveat: We discourage the usage of Type Aliases for structured data since its members remain unnamed. Instead, consider
-using NamedTuple:
+Caveat: We discourage the usage of type aliases for structured data since its members remain unnamed. Instead, consider
+using `NamedTuple`:
 
 ```python
 # Discouraged: Type Alias with unnamed members
@@ -185,14 +202,13 @@ Tuple[int, int]
 # Better: use NamedTuple
 from typing import NamedTuple
 
-Position = NamedTuple('Position',
-                      [
-                          ('r', int),
-                          ('c', int)
-                      ])
+Position = NamedTuple('Position', [
+    ('r', int),
+    ('c', int)
+])
 ```
 
-## NamedTuple
+### NamedTuple
 
 For structured data containers for which we do not write additional methods, we use `NamedTuple` instead of plain `Dict`
 to ensure better readability:
@@ -200,17 +216,16 @@ to ensure better readability:
 ```python
 from typing import NamedTuple
 
-RailEnvNextAction = NamedTuple('RailEnvNextAction',
-                               [
-                                   ('action', RailEnvActions),
-                                   ('next_position', RailEnvGridPos),
-                                   ('next_direction', Grid4TransitionsEnum)
-                               ])
+RailEnvNextAction = NamedTuple('RailEnvNextAction', [
+    ('action', RailEnvActions),
+    ('next_position', RailEnvGridPos),
+    ('next_direction', Grid4TransitionsEnum)
+])
 ```
 
 Members of NamedTuple can then be accessed through `.<member>` instead of `['<key>']`.
 
-## Class Attributes
+### Class Attributes
 
 We use classes for data structures if we need to write methods that ensure (class) invariants over multiple members, for
 instance, `o.A` always changes at the same time as `o.B`. We use the [attrs](https://github.com/python-attrs/attrs)
@@ -222,7 +237,7 @@ class Replay(object):
     position = attrib(type=Tuple[int, int])
 ```
 
-## Abstract Base Classes
+### Abstract Base Classes
 
 We use the [abc](https://pymotw.com/3/abc/) class decorator and a way to declaratively define the attributes on that
 class:
@@ -249,7 +264,6 @@ And then:
 ```python
 # abc_subclass.py
 
-import abc
 from abc_base import PluginBase
 
 
@@ -269,7 +283,7 @@ if __name__ == '__main__':
                                   PluginBase))
 ```
 
-## Currying
+### Currying
 
 We discourage currying to encapsulate state since we often want the stateful object to have multiple methods (but the
 curried function has only its signature, and abusing params to switch behavior is not very readable). Thus, we should
@@ -288,3 +302,15 @@ def complex_rail_generator(nr_start_goal=1,
                            max_dist=99999,
                            seed=1) -> RailGenerator:
 ```
+
+## Publishing
+
+To publish a new version of the package:
+
+1. Pick an appropriate version number (this project follows semantic versioning, hence chose wisely) and
+   update `CHANGELOG.md` accordingly.
+2. Create a branch using the naming convention `release/<version-number>`, e.g. `release/4.0.0`.
+3. Commit your changes to `CHANGELOG.md`.
+4. Push the branch and open a PR targeting `main` and get it approved by a core team member.
+5. Merge the PR, a GitHub action will pick it up and release the new version.
+

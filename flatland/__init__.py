@@ -2,6 +2,9 @@
 
 """Top-level package for flatland."""
 
-__author__ = """S.P. Mohanty"""
-__email__ = 'mohanty@aicrowd.com'
-__version__ = '3.0.15'
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("flatland-rl")
+except PackageNotFoundError:
+    pass

@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flatland-rl"
+description = "Multi Agent Reinforcement Learning on Trains"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+keywords = ["flatland"]
+authors = [{ name = "Flatland Association", email = "contact@flatland-association.org" }]
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Developers',
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+]
+dependencies = [
+    "attr",
+    "boto3",
+    "click",
+    "crowdai_api",
+    "dataclasses",
+    "graphviz",
+    "gym==0.14.0",
+    "importlib_resources<2.0.0",
+    "ipycanvas",
+    "ipyevents",
+    "ipython",
+    "ipywidgets",
+    "matplotlib",
+    "msgpack_numpy",
+    "msgpack",
+    "networkx",
+    "numpy",
+    "pandas",
+    "pettingzoo",
+    "Pillow",
+    "pyglet",
+    "PyYAML",
+    "ray",
+    "recordtype",
+    "redis",
+    "seaborn",
+    "stable_baselines3",
+    "supersuit",
+    "svgutils",
+    "timeout_decorator",
+    "wandb",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "benchmarker",
+    "coverage",
+    "flake8",
+    "flake8-eradicate",
+    "ipycytoscape",
+    "jupyter",
+    "jupyter-contrib-nbextensions",
+    "jupyter-core",
+    "m2r",
+    "notebook",
+    "numpydoc",
+    "pip-tools",
+    "pytest",
+    "sphinx",
+    "sphinx-rtd-theme",
+    "tox",
+    "twine",
+    "twine",
+]
+
+[project.urls]
+"Homepage" = "https://www.flatland-association.org"
+"Github Repository" = "https://github.com/flatland-association/flatland-rl"
+"Issue Tracker" = "https://github.com/flatland-association/flatland-rl/issues"
+
+[project.scripts]
+flatland-demo = "flatland.cli:demo"
+evaluator = "flatland.cli:evaluator"
+
+[tool.setuptools.packages]
+find = { }
+
+[tool.setuptools_scm]
