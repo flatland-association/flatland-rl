@@ -42,10 +42,15 @@ jobs:
                 run: |
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
-            -   name: Add version tag
+            -   name: Build version tag
+                id: build-version-tag
                 run: |
                     VERSION=$(echo "$GITHUB_HEAD_REF" | sed 's/release\///')
-                    git tag v"$VERSION"
+                    echo "{VERSION_TAG}={v$VERSION}" >> "$GITHUB_OUTPUT"
+            -   name: Tag commit with version
+                env:
+                    VERSION_TAG: ${{ steps.build-version-tag.outputs.VERSION_TAG }}
+                run: git tag "$VERSION_TAG"
             -   name: Build new package
                 run: tox run -e build
             -   name: Publish package to PyPI
@@ -53,7 +58,9 @@ jobs:
                 with:
                     password: ${{ secrets.PYPI_API_TOKEN }}
             -   name: Push version tag
-                run: git push --tags
+                env:
+                    VERSION_TAG: ${{ steps.build-version-tag.outputs.VERSION_TAG }}
+                run: git push origin "$VERSION_TAG"
             -   name: Archive package
                 uses: actions/upload-artifact@v3
                 with:
