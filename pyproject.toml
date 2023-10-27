@@ -25,7 +25,7 @@ dependencies = [
     "crowdai_api",
     "dataclasses",
     "graphviz",
-    "gym==0.14.0",
+    "gym<0.23.0",
     "importlib_resources<2.0.0",
     "ipycanvas",
     "ipyevents",
