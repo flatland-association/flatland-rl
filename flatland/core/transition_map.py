@@ -6,6 +6,7 @@ from functools import lru_cache
 import numpy as np
 from importlib_resources import path
 from numpy import array
+import traceback
 
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position, get_direction
@@ -266,18 +267,14 @@ class GridTransitionMap(TransitionMap):
         send_infrastructure_data_change_signal_to_reset_lru_cache()
         #assert len(cell_id) == 3, \
         #    'GridTransitionMap.set_transition() ERROR: cell_id tuple must have length 3.'
-        
+
         nDir = cell_id[2]
-        #print(cell_id, type(nDir))
         if type(nDir) == np.ndarray:
             # I can't work out how to dump a complete backtrace here
-            #import traceback
-            #try:
-            #    assert type(nDir)==int, "cell direction is not an int"
-            #except Exception as e:
-            #    traceback.print_exception(e)
-            #    traceback.print_tb(e.__traceback__)
-            #    print(traceback.format_exc())
+            try:
+                assert type(nDir)==int, "cell direction is not an int"
+            except Exception as e:
+                traceback.print_stack()
             print("fixing nDir:", cell_id, nDir)
             nDir = int(nDir[0])
 
@@ -289,7 +286,7 @@ class GridTransitionMap(TransitionMap):
             else:
                 # print("transition_index type:", type(transition_index))
                 transition_index = int(transition_index)
-            
+
         #if type(new_transition) not in (int, bool):
         if isinstance(new_transition, np.ndarray):
             #print("fixing new_transition:", cell_id, new_transition)
@@ -601,8 +598,8 @@ class GridTransitionMap(TransitionMap):
             self.set_transitions(rcPos, 0)
 
             connect_directions = np.argwhere(incoming_connections > 0)
-            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0])), connect_directions[1], 1)
-            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1])), connect_directions[0], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0][0])), connect_directions[1][0], 1)
+            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1][0])), connect_directions[0][0], 1)
 
         # Find feasible connection for three entries
         if number_of_incoming == 3:
