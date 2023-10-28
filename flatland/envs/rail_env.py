@@ -5,7 +5,6 @@ import random
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-from gym.utils import seeding
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -203,8 +202,38 @@ class RailEnv(Environment):
 
         self.motionCheck = ac.MotionCheck()
 
+    """Set of random number generator functions: seeding, generator, hashing seeds."""
+    from typing import Any, Optional, Tuple
+
+    import numpy as np
+
+    from gym import error
+
+    @staticmethod
+    def _np_random(seed: Optional[int] = None) -> Tuple[np.random.Generator, Any]:
+        """Generates a random number generator from the seed and returns the Generator and seed.
+
+        Args:
+            seed: The seed used to create the generator
+
+        Returns:
+            The generator and resulting seed
+
+        Raises:
+            Error: Seed must be a non-negative integer or omitted
+        """
+        if seed is not None and not (isinstance(seed, int) and 0 <= seed):
+            raise print(f"Seed must be a non-negative integer or omitted, not {seed}")
+
+        seed_seq = np.random.SeedSequence(seed)
+        np_seed = seed_seq.entropy
+        rng = np.random.Generator(np.random.PCG64(seed_seq))
+        return rng, np_seed
+
+    RNG = RandomNumberGenerator = np.random.Generator
+
     def _seed(self, seed):
-        self.np_random, seed = seeding.np_random(seed)
+        self.np_random, seed = RailEnv._np_random(seed)
         random.seed(seed)
         self.random_seed = seed
 
