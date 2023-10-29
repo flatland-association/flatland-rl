@@ -5,7 +5,7 @@ import random
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-from gym.utils import seeding
+from flatland.utils import seeding
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
