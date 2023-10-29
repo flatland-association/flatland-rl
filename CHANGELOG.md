@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [4.0.1] - 2023-10-30
+
+### Fixed
+
+- Removed dependency on an old version of `gym` which in turn brought in an old version of `pyglet` that caused issues
+  on Windows.
+
 ## [4.0.0] - 2023-10-27
 
 ### Removed
