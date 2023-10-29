@@ -22,7 +22,7 @@ argon2-cffi-bindings==21.2.0
     # via argon2-cffi
 arrow==1.3.0
     # via isoduration
-asttokens==2.4.0
+asttokens==2.4.1
     # via stack-data
 async-lru==2.0.4
     # via jupyterlab
@@ -35,7 +35,7 @@ attrs==23.1.0
     #   flake8-eradicate
     #   jsonschema
     #   referencing
-babel==2.13.0
+babel==2.13.1
     # via
     #   jupyterlab-server
     #   sphinx
@@ -47,15 +47,15 @@ benchmarker==4.0.1
     # via flatland-rl (pyproject.toml)
 bleach==6.1.0
     # via nbconvert
-boto3==1.28.68
+boto3==1.28.73
     # via flatland-rl (pyproject.toml)
-botocore==1.31.68
+botocore==1.31.73
     # via
     #   boto3
     #   s3transfer
 build==1.0.3
     # via pip-tools
-cachetools==5.3.1
+cachetools==5.3.2
     # via tox
 certifi==2023.7.22
     # via
@@ -73,9 +73,8 @@ click==8.1.7
     #   pip-tools
     #   ray
     #   wandb
-cloudpickle==1.2.2
+cloudpickle==3.0.0
     # via
-    #   gym
     #   gymnasium
     #   stable-baselines3
 colorama==0.4.6
@@ -118,13 +117,13 @@ exceptiongroup==1.1.3
     # via
     #   anyio
     #   pytest
-executing==2.0.0
+executing==2.0.1
     # via stack-data
 farama-notifications==0.0.4
     # via gymnasium
 fastjsonschema==2.18.1
     # via nbformat
-filelock==3.12.4
+filelock==3.13.0
     # via
     #   ray
     #   torch
@@ -146,15 +145,11 @@ frozenlist==1.4.0
     #   ray
 fsspec==2023.10.0
     # via torch
-future==0.18.3
-    # via pyglet
 gitdb==4.0.11
     # via gitpython
 gitpython==3.1.40
     # via wandb
 graphviz==0.20.1
-    # via flatland-rl (pyproject.toml)
-gym==0.14.0
     # via flatland-rl (pyproject.toml)
 gymnasium==0.29.1
     # via
@@ -194,7 +189,7 @@ ipycytoscape==1.3.3
     # via flatland-rl (pyproject.toml)
 ipyevents==2.0.2
     # via flatland-rl (pyproject.toml)
-ipykernel==6.25.2
+ipykernel==6.26.0
     # via
     #   jupyter
     #   jupyter-console
@@ -250,7 +245,7 @@ jsonschema-specifications==2023.7.1
     # via jsonschema
 jupyter==1.0.0
     # via flatland-rl (pyproject.toml)
-jupyter-client==8.4.0
+jupyter-client==8.5.0
     # via
     #   ipykernel
     #   jupyter-console
@@ -288,7 +283,7 @@ jupyter-lsp==2.2.0
     # via jupyterlab
 jupyter-nbextensions-configurator==0.6.3
     # via jupyter-contrib-nbextensions
-jupyter-server==2.8.0
+jupyter-server==2.9.1
     # via
     #   jupyter-lsp
     #   jupyterlab
@@ -387,7 +382,6 @@ numpy==1.24.4
     # via
     #   contourpy
     #   flatland-rl (pyproject.toml)
-    #   gym
     #   gymnasium
     #   ipycanvas
     #   matplotlib
@@ -395,7 +389,6 @@ numpy==1.24.4
     #   pandas
     #   pettingzoo
     #   ray
-    #   scipy
     #   seaborn
     #   stable-baselines3
     #   supersuit
@@ -483,10 +476,8 @@ pycparser==2.21
     # via cffi
 pyflakes==3.1.0
     # via flake8
-pyglet==1.3.2
-    # via
-    #   flatland-rl (pyproject.toml)
-    #   gym
+pyglet==2.0.9
+    # via flatland-rl (pyproject.toml)
 pygments==2.16.1
     # via
     #   ipython
@@ -502,7 +493,7 @@ pyproject-api==1.6.1
     # via tox
 pyproject-hooks==1.0.0
     # via build
-pytest==7.4.2
+pytest==7.4.3
     # via flatland-rl (pyproject.toml)
 python-dateutil==2.8.2
     # via
@@ -535,7 +526,7 @@ pyzmq==25.1.1
     #   qtconsole
 qtconsole==5.4.4
     # via jupyter
-qtpy==2.4.0
+qtpy==2.4.1
     # via qtconsole
 ray==2.7.1
     # via flatland-rl (pyproject.toml)
@@ -584,8 +575,6 @@ rpds-py==0.10.6
     #   referencing
 s3transfer==0.7.0
     # via boto3
-scipy==1.10.1
-    # via gym
 seaborn==0.13.0
     # via flatland-rl (pyproject.toml)
 send2trash==1.8.2
@@ -599,7 +588,6 @@ six==1.16.0
     #   asttokens
     #   bleach
     #   docker-pycreds
-    #   gym
     #   python-dateutil
     #   recordtype
     #   rfc3339-validator
@@ -682,7 +670,7 @@ tornado==6.3.3
     #   terminado
 tox==4.11.3
     # via flatland-rl (pyproject.toml)
-traitlets==5.11.2
+traitlets==5.12.0
     # via
     #   comm
     #   ipykernel
@@ -724,7 +712,7 @@ urllib3==1.26.18
     #   requests
     #   sentry-sdk
     #   twine
-virtualenv==20.24.5
+virtualenv==20.24.6
     # via tox
 wandb==0.15.12
     # via flatland-rl (pyproject.toml)
