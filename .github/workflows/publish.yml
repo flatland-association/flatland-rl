@@ -46,7 +46,7 @@ jobs:
                 id: build-version-tag
                 run: |
                     VERSION=$(echo "$GITHUB_HEAD_REF" | sed 's/release\///')
-                    echo "{VERSION_TAG}={v$VERSION}" >> "$GITHUB_OUTPUT"
+                    echo "VERSION_TAG=v$VERSION" >> "$GITHUB_OUTPUT"
             -   name: Tag commit with version
                 env:
                     VERSION_TAG: ${{ steps.build-version-tag.outputs.VERSION_TAG }}
