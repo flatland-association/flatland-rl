@@ -245,7 +245,7 @@ jsonschema-specifications==2023.7.1
     # via jsonschema
 jupyter==1.0.0
     # via flatland-rl (pyproject.toml)
-jupyter-client==8.5.0
+jupyter-client==8.6.0
     # via
     #   ipykernel
     #   jupyter-console
