@@ -7,6 +7,8 @@ from typing import List, Optional, Dict, Tuple
 import numpy as np
 from flatland.utils import seeding
 
+# from flatland.envs.timetable_generators import timetable_generator
+import flatland.envs.timetable_generators as ttg
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
@@ -25,7 +27,6 @@ from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
-from flatland.envs.timetable_generators import timetable_generator
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
     enable_infrastructure_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
@@ -108,6 +109,7 @@ class RailEnv(Environment):
                  remove_agents_at_target=True,
                  random_seed=None,
                  record_steps=False,
+                 timetable_generator=ttg.timetable_generator,
                  ):
         """
         Environment init.
@@ -167,6 +169,7 @@ class RailEnv(Environment):
         if line_generator is None:
             line_generator = line_gen.sparse_line_generator()
         self.line_generator = line_generator
+        self.timetable_generator = timetable_generator
 
         self.rail: Optional[GridTransitionMap] = None
         self.width = width
@@ -320,8 +323,8 @@ class RailEnv(Environment):
             self.distance_map.reset(self.agents, self.rail)
 
             # NEW : Time Schedule Generation
-            timetable = timetable_generator(self.agents, self.distance_map,
-                                            agents_hints, self.np_random)
+            timetable = self.timetable_generator(self.agents, self.distance_map,
+                                                 agents_hints, self.np_random)
 
             self._max_episode_steps = timetable.max_episode_steps
 
@@ -625,6 +628,8 @@ class RailEnv(Environment):
         self.end_of_episode_update(have_all_agents_ended)
 
         self._update_agent_positions_map()
+        if self.record_steps:
+            self.record_timestep(action_dict_)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
@@ -645,7 +650,7 @@ class RailEnv(Environment):
             list_agents_state.append([
                 *pos, int(agent.direction),
                 agent.malfunction_handler.malfunction_down_counter,
-                int(agent.status),
+                0,  # int(agent.status), #  TODO: find appropriate attribute for agent status
                 int(agent.position in self.motionCheck.svDeadlocked)
             ])
 
