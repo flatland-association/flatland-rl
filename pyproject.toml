@@ -63,6 +63,7 @@ dev = [
     "jupyter-contrib-nbextensions",
     "jupyter-core",
     "m2r",
+    "nbmake",
     "notebook",
     "numpydoc",
     "pip-tools",
