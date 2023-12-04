@@ -58,6 +58,7 @@ dev = [
     "coverage",
     "flake8",
     "flake8-eradicate",
+    "imageio",
     "ipycytoscape",
     "jupyter",
     "jupyter-contrib-nbextensions",
