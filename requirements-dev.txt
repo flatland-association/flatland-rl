@@ -162,8 +162,6 @@ idna==3.4
     #   anyio
     #   jsonschema
     #   requests
-imageio==2.33.0
-    # via flatland-rl (pyproject.toml)
 imagesize==1.4.1
     # via sphinx
 importlib-metadata==6.8.0
@@ -385,7 +383,6 @@ numpy==1.24.4
     #   contourpy
     #   flatland-rl (pyproject.toml)
     #   gymnasium
-    #   imageio
     #   ipycanvas
     #   matplotlib
     #   msgpack-numpy
@@ -467,7 +464,6 @@ pickleshare==0.7.5
 pillow==10.1.0
     # via
     #   flatland-rl (pyproject.toml)
-    #   imageio
     #   ipycanvas
     #   matplotlib
 pip-tools==7.3.0
