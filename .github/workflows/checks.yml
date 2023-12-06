@@ -45,7 +45,7 @@ jobs:
                 run: tox
 
     notebooks:
-        if: ${{ false }}  # disabled for now, some need custom kernel
+        #if: ${{ false }}  # disabled for now, some need custom kernel
         runs-on: ubuntu-22.04
         steps:
             -   uses: actions/checkout@v3
