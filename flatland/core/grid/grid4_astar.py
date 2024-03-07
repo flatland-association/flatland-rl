@@ -46,6 +46,15 @@ class AStarNode:
             self.h = other.h
             self.f = other.f
 
+def getmin(open_nodes):
+    current_node = None
+    for item in open_nodes:
+        if current_node is None:
+            current_node = item
+            continue
+        if item.f < current_node.f:
+            current_node = item
+    return current_node
 
 def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
            a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance, avoid_rails=False,
@@ -105,6 +114,7 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
             prev_pos = None
 
         for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+        
             # update the "current" pos
             node_pos: IntVector2D = Vec2d.add(current_node.pos, new_pos)
 
