@@ -97,6 +97,7 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
 
         # found the goal
         if current_node == end_node:
+            print("found goal")
             path = []
             current = current_node
             while current is not None:
@@ -161,5 +162,5 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
             node_in_heap.add(child)
 
         # no full path found
-        if len(open_nodes) == 0:
+        if len(open_node_heap) == 0:
             return []
