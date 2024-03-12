@@ -46,15 +46,15 @@ class AStarNode:
             self.h = other.h
             self.f = other.f
 
-def getmin(open_nodes):
-    current_node = None
-    for item in open_nodes:
-        if current_node is None:
-            current_node = item
-            continue
-        if item.f < current_node.f:
-            current_node = item
-    return current_node
+def reconstruct_path(current_node: AStarNode):
+    path = []
+    current = current_node
+    while current is not None:
+        path.append(current.pos)
+        current = current.parent
+
+    # return reversed path
+    return path[::-1]
 
 def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
            a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance, avoid_rails=False,
@@ -82,6 +82,10 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
     rail_shape = grid_map.grid.shape
 
     start_node = AStarNode(start, None)
+    start_node.g = 0
+    start_node.f = a_star_distance_function(start_node.pos, end)
+
+    
     end_node = AStarNode(end, None)
     open_nodes = [start_node]
     node_in_heap = {start_node}
@@ -89,6 +93,8 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
 
     while len(open_nodes) > 0:
         # get node with current shortest est. path (lowest f)
+        if(len(open_node_heap)%100 ==0):
+            print(len(open_node_heap))
         current_node = None
         current_node = heapq.heappop(open_nodes)
         node_in_heap.remove(current_node)
@@ -97,16 +103,9 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
 
         # found the goal
         if current_node == end_node:
-            print("found goal")
-            path = []
-            current = current_node
-            while current is not None:
-                path.append(current.pos)
-                current = current.parent
-
-            # return reversed path
-            return path[::-1]
-
+            print("i found a way")
+            return reconstruct_path(current_node=current_node)
+           
         # generate children
         children = []
         if current_node.parent is not None:
@@ -128,30 +127,32 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
             if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos,
                                                     end_node.pos) and respect_transition_validity:
                 continue
-            # create new node
-            new_node = AStarNode(node_pos, current_node)
+            #if node has already been discovered, fetch corresponding AStarNode
+            #else create a new node at distance infinite (allow to update distance when comparing neighbour distance from current node)
+            if(node_pos in visited):
+                new_node = visited[node_pos]
+            else:
+                new_node = AStarNode(node_pos, current_node)
+                new_node.g = np.inf
+
 
             # Skip paths through forbidden regions if they are provided
             if forbidden_cells is not None:
                 if node_pos in forbidden_cells and new_node != start_node and new_node != end_node:
                     continue
-
+            
             children.append(new_node)
 
         # loop through children
         for child in children:
-            # already in closed list?
-            if child in closed_nodes:
-                continue
-
-            # create the f, g, and h values
-            child.g = current_node.g + 1.0
+                
+            # calculate the length of the path so far through the current node
+            tentative_dist = current_node.g + 1.0
             # this heuristic avoids diagonal paths
             if avoid_rails:
                 child.h = a_star_distance_function(child.pos, end_node.pos) + max(min(grid_map.grid[child.pos], 1), 0)
             else:
-                child.h = a_star_distance_function(child.pos, end_node.pos)
-            child.f = child.g + child.h
+                h = a_star_distance_function(child.pos, end_node.pos)
 
             # already in the open list?
             if child in node_in_heap:
@@ -161,6 +162,9 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
             heapq.heappush(open_nodes, child)
             node_in_heap.add(child)
 
+                # add the child to the open list
+        
+        visited[current_node.pos] = current_node
         # no full path found
         if len(open_node_heap) == 0:
             return []
