@@ -7,6 +7,8 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.utils.decorators import enable_infrastructure_lru_cache
 from flatland.utils.ordered_set import OrderedSet
 
+astar_priority = False
+
 
 class AStarNode:
     """A node class for A* Pathfinding"""
@@ -45,6 +47,9 @@ class AStarNode:
             self.g = other.g
             self.h = other.h
             self.f = other.f
+def set_priority(priority):
+    global astar_priority
+    astar_priority = priority
 
 
 def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
@@ -70,86 +75,176 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
     """
-    rail_shape = grid_map.grid.shape
+    if astar_priority:
+        rail_shape = grid_map.grid.shape
 
-    start_node = AStarNode(start, None)
-    end_node = AStarNode(end, None)
-    open_nodes = [start_node]
-    node_in_heap = {start_node}
-    closed_nodes = OrderedSet()
+        start_node = AStarNode(start, None)
+        end_node = AStarNode(end, None)
+        open_nodes = [start_node]
+        node_in_heap = {start_node}
+        closed_nodes = OrderedSet()
 
-    while len(open_nodes) > 0:
-        # get node with current shortest est. path (lowest f)
-        current_node = None
-        current_node = heapq.heappop(open_nodes)
-        node_in_heap.remove(current_node)
-        # pop current off open list, add to closed list
-        closed_nodes.add(current_node)
+        while len(open_nodes) > 0:
+            # get node with current shortest est. path (lowest f)
+            current_node = None
+            current_node = heapq.heappop(open_nodes)
+            node_in_heap.remove(current_node)
+            # pop current off open list, add to closed list
+            closed_nodes.add(current_node)
 
-        # found the goal
-        if current_node == end_node:
-            path = []
-            current = current_node
-            while current is not None:
-                path.append(current.pos)
-                current = current.parent
+            # found the goal
+            if current_node == end_node:
+                path = []
+                current = current_node
+                while current is not None:
+                    path.append(current.pos)
+                    current = current.parent
 
-            # return reversed path
-            return path[::-1]
+                # return reversed path
+                return path[::-1]
 
-        # generate children
-        children = []
-        if current_node.parent is not None:
-            prev_pos = current_node.parent.pos
-        else:
-            prev_pos = None
+            # generate children
+            children = []
+            if current_node.parent is not None:
+                prev_pos = current_node.parent.pos
+            else:
+                prev_pos = None
 
-        for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-            # update the "current" pos
-            node_pos: IntVector2D = Vec2d.add(current_node.pos, new_pos)
+            for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                # update the "current" pos
+                node_pos: IntVector2D = Vec2d.add(current_node.pos, new_pos)
 
-            # is node_pos inside the grid?
-            if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
-                continue
-
-            # validate positions
-            #
-            if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos,
-                                                    end_node.pos) and respect_transition_validity:
-                continue
-            # create new node
-            new_node = AStarNode(node_pos, current_node)
-
-            # Skip paths through forbidden regions if they are provided
-            if forbidden_cells is not None:
-                if node_pos in forbidden_cells and new_node != start_node and new_node != end_node:
+                # is node_pos inside the grid?
+                if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
                     continue
 
-            children.append(new_node)
+                # validate positions
+                #
+                if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos,
+                                                        end_node.pos) and respect_transition_validity:
+                    continue
+                # create new node
+                new_node = AStarNode(node_pos, current_node)
 
-        # loop through children
-        for child in children:
-            # already in closed list?
-            if child in closed_nodes:
-                continue
+                # Skip paths through forbidden regions if they are provided
+                if forbidden_cells is not None:
+                    if node_pos in forbidden_cells and new_node != start_node and new_node != end_node:
+                        continue
 
-            # create the f, g, and h values
-            child.g = current_node.g + 1.0
-            # this heuristic avoids diagonal paths
-            if avoid_rails:
-                child.h = a_star_distance_function(child.pos, end_node.pos) + max(min(grid_map.grid[child.pos], 1), 0)
+                children.append(new_node)
+
+            # loop through children
+            for child in children:
+                # already in closed list?
+                if child in closed_nodes:
+                    continue
+
+                # create the f, g, and h values
+                child.g = current_node.g + 1.0
+                # this heuristic avoids diagonal paths
+                if avoid_rails:
+                    child.h = a_star_distance_function(child.pos, end_node.pos) + max(min(grid_map.grid[child.pos], 1), 0)
+                else:
+                    child.h = a_star_distance_function(child.pos, end_node.pos)
+                child.f = child.g + child.h
+
+                # already in the open list?
+                if child in node_in_heap:
+                    continue
+
+                # add the child to the open list
+                heapq.heappush(open_nodes, child)
+                node_in_heap.add(child)
+
+            # no full path found
+            if len(open_nodes) == 0:
+                return []
+    else:
+        rail_shape = grid_map.grid.shape
+
+        start_node = AStarNode(start, None)
+        end_node = AStarNode(end, None)
+        open_nodes = OrderedSet()
+        closed_nodes = OrderedSet()
+        open_nodes.add(start_node)
+
+        while len(open_nodes) > 0:
+            # get node with current shortest est. path (lowest f)
+            current_node = None
+            for item in open_nodes:
+                if current_node is None:
+                    current_node = item
+                    continue
+                if item.f < current_node.f:
+                    current_node = item
+
+            # pop current off open list, add to closed list
+            open_nodes.remove(current_node)
+            closed_nodes.add(current_node)
+
+            # found the goal
+            if current_node == end_node:
+                path = []
+                current = current_node
+                while current is not None:
+                    path.append(current.pos)
+                    current = current.parent
+
+                # return reversed path
+                return path[::-1]
+
+            # generate children
+            children = []
+            if current_node.parent is not None:
+                prev_pos = current_node.parent.pos
             else:
-                child.h = a_star_distance_function(child.pos, end_node.pos)
-            child.f = child.g + child.h
+                prev_pos = None
 
-            # already in the open list?
-            if child in node_in_heap:
-                continue
+            for new_pos in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                # update the "current" pos
+                node_pos: IntVector2D = Vec2d.add(current_node.pos, new_pos)
 
-            # add the child to the open list
-            heapq.heappush(open_nodes, child)
-            node_in_heap.add(child)
+                # is node_pos inside the grid?
+                if node_pos[0] >= rail_shape[0] or node_pos[0] < 0 or node_pos[1] >= rail_shape[1] or node_pos[1] < 0:
+                    continue
 
-        # no full path found
-        if len(open_nodes) == 0:
-            return []
+                # validate positions
+                #
+                if not grid_map.validate_new_transition(prev_pos, current_node.pos, node_pos,
+                                                        end_node.pos) and respect_transition_validity:
+                    continue
+                # create new node
+                new_node = AStarNode(node_pos, current_node)
+
+                # Skip paths through forbidden regions if they are provided
+                if forbidden_cells is not None:
+                    if node_pos in forbidden_cells and new_node != start_node and new_node != end_node:
+                        continue
+
+                children.append(new_node)
+
+            # loop through children
+            for child in children:
+                # already in closed list?
+                if child in closed_nodes:
+                    continue
+
+                # create the f, g, and h values
+                child.g = current_node.g + 1.0
+                # this heuristic avoids diagonal paths
+                if avoid_rails:
+                    child.h = a_star_distance_function(child.pos, end_node.pos) + np.clip(grid_map.grid[child.pos], 0, 1)
+                else:
+                    child.h = a_star_distance_function(child.pos, end_node.pos)
+                child.f = child.g + child.h
+
+                # already in the open list?
+                if child in open_nodes:
+                    continue
+
+                # add the child to the open list
+                open_nodes.add(child)
+
+            # no full path found
+            if len(open_nodes) == 0:
+                return []
