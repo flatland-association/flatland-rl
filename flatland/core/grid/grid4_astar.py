@@ -28,6 +28,12 @@ class AStarNode:
         return self.pos == other.pos
     
     def __lt__(self, other):
+        """
+
+        Parameters
+        ----------
+        other : AStarNode
+        """
         return self.f < other.f
     
     def __hash__(self):
