@@ -50,6 +50,8 @@ class AStarNode:
 def set_priority(priority):
     global astar_priority
     astar_priority = priority
+def get_priority():
+    return astar_priority
 
 
 def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,

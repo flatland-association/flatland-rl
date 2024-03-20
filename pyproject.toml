@@ -48,6 +48,7 @@ dependencies = [
     "svgutils",
     "timeout_decorator",
     "wandb",
+    "heapq"
 ]
 dynamic = ["version"]
 
