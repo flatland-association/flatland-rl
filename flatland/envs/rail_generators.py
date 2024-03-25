@@ -392,7 +392,7 @@ class SparseRailGen(RailGen):
         inner_connection_points: List[List[List[IntVector2D]]] = []
         outer_connection_points: List[List[List[IntVector2D]]] = []
         city_orientations: List[Grid4TransitionsEnum] = []
-        city_cells: IntVector2DArray = []
+        city_cells: IntVector2DArray = {}
 
         for city_position in city_positions:
 
@@ -412,7 +412,7 @@ class SparseRailGen(RailGen):
             connection_sides_idx.append(current_closest_direction)
             connection_sides_idx.append((current_closest_direction + 2) % 4)
             city_orientations.append(current_closest_direction)
-            city_cells.extend(self._get_cells_in_city(city_position, city_radius, city_orientations[-1], vector_field))
+            city_cells.update(self._get_cells_in_city(city_position, city_radius, city_orientations[-1], vector_field))
             # set the number of tracks within a city, at least 2 tracks per city
             connections_per_direction = np.zeros(4, dtype=int)
             # NEW : SCHED CONST
@@ -683,7 +683,7 @@ class SparseRailGen(RailGen):
         # Fix all cities with illegal transition maps
         rails_to_fix = np.zeros(3 * grid_map.height * grid_map.width * 2, dtype='int')
         rails_to_fix_cnt = 0
-        cells_to_fix = city_cells + inter_city_lines
+        cells_to_fix = list(city_cells.keys()) + inter_city_lines
         for cell in cells_to_fix:
             cell_valid = grid_map.cell_neighbours_valid(cell, True)
 
@@ -782,8 +782,10 @@ class SparseRailGen(RailGen):
         y_range = np.arange(center[1] - radius, center[1] + radius + 1)
         x_values = np.repeat(x_range, len(y_range))
         y_values = np.tile(y_range, len(x_range))
-        city_cells = list(zip(x_values, y_values))
-        for cell in city_cells:
+        city_cells_list = list(zip(x_values, y_values))
+        city_cells = {}
+        for cell in city_cells_list:
+            city_cells[cell] = False
             vector_field[cell] = align_cell_to_city(center, city_orientation, cell)
         return city_cells
 
