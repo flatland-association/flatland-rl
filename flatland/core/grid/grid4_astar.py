@@ -7,7 +7,6 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.utils.decorators import enable_infrastructure_lru_cache
 from flatland.utils.ordered_set import OrderedSet
 
-astar_priority = False
 
 
 class AStarNode:
