@@ -1,11 +1,12 @@
 import numpy as np
-
+import heapq
 from flatland.core.grid.grid_utils import IntVector2D, IntVector2DDistance
 from flatland.core.grid.grid_utils import IntVector2DArray
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transition_map import GridTransitionMap
 from flatland.utils.decorators import enable_infrastructure_lru_cache
 from flatland.utils.ordered_set import OrderedSet
+
 
 
 class AStarNode:
@@ -26,7 +27,16 @@ class AStarNode:
         other : AStarNode
         """
         return self.pos == other.pos
+    
+    def __lt__(self, other):
+        """
 
+        Parameters
+        ----------
+        other : AStarNode
+        """
+        return self.f < other.f
+    
     def __hash__(self):
         return hash(self.pos)
 
@@ -36,6 +46,7 @@ class AStarNode:
             self.g = other.g
             self.h = other.h
             self.f = other.f
+
 
 
 def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
@@ -61,26 +72,21 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
     """
+    
     rail_shape = grid_map.grid.shape
 
     start_node = AStarNode(start, None)
     end_node = AStarNode(end, None)
-    open_nodes = OrderedSet()
+    open_nodes = [start_node]
+    node_in_heap = {start_node}
     closed_nodes = OrderedSet()
-    open_nodes.add(start_node)
 
     while len(open_nodes) > 0:
         # get node with current shortest est. path (lowest f)
         current_node = None
-        for item in open_nodes:
-            if current_node is None:
-                current_node = item
-                continue
-            if item.f < current_node.f:
-                current_node = item
-
+        current_node = heapq.heappop(open_nodes)
+        node_in_heap.remove(current_node)
         # pop current off open list, add to closed list
-        open_nodes.remove(current_node)
         closed_nodes.add(current_node)
 
         # found the goal
@@ -134,17 +140,18 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
             child.g = current_node.g + 1.0
             # this heuristic avoids diagonal paths
             if avoid_rails:
-                child.h = a_star_distance_function(child.pos, end_node.pos) + np.clip(grid_map.grid[child.pos], 0, 1)
+                child.h = a_star_distance_function(child.pos, end_node.pos) + max(min(grid_map.grid[child.pos], 1), 0)
             else:
                 child.h = a_star_distance_function(child.pos, end_node.pos)
             child.f = child.g + child.h
 
             # already in the open list?
-            if child in open_nodes:
+            if child in node_in_heap:
                 continue
 
             # add the child to the open list
-            open_nodes.add(child)
+            heapq.heappush(open_nodes, child)
+            node_in_heap.add(child)
 
         # no full path found
         if len(open_nodes) == 0:
