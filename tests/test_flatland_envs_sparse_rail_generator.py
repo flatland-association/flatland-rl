@@ -21,10 +21,10 @@ def test_sparse_rail_generator():
                   obs_builder_object=GlobalObsForRailEnv(),
                   random_seed=1)
     env.reset(False, False)
-    for r in range(env.height):
-        for c in range(env.width):
-            if env.rail.grid[r][c] > 0:
-                print("expected_grid_map[{}][{}] = {}".format(r, c, env.rail.grid[r][c]))
+    # for r in range(env.height):
+    #     for c in range(env.width):
+    #         if env.rail.grid[r][c] > 0:
+    #             print("expected_grid_map[{}][{}] = {}".format(r, c, env.rail.grid[r][c]))
     expected_grid_map = env.rail.grid
     expected_grid_map[4][9] = 16386
     expected_grid_map[4][10] = 1025
@@ -490,6 +490,7 @@ def test_sparse_rail_generator():
     expected_grid_map[47][29] = 1025
     expected_grid_map[47][30] = 3089
     expected_grid_map[47][31] = 2064
+
     # Attention, once we have fixed the generator this needs to be changed!!!!
     expected_grid_map = env.rail.grid
     assert np.array_equal(env.rail.grid, expected_grid_map), "actual={}, expected={}".format(env.rail.grid,
@@ -501,7 +502,6 @@ def test_sparse_rail_generator():
         s1 = Vec2d.get_chebyshev_distance(env.agents[a].initial_position, (0, 0))
     assert s0 == 36, "actual={}".format(s0)
     assert s1 == 27, "actual={}".format(s1)
-    return
 
 
 def test_sparse_rail_generator_deterministic():
@@ -517,13 +517,13 @@ def test_sparse_rail_generator_deterministic():
                                                                             seed=215545,  # Random seed
                                                                             grid_mode=True
                                                                             ),
-                 line_generator=sparse_line_generator(speed_ration_map), number_of_agents=1, random_seed=1)
+                  line_generator=sparse_line_generator(speed_ration_map), number_of_agents=1, random_seed=1)
     env.reset()
-    for r in range(env.height):
-         for c in range(env.width):
-             print("assert env.rail.get_full_transitions({}, {}) == {}, \"[{}][{}]\"".format(r, c,
-                                                                                         env.rail.get_full_transitions(
-                                                                                              r, c), r, c))
+    # for r in range(env.height):
+    #     for c in range(env.width):
+    #         print("assert env.rail.get_full_transitions({}, {}) == {}, \"[{}][{}]\"".format(r, c,
+    #                                                                                     env.rail.get_full_transitions(
+    #                                                                                          r, c), r, c))
     assert env.rail.get_full_transitions(0, 1) == 0, "[0][1]"
     assert env.rail.get_full_transitions(0, 2) == 0, "[0][2]"
     assert env.rail.get_full_transitions(0, 3) == 0, "[0][3]"
@@ -1445,11 +1445,11 @@ def main():
     # Then run selected tests.
     #test_sparse_rail_generator()
     #test_sparse_rail_generator_deterministic()
-    test_rail_env_action_required_info()
-    test_rail_env_malfunction_speed_info()
-    test_sparse_generator_with_too_man_cities_does_not_break_down()
-    test_sparse_generator_with_illegal_params_aborts()
-    test_sparse_generator_changes_to_grid_mode()
+    #test_rail_env_action_required_info()
+    #test_rail_env_malfunction_speed_info()
+    #test_sparse_generator_with_too_man_cities_does_not_break_down()
+    #test_sparse_generator_with_illegal_params_aborts()
+    #test_sparse_generator_changes_to_grid_mode()
 
 if __name__ == "__main__":
     main()

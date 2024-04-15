@@ -477,7 +477,6 @@ class SparseRailGen(RailGen):
         connection_points: List[List[List[IntVector2D]]]
             List of coordinates of all outer connection points
         city_cells: set
-
             Coordinates of all the cells contained in any city. This is used to avoid drawing rails through existing
             cities.
         rail_trans: RailEnvTransitions

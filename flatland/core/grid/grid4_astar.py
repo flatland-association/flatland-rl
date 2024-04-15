@@ -8,7 +8,6 @@ from flatland.utils.decorators import enable_infrastructure_lru_cache
 from flatland.utils.ordered_set import OrderedSet
 
 
-
 class AStarNode:
     """A node class for A* Pathfinding"""
 
@@ -48,7 +47,6 @@ class AStarNode:
             self.f = other.f
 
 
-
 def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
            a_star_distance_function: IntVector2DDistance = Vec2d.get_manhattan_distance, avoid_rails=False,
            respect_transition_validity=True, forbidden_cells: IntVector2DArray = None) -> IntVector2DArray:
@@ -72,7 +70,6 @@ def a_star(grid_map: GridTransitionMap, start: IntVector2D, end: IntVector2D,
     Returns a list of tuples as a path from the given start to end.
     If no path is found, returns path to closest point to end.
     """
-    
     rail_shape = grid_map.grid.shape
 
     start_node = AStarNode(start, None)
