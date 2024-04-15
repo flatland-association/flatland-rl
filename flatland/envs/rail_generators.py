@@ -385,14 +385,14 @@ class SparseRailGen(RailGen):
             [North_Points, East_Poinst, South_Points, West_Points]
         city_orientations: List of length number of cities
             Contains all the orientations of cities. This is then used to orient agents according to the rails
-        city_cells: List
+        city_cells: set
             List containing the coordinates of all the cells that belong to a city. This is used by other algorithms
             to avoid drawing inter-city-rails through cities.
         """
         inner_connection_points: List[List[List[IntVector2D]]] = []
         outer_connection_points: List[List[List[IntVector2D]]] = []
         city_orientations: List[Grid4TransitionsEnum] = []
-        city_cells: IntVector2DArray = {}
+        city_cells = set()
 
         for city_position in city_positions:
 
@@ -464,7 +464,7 @@ class SparseRailGen(RailGen):
         return inner_connection_points, outer_connection_points, city_orientations, city_cells
 
     def _connect_cities(self, city_positions: IntVector2DArray, connection_points: List[List[List[IntVector2D]]],
-                        city_cells: IntVector2DArray,
+                        city_cells: set,
                         rail_trans: RailEnvTransitions, grid_map: RailEnvTransitions) -> List[IntVector2DArray]:
         """
         Connects cities together through rails. Each city connects from its outgoing connection points to the closest
@@ -476,7 +476,8 @@ class SparseRailGen(RailGen):
             All coordinates of the cities
         connection_points: List[List[List[IntVector2D]]]
             List of coordinates of all outer connection points
-        city_cells: IntVector2DArray
+        city_cells: set
+
             Coordinates of all the cells contained in any city. This is used to avoid drawing rails through existing
             cities.
         rail_trans: RailEnvTransitions
@@ -660,7 +661,7 @@ class SparseRailGen(RailGen):
                 train_stations[current_city].append((possible_location, track_nbr))
         return train_stations
 
-    def _fix_transitions(self, city_cells: IntVector2DArray, inter_city_lines: List[IntVector2DArray],
+    def _fix_transitions(self, city_cells: set, inter_city_lines: List[IntVector2DArray],
                          grid_map: GridTransitionMap, vector_field):
         """
         Check and fix transitions of all the cells that were modified. This is necessary because we ignore validity
@@ -668,7 +669,7 @@ class SparseRailGen(RailGen):
 
         Parameters
         ----------
-        city_cells: IntVector2DArray
+        city_cells: set
             Cells within cities. All of these might have changed and are thus checked
         inter_city_lines: List[IntVector2DArray]
             All cells within rails drawn between cities
@@ -683,7 +684,7 @@ class SparseRailGen(RailGen):
         # Fix all cities with illegal transition maps
         rails_to_fix = np.zeros(3 * grid_map.height * grid_map.width * 2, dtype='int')
         rails_to_fix_cnt = 0
-        cells_to_fix = list(city_cells.keys()) + inter_city_lines
+        cells_to_fix = list(city_cells) + inter_city_lines
         for cell in cells_to_fix:
             cell_valid = grid_map.cell_neighbours_valid(cell, True)
 
@@ -782,10 +783,8 @@ class SparseRailGen(RailGen):
         y_range = np.arange(center[1] - radius, center[1] + radius + 1)
         x_values = np.repeat(x_range, len(y_range))
         y_values = np.tile(y_range, len(x_range))
-        city_cells_list = list(zip(x_values, y_values))
-        city_cells = {}
-        for cell in city_cells_list:
-            city_cells[cell] = False
+        city_cells = set(zip(x_values, y_values))
+        for cell in city_cells:
             vector_field[cell] = align_cell_to_city(center, city_orientation, cell)
         return city_cells
 
