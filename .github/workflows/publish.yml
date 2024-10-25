@@ -64,7 +64,7 @@ jobs:
                     VERSION_TAG: ${{ steps.build-version-tag.outputs.VERSION_TAG }}
                 run: git push origin "$VERSION_TAG"
             -   name: Archive package
-                uses: actions/upload-artifact@v3
+                uses: actions/upload-artifact@v4
                 with:
                     name: python-package
                     path: dist/
