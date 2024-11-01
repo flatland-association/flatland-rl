@@ -2,7 +2,7 @@
 Collection of environment-specific ObservationBuilder.
 """
 import collections
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict
 
 import numpy as np
 
@@ -211,7 +211,6 @@ class TreeObsForRailEnv(ObservationBuilder):
         # Here information about the agent itself is stored
         distance_map = self.env.distance_map.get()
 
-        # was referring to TreeObsForRailEnv.Node
         root_node_observation = Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
                                      dist_other_agent_encountered=0, dist_potential_conflict=0,
                                      dist_unusable_switch=0, dist_to_next_branch=0,
@@ -440,7 +439,6 @@ class TreeObsForRailEnv(ObservationBuilder):
             dist_to_next_branch = tot_dist
             dist_min_to_target = distance_map_handle[position[0], position[1], direction]
 
-        # TreeObsForRailEnv.Node
         node = Node(dist_own_target_encountered=own_target_encountered,
                     dist_other_target_encountered=other_target_encountered,
                     dist_other_agent_encountered=other_agent_encountered,
@@ -580,10 +578,6 @@ class GlobalObsForRailEnv(ObservationBuilder):
         obs_targets = np.zeros((self.env.height, self.env.width, 2))
         obs_agents_state = np.zeros((self.env.height, self.env.width, 5)) - 1
 
-        # TODO can we do this more elegantly?
-        # for r in range(self.env.height):
-        #     for c in range(self.env.width):
-        #         obs_agents_state[(r, c)][4] = 0
         obs_agents_state[:, :, 4] = 0
 
         obs_agents_state[agent_virtual_position][0] = agent.direction
@@ -695,15 +689,6 @@ class LocalObsForRailEnv(ObservationBuilder):
 
         direction = np.identity(4)[agent.direction]
         return local_rail_obs, obs_map_state, obs_other_agents_state, direction
-
-    def get_many(self, handles: Optional[List[int]] = None) -> Dict[
-        int, Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
-        """
-        Called whenever an observation has to be computed for the `env` environment, for each agent with handle
-        in the `handles` list.
-        """
-
-        return super().get_many(handles)
 
     def field_of_view(self, position, direction, state=None):
         # Compute the local field of view for an agent in the environment

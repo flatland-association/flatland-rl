@@ -1,0 +1,8 @@
+name: flatland-ray-310
+channels:
+    - defaults
+dependencies:
+    - python=3.10.14
+    - pip=24.2
+    - pip:
+          - -r ${RAY_RUNTIME_ENV_CREATE_WORKING_DIR}/requirements-dev.txt
