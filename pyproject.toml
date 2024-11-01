@@ -70,8 +70,9 @@ dev = [
 ]
 # TODO https://github.com/flatland-association/flatland-rl/issues/73 merge whole of flatland/contrib into flatland/ml and add all dependencies from flatland/contrib/requirements_training.txt here
 ml = [
-    "ray[default]",
+    "ray[default,rllib]",
     "wandb",
+    "torch"
     #    "supersuit",
     #    "pettingzoo",
     #    "stable_baselines3",

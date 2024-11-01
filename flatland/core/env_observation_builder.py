@@ -21,7 +21,7 @@ class ObservationBuilder:
     """
 
     def __init__(self):
-        self.env = None
+        self.env: Environment = None
 
     def set_env(self, env: Environment):
         self.env: Environment = env
