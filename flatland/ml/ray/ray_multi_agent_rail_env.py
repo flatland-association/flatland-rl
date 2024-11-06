@@ -39,9 +39,11 @@ class RayMultiAgentWrapper(MultiAgentEnv):
 
         super().__init__()
 
+        self.agents = [str(i) for i in self.wrap.get_agent_handles()]
+
     @override(Environment)
     def step(
-            self, action_dict: MultiAgentDict
+        self, action_dict: MultiAgentDict
     ) -> Tuple[
         MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict
     ]:
@@ -83,14 +85,14 @@ class RayMultiAgentWrapper(MultiAgentEnv):
 
     @override(Environment)
     def reset(
-            self,
-            *,
-            seed: Optional[int] = None,
-            options: Optional[dict] = None,
+        self,
+        *,
+        seed: Optional[int] = None,
+        options: Optional[dict] = None,
     ) -> Tuple[MultiAgentDict, MultiAgentDict]:
         if options is None:
             options = {}
-        obs, infos = self.wrap.reset(random_seed=seed,**options)
+        obs, infos = self.wrap.reset(random_seed=seed, **options)
 
         # convert np.ndarray to MultiAgentDict
         obs = {str(i): obs[i] for i in self.wrap.get_agent_handles()}
@@ -109,5 +111,3 @@ class RayMultiAgentWrapper(MultiAgentEnv):
     @override(MultiAgentEnv)
     def get_agent_ids(self) -> Set[AgentID]:
         return set({str(i) for i in self.wrap.get_agent_handles()})
-
-
