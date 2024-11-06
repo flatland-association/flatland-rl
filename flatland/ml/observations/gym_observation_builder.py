@@ -1,9 +1,13 @@
 from abc import abstractmethod
 
 import gymnasium as gym
+import numpy as np
 
+from flatland.core.env import Environment
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.envs.observations import GlobalObsForRailEnv
+from flatland.envs.rail_env import RailEnv
 
 
 class GymObservationBuilder(ObservationBuilder):
@@ -21,6 +25,9 @@ class GymObservationBuilderWrapper(GymObservationBuilder):
         self.wrap = wrap
         self.observation_space = observation_space
 
+    def set_env(self, env: Environment):
+        self.wrap.set_env(env)
+
     def reset(self):
         self.wrap.reset()
 
@@ -34,36 +41,44 @@ class GymObservationBuilderWrapper(GymObservationBuilder):
         return self.observation_space
 
 
-# # TODO wrap - keep core clean from gym dependency?!
-# class RailEnvSpace(gym.spaces.Space):
-#     def __init__(
-#         self,
-#         obs_builder: ObservationBuilder,
-#         shape: Sequence[int] | None = None,
-#         dtype: npt.DTypeLike | None = None,
-#         seed: int | np.random.Generator | None = None,
-#
-#     ):
-#         super().__init__(shape, dtype, seed)
-#         self.obs_builder = obs_builder
-#
-#     def sample(self, mask: Any | None = None):
-#         # get = self.obs_builder.get()
-#         get = self.obs_builder.get_many(self.obs_builder.env.get_agent_handles())
-#         return get
-#
-#     def contains(self, x: Any) -> bool:
-#         return True
-#
-#         # N.B.
-#         self.observation_space = gym.spaces.Tuple(spaces=[
-#             # transition map
-#             RailEnvSpace(self, shape=(self.env.height, self.env.width, 16), dtype=np.float64),
-#             # obs_agents_state
-#             RailEnvSpace(self, shape=(self.env.height, self.env.width, 5), dtype=np.float64),
-#             # obs_targets
-#             RailEnvSpace(self, shape=(self.env.height, self.env.width, 2), dtype=np.float64)
-#         ])
+class DummyObservationBuilderGym(GymObservationBuilderWrapper):
+    def __init__(self):
+        # TODO is there no standard MultiAgentEnv-compatabile Env-Flattening wrapper?
+        # workaround for multi-agent setting (i.e. do not flatten agent dict, only flatten per-agent observations)
+        self.unflattened_observation_space = gym.spaces.Discrete(2)
+        super().__init__(DummyObservationBuilder(), gym.spaces.utils.flatten_space(self.unflattened_observation_space))
 
-def dummy_observation_builder_wrapper(dummy_observation_builder: DummyObservationBuilder) -> GymObservationBuilderWrapper:
-    return GymObservationBuilderWrapper(dummy_observation_builder, gym.spaces.Discrete(2))
+    def get(self, handle: int = 0):
+        return gym.spaces.utils.flatten(self.unflattened_observation_space, super().get(handle)).astype(float)
+
+
+# TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
+class GlobalObsForRailEnvGym(GymObservationBuilderWrapper):
+
+    def __init__(self):
+        super().__init__(GlobalObsForRailEnv(), None)
+        self.observation_space = None
+
+    def set_env(self, env: RailEnv):
+        super().set_env(env)
+        self._update_observation_space(env)
+
+    def _update_observation_space(self, env):
+        # TODO is there no standard MultiAgentEnv-compatabile Env-Flattening wrapper?
+        # workaround for multi-agent setting (i.e. do not flatten agent dict, only flatten per-agent observations)
+        self.unflattened_observation_space = gym.spaces.Tuple(spaces=[
+            # transition map
+            gym.spaces.Box(low=-np.inf, high=np.inf, shape=(env.height, env.width, 16), dtype=float),
+            # obs_agents_state
+            gym.spaces.Box(low=-np.inf, high=np.inf, shape=(env.height, env.width, 5), dtype=float),
+            # obs_targets
+            gym.spaces.Box(low=-np.inf, high=np.inf, shape=(env.height, env.width, 2), dtype=float)
+        ])
+        self.observation_space = gym.spaces.flatten_space(self.unflattened_observation_space)
+
+    def get(self, handle: int = 0):
+        return gym.spaces.utils.flatten(self.unflattened_observation_space, super().get(handle))
+
+    def reset(self):
+        super().reset()
+        self._update_observation_space(self.wrap.env)

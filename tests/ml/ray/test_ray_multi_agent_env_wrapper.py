@@ -3,14 +3,15 @@ from typing import Callable
 import pytest
 from ray.rllib import RolloutWorker
 from ray.rllib.algorithms import AlgorithmConfig
-from ray.rllib.utils.test_utils import add_rllib_example_script_args
+from ray.tune.registry import register_input
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenTreeObsForRailEnv
-from flatland.ml.ray.ray_cli import train
+from flatland.ml.observations.gym_observation_builder import DummyObservationBuilderGym, GlobalObsForRailEnvGym
+from flatland.ml.ray.ray_cli import train, add_flatland_ray_cli_example_script_args
 from flatland.ml.ray.wrappers import ray_env_creator
 
 
@@ -59,10 +60,9 @@ def test_rail_env_wrappers_random_rollout(obs_builder_object: ObservationBuilder
         )
         for obs_builder, obid in
         [
-            # TODO training with all obs builders
-            # (lambda: DummyObservationBuilder(), "DummyObservationBuilder"),
-            # (lambda: GlobalObsForRailEnv(), "GlobalObsForRailEnv"),
-            (lambda: FlattenTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)), "FlattenTreeObsForRailEnv_max_depth_3_50")
+            (lambda: FlattenTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)), "FlattenTreeObsForRailEnv_max_depth_3_50"),
+            (lambda: DummyObservationBuilderGym(), "DummyObservationBuilderGym"),
+            (lambda: GlobalObsForRailEnvGym(), "GlobalObsForRailEnvGym"),
         ]
         for algo in [
         # TODO DQN not working yet - use latest ray with new api stack?
@@ -74,7 +74,10 @@ def test_rail_env_wrappers_random_rollout(obs_builder_object: ObservationBuilder
     ]
 )
 def test_rail_env_wrappers_training(obs_builder: Callable[[], ObservationBuilder], algo: str):
-    parser = add_rllib_example_script_args()
-    train(parser.parse_args(["--algo", algo, "--num-agents", "2", "--enable-new-api-stack", "--stop-iters", "1"]))
+    parser = add_flatland_ray_cli_example_script_args()
+    # TODO is register_input the right way?
+    register_input("test_rail_env_wrappers_training_obs_builder", obs_builder)
+    train(parser.parse_args(
+        ["--algo", algo, "--num-agents", "2", "--enable-new-api-stack", "--stop-iters", "1", "--obs_builder", "test_rail_env_wrappers_training_obs_builder"]))
 
 # TODO verification of implementation with training? 0.6 bei 1000 Episode
