@@ -79,7 +79,7 @@ class RayMultiAgentWrapper(MultiAgentEnv):
         truncateds = {"__all__": False}
 
         if self.render_mode is not None:
-            # We render the initial step and show the obsered cells as colored boxes
+            # We render the initial step and show the observed cells as colored boxes
             self.env_renderer.render_env(show=True, frames=True, show_observations=True, show_predictions=False)
         return obs, rewards, terminateds, truncateds, infos
 

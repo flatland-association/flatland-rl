@@ -91,8 +91,5 @@ class DummyObservationBuilder(ObservationBuilder):
     def reset(self):
         pass
 
-    def get_many(self, handles: Optional[List[int]] = None) -> bool:
-        return True
-
     def get(self, handle: int = 0) -> bool:
         return True

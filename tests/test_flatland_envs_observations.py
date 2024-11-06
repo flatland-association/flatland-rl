@@ -1,18 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from typing import Callable
 
 import numpy as np
+import pytest
 
+from env_generation.env_creator import env_creator
+from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
+from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv, Node
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.step_utils.states import TrainState
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
-from flatland.envs.step_utils.states import TrainState
 
 """Tests for `flatland` package."""
 
@@ -315,3 +319,44 @@ def test_reward_function_waiting(rendering=False):
             #                                                                                        actual_reward,
             #                                                                                        expected_reward)
         iteration += 1
+
+
+@pytest.mark.parametrize(
+    "obs_builder,expected_shape",
+    [
+        pytest.param(obs_builder, expected_shape, id=f"{obid}")
+        for obs_builder, obid, expected_shape in
+        [
+            (TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)), "FlattenTreeObsForRailEnv_max_depth_3_50",
+             lambda v: type(v) == Node),
+            (DummyObservationBuilder(), "DummyObservationBuilderGym", lambda v: type(v) == bool),
+            (GlobalObsForRailEnv(), "GlobalObsForRailEnvGym",
+             lambda v: type(v) == tuple
+                       and len(v) == 3
+                       and v[0].shape == (30, 30, 16) and v[0].dtype == float
+                       and v[1].shape == (30, 30, 5) and v[1].dtype == float
+                       and v[2].shape == (30, 30, 2) and v[2].dtype == float),
+        ]
+    ]
+)
+def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape: Callable):
+    expected_dtype = float
+    expected_agent_ids = [0, 1, 2, 3, 4, 5, 6]
+
+    env = env_creator(obs_builder_object=obs_builder)
+
+    for agent_id in env.agents:
+        space_shape = env.get_observation_space(agent_id).shape
+        assert space_shape == expected_shape, (expected_shape, space_shape)
+        space_dtype = env.get_observation_space(agent_id).dtype
+        assert space_dtype == expected_dtype
+        sample_shape = env.get_observation_space(agent_id).sample().shape
+        assert sample_shape == expected_shape, (expected_shape, sample_shape)
+    obs, _ = env.reset()
+    assert list(obs.keys()) == expected_agent_ids
+    for i in range(7):
+        assert expected_shape(obs[i])
+    obs, _, _, _ = env.step({})
+    assert list(obs.keys()) == expected_agent_ids
+    for i in range(7):
+        assert expected_shape(obs[i])
