@@ -45,11 +45,13 @@ class DummyObservationBuilderGym(GymObservationBuilderWrapper):
     def __init__(self):
         # TODO is there no standard MultiAgentEnv-compatabile Env-Flattening wrapper?
         # workaround for multi-agent setting (i.e. do not flatten agent dict, only flatten per-agent observations)
-        self.unflattened_observation_space = gym.spaces.Discrete(2)
-        super().__init__(DummyObservationBuilder(), gym.spaces.utils.flatten_space(self.unflattened_observation_space))
+        self.unflattened_observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=float)
+        self.observation_space = gym.spaces.utils.flatten_space(self.unflattened_observation_space)
+        super().__init__(DummyObservationBuilder(), self.observation_space)
 
     def get(self, handle: int = 0):
-        return gym.spaces.utils.flatten(self.unflattened_observation_space, super().get(handle)).astype(float)
+        # `flatten` converts bool to float as float as observation space's dtype
+        return gym.spaces.utils.flatten(self.unflattened_observation_space, super().get(handle))
 
 
 # TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64

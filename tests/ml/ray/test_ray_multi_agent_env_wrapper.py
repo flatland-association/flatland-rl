@@ -51,6 +51,44 @@ def test_rail_env_wrappers_random_rollout(obs_builder_object: ObservationBuilder
     worker.sample()
 
 
+@pytest.mark.parametrize(
+    "obs_builder,expected_shape",
+    [
+        pytest.param(obs_builder, expected_shape, id=f"{obid}")
+        for obs_builder, obid, expected_shape in
+        [
+            (FlattenTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)), "FlattenTreeObsForRailEnv_max_depth_3_50", (935,)),
+            (DummyObservationBuilderGym(), "DummyObservationBuilderGym", (1,)),
+            (GlobalObsForRailEnvGym(), "GlobalObsForRailEnvGym", (20700,)),
+        ]
+    ]
+)
+def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape):
+    expected_dtype = float
+    expected_agent_ids = ['0', '1', '2', '3', '4', '5', '6']
+
+    env = ray_env_creator(obs_builder_object=obs_builder)
+
+    assert env.agents == expected_agent_ids, env.agents
+    for agent_id in env.agents:
+        space_shape = env.get_observation_space(agent_id).shape
+        assert space_shape == expected_shape, (expected_shape, space_shape)
+        space_dtype = env.get_observation_space(agent_id).dtype
+        assert space_dtype == expected_dtype
+        sample_shape = env.get_observation_space(agent_id).sample().shape
+        assert sample_shape == expected_shape, (expected_shape, sample_shape)
+    obs, _ = env.reset()
+    assert list(obs.keys()) == expected_agent_ids
+    for i in range(7):
+        assert obs[str(i)].shape == expected_shape
+        assert obs[str(i)].dtype == expected_dtype
+    obs, _, _, _, _ = env.step({})
+    assert list(obs.keys()) == expected_agent_ids
+    for i in range(7):
+        assert obs[str(i)].shape == expected_shape
+        assert obs[str(i)].dtype == expected_dtype
+
+
 # TODO takes too long for unit tests -> mark as skip or IT? Or reduce training?
 @pytest.mark.parametrize(
     "obs_builder,algo",
@@ -73,6 +111,7 @@ def test_rail_env_wrappers_random_rollout(obs_builder_object: ObservationBuilder
         "PPO"]
     ]
 )
+@pytest.mark.integrationtest
 def test_rail_env_wrappers_training(obs_builder: Callable[[], ObservationBuilder], algo: str):
     parser = add_flatland_ray_cli_example_script_args()
     # TODO is register_input the right way?
