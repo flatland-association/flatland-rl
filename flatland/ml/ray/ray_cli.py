@@ -8,22 +8,13 @@ from ray.rllib.utils.test_utils import (
     add_rllib_example_script_args,
     run_rllib_example_script_experiment,
 )
-from ray.tune.registry import get_trainable_cls, register_env
+from ray.tune.registry import get_trainable_cls, register_env, registry_get_input
 
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenTreeObsForRailEnv
 from flatland.ml.ray.wrappers import ray_env_creator
 
 
 def setup_func():
     logging.basicConfig(level=logging.INFO, format="[%(asctime)s][%(levelname)s][%(process)d][%(filename)s:%(funcName)s:%(lineno)d] %(message)s")
-
-
-parser = add_rllib_example_script_args(
-    default_iters=200,
-    default_timesteps=1000000,
-    default_reward=0.0,
-)
 
 
 def train(args: Namespace):
@@ -51,8 +42,10 @@ def train(args: Namespace):
         env_name = "flatland_env"
         # TODO inject whole env from cli?
         # TODO can we wrap instead?
-        obs_builder_object = FlattenTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
-        register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=obs_builder_object))
+        # obs_builder_object = FlattenTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
+
+        register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
+        # register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=FlattenTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))))
         # Policies are called just like the agents (exact 1:1 mapping).
         policies = {str(i) for i in range(args.num_agents)}
         base_config = (
@@ -67,6 +60,7 @@ def train(args: Namespace):
             .training(
                 # vf_loss_coeff=0.005,
             )
+            # TODO	WARNING deprecation.py:50 -- DeprecationWarning: `AlgorithmConfig.rl_module(model_config_dict=..)` has been deprecated. Use `AlgorithmConfig.rl_module(model_config=..)` instead. This will raise an error in the future!
             .rl_module(
                 model_config_dict={"vf_share_layers": True},
                 rl_module_spec=MultiRLModuleSpec(
@@ -84,12 +78,27 @@ def train(args: Namespace):
         raise e
 
 
+def add_flatland_ray_cli_example_script_args():
+    parser = add_rllib_example_script_args(
+        default_iters=200,
+        default_timesteps=1000000,
+        default_reward=0.0,
+    )
+    parser.add_argument(
+        "--obs_builder",
+        type=str,
+        default=None,
+    )
+    return parser
+
+
 # TODO convert to full cli (with which options) or convert to example?
 # TODO documentation/cli ray cluster?
 # TODO https://github.com/flatland-association/flatland-rl/issues/73 get pettingzoo up and running again.
 # TODO https://github.com/flatland-association/flatland-rl/issues/75 illustrate algorithm/policy abstraction in ray
 # TODO https://github.com/flatland-association/flatland-rl/issues/76 illustrate generic callbacks with ray
 # TODO https://github.com/flatland-association/flatland-rl/issues/77 illustrate logging (wandb/tensorflow/custom)...
-if __name__ == "__main__":
+if __name__ == '__main__':
+    parser = add_flatland_ray_cli_example_script_args()
     args = parser.parse_args()
     train(args)
