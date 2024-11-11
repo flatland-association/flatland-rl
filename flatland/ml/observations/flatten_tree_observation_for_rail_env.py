@@ -137,6 +137,7 @@ def normalize_observation(observation, tree_depth: int, observation_radius=0):
 
 # TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
 # TODO can we not use gym flatteners instead?
+# TODO call it ...Gym as well?
 class FlattenTreeObsForRailEnv(TreeObsForRailEnv, GymObservationBuilder):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

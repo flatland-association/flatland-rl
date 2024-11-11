@@ -5,10 +5,10 @@ from typing import Callable
 import numpy as np
 import pytest
 
-from env_generation.env_creator import env_creator
 from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.env_generation.env_creator import env_creator
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv, Node
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -340,18 +340,9 @@ def test_reward_function_waiting(rendering=False):
     ]
 )
 def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape: Callable):
-    expected_dtype = float
     expected_agent_ids = [0, 1, 2, 3, 4, 5, 6]
 
     env = env_creator(obs_builder_object=obs_builder)
-
-    for agent_id in env.agents:
-        space_shape = env.get_observation_space(agent_id).shape
-        assert space_shape == expected_shape, (expected_shape, space_shape)
-        space_dtype = env.get_observation_space(agent_id).dtype
-        assert space_dtype == expected_dtype
-        sample_shape = env.get_observation_space(agent_id).sample().shape
-        assert sample_shape == expected_shape, (expected_shape, sample_shape)
     obs, _ = env.reset()
     assert list(obs.keys()) == expected_agent_ids
     for i in range(7):

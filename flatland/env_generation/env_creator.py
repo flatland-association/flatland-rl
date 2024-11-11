@@ -25,7 +25,7 @@ def env_creator(n_agents=7,
     if obs_builder_object is None:
         obs_builder_object = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
 
-    return RailEnv(
+    env = RailEnv(
         width=x_dim,
         height=y_dim,
         rail_generator=sparse_rail_generator(
@@ -42,3 +42,5 @@ def env_creator(n_agents=7,
         obs_builder_object=obs_builder_object,
         record_steps=True
     )
+    env.reset(random_seed=seed)
+    return env
