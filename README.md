@@ -11,7 +11,7 @@ Flatland is a open-source toolkit for developing and comparing Multi-Agent Reinf
 [The official website](https://www.flatland-association.org/) contains full details about the environment and problem
 statement.
 
-Flatland is tested with Python 3.8, 3.9 and 3.10 on modern versions of macOS, Linux and Windows. You may encounter
+Flatland is tested with Python 3.10, 3.11, and 3.12 on modern versions of macOS, Linux and Windows. You may encounter
 problems with graphical rendering if you use WSL.
 
 🏆 Challenges

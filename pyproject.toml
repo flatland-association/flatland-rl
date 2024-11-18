@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "flatland-rl"
 description = "Multi Agent Reinforcement Learning on Trains"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 keywords = ["flatland"]
 authors = [{ name = "Flatland Association", email = "contact@flatland-association.org" }]
@@ -14,9 +14,7 @@ classifiers = [
     'Development Status :: 4 - Beta',
     'Intended Audience :: Developers',
     'Natural Language :: English',
-    'Programming Language :: Python :: 3.8',
-    'Programming Language :: Python :: 3.9',
-    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.10 - 3.12',
 ]
 dependencies = [
     "attr",
@@ -34,20 +32,17 @@ dependencies = [
     "msgpack_numpy",
     "msgpack",
     "networkx",
-    "numpy",
+    "numpy<2",
     "pandas",
-    "pettingzoo",
     "Pillow",
     "pyglet",
     "PyYAML",
-    "ray",
     "recordtype",
     "redis",
     "seaborn",
-    "supersuit",
     "svgutils",
     "timeout_decorator",
-    "wandb",
+
 ]
 dynamic = ["version"]
 
@@ -69,10 +64,17 @@ dev = [
     "pytest",
     "sphinx",
     "sphinx-rtd-theme",
-    "stable_baselines3",
     "tox",
     "twine",
     "twine",
+]
+# TODO https://github.com/flatland-association/flatland-rl/issues/73 merge whole of flatland/contrib into flatland/ml and add all dependencies from flatland/contrib/requirements_training.txt here
+ml = [
+    "ray[default]",
+    "wandb",
+    #    "supersuit",
+    #    "pettingzoo",
+    #    "stable_baselines3",
 ]
 
 [project.urls]
