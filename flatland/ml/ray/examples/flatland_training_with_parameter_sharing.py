@@ -47,6 +47,13 @@ def add_flatland_ray_cli_example_script_args():
         default=10,
         help="Number of episodes to do inference over (after restoring from a checkpoint).",
     )
+    parser.add_argument(
+        "--ray_address",
+        type=str,
+        default=None,
+        required=False,
+        help="The address of the ray cluster to connect to in the form ray://<head_node_ip_address>:10001. Leave empty to start a new cluster. Passed to ray.init(address=...). See https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html ",
+    )
     return parser
 
 
@@ -62,24 +69,35 @@ def train(args: Namespace):
     assert (
         args.enable_new_api_stack
     ), "Must set --enable-new-api-stack when running this script!"
+    assert (
+        args.obs_builder
+    ), "Must set --obs_builder <obs builder ID> when running this script!"
     # TODO use ray.init also for flatland_inference example
     setup_func()
-    ray.init(runtime_env={
-        # TODO cleanup: do without environment file (relative paths), maybe generate ad hoc to inject requirements-ml.txt
-        # install clean env fro
-        # "conda": "environment.yml",
-        # TODO cleanup: pass working dir from cli?
-        # "working_dir": f"{Path.cwd().parent.parent.parent.parent}",
-        "working_dir": f".",
-        # "working_dir": "../../../..",
-        "excludes": ["notebooks/", ".git/", ".tox/", ".venv/", "docs/", ".idea", "tmp"],
-        "env_vars": {
-            "RAY_ENABLE_RECORD_ACTOR_TASK_LOGGING": "1",
-            # TODO cli?
-            # "RAY_DEBUG": "1",
-        },
-        "worker_process_setup_hook": setup_func
-    })
+    kwargs = {}
+    if args.ray_address is not None:
+        kwargs['address'] = args.ray_address
+    # kwargs['address'] = "ray://127.0.0.1::10001"
+    # https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html
+    ray.init(
+        **kwargs,
+        # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#runtime-environments
+        runtime_env={
+
+            # TODO cleanup: do without environment file (relative paths), maybe generate ad hoc to inject requirements-ml.txt
+            # install clean env fro
+            # "conda": "environment.yml",
+            # TODO cleanup: pass working dir from cli?
+            # "working_dir": f"{Path.cwd().parent.parent.parent.parent}",
+            # "working_dir": f".",
+            "excludes": ["notebooks/", ".git/", ".tox/", ".venv/", "docs/", ".idea", "tmp"],
+            "env_vars": {
+                "RAY_ENABLE_RECORD_ACTOR_TASK_LOGGING": "1",
+                # TODO cli?
+                # "RAY_DEBUG": "1",
+            },
+            # "worker_process_setup_hook": "flatland.ml.ray.examples.flatland_training_with_parameter_sharing.setup_func"
+        })
     try:
         env_name = "flatland_env"
         register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
