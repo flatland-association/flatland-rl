@@ -23,7 +23,6 @@ from typing import Tuple, Set, Union
 
 import graphviz as gv
 import networkx as nx
-import numpy as np
 
 
 class MotionCheck(object):
@@ -40,9 +39,6 @@ class MotionCheck(object):
         self._G_reversed: Union[nx.DiGraph, None] = None
 
     def get_G_reversed(self):
-        # if self._G_reversed is None:
-        #    self._G_reversed = self.G.reverse()
-        # return self._G_reversed
         return self.Grev
 
     def reset_G_reversed(self):
@@ -68,26 +64,6 @@ class MotionCheck(object):
             self.G.nodes[rc1]["xlabel"] = xlabel
         self.G.add_edge(rc1, rc2)
         self.Grev.add_edge(rc2, rc1)
-
-    def find_stops(self):
-        """ find all the stopped agents as a set of rc position nodes
-            A stopped agent is a self-loop on a cell node.
-        """
-
-        # get the (sparse) adjacency matrix
-        spAdj = nx.linalg.adjacency_matrix(self.G)
-
-        # the stopped agents appear as 1s on the diagonal
-        # the where turns this into a list of indices of the 1s
-        giStops = np.where(spAdj.diagonal())[0]
-
-        # convert the cell/node indices into the node rc values
-        lvAll = list(self.G.nodes())
-        # pick out the stops by their indices
-        lvStops = [lvAll[i] for i in giStops]
-        # make it into a set ready for a set intersection
-        svStops = set(lvStops)
-        return svStops
 
     def find_stops2(self):
         """ alternative method to find stopped agents, using a networkx call to find selfloop edges
@@ -138,18 +114,6 @@ class MotionCheck(object):
 
         # the set of all the nodes/agents blocked by this set of stopped nodes
         return svBlocked
-
-    def find_swaps(self):
-        """ find all the swap conflicts where two agents are trying to exchange places.
-            These appear as simple cycles of length 2.
-            These agents are necessarily deadlocked (since they can't change direction in flatland) -
-            meaning they will now be stuck for the rest of the episode.
-        """
-        # svStops = self.find_stops2()
-        llvLoops = list(nx.algorithms.cycles.simple_cycles(self.G))
-        llvSwaps = [lvLoop for lvLoop in llvLoops if len(lvLoop) == 2]
-        svSwaps = {v for lvSwap in llvSwaps for v in lvSwap}
-        return svSwaps
 
     def find_swaps2(self) -> Set[Tuple[int, int]]:
         svSwaps = set()
@@ -204,8 +168,7 @@ class MotionCheck(object):
         self.reset_G_reversed()
 
         svStops = self.find_stops2()  # voluntarily stopped agents - have self-loops
-        # svSwaps = self.find_swaps()   # deadlocks - adjacent head-on collisions
-        svSwaps = self.find_swaps2()  # faster version of find_swaps
+        svSwaps = self.find_swaps2()  # deadlocks - adjacent head-on collisions
 
         # Block all swaps and their tree of predecessors
         self.svDeadlocked = self.block_preds(svSwaps, color="purple")
