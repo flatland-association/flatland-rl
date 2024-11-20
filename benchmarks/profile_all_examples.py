@@ -1,6 +1,8 @@
 import cProfile
+import os
 import runpy
 import sys
+from fileinput import filename
 from io import StringIO
 
 import importlib_resources
@@ -16,6 +18,11 @@ def profile(resource, entry):
         print("*****************************************************************")
         print("Profiling {}".format(entry))
         print("*****************************************************************")
+        profiling_output_folder = os.environ.get('PROFILING_OUTPUT_FOLDER', None)
+        outfile = None
+        if profiling_output_folder:
+            outfile = os.path.join(profiling_output_folder, f"{entry}.prof")
+
         with swap_attr(sys, "stdin", StringIO("q")):
             global my_func
 
@@ -23,7 +30,7 @@ def profile(resource, entry):
                     'argv': ['--sleep-for-animation=False', '--do_rendering=False']
                 })
 
-            cProfile.run('my_func()', sort='time')
+            cProfile.run('my_func()', sort='time', filename=outfile)
 
 
 for entry in [entry for entry in importlib_resources.contents('examples') if
