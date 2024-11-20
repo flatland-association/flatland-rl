@@ -101,6 +101,10 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Run profiling
                 run: tox run -e profiling
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-benchmarking-results
+                    path: ${GITHUB_WORKSPACE}/.tox/profiling/log
 
     benchmarks:
         runs-on: ubuntu-22.04
@@ -122,6 +126,10 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e benchmarks
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-benchmarking-results
+                    path: ${GITHUB_WORKSPACE}/.tox/benchmarks/log
 
     publish:
         if: ${{ false }}  # disabled until decided when it should run exactly
