@@ -40,7 +40,7 @@ If you are proposing a feature:
 
 Ready to contribute? Here's how to set up `flatland` for local development.
 
-1. Make sure all supported Python interpreters (3.8, 3.9, 3.10) are available.
+1. Make sure all supported Python interpreters (3.10, 3.11, 3.12) are available.
    This is important because you want to be able to run the test with all supported versions.
    We recommend [pyenv](https://github.com/pyenv/pyenv) to manage Python versions.
    See their docs for installation instructions.
@@ -54,7 +54,7 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 3. When using `pyenv`, set the local Python versions:
 
    ```shell
-   pyenv local 3.8 3.9 3.10
+   pyenv local 3.10 3.11 3.12
    ```
 
 4. Set up a virtual environment using your preferred method (we suggest the built-in `venv`) and activate it.
@@ -69,6 +69,7 @@ Ready to contribute? Here's how to set up `flatland` for local development.
 
     ```shell
     python -m pip install -r requirements-dev.txt
+    python -m pip install -r requirements-ml.txt
     ```
 
 6. Create a branch for local development:
