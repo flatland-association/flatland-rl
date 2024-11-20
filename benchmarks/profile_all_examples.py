@@ -2,7 +2,6 @@ import cProfile
 import os
 import runpy
 import sys
-from fileinput import filename
 from io import StringIO
 
 import importlib_resources
@@ -27,8 +26,8 @@ def profile(resource, entry):
             global my_func
 
             def my_func(): runpy.run_path(file_in, run_name="__main__", init_globals={
-                    'argv': ['--sleep-for-animation=False', '--do_rendering=False']
-                })
+                'argv': ['--sleep-for-animation=False', '--do_rendering=False']
+            })
 
             cProfile.run('my_func()', sort='time', filename=outfile)
 
@@ -38,7 +37,6 @@ def profile_all_examples():
                   not pkg_resources.resource_isdir('examples', entry)
                   and entry.endswith(".py")
                   and '__init__' not in entry
-                  and 'demo.py' not in entry
                   and 'DELETE' not in entry
                   ]:
         profile('examples', entry)
