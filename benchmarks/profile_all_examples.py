@@ -22,6 +22,7 @@ def profile(resource, entry):
         outfile = None
         if profiling_output_folder:
             outfile = os.path.join(profiling_output_folder, f"{entry}.prof")
+        print(f"outfile={outfile}")
 
         with swap_attr(sys, "stdin", StringIO("q")):
             global my_func

@@ -27,6 +27,7 @@ if __name__ == '__main__':
         outfile = None
         if benchmarks_output_folder:
             outfile = os.path.join(benchmarks_output_folder, f"{entry}.json")
+        print(f"outfile={outfile}")
 
         with path('examples', entry) as file_in:
             with Benchmarker(cycle=20, extra=1, outfile=outfile) as bench:
