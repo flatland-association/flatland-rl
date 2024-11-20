@@ -162,6 +162,44 @@ def create_test_agents2(omc: MotionCheck):
 
 
 def test_agent_following():
+    expected = {
+        (1, 0): "red",
+        (1, 1): "red",
+        (1, 2): "red",
+        (1, 3): "red",
+        (3, 0): "red",
+        (3, 1): "red",
+        (4, 1): "purple",
+        (4, 2): "purple",
+        (5, 1): "purple",
+        (5, 2): "purple",
+        (5, 3): "purple",
+        (6, 1): "red",
+        (6, 2): "red",
+        (6, 3): "red",
+        (6, 4): "red",
+        (7, 1): "purple",
+        (7, 2): "purple",
+        (7, 3): "purple",
+        (7, 4): "purple",
+        (7, 5): "purple",
+        (7, 6): "purple",
+        (8, 2): "blue",
+        (8, 3): "red",
+        (9, 4): "blue",
+        (9, 5): "red",
+        (9, 6): "red",
+        (9, 7): "red",
+        (10, 2): "blue",
+        (10, 3): "red",
+        (11, 2): "red",
+        (12, 3): "magenta",
+        (13, 3): "red",
+        (14, 3): "magenta",
+        (15, 3): "red",
+        (15, 2): "red",
+        (16, 2): "red",
+    }
     omc = MotionCheck()
     create_test_agents2(omc)
     omc.find_conflicts()
@@ -170,4 +208,8 @@ def test_agent_following():
             pos={p: p for p in omc.G.nodes},
             node_color=[n["color"] if "color" in n else "lightblue" for _, n in omc.G.nodes.data()]
             )
-    # plt.show()
+    actual = {i: n['color'] for i, n in omc.G.nodes.data() if 'color' in n}
+
+    assert set(actual.keys()) == set(expected.keys())
+    for k in actual.keys():
+        assert expected[k] == actual[k], (k, expected[k], actual[k])
