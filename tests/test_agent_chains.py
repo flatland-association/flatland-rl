@@ -164,23 +164,10 @@ def create_test_agents2(omc: MotionCheck):
 def test_agent_following():
     omc = MotionCheck()
     create_test_agents2(omc)
-
-    svStops = omc.find_stops()
-    svBlocked = omc.find_stop_preds()
-    llvSwaps = omc.find_swaps()
-    svSwaps = {v for lvSwap in llvSwaps for v in lvSwap}
-    print(list(svBlocked))
-
-    lvCells = omc.G.nodes()
-
-    lColours = ["magenta" if v in svStops
-                else "red" if v in svBlocked
-    else "purple" if v in svSwaps
-    else "lightblue"
-                for v in lvCells]
-    dPos = dict(zip(lvCells, lvCells))
-
+    omc.find_conflicts()
     nx.draw(omc.G,
             with_labels=True, arrowsize=20,
-            pos=dPos,
-            node_color=lColours)
+            pos={p: p for p in omc.G.nodes},
+            node_color=[n["color"] if "color" in n else "lightblue" for _, n in omc.G.nodes.data()]
+            )
+    # plt.show()
