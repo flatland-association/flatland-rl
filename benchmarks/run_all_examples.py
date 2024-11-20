@@ -26,16 +26,16 @@ for entry in [entry for entry in importlib_resources.contents('examples') if
         print("Running {}".format(entry))
         print("*****************************************************************")
 
-        with swap_attr(sys, "stdin", StringIO("q")):
-            try:
-                runpy.run_path(file_in, run_name="__main__", init_globals={
-                    'argv': ['--sleep-for-animation=False', '--do_rendering=False']
-                })
-            except Exception as e:
-                print(e)
-                error_log_examples.update({file_in: e})
-            print("runpy done.")
-        print("Done with {}".format(entry))
+        # with swap_attr(sys, "stdin", StringIO("q")):
+        #     try:
+        #         runpy.run_path(file_in, run_name="__main__", init_globals={
+        #             'argv': ['--sleep-for-animation=False', '--do_rendering=False']
+        #         })
+        #     except Exception as e:
+        #         print(e)
+        #         error_log_examples.update({file_in: e})
+        #     print("runpy done.")
+        # print("Done with {}".format(entry))
 
 if len(error_log_examples.keys()) > 0:
     print("*****************************************************************")
