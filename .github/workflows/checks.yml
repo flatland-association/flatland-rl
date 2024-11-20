@@ -102,7 +102,8 @@ jobs:
             -   uses: actions/upload-artifact@v4
                 with:
                     name: upload-benchmarking-results
-                    path: ${GITHUB_WORKSPACE}/.tox/profiling/log
+                    path: .tox/profiling/log
+                    if-no-files-found: error
 
     benchmarks:
         runs-on: ubuntu-22.04
@@ -121,4 +122,5 @@ jobs:
             -   uses: actions/upload-artifact@v4
                 with:
                     name: upload-benchmarking-results
-                    path: ${GITHUB_WORKSPACE}/.tox/benchmarks/log
+                    path: .tox/benchmarks/log
+                    if-no-files-found: error
