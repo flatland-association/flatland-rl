@@ -1,6 +1,0 @@
-
-ffmpeg -y -framerate 12 -i frame_%04d.bmp -hide_banner -c:v libx264 -pix_fmt yuv420p test.mp4
-
-ffmpeg -i test.mp4 test.gif
-
-pause
