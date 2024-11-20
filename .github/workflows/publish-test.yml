@@ -13,11 +13,11 @@ jobs:
         runs-on: ubuntu-22.04
         steps:
             -   name: Checkout
-                uses: actions/checkout@v3
+                uses: actions/checkout@v4
                 with:
                     fetch-depth: 0
             -   name: Set up Python
-                uses: actions/setup-python@v3
+                uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
             -   name: Install tox
@@ -36,7 +36,7 @@ jobs:
                     password: ${{ secrets.PYPI_TEST_API_TOKEN }}
                     repository-url: https://test.pypi.org/legacy/
             -   name: Archive package
-                uses: actions/upload-artifact@v3
+                uses: actions/upload-artifact@v4
                 with:
                     name: python-package
                     path: dist/

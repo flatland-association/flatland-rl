@@ -1,6 +1,9 @@
 name: Main
 
 on:
+    workflow_dispatch:
+    schedule:
+        -   cron: '30 5 * * *'
     push:
         branches: [ "main" ]
 
@@ -13,9 +16,9 @@ jobs:
         if: ${{ false }}  # disabled for now, hasn't run in a while resulting in countless issues
         runs-on: ubuntu-22.04
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v4
             -   name: Set up Python
-                uses: actions/setup-python@v3
+                uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
             -   name: Install tox
@@ -32,9 +35,9 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12" ]
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v4
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v3
+                uses: actions/setup-python@v5
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Install tox
@@ -47,9 +50,9 @@ jobs:
     docs:
         runs-on: ubuntu-22.04
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v4
             -   name: Set up Python
-                uses: actions/setup-python@v3
+                uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
             -   name: Install tox
@@ -59,7 +62,7 @@ jobs:
             -   name: Run docs
                 run: tox run -e docs
             -   name: Archive docs
-                uses: actions/upload-artifact@v3
+                uses: actions/upload-artifact@v4
                 with:
                     name: docs
                     path: docs/_build/html
@@ -68,9 +71,9 @@ jobs:
         if: ${{ false }}  # disabled for now, some need custom kernel
         runs-on: ubuntu-22.04
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v4
             -   name: Set up Python
-                uses: actions/setup-python@v3
+                uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
             -   name: Install tox
@@ -83,9 +86,9 @@ jobs:
     examples:
         runs-on: ubuntu-22.04
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v4
             -   name: Set up Python
-                uses: actions/setup-python@v3
+                uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
             -   name: Install tox
@@ -98,9 +101,9 @@ jobs:
     profiling:
         runs-on: ubuntu-22.04
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v4
             -   name: Set up Python
-                uses: actions/setup-python@v3
+                uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
             -   name: Install tox
@@ -113,9 +116,9 @@ jobs:
     benchmarks:
         runs-on: ubuntu-22.04
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v4
             -   name: Set up Python
-                uses: actions/setup-python@v3
+                uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
             -   name: Install tox
@@ -130,11 +133,11 @@ jobs:
         runs-on: ubuntu-22.04
         needs: [ test, examples ]
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v4
                 with:
                     fetch-depth: 0
             -   name: Set up Python
-                uses: actions/setup-python@v3
+                uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
             -   name: Install tox
@@ -148,7 +151,7 @@ jobs:
                 with:
                     password: ${{ secrets.PYPI_API_TOKEN }}
             -   name: Archive package
-                uses: actions/upload-artifact@v3
+                uses: actions/upload-artifact@v4
                 with:
                     name: python-package
                     path: dist/
