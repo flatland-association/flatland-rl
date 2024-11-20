@@ -22,7 +22,6 @@ def profile(resource, entry):
         outfile = None
         if profiling_output_folder:
             outfile = os.path.join(profiling_output_folder, f"{entry}.prof")
-        print(f"outfile={outfile}")
 
         with swap_attr(sys, "stdin", StringIO("q")):
             global my_func
@@ -34,11 +33,16 @@ def profile(resource, entry):
             cProfile.run('my_func()', sort='time', filename=outfile)
 
 
-for entry in [entry for entry in importlib_resources.contents('examples') if
-              not pkg_resources.resource_isdir('examples', entry)
-              and entry.endswith(".py")
-              and '__init__' not in entry
-              and 'demo.py' not in entry
-              and 'DELETE' not in entry
-              ]:
-    profile('examples', entry)
+def profile_all_examples():
+    for entry in [entry for entry in importlib_resources.contents('examples') if
+                  not pkg_resources.resource_isdir('examples', entry)
+                  and entry.endswith(".py")
+                  and '__init__' not in entry
+                  and 'demo.py' not in entry
+                  and 'DELETE' not in entry
+                  ]:
+        profile('examples', entry)
+
+
+if __name__ == '__main__':
+    profile_all_examples()

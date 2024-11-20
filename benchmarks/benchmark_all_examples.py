@@ -11,8 +11,8 @@ from importlib_resources import path
 
 from benchmarks.benchmark_utils import swap_attr
 
-if __name__ == '__main__':
 
+def benchmark_all_examples():
     for entry in [entry for entry in importlib_resources.contents('examples') if
                   not pkg_resources.resource_isdir('examples', entry)
                   and entry.endswith(".py")
@@ -46,3 +46,7 @@ if __name__ == '__main__':
                         runpy.run_path(file_in, run_name="__main__", init_globals={
                             'argv': ['--sleep-for-animation=False', '--do_rendering=False']
                         })
+
+
+if __name__ == '__main__':
+    benchmark_all_examples()
