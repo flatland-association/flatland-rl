@@ -20,6 +20,7 @@ References:
 TODO split file: env creation, graph derivation, simplification, rendering, notebook
 TODO action into cell behaviour - add to documentation
 TODO docs with illustration of the mapping.
+TODO illustration simplification and edge cases (pun intended): non-facing switches and diamond-crossings, and multi-edges.
 TODO tests
 """
 from collections import defaultdict
