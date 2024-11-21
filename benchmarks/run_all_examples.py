@@ -1,5 +1,6 @@
 import runpy
 import sys
+import traceback
 from io import StringIO
 
 import importlib_resources
@@ -36,7 +37,8 @@ def run_all_examples():
                     print(e)
                     error_log_examples.update({file_in: e})
                 except:
-                    print("runpy failed.")
+                    print("runpy failed:")
+                    traceback.print_exc()
                 print("runpy done.")
             print("Done with {}".format(entry))
     if len(error_log_examples.keys()) > 0:
