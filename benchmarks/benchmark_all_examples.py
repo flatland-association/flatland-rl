@@ -23,13 +23,14 @@ def benchmark_all_examples():
         print("Benchmarking {}".format(entry))
         print("*****************************************************************")
 
-        # benchmarks_output_folder = os.environ.get('BENCHMARKS_OUTPUT_FOLDER', None)
-        # outfile = None
-        # if benchmarks_output_folder:
-        #     outfile = os.path.join(benchmarks_output_folder, f"{entry}.json")
-        # print(f"outfile={outfile}")
-        #
-        # with path('examples', entry) as file_in:
+        benchmarks_output_folder = os.environ.get('BENCHMARKS_OUTPUT_FOLDER', None)
+        outfile = None
+        if benchmarks_output_folder:
+            outfile = os.path.join(benchmarks_output_folder, f"{entry}.json")
+        print(f"outfile={outfile}")
+
+        with path('examples', entry) as file_in:
+            file_in.write_text("abcd")
         #     with Benchmarker(cycle=20, extra=1, outfile=outfile) as bench:
         #         @bench(entry)
         #         def _(_):
