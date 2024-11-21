@@ -5,9 +5,7 @@ import random
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-from flatland.utils import seeding
 
-# from flatland.envs.timetable_generators import timetable_generator
 import flatland.envs.timetable_generators as ttg
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -21,12 +19,14 @@ from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.fast_methods import fast_position_equal
+from flatland.envs.line_generators import LineGenerator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
     enable_infrastructure_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
@@ -101,7 +101,7 @@ class RailEnv(Environment):
                  width,
                  height,
                  rail_generator=None,
-                 line_generator=None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
+                 line_generator: LineGenerator = None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
                  number_of_agents=2,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
@@ -168,7 +168,7 @@ class RailEnv(Environment):
         self.rail_generator = rail_generator
         if line_generator is None:
             line_generator = line_gen.sparse_line_generator()
-        self.line_generator = line_generator
+        self.line_generator: LineGenerator = line_generator
         self.timetable_generator = timetable_generator
 
         self.rail: Optional[GridTransitionMap] = None

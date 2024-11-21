@@ -1,8 +1,26 @@
 """
-TODO description
-TODO split file
-TODO documentation/notebook
-TODO reference to _create_simplified_graph https://github.com/aiAdrian/flatland_railway_extension/blob/e2b15bdd851ad32fb26c1a53f04621a3ca38fc00/flatland_railway_extension/FlatlandGraphBuilder.py
+A Flatland (microscopic) topology can be represented as different kinds of graphs.
+The topology must reflect the possible paths through the rail network - it must not be possible to traverse a switch in the acute angle.
+With the help of the graph it is very easy to calculate the shortest connection from node A to node B. The API makes it possible to solve such tasks very efficiently. Moreover, the graph can be simplified so that only decision-relevant nodes remain in the graph and all other nodes are merged. A decision node is a node or flatland cell (track) that reasonably allows the agent to stop, go, or branch off. For straight track edges within a route, it makes little sense to wait in many situations. This is because the agent would block many resources, i.e., if an agent does not drive to the decision point: a cell before a crossing, the agent blocks the area in between. This makes little sense from an optimization point of view.
+
+Two (dual, equivalent) approaches are possible:
+- agents are positioned on the nodes
+- agents are positioned on the edges.
+The second approach makes it easier to visualize agents moving forward on edges. Hence, we choose the second approach.
+
+Our directed graph consists of nodes and edges:
+* A node in the graph is defined by position and direction. The position corresponds to the position of the underlying cell in the original flatland topology, and the direction corresponds to the direction in which an agent reaches the cell. Thus, the node is defined by (r, c, d), where c (column) is the index of the horizontal cell grid position, r (row) is the index of the vertical cell grid position, and d (direction) is the direction of cell entry. In the Flatland (2d grid), not every of the eight neighbors cell can be reached from every direction. Therefore, the entry direction information is key.
+* An edge is defined by "from-node" u and "to-node" v such that for the edge e = (u, v).  Edges reflect feasible transition from node u to node v exist.
+
+The implementation uses networkX, so there are also many graph functions available.
+
+References:
+- Egli, Adrian. FlatlandGraphBuilder. https://github.com/aiAdrian/flatland_railway_extension/blob/e2b15bdd851ad32fb26c1a53f04621a3ca38fc00/flatland_railway_extension/FlatlandGraphBuilder.py
+- Nygren, E., Eichenberger, Ch., Frejinger, E., Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
+TODO split file: env creation, graph derivation, simplification, rendering, notebook
+TODO action into cell behaviour - add to documentation
+TODO docs with illustration of the mapping.
+TODO tests
 """
 from collections import defaultdict
 from typing import List, Tuple
@@ -14,13 +32,15 @@ from attr import attrs, attrib
 
 from core.grid.grid4_utils import get_new_position
 from core.transition_map import GridTransitionMap
-from envs.line_generators import sparse_line_generator
-from envs.malfunction_generators import NoMalfunctionGen
-from envs.observations import TreeObsForRailEnv
-from envs.predictions import ShortestPathPredictorForRailEnv
-from envs.rail_env import RailEnv
-from envs.rail_generators import sparse_rail_generator
+from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.malfunction_generators import ParamMalfunctionGen, MalfunctionParameters
+from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.predictions import ShortestPathPredictorForRailEnv
+from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import sparse_rail_generator
 from utils.rendertools import RenderTool
+
+GridNode = Tuple[int, int, int]
 
 
 # TODO move method
@@ -53,25 +73,24 @@ def env_creator(n_agents=7,
             max_rails_between_cities=max_rails_between_cities,
             max_rail_pairs_in_city=max_rail_pairs_in_city
         ),
-        malfunction_generator=NoMalfunctionGen(),
-        # TODO ignore malfunctions for now
-        # ParamMalfunctionGen(MalfunctionParameters(
-        #     min_duration=malfunction_duration_min, max_duration=malfunction_duration_max, malfunction_rate=1.0 / malfunction_interval)),
-        #
+        malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(
+            min_duration=malfunction_duration_min, max_duration=malfunction_duration_max, malfunction_rate=1.0 / malfunction_interval)),
         line_generator=sparse_line_generator(speed_ratio_map=speed_ratios, seed=seed),
         number_of_agents=n_agents,
         obs_builder_object=obs_builder_object,
         record_steps=True,
         random_seed=seed
     )
-    # TODO not deterministic grrrrr!
+    # TODO check env reset is deterministic?
     env.reset(random_seed=seed)
     return env
 
 
+# TODO naming?
 class GraphTransitionMap:
     def __init__(self, g: nx.DiGraph):
         self.g = g
+
         self.cell_in_pins = defaultdict(lambda: set())
         self.cell_out_pins = defaultdict(lambda: set())
         for n in self.g:
@@ -101,7 +120,7 @@ class GraphTransitionMap:
 
 @attrs
 class DecisionPointGraphEdgeData:
-    path = attrib(type=List[Tuple[int, int, int]])
+    path = attrib(type=List[GridNode])
 
 
 # TODO naming: decision point graph, simplified graph, collapsed graph, ....?
@@ -110,14 +129,14 @@ class DecisionPointGraph:
         self.g = g
 
     @staticmethod
-    def explore_branch(g: nx.DiGraph, u: Tuple[int, int, int], v: Tuple[int, int, int]) -> List[Tuple[int, int, int]]:
+    def _explore_branch(g: nx.DiGraph, u: GridNode, v: GridNode) -> List[GridNode]:
         branch = [u, v]
         successors = list(g.successors(v))
         assert len(successors) > 0
         while len(successors) == 1:
-            succ = successors[0]
-            branch.append(succ)
-            successors = list(g.successors(succ))
+            successor = successors[0]
+            branch.append(successor)
+            successors = list(g.successors(successor))
             assert len(successors) > 0
         return branch
 
@@ -132,7 +151,7 @@ class DecisionPointGraph:
         # add edge for
         for dp in decision_nodes:
             for n in micro.successors(dp):
-                branch = DecisionPointGraph.explore_branch(micro, dp, n)
+                branch = DecisionPointGraph._explore_branch(micro, dp, n)
                 g.add_edge(branch[0], branch[-1], d=DecisionPointGraphEdgeData(path=branch))
         return DecisionPointGraph(g)
 
@@ -166,6 +185,7 @@ def _add_flatland_styling(env: RailEnv, ax):
     ax.grid(which="minor")
 
 
+# TODO move to notebook
 if __name__ == '__main__':
     env = env_creator()
 
