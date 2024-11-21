@@ -46,11 +46,33 @@ class DecisionPointGraphEdgeData:
 
 
 class DecisionPointGraph:
-    def __init__(self, g: GraphTransitionMap):
+    def __init__(self, g: nx.DiGraph):
         self.g = g
 
     @staticmethod
-    def fromGraphTransitionMap(g: GraphTransitionMap):
+    def fromGraphTransitionMap(gtm: GraphTransitionMap):
         # TODO _create_simplified_graph https://github.com/aiAdrian/flatland_railway_extension/blob/e2b15bdd851ad32fb26c1a53f04621a3ca38fc00/flatland_railway_extension/FlatlandGraphBuilder.py
+        g = nx.DiGraph()
 
+        # find decision cells
+        decision_cells = set()
+        for cell, out_pins in gtm.cell_out_pins.items():
+            if len(out_pins) > 2:
+                decision_cells.add(cell)
+
+        # explore decision cells
+        for (r, c) in decision_cells:
+            for s in gtm.cell_out_pins[s]:
+                branch: List[Tuple[int, int, int]] = [s]
+                is_decision = False
+                while not is_decision:
+                    previous = branch[-1]
+                    next = list(g.successors(previous))
+                    assert len(next) >= 1
+                    is_decision = len(next) > 1
+                    if is_decision:
+                        # add edge from decision point to the one before the next decision point
+                        g.add_edge(branch[0], branch[-1], d=DecisionPointGraphEdgeData(branch=branch))
+                    else:
+                        branch.append(next[0])
         return DecisionPointGraph(g)
