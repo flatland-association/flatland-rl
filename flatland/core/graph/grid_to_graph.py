@@ -13,10 +13,14 @@ from envs.rail_env import RailEnv
 class GraphTransitionMap:
     def __init__(self, g: nx.DiGraph):
         self.g = g
-        self.in_pins = defaultdict(lambda: set())
+        self.cell_in_pins = defaultdict(lambda: set())
+        self.cell_out_pins = defaultdict(lambda: set())
         for n in self.g:
-            r, c, d = n
-            self.in_pins[(r, c)].add(n)
+            cell = n[:2]
+            self.cell_in_pins[cell].add(n)
+            for succ in g.successors(n):
+                succ_cell = succ[:2]
+                self.cell_out_pins[succ_cell].add(cell)
 
     @staticmethod
     def grid_to_digraph(transition_map: GridTransitionMap) -> nx.DiGraph:
