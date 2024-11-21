@@ -521,6 +521,8 @@ six==1.16.0
     #   python-dateutil
     #   recordtype
     #   rfc3339-validator
+snakeviz==2.2.2
+    # via flatland-rl (pyproject.toml)
 sniffio==1.3.1
     # via
     #   anyio
@@ -587,6 +589,7 @@ tornado==6.4.1
     #   jupyter-server
     #   jupyterlab
     #   notebook
+    #   snakeviz
     #   terminado
 tox==4.23.2
     # via flatland-rl (pyproject.toml)
