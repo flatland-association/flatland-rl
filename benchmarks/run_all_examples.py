@@ -35,6 +35,8 @@ def run_all_examples():
                 except Exception as e:
                     print(e)
                     error_log_examples.update({file_in: e})
+                except:
+                    print("runpy failed.")
                 print("runpy done.")
             print("Done with {}".format(entry))
     if len(error_log_examples.keys()) > 0:
