@@ -11,17 +11,27 @@ We are still using index order to resolve conflicts between two agents trying to
 
 Implementation: We did it by storing an agent's position as a graph node, and a movement as a directed edge, using the NetworkX graph library.
 We create an empty graph for each step, and add the agents into the graph in order,
-using their (row, column) location for the node. Stationary agents get a self-loop.
+using their (row, column) location for the node. In this way, agents staying in the same cell (stop action or not at cell exit yet) get a self-loop.
 Agents in an adjacent chain naturally get "connected up".
+
+Pseudocode:
+* purple = deadlocked if in deadlock or predecessor of deadlocked (`mark_preds(find_swaps(), 'purple')`)
+* red = blocked, i.e. wanting to move, but blocked by an agent ahead not wanting to move or blocked itself (`mark_preds(find_stopped_agents(), 'red')`)
+* blue = no agent and >1 wanting to enter, blocking after conflict resolution (`mark_preds(losers, 'red')`)
+* magenta: agent (able to move) and >1 wanting to enter, blocking after conflict resolution (`mark_preds(losers, 'red')`)
+
+
 We then use some NetworkX algorithms (https://github.com/networkx/networkx):
     * `weakly_connected_components` to find the chains.
     * `selfloop_edges` to find the stopped agents
     * `dfs_postorder_nodes` to traverse a chain
-    * `simple_cycles` to find agents colliding head-on
 """
-from typing import Tuple, Set, Union
+from typing import Tuple, Set, Dict
 
 import networkx as nx
+
+AgentHandle = int
+Cell = Tuple[int, int]
 
 
 class MotionCheck(object):
@@ -31,19 +41,16 @@ class MotionCheck(object):
     """
 
     def __init__(self):
-        self.G = nx.DiGraph()
+        self.G = nx.DiGraph()  # nodes of type `Cell`
+        # TODO do we need the reversed graph at all?
         self.Grev = nx.DiGraph()  # reversed graph for finding predecessors
         self.nDeadlocks = 0
         self.svDeadlocked = set()
-        self._G_reversed: Union[nx.DiGraph, None] = None
 
     def get_G_reversed(self):
         return self.Grev
 
-    def reset_G_reversed(self):
-        self._G_reversed = None
-
-    def addAgent(self, iAg, rc1, rc2, xlabel=None):
+    def addAgent(self, iAg: AgentHandle, rc1: Cell, rc2: Cell, xlabel=None):
         """ add an agent and its motion as row,col tuples of current and next position.
             The agent's current position is given an "agent" attribute recording the agent index.
             If an agent does not want to move this round (rc1 == rc2) then a self-loop edge is created.
@@ -51,7 +58,7 @@ class MotionCheck(object):
         """
 
         # Agents which have not yet entered the env have position None.
-        # Substitute this for the row = -1, column = agent index
+        # Substitute this for the row = -1, column = agent index, i.e. they are isolated nodes in the graph!
         if rc1 is None:
             rc1 = (-1, iAg)
 
@@ -64,46 +71,42 @@ class MotionCheck(object):
         self.G.add_edge(rc1, rc2)
         self.Grev.add_edge(rc2, rc1)
 
-    def find_stops2(self):
-        """ alternative method to find stopped agents, using a networkx call to find selfloop edges
+    def find_stopped_agents(self) -> Set[Cell]:
+        """
+        Find stopped agents, using a networkx call to find self-loop nodes.
+        :return: set of stopped agents
         """
         svStops = {u for u, v in nx.classes.function.selfloop_edges(self.G)}
         return svStops
 
-    def find_stop_preds(self, svStops=None):
-        """ Find the predecessors to a list of stopped agents (ie the nodes / vertices)
-            Returns the set of predecessors.
-            Includes "chained" predecessors.
+    def find_stop_preds(self, svStops: Set[Cell]) -> Set[Cell]:
+        """ Find the predecessors to a list of stopped agents (ie the nodes / vertices). Includes "chained" predecessors.
+            :param svStops: list of voluntarily stopped agents
+            :return: the set of predecessors.
         """
-
-        if svStops is None:
-            svStops = self.find_stops2()
 
         # Get all the chains of agents - weakly connected components.
         # Weakly connected because it's a directed graph and you can traverse a chain of agents
         # in only one direction
+        # TODO why do we need weakly connected components at all? Just use reverse traversal of directed edges?
         lWCC = list(nx.algorithms.components.weakly_connected_components(self.G))
 
         svBlocked = set()
-        reversed_G = None
+        reversed_G = self.get_G_reversed()
 
         for oWCC in lWCC:
             if (len(oWCC) == 1):
                 continue
-            # print("Component:", len(oWCC), oWCC)
             # Get the node details for this WCC in a subgraph
-            Gwcc = self.G.subgraph(oWCC)
+            Gwcc: Set[Cell] = self.G.subgraph(oWCC)
 
             # Find all the stops in this chain or tree
-            svCompStops = svStops.intersection(Gwcc)
-            # print(svCompStops)
+            svCompStops: Set[Cell] = svStops.intersection(Gwcc)
 
             if len(svCompStops) > 0:
-                if reversed_G is None:
-                    reversed_G = self.get_G_reversed()
 
                 # We need to traverse it in reverse - back up the movement edges
-                Gwcc_rev = reversed_G.subgraph(oWCC)  # Gwcc.reverse()
+                Gwcc_rev = reversed_G.subgraph(oWCC)
                 for vStop in svCompStops:
                     # Find all the agents stopped by vStop by following the (reversed) edges
                     # This traverses a tree - dfs = depth first seearch
@@ -114,37 +117,33 @@ class MotionCheck(object):
         # the set of all the nodes/agents blocked by this set of stopped nodes
         return svBlocked
 
-    def find_swaps2(self) -> Set[Tuple[int, int]]:
+    def find_swaps(self) -> Set[Cell]:
+        """
+        Find loops of size 2 in the graph, i.e. swaps leading to head-on collisions.
+        :return: set of all cells in swaps.
+        """
         svSwaps = set()
         sEdges = self.G.edges()
 
         for u, v in sEdges:
             if u == v:
-                # print("self loop", u, v)
                 pass
             else:
                 if (v, u) in sEdges:
-                    # print("swap", uv)
                     svSwaps.update([u, v])
         return svSwaps
 
-    def find_same_dest(self):
-        """ find groups of agents which are trying to land on the same cell.
-            ie there is a gap of one cell between them and they are both landing on it.
-        """
-        pass
-
-    def block_preds(self, svStops, color="red"):
+    def mark_preds(self, svStops: Set[Cell], color: object = "red") -> Set[Cell]:
         """ Take a list of stopped agents, and apply a stop color to any chains/trees
             of agents trying to head toward those cells.
-            Count the number of agents blocked, ignoring those which are already marked.
-            (Otherwise it can double count swaps)
+            :param svStops: list of stopped agents
+            :param color: color to apply to predecessor of stopped agents
+            :return: all predecessors of any stopped agent
 
         """
-        iCount = 0
-        svBlocked = set()
+        predecessors = set()
         if len(svStops) == 0:
-            return svBlocked
+            return predecessors
 
         # The reversed graph allows us to follow directed edges to find affected agents.
         Grev = self.get_G_reversed()
@@ -152,48 +151,44 @@ class MotionCheck(object):
 
             # Use depth-first-search to find a tree of agents heading toward the blocked cell.
             lvPred = list(nx.traversal.dfs_postorder_nodes(Grev, source=v))
-            svBlocked |= set(lvPred)
-            svBlocked.add(v)
-            # print("node:", v, "set", svBlocked)
-            # only count those not already marked
+            predecessors |= set(lvPred)
+            predecessors.add(v)
+
+            # only color those not already marked (not updating previous colors)
             for v2 in [v] + lvPred:
                 if self.G.nodes[v2].get("color") != color:
                     self.G.nodes[v2]["color"] = color
-                    iCount += 1
-
-        return svBlocked
+        return predecessors
 
     def find_conflicts(self):
-        self.reset_G_reversed()
+        """Called in env.step() before the agents execute their actions."""
 
-        svStops = self.find_stops2()  # voluntarily stopped agents - have self-loops
-        svSwaps = self.find_swaps2()  # deadlocks - adjacent head-on collisions
+        svStops: Set[Cell] = self.find_stopped_agents()  # voluntarily stopped agents - have self-loops ("same cell to same cell")
+        svSwaps: Set[Cell] = self.find_swaps()  # deadlocks - adjacent head-on collisions
 
-        # Block all swaps and their tree of predecessors
-        self.svDeadlocked = self.block_preds(svSwaps, color="purple")
+        # Mark all swaps and their tree of predecessors with purple - these are directly deadlocked
+        self.svDeadlocked: Set[Cell] = self.mark_preds(svSwaps, color="purple")
 
-        # Take the union of the above, and find all the predecessors
-        # svBlocked = self.find_stop_preds(svStops.union(svSwaps))
-
-        # Just look for the tree of preds for each voluntarily stopped agent
-        svBlocked = self.find_stop_preds(svStops)
+        # Just look for the tree of preds for each voluntarily stopped agent (i.e. not wanting to move)
+        # TODO why not re-use mark_preds(swStops, color="red")?
+        # TODO refactoring suggestion: only one "blocked" red = 1. all deadlocked and their predecessor, 2. all predecessors of self-loopers, 3.
+        svBlocked: Set[Cell] = self.find_stop_preds(svStops)
 
         # iterate the nodes v with their predecessors dPred (dict of nodes->{})
         for (v, dPred) in self.G.pred.items():
-            # mark any swaps with purple - these are directly deadlocked
-            # if v in svSwaps:
-            #    self.G.nodes[v]["color"] = "purple"
-            # If they are not directly deadlocked, but are in the union of stopped + deadlocked
-            # elif v in svBlocked:
 
-            # if in blocked, it will not also be in a swap pred tree, so no need to worry about overwriting
+            dPred: Set[Cell] = dPred
+
+            # if in blocked, it will not also be in a swap pred tree, so no need to worry about overwriting (outdegree always  <= 1!)
+            # TODO why not mark outside of the loop? The loop would then only need to go over nodes with indegree >2 not marked purple or red yet
             if v in svBlocked:
                 self.G.nodes[v]["color"] = "red"
+
             # not blocked but has two or more predecessors, ie >=2 agents waiting to enter this node
             elif len(dPred) > 1:
+                # if this agent is already red or purple, all its predecessors are in svDeadlocked or svBlocked and will eventually be marked red or purple
 
-                # if this agent is already red/blocked, ignore. CHECK: why?
-                # certainly we want to ignore purple so we don't overwrite with red.
+                # no conflict resolution if deadlocked or blocked
                 if self.G.nodes[v].get("color") in ("red", "purple"):
                     continue
 
@@ -205,29 +200,28 @@ class MotionCheck(object):
                     self.G.nodes[v]["color"] = "magenta"
 
                 # predecessors of a contended cell: {agent index -> node}
-                diAgCell = {self.G.nodes[vPred].get("agent"): vPred for vPred in dPred}
+                diAgCell: Dict[AgentHandle, Cell] = {self.G.nodes[vPred].get("agent"): vPred for vPred in dPred}
 
                 # remove the agent with the lowest index, who wins
                 iAgWinner = min(diAgCell)
                 diAgCell.pop(iAgWinner)
 
-                # Block all the remaining predessors, and their tree of preds
-                # for iAg, v in diAgCell.items():
-                #    self.G.nodes[v]["color"] = "red"
-                #    for vPred in nx.traversal.dfs_postorder_nodes(self.G.reverse(), source=v):
-                #        self.G.nodes[vPred]["color"] = "red"
-                self.block_preds(diAgCell.values(), "red")
+                self.mark_preds(set(diAgCell.values()), "red")
 
-    def check_motion(self, iAgent, rcPos):
+    def check_motion(self, iAgent: AgentHandle, rcPos: Cell) -> bool:
         """ Returns tuple of boolean can the agent move, and the cell it will move into.
-            If agent position is None, we use a dummy position of (-1, iAgent)
+            If agent position is None, we use a dummy position of (-1, iAgent).
+            Called in env.step() after conflicts are collected in find_conflicts() - each agent now can execute their position update independently (valid_movement) by calling check_motion.
+            :param iAgent: agent handle
+            :param rcPos:  cell
+            :return: true iff the agent wants to move and it has no conflict
         """
 
         if rcPos is None:
+            # no successor
             rcPos = (-1, iAgent)
 
         dAttr = self.G.nodes.get(rcPos)
-        # print("pos:", rcPos, "dAttr:", dAttr)
 
         if dAttr is None:
             dAttr = {}
