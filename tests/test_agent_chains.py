@@ -131,14 +131,6 @@ def create_test_agents2(omc: MotionCheck):
     cte.addAgent((cte.iRowNext + 1, 2), (cte.iRowNext, 2))
     cte.nextRow()
 
-    if False:
-        cte.nextRow()
-        cte.nextRow()
-        cte.addAgentToRow(1, 2, "4-way\nsame")
-        cte.addAgentToRow(3, 2)
-        cte.addAgent((cte.iRowNext + 1, 2), (cte.iRowNext, 2))
-        cte.addAgent((cte.iRowNext - 1, 2), (cte.iRowNext, 2))
-        cte.nextRow()
 
     cte.nextRow()
     cte.addAgentToRow(1, 2, "Tee")
