@@ -21,7 +21,6 @@ We then use some NetworkX algorithms (https://github.com/networkx/networkx):
 """
 from typing import Tuple, Set, Union
 
-import graphviz as gv
 import networkx as nx
 
 
@@ -252,18 +251,3 @@ class MotionCheck(object):
             return False
         # The agent wanted to move, and it can
         return True
-
-
-def render(omc: MotionCheck, horizontal=True):
-    try:
-        oAG = nx.drawing.nx_agraph.to_agraph(omc.G)
-        oAG.layout("dot")
-        sDot = oAG.to_string()
-        if horizontal:
-            sDot = sDot.replace('{', '{ rankdir="LR" ')
-        # return oAG.draw(format="png")
-        # This returns a graphviz object which implements __repr_svg
-        return gv.Source(sDot)
-    except ImportError as oError:
-        print("Flatland agent_chains ignoring ImportError - install pygraphviz to render graphs")
-        return None
