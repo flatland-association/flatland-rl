@@ -19,7 +19,6 @@ from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.fast_methods import fast_position_equal
-from flatland.envs.line_generators import LineGenerator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils import action_preprocessing
@@ -101,7 +100,7 @@ class RailEnv(Environment):
                  width,
                  height,
                  rail_generator=None,
-                 line_generator: LineGenerator = None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
+                 line_generator: "LineGenerator" = None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
                  number_of_agents=2,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
