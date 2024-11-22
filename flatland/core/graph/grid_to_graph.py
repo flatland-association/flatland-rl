@@ -1,5 +1,5 @@
 """
-A Flatland (microscopic) topology can be represented as different kinds of graphs.
+A Flatland (microscopic) topology can be represented by different kinds of graphs.
 The topology must reflect the possible paths through the rail network - it must not be possible to traverse a switch in the acute angle.
 With the help of the graph it is very easy to calculate the shortest connection from node A to node B. The API makes it possible to solve such tasks very efficiently. Moreover, the graph can be simplified so that only decision-relevant nodes remain in the graph and all other nodes are merged. A decision node is a node or flatland cell (track) that reasonably allows the agent to stop, go, or branch off. For straight track edges within a route, it makes little sense to wait in many situations. This is because the agent would block many resources, i.e., if an agent does not drive to the decision point: a cell before a crossing, the agent blocks the area in between. This makes little sense from an optimization point of view.
 
@@ -16,10 +16,10 @@ The implementation uses networkX, so there are also many graph functions availab
 
 References:
 - Egli, Adrian. FlatlandGraphBuilder. https://github.com/aiAdrian/flatland_railway_extension/blob/e2b15bdd851ad32fb26c1a53f04621a3ca38fc00/flatland_railway_extension/FlatlandGraphBuilder.py
-- Nygren, E., Eichenberger, Ch., Frejinger, E., Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
+- Nygren, E., Eichenberger, Ch., Frejinger, E. Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
 TODO split file: env creation, graph derivation, simplification, rendering, notebook
 TODO action into cell behaviour - add to documentation
-TODO docs with illustration of the mapping.
+TODO docs with illustration of the mapping and "pins".
 TODO illustration simplification and edge cases (pun intended): non-facing switches and diamond-crossings, and multi-edges.
 TODO tests
 """
