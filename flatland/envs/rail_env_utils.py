@@ -43,7 +43,6 @@ def load_flatland_environment_from_file(file_name: str,
 
 
 # TODO code doc
-# TODO test deterministic!
 def env_creator(n_agents=7,
                 x_dim=30,
                 y_dim=30,
