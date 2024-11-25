@@ -1,4 +1,4 @@
-from envs.malfunction_generators import ParamMalfunctionGen, MalfunctionParameters
+from flatland.envs.malfunction_generators import ParamMalfunctionGen, MalfunctionParameters
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.envs.line_generators import line_from_file, sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
