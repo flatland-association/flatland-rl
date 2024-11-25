@@ -5,7 +5,6 @@ import random
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-from flatland.utils import seeding
 
 # from flatland.envs.timetable_generators import timetable_generator
 import flatland.envs.timetable_generators as ttg
@@ -27,6 +26,7 @@ from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
     enable_infrastructure_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
@@ -52,9 +52,12 @@ class RailEnv(Environment):
     Moving forward in a dead-end cell makes the agent turn 180 degrees and step
     to the cell it came from.
 
+    In order for agents to be able to "understand" the simulation behaviour from the observations,
+    the execution order of actions should not matter (i.e. not depend on the agent handle).
+    However, the agent ordering is still used to resolve conflicts between two agents trying to move into the same cell,
+    for example, head-on collisions, or agents "merging" at junctions.
+    See `MotionCheck` for more details.
 
-    The actions of the agents are executed in order of their handle to prevent
-    deadlocks and to allow them to learn relative priorities.
 
     Reward Function:
 
