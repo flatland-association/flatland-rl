@@ -17,11 +17,11 @@ The implementation uses networkX, so there are also many graph functions availab
 References:
 - Egli, Adrian. FlatlandGraphBuilder. https://github.com/aiAdrian/flatland_railway_extension/blob/e2b15bdd851ad32fb26c1a53f04621a3ca38fc00/flatland_railway_extension/FlatlandGraphBuilder.py
 - Nygren, E., Eichenberger, Ch., Frejinger, E. Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
-TODO split file: env creation, graph derivation, simplification, rendering, notebook
-TODO action into cell behaviour - add to documentation
-TODO docs with illustration of the mapping and "pins".
-TODO illustration simplification and edge cases (pun intended): non-facing switches and diamond-crossings, and multi-edges.
-TODO tests for conversion
+TODO action into cell behaviour - add to documentation --> "flatland-book"
+TODO docs with illustration of the mapping and "pins". --> "flatland-book"
+TODO illustration simplification and edge cases (pun intended): non-facing switches and diamond-crossings, and multi-edges. --> notebook or "flatland-book"?
+TODO unit tests for conversion and simplification
+TODO docstrings
 """
 from collections import defaultdict
 
@@ -34,6 +34,14 @@ from flatland.envs.rail_env import RailEnv
 
 # TODO naming?
 class GraphTransitionMap:
+    """
+    Flatland 3 Transition map represented by a directed graph.
+
+    Attributes
+    ----------
+    g: nx.DiGraph
+    """
+
     def __init__(self, g: nx.DiGraph):
         self.g = g
 
@@ -48,6 +56,17 @@ class GraphTransitionMap:
 
     @staticmethod
     def grid_to_digraph(transition_map: GridTransitionMap) -> nx.DiGraph:
+        """
+        The graph representation of a grid transition map.
+
+        Parameters
+        ----------
+        transition_map
+
+        Returns
+        -------
+
+        """
         g = nx.DiGraph()
         for r in range(transition_map.height):
             for c in range(transition_map.width):
@@ -61,4 +80,16 @@ class GraphTransitionMap:
 
     @staticmethod
     def fromRailEnv(env: RailEnv) -> "GraphTransitionMap":
+        """
+        Factory method to create a graph transition map from a rail env.
+
+        Parameters
+        ----------
+        env: RailEnv
+
+        Returns
+        -------
+        GraphTransitionMap
+            The graph transition map.
+        """
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
