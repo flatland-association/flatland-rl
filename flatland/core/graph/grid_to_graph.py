@@ -21,7 +21,6 @@ TODO action into cell behaviour - add to documentation --> "flatland-book"
 TODO docs with illustration of the mapping and "pins". --> "flatland-book"
 TODO illustration simplification and edge cases (pun intended): non-facing switches and diamond-crossings, and multi-edges. --> notebook or "flatland-book"?
 TODO unit tests for conversion and simplification
-TODO docstrings
 """
 from collections import defaultdict
 
@@ -32,7 +31,6 @@ from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.rail_env import RailEnv
 
 
-# TODO naming?
 class GraphTransitionMap:
     """
     Flatland 3 Transition map represented by a directed graph.
