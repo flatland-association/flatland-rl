@@ -20,7 +20,6 @@ References:
 TODO action into cell behaviour - add to documentation --> "flatland-book"
 TODO docs with illustration of the mapping and "pins". --> "flatland-book"
 TODO illustration simplification and edge cases (pun intended): non-facing switches and diamond-crossings, and multi-edges. --> notebook or "flatland-book"?
-TODO unit tests for conversion and simplification
 """
 from collections import defaultdict
 
@@ -77,7 +76,7 @@ class GraphTransitionMap:
         return g
 
     @staticmethod
-    def fromRailEnv(env: RailEnv) -> "GraphTransitionMap":
+    def from_rail_env(env: RailEnv) -> "GraphTransitionMap":
         """
         Factory method to create a graph transition map from a rail env.
 
