@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from core.graph.grid_to_graph import GraphTransitionMap
-from core.grid.grid4 import Grid4TransitionsEnum
-from core.grid.rail_env_grid import RailEnvTransitions
-from core.transition_map import GridTransitionMap
+from flatland.core.graph.grid_to_graph import GraphTransitionMap
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.grid.rail_env_grid import RailEnvTransitions
+from flatland.core.transition_map import GridTransitionMap
 
 # TODO make enum
 transitions = RailEnvTransitions()
