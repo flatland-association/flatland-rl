@@ -34,6 +34,32 @@ class GraphTransitionMap:
     """
     Flatland 3 Transition map represented by a directed graph.
 
+    The grid transition map contains for all cells a set of pairs (heading at cell entry, heading at cell exit).
+      E.g. horizontal straight is {(E,E), (W,W)}.
+    The directed graph's nodes are entry pins (cell + plus heading at entry).
+    Edges always go from entry pin at one cell to entry pin of a neighboring cell.
+    The outgoing heading for the grid transition map is the incoming heading at a neighboring cell.
+
+    Incoming heading:
+
+                   S
+                   ⌄
+                   |
+           E   >---+---< W
+                   |
+                   ^
+                   N
+
+    Outgoing heading (=incoming at neighbor cell):
+                   N (of cell-to-the-north)
+                   ^
+                   |
+           E   <---+---> E (of cell-to-the-east)
+    (of cell-to-   |
+     the-east)     ⌄
+                   S (of cell-to-the-south)
+
+
     Attributes
     ----------
     g: nx.DiGraph
@@ -41,20 +67,13 @@ class GraphTransitionMap:
 
     def __init__(self, g: nx.DiGraph):
         self.g = g
-
         self.cell_in_pins = defaultdict(lambda: set())
-        self.cell_out_pins = defaultdict(lambda: set())
-        for n in self.g:
-            cell = n[:2]
-            self.cell_in_pins[cell].add(n)
-            for succ in g.successors(n):
-                succ_cell = succ[:2]
-                self.cell_out_pins[succ_cell].add(n)
 
     @staticmethod
     def grid_to_digraph(transition_map: GridTransitionMap) -> nx.DiGraph:
         """
         The graph representation of a grid transition map.
+
 
         Parameters
         ----------
