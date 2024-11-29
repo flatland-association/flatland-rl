@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid4 import Grid4Transitions, fast_grid4_rotate_transition
 from flatland.utils.ordered_set import OrderedSet
 
 
@@ -83,18 +83,30 @@ class RailEnvTransitions(Grid4Transitions):
 # TODO not complete
 class RailEnvTransitionsEnum(IntEnum):
     # Case 0 - empty cell (1)
-    empty = RailEnvTransitions().transition_list[0]
+    empty = RailEnvTransitions.transition_list[0]
 
     # Case 1 - straight (2)
-    vertical_straight = RailEnvTransitions().transition_list[1]
-    horizontal_straight = RailEnvTransitions().rotate_transition(RailEnvTransitions().transition_list[1], 90)
+    vertical_straight = RailEnvTransitions.transition_list[1]
+    horizontal_straight = fast_grid4_rotate_transition(RailEnvTransitions.transition_list[1], 90)
 
     # Case 2 - simple switch left (4)
-    simple_switch_north_left = RailEnvTransitions().transition_list[2]
+    simple_switch_north_left = RailEnvTransitions.transition_list[2]
+    simple_switch_east_left = fast_grid4_rotate_transition(RailEnvTransitions.transition_list[2], 90)
+    simple_switch_south_left = fast_grid4_rotate_transition(RailEnvTransitions.transition_list[2], 180)
+    simple_switch_west_left = fast_grid4_rotate_transition(RailEnvTransitions.transition_list[2], 270)
 
     # Case 3 - diamond crossing (1)
+    diamond_crossing = RailEnvTransitions.transition_list[3]
+
     # Case 4 - single slip (4)
+    single_slip_1 = RailEnvTransitions.transition_list[4]
+    single_slip_2 = fast_grid4_rotate_transition(RailEnvTransitions.transition_list[4], 90)
+    single_slip_3 = fast_grid4_rotate_transition(RailEnvTransitions.transition_list[4], 180)
+    single_slip_4 = fast_grid4_rotate_transition(RailEnvTransitions.transition_list[4], 270)
+
     # Case 5 - double slip (2)
+    double_slip_1 = RailEnvTransitions.transition_list[5]
+    double_slip_2 = fast_grid4_rotate_transition(RailEnvTransitions.transition_list[5], 90)
 
     # Case 6 - symmetrical (4)
     #   NESW
@@ -102,21 +114,25 @@ class RailEnvTransitionsEnum(IntEnum):
     # E 0010
     # S 0000
     # W 0010
-    symmetric_switch_south = RailEnvTransitions().transition_list[6]
-    symmetric_switch_north = RailEnvTransitions().rotate_transition(symmetric_switch_south, 180)
+    symmetric_switch_south = RailEnvTransitions.transition_list[6]
+    symmetric_switch_west = fast_grid4_rotate_transition(symmetric_switch_south, 90)
+    symmetric_switch_north = fast_grid4_rotate_transition(symmetric_switch_south, 180)
+    symmetric_switch_east = fast_grid4_rotate_transition(symmetric_switch_south, 270)
 
     # Case 7 - dead end (4)
-    dead_end_from_south = RailEnvTransitions().transition_list[7]
-    dead_end_from_west = RailEnvTransitions().rotate_transition(dead_end_from_south, 90)
-    dead_end_from_north = RailEnvTransitions().rotate_transition(dead_end_from_south, 180)
-    dead_end_from_east = RailEnvTransitions().rotate_transition(dead_end_from_south, 270)
+    dead_end_from_south = RailEnvTransitions.transition_list[7]
+    dead_end_from_west = fast_grid4_rotate_transition(dead_end_from_south, 90)
+    dead_end_from_north = fast_grid4_rotate_transition(dead_end_from_south, 180)
+    dead_end_from_east = fast_grid4_rotate_transition(dead_end_from_south, 270)
 
     # Case 1b/1c (8)/(9)  - simple turn  (4)
-    right_turn_from_south = RailEnvTransitions().transition_list[8]
-
-    right_turn_from_west = RailEnvTransitions().rotate_transition(right_turn_from_south, 90)
-    right_turn_from_north = RailEnvTransitions().rotate_transition(right_turn_from_south, 180)
+    right_turn_from_south = RailEnvTransitions.transition_list[8]
+    right_turn_from_west = fast_grid4_rotate_transition(right_turn_from_south, 90)
+    right_turn_from_north = fast_grid4_rotate_transition(right_turn_from_south, 180)
+    right_turn_from_est = fast_grid4_rotate_transition(right_turn_from_south, 270)
 
     # Case 2b (10) - simple switch right (4)
-    simple_switch_north_right = RailEnvTransitions().transition_list[10]
-    simple_switch_left_east = RailEnvTransitions().rotate_transition(simple_switch_north_left, 90)
+    simple_switch_north_right = RailEnvTransitions.transition_list[10]
+    simple_switch_east_right = fast_grid4_rotate_transition(simple_switch_north_right, 90)
+    simple_switch_south_right = fast_grid4_rotate_transition(simple_switch_north_right, 180)
+    simple_switch_west_right = fast_grid4_rotate_transition(simple_switch_north_right, 270)

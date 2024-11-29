@@ -47,8 +47,12 @@ def add_flatland_styling(env: RailEnv, ax: plt.Axes):
     """
     env_renderer = RenderTool(env)
     img = env_renderer.render_env(show=False, frames=True, show_observations=False, show_predictions=False, return_image=True)
+    ax.set_ylim(env.height - 0.5, -0.5)
+    ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+    ax.set_xticks(np.arange(0, env.width, 1))
+    ax.set_yticks(np.arange(0, env.height, 1))
     # TODO image does not fill extent entirely - why?
-    ax.imshow(np.fliplr(np.rot90(np.rot90(img))), extent=[-0.5, env.width - 0.5, -0.5, env.height - 0.5])
+    ax.imshow(np.fliplr(np.rot90(np.rot90(img))), extent=(-0.5, env.width - 0.5, -0.5, env.height - 0.5))
     ax.set_xticks(np.arange(-0.5, env.width + 0.5, 1), minor=True)
     ax.set_yticks(np.arange(-0.5, env.height + 0.5, 1), minor=True)
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
