@@ -6,8 +6,10 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 
-# rows are top to bottom!
-testdata = [
+
+@pytest.mark.parametrize("transition,expected_edges", [
+    # rows are top to bottom!
+
     # Case 0 - empty cell (1)
     (RailEnvTransitionsEnum.empty, []),
     # Case 1 - straight (2)
@@ -36,10 +38,7 @@ testdata = [
     # Case 7 - dead end (4)
     (RailEnvTransitionsEnum.dead_end_from_north, [((1, 1, Grid4TransitionsEnum.SOUTH), (0, 1, Grid4TransitionsEnum.NORTH))]),
     (RailEnvTransitionsEnum.dead_end_from_south, [((1, 1, Grid4TransitionsEnum.NORTH), (2, 1, Grid4TransitionsEnum.SOUTH))]),
-]
-
-
-@pytest.mark.parametrize("transition,expected_edges", testdata)
+])
 def test_grid_to_digraph(transition, expected_edges):
     RailEnvTransitions().print(transition)
     # use 3 x 3 not to go -1
