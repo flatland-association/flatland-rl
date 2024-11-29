@@ -62,6 +62,7 @@ dev = [
     "numpydoc",
     "pip-tools",
     "pytest",
+    "snakeviz",
     "sphinx",
     "sphinx-rtd-theme",
     "tox",
