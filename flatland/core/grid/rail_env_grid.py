@@ -1,3 +1,5 @@
+from enum import IntEnum
+
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.utils.ordered_set import OrderedSet
 
@@ -76,3 +78,45 @@ class RailEnvTransitions(Grid4Transitions):
             True or False
         """
         return cell_transition in self.transitions_all
+
+
+# TODO not complete
+class RailEnvTransitionsEnum(IntEnum):
+    # Case 0 - empty cell (1)
+    empty = RailEnvTransitions().transition_list[0]
+
+    # Case 1 - straight (2)
+    vertical_straight = RailEnvTransitions().transition_list[1]
+    horizontal_straight = RailEnvTransitions().rotate_transition(RailEnvTransitions().transition_list[1], 90)
+
+    # Case 2 - simple switch left (4)
+    simple_switch_north_left = RailEnvTransitions().transition_list[2]
+
+    # Case 3 - diamond crossing (1)
+    # Case 4 - single slip (4)
+    # Case 5 - double slip (2)
+
+    # Case 6 - symmetrical (4)
+    #   NESW
+    # N 0101
+    # E 0010
+    # S 0000
+    # W 0010
+    symmetric_switch_south = RailEnvTransitions().transition_list[6]
+    symmetric_switch_north = RailEnvTransitions().rotate_transition(symmetric_switch_south, 180)
+
+    # Case 7 - dead end (4)
+    dead_end_from_south = RailEnvTransitions().transition_list[7]
+    dead_end_from_west = RailEnvTransitions().rotate_transition(dead_end_from_south, 90)
+    dead_end_from_north = RailEnvTransitions().rotate_transition(dead_end_from_south, 180)
+    dead_end_from_east = RailEnvTransitions().rotate_transition(dead_end_from_south, 270)
+
+    # Case 1b/1c (8)/(9)  - simple turn  (4)
+    right_turn_from_south = RailEnvTransitions().transition_list[8]
+
+    right_turn_from_west = RailEnvTransitions().rotate_transition(right_turn_from_south, 90)
+    right_turn_from_north = RailEnvTransitions().rotate_transition(right_turn_from_south, 180)
+
+    # Case 2b (10) - simple switch right (4)
+    simple_switch_north_right = RailEnvTransitions().transition_list[10]
+    simple_switch_left_east = RailEnvTransitions().rotate_transition(simple_switch_north_left, 90)
