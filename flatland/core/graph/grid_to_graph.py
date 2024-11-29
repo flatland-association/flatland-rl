@@ -19,7 +19,6 @@ References:
 - Nygren, E., Eichenberger, Ch., Frejinger, E. Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
 TODO action into cell behaviour - add to documentation --> "flatland-book"
 TODO docs with illustration of the mapping and "pins". --> "flatland-book"
-TODO illustration simplification and edge cases (pun intended): non-facing switches and diamond-crossings, and multi-edges. --> notebook or "flatland-book"?
 """
 from collections import defaultdict
 
