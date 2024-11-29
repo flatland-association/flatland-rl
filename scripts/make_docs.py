@@ -53,7 +53,4 @@ for image_file in glob.glob(r'./specifications/img/*'):
     shutil.copy(image_file, img_dest)
 subprocess.call(['python', '-msphinx', '-M', 'html', '.', '_build'])
 
-# we do not currently use pydeps, commented out
-# subprocess.call(['python', '-mpydeps', '../flatland', '-o', '_build/html/flatland.svg', '--no-config', '--noshow'])
-
 browser('_build/html/index.html')
