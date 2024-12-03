@@ -5,7 +5,7 @@
 
 [![Main](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml/badge.svg)](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml)
 
-Flatland is a open-source toolkit for developing and comparing Multi-Agent Reinforcement Learning algorithms in little
+Flatland is an open-source toolkit for developing and comparing Multi-Agent Reinforcement Learning algorithms in little
 (or ridiculously large!) gridworlds.
 
 [The official website](https://www.flatland-association.org/) contains full details about the environment and problem
