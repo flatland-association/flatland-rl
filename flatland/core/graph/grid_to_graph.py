@@ -17,8 +17,6 @@ The implementation uses networkX, so there are also many graph functions availab
 References:
 - Egli, Adrian. FlatlandGraphBuilder. https://github.com/aiAdrian/flatland_railway_extension/blob/e2b15bdd851ad32fb26c1a53f04621a3ca38fc00/flatland_railway_extension/FlatlandGraphBuilder.py
 - Nygren, E., Eichenberger, Ch., Frejinger, E. Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
-TODO action into cell behaviour - add to documentation --> "flatland-book"
-TODO docs with illustration of the mapping and "pins". --> "flatland-book"
 """
 from collections import defaultdict
 

@@ -25,7 +25,6 @@ class DecisionPointGraphEdgeData:
     len = attrib(type=int)
 
 
-# TODO naming: decision point graph, simplified graph, collapsed graph, ....?
 class DecisionPointGraph:
     """
     Overlay on top of Flatland 3 grid where consecutive cells where agents cannot choose between alternative paths are collapsed into a single edge.
