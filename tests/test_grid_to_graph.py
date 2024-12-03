@@ -122,28 +122,20 @@ _SOUTH_NEIGHBOR = (2, 1, Grid4TransitionsEnum.SOUTH)  # to the "S", heading "S"
 
     # Case 2b (10) - simple switch right (4)
     (RailEnvTransitionsEnum.simple_switch_west_right, [
-        (_WEST_OWN, _WEST_NEIGHBOR),
-        (_EAST_OWN, _EAST_NEIGHBOR),
-        (_WEST_OWN, _NORTH_NEIGHBOR),
-        (_SOUTH_OWN, _EAST_NEIGHBOR),
+        (_WEST_OWN, _WEST_NEIGHBOR), (_EAST_OWN, _EAST_NEIGHBOR),
+        (_WEST_OWN, _NORTH_NEIGHBOR), (_SOUTH_OWN, _EAST_NEIGHBOR),
     ]),
     (RailEnvTransitionsEnum.simple_switch_north_right, [
-        (_SOUTH_OWN, _SOUTH_NEIGHBOR),
-        (_NORTH_OWN, _NORTH_NEIGHBOR),
-        (_NORTH_OWN, _EAST_NEIGHBOR),
-        (_WEST_OWN, _SOUTH_NEIGHBOR),
+        (_SOUTH_OWN, _SOUTH_NEIGHBOR), (_NORTH_OWN, _NORTH_NEIGHBOR),
+        (_NORTH_OWN, _EAST_NEIGHBOR), (_WEST_OWN, _SOUTH_NEIGHBOR),
     ]),
     (RailEnvTransitionsEnum.simple_switch_east_right, [
-        (_WEST_OWN, _WEST_NEIGHBOR),
-        (_EAST_OWN, _EAST_NEIGHBOR),
-        (_EAST_OWN, _SOUTH_NEIGHBOR),
-        (_NORTH_OWN, _WEST_NEIGHBOR),
+        (_WEST_OWN, _WEST_NEIGHBOR), (_EAST_OWN, _EAST_NEIGHBOR),
+        (_EAST_OWN, _SOUTH_NEIGHBOR), (_NORTH_OWN, _WEST_NEIGHBOR),
     ]),
     (RailEnvTransitionsEnum.simple_switch_south_right, [
-        (_SOUTH_OWN, _SOUTH_NEIGHBOR),
-        (_NORTH_OWN, _NORTH_NEIGHBOR),
-        (_SOUTH_OWN, _WEST_NEIGHBOR),
-        (_EAST_OWN, _NORTH_NEIGHBOR),
+        (_SOUTH_OWN, _SOUTH_NEIGHBOR), (_NORTH_OWN, _NORTH_NEIGHBOR),
+        (_SOUTH_OWN, _WEST_NEIGHBOR), (_EAST_OWN, _NORTH_NEIGHBOR),
     ]),
 ])
 def test_grid_to_digraph(transition, expected_edges):
