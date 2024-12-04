@@ -94,7 +94,7 @@ For example, for a 2-agents environment:
     action_dict = {handles[0]:0, handles[1]:0}
     obs, all_rewards, done, _ = env.step(action_dict)
 
-where 'obs', 'all_rewards', and 'done' are also dictionary indexed by the agents'
+where 'obs', 'all_rewards', and 'done' are also dictionaries indexed by the agents'
 handles, whose values correspond to the relevant observations, rewards and terminal
 status for each agent. Further, the 'dones' dictionary returns an extra key
 '__all__' that is set to True after all agents have reached their goals.
@@ -151,13 +151,13 @@ Next we configure the difficulty of our task by modifying the complex_rail_gener
 
 The difficulty of a railway network depends on the dimensions (`width` x `height`) and the number of agents in the network.
 By varying the number of start and goal connections (nr_start_goal) and the number of extra railway elements added (nr_extra)
-the number of alternative paths of each agents can be modified. The more possible paths an agent has to reach its target the easier the task becomes.
-Here we don't specify any observation builder but rather use the standard tree observation. If you would like to use a custom obervation please follow
+the number of alternative paths of each agent can be modified. The more possible paths an agent has to reach its target the easier the task becomes.
+Here we don't specify any observation builder but rather use the standard tree observation. If you would like to use a custom observation please follow
 the instructions in the next tutorial.
-Feel free to vary these parameters to see how your own agent holds up on different setting. The evalutation set of railway configurations will
+Feel free to vary these parameters to see how your own agent holds up on different settings. The evaluation set of railway configurations will
 cover the whole spectrum from easy to complex tasks.
 
-Once we are set with the environment we can load our preferred agent from either RLlib or any other ressource. Here we use a random agent to illustrate the code.
+Once we are set with the environment we can load our preferred agent from either RLlib or any other resource. Here we use a random agent to illustrate the code.
 
 .. code-block:: python
 
@@ -170,7 +170,7 @@ We start every trial by resetting the environment
     obs, info = env.reset()
 
 Which provides the initial observation for all agents (obs = array of all observations).
-In order for the environment to step forward in time we need a dictionar of actions for all active agents.
+In order for the environment to step forward in time we need a dictionary of actions for all active agents.
 
 .. code-block:: python
 
@@ -178,7 +178,7 @@ In order for the environment to step forward in time we need a dictionar of acti
             action = agent.act(obs[handle])
             action_dict.update({handle: action})
 
-This dictionary is then passed to the environment which checks the validity of all actions and update the environment state.
+This dictionary is then passed to the environment which checks the validity of all actions and updates the environment state.
 
 .. code-block:: python
 
