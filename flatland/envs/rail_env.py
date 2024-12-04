@@ -5,9 +5,7 @@ import random
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-from flatland.utils import seeding
 
-# from flatland.envs.timetable_generators import timetable_generator
 import flatland.envs.timetable_generators as ttg
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -27,6 +25,7 @@ from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
     enable_infrastructure_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
@@ -774,3 +773,51 @@ class RailEnv(Environment):
             except Exception as e:
                 print("Could Not close window due to:", e)
             self.renderer = None
+
+    # TODO use __eq__
+    def eq__(self, other):
+        if not isinstance(other, RailEnv):
+            # don't attempt to compare against unrelated types
+            return NotImplemented
+
+        return (
+            self.width == other.width and
+            self.height == other.height and
+            # random seed
+            # TODO random_seed
+            # self.random_seed == other.random_seed and
+            # self.seed_history == other.seed_history and
+            self.agents == other.agents and
+            self._elapsed_steps == other._elapsed_steps and
+            self.num_resets == other.num_resets and
+            # TODO rail
+            # self.rail == other.rail and
+            # self.dev_pred_dict == other.dev_pred_dict and
+            # self.dev_obs_dict == other.dev_obs_dict and
+            self.dones == other.dones and
+            self._max_episode_steps == other._max_episode_steps and
+            self.active_agents == other.active_agents and
+
+            # distance map
+            # TODO  compare distance_map, extract to __eq__ in distance map!
+            # self.distance_map.agents == other.distance_map.agents and
+            # self.distance_map.agents == other self.agents and
+            # self.distance_map.rail == other self.rail and
+            # self.distance_map.distance_map == other.distance_map.distance_map and
+            # self.distance_map.agents_previous_computation == other.distance_map.agents_previous_computation and
+
+            # MFP
+            self.malfunction_generator.MFP == other.malfunction_generator.MFP and
+            self.malfunction_generator._rand_idx == other.malfunction_generator._rand_idx and
+            self.malfunction_generator._cached_rand == other.malfunction_generator._cached_rand and
+
+            # np_random
+            # TODO compare RailEnv.np_random_state
+            len(self.np_random.get_state()) == len(other.np_random.get_state()) and
+            self.np_random.get_state()[0] == other.np_random.get_state()[0] and
+            # (self.np_random.get_state()[1] == other.np_random.get_state()[1]) and
+            # self.np_random.get_state()[2] == other.np_random.get_state()[2] and
+            self.np_random.get_state()[3] == other.np_random.get_state()[3] and
+            self.np_random.get_state()[4] == other.np_random.get_state()[4] and
+            True
+        )
