@@ -3,10 +3,10 @@ import pickle
 
 import numpy as np
 
-from envs.observations import TreeObsForRailEnv
-from envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
+from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map, sparse_rail_generator
 from flatland.utils.simple_rail import make_simple_rail
