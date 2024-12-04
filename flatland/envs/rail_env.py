@@ -30,9 +30,14 @@ from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.action_preprocessing import process_illegal_action, check_valid_action, preprocess_left_right_action
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.utils import seeding
+from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
+    enable_infrastructure_lru_cache
 from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+from flatland.utils.seeding import random_state_to_hashablestate, random_state_from_hashablestate
 
 
 class RailEnv(Environment):
@@ -204,6 +209,8 @@ class RailEnv(Environment):
 
         self.acceleration_delta = acceleration_delta
         self.braking_delta = braking_delta
+
+        self.save_distance_maps = False
 
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
@@ -697,7 +704,7 @@ class RailEnv(Environment):
                 assert not conflict
 
     # TODO extract to callbacks instead!
-    def record_timestep(self, dActions):
+    def record_timestep(self, d_actions: Dict[int, RailEnvActions]):
         """
         Record the positions and orientations of all agents in memory, in the cur_episode
         """
@@ -710,7 +717,6 @@ class RailEnv(Environment):
                 pos = (0, 0)
             else:
                 pos = (int(agent.position[0]), int(agent.position[1]))
-            # print("pos:", pos, type(pos[0]))
             list_agents_state.append([
                 *pos, int(agent.direction),
                 agent.malfunction_handler.malfunction_down_counter,
@@ -719,7 +725,7 @@ class RailEnv(Environment):
             ])
 
         self.cur_episode.append(list_agents_state)
-        self.list_actions.append(dActions)
+        self.list_actions.append(d_actions)
 
     def _get_observations(self):
         """
@@ -838,3 +844,76 @@ class RailEnv(Environment):
             except Exception as e:
                 print("Could Not close window due to:", e)
             self.renderer = None
+
+    def __getstate__(self, save_distance_maps=None):
+        if save_distance_maps is None:
+            # for pkl
+            save_distance_maps = self.save_distance_maps
+
+        return {
+            "width": self.width,
+            "height": self.height,
+            # random seed
+            "random_seed": self.random_seed,
+            "seed_history": self.seed_history,
+            "agents": [a.__getstate__() for a in self.agents],
+            "_elapsed_steps": self._elapsed_steps,
+            "num_resets": self.num_resets,
+            # explicitly use custom hashable __getstate__
+            "rail": self.rail.__getstate__(),
+            "dev_pred_dict": self.dev_pred_dict,
+            "dev_obs_dict": self.dev_obs_dict,
+            "dones": self.dones,
+            "_max_episode_steps": self._max_episode_steps,
+            "active_agents": self.active_agents,
+
+            # distance map
+            # explicitly use custom hashable __getstate__
+            "distance_map": self.distance_map.__getstate__() if save_distance_maps else None,
+
+            # MFP
+            "malfunction_generator.MFP": self.malfunction_generator.MFP,
+            "malfunction_generator._rand_idx": self.malfunction_generator._rand_idx,
+            "malfunction_generator._cached_rand": self.malfunction_generator._cached_rand,
+            "malfunction_process_data": self.malfunction_process_data,
+
+            # np_random
+            # explicitly use custom hashable representation
+            "np_random": random_state_to_hashablestate(self.np_random)
+        }
+
+    def __setstate__(self, state):
+        self.width = state["width"]
+        self.height = state["height"]
+
+        # random seed
+        self.random_seed = state["random_seed"]
+        self.seed_history = state["seed_history"]
+        self.agents = [EnvAgent(None, None, None, None).__setstate__(s) for s in state["agents"]]
+        self._elapsed_steps = state["_elapsed_steps"]
+        self.num_resets = state["num_resets"]
+        self.rail = GridTransitionMap(0, 0)
+        self.rail.__setstate__(state["rail"])
+        self.dev_pred_dict = state["dev_pred_dict"]
+        self.dev_obs_dict = state["dev_obs_dict"]
+        self.dones = state["dones"]
+        self._max_episode_steps = state["_max_episode_steps"]
+        self.active_agents = state["active_agents"]
+
+        # distance map
+        if state["distance_map"] is not None:
+            self.distance_map = DistanceMap(None, None, None)
+            self.distance_map.__setstate__(state["distance_map"])
+
+        # MFP
+        # TODO bad code smell - is this general?
+        from flatland.envs.malfunction_generators import ParamMalfunctionGen
+        self.malfunction_generator = ParamMalfunctionGen(None)
+        self.malfunction_generator.MFP = state["malfunction_generator.MFP"]
+        self.malfunction_generator._rand_idx = state["malfunction_generator._rand_idx"]
+        self.malfunction_generator._cached_rand = state["malfunction_generator._cached_rand"]
+        self.malfunction_process_data = state["malfunction_process_data"]
+
+        # np_random
+        self.np_random = random_state_from_hashablestate(state["np_random"])
+        return self

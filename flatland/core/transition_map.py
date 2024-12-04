@@ -5,6 +5,9 @@ import traceback
 import uuid
 import warnings
 from functools import lru_cache
+import base64
+import traceback
+from typing import Tuple
 
 import numpy as np
 from importlib_resources import path
@@ -17,6 +20,7 @@ from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 from flatland.utils.ordered_set import OrderedSet
+from flatland.utils.seeding import random_state_to_hashablestate, random_state_from_hashablestate
 
 
 # TODO are these general classes or for grid4 only?
@@ -121,7 +125,7 @@ class GridTransitionMap(TransitionMap):
     GridTransitionMap implements utility functions.
     """
 
-    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), random_seed=None, grid: np.ndarray = None):
+    def __init__(self, width, height, transitions: Transitions =None, random_seed=None, grid: np.ndarray = None):
         """
         Builder for GridTransitionMap object.
 
@@ -136,6 +140,9 @@ class GridTransitionMap(TransitionMap):
             grid.
 
         """
+        if transitions is None:
+            transitions = Grid4Transitions([])
+        send_infrastructure_data_change_signal_to_reset_lru_cache()
         self.width = width
         self.height = height
         self.transitions = transitions
@@ -690,6 +697,25 @@ class GridTransitionMap(TransitionMap):
 
         # is transition is valid?
         return self.transitions.is_valid(new_trans)
+
+    def __getstate__(self):
+        return {
+            "width": self.width,
+            "height": self.height,
+            "transitions": self.transitions.__getstate__(),
+            "random_generator": random_state_to_hashablestate(self.random_generator),
+            # TODO bad smell - is dtype safe?
+            "grid": base64.b64encode(self.grid.astype(np.uint16)).decode("utf-8"),
+        }
+
+    def __setstate__(self, state):
+        self.width = state["width"]
+        self.height = state["height"]
+        self.transitions = Grid4Transitions(None)
+        self.transitions.__setstate__(state["transitions"])
+        self.random_generator = random_state_from_hashablestate(state["random_generator"])
+        # TODO bad smell - is dtype safe?
+        self.grid = np.frombuffer(base64.b64decode(state["grid"].encode("utf-8")), dtype=np.uint16).reshape((self.height, self.width))
 
 
 def mirror(dir):

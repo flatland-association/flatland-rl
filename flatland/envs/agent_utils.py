@@ -262,3 +262,41 @@ class EnvAgent:
             agent.latest_arrival = timetable.latest_arrivals[agent_i][-1]
             agent.waypoints_earliest_departure = timetable.earliest_departures[agent_i]
             agent.waypoints_latest_arrival = timetable.latest_arrivals[agent_i]
+    def __getstate__(self):
+        return {
+            "initial_position": self.initial_position,
+            "initial_direction": self.initial_direction,
+            "direction": self.direction,
+            "target": self.target,
+            "moving": self.moving,
+            "earliest_departure": self.earliest_departure,
+            "latest_arrival": self.latest_arrival,
+            "handle": self.handle,
+            "speed_counter": self.speed_counter.to_dict(),
+            "action_saver": self.action_saver.to_dict(),
+            "state_machine": self.state_machine.to_dict(),
+            "malfunction_handler": self.malfunction_handler.to_dict(),
+            "position": self.position,
+            "arrival_time": self.arrival_time,
+            "old_direction": self.old_direction,
+            "old_position": self.old_position,
+        }
+
+    def __setstate__(self, state):
+        self.initial_position = state["initial_position"]
+        self.initial_direction = state["initial_direction"]
+        self.direction = state["direction"]
+        self.target = state["target"]
+        self.moving = state["moving"]
+        self.earliest_departure = state["earliest_departure"]
+        self.latest_arrival = state["latest_arrival"]
+        self.handle = state["handle"]
+        self.speed_counter = SpeedCounter(None).from_dict(state["speed_counter"])
+        self.action_saver = ActionSaver().from_dict(state["action_saver"])
+        self.state_machine = TrainStateMachine().from_dict(state["state_machine"])
+        self.malfunction_handler = MalfunctionHandler().from_dict(state["malfunction_handler"])
+        self.position = state["position"]
+        self.arrival_time = state["arrival_time"]
+        self.old_direction = state["old_direction"]
+        self.old_position = state["old_position"]
+        return self

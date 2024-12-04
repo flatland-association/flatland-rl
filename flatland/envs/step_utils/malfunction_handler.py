@@ -15,11 +15,11 @@ class MalfunctionHandler:
     def reset(self):
         self._malfunction_down_counter = 0
         self.num_malfunctions = 0
-    
+
     @property
     def in_malfunction(self):
         return self._malfunction_down_counter > 0
-    
+
     @property
     def malfunction_counter_complete(self):
         return self._malfunction_down_counter == 0
@@ -57,16 +57,12 @@ class MalfunctionHandler:
     def to_dict(self):
         return {"malfunction_down_counter": self._malfunction_down_counter,
                 "num_malfunctions": self.num_malfunctions}
-    
+
     def from_dict(self, load_dict):
         self._malfunction_down_counter = load_dict['malfunction_down_counter']
         self.num_malfunctions = load_dict['num_malfunctions']
+        return self
 
     def __eq__(self, other):
         return self._malfunction_down_counter == other._malfunction_down_counter and \
                self.num_malfunctions == other.num_malfunctions
-
-    
-
-    
-

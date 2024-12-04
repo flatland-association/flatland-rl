@@ -1,4 +1,8 @@
+import json
 import pickle
+import warnings
+from typing import Optional, Tuple, Dict
+
 from typing import Tuple, Dict
 
 import msgpack
@@ -19,7 +23,40 @@ from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
 from flatland.envs import timetable_generators as tt_gen
 
+from flatland.utils.seeding import random_state_to_hashablestate
+
+
 class RailEnvPersister(object):
+    @classmethod
+    def new_save(cls, env: "RailEnv", filename: str, save_distance_maps=False):
+        if filename.endswith(".pkl"):
+            # TODO bad code smell
+            env.save_distance_maps = save_distance_maps
+            with open(filename, "wb") as f:
+                pickle.dump(env, f)
+        elif filename.endswith(".mpk"):
+            with open(filename, "wb") as f:
+                f.write(msgpack.packb(env.__getstate__(save_distance_maps=save_distance_maps)))
+        elif filename.endswith(".json"):
+            with open(filename, "w") as f:
+                json.dump(env.__getstate__(save_distance_maps=save_distance_maps), f, default=float)
+        else:
+            warnings.warn(f"Unknown file type for {filename}")
+
+    @classmethod
+    def new_load(cls, env, filename, load_from_package=None) -> "RailEnv":
+        if filename.endswith(".pkl"):
+            with open(filename, "rb") as f:
+                return pickle.load(f)
+        elif filename.endswith(".mpk"):
+            with open(filename, "rb") as f:
+                # TODO int keys
+                return msgpack.unpackb(f.read(), use_list=False, raw=False, strict_map_key=False)
+        elif filename.endswith(".json"):
+            with open(filename, "r") as f:
+                rail_env.RailEnv(0, 0).__setstate__(json.load(f))
+        else:
+            warnings.warn(f"Unknown file type for {filename}")
 
     @classmethod
     def save(cls, env, filename, save_distance_maps=False):
@@ -99,8 +136,21 @@ class RailEnvPersister(object):
         cls.set_full_state(env, env_dict)
 
     @classmethod
-    def load_new(cls, filename, load_from_package=None) -> Tuple["RailEnv", Dict]:
+    def load_new(cls, filename: str, load_from_package: Optional[str] = None, legacy: bool = False) -> Tuple["RailEnv", Dict]:
+        """
 
+        Parameters
+        ----------
+        filename
+            name of file to load
+        load_from_package
+            package to load `filename` from
+        legacy
+            skip random state loading
+        Returns
+        -------
+
+        """
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
         llGrid = env_dict["grid"]
@@ -126,12 +176,11 @@ class RailEnvPersister(object):
         # TODO bad code smell - agent_position initialized in reset() only.
         env.agent_positions = np.zeros((env.height, env.width), dtype=int) - 1
 
-        cls.set_full_state(env, env_dict)
+        cls.set_full_state(env, env_dict, legacy=legacy)
         return env, env_dict
 
     @classmethod
     def load_env_dict(cls, filename, load_from_package=None):
-
         if load_from_package is not None:
             from importlib_resources import read_binary
             load_data = read_binary(load_from_package, filename)
@@ -180,7 +229,7 @@ class RailEnvPersister(object):
         return cls.load_new(resource, load_from_package=package)
 
     @classmethod
-    def set_full_state(cls, env, env_dict):
+    def set_full_state(cls, env, env_dict, legacy: bool = False):
         """
         Sets environment state from env_dict
 
@@ -243,7 +292,7 @@ class RailEnvPersister(object):
             env.malfunction_generator._rand_idx = malfunction_rand_idx
 
     @classmethod
-    def get_full_state(cls, env):
+    def get_full_state(cls, env: "RailEnv"):
         """
         Returns state of environment in dict object, ready for serialization
 
@@ -252,6 +301,7 @@ class RailEnvPersister(object):
 
         # msgpack cannot persist EnvAgent so use the Agent namedtuple.
         agent_data = [agent.to_agent() for agent in env.agents]
+        # print("get_full_state - agent_data:", agent_data)
         malfunction_data: mal_gen.MalfunctionProcessData = env.malfunction_process_data
 
         msg_data_dict = {
