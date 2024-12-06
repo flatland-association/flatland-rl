@@ -5,6 +5,7 @@ Runs Flatland env in RLlib using single policy learning, based on
 Take this as starting point to build your own training cli.
 """
 import logging
+import os.path
 from argparse import Namespace
 
 import ray
@@ -54,6 +55,10 @@ def add_flatland_ray_cli_example_script_args():
         required=False,
         help="The address of the ray cluster to connect to in the form ray://<head_node_ip_address>:10001. Leave empty to start a new cluster. Passed to ray.init(address=...). See https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html ",
     )
+    parser.add_argument("--env_var", "-e",
+                        metavar="KEY=VALUE",
+                        nargs='*',
+                        help="Set ray runtime environment variables like -e RAY_DEBUG=1, passed to ray.init(runtime_env={env_vars: {...}}), see https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#api-reference")
     return parser
 
 
@@ -72,32 +77,32 @@ def train(args: Namespace):
     assert (
         args.obs_builder
     ), "Must set --obs_builder <obs builder ID> when running this script!"
-    # TODO use ray.init also for flatland_inference example
+    assert os.path.exists("flatland/ml/ray/examples/environment.yml"), "Script must be executed in root folder of checked out flatland-rl."
+    assert os.path.exists("requirements-ml.txt"), "Script must be executed in root folder of checkout out flatland-rl."
+
     setup_func()
     kwargs = {}
     if args.ray_address is not None:
         kwargs['address'] = args.ray_address
-    # kwargs['address'] = "ray://127.0.0.1::10001"
+
+    env_vars = set()
+    if args.env_var is not None:
+        env_vars = args.env_var
     # https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html
     ray.init(
         **kwargs,
         # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#runtime-environments
         runtime_env={
-
-            # TODO cleanup: do without environment file (relative paths), maybe generate ad hoc to inject requirements-ml.txt
-            # install clean env fro
-            # "conda": "environment.yml",
-            # TODO cleanup: pass working dir from cli?
-            # "working_dir": f"{Path.cwd().parent.parent.parent.parent}",
-            # "working_dir": f".",
+            # install clean env from environment.yml - important for running in a cluster!
+            # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#api-reference
+            "working_dir": ".",
+            "conda": "flatland/ml/ray/examples/environment.yml",
             "excludes": ["notebooks/", ".git/", ".tox/", ".venv/", "docs/", ".idea", "tmp"],
-            "env_vars": {
-                "RAY_ENABLE_RECORD_ACTOR_TASK_LOGGING": "1",
-                # TODO cli?
-                # "RAY_DEBUG": "1",
-            },
-            # "worker_process_setup_hook": "flatland.ml.ray.examples.flatland_training_with_parameter_sharing.setup_func"
-        })
+            "env_vars": dict(map(lambda s: s.split('='), env_vars)),
+            # https://docs.ray.io/en/latest/ray-observability/user-guides/configure-logging.html
+            "worker_process_setup_hook": "flatland.ml.ray.examples.flatland_training_with_parameter_sharing.setup_func"
+        }
+    )
     try:
         env_name = "flatland_env"
         register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
@@ -131,7 +136,6 @@ def train(args: Namespace):
         raise e
 
 
-# TODO documentation/cli ray cluster?
 # TODO https://github.com/flatland-association/flatland-rl/issues/73 get pettingzoo up and running again.
 # TODO https://github.com/flatland-association/flatland-rl/issues/75 illustrate algorithm/policy abstraction in ray
 # TODO https://github.com/flatland-association/flatland-rl/issues/76 illustrate generic callbacks with ray

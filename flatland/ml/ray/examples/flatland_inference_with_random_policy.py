@@ -63,6 +63,8 @@ def rollout(args: Namespace):
     episode_return = 0.0
 
     while num_episodes < args.num_episodes_during_inference:
+
+        # TODO use rllib model - load from checkpoint and run?
         action_dict = {
             str(i): np.random.choice(5) for i in range(args.num_agents)
         }
