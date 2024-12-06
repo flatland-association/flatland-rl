@@ -1,20 +1,22 @@
 from abc import abstractmethod
+from typing import Generic
 
 import gymnasium as gym
 import numpy as np
+from ray.rllib.utils.typing import MultiAgentDict
 
 from flatland.core.env import Environment
-from flatland.core.env_observation_builder import DummyObservationBuilder
+from flatland.core.env_observation_builder import DummyObservationBuilder, AgentHandle, ObservationType
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 
 
-class GymObservationBuilder(ObservationBuilder):
+class GymObservationBuilder(ObservationBuilder[ObservationType], Generic[ObservationType]):
     @abstractmethod
     def get_observation_space(self, handle: int = 0) -> gym.Space:
         """
-        Takes in agent and returns the observation space for that agent.
+        Takes in agent and returns the observation space for that (single) agent.
         """
         raise NotImplementedError()
 
@@ -31,26 +33,27 @@ class GymObservationBuilderWrapper(GymObservationBuilder):
     def reset(self):
         self.wrap.reset()
 
-    def get(self, handle: int = 0):
+    # TODO are handles still int? Which MultiAgentDict?
+    def get(self, handle: AgentHandle = 0) -> MultiAgentDict:
         return self.wrap.get(handle)
 
     def get_observation_space(self, handle: int = 0) -> gym.Space:
         """
-        Takes in agent and returns the observation space for that agent.
+        Takes in agent and returns the observation space for that (single) agent.
         """
         return self.observation_space
 
 
+# TODO split flattening and gymification!
 class DummyObservationBuilderGym(GymObservationBuilderWrapper):
     def __init__(self):
-        # TODO is there no standard MultiAgentEnv-compatabile Env-Flattening wrapper?
         # workaround for multi-agent setting (i.e. do not flatten agent dict, only flatten per-agent observations)
         self.unflattened_observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=float)
         self.observation_space = gym.spaces.utils.flatten_space(self.unflattened_observation_space)
         super().__init__(DummyObservationBuilder(), self.observation_space)
 
-    def get(self, handle: int = 0):
-        # `flatten` converts bool to float as float as observation space's dtype
+    def get(self, handle: AgentHandle = 0):
+        # `flatten` converts bool to float as float is observation space's dtype
         return gym.spaces.utils.flatten(self.unflattened_observation_space, super().get(handle))
 
 
@@ -66,7 +69,6 @@ class GlobalObsForRailEnvGym(GymObservationBuilderWrapper):
         self._update_observation_space(env)
 
     def _update_observation_space(self, env):
-        # TODO is there no standard MultiAgentEnv-compatabile Env-Flattening wrapper?
         # workaround for multi-agent setting (i.e. do not flatten agent dict, only flatten per-agent observations)
         self.unflattened_observation_space = gym.spaces.Tuple(spaces=[
             # transition map

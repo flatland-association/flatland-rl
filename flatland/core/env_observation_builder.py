@@ -8,20 +8,23 @@ The ObservationBuilder-derived custom classes implement 2 functions, reset() and
 multi-agent environments.
 
 """
-from typing import Optional, List
+from typing import Optional, List, Dict, Generic, TypeVar
 
 import numpy as np
 
 from flatland.core.env import Environment
 
+ObservationType = TypeVar('ObservationType')
+AgentHandle = int
 
-class ObservationBuilder:
+
+class ObservationBuilder(Generic[ObservationType]):
     """
     ObservationBuilder base class.
     """
 
     def __init__(self):
-        self.env: Environment = None
+        self.env: Optional[Environment] = None
 
     def set_env(self, env: Environment):
         self.env: Environment = env
@@ -32,7 +35,7 @@ class ObservationBuilder:
         """
         raise NotImplementedError()
 
-    def get_many(self, handles: Optional[List[int]] = None):
+    def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, ObservationType]:
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
@@ -55,7 +58,7 @@ class ObservationBuilder:
             observations[h] = self.get(h)
         return observations
 
-    def get(self, handle: int = 0):
+    def get(self, handle: AgentHandle = 0) -> ObservationType:
         """
         Called whenever an observation has to be computed for the `env` environment, possibly
         for each agent independently (agent id `handle`).
@@ -72,14 +75,14 @@ class ObservationBuilder:
         """
         raise NotImplementedError()
 
-    def _get_one_hot_for_agent_direction(self, agent):
+    def _get_one_hot_for_agent_direction(self, agent) -> np.ndarray:
         """Retuns the agent's direction to one-hot encoding."""
         direction = np.zeros(4)
         direction[agent.direction] = 1
         return direction
 
 
-class DummyObservationBuilder(ObservationBuilder):
+class DummyObservationBuilder(ObservationBuilder[bool]):
     """
     DummyObservationBuilder class which returns dummy observations
     This is used in the evaluation service
@@ -91,5 +94,5 @@ class DummyObservationBuilder(ObservationBuilder):
     def reset(self):
         pass
 
-    def get(self, handle: int = 0) -> bool:
+    def get(self, handle: AgentHandle = 0) -> bool:
         return True

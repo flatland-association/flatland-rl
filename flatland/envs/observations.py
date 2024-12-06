@@ -2,12 +2,12 @@
 Collection of environment-specific ObservationBuilder.
 """
 import collections
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 
 import numpy as np
 
 from flatland.core.env import Environment
-from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.core.env_observation_builder import ObservationBuilder, AgentHandle
 from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import coordinate_to_position
@@ -31,7 +31,7 @@ Node = collections.namedtuple('Node', 'dist_own_target_encountered '
                                       'childs')
 
 
-class TreeObsForRailEnv(ObservationBuilder):
+class TreeObsForRailEnv(ObservationBuilder[Node]):
     """
     TreeObsForRailEnv object.
 
@@ -56,7 +56,7 @@ class TreeObsForRailEnv(ObservationBuilder):
     def reset(self):
         self.location_has_target = {tuple(agent.target): 1 for agent in self.env.agents}
 
-    def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, Node]:
+    def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, Node]:
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
@@ -113,7 +113,7 @@ class TreeObsForRailEnv(ObservationBuilder):
 
         return observations
 
-    def get(self, handle: int = 0) -> Node:
+    def get(self, handle: AgentHandle = 0) -> Node:
         """
         Computes the current observation for agent `handle` in env
 
@@ -530,7 +530,7 @@ class TreeObsForRailEnv(ObservationBuilder):
         return int((direction + 2) % 4)
 
 
-class GlobalObsForRailEnv(ObservationBuilder):
+class GlobalObsForRailEnv(ObservationBuilder[Tuple[np.ndarray, np.ndarray, np.ndarray]]):
     """
     Gives a global observation of the entire rail environment.
     The observation is composed of the following elements:
@@ -563,7 +563,7 @@ class GlobalObsForRailEnv(ObservationBuilder):
                 bitlist = [0] * (16 - len(bitlist)) + bitlist
                 self.rail_obs[i, j] = np.array(bitlist)
 
-    def get(self, handle: int = 0) -> (np.ndarray, np.ndarray, np.ndarray):
+    def get(self, handle: AgentHandle = 0) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
 
         agent = self.env.agents[handle]
         if agent.state.is_off_map_state():
