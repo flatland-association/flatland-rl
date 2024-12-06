@@ -4,7 +4,6 @@ from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import tr
     add_flatland_ray_cli_observation_builders
 
 
-# TODO takes too long for unit tests -> mark as skip or IT? Or reduce training?
 @pytest.mark.parametrize(
     "obid,algo",
     [
@@ -32,12 +31,9 @@ from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import tr
         ]
     ]
 )
-# TODO PytestUnknownMarkWarning
-@pytest.mark.integrationtest
+@pytest.mark.slow
 def test_rail_env_wrappers_training(obid: str, algo: str):
     add_flatland_ray_cli_observation_builders()
     parser = add_flatland_ray_cli_example_script_args()
     train(parser.parse_args(
         ["--algo", algo, "--num-agents", "2", "--stop-iters", "1", "--obs_builder", obid]))
-
-# TODO verification of implementation with training? 0.6 bei 1000 Episode

@@ -136,6 +136,7 @@ def train(args: Namespace):
         raise e
 
 
+# TODO verification of implementation with a proper model
 # TODO https://github.com/flatland-association/flatland-rl/issues/73 get pettingzoo up and running again.
 # TODO https://github.com/flatland-association/flatland-rl/issues/75 illustrate algorithm/policy abstraction in ray
 # TODO https://github.com/flatland-association/flatland-rl/issues/76 illustrate generic callbacks with ray
