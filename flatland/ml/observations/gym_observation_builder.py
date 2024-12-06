@@ -12,7 +12,11 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 
 
-class GymObservationBuilder(ObservationBuilder[ObservationType], Generic[ObservationType]):
+class GymObservationBuilder(Generic[ObservationType], ObservationBuilder[ObservationType]):
+    """
+    Adds `observation_space` method to `ObservationBuilder`.
+    """
+
     @abstractmethod
     def get_observation_space(self, handle: int = 0) -> gym.Space:
         """
@@ -22,6 +26,10 @@ class GymObservationBuilder(ObservationBuilder[ObservationType], Generic[Observa
 
 
 class GymObservationBuilderWrapper(GymObservationBuilder):
+    """
+    Wraps an existing `ObservationBuilder` into a `GymObservationBuilder`.
+    """
+
     def __init__(self, wrap: ObservationBuilder, observation_space: gym.Space):
         super().__init__()
         self.wrap = wrap
@@ -33,7 +41,6 @@ class GymObservationBuilderWrapper(GymObservationBuilder):
     def reset(self):
         self.wrap.reset()
 
-    # TODO are handles still int? Which MultiAgentDict?
     def get(self, handle: AgentHandle = 0) -> MultiAgentDict:
         return self.wrap.get(handle)
 
@@ -44,8 +51,11 @@ class GymObservationBuilderWrapper(GymObservationBuilder):
         return self.observation_space
 
 
-# TODO split flattening and gymification!
 class DummyObservationBuilderGym(GymObservationBuilderWrapper):
+    """
+    Gym-ified multi-agent `DummyObservationBuilder`.
+    """
+
     def __init__(self):
         # workaround for multi-agent setting (i.e. do not flatten agent dict, only flatten per-agent observations)
         self.unflattened_observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=float)
@@ -59,6 +69,9 @@ class DummyObservationBuilderGym(GymObservationBuilderWrapper):
 
 # TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
 class GlobalObsForRailEnvGym(GymObservationBuilderWrapper):
+    """
+    Gym-ified multi-agent `GlobalObsForRailEnv`.
+    """
 
     def __init__(self):
         super().__init__(GlobalObsForRailEnv(), None)

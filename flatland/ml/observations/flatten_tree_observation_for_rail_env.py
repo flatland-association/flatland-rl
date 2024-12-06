@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional
 
 import gymnasium as gym
 import numpy as np
@@ -138,7 +138,11 @@ def normalize_observation(observation, tree_depth: int, observation_radius=0):
 
 
 # TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
-class FlattenTreeObsForRailEnv(TreeObsForRailEnv, GymObservationBuilder[np.ndarray]):
+class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRailEnv):
+    """
+    Gym-ified and flattend tree observation.
+    """
+
     def __init__(self, observation_radius: int = 2, **kwargs):
         super().__init__(**kwargs)
         self.observation_radius = observation_radius
@@ -147,9 +151,6 @@ class FlattenTreeObsForRailEnv(TreeObsForRailEnv, GymObservationBuilder[np.ndarr
         obs = super(FlattenTreeObsForRailEnv, self).get(handle)
         obs = normalize_observation(obs, tree_depth=self.max_depth, observation_radius=self.observation_radius)
         return obs
-
-    def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, np.ndarray]:
-        return super(FlattenTreeObsForRailEnv).get_many(handles)
 
     def get_observation_space(self, handle: int = 0) -> gym.Space:
         # max_depth=1 -> 55, max_depth=2 -> 231, max_depth=3 -> 935, ...
