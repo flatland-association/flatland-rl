@@ -1,8 +1,9 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import gymnasium as gym
 import numpy as np
 
+from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.ml.observations.gym_observation_builder import GymObservationBuilder
 
@@ -84,7 +85,7 @@ def _split_node_into_feature_groups(node) -> (np.ndarray, np.ndarray, np.ndarray
 
 
 def _split_subtree_into_feature_groups(node, current_tree_depth: int, max_tree_depth: int) -> (
-        np.ndarray, np.ndarray, np.ndarray):
+    np.ndarray, np.ndarray, np.ndarray):
     if node == -np.inf:
         remaining_depth = max_tree_depth - current_tree_depth
         # reference: https://stackoverflow.com/questions/515214/total-number-of-nodes-in-a-tree-data-structure
@@ -135,20 +136,22 @@ def normalize_observation(observation, tree_depth: int, observation_radius=0):
     normalized_obs = np.concatenate((np.concatenate((data, distance)), agent_data))
     return normalized_obs
 
-# TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
-# TODO can we not use gym flatteners instead?
-# TODO call it ...Gym as well?
-class FlattenTreeObsForRailEnv(TreeObsForRailEnv, GymObservationBuilder):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.observation_radius = 2
 
-    def get_many(self, handles: Optional[List[int]] = None):
-        obs = super(FlattenTreeObsForRailEnv, self).get_many(handles)
-        obs = {i: normalize_observation(obs[i], tree_depth=self.max_depth, observation_radius=self.observation_radius) for i in range(len(handles))}
+# TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
+class FlattenTreeObsForRailEnv(TreeObsForRailEnv, GymObservationBuilder[np.ndarray]):
+    def __init__(self, observation_radius: int = 2, **kwargs):
+        super().__init__(**kwargs)
+        self.observation_radius = observation_radius
+
+    def get(self, handle: Optional[AgentHandle] = 0) -> np.ndarray:
+        obs = super(FlattenTreeObsForRailEnv, self).get(handle)
+        obs = normalize_observation(obs, tree_depth=self.max_depth, observation_radius=self.observation_radius)
         return obs
 
-    def get_observation_space(self, handle: int = 0):
+    def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, np.ndarray]:
+        return super(FlattenTreeObsForRailEnv).get_many(handles)
+
+    def get_observation_space(self, handle: int = 0) -> gym.Space:
         # max_depth=1 -> 55, max_depth=2 -> 231, max_depth=3 -> 935, ...
         k = 11
         for _ in range(self.max_depth):
