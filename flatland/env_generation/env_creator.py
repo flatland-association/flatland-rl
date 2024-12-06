@@ -6,7 +6,6 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 
 
-# TODO test this is determinist - is seeding done correctly?
 # defaults from Flatland 3 Round 2 Test_0, see https://flatland.aicrowd.com/challenges/flatland3/envconfig.html
 def env_creator(n_agents=7,
                 x_dim=30,
