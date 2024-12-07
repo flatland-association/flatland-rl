@@ -5,39 +5,34 @@ Runs random rollout of Flatland env in RLlib, based on a combination of:
 
 See there how to load checkpoint into RlModule.
 
-Take this as starting point to build your own inference cli.
+Take this as starting point to build your own inference (cli) script.
 """
+import argparse
+import os
 from argparse import Namespace
 
 import numpy as np
-from ray.rllib.utils.test_utils import add_rllib_example_script_args
-from ray.tune.registry import registry_get_input, register_input
+import torch
+from ray.rllib.core import Columns, DEFAULT_MODULE_ID
+from ray.rllib.core.rl_module import RLModule
+from ray.rllib.examples.rl_modules.classes.random_rlm import RandomRLModule
+from ray.rllib.utils.numpy import convert_to_numpy, softmax
+from ray.tune.registry import registry_get_input
 
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenTreeObsForRailEnv
-from flatland.ml.observations.gym_observation_builder import DummyObservationBuilderGym, GlobalObsForRailEnvGym
+from flatland.envs.rail_env_action import RailEnvActions
+from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
 from flatland.ml.ray.wrappers import ray_env_creator
 
 
-def add_flatland_ray_cli_observation_builders():
-    register_input("DummyObservationBuilderGym", lambda: DummyObservationBuilderGym()),
-    register_input("GlobalObsForRailEnvGym", lambda: GlobalObsForRailEnvGym()),
-    register_input("FlattenTreeObsForRailEnv_max_depth_3_50",
-                   lambda: FlattenTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
-
-
-def add_flatland_ray_cli_example_script_args():
-    parser = add_rllib_example_script_args(
-        default_iters=200,
-        default_timesteps=1000000,
-        default_reward=0.0,
-    )
-    parser.set_defaults(
-        enable_new_api_stack=True
-    )
-
+def add_flatland_inference_with_random_policy_args():
+    parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--obs_builder",
+        "--num-agents",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "--obs-builder",
         type=str,
         default=None,
     )
@@ -47,28 +42,51 @@ def add_flatland_ray_cli_example_script_args():
         default=10,
         help="Number of episodes to do inference over (after restoring from a checkpoint).",
     )
+    parser.add_argument(
+        "--policy-id",
+        type=str,
+        default=DEFAULT_MODULE_ID
+    )
+    parser.add_argument(
+        "--cp",
+        type=str,
+        required=False,
+        default=None
+    )
     return parser
 
 
 def rollout(args: Namespace):
-    assert (
-        args.enable_new_api_stack
-    ), "Must set --enable-new-api-stack when running this script!"
-
     # Create an env to do inference in.
     env = ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)())
-    env.reset()
+    obs, _ = env.reset()
 
     num_episodes = 0
     episode_return = 0.0
 
-    while num_episodes < args.num_episodes_during_inference:
+    if args.cp is not None:
+        cp = os.path.join(
+            args.cp,
+            "learner_group",
+            "learner",
+            "rl_module",
+            args.policy_id,
+        )
+        rl_module = RLModule.from_checkpoint(cp)
+    else:
+        rl_module = RandomRLModule(action_space=env.action_space)
 
-        # TODO use rllib model - load from checkpoint and run?
-        action_dict = {
-            str(i): np.random.choice(5) for i in range(args.num_agents)
-        }
-        _, rewards, terminateds, truncateds, _ = env.step(action_dict)
+    while num_episodes < args.num_episodes_during_inference:
+        obss = np.stack(list(obs.values()))
+        if args.cp is not None:
+            rl_module_out = rl_module.forward_inference({"obs": torch.from_numpy(obss).unsqueeze(0).float()})
+            logits = convert_to_numpy(rl_module_out[Columns.ACTION_DIST_INPUTS])
+            action_dict = {str(h): np.random.choice(len(RailEnvActions), p=softmax(l)) for h, l in enumerate(logits[0])}
+        else:
+            action_dict = rl_module.forward_inference({"obs": np.expand_dims(obs, 0)})
+            action_dict = {h: a[0] for h, a in action_dict['actions'].items()}
+
+        obs, rewards, terminateds, truncateds, _ = env.step(action_dict)
         for _, v in rewards.items():
             episode_return += v
         # Is the episode `done`? -> Reset.
@@ -77,12 +95,11 @@ def rollout(args: Namespace):
             env.reset()
             num_episodes += 1
             episode_return = 0.0
-
     print(f"Done performing action inference through {num_episodes} Episodes")
 
 
 if __name__ == '__main__':
-    add_flatland_ray_cli_observation_builders()
-    parser = add_flatland_ray_cli_example_script_args()
+    register_flatland_ray_cli_observation_builders()
+    parser = add_flatland_inference_with_random_policy_args()
     args = parser.parse_args()
     rollout(args)

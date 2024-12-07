@@ -1,7 +1,9 @@
 import pytest
+from ray.rllib.utils.metrics import ENV_RUNNER_RESULTS, EPISODE_RETURN_MEAN
 
-from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import train, add_flatland_ray_cli_example_script_args, \
-    add_flatland_ray_cli_observation_builders
+from flatland.ml.ray.examples.flatland_inference_with_random_policy import add_flatland_inference_with_random_policy_args, rollout
+from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import train, add_flatland_training_with_parameter_sharing_args, \
+    register_flatland_ray_cli_observation_builders
 
 
 @pytest.mark.parametrize(
@@ -12,19 +14,18 @@ from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import tr
         )
         for obid in
         [
-            "FlattenTreeObsForRailEnv_max_depth_3_50",
             "DummyObservationBuilderGym",
             "GlobalObsForRailEnvGym",
+            "FlattenTreeObsForRailEnv_max_depth_3_50",
+
         ]
         for algo in
         [
             # https://docs.ray.io/en/latest/rllib/rllib-algorithms.html
-
             "PPO",
-            # TODO DQN not working yet - use latest ray with new api stack?
-            #   File "/tmp/ray/session_2024-10-28_09-26-41_604177_64833/runtime_resources/conda/54f41acf3bda09e1ccf6469b1e424bd2f43fc0b0/lib/python3.10/site-packages/ray/rllib/utils/replay_buffers/multi_agent_replay_buffer.py", line 224, in add
-            #     batch = batch.as_multi_agent()
-            # AttributeError: 'list' object has no attribute 'as_multi_agent'
+            # TODO not working:  rewards = scipy.signal.lfilter([1], [1, -gamma], raw_rewards[::-1], axis=0)[
+            #                                                      ~~~~~~~~~~~^^^^^^
+            # TypeError: unhashable type: 'slice'
             # "DQN",
             "IMPALA",
             "APPO",
@@ -32,8 +33,14 @@ from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import tr
     ]
 )
 @pytest.mark.slow
-def test_rail_env_wrappers_training(obid: str, algo: str):
-    add_flatland_ray_cli_observation_builders()
-    parser = add_flatland_ray_cli_example_script_args()
-    train(parser.parse_args(
-        ["--algo", algo, "--num-agents", "2", "--stop-iters", "1", "--obs_builder", obid]))
+def test_rail_env_wrappers_training_and_rollout(obid: str, algo: str):
+    register_flatland_ray_cli_observation_builders()
+    parser = add_flatland_training_with_parameter_sharing_args()
+    results = train(parser.parse_args(
+        ["--num-agents", "2", "--obs-builder", obid, "--algo", algo, "--stop-iters", "1", "--train-batch-size-per-learner", "200", "--checkpoint-freq", "1"]))
+    best_result = results.get_best_result(
+        metric=f"{ENV_RUNNER_RESULTS}/{EPISODE_RETURN_MEAN}", mode="max"
+    )
+    register_flatland_ray_cli_observation_builders()
+    parser = add_flatland_inference_with_random_policy_args()
+    rollout(parser.parse_args(["--num-agents", "2", "--obs-builder", obid, "--cp", best_result.checkpoint.path, "--policy-id", "p0"]))
