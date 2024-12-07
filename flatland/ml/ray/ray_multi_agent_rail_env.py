@@ -2,7 +2,7 @@ import copy
 from typing import Tuple, Set, Optional
 
 import gymnasium as gym
-from gymnasium.vector.utils import spaces
+from gymnasium import spaces
 from ray.rllib import MultiAgentEnv
 from ray.rllib.utils import override
 from ray.rllib.utils.typing import MultiAgentDict, AgentID

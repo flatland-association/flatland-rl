@@ -1,7 +1,7 @@
 import pytest
 
-from flatland.ml.ray.examples.flatland_inference_with_random_policy import rollout, add_flatland_ray_cli_example_script_args, \
-    add_flatland_ray_cli_observation_builders
+from flatland.ml.ray.examples.flatland_inference_with_random_policy import add_flatland_inference_with_random_policy_args
+from flatland.ml.ray.examples.flatland_inference_with_random_policy import rollout, register_flatland_ray_cli_observation_builders
 
 
 @pytest.mark.parametrize(
@@ -19,7 +19,7 @@ from flatland.ml.ray.examples.flatland_inference_with_random_policy import rollo
     ],
 )
 def test_rail_env_wrappers_random_rollout(obid: str):
-    add_flatland_ray_cli_observation_builders()
-    parser = add_flatland_ray_cli_example_script_args()
+    register_flatland_ray_cli_observation_builders()
+    parser = add_flatland_inference_with_random_policy_args()
     rollout(parser.parse_args(
-        ["--algo", "PPO", "--num-agents", "2", "--stop-iters", "1", "--obs_builder", obid]))
+        ["--num-agents", "2", "--obs-builder", obid]))
