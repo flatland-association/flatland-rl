@@ -5,7 +5,6 @@ Runs Flatland env in RLlib using single policy learning, based on
 Take this as starting point to build your own training (cli) script.
 """
 import logging
-import os.path
 from argparse import Namespace
 from typing import Union
 
@@ -70,8 +69,9 @@ def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
     assert (
         args.obs_builder
     ), "Must set --obs-builder <obs builder ID> when running this script!"
-    assert os.path.exists("flatland/ml/ray/examples/environment.yml"), "Script must be executed in root folder of checked out flatland-rl."
-    assert os.path.exists("requirements-ml.txt"), "Script must be executed in root folder of checkout out flatland-rl."
+    # TODO revise whether we can get around this resrction relative path
+    # assert os.path.exists("flatland/ml/ray/examples/environment.yml"), "Script must be executed in root folder of checked out flatland-rl."
+    # assert os.path.exists("requirements-ml.txt"), "Script must be executed in root folder of checkout out flatland-rl."
 
     setup_func()
     kwargs = {}
@@ -88,11 +88,11 @@ def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
         runtime_env={
             # install clean env from environment.yml - important for running in a cluster!
             # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#api-reference
-            "working_dir": ".",
+            #"working_dir": ".",
             # TODO conda configurable, default to this only?!
             # "conda": "flatland/ml/ray/examples/environment.yml",
-            "conda": "flatland-rllib-cli",
-            "excludes": ["notebooks/", ".git/", ".tox/", ".venv/", "docs/", ".idea", "tmp"],
+            # "conda": "flatland-rllib-cli",
+            #"excludes": ["notebooks/", ".git/", ".tox/", ".venv/", "docs/", ".idea", "tmp"],
             "env_vars": dict(map(lambda s: s.split('='), env_vars)),
             # https://docs.ray.io/en/latest/ray-observability/user-guides/configure-logging.html
             "worker_process_setup_hook": "flatland.ml.ray.examples.flatland_training_with_parameter_sharing.setup_func"
@@ -105,6 +105,7 @@ def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
             get_trainable_cls(args.algo)
             .get_default_config()
             .environment("flatland_env")
+            # TODO make configurable!
             .multi_agent(
                 policies={"p0"},
                 # All agents map to the exact same policy.
