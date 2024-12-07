@@ -23,7 +23,7 @@ from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import tr
         [
             # https://docs.ray.io/en/latest/rllib/rllib-algorithms.html
             "PPO",
-            # TODO not working:  rewards = scipy.signal.lfilter([1], [1, -gamma], raw_rewards[::-1], axis=0)[
+            # TODO dqn not working:  rewards = scipy.signal.lfilter([1], [1, -gamma], raw_rewards[::-1], axis=0)[
             #                                                      ~~~~~~~~~~~^^^^^^
             # TypeError: unhashable type: 'slice'
             # "DQN",
@@ -41,6 +41,7 @@ def test_rail_env_wrappers_training_and_rollout(obid: str, algo: str):
     best_result = results.get_best_result(
         metric=f"{ENV_RUNNER_RESULTS}/{EPISODE_RETURN_MEAN}", mode="max"
     )
+    # TODO why necessary again? because of ray.shutdown()? same in notebook
     register_flatland_ray_cli_observation_builders()
     parser = add_flatland_inference_with_random_policy_args()
     rollout(parser.parse_args(["--num-agents", "2", "--obs-builder", obid, "--cp", best_result.checkpoint.path, "--policy-id", "p0"]))
