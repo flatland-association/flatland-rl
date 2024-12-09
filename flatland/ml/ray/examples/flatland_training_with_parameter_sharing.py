@@ -61,6 +61,7 @@ def add_flatland_training_with_parameter_sharing_args():
     return parser
 
 
+# TODO allow for kwargs as well to be accessible from python directly and for easier injection?
 def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
     assert args.num_agents > 0, "Must set --num-agents > 0 when running this script!"
     assert (
@@ -74,16 +75,16 @@ def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
     # assert os.path.exists("requirements-ml.txt"), "Script must be executed in root folder of checkout out flatland-rl."
 
     setup_func()
-    kwargs = {}
+    init_args = {}
     if args.ray_address is not None:
-        kwargs['address'] = args.ray_address
+        init_args['address'] = args.ray_address
 
     env_vars = set()
     if args.env_var is not None:
         env_vars = args.env_var
     # https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html
     ray.init(
-        **kwargs,
+        **init_args,
         # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#runtime-environments
         runtime_env={
             # install clean env from environment.yml - important for running in a cluster!
@@ -96,43 +97,40 @@ def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
             "env_vars": dict(map(lambda s: s.split('='), env_vars)),
             # https://docs.ray.io/en/latest/ray-observability/user-guides/configure-logging.html
             "worker_process_setup_hook": "flatland.ml.ray.examples.flatland_training_with_parameter_sharing.setup_func"
-        }
+        },
+        ignore_reinit_error=True,
     )
-    try:
-        env_name = "flatland_env"
-        register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
-        base_config = (
-            get_trainable_cls(args.algo)
-            .get_default_config()
-            .environment("flatland_env")
-            # TODO make configurable!
-            .multi_agent(
-                policies={"p0"},
-                # All agents map to the exact same policy.
-                policy_mapping_fn=(lambda aid, *args, **kwargs: "p0"),
-            )
-            .training(
-                model={
-                    "vf_share_layers": True,
-                },
-                train_batch_size=args.train_batch_size_per_learner
-            )
-            .rl_module(
-                rl_module_spec=MultiRLModuleSpec(
-                    rl_module_specs={"p0": RLModuleSpec()},
-                )
-            )
-
+    # TODO allow for injection?!
+    env_name = "flatland_env"
+    register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
+    base_config = (
+        get_trainable_cls(args.algo)
+        .get_default_config()
+        .environment("flatland_env")
+        # TODO make configurable!
+        .multi_agent(
+            policies={"p0"},
+            # All agents map to the exact same policy.
+            policy_mapping_fn=(lambda aid, *args, **kwargs: "p0"),
         )
-        res = run_rllib_example_script_experiment(base_config, args)
+        .training(
+            model={
+                "vf_share_layers": True,
+            },
+            train_batch_size=args.train_batch_size_per_learner
+        )
+        .rl_module(
+            rl_module_spec=MultiRLModuleSpec(
+                rl_module_specs={"p0": RLModuleSpec()},
+            )
+        )
 
-        if res.num_errors > 0:
-            raise AssertionError(f"{res.errors}")
-        ray.shutdown()
-        return res
-    except BaseException as e:
-        ray.shutdown()
-        raise e
+    )
+    res = run_rllib_example_script_experiment(base_config, args)
+
+    if res.num_errors > 0:
+        raise AssertionError(f"{res.errors}")
+    return res
 
 
 # TODO verification of implementation with a proper model
