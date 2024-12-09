@@ -5,9 +5,7 @@ import random
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-from flatland.utils import seeding
 
-# from flatland.envs.timetable_generators import timetable_generator
 import flatland.envs.timetable_generators as ttg
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -27,9 +25,11 @@ from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
     enable_infrastructure_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+from flatland.utils.seeding import random_generator_get_hashablestate
 
 
 class RailEnv(Environment):
@@ -774,3 +774,38 @@ class RailEnv(Environment):
             except Exception as e:
                 print("Could Not close window due to:", e)
             self.renderer = None
+
+    # TODO named table for env state?
+    def _gethashablestate(self):
+        return (
+            self.width,
+            self.height,
+            # random seed
+            self.random_seed,
+            self.seed_history,
+            self.agents,
+            self._elapsed_steps,
+            self.num_resets,
+            self.rail._gethashablestate(),
+            # self.dev_pred_dict ,
+            # self.dev_obs_dict ,
+            self.dones,
+            self._max_episode_steps,
+            self.active_agents,
+
+            # distance map
+            # TODO distance_map
+            # self.distance_map.agents ,
+            # self.distance_map.agents ,
+            # self.distance_map.rail ,
+            # self.distance_map.distance_map ,
+            # self.distance_map.agents_previous_computation ,
+
+            # MFP
+            self.malfunction_generator.MFP,
+            self.malfunction_generator._rand_idx,
+            self.malfunction_generator._cached_rand,
+
+            # np_random
+            random_generator_get_hashablestate(self.np_random)
+        )
