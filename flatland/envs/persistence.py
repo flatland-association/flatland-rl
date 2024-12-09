@@ -1,4 +1,5 @@
 import pickle
+from typing import Optional, Tuple, Dict
 
 import msgpack
 import msgpack_numpy
@@ -7,7 +8,6 @@ import numpy as np
 msgpack_numpy.patch()
 
 from flatland.envs import rail_env
-from flatland.envs.rail_env import RailEnv
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.transition_map import GridTransitionMap
@@ -101,8 +101,21 @@ class RailEnvPersister(object):
         cls.set_full_state(env, env_dict)
 
     @classmethod
-    def load_new(cls, filename, load_from_package=None):
+    def load_new(cls, filename: str, load_from_package: Optional[str] = None, legacy: bool = False) -> Tuple["RailEnv", Dict]:
+        """
 
+        Parameters
+        ----------
+        filename
+            name of file to load
+        load_from_package
+            package to load `filename` from
+        legacy
+            skip random state loading
+        Returns
+        -------
+
+        """
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
         llGrid = env_dict["grid"]
@@ -124,9 +137,10 @@ class RailEnvPersister(object):
 
         env.rail = GridTransitionMap(1, 1)  # dummy
 
-        cls.set_full_state(env, env_dict)
+        cls.set_full_state(env, env_dict, legacy=legacy)
         return env, env_dict
 
+    # TODO named tuple for env_dict
     @classmethod
     def load_env_dict(cls, filename, load_from_package=None):
 
@@ -178,7 +192,7 @@ class RailEnvPersister(object):
         return cls.load_new(resource, load_from_package=package)
 
     @classmethod
-    def set_full_state(cls, env, env_dict):
+    def set_full_state(cls, env, env_dict, legacy: bool = False):
         """
         Sets environment state from env_dict
 
@@ -198,13 +212,14 @@ class RailEnvPersister(object):
         env.rail.height = env.height
         env.rail.width = env.width
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
-        env.random_seed = env_dict["random_seed"]
-        env.seed_history = env_dict["seed_history"]
-        env.np_random.set_state(env_dict["np_random_state"])
+        if not legacy:
+            env.random_seed = env_dict["random_seed"]
+            env.seed_history = env_dict["seed_history"]
+            env.np_random.set_state(env_dict["np_random_state"])
 
     # TODO NamedTuple for env_dict
     @classmethod
-    def get_full_state(cls, env: RailEnv):
+    def get_full_state(cls, env: "RailEnv"):
         """
         Returns state of environment in dict object, ready for serialization
 

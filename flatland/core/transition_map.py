@@ -17,7 +17,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 from flatland.utils.decorators import enable_infrastructure_lru_cache, send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.ordered_set import OrderedSet
-from utils.seeding import random_generator_get_hashablestate
+from flatland.utils.seeding import random_generator_get_hashablestate
 
 
 # TODO are these general classes or for grid4 only?

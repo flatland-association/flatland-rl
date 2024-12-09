@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from utils.seeding import random_generator_get_hashablestate
+from flatland.utils.seeding import random_generator_get_hashablestate
 
 
 @pytest.mark.parametrize("seed", [4242, 42, 31, None])

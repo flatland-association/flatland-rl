@@ -29,7 +29,7 @@ from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
     enable_infrastructure_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
-from utils.seeding import random_generator_get_hashablestate
+from flatland.utils.seeding import random_generator_get_hashablestate
 
 
 class RailEnv(Environment):
