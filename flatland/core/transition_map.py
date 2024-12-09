@@ -1,12 +1,13 @@
 """
 TransitionMap and derived classes.
 """
-from functools import lru_cache
+
+import traceback
+from typing import Tuple
 
 import numpy as np
 from importlib_resources import path
 from numpy import array
-import traceback
 
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position, get_direction
@@ -16,6 +17,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 from flatland.utils.decorators import enable_infrastructure_lru_cache, send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.ordered_set import OrderedSet
+from utils.seeding import random_generator_get_hashablestate
 
 
 # TODO are these general classes or for grid4 only?
@@ -112,6 +114,9 @@ class TransitionMap:
         """
         raise NotImplementedError()
 
+    def _gethashablestate(self) -> Tuple[int, int, Tuple, Tuple, Tuple]:
+        raise NotImplementedError()
+
 
 class GridTransitionMap(TransitionMap):
     """
@@ -120,7 +125,7 @@ class GridTransitionMap(TransitionMap):
     GridTransitionMap implements utility functions.
     """
 
-    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), random_seed=None):
+    def __init__(self, width, height, transitions: Transitions = None, random_seed=None):
         """
         Builder for GridTransitionMap object.
 
@@ -135,6 +140,8 @@ class GridTransitionMap(TransitionMap):
             grid.
 
         """
+        if transitions is None:
+            transitions = Grid4Transitions([])
         send_infrastructure_data_change_signal_to_reset_lru_cache()
         self.width = width
         self.height = height
@@ -207,12 +214,12 @@ class GridTransitionMap(TransitionMap):
 
         """
         send_infrastructure_data_change_signal_to_reset_lru_cache()
-        #assert len(cell_id) in (2, 3), \
+        # assert len(cell_id) in (2, 3), \
         #    'GridTransitionMap.set_transitions() ERROR: cell_id tuple must have length 2 or 3.'
         if len(cell_id) == 3:
             self.grid[cell_id[0:2]] = self.transitions.set_transitions(self.grid[cell_id[0:2]],
-                                                                                 cell_id[2],
-                                                                                 new_transitions)
+                                                                       cell_id[2],
+                                                                       new_transitions)
         elif len(cell_id) == 2:
             self.grid[cell_id] = new_transitions
 
@@ -240,7 +247,7 @@ class GridTransitionMap(TransitionMap):
             0/1 allowed/not allowed, a probability in [0,1], etc...)
 
         """
-        #assert len(cell_id) == 3, \
+        # assert len(cell_id) == 3, \
         #    'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
         return self.transitions.get_transition(self.grid[cell_id[0:2]], cell_id[2], transition_index)
 
@@ -265,38 +272,38 @@ class GridTransitionMap(TransitionMap):
 
         """
         send_infrastructure_data_change_signal_to_reset_lru_cache()
-        #assert len(cell_id) == 3, \
+        # assert len(cell_id) == 3, \
         #    'GridTransitionMap.set_transition() ERROR: cell_id tuple must have length 3.'
 
         nDir = cell_id[2]
         if type(nDir) == np.ndarray:
             # I can't work out how to dump a complete backtrace here
             try:
-                assert type(nDir)==int, "cell direction is not an int"
+                assert type(nDir) == int, "cell direction is not an int"
             except Exception as e:
                 traceback.print_stack()
             print("fixing nDir:", cell_id, nDir)
             nDir = int(nDir[0])
 
-        #if type(transition_index) not in (int, np.int64):
+        # if type(transition_index) not in (int, np.int64):
         if isinstance(transition_index, np.ndarray):
-            #print("fixing transition_index:", cell_id, transition_index)
+            # print("fixing transition_index:", cell_id, transition_index)
             if type(transition_index) == np.ndarray:
                 transition_index = int(transition_index.ravel()[0])
             else:
                 # print("transition_index type:", type(transition_index))
                 transition_index = int(transition_index)
 
-        #if type(new_transition) not in (int, bool):
+        # if type(new_transition) not in (int, bool):
         if isinstance(new_transition, np.ndarray):
-            #print("fixing new_transition:", cell_id, new_transition)
+            # print("fixing new_transition:", cell_id, new_transition)
             new_transition = int(new_transition.ravel()[0])
 
-        #print("fixed:", cell_id, type(nDir), transition_index, new_transition, remove_deadends)
+        # print("fixed:", cell_id, type(nDir), transition_index, new_transition, remove_deadends)
 
         self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transition(
             self.grid[cell_id[0:2]],
-            nDir, # cell_id[2],
+            nDir,  # cell_id[2],
             transition_index,
             new_transition,
             remove_deadends)
@@ -674,6 +681,16 @@ class GridTransitionMap(TransitionMap):
 
         # is transition is valid?
         return self.transitions.is_valid(new_trans)
+
+    def _gethashablestate(self) -> Tuple[int, int, Tuple, Tuple, Tuple]:
+        hashablegrid = tuple([tuple(sl) for sl in self.grid.tolist()])
+        return (
+            self.width,
+            self.height,
+            self.transitions._gethashablestate(),
+            random_generator_get_hashablestate(self.random_generator),
+            hashablegrid
+        )
 
 
 def mirror(dir):

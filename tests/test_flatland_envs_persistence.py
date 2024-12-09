@@ -69,14 +69,14 @@ def readable_size(size2, decimal_point=3):
 
 def test_save_load():
     env = create_env()
-    e = create_env()
     RailEnvPersister.save(env, "test_save_load.pkl", True)
-
-    RailEnvPersister.load(e, "test_save_load.pkl")
-
-    actual = RailEnvPersister.get_full_state(e)
-    expected = RailEnvPersister.get_full_state(env)
-    assert pickle.dumps(actual) == pickle.dumps(expected)
-    assert e.eq__(env)
-
     print(readable_size(os.path.getsize("test_save_load.pkl")))
+
+    env_loaded = create_env()
+    RailEnvPersister.load(env_loaded, "test_save_load.pkl")
+
+    assert env._gethashablestate() == env_loaded._gethashablestate()
+
+    full_state = RailEnvPersister.get_full_state(env_loaded)
+    full_state_loaded = RailEnvPersister.get_full_state(env)
+    assert pickle.dumps(full_state) == pickle.dumps(full_state_loaded)
