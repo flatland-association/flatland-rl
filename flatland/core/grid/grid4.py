@@ -287,4 +287,5 @@ class Grid4Transitions(Transitions):
         return [(cell_transition >> ((3 - orientation) * 4)) & 15 > 0 for orientation in range(4)]
 
     def _gethashablestate(self) -> HashableGrid4TransitionsState:
+        # TODO fix typing/hierarchy
         return (tuple(self.transitions), self.sDirs, self.lsDirs, tuple([tuple(t) for t in self.gDir2dRC]), tuple(self.transitions))

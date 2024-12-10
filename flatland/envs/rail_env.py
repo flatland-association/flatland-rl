@@ -775,6 +775,7 @@ class RailEnv(Environment):
                 print("Could Not close window due to:", e)
             self.renderer = None
 
+    # TODO is there a more standard way without slowing down? Use classes instead of tuples?
     def _gethashablestate(self):
         return (
             self.width,
@@ -786,6 +787,7 @@ class RailEnv(Environment):
             self._elapsed_steps,
             self.num_resets,
             self.rail._gethashablestate(),
+            # TODO dev_pred_dict
             # self.dev_pred_dict ,
             # self.dev_obs_dict ,
             self.dones,
@@ -793,12 +795,7 @@ class RailEnv(Environment):
             self.active_agents,
 
             # distance map
-            # TODO distance_map
-            # self.distance_map.agents ,
-            # self.distance_map.agents ,
-            # self.distance_map.rail ,
-            # self.distance_map.distance_map ,
-            # self.distance_map.agents_previous_computation ,
+            self.distance_map._gethashablestate(),
 
             # MFP
             self.malfunction_generator.MFP,

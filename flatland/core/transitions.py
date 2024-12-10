@@ -133,3 +133,6 @@ class Transitions:
 
     def get_direction_enum(self) -> IntEnum:
         raise NotImplementedError()
+
+    def _gethashablestate(self):
+        raise NotImplementedError()

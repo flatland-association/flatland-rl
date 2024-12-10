@@ -1,11 +1,13 @@
 from collections import deque
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.transition_map import GridTransitionMap
+from flatland.core.transition_map import GridTransitionMap, HashableGridTransitionMapState
 from flatland.envs.agent_utils import EnvAgent
+
+HashableDistanceMapState = Tuple[HashableGridTransitionMapState]
 
 
 class DistanceMap:
@@ -160,3 +162,7 @@ class DistanceMap:
                         self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation] = new_distance
 
         return neighbors
+
+    def _gethashablestate(self):
+        tuple([self.env_height, self.env_width, self.distance_map, self.agents_previous_computation, self.reset_was_called, self.agents,
+               self.rail._gethashablestate])

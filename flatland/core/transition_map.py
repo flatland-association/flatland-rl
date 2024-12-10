@@ -118,6 +118,9 @@ class TransitionMap:
         raise NotImplementedError()
 
 
+HashableGridTransitionMapState = Tuple[int, int, Tuple, Tuple, Tuple]
+
+
 class GridTransitionMap(TransitionMap):
     """
     Implements a TransitionMap over a 2D grid.
@@ -682,7 +685,7 @@ class GridTransitionMap(TransitionMap):
         # is transition is valid?
         return self.transitions.is_valid(new_trans)
 
-    def _gethashablestate(self) -> Tuple[int, int, Tuple, Tuple, Tuple]:
+    def _gethashablestate(self) -> HashableGridTransitionMapState:
         hashablegrid = tuple([tuple(sl) for sl in self.grid.tolist()])
         return (
             self.width,

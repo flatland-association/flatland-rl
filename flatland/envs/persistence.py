@@ -211,6 +211,10 @@ class RailEnvPersister(object):
         env.rail.height = env.height
         env.rail.width = env.width
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
+
+        if "distance_map" in env_dict:
+            env.distance_map.set(env_dict["distance_map"])
+
         if not legacy:
             env.random_seed = env_dict["random_seed"]
             env.seed_history = env_dict["seed_history"]
