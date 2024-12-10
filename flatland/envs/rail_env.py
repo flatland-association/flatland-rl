@@ -775,7 +775,6 @@ class RailEnv(Environment):
                 print("Could Not close window due to:", e)
             self.renderer = None
 
-    # TODO named table for env state?
     def _gethashablestate(self):
         return (
             self.width,

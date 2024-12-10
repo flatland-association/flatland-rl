@@ -140,7 +140,6 @@ class RailEnvPersister(object):
         cls.set_full_state(env, env_dict, legacy=legacy)
         return env, env_dict
 
-    # TODO named tuple for env_dict
     @classmethod
     def load_env_dict(cls, filename, load_from_package=None):
 
@@ -217,7 +216,6 @@ class RailEnvPersister(object):
             env.seed_history = env_dict["seed_history"]
             env.np_random.set_state(env_dict["np_random_state"])
 
-    # TODO NamedTuple for env_dict
     @classmethod
     def get_full_state(cls, env: "RailEnv"):
         """
