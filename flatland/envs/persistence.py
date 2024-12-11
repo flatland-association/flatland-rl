@@ -18,7 +18,7 @@ from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
 
-from flatland.utils.seeding import random_generator_get_hashablestate
+from flatland.utils.seeding import random_state_to_hashablestate
 
 
 class RailEnvPersister(object):
@@ -240,7 +240,7 @@ class RailEnvPersister(object):
             "max_episode_steps": env._max_episode_steps,
             "random_seed": env.random_seed,
             "seed_history": env.seed_history,
-            "np_random_state": random_generator_get_hashablestate(env.np_random)
+            "np_random_state": random_state_to_hashablestate(env.np_random)
         }
         return msg_data_dict
 

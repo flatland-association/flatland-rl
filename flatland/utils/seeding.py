@@ -4,6 +4,7 @@ import struct
 from typing import Tuple
 
 import numpy as np
+from numpy.random import RandomState
 
 
 def np_random(seed=None):
@@ -96,6 +97,12 @@ def _int_list_from_bigint(bigint):
 HashableRandomState = Tuple[str, np.ndarray[np.uint], int, int, float]
 
 
-def random_generator_get_hashablestate(s: np.random.RandomState):
+def random_state_to_hashablestate(s: np.random.RandomState):
     s = s.get_state()
     return (tuple([s[0], tuple(s[1].tolist()), *s[2:]]))
+
+
+def random_state_from_hashablestate(state):
+    rs = RandomState()
+    rs.set_state(state)
+    return rs

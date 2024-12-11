@@ -35,15 +35,16 @@ def test_load_new():
     assert agents_initial == agents_loaded
 
 
+# TODO use env_creator from https://github.com/flatland-association/flatland-rl/pull/85 instead
 def create_env():
-    nAgents = 200
+    nAgents = 5
     n_cities = 2
     max_rails_between_cities = 2
     max_rails_in_city = 4
     seed = 0
     env = RailEnv(
-        width=200,
-        height=200,
+        width=30,
+        height=30,
         rail_generator=sparse_rail_generator(
             max_num_cities=n_cities,
             seed=seed,
@@ -75,8 +76,28 @@ def test_save_load():
     env_loaded = create_env()
     RailEnvPersister.load(env_loaded, "test_save_load.pkl")
 
-    assert env._gethashablestate() == env_loaded._gethashablestate()
+    assert env.__getstate__() == env_loaded.__getstate__()
 
     full_state = RailEnvPersister.get_full_state(env_loaded)
     full_state_loaded = RailEnvPersister.get_full_state(env)
+    assert pickle.dumps(full_state) == pickle.dumps(full_state_loaded)
+
+
+def test_dump_load():
+    env = create_env()
+    with open("test_save_load.pkl", "wb") as f:
+        pickle.dump(env, f)
+
+    print(readable_size(os.path.getsize("test_save_load.pkl")))
+
+    with open("test_save_load.pkl", "rb") as f:
+        env_loaded = pickle.load(f)
+
+    expected = env.__getstate__()
+    actual = env_loaded.__getstate__()
+    assert expected == actual
+
+    full_state = RailEnvPersister.get_full_state(env_loaded)
+    full_state_loaded = RailEnvPersister.get_full_state(env)
+    assert full_state == full_state_loaded
     assert pickle.dumps(full_state) == pickle.dumps(full_state_loaded)

@@ -1,13 +1,11 @@
 from collections import deque
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.transition_map import GridTransitionMap, HashableGridTransitionMapState
+from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
-
-HashableDistanceMapState = Tuple[HashableGridTransitionMapState]
 
 
 class DistanceMap:
@@ -166,3 +164,27 @@ class DistanceMap:
     def _gethashablestate(self):
         tuple([self.env_height, self.env_width, self.distance_map, self.agents_previous_computation, self.reset_was_called, self.agents,
                self.rail._gethashablestate])
+
+    def __getstate__(self):
+        return {
+            "env_height": self.env_height,
+            "env_width": self.env_width,
+            # TODO very very slow time consuming - better ways and still hashable?
+            # https://numpy.org/doc/stable/reference/generated/numpy.recarray.html
+            "distance_map": self.distance_map.view(np.recarray).tolist(),
+            "agents_previous_computation": self.agents_previous_computation,
+            "reset_was_called": self.reset_was_called,
+            "agents": self.agents,
+            "rail": self.rail.__getstate__()
+        }
+
+    def __setstate__(self, state):
+        self.env_height = state["env_height"]
+        self.env_width = state["env_width"]
+        # https://numpy.org/doc/stable/reference/generated/numpy.recarray.tolist.html
+        self.distance_map = np.array(state["distance_map"])
+        self.agents_previous_computation = state["agents_previous_computation"]
+        self.reset_was_called = state["reset_was_called"]
+        self.agents = state["agents"]
+        self.rail = GridTransitionMap(0, 0)
+        self.rail.__setstate__(state["rail"])

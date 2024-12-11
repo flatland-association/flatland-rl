@@ -17,7 +17,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 from flatland.utils.decorators import enable_infrastructure_lru_cache, send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.ordered_set import OrderedSet
-from flatland.utils.seeding import random_generator_get_hashablestate
+from flatland.utils.seeding import random_state_to_hashablestate, random_state_from_hashablestate
 
 
 # TODO are these general classes or for grid4 only?
@@ -113,12 +113,6 @@ class TransitionMap:
 
         """
         raise NotImplementedError()
-
-    def _gethashablestate(self) -> Tuple[int, int, Tuple, Tuple, Tuple]:
-        raise NotImplementedError()
-
-
-HashableGridTransitionMapState = Tuple[int, int, Tuple, Tuple, Tuple]
 
 
 class GridTransitionMap(TransitionMap):
@@ -685,15 +679,24 @@ class GridTransitionMap(TransitionMap):
         # is transition is valid?
         return self.transitions.is_valid(new_trans)
 
-    def _gethashablestate(self) -> HashableGridTransitionMapState:
-        hashablegrid = tuple([tuple(sl) for sl in self.grid.tolist()])
-        return (
-            self.width,
-            self.height,
-            self.transitions._gethashablestate(),
-            random_generator_get_hashablestate(self.random_generator),
-            hashablegrid
-        )
+    def __getstate__(self):
+        return {
+            "width": self.width,
+            "height": self.height,
+            "transitions": self.transitions.__getstate__(),
+            "random_generator": random_state_to_hashablestate(self.random_generator),
+            # https://numpy.org/doc/stable/reference/generated/numpy.recarray.html
+            "grid": self.grid.view(np.recarray).tolist(),
+        }
+
+    def __setstate__(self, state):
+        self.width = state["width"]
+        self.height = state["height"]
+        self.transitions = Grid4Transitions(None)
+        self.transitions.__setstate__(state["transitions"])
+        self.random_generator = random_state_from_hashablestate(state["random_generator"])
+        # https://numpy.org/doc/stable/reference/generated/numpy.recarray.tolist.html
+        self.grid = np.array(state["grid"])
 
 
 def mirror(dir):
