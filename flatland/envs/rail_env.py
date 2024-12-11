@@ -5,9 +5,7 @@ import random
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-from flatland.utils import seeding
 
-# from flatland.envs.timetable_generators import timetable_generator
 import flatland.envs.timetable_generators as ttg
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -21,15 +19,18 @@ from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.fast_methods import fast_position_equal
+from flatland.envs.malfunction_generators import ParamMalfunctionGen
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
     enable_infrastructure_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+from flatland.utils.seeding import random_state_to_hashablestate, random_state_from_hashablestate
 
 
 class RailEnv(Environment):
@@ -774,3 +775,103 @@ class RailEnv(Environment):
             except Exception as e:
                 print("Could Not close window due to:", e)
             self.renderer = None
+
+    # TODO is there a more standard way without slowing down? Use classes instead of tuples?
+    def _gethashablestate(self):
+        return (
+            self.width,
+            self.height,
+            # random seed
+            self.random_seed,
+            self.seed_history,
+            self.agents,
+            self._elapsed_steps,
+            self.num_resets,
+            self.rail._gethashablestate(),
+            # TODO dev_pred_dict
+            # self.dev_pred_dict ,
+            # self.dev_obs_dict ,
+            self.dones,
+            self._max_episode_steps,
+            self.active_agents,
+
+            # distance map
+            self.distance_map._gethashablestate(),
+
+            # MFP
+            self.malfunction_generator.MFP,
+            self.malfunction_generator._rand_idx,
+            self.malfunction_generator._cached_rand,
+
+            # np_random
+            random_state_to_hashablestate(self.np_random)
+        )
+
+    # TODO does this have any expected or unexpected side-effects?
+    def __getstate__(self):
+        return {
+            "width": self.width,
+            "height": self.height,
+            # random seed
+            "random_seed": self.random_seed,
+            "seed_history": self.seed_history,
+            "agents": self.agents,
+            "_elapsed_steps": self._elapsed_steps,
+            "num_resets": self.num_resets,
+            # explicitly use custom hashable __getstate__
+            "rail": self.rail.__getstate__(),
+            # TODO dev_pred_dict
+            # "dev_pred_dict ,": self.dev_pred_dict ,
+            # "dev_obs_dict ,": self.dev_obs_dict ,
+            "dones": self.dones,
+            "_max_episode_steps": self._max_episode_steps,
+            "active_agents": self.active_agents,
+
+            # # distance map
+            # explicitly use custom hashable __getstate__
+            "distance_map": self.distance_map.__getstate__(),
+
+            # MFP
+            "malfunction_generator.MFP": self.malfunction_generator.MFP,
+            "malfunction_generator._rand_idx": self.malfunction_generator._rand_idx,
+            "malfunction_generator._cached_rand": self.malfunction_generator._cached_rand,
+            "malfunction_process_data": self.malfunction_process_data,
+
+            # np_random
+            # explicitly use custom hashable representation
+            "np_random": random_state_to_hashablestate(self.np_random)
+        }
+
+    def __setstate__(self, state):
+        self.width = state["width"]
+        self.height = state["height"]
+
+        # random seed
+        self.random_seed = state["random_seed"]
+        self.seed_history = state["seed_history"]
+        self.agents = state["agents"]
+        self._elapsed_steps = state["_elapsed_steps"]
+        self.num_resets = state["num_resets"]
+        self.rail = GridTransitionMap(0, 0)
+        self.rail.__setstate__(state["rail"])
+        # TODO dev_pred_dict
+        # self.dev_pred_dict  = state["dev_pred_dict ,"]
+        # self.dev_obs_dict  = state["dev_obs_dict ,"]
+        self.dones = state["dones"]
+        self._max_episode_steps = state["_max_episode_steps"]
+        self.active_agents = state["active_agents"]
+
+        # distance map
+        self.distance_map = DistanceMap(None, None, None)
+        self.distance_map.__setstate__(state["distance_map"])
+
+        # MFP
+        # TODO bad code smell - is this general?
+        self.malfunction_generator = ParamMalfunctionGen(None)
+        self.malfunction_generator.MFP = state["malfunction_generator.MFP"]
+        self.malfunction_generator._rand_idx = state["malfunction_generator._rand_idx"]
+        self.malfunction_generator._cached_rand = state["malfunction_generator._cached_rand"]
+        self.malfunction_process_data = state["malfunction_process_data"]
+
+        # np_random
+        self.np_random = random_state_from_hashablestate(state["np_random"])
