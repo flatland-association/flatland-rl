@@ -216,6 +216,7 @@ class RailEnvPersister(object):
             env.distance_map.set(env_dict["distance_map"])
 
         if not legacy:
+            env._max_episode_steps = env_dict["max_episode_steps"]
             env.random_seed = env_dict["random_seed"]
             env.seed_history = env_dict["seed_history"]
             env.np_random.set_state(env_dict["np_random_state"])
