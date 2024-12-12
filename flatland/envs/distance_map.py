@@ -161,10 +161,6 @@ class DistanceMap:
 
         return neighbors
 
-    def _gethashablestate(self):
-        tuple([self.env_height, self.env_width, self.distance_map, self.agents_previous_computation, self.reset_was_called, self.agents,
-               self.rail._gethashablestate])
-
     def __getstate__(self):
         return {
             "env_height": self.env_height,
@@ -172,9 +168,9 @@ class DistanceMap:
             # TODO very very slow time consuming - better ways and still hashable?
             # https://numpy.org/doc/stable/reference/generated/numpy.recarray.html
             "distance_map": self.distance_map.view(np.recarray).tolist(),
-            "agents_previous_computation": self.agents_previous_computation,
+            "agents_previous_computation": [a.__getstate__() for a in self.agents_previous_computation],
             "reset_was_called": self.reset_was_called,
-            "agents": self.agents,
+            "agents": [a.__getstate__() for a in self.agents],
             "rail": self.rail.__getstate__()
         }
 
@@ -183,8 +179,8 @@ class DistanceMap:
         self.env_width = state["env_width"]
         # https://numpy.org/doc/stable/reference/generated/numpy.recarray.tolist.html
         self.distance_map = np.array(state["distance_map"])
-        self.agents_previous_computation = state["agents_previous_computation"]
+        self.agents_previous_computation = [EnvAgent(None, None, None, None).__setstate__(s) for s in state["agents_previous_computation"]]
         self.reset_was_called = state["reset_was_called"]
-        self.agents = state["agents"]
+        self.agents = [EnvAgent(None, None, None, None).__setstate__(s) for s in state["agents"]]
         self.rail = GridTransitionMap(0, 0)
         self.rail.__setstate__(state["rail"])

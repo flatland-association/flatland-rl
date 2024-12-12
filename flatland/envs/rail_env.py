@@ -776,37 +776,6 @@ class RailEnv(Environment):
                 print("Could Not close window due to:", e)
             self.renderer = None
 
-    # TODO is there a more standard way without slowing down? Use classes instead of tuples?
-    def _gethashablestate(self):
-        return (
-            self.width,
-            self.height,
-            # random seed
-            self.random_seed,
-            self.seed_history,
-            self.agents,
-            self._elapsed_steps,
-            self.num_resets,
-            self.rail._gethashablestate(),
-            # TODO dev_pred_dict
-            # self.dev_pred_dict ,
-            # self.dev_obs_dict ,
-            self.dones,
-            self._max_episode_steps,
-            self.active_agents,
-
-            # distance map
-            self.distance_map._gethashablestate(),
-
-            # MFP
-            self.malfunction_generator.MFP,
-            self.malfunction_generator._rand_idx,
-            self.malfunction_generator._cached_rand,
-
-            # np_random
-            random_state_to_hashablestate(self.np_random)
-        )
-
     # TODO does this have any expected or unexpected side-effects?
     def __getstate__(self):
         return {
@@ -815,13 +784,14 @@ class RailEnv(Environment):
             # random seed
             "random_seed": self.random_seed,
             "seed_history": self.seed_history,
-            "agents": self.agents,
+            "agents": [a.__getstate__() for a in self.agents],
             "_elapsed_steps": self._elapsed_steps,
             "num_resets": self.num_resets,
             # explicitly use custom hashable __getstate__
             "rail": self.rail.__getstate__(),
             # TODO dev_pred_dict
             # "dev_pred_dict ,": self.dev_pred_dict ,
+            # TODO dev_obs_dict
             # "dev_obs_dict ,": self.dev_obs_dict ,
             "dones": self.dones,
             "_max_episode_steps": self._max_episode_steps,
@@ -849,7 +819,7 @@ class RailEnv(Environment):
         # random seed
         self.random_seed = state["random_seed"]
         self.seed_history = state["seed_history"]
-        self.agents = state["agents"]
+        self.agents = [EnvAgent(None, None, None, None).__setstate__(s) for s in state["agents"]]
         self._elapsed_steps = state["_elapsed_steps"]
         self.num_resets = state["num_resets"]
         self.rail = GridTransitionMap(0, 0)
@@ -875,3 +845,4 @@ class RailEnv(Environment):
 
         # np_random
         self.np_random = random_state_from_hashablestate(state["np_random"])
+        return self

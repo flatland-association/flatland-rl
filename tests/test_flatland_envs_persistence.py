@@ -1,7 +1,9 @@
+import json
 import os
 import pickle
 
 import numpy as np
+import pytest
 
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
@@ -72,42 +74,69 @@ def test_save_load():
     env = create_env()
     RailEnvPersister.save(env, "test_save_load.pkl", True)
     print(readable_size(os.path.getsize("test_save_load.pkl")))
-
     env_loaded = create_env()
     RailEnvPersister.load(env_loaded, "test_save_load.pkl")
 
+    # RailEnvPersister save and load restores full_state
     full_state = RailEnvPersister.get_full_state(env_loaded)
     full_state_loaded = RailEnvPersister.get_full_state(env)
+    assert full_state == full_state_loaded
     assert pickle.dumps(full_state) == pickle.dumps(full_state_loaded)
+
+    # RailEnvPersister save and load restore does not fully restore state == - TODO should we fix?!
     for k in env.__getstate__():
         if k != 'distance_map':
             assert env.__getstate__()[k] == env_loaded.__getstate__()[k], (k, env.__getstate__()[k] == env_loaded.__getstate__()[k])
         else:
             for kk in env.__getstate__()[k]:
-                # TODO culprits - what to do?
-                if kk not in ['agents_previous_computation', 'agents']:
-                    assert env.__getstate__()[k][kk] == env_loaded.__getstate__()[k][kk]
-                else:
+                if kk in ['agents_previous_computation', 'agents']:
                     assert env.__getstate__()[k][kk] != env_loaded.__getstate__()[k][kk]
-        # TODO cleanup
-        # assert env.__getstate__()[k].__getstate__() == env_loaded.__getstate__()[k].__getstate__()
-    # assert env.__getstate__() == env_loaded.__getstate__()
+                else:
+                    assert env.__getstate__()[k][kk] == env_loaded.__getstate__()[k][kk]
 
 
-def test_dump_load():
+# pickle dump and load (new implementation) restores state and full_state
+def test_dump_load_pickle():
     env = create_env()
     with open("test_save_load.pkl", "wb") as f:
         pickle.dump(env, f)
-
     print(readable_size(os.path.getsize("test_save_load.pkl")))
-
     with open("test_save_load.pkl", "rb") as f:
         env_loaded = pickle.load(f)
 
+    # pickle dump and load (new implementation) restores state ==
     expected = env.__getstate__()
     actual = env_loaded.__getstate__()
     assert expected == actual
 
+    # pickle dump and load (new implementation) restores full_state as well
+    full_state = RailEnvPersister.get_full_state(env_loaded)
+    full_state_loaded = RailEnvPersister.get_full_state(env)
+    assert full_state == full_state_loaded
+    assert pickle.dumps(full_state) == pickle.dumps(full_state_loaded)
+
+
+@pytest.mark.skip(
+    "TODO dictionary keys converted to string, https://stackoverflow.com/questions/1450957/pythons-json-module-converts-int-dictionary-keys-to-strings")
+def test_dump_load_json():
+    env = create_env()
+    with open("test_save_load.json", "w") as f:
+        json.dump(env.__getstate__(), f, default=float)
+    print(readable_size(os.path.getsize("test_save_load.json")))
+    with open("test_save_load.json", "r") as f:
+        env_loaded = RailEnv(0, 0).__setstate__(json.load(f))
+
+    diff = []
+    for k in env.__getstate__():
+        if env.__getstate__()[k] != env_loaded.__getstate__()[k]:
+            diff.append(k)
+    print(diff)
+    # json dump and load (new implementation) restores state ==
+    expected = env.__getstate__()
+    actual = env_loaded.__getstate__()
+    assert expected == actual
+
+    # json dump and load (new implementation) restores full_state as well
     full_state = RailEnvPersister.get_full_state(env_loaded)
     full_state_loaded = RailEnvPersister.get_full_state(env)
     assert full_state == full_state_loaded
