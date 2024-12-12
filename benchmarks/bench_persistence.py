@@ -123,6 +123,7 @@ def readable_size(size2, decimal_point=3):
 @pytest.mark.parametrize("width,height,nAgents", [
     (30, 30, 25),
     (100, 100, 50),
+    (200, 200, 100),
 ])
 def test_bench_persistence(width, height, nAgents):
     env = create_env(width=width, height=height, nAgents=nAgents)

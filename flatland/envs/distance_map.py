@@ -1,3 +1,4 @@
+import base64
 from collections import deque
 from typing import List, Optional
 
@@ -165,9 +166,7 @@ class DistanceMap:
         return {
             "env_height": self.env_height,
             "env_width": self.env_width,
-            # TODO very very slow time consuming - better ways and still hashable?
-            # https://numpy.org/doc/stable/reference/generated/numpy.recarray.html
-            "distance_map": self.distance_map.view(np.recarray).tolist(),
+            "distance_map": base64.binascii.b2a_base64(self.distance_map).decode("ascii"),
             "agents_previous_computation": [a.__getstate__() for a in self.agents_previous_computation],
             "reset_was_called": self.reset_was_called,
             "agents": [a.__getstate__() for a in self.agents],
@@ -177,8 +176,7 @@ class DistanceMap:
     def __setstate__(self, state):
         self.env_height = state["env_height"]
         self.env_width = state["env_width"]
-        # https://numpy.org/doc/stable/reference/generated/numpy.recarray.tolist.html
-        self.distance_map = np.array(state["distance_map"])
+        self.distance_map = np.frombuffer(base64.binascii.a2b_base64(state["distance_map"].encode("ascii")))
         self.agents_previous_computation = [EnvAgent(None, None, None, None).__setstate__(s) for s in state["agents_previous_computation"]]
         self.reset_was_called = state["reset_was_called"]
         self.agents = [EnvAgent(None, None, None, None).__setstate__(s) for s in state["agents"]]

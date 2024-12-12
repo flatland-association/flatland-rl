@@ -1,7 +1,7 @@
 """
 TransitionMap and derived classes.
 """
-
+import base64
 import traceback
 from typing import Tuple
 
@@ -685,8 +685,7 @@ class GridTransitionMap(TransitionMap):
             "height": self.height,
             "transitions": self.transitions.__getstate__(),
             "random_generator": random_state_to_hashablestate(self.random_generator),
-            # https://numpy.org/doc/stable/reference/generated/numpy.recarray.html
-            "grid": self.grid.view(np.recarray).tolist(),
+            "grid": base64.binascii.b2a_base64(self.grid).decode("ascii"),
         }
 
     def __setstate__(self, state):
@@ -695,8 +694,7 @@ class GridTransitionMap(TransitionMap):
         self.transitions = Grid4Transitions(None)
         self.transitions.__setstate__(state["transitions"])
         self.random_generator = random_state_from_hashablestate(state["random_generator"])
-        # https://numpy.org/doc/stable/reference/generated/numpy.recarray.tolist.html
-        self.grid = np.array(state["grid"])
+        self.grid = np.frombuffer(base64.binascii.a2b_base64(state["grid"].encode("ascii")))
 
 
 def mirror(dir):
