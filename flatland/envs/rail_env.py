@@ -202,8 +202,8 @@ class RailEnv(Environment):
         # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
         self.record_steps = record_steps  # whether to save timesteps
         # save timesteps in here: [[[row, col, dir, malfunction],...nAgents], ...nSteps]
-        self.cur_episode = []
-        self.list_actions = []  # save actions in here
+        self.cur_episode: List[Tuple[int, int, int, int, int]] = []
+        self.list_actions: List[Dict[int, RailEnvActions]] = []  # save actions in here
 
         self.motionCheck = ac.MotionCheck()
 
@@ -634,7 +634,7 @@ class RailEnv(Environment):
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
-    def record_timestep(self, dActions):
+    def record_timestep(self, d_actions: Dict[int, RailEnvActions]):
         """
         Record the positions and orientations of all agents in memory, in the cur_episode
         """
@@ -647,7 +647,6 @@ class RailEnv(Environment):
                 pos = (0, 0)
             else:
                 pos = (int(agent.position[0]), int(agent.position[1]))
-            # print("pos:", pos, type(pos[0]))
             list_agents_state.append([
                 *pos, int(agent.direction),
                 agent.malfunction_handler.malfunction_down_counter,
@@ -656,7 +655,7 @@ class RailEnv(Environment):
             ])
 
         self.cur_episode.append(list_agents_state)
-        self.list_actions.append(dActions)
+        self.list_actions.append(d_actions)
 
     def _get_observations(self):
         """
