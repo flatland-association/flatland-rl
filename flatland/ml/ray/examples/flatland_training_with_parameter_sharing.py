@@ -4,9 +4,9 @@ Runs Flatland env in RLlib using single policy learning, based on
 
 Take this as starting point to build your own training (cli) script.
 """
+import argparse
 import logging
-from argparse import Namespace
-from typing import Union
+from typing import Union, Optional
 
 import ray
 from ray import tune
@@ -61,8 +61,10 @@ def add_flatland_training_with_parameter_sharing_args():
     return parser
 
 
-# TODO allow for kwargs as well to be accessible from python directly and for easier injection?
-def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
+def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[ResultDict, tune.result_grid.ResultGrid]:
+    if args is None:
+        parser = add_flatland_training_with_parameter_sharing_args()
+        args = parser.parse_args()
     assert args.num_agents > 0, "Must set --num-agents > 0 when running this script!"
     assert (
         args.enable_new_api_stack
@@ -70,44 +72,34 @@ def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
     assert (
         args.obs_builder
     ), "Must set --obs-builder <obs builder ID> when running this script!"
-    # TODO revise whether we can get around this resrction relative path
-    # assert os.path.exists("flatland/ml/ray/examples/environment.yml"), "Script must be executed in root folder of checked out flatland-rl."
-    # assert os.path.exists("requirements-ml.txt"), "Script must be executed in root folder of checkout out flatland-rl."
 
     setup_func()
-    init_args = {}
-    if args.ray_address is not None:
-        init_args['address'] = args.ray_address
+    if init_args is None:
+        env_vars = set()
+        if args.env_var is not None:
+            env_vars = args.env_var
+        init_args = {
+            # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#runtime-environments
+            "runtime_env": {
+                "env_vars": dict(map(lambda s: s.split('='), env_vars)),
+                # https://docs.ray.io/en/latest/ray-observability/user-guides/configure-logging.html
+                "worker_process_setup_hook": "flatland.ml.ray.examples.flatland_training_with_parameter_sharing.setup_func"
+            },
+            "ignore_reinit_error": True,
+        }
+        if args.ray_address is not None:
+            init_args['address'] = args.ray_address
 
-    env_vars = set()
-    if args.env_var is not None:
-        env_vars = args.env_var
     # https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html
     ray.init(
         **init_args,
-        # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#runtime-environments
-        runtime_env={
-            # install clean env from environment.yml - important for running in a cluster!
-            # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#api-reference
-            #"working_dir": ".",
-            # TODO conda configurable, default to this only?!
-            # "conda": "flatland/ml/ray/examples/environment.yml",
-            # "conda": "flatland-rllib-cli",
-            #"excludes": ["notebooks/", ".git/", ".tox/", ".venv/", "docs/", ".idea", "tmp"],
-            "env_vars": dict(map(lambda s: s.split('='), env_vars)),
-            # https://docs.ray.io/en/latest/ray-observability/user-guides/configure-logging.html
-            "worker_process_setup_hook": "flatland.ml.ray.examples.flatland_training_with_parameter_sharing.setup_func"
-        },
-        ignore_reinit_error=True,
     )
-    # TODO allow for injection?!
     env_name = "flatland_env"
     register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
     base_config = (
         get_trainable_cls(args.algo)
         .get_default_config()
         .environment("flatland_env")
-        # TODO make configurable!
         .multi_agent(
             policies={"p0"},
             # All agents map to the exact same policy.
@@ -124,7 +116,6 @@ def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
                 rl_module_specs={"p0": RLModuleSpec()},
             )
         )
-
     )
     res = run_rllib_example_script_experiment(base_config, args)
 
@@ -133,7 +124,7 @@ def train(args: Namespace) -> Union[ResultDict, tune.result_grid.ResultGrid]:
     return res
 
 
-# TODO verification of implementation with a proper model
+# TODO https://github.com/flatland-association/flatland-rl/issues/100 verify implementation
 # TODO https://github.com/flatland-association/flatland-rl/issues/73 get pettingzoo up and running again.
 # TODO https://github.com/flatland-association/flatland-rl/issues/75 illustrate algorithm/policy abstraction in ray
 # TODO https://github.com/flatland-association/flatland-rl/issues/76 illustrate generic callbacks with ray
