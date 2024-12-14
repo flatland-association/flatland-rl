@@ -1,10 +1,12 @@
 from typing import Tuple, List
 
 import networkx as nx
+from matplotlib import pyplot as plt
 
 from flatland.envs.agent_chains import MotionCheck
 
 
+# TODO unused - dump?
 def create_test_agents(omc: MotionCheck):
     # blocked chain
     omc.addAgent(1, (1, 2), (1, 3))
@@ -131,7 +133,6 @@ def create_test_agents2(omc: MotionCheck):
     cte.addAgent((cte.iRowNext + 1, 2), (cte.iRowNext, 2))
     cte.nextRow()
 
-
     cte.nextRow()
     cte.addAgentToRow(1, 2, "Tee")
     cte.addAgentToRow(2, 3)
@@ -151,9 +152,26 @@ def create_test_agents2(omc: MotionCheck):
     cte.addAgent((r3, 2), (r2, 3))
 
     cte.nextRow()
+    cte.nextRow()
+    cte.nextRow()
+
+    r1 = cte.iRowNext
+    r2 = cte.iRowNext + 1
+    r3 = cte.iRowNext + 2
+
+    cte.addAgent((r2, 3), (r1, 3))
+    cte.addAgent((r2, 2), (r2, 3))
+    cte.addAgent((r3, 2), (r2, 3))
+    cte.addAgent((r1, 1), (r1, 2), "Tree different order")
+    cte.addAgent((r1, 2), (r1, 3))
+    cte.addAgent((r1, 3), (r1, 4))
+
+    cte.nextRow()
+    cte.nextRow()
+    cte.nextRow()
 
 
-def test_agent_following():
+def test_agent_unordered_close_following(show=False):
     expected = {
         (1, 0): "red",
         (1, 1): "red",
@@ -191,17 +209,25 @@ def test_agent_following():
         (15, 3): "red",
         (15, 2): "red",
         (16, 2): "red",
+        (17, 1): "red",
+        (17, 2): "red",
+        (17, 3): "magenta",
+        (18, 3): "magenta",
+        (19, 2): "red"
     }
     omc = MotionCheck()
     create_test_agents2(omc)
     omc.find_conflicts()
-    nx.draw(omc.G,
-            with_labels=True, arrowsize=20,
-            pos={p: p for p in omc.G.nodes},
-            node_color=[n["color"] if "color" in n else "lightblue" for _, n in omc.G.nodes.data()]
-            )
     actual = {i: n['color'] for i, n in omc.G.nodes.data() if 'color' in n}
 
     assert set(actual.keys()) == set(expected.keys())
     for k in actual.keys():
         assert expected[k] == actual[k], (k, expected[k], actual[k])
+
+    if show:
+        nx.draw(omc.G,
+                with_labels=True, arrowsize=20,
+                pos={p: p for p in omc.G.nodes},
+                node_color=[n["color"] if "color" in n else "lightblue" for _, n in omc.G.nodes.data()]
+                )
+        plt.show()
