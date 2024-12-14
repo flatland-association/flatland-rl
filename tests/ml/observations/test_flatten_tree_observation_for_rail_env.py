@@ -9,7 +9,7 @@ def test_flatten_tree_obs_for_rail_env():
     env_creator(n_agents=7, obs_builder_object=obs_builder)
     obs = obs_builder.get()
     assert obs.dtype == float
-    assert obs.shape == (5 * 11,)
+    assert obs.shape == (5 * 12,)
 
     env_creator(obs_builder_object=obs_builder)
     obs = obs_builder.get_many(list(range(7)))
@@ -18,4 +18,4 @@ def test_flatten_tree_obs_for_rail_env():
     for k in obs.keys():
         assert type(k) == AgentHandle
     for o in obs.values():
-        assert o.shape == (5 * 11,)
+        assert o.shape == (5 * 12,)

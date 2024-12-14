@@ -4,7 +4,7 @@ import gymnasium as gym
 import numpy as np
 
 from flatland.core.env_observation_builder import AgentHandle
-from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.ml.observations.gym_observation_builder import GymObservationBuilder
 
 
@@ -40,18 +40,29 @@ def min_gt(seq, val):
 
 def norm_obs_clip(obs, clip_min=-1, clip_max=1, fixed_radius=0, normalize_to_range=False):
     """
-    This function returns the difference between min and max value of an observation
-    :param obs: Observation that should be normalized
-    :param clip_min: min value where observation will be clipped
-    :param clip_max: max value where observation will be clipped
-    :return: returnes normalized and clipped observatoin
+    This function returns the difference between min and max value of an observation.
+
+    Parameters
+    ----------
+    obs
+        Observation that should be normalized
+    clip_min
+        min value where observation will be clipped
+    clip_max
+        max value where observation will be clipped
+    fixed_radius
+    normalize_to_range
+
+    Returns
+    -------
+    normalized and clipped observation
     """
     if fixed_radius > 0:
         max_obs = fixed_radius
     else:
         max_obs = max(1, max_lt(obs, 1000)) + 1
 
-    min_obs = 0  # min(max_obs, min_gt(obs, 0))
+    min_obs = 0
     if normalize_to_range:
         min_obs = min_gt(obs, 0)
     if min_obs > max_obs:
@@ -62,10 +73,10 @@ def norm_obs_clip(obs, clip_min=-1, clip_max=1, fixed_radius=0, normalize_to_ran
     return np.clip((np.array(obs) - min_obs) / norm, clip_min, clip_max)
 
 
-def _split_node_into_feature_groups(node) -> (np.ndarray, np.ndarray, np.ndarray):
+def _split_node_into_feature_groups(node: Node) -> (np.ndarray, np.ndarray, np.ndarray):
     data = np.zeros(6)
     distance = np.zeros(1)
-    agent_data = np.zeros(4)
+    agent_data = np.zeros(5)
 
     data[0] = node.dist_own_target_encountered
     data[1] = node.dist_other_target_encountered
@@ -80,6 +91,7 @@ def _split_node_into_feature_groups(node) -> (np.ndarray, np.ndarray, np.ndarray
     agent_data[1] = node.num_agents_opposite_direction
     agent_data[2] = node.num_agents_malfunctioning
     agent_data[3] = node.speed_min_fractional
+    agent_data[4] = node.num_agents_ready_to_depart
 
     return data, distance, agent_data
 
@@ -90,7 +102,7 @@ def _split_subtree_into_feature_groups(node, current_tree_depth: int, max_tree_d
         remaining_depth = max_tree_depth - current_tree_depth
         # reference: https://stackoverflow.com/questions/515214/total-number-of-nodes-in-a-tree-data-structure
         num_remaining_nodes = int((4 ** (remaining_depth + 1) - 1) / (4 - 1))
-        return [-np.inf] * num_remaining_nodes * 6, [-np.inf] * num_remaining_nodes, [-np.inf] * num_remaining_nodes * 4
+        return [-np.inf] * num_remaining_nodes * 6, [-np.inf] * num_remaining_nodes, [-np.inf] * num_remaining_nodes * 5
 
     data, distance, agent_data = _split_node_into_feature_groups(node)
 
@@ -138,11 +150,13 @@ def normalize_observation(observation, tree_depth: int, observation_radius=0):
 
 
 # TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
-# TODO can we use tree.flatten instead?
 class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRailEnv):
     """
     Gym-ified and flattend tree observation.
     """
+
+    NUM_FEATURES = 12
+    NUM_BRANCHES = 4
 
     def __init__(self, observation_radius: int = 2, **kwargs):
         super().__init__(**kwargs)
@@ -154,8 +168,8 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
         return obs
 
     def get_observation_space(self, handle: int = 0) -> gym.Space:
-        # max_depth=1 -> 55, max_depth=2 -> 231, max_depth=3 -> 935, ...
-        k = 11
+        # max_depth=1 -> 60, max_depth=2 -> 240, max_depth=3 -> 972, ...
+        k = FlattenTreeObsForRailEnv.NUM_FEATURES
         for _ in range(self.max_depth):
-            k = k * 4 + 11
+            k = k * FlattenTreeObsForRailEnv.NUM_BRANCHES + FlattenTreeObsForRailEnv.NUM_FEATURES
         return gym.spaces.Box(-1, 2, (k,), dtype=np.float64)
