@@ -38,6 +38,7 @@ def min_gt(seq, val):
     return min
 
 
+# TODO documentataion
 def norm_obs_clip(obs, clip_min=-1, clip_max=1, fixed_radius=0, normalize_to_range=False):
     """
     This function returns the difference between min and max value of an observation.
@@ -120,6 +121,7 @@ def _split_subtree_into_feature_groups(node, current_tree_depth: int, max_tree_d
     return data, distance, agent_data
 
 
+# TODO document feature groups
 def split_tree_into_feature_groups(tree, max_tree_depth: int) -> (np.ndarray, np.ndarray, np.ndarray):
     """
     This function splits the tree into three difference arrays of values
@@ -136,6 +138,7 @@ def split_tree_into_feature_groups(tree, max_tree_depth: int) -> (np.ndarray, np
     return data, distance, agent_data
 
 
+# TODO make normalization optional? Re-factor, so we first have flattening and re-arranging in groups and then normlization afterwards.
 def normalize_observation(observation, tree_depth: int, observation_radius=0):
     """
     This function normalizes the observation used by the RL algorithm
@@ -152,7 +155,7 @@ def normalize_observation(observation, tree_depth: int, observation_radius=0):
 # TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
 class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRailEnv):
     """
-    Gym-ified and flattend tree observation.
+    Gym-ified and flattend normalized tree observation.
     """
 
     NUM_FEATURES = 12
