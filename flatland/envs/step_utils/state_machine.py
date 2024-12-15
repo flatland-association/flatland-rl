@@ -1,3 +1,4 @@
+from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 
 
