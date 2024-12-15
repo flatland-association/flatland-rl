@@ -42,7 +42,6 @@ dependencies = [
     "seaborn",
     "svgutils",
     "timeout_decorator",
-
 ]
 dynamic = ["version"]
 
@@ -72,10 +71,10 @@ dev = [
 ml = [
     "ray[default,rllib]",
     "wandb",
-    "torch"
-    #    "supersuit",
-    #    "pettingzoo",
-    #    "stable_baselines3",
+    "torch",
+    "supersuit",
+    "pettingzoo",
+    "stable_baselines3",
 ]
 
 [project.urls]
