@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [4.0.3] - 2024-04-23 
+### Fixed
 
-### Github Action Release failed 
+* non-deterministic test failues [pr [#103](https://github.com/flatland-association/flatland-rl/pull/103)]
+
+## [4.0.3] - 2024-04-23
+
+### Github Action Release failed
 Fixed.
 
 ## [4.0.2] - 2024-04-23
