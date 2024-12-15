@@ -84,15 +84,17 @@ def test_save_load():
     assert pickle.dumps(full_state) == pickle.dumps(full_state_loaded)
 
     # RailEnvPersister save and load restore does not fully restore state == - TODO should we fix?!
-    for k in env.__getstate__():
-        if k != 'distance_map':
-            assert env.__getstate__()[k] == env_loaded.__getstate__()[k], (k, env.__getstate__()[k] == env_loaded.__getstate__()[k])
+    env_state = env.__getstate__()
+    env_loaded_state = env_loaded.__getstate__()
+    for k in env_state:
+        if k != 'distance_map' and k != 'rail':
+            assert env_state[k] == env_loaded_state[k], (k, env_state[k] == env_loaded_state[k])
         else:
-            for kk in env.__getstate__()[k]:
+            for kk in env_state[k]:
                 if kk in ['agents_previous_computation', 'agents']:
-                    assert env.__getstate__()[k][kk] != env_loaded.__getstate__()[k][kk]
+                    assert env_state[k][kk] != env_loaded_state[k][kk], (k, kk)
                 else:
-                    assert env.__getstate__()[k][kk] == env_loaded.__getstate__()[k][kk]
+                    assert env_state[k][kk] == env_loaded_state[k][kk], (k, kk)
 
 
 # pickle dump and load (new implementation) restores state and full_state
@@ -110,8 +112,8 @@ def test_dump_load_pickle():
     assert expected == actual
 
     # pickle dump and load (new implementation) restores full_state as well
-    full_state = RailEnvPersister.get_full_state(env_loaded)
-    full_state_loaded = RailEnvPersister.get_full_state(env)
+    full_state = RailEnvPersister.get_full_state(env)
+    full_state_loaded = RailEnvPersister.get_full_state(env_loaded)
     assert full_state == full_state_loaded
     assert pickle.dumps(full_state) == pickle.dumps(full_state_loaded)
 

@@ -685,7 +685,8 @@ class GridTransitionMap(TransitionMap):
             "height": self.height,
             "transitions": self.transitions.__getstate__(),
             "random_generator": random_state_to_hashablestate(self.random_generator),
-            "grid": base64.binascii.b2a_base64(self.grid).decode("ascii"),
+            # TODO bad smell - is dtype safe?
+            "grid": base64.b64encode(self.grid.astype(np.uint16)).decode("utf-8"),
         }
 
     def __setstate__(self, state):
@@ -694,7 +695,8 @@ class GridTransitionMap(TransitionMap):
         self.transitions = Grid4Transitions(None)
         self.transitions.__setstate__(state["transitions"])
         self.random_generator = random_state_from_hashablestate(state["random_generator"])
-        self.grid = np.frombuffer(base64.binascii.a2b_base64(state["grid"].encode("ascii")))
+        # TODO bad smell - is dtype safe?
+        self.grid = np.frombuffer(base64.b64decode(state["grid"].encode("utf-8")), dtype=np.uint16).reshape((self.height, self.width))
 
 
 def mirror(dir):
