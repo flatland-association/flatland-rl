@@ -22,7 +22,6 @@ def ray_multi_agent_env_wrapper(wrap: RailEnv, render_mode: Optional[str] = None
     -------
 
     """
-    assert hasattr(wrap.obs_builder, "get_observation_space"), f"{type(wrap.obs_builder)} is not gym-compatible, missing get_observation_space"
     return RayMultiAgentWrapper(wrap, render_mode)
 
 

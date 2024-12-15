@@ -16,6 +16,7 @@ from flatland.utils.rendertools import RenderTool
 class RayMultiAgentWrapper(MultiAgentEnv):
 
     def __init__(self, wrap: RailEnv, render_mode: Optional[str] = None):
+        assert hasattr(wrap.obs_builder, "get_observation_space"), f"{type(wrap.obs_builder)} is not gym-compatible, missing get_observation_space"
         self.wrap: RailEnv = wrap
         self.render_mode = render_mode
         self.env_renderer = None
@@ -23,11 +24,13 @@ class RayMultiAgentWrapper(MultiAgentEnv):
             self.env_renderer = RenderTool(wrap)
 
         self.action_space: gym.spaces.Dict = spaces.Dict({
+            # TODO document why str is necessary - is it?
             str(i): gym.spaces.Discrete(5)
             for i in range(self.wrap.number_of_agents)
         })
 
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
+            # TODO bad design smell - wrapper for gym-compatible railenvs?
             str(handle): self.wrap.obs_builder.get_observation_space(handle)
             for handle in self.wrap.get_agent_handles()
         })
