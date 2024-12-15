@@ -11,6 +11,7 @@ import os
 import time
 
 import supersuit as ss
+from pettingzoo import ParallelEnv
 from stable_baselines3 import PPO
 from stable_baselines3.ppo import MlpPolicy
 
@@ -54,7 +55,7 @@ def train_butterfly_supersuit(
 
 def eval(env_fn, num_games: int = 100, render_mode: str | None = None, **env_kwargs):
     # Evaluate a trained agent vs a random agent
-    env = env_fn.env(render_mode=render_mode, **env_kwargs)
+    env: ParallelEnv = env_fn.env(render_mode=render_mode, **env_kwargs)
 
     print(
         f"\nStarting evaluation on {str(env.metadata['name'])} (num_games={num_games}, render_mode={render_mode})"
@@ -72,22 +73,19 @@ def eval(env_fn, num_games: int = 100, render_mode: str | None = None, **env_kwa
 
     rewards = {agent: 0 for agent in env.possible_agents}
 
-    # Note: We train using the Parallel API but evaluate using the AEC API
     # SB3 models are designed for single-agent settings, we get around this by using he same model for every agent
+    # TODO not sure this is correct - what about use of AECEnv in the waterworld example?
     for i in range(num_games):
-        env.reset(seed=i)
+        obs, _ = env.reset(seed=i)
 
-        for agent in env.agent_iter():
-            obs, reward, termination, truncation, info = env.last()
-
+        done = False
+        while not done:
+            act = {a: int(model.predict(obs[a], deterministic=True)[0]) for a in env.agents}
+            obs, rew, terminations, truncations, infos = env.step(act)
             for a in env.agents:
-                rewards[a] += env.rewards[a]
-            if termination or truncation:
-                break
-            else:
-                act = model.predict(obs, deterministic=True)[0]
+                rewards[a] += rew[a]
+            done = all(terminations.values())
 
-            env.step(act)
     env.close()
 
     avg_reward = sum(rewards.values()) / len(rewards.values())
