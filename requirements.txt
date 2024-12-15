@@ -10,13 +10,13 @@ async-timeout==5.0.1
     # via redis
 attr==0.3.2
     # via flatland-rl (pyproject.toml)
-boto3==1.35.76
+boto3==1.35.81
     # via flatland-rl (pyproject.toml)
-botocore==1.35.76
+botocore==1.35.81
     # via
     #   boto3
     #   s3transfer
-certifi==2024.8.30
+certifi==2024.12.14
     # via requests
 charset-normalizer==3.4.0
     # via requests
@@ -38,7 +38,7 @@ exceptiongroup==1.2.2
     # via ipython
 executing==2.1.0
     # via stack-data
-fonttools==4.55.2
+fonttools==4.55.3
     # via matplotlib
 graphviz==0.20.3
     # via flatland-rl (pyproject.toml)
@@ -71,7 +71,7 @@ kiwisolver==1.4.7
     # via matplotlib
 lxml==5.3.0
     # via svgutils
-matplotlib==3.9.3
+matplotlib==3.10.0
     # via
     #   flatland-rl (pyproject.toml)
     #   seaborn
