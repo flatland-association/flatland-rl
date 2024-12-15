@@ -2,6 +2,7 @@ import json
 import os
 import pickle
 
+import msgpack
 import numpy as np
 import pytest
 from benchmarker import Benchmarker
@@ -148,14 +149,25 @@ def test_bench_persistence(width, height, nAgents):
             print(readable_size(os.path.getsize("1234.pkl")))
             sizes["get_state+pickle"] = readable_size(os.path.getsize("1234.pkl"))
 
+        @bench("get_state+msgpack")
+        def _(_):
+            with open("1234.mpk", "wb") as f:
+                f.write(msgpack.packb(env.__getstate__()))
+
+            with open("1234.mpk", "rb") as f:
+                # TODO int keys
+                msgpack.unpackb(f.read(), use_list=False, raw=False, strict_map_key=False)
+            print(readable_size(os.path.getsize("1234.mpk")))
+            sizes["get_state+msgpack"] = readable_size(os.path.getsize("1234.mpk"))
+
         @bench("get_state+json")
         def _(_):
-            with open("1234.pkl", "w") as f:
+            with open("1234.json", "w") as f:
                 json.dump(env.__getstate__(), f, default=float)
-            with open("1234.pkl", "r") as f:
+            with open("1234.json", "r") as f:
                 RailEnv(0, 0).__setstate__(json.load(f))
-            print(readable_size(os.path.getsize("1234.pkl")))
-            sizes["get_state+json"] = readable_size(os.path.getsize("1234.pkl"))
+            print(readable_size(os.path.getsize("1234.json")))
+            sizes["get_state+json"] = readable_size(os.path.getsize("1234.json"))
 
         @bench("SerializationDeserializion")
         def _(_):
