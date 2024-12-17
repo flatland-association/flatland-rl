@@ -19,7 +19,6 @@ from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.fast_methods import fast_position_equal
-from flatland.envs.malfunction_generators import ParamMalfunctionGen
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils import action_preprocessing
@@ -836,6 +835,7 @@ class RailEnv(Environment):
 
         # MFP
         # TODO bad code smell - is this general?
+        from flatland.envs.malfunction_generators import ParamMalfunctionGen
         self.malfunction_generator = ParamMalfunctionGen(None)
         self.malfunction_generator.MFP = state["malfunction_generator.MFP"]
         self.malfunction_generator._rand_idx = state["malfunction_generator._rand_idx"]
