@@ -7,12 +7,12 @@ import numpy as np
 import pytest
 from benchmarker import Benchmarker
 
-from envs.rail_env import RailEnv
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
+from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.serialization_deserialization_snippet import SerializationDeserializion
 
