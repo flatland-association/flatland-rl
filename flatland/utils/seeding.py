@@ -1,8 +1,11 @@
 import hashlib
 import os
 import struct
+from typing import Tuple
 
 import numpy as np
+from numpy.random import RandomState
+
 
 def np_random(seed=None):
     if seed is not None and not (isinstance(seed, int) and 0 <= seed):
@@ -89,3 +92,17 @@ def _int_list_from_bigint(bigint):
         bigint, mod = divmod(bigint, 2 ** 32)
         ints.append(mod)
     return ints
+
+
+HashableRandomState = Tuple[str, np.ndarray[np.uint], int, int, float]
+
+
+def random_state_to_hashablestate(s: np.random.RandomState):
+    s = s.get_state()
+    return (tuple([s[0], tuple(s[1].tolist()), *s[2:]]))
+
+
+def random_state_from_hashablestate(state):
+    rs = RandomState()
+    rs.set_state(state)
+    return rs
