@@ -1,8 +1,6 @@
-import json
 import os
 import pickle
 
-import msgpack
 import numpy as np
 import pytest
 from benchmarker import Benchmarker
@@ -20,7 +18,7 @@ from flatland.envs.serialization_deserialization_snippet import SerializationDes
 class SerializationDeserializion:
 
     @staticmethod
-    def _serialize_rail_env(rail_env: RailEnv) -> list[any]:
+    def _serialize_rail_env(rail_env: RailEnv, save_distance_maps: bool) -> list[any]:
         """Supports the serialization of the core_env.
         It decouples the serialization of the backend from the core_env.
         :return: A list of essential parameters needed to be cloned.
@@ -37,7 +35,7 @@ class SerializationDeserializion:
             rail_env.dones,  # Arrived trains
             rail_env._max_episode_steps,  # Maximum step within the episode
             rail_env.active_agents,  # Not sure what is this used for..
-            rail_env.distance_map.distance_map,  # distance map for the agents
+            rail_env.distance_map.distance_map if save_distance_maps else None,  # distance map for the agents
             rail_env.distance_map.agents_previous_computation,  # distance map other field...
             rail_env.malfunction_generator.MFP,  # malfunction generator parameters
             #            _rail_env_rnd_state_for_malfunctions,  # rnd generator for malfunctions
@@ -121,12 +119,12 @@ def readable_size(size2, decimal_point=3):
     return f"{size2:.{decimal_point}f}{i}"
 
 
-@pytest.mark.parametrize("width,height,nAgents", [
+@pytest.mark.parametrize("width,height,nAgents,save_distance_maps", [(*t, s) for s in [True, False] for t in [
     (30, 30, 25),
     (100, 100, 50),
     (200, 200, 100),
-])
-def test_bench_persistence(width, height, nAgents):
+]])
+def test_bench_persistence(width, height, nAgents, save_distance_maps):
     env = create_env(width=width, height=height, nAgents=nAgents)
     e = create_env(width=width, height=height, nAgents=nAgents)
     cycle = 20
@@ -134,7 +132,7 @@ def test_bench_persistence(width, height, nAgents):
     with Benchmarker(cycle=cycle, extra=1) as bench:
         @bench("RailEnvPersister")
         def _(_):
-            RailEnvPersister.save(env, "1234.pkl", True)
+            RailEnvPersister.save(env, "1234.pkl", save_distance_maps=save_distance_maps)
             RailEnvPersister.load(e, "1234.pkl")
 
             print(readable_size(os.path.getsize("1234.pkl")))
@@ -142,37 +140,30 @@ def test_bench_persistence(width, height, nAgents):
 
         @bench("get_state+pickle")
         def _(_):
-            with open("1234.pkl", "wb") as f:
-                pickle.dump(env, f)
-            with open("1234.pkl", "rb") as f:
-                pickle.load(f)
+            RailEnvPersister.new_save(env, "1234.pkl", save_distance_maps=save_distance_maps)
+            RailEnvPersister.new_load(env, "1234.pkl")
             print(readable_size(os.path.getsize("1234.pkl")))
             sizes["get_state+pickle"] = readable_size(os.path.getsize("1234.pkl"))
 
         @bench("get_state+msgpack")
         def _(_):
-            with open("1234.mpk", "wb") as f:
-                f.write(msgpack.packb(env.__getstate__()))
-
-            with open("1234.mpk", "rb") as f:
-                # TODO int keys
-                msgpack.unpackb(f.read(), use_list=False, raw=False, strict_map_key=False)
+            RailEnvPersister.new_save(env, "1234.mpk", save_distance_maps=save_distance_maps)
+            RailEnvPersister.new_load(env, "1234.mpk")
             print(readable_size(os.path.getsize("1234.mpk")))
             sizes["get_state+msgpack"] = readable_size(os.path.getsize("1234.mpk"))
 
-        @bench("get_state+json")
-        def _(_):
-            with open("1234.json", "w") as f:
-                json.dump(env.__getstate__(), f, default=float)
-            with open("1234.json", "r") as f:
-                RailEnv(0, 0).__setstate__(json.load(f))
-            print(readable_size(os.path.getsize("1234.json")))
-            sizes["get_state+json"] = readable_size(os.path.getsize("1234.json"))
+        # TODO dev_obs_dict has int keys values
+        # @bench("get_state+json")
+        # def _(_):
+        #     RailEnvPersister.new_save(env,"1234.json", save_distance_maps)
+        #     RailEnvPersister.new_load(env,"1234.json")
+        #     print(readable_size(os.path.getsize("1234.json")))
+        #     sizes["get_state+json"] = readable_size(os.path.getsize("1234.json"))
 
         @bench("SerializationDeserializion")
         def _(_):
             with open("1234.pkl", "wb") as file_out:
-                data = pickle.dumps(SerializationDeserializion._serialize_rail_env(env))
+                data = pickle.dumps(SerializationDeserializion._serialize_rail_env(env, save_distance_maps=save_distance_maps))
                 # data = msgpack.packb(SerializationDeserializion(env)._serialize_rail_env())
                 file_out.write(data)
             with open("1234.pkl", "rb") as file_in:
@@ -181,6 +172,7 @@ def test_bench_persistence(width, height, nAgents):
                 SerializationDeserializion._deserialize_rail_env(data, RailEnv(width=rail.width, height=rail.height))
                 print(readable_size(os.path.getsize("./1234.pkl")))
                 sizes["SerializationDeserializion"] = readable_size(os.path.getsize("1234.pkl"))
-
+    print("=========================================")
+    print(f" width={width}, height={height}, nAgents={nAgents}, save_distance_maps={save_distance_maps}")
     print("=========================================")
     print(sizes)

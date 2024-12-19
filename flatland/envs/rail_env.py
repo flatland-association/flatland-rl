@@ -206,6 +206,8 @@ class RailEnv(Environment):
 
         self.motionCheck = ac.MotionCheck()
 
+        self.save_distance_maps = False
+
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
         random.seed(seed)
@@ -774,8 +776,11 @@ class RailEnv(Environment):
                 print("Could Not close window due to:", e)
             self.renderer = None
 
-    # TODO does this have any expected or unexpected side-effects?
-    def __getstate__(self):
+    def __getstate__(self, save_distance_maps=None):
+        if save_distance_maps is None:
+            # for pkl
+            save_distance_maps = self.save_distance_maps
+
         return {
             "width": self.width,
             "height": self.height,
@@ -795,7 +800,7 @@ class RailEnv(Environment):
 
             # distance map
             # explicitly use custom hashable __getstate__
-            "distance_map": self.distance_map.__getstate__(),
+            "distance_map": self.distance_map.__getstate__() if save_distance_maps else None,
 
             # MFP
             "malfunction_generator.MFP": self.malfunction_generator.MFP,
@@ -827,8 +832,9 @@ class RailEnv(Environment):
         self.active_agents = state["active_agents"]
 
         # distance map
-        self.distance_map = DistanceMap(None, None, None)
-        self.distance_map.__setstate__(state["distance_map"])
+        if state["distance_map"] is not None:
+            self.distance_map = DistanceMap(None, None, None)
+            self.distance_map.__setstate__(state["distance_map"])
 
         # MFP
         # TODO bad code smell - is this general?

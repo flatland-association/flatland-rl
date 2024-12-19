@@ -97,6 +97,8 @@ def test_save_load():
                     assert env_state[k][kk] == env_loaded_state[k][kk], (k, kk)
 
 
+# TODO use new_load and new_save instead
+# TODO test all 4 formats yield the same!
 # pickle dump and load (new implementation) restores state and full_state
 def test_dump_load_pickle():
     env = create_env()

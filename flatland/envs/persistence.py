@@ -1,9 +1,13 @@
+import json
 import pickle
+import warnings
 from typing import Optional, Tuple, Dict
 
 import msgpack
 import msgpack_numpy
 import numpy as np
+
+from flatland.envs.rail_env import RailEnv
 
 msgpack_numpy.patch()
 
@@ -22,6 +26,36 @@ from flatland.utils.seeding import random_state_to_hashablestate
 
 
 class RailEnvPersister(object):
+    @classmethod
+    def new_save(cls, env: rail_env.RailEnv, filename: str, save_distance_maps=False):
+        if filename.endswith(".pkl"):
+            # TODO bad code smell
+            env.save_distance_maps = save_distance_maps
+            with open(filename, "wb") as f:
+                pickle.dump(env, f)
+        elif filename.endswith(".mpk"):
+            with open(filename, "wb") as f:
+                f.write(msgpack.packb(env.__getstate__(save_distance_maps=save_distance_maps)))
+        elif filename.endswith(".json"):
+            with open(filename, "w") as f:
+                json.dump(env.__getstate__(save_distance_maps=save_distance_maps), f, default=float)
+        else:
+            warnings.warn(f"Unknown file type for {filename}")
+
+    @classmethod
+    def new_load(cls, env, filename, load_from_package=None) -> RailEnv:
+        if filename.endswith(".pkl"):
+            with open(filename, "rb") as f:
+                return pickle.load(f)
+        elif filename.endswith(".mpk"):
+            with open(filename, "rb") as f:
+                # TODO int keys
+                return msgpack.unpackb(f.read(), use_list=False, raw=False, strict_map_key=False)
+        elif filename.endswith(".json"):
+            with open(filename, "r") as f:
+                RailEnv(0, 0).__setstate__(json.load(f))
+        else:
+            warnings.warn(f"Unknown file type for {filename}")
 
     @classmethod
     def save(cls, env, filename, save_distance_maps=False):
@@ -142,7 +176,6 @@ class RailEnvPersister(object):
 
     @classmethod
     def load_env_dict(cls, filename, load_from_package=None):
-
         if load_from_package is not None:
             from importlib_resources import read_binary
             load_data = read_binary(load_from_package, filename)
