@@ -220,6 +220,8 @@ class RailEnvPersister(object):
             env.random_seed = env_dict["random_seed"]
             env.seed_history = env_dict["seed_history"]
             env.np_random.set_state(env_dict["np_random_state"])
+            env.dev_pred_dict = env_dict["dev_pred_dict"]
+            env.dev_obs_dict = env_dict["dev_obs_dict"]
 
     @classmethod
     def get_full_state(cls, env: "RailEnv"):
@@ -241,7 +243,9 @@ class RailEnvPersister(object):
             "max_episode_steps": env._max_episode_steps,
             "random_seed": env.random_seed,
             "seed_history": env.seed_history,
-            "np_random_state": random_state_to_hashablestate(env.np_random)
+            "np_random_state": random_state_to_hashablestate(env.np_random),
+            "dev_pred_dict": env.dev_pred_dict,
+            "dev_obs_dict": env.dev_obs_dict,
         }
         return msg_data_dict
 

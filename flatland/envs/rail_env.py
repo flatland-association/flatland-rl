@@ -787,15 +787,13 @@ class RailEnv(Environment):
             "num_resets": self.num_resets,
             # explicitly use custom hashable __getstate__
             "rail": self.rail.__getstate__(),
-            # TODO dev_pred_dict
-            # "dev_pred_dict ,": self.dev_pred_dict ,
-            # TODO dev_obs_dict
-            # "dev_obs_dict ,": self.dev_obs_dict ,
+            "dev_pred_dict": self.dev_pred_dict,
+            "dev_obs_dict": self.dev_obs_dict,
             "dones": self.dones,
             "_max_episode_steps": self._max_episode_steps,
             "active_agents": self.active_agents,
 
-            # # distance map
+            # distance map
             # explicitly use custom hashable __getstate__
             "distance_map": self.distance_map.__getstate__(),
 
@@ -822,9 +820,8 @@ class RailEnv(Environment):
         self.num_resets = state["num_resets"]
         self.rail = GridTransitionMap(0, 0)
         self.rail.__setstate__(state["rail"])
-        # TODO dev_pred_dict
-        # self.dev_pred_dict  = state["dev_pred_dict ,"]
-        # self.dev_obs_dict  = state["dev_obs_dict ,"]
+        self.dev_pred_dict = state["dev_pred_dict"]
+        self.dev_obs_dict = state["dev_obs_dict"]
         self.dones = state["dones"]
         self._max_episode_steps = state["_max_episode_steps"]
         self.active_agents = state["active_agents"]
