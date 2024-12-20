@@ -30,7 +30,6 @@ class RayMultiAgentWrapper(MultiAgentEnv):
         })
 
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
-            # TODO bad design smell - wrapper for gym-compatible railenvs?
             str(handle): self.wrap.obs_builder.get_observation_space(handle)
             for handle in self.wrap.get_agent_handles()
         })

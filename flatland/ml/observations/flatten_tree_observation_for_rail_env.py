@@ -138,18 +138,28 @@ def split_tree_into_feature_groups(tree, max_tree_depth: int) -> (np.ndarray, np
     return data, distance, agent_data
 
 
-# TODO make normalization optional? Re-factor, so we first have flattening and re-arranging in groups and then normlization afterwards.
+# TODO make normalization optional? Re-factor, so we first have flattening and re-arranging in groups and then normlization afterwards?
 def normalize_observation(observation, tree_depth: int, observation_radius=0):
     """
     This function normalizes the observation used by the RL algorithm
     """
     data, distance, agent_data = split_tree_into_feature_groups(observation, tree_depth)
+    assert len(data) == _get_len_data(tree_depth, 6), (len(data), _get_len_data(tree_depth, 6))
+    assert len(distance) == _get_len_data(tree_depth, 1)
+    assert len(agent_data) == _get_len_data(tree_depth, 5)
 
     data = norm_obs_clip(data, fixed_radius=observation_radius)
     distance = norm_obs_clip(distance, normalize_to_range=True)
     agent_data = np.clip(agent_data, -1, 1)
     normalized_obs = np.concatenate((np.concatenate((data, distance)), agent_data))
     return normalized_obs
+
+
+def _get_len_data(tree_depth: int, num_features):
+    k = num_features
+    for _ in range(tree_depth):
+        k = k * FlattenTreeObsForRailEnv.NUM_BRANCHES + num_features
+    return k
 
 
 # TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
@@ -161,18 +171,44 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
     NUM_FEATURES = 12
     NUM_BRANCHES = 4
 
+    NUM_DATA_FEATURE_GROUP = 6
+    NUM_DISTANCE_FEATURE_GROUP = 1
+    NUM_AGENT_DATA_FEATURE_GROUP = 5
+
+    def normalize_obs(self, obs):
+        len_data = _get_len_data(self.max_depth, self.NUM_DATA_FEATURE_GROUP)
+        len_distance = _get_len_data(self.max_depth, self.NUM_DISTANCE_FEATURE_GROUP)
+        len_agent_data = _get_len_data(self.max_depth, self.NUM_AGENT_DATA_FEATURE_GROUP)
+
+        data = obs[:len_data]
+        distance = obs[len_data:len_data + len_distance]
+        agent_data = obs[-len_agent_data:]
+
+        data = norm_obs_clip(data, fixed_radius=self.observation_radius)
+        distance = norm_obs_clip(distance, normalize_to_range=True)
+        agent_data = np.clip(agent_data, -1, 1)
+        return np.concatenate((np.concatenate((data, distance)), agent_data))
+
     def __init__(self, observation_radius: int = 2, **kwargs):
         super().__init__(**kwargs)
         self.observation_radius = observation_radius
 
     def get(self, handle: Optional[AgentHandle] = 0) -> np.ndarray:
-        obs = super(FlattenTreeObsForRailEnv, self).get(handle)
-        obs = normalize_observation(obs, tree_depth=self.max_depth, observation_radius=self.observation_radius)
-        return obs
+        observation = super(FlattenTreeObsForRailEnv, self).get(handle)
+        data, distance, agent_data = split_tree_into_feature_groups(observation, self.max_depth)
+        assert len(data) == _get_len_data(self.max_depth, self.NUM_DATA_FEATURE_GROUP), (
+        len(data), _get_len_data(self.max_depth, self.NUM_AGENT_DATA_FEATURE_GROUP))
+        assert len(distance) == _get_len_data(self.max_depth, self.NUM_DISTANCE_FEATURE_GROUP)
+        assert len(agent_data) == _get_len_data(self.max_depth, self.NUM_AGENT_DATA_FEATURE_GROUP)
+
+        normalized_obs = np.concatenate((np.concatenate((data, distance)), agent_data))
+        normalized_obs = self.normalize_obs(normalized_obs)
+        return normalized_obs
 
     def get_observation_space(self, handle: int = 0) -> gym.Space:
         # max_depth=1 -> 60, max_depth=2 -> 240, max_depth=3 -> 972, ...
         k = FlattenTreeObsForRailEnv.NUM_FEATURES
         for _ in range(self.max_depth):
             k = k * FlattenTreeObsForRailEnv.NUM_BRANCHES + FlattenTreeObsForRailEnv.NUM_FEATURES
+        # TODO bad code smell - explicit type
         return gym.spaces.Box(-1, 2, (k,), dtype=np.float64)
