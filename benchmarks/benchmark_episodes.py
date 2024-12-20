@@ -274,7 +274,7 @@ def test_(data_dir: str, ep_id: str):
 
     """
     # TODO absolute path
-    # TODO ci integration
+    # TODO ci integration/upload pkl to onedrive?
     _dir = "/Users/che/workspaces/flatland_episode_serialised/dev"
     assert 'dev' in _dir, "Wrong directory. Please provide a directory to the serialised data."
     _dir = _dir[:_dir.index('dev')]
