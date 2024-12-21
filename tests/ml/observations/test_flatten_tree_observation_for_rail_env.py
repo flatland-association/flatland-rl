@@ -3,11 +3,11 @@ import numpy as np
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.env_generation.env_creator import env_creator
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenTreeObsForRailEnv
+from ml.observations.flatten_tree_observation_for_rail_env import FlattenNormalizedTreeObsForRailEnv
 
 
 def test_flatten_tree_obs_for_rail_env():
-    obs_builder = FlattenTreeObsForRailEnv(max_depth=1, predictor=ShortestPathPredictorForRailEnv(max_depth=10))
+    obs_builder = FlattenNormalizedTreeObsForRailEnv(max_depth=1, predictor=ShortestPathPredictorForRailEnv(max_depth=10))
     env_creator(n_agents=7, obs_builder_object=obs_builder)
     obs = obs_builder.get()
     assert obs.dtype == float
