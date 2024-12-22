@@ -1,3 +1,7 @@
+"""
+Adpated from https://github.com/aiAdrian/flatland_solver_policy/blob/main/observation/flatland/flatten_tree_observation_for_rail_env/flatten_tree_observation_for_rail_env_utils.py
+Initially from https://github.com/instadeepai/Mava/blob/0.0.9/mava/wrappers/flatland.py
+"""
 from typing import Optional
 
 import gymnasium as gym
@@ -6,72 +10,6 @@ import numpy as np
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.ml.observations.gym_observation_builder import GymObservationBuilder
-
-
-# from https://github.com/aiAdrian/flatland_solver_policy/blob/main/observation/flatland/flatten_tree_observation_for_rail_env/flatten_tree_observation_for_rail_env_utils.py
-# initially from https://github.com/instadeepai/Mava/blob/0.0.9/mava/wrappers/flatland.py
-def max_lt(seq, val):
-    """
-    Return greatest item in seq for which item < val applies.
-    None is returned if seq was empty or all items in seq were >= val.
-    """
-    max = 0
-    idx = len(seq) - 1
-    while idx >= 0:
-        if seq[idx] < val and seq[idx] >= 0 and seq[idx] > max:
-            max = seq[idx]
-        idx -= 1
-    return max
-
-
-def min_gt(seq, val):
-    """
-    Return smallest item in seq for which item > val applies.
-    None is returned if seq was empty or all items in seq were >= val.
-    """
-    min = np.inf
-    idx = len(seq) - 1
-    while idx >= 0:
-        if seq[idx] >= val and seq[idx] < min:
-            min = seq[idx]
-        idx -= 1
-    return min
-
-
-# TODO documentataion, extract to library module or to normalized tree obs class?
-def norm_obs_clip(obs, clip_min=-1, clip_max=1, fixed_radius=0, normalize_to_range=False):
-    """
-    This function returns the difference between min and max value of an observation.
-
-    Parameters
-    ----------
-    obs
-        Observation that should be normalized
-    clip_min
-        min value where observation will be clipped
-    clip_max
-        max value where observation will be clipped
-    fixed_radius
-    normalize_to_range
-
-    Returns
-    -------
-    normalized and clipped observation
-    """
-    if fixed_radius > 0:
-        max_obs = fixed_radius
-    else:
-        max_obs = max(1, max_lt(obs, 1000)) + 1
-
-    min_obs = 0
-    if normalize_to_range:
-        min_obs = min_gt(obs, 0)
-    if min_obs > max_obs:
-        min_obs = max_obs
-    if max_obs == min_obs:
-        return np.clip(np.array(obs) / max_obs, clip_min, clip_max)
-    norm = np.abs(max_obs - min_obs)
-    return np.clip((np.array(obs) - min_obs) / norm, clip_min, clip_max)
 
 
 # TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
@@ -210,13 +148,73 @@ class FlattenNormalizedTreeObsForRailEnv(FlattenTreeObsForRailEnv):
         super().__init__(**kwargs)
         self.observation_radius = observation_radius
 
+    def _max_lt(self, seq, val):
+        """
+        Return greatest item in seq for which item < val applies.
+        None is returned if seq was empty or all items in seq were >= val.
+        """
+        max = 0
+        idx = len(seq) - 1
+        while idx >= 0:
+            if seq[idx] < val and seq[idx] >= 0 and seq[idx] > max:
+                max = seq[idx]
+            idx -= 1
+        return max
+
+    def _min_gt(self, seq, val):
+        """
+        Return smallest item in seq for which item > val applies.
+        None is returned if seq was empty or all items in seq were >= val.
+        """
+        min = np.inf
+        idx = len(seq) - 1
+        while idx >= 0:
+            if seq[idx] >= val and seq[idx] < min:
+                min = seq[idx]
+            idx -= 1
+        return min
+
+    def _norm_obs_clip(self, obs, clip_min=-1, clip_max=1, fixed_radius=0, normalize_to_range=False):
+        """
+        This function returns the difference between min and max value of an observation.
+
+        Parameters
+        ----------
+        obs
+            Observation that should be normalized
+        clip_min
+            min value where observation will be clipped
+        clip_max
+            max value where observation will be clipped
+        fixed_radius
+        normalize_to_range
+
+        Returns
+        -------
+        normalized and clipped observation
+        """
+        if fixed_radius > 0:
+            max_obs = fixed_radius
+        else:
+            max_obs = max(1, self._max_lt(obs, 1000)) + 1
+
+        min_obs = 0
+        if normalize_to_range:
+            min_obs = self._min_gt(obs, 0)
+        if min_obs > max_obs:
+            min_obs = max_obs
+        if max_obs == min_obs:
+            return np.clip(np.array(obs) / max_obs, clip_min, clip_max)
+        norm = np.abs(max_obs - min_obs)
+        return np.clip((np.array(obs) - min_obs) / norm, clip_min, clip_max)
+
     def normalize_obs(self, obs):
         data = obs[:self._len_data]
         distance = obs[self._len_data:self._len_data + self._len_distance]
         agent_data = obs[-self._len_agent_data:]
 
-        data = norm_obs_clip(data, fixed_radius=self.observation_radius)
-        distance = norm_obs_clip(distance, normalize_to_range=True)
+        data = self._norm_obs_clip(data, fixed_radius=self.observation_radius)
+        distance = self._norm_obs_clip(distance, normalize_to_range=True)
         agent_data = np.clip(agent_data, -1, 1)
         return np.concatenate((np.concatenate((data, distance)), agent_data))
 
