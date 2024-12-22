@@ -122,7 +122,6 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
 
         return data, distance, agent_data
 
-    # TODO we actually don't need the splitting here... only relevant for normalization.
     def _split_subtree_into_feature_groups(self, node, current_tree_depth: int, max_tree_depth: int) -> (
         np.ndarray, np.ndarray, np.ndarray):
         if node == -np.inf:
@@ -147,10 +146,37 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
 
         return data, distance, agent_data
 
-    # TODO document feature groups
     def split_tree_into_feature_groups(self, tree, max_tree_depth: int) -> (np.ndarray, np.ndarray, np.ndarray):
         """
-        This function splits the tree into three difference arrays of values
+        This function splits the tree into three difference arrays of values:
+
+        - `data` (5 features per node):
+            - `node.dist_own_target_encountered`
+            - `node.dist_other_target_encountered`
+            - `node.dist_other_agent_encountered`
+            - `node.dist_potential_conflict`
+            - `node.dist_unusable_switch`
+            - `node.dist_to_next_branch`
+
+        - `distance` (1 feature per node):
+            - `node.dist_min_to_target`
+
+        - `agent_data` (5 features per node):
+            - `node.num_agents_same_direction`
+            - `node.num_agents_opposite_direction`
+            - `node.num_agents_malfunctioning`
+            - `node.speed_min_fractional`
+            - `node.num_agents_ready_to_depart`
+
+        Sub-trees are traversed depth-first in pre-order (i.e. Node 'N' itself, 'L', 'F', 'R', 'B').
+        All features from subtrees are re-grouped by feature group, i.e. the flattened data has
+        `( data ('N', 'L', 'F', 'R', 'B', ...), distance ('N', 'L', 'F', 'R', 'B', ...), agent_data( 'N', 'L', 'F', 'R', 'B', ...))`
+        The total size `S[k]` of the flattened structure for `max_tree_depth=k` is recursively defined by:
+        - `S[0] = NUM_FEATURES`
+        - `S[k+1] = S[k] * NUM_BRANCHES + NUM_FEATURES`
+        for
+        - `NUM_FEATURES=12`
+        - `NUM_BRANCHES=4`
         """
         data, distance, agent_data = self._split_node_into_feature_groups(tree)
 
