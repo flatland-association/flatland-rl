@@ -67,7 +67,6 @@ class DummyObservationBuilderGym(GymObservationBuilderWrapper):
         return gym.spaces.utils.flatten(self.unflattened_observation_space, super().get(handle))
 
 
-# TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
 class GlobalObsForRailEnvGym(GymObservationBuilderWrapper):
     """
     Gym-ified multi-agent `GlobalObsForRailEnv`.

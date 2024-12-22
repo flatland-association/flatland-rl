@@ -12,7 +12,6 @@ from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.ml.observations.gym_observation_builder import GymObservationBuilder
 
 
-# TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
 class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRailEnv):
     """
     Gym-ified and flattened normalized tree observation.
@@ -110,12 +109,7 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
         Subtrees are traversed depth-first in pre-order (i.e. Node 'N' itself, 'L', 'F', 'R', 'B').
         All features from subtrees are re-grouped by feature group, i.e. the flattened data has
         `( data ('N', 'L', 'F', 'R', 'B', ...), distance ('N', 'L', 'F', 'R', 'B', ...), agent_data( 'N', 'L', 'F', 'R', 'B', ...))`
-        The total size `S[k]` of the flattened structure for `max_tree_depth=k` is recursively defined by:
-        - `S[0] = NUM_FEATURES`
-        - `S[k+1] = S[k] * NUM_BRANCHES + NUM_FEATURES`
-        for
-        - `NUM_FEATURES=12`
-        - `NUM_BRANCHES=4`
+        See `get_len_flattened()` for the length of the flattened structure.
         """
         data, distance, agent_data = self._split_node_into_feature_groups(tree)
 
@@ -136,12 +130,33 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
         return flattened_ops
 
     def get_observation_space(self, handle: int = 0) -> gym.Space:
-        # max_depth=1 -> 60, max_depth=2 -> 240, max_depth=3 -> 972, ...
+        k = self.get_len_flattened()
+        return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(k,), dtype=np.float64)
+
+    def get_len_flattened(self):
+        """
+        The total size `S[k]` of the flattened structure for `max_tree_depth=k` is recursively defined by:
+        - `S[0] = NUM_FEATURES`
+        - `S[k+1] = S[k] * NUM_BRANCHES + NUM_FEATURES`
+        for
+        - `NUM_FEATURES=12`
+        - `NUM_BRANCHES=4`
+
+        I.e.
+        - max_depth=1 -> 60
+        - max_depth=2 -> 252
+        - max_depth=3 -> 1020
+        - ...
+
+        Returns
+        -------
+        Length of the flattened tree obs.
+        """
+
         k = FlattenTreeObsForRailEnv.NUM_FEATURES
         for _ in range(self.max_depth):
             k = k * FlattenTreeObsForRailEnv.NUM_BRANCHES + FlattenTreeObsForRailEnv.NUM_FEATURES
-        # TODO bad code smell - explicit type
-        return gym.spaces.Box(-1, 2, (k,), dtype=np.float32)
+        return k
 
 
 class FlattenNormalizedTreeObsForRailEnv(FlattenTreeObsForRailEnv):
@@ -210,6 +225,10 @@ class FlattenNormalizedTreeObsForRailEnv(FlattenTreeObsForRailEnv):
             return np.clip(np.array(obs) / max_obs, clip_min, clip_max)
         norm = np.abs(max_obs - min_obs)
         return np.clip((np.array(obs) - min_obs) / norm, clip_min, clip_max)
+
+    def get_observation_space(self, handle: int = 0) -> gym.Space:
+        k = self.get_len_flattened()
+        return gym.spaces.Box(low=0, high=self.observation_radius, shape=(k,), dtype=np.float64)
 
     def normalize_obs(self, obs):
         data = obs[:self._len_data]
