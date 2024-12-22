@@ -122,6 +122,7 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
 
         return data, distance, agent_data
 
+    # TODO we actually don't need the splitting here... only relevant for normalization.
     def _split_subtree_into_feature_groups(self, node, current_tree_depth: int, max_tree_depth: int) -> (
         np.ndarray, np.ndarray, np.ndarray):
         if node == -np.inf:
