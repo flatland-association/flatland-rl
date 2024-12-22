@@ -97,6 +97,8 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
     env_name = "flatland_env"
     register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
     base_config = (
+        # N.B. the warning `passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64`
+        #   comes from ray.tune.registry._register_all() -->  import ray.rllib.algorithms.dreamerv3 as dreamerv3!
         get_trainable_cls(args.algo)
         .get_default_config()
         .environment("flatland_env")

@@ -327,7 +327,7 @@ def test_reward_function_waiting(rendering=False):
         pytest.param(obs_builder, expected_shape, id=f"{obid}")
         for obs_builder, obid, expected_shape in
         [
-            (TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)), "FlattenTreeObsForRailEnv_max_depth_3_50",
+            (TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)), "TreeObsForRailEnv_max_depth_3_50",
              lambda v: type(v) == Node),
             (DummyObservationBuilder(), "DummyObservationBuilderGym", lambda v: type(v) == bool),
             (GlobalObsForRailEnv(), "GlobalObsForRailEnvGym",

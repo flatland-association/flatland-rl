@@ -12,7 +12,7 @@ from flatland.ml.ray.examples.flatland_inference_with_random_policy import rollo
         )
         for obid in
         [
-            "FlattenTreeObsForRailEnv_max_depth_3_50",
+            "FlattenNormalizedTreeObsForRailEnv_max_depth_3_50",
             "DummyObservationBuilderGym",
             "GlobalObsForRailEnvGym",
         ]

@@ -4,7 +4,7 @@ from flatland.core.env_observation_builder import AgentHandle
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.env_generation.env_creator import env_creator
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenTreeObsForRailEnv
+from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenNormalizedTreeObsForRailEnv
 from flatland.ml.observations.gym_observation_builder import DummyObservationBuilderGym, GlobalObsForRailEnvGym
 from flatland.ml.ray.wrappers import ray_env_creator
 
@@ -48,7 +48,8 @@ def test_global_obs_for_rail_env():
         pytest.param(obs_builder, expected_shape, id=f"{obid}")
         for obs_builder, obid, expected_shape in
         [
-            (FlattenTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)), "FlattenTreeObsForRailEnv_max_depth_3_50", (935,)),
+            (FlattenNormalizedTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)),
+             "FlattenNormalizedTreeObsForRailEnv_max_depth_3_50", (1020,)),
             (DummyObservationBuilderGym(), "DummyObservationBuilderGym", (1,)),
             (GlobalObsForRailEnvGym(), "GlobalObsForRailEnvGym", (20700,)),
         ]
