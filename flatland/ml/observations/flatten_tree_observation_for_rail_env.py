@@ -1,5 +1,5 @@
 """
-Adpated from https://github.com/aiAdrian/flatland_solver_policy/blob/main/observation/flatland/flatten_tree_observation_for_rail_env/flatten_tree_observation_for_rail_env_utils.py
+Adapted from https://github.com/aiAdrian/flatland_solver_policy/blob/main/observation/flatland/flatten_tree_observation_for_rail_env/flatten_tree_observation_for_rail_env_utils.py
 Initially from https://github.com/instadeepai/Mava/blob/0.0.9/mava/wrappers/flatland.py
 """
 from typing import Optional
@@ -15,7 +15,7 @@ from flatland.ml.observations.gym_observation_builder import GymObservationBuild
 # TODO passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64
 class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRailEnv):
     """
-    Gym-ified and flattend normalized tree observation.
+    Gym-ified and flattened normalized tree observation.
     """
 
     NUM_FEATURES = 12
@@ -38,7 +38,8 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
             k = k * FlattenTreeObsForRailEnv.NUM_BRANCHES + num_features
         return k
 
-    def _split_node_into_feature_groups(self, node: Node) -> (np.ndarray, np.ndarray, np.ndarray):
+    @staticmethod
+    def _split_node_into_feature_groups(node: Node) -> (np.ndarray, np.ndarray, np.ndarray):
         data = np.zeros(6)
         distance = np.zeros(1)
         agent_data = np.zeros(5)
@@ -106,7 +107,7 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
             - `node.speed_min_fractional`
             - `node.num_agents_ready_to_depart`
 
-        Sub-trees are traversed depth-first in pre-order (i.e. Node 'N' itself, 'L', 'F', 'R', 'B').
+        Subtrees are traversed depth-first in pre-order (i.e. Node 'N' itself, 'L', 'F', 'R', 'B').
         All features from subtrees are re-grouped by feature group, i.e. the flattened data has
         `( data ('N', 'L', 'F', 'R', 'B', ...), distance ('N', 'L', 'F', 'R', 'B', ...), agent_data( 'N', 'L', 'F', 'R', 'B', ...))`
         The total size `S[k]` of the flattened structure for `max_tree_depth=k` is recursively defined by:
@@ -140,7 +141,7 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
         for _ in range(self.max_depth):
             k = k * FlattenTreeObsForRailEnv.NUM_BRANCHES + FlattenTreeObsForRailEnv.NUM_FEATURES
         # TODO bad code smell - explicit type
-        return gym.spaces.Box(-1, 2, (k,), dtype=np.float64)
+        return gym.spaces.Box(-1, 2, (k,), dtype=np.float32)
 
 
 class FlattenNormalizedTreeObsForRailEnv(FlattenTreeObsForRailEnv):
@@ -148,31 +149,33 @@ class FlattenNormalizedTreeObsForRailEnv(FlattenTreeObsForRailEnv):
         super().__init__(**kwargs)
         self.observation_radius = observation_radius
 
-    def _max_lt(self, seq, val):
+    @staticmethod
+    def _max_lt(seq, val):
         """
         Return greatest item in seq for which item < val applies.
         None is returned if seq was empty or all items in seq were >= val.
         """
-        max = 0
+        _max = 0
         idx = len(seq) - 1
         while idx >= 0:
-            if seq[idx] < val and seq[idx] >= 0 and seq[idx] > max:
-                max = seq[idx]
+            if seq[idx] < val and seq[idx] >= 0 and seq[idx] > _max:
+                _max = seq[idx]
             idx -= 1
-        return max
+        return _max
 
-    def _min_gt(self, seq, val):
+    @staticmethod
+    def _min_gt(seq, val):
         """
         Return smallest item in seq for which item > val applies.
         None is returned if seq was empty or all items in seq were >= val.
         """
-        min = np.inf
+        _min = np.inf
         idx = len(seq) - 1
         while idx >= 0:
-            if seq[idx] >= val and seq[idx] < min:
-                min = seq[idx]
+            if seq[idx] >= val and seq[idx] < _min:
+                _min = seq[idx]
             idx -= 1
-        return min
+        return _min
 
     def _norm_obs_clip(self, obs, clip_min=-1, clip_max=1, fixed_radius=0, normalize_to_range=False):
         """
