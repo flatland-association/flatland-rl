@@ -43,9 +43,9 @@ benchmarker==4.0.1
     # via flatland-rl (pyproject.toml)
 bleach==6.2.0
     # via nbconvert
-boto3==1.35.76
+boto3==1.35.81
     # via flatland-rl (pyproject.toml)
-botocore==1.35.76
+botocore==1.35.81
     # via
     #   boto3
     #   s3transfer
@@ -53,7 +53,7 @@ build==1.2.2.post1
     # via pip-tools
 cachetools==5.5.0
     # via tox
-certifi==2024.8.30
+certifi==2024.12.14
     # via
     #   httpcore
     #   httpx
@@ -84,7 +84,7 @@ cycler==0.12.1
     # via matplotlib
 dataclasses==0.6
     # via flatland-rl (pyproject.toml)
-debugpy==1.8.9
+debugpy==1.8.11
     # via ipykernel
 decorator==5.1.1
     # via ipython
@@ -121,7 +121,7 @@ flake8==7.1.1
     #   flatland-rl (pyproject.toml)
 flake8-eradicate==1.5.0
     # via flatland-rl (pyproject.toml)
-fonttools==4.55.2
+fonttools==4.55.3
     # via matplotlib
 fqdn==1.5.1
     # via jsonschema
@@ -253,7 +253,7 @@ jupyter-server==2.14.2
     #   notebook-shim
 jupyter-server-terminals==0.5.3
     # via jupyter-server
-jupyterlab==4.3.2
+jupyterlab==4.3.3
     # via
     #   jupyter
     #   notebook
@@ -282,7 +282,7 @@ markupsafe==3.0.2
     # via
     #   jinja2
     #   nbconvert
-matplotlib==3.9.3
+matplotlib==3.10.0
     # via
     #   flatland-rl (pyproject.toml)
     #   seaborn
@@ -451,7 +451,7 @@ python-dateutil==2.9.0.post0
     #   pandas
 python-gitlab==5.1.0
     # via crowdai-api
-python-json-logger==2.0.7
+python-json-logger==3.2.0
     # via jupyter-events
 pytz==2024.2
     # via pandas
