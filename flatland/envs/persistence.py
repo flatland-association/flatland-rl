@@ -7,8 +7,6 @@ import msgpack
 import msgpack_numpy
 import numpy as np
 
-from flatland.envs.rail_env import RailEnv
-
 msgpack_numpy.patch()
 
 from flatland.envs import rail_env
@@ -27,7 +25,7 @@ from flatland.utils.seeding import random_state_to_hashablestate
 
 class RailEnvPersister(object):
     @classmethod
-    def new_save(cls, env: rail_env.RailEnv, filename: str, save_distance_maps=False):
+    def new_save(cls, env: "RailEnv", filename: str, save_distance_maps=False):
         if filename.endswith(".pkl"):
             # TODO bad code smell
             env.save_distance_maps = save_distance_maps
@@ -43,7 +41,7 @@ class RailEnvPersister(object):
             warnings.warn(f"Unknown file type for {filename}")
 
     @classmethod
-    def new_load(cls, env, filename, load_from_package=None) -> RailEnv:
+    def new_load(cls, env, filename, load_from_package=None) -> "RailEnv":
         if filename.endswith(".pkl"):
             with open(filename, "rb") as f:
                 return pickle.load(f)
@@ -53,7 +51,7 @@ class RailEnvPersister(object):
                 return msgpack.unpackb(f.read(), use_list=False, raw=False, strict_map_key=False)
         elif filename.endswith(".json"):
             with open(filename, "r") as f:
-                RailEnv(0, 0).__setstate__(json.load(f))
+                rail_env.RailEnv(0, 0).__setstate__(json.load(f))
         else:
             warnings.warn(f"Unknown file type for {filename}")
 

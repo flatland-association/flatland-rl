@@ -84,8 +84,8 @@ def test_save_load():
     assert pickle.dumps(full_state) == pickle.dumps(full_state_loaded)
 
     # RailEnvPersister save and load restore does not fully restore state == - TODO should we fix?!
-    env_state = env.__getstate__()
-    env_loaded_state = env_loaded.__getstate__()
+    env_state = env.__getstate__(True)
+    env_loaded_state = env_loaded.__getstate__(True)
     for k in env_state:
         if k != 'distance_map' and k != 'rail':
             assert env_state[k] == env_loaded_state[k], (k, env_state[k] == env_loaded_state[k])
@@ -102,6 +102,8 @@ def test_save_load():
 # pickle dump and load (new implementation) restores state and full_state
 def test_dump_load_pickle():
     env = create_env()
+    # TODO bad code smell
+    env.save_distance_maps = True
     with open("test_save_load.pkl", "wb") as f:
         pickle.dump(env, f)
     print(readable_size(os.path.getsize("test_save_load.pkl")))
@@ -109,8 +111,8 @@ def test_dump_load_pickle():
         env_loaded = pickle.load(f)
 
     # pickle dump and load (new implementation) restores state ==
-    expected = env.__getstate__()
-    actual = env_loaded.__getstate__()
+    expected = env.__getstate__(True)
+    actual = env_loaded.__getstate__(True)
     assert expected == actual
 
     # pickle dump and load (new implementation) restores full_state as well
