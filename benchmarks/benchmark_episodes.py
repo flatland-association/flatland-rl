@@ -176,6 +176,7 @@ def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) 
     assert len(pos) == 1
     return ast.literal_eval(pos.iloc[0])
 
+
 def action_lookup(actions_df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) -> RailEnvActions:
     """Method used to retrieve the stored action (if available).
 
@@ -304,7 +305,7 @@ def movement_lookup(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
     ("30x30 map/50_trains", "ec716f73-b22a-4fae-833a-7f58eed3968d"),
     ("30x30 map/50_trains", "f70202cc-2dec-4080-bfef-7884ab47b1b4"),
 ])
-def test_(data_sub_dir, ep_id: str):
+def test_episode(data_sub_dir, ep_id: str):
     """
     The data is structured as follows:
         -30x30 map
@@ -322,15 +323,10 @@ def test_(data_sub_dir, ep_id: str):
     ----------
     data_sub_dir sub directory within BENCHMARK_EPISODES_FOLDER
     ep_id the episode ID
-
-    Returns
-    -------
-
     """
 
     _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
-
-    assert os.path.exists(_dir), DOWNLOAD_INSTRUCTIONS
+    assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = os.path.join(_dir, data_sub_dir)
 
     positions = read_train_positions(data_dir)
