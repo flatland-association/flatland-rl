@@ -8,10 +8,10 @@ import pandas as pd
 import pytest
 from pandas import DataFrame
 
-from envs.rail_env_action import RailEnvActions
 from flatland.envs.agent_utils import load_env_agent
 from flatland.envs.malfunction_generators import FileMalfunctionGen
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 
 # TODO add code to generate episodes, add intermediate positions and rewards as well? Maybe add intermediate pkls without distance_map as well?
 DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
@@ -171,7 +171,7 @@ def movement_lookup(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
 
 
 # TODO episodes with different speeds and malfunctions
-@pytest.mark.parametrize("data_dir,ep_id", [
+@pytest.mark.parametrize("data_sub_dir,ep_id", [
     ("30x30 map/15_trains", "a61843e8-b550-407b-9348-5029686cc967"),
     ("30x30 map/15_trains", "9845da2f-2366-44f6-8b25-beca522495b4"),
     ("30x30 map/15_trains", "e5a7061c-31ac-45f1-9f8a-06d58db26945"),
@@ -250,7 +250,7 @@ def movement_lookup(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
     ("30x30 map/20_trains", "cc2f35ca-d82b-437e-809f-ed6222b0a097"),
     ("30x30 map/20_trains", "7953da6b-3521-4cc1-a2e6-0ced898c86cc"),
 ])
-def test_(data_dir: str, ep_id: str):
+def test_(data_sub_dir, ep_id: str):
     """
     The data is structured as follows:
         -30x30 map
@@ -266,19 +266,17 @@ def test_(data_dir: str, ep_id: str):
 
     Parameters
     ----------
-    data_dir
-    ep_id
+    data_sub_dir sub directory within BENCHMARK_EPISODES_FOLDER
+    ep_id the episode ID
 
     Returns
     -------
 
     """
-    # TODO absolute path
-    # TODO ci integration/upload pkl to onedrive?
-    _dir = "/Users/che/workspaces/flatland_episode_serialised/dev"
-    assert 'dev' in _dir, "Wrong directory. Please provide a directory to the serialised data."
-    _dir = _dir[:_dir.index('dev')]
-    data_dir = os.path.join(_dir, data_dir)
+    _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
+    assert os.path.exists(
+        _dir), "Download from https://flatlandassociation-my.sharepoint.com/:u:/g/personal/christian_eichenberger_flatland-association_org/Ecyre4gqGz9DjAQmo1Shn3UBIEqN7t3sFhTM8qi94uJEJQ?e=gfIyf0 and set BENCHMARK_EPISODES_FOLDER env var."
+    data_dir = os.path.join(_dir, data_sub_dir)
 
     actions = read_actions(data_dir)
     movements = read_train_movements(data_dir)
