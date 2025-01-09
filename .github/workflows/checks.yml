@@ -92,7 +92,6 @@ jobs:
                     wget "https://flatlandassociation-my.sharepoint.com/:u:/g/personal/christian_eichenberger_flatland-association_org/Ecyre4gqGz9DjAQmo1Shn3UBIEqN7t3sFhTM8qi94uJEJQ?e=gfIyf0&download=1" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-                    find .
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
