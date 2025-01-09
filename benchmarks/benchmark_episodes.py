@@ -24,6 +24,7 @@ DOWNLOAD_INSTRUCTIONS = "Download from https://flatlandassociation-my.sharepoint
 
 COLLECT = False
 
+
 # TODO merge with send_infrastructure_data_change_signal_to_reset_lru_cache?
 # https://stackoverflow.com/questions/40273767/clear-all-lru-cache-in-python
 def clear_all_lru_caches():
@@ -173,7 +174,7 @@ def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) 
         The action to step the env.
     """
     pos = df.loc[(df['env_time'] == env_time) & (df['agent_id'] == agent_id) & (df['episode_id'] == ep_id)]['position']
-    assert len(pos) == 1
+    assert len(pos) == 1, f"Found multiple positions for {ep_id} {env_time} {agent_id}"
     return ast.literal_eval(pos.iloc[0])
 
 
@@ -346,11 +347,13 @@ def test_episode(data_sub_dir, ep_id: str):
 
         for agent_id in range(n_agents):
             agent = env.agents[agent_id]
-            pos = (agent.position, agent.direction)
+            actual_position = (agent.position, agent.direction)
             if COLLECT:
-                position_collect(positions, ep_id=ep_id, env_time=i, agent_id=agent_id, position=str(pos))
+                position_collect(positions, ep_id=ep_id, env_time=i, agent_id=agent_id, position=str(actual_position))
             else:
-                assert pos == position_lookup(positions, ep_id=ep_id, env_time=i, agent_id=agent_id)
+                expected_position = position_lookup(positions, ep_id=ep_id, env_time=i, agent_id=agent_id)
+                print((data_sub_dir, ep_id, agent_id, i, actual_position, expected_position))
+                assert actual_position == expected_position, (data_sub_dir, ep_id, agent_id, i, actual_position, expected_position)
 
     data = movement_lookup(movements, ep_id)
     expected_success_rate = data['success_rate']
