@@ -53,6 +53,7 @@ def test_lru_load():
     for r in range(30):
         for c in range(30):
             transitions_43[(r, c)] = env_43.rail.get_full_transitions(r, c)
+    # reset clears the cache, so the transitions are indeed different
     assert set(transitions_42.items()) != set(transitions_43.items())
 
     # load env_42 from file
@@ -63,7 +64,7 @@ def test_lru_load():
     for r in range(30):
         for c in range(30):
             transitions_42_tri[(r, c)] = env_42_tri.rail.get_full_transitions(r, c)
-    # load() does not invalidate cache (so env_43 transitions are still in the cache) - to be fixed
+    # load() does not invalidate cache (so env_43 transitions are still in the cache) - TODO to be fixed
     assert set(transitions_42.items()) != set(transitions_42_tri.items())
 
 
@@ -116,10 +117,11 @@ def test_lru_load_new():
     for r in range(30):
         for c in range(30):
             transitions_43[(r, c)] = env_43.rail.get_full_transitions(r, c)
+    # reset clears the cache, so the transitions are indeed different
     assert set(transitions_42.items()) != set(transitions_43.items())
 
     # load env_42 from file
-    # N.B.line `env.rail = GridTransitionMap(1, 1)` in `load_new` has side effect of clearing infrastructure cache, but not `load()`
+    # N.B.line `env.rail = GridTransitionMap(1, 1)` in `load_new` has side effect of clearing infrastructure cache, but not `load()` TODO fix load()
     env_42_tri, _ = RailEnvPersister.load_new("env_42.pkl")
 
     transitions_42_tri = {}
