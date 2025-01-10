@@ -200,7 +200,7 @@ class RailEnvPersister(object):
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
 
         # TODO merge with https://github.com/flatland-association/flatland-rl/pull/97/files
-        max_episode_steps = env_dict.get('distance_map', None)
+        max_episode_steps = env_dict.get('max_episode_steps', None)
         if max_episode_steps is not None:
             env._max_episode_steps = max_episode_steps
 
