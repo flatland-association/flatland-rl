@@ -1,5 +1,3 @@
-
-
 import pickle
 
 import msgpack
@@ -41,8 +39,6 @@ class RailEnvPersister(object):
         # a0 = env_dict["agents"][0]
         # print("agent type:", type(a0))
 
-
-
         if save_distance_maps is True:
             oDistMap = env.distance_map.get()
             if oDistMap is not None:
@@ -61,19 +57,17 @@ class RailEnvPersister(object):
 
             elif filename.endswith("pkl"):
                 data = pickle.dumps(env_dict)
-                #pickle.dump(env_dict, file_out)
+                # pickle.dump(env_dict, file_out)
 
             file_out.write(data)
 
         # We have an unresovled problem with msgpack loading the list of Agents
         # with open(filename, "rb") as file_in:
         # if filename.endswith("mpk"):
-            # bytes_in = file_in.read()
-            # dIn = msgpack.unpackb(data, encoding="utf-8")
-            # print(f"msgpack check - {dIn.keys()}")
-            # print(f"msgpack check - {dIn['agents'][0]}")
-
-
+        # bytes_in = file_in.read()
+        # dIn = msgpack.unpackb(data, encoding="utf-8")
+        # print(f"msgpack check - {dIn.keys()}")
+        # print(f"msgpack check - {dIn['agents'][0]}")
 
     @classmethod
     def save_episode(cls, env, filename):
@@ -113,19 +107,19 @@ class RailEnvPersister(object):
         width = len(llGrid[0])
 
         # TODO: inefficient - each one of these generators loads the complete env file.
-        env = rail_env.RailEnv(#width=1, height=1,
-                width=width, height=height,
-                rail_generator=rail_gen.rail_from_file(filename,
-                    load_from_package=load_from_package),
-                    line_generator=line_gen.line_from_file(filename,
-                    load_from_package=load_from_package),
-                #malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
-                #    load_from_package=load_from_package),
-                malfunction_generator=mal_gen.FileMalfunctionGen(env_dict),
-                obs_builder_object=DummyObservationBuilder(),
-                record_steps=True)
+        env = rail_env.RailEnv(  # width=1, height=1,
+            width=width, height=height,
+            rail_generator=rail_gen.rail_from_file(filename,
+                                                   load_from_package=load_from_package),
+            line_generator=line_gen.line_from_file(filename,
+                                                   load_from_package=load_from_package),
+            # malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
+            #    load_from_package=load_from_package),
+            malfunction_generator=mal_gen.FileMalfunctionGen(env_dict),
+            obs_builder_object=DummyObservationBuilder(),
+            record_steps=True)
 
-        env.rail = GridTransitionMap(1,1) # dummy
+        env.rail = GridTransitionMap(1, 1)  # dummy
 
         # TODO bad code smell - agent_position initialized in reset() only.
         env.agent_positions = np.zeros((env.height, env.width), dtype=int) - 1
@@ -171,15 +165,15 @@ class RailEnvPersister(object):
         """
         Load environment (with distance map?) from a binary
         """
-        #from importlib_resources import read_binary
-        #load_data = read_binary(package, resource)
+        # from importlib_resources import read_binary
+        # load_data = read_binary(package, resource)
 
-        #if resource.endswith("pkl"):
+        # if resource.endswith("pkl"):
         #    env_dict = pickle.loads(load_data)
-        #elif resource.endswith("mpk"):
+        # elif resource.endswith("mpk"):
         #    env_dict = msgpack.unpackb(load_data, encoding="utf-8")
 
-        #cls.set_full_state(env, env_dict)
+        # cls.set_full_state(env, env_dict)
 
         return cls.load_new(resource, load_from_package=package)
 
@@ -205,6 +199,13 @@ class RailEnvPersister(object):
         env.rail.width = env.width
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
 
+        # TODO merge with https://github.com/flatland-association/flatland-rl/pull/97/files
+        env._max_episode_steps = env_dict['max_episode_steps']
+
+        env.distance_map.distance_map = env_dict.get('distance_map', None)
+        env.distance_map.reset(env.agents, env.rail)
+        env.distance_map._compute(env.agents, env.rail)
+
     @classmethod
     def get_full_state(cls, env):
         """
@@ -215,7 +216,7 @@ class RailEnvPersister(object):
 
         # msgpack cannot persist EnvAgent so use the Agent namedtuple.
         agent_data = [agent.to_agent() for agent in env.agents]
-        #print("get_full_state - agent_data:", agent_data)
+        # print("get_full_state - agent_data:", agent_data)
         malfunction_data: mal_gen.MalfunctionProcessData = env.malfunction_process_data
 
         msg_data_dict = {
@@ -223,12 +224,11 @@ class RailEnvPersister(object):
             "agents": agent_data,
             "malfunction": malfunction_data,
             "max_episode_steps": env._max_episode_steps,
-            }
+        }
         return msg_data_dict
 
-
-################################################################################################
-# deprecated methods moved from RailEnv.  Most likely broken.
+    ################################################################################################
+    # deprecated methods moved from RailEnv.  Most likely broken.
 
     def deprecated_get_full_state_msg(self) -> msgpack.Packer:
         """
@@ -254,12 +254,12 @@ class RailEnvPersister(object):
         agent_data = [agent.to_agent() for agent in self.agents]
 
         # I think these calls do nothing - they create packed data and it is discarded
-        #msgpack.packb(grid_data, use_bin_type=True)
-        #msgpack.packb(agent_data, use_bin_type=True)
+        # msgpack.packb(grid_data, use_bin_type=True)
+        # msgpack.packb(agent_data, use_bin_type=True)
 
         distance_map_data = self.distance_map.get()
         malfunction_data: mal_gen.MalfunctionProcessData = self.malfunction_process_data
-        #msgpack.packb(distance_map_data, use_bin_type=True)  # does nothing
+        # msgpack.packb(distance_map_data, use_bin_type=True)  # does nothing
         msg_data = {
             "grid": grid_data,
             "agents": agent_data,
