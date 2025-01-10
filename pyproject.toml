@@ -62,8 +62,6 @@ dev = [
     "numpydoc",
     "pip-tools",
     "pytest",
-    "sphinx",
-    "sphinx-rtd-theme",
     "tox",
     "twine",
     "twine",
