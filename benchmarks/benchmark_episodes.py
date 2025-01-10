@@ -16,8 +16,7 @@ TRAIN_MOVEMEMENT_EVENTS_FNAME = "event_logs/TrainMovementEvents.trains_arrived.t
 TRAIN_POSITION_EVENTS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
-# TODO use non-personal onedrive or something else?
-DOWNLOAD_INSTRUCTIONS = "Download from https://flatlandassociation-my.sharepoint.com/:u:/g/personal/christian_eichenberger_flatland-association_org/Ecyre4gqGz9DjAQmo1Shn3UBIEqN7t3sFhTM8qi94uJEJQ?e=gfIyf0 and set BENCHMARK_EPISODES_FOLDER env var."
+DOWNLOAD_INSTRUCTIONS = "Download from hhttps://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
 
 COLLECT_POSITIONS = False
 
