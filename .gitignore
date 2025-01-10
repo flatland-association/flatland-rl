@@ -62,13 +62,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-docs/flatland*.rst
-docs/modules.rst
-docs/changelog.md
-docs/flatland_2.0.md
-
 # PyBuilder
 target/
 
