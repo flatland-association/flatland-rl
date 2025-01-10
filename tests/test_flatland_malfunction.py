@@ -213,7 +213,7 @@ def test_malfunction_values_and_behavior():
 
     rail, rail_map, optionals = make_simple_rail2()
     action_dict: Dict[int, RailEnvActions] = {}
-    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 0.001,  # Rate of malfunction occurence
+    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 0.001,  # Rate of malfunction occurrence
                                             min_duration=10,  # Minimal duration of malfunction
                                             max_duration=10  # Max duration of malfunction
                                             )
@@ -242,7 +242,7 @@ def test_malfunction_values_and_behavior():
 
 
 def test_initial_malfunction():
-    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 1000,  # Rate of malfunction occurence
+    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 1000,  # Rate of malfunction occurrence
                                             min_duration=2,  # Minimal duration of malfunction
                                             max_duration=5  # Max duration of malfunction
                                             )
@@ -411,7 +411,7 @@ def test_initial_malfunction_stop_moving():
 
 
 def test_initial_malfunction_do_nothing():
-    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 70,  # Rate of malfunction occurence
+    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 70,  # Rate of malfunction occurrence
                                             min_duration=2,  # Minimal duration of malfunction
                                             max_duration=5  # Max duration of malfunction
                                             )
