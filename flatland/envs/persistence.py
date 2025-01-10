@@ -1,9 +1,11 @@
 
 
 import pickle
+
 import msgpack
-import numpy as np
 import msgpack_numpy
+import numpy as np
+
 msgpack_numpy.patch()
 
 from flatland.envs import rail_env
@@ -124,6 +126,9 @@ class RailEnvPersister(object):
                 record_steps=True)
 
         env.rail = GridTransitionMap(1,1) # dummy
+
+        # TODO bad code smell - agent_position initialized in reset() only.
+        env.agent_positions = np.zeros((env.height, env.width), dtype=int) - 1
 
         cls.set_full_state(env, env_dict)
         return env, env_dict

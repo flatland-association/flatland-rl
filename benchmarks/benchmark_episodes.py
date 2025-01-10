@@ -2,15 +2,13 @@ import ast
 import functools
 import gc
 import os
-import pickle
 
-import numpy as np
 import pandas as pd
 import pytest
 from pandas import DataFrame
 
-from flatland.envs.agent_utils import load_env_agent
-from flatland.envs.malfunction_generators import FileMalfunctionGen
+from envs.persistence import RailEnvPersister
+from flatland.envs.malfunction_generators import NoMalfunctionGen
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 
@@ -99,55 +97,16 @@ def restore_episode(data_dir: str, ep_id: str) -> RailEnv:
         identifier for the episode to be replayed.
     """
 
-    tmp_dir = os.path.join(data_dir, SERIALISED_STATE_SUBDIR, f'{ep_id}.pkl')
-    with open(tmp_dir, 'rb') as f:
-        episode_config = pickle.load(f)
-    env = _init_env(episode_config)
+    f = os.path.join(data_dir, SERIALISED_STATE_SUBDIR, f'{ep_id}.pkl')
+    env, _ = RailEnvPersister.load_new(f)
 
+    # TODO epidosdes contain strings for malfunction_rate etc. instead of ints - we should fix the serialized pkls?
+    env.malfunction_generator = NoMalfunctionGen()
+
+    # TODO using RailEnvPersister.load_new has side effect send_infrastructure_data_change_signal_to_reset_lru_cache - why is it enough?
     # IMPORTANT! Flatland 4 fails without clearing lru cache! See https://github.com/flatland-association/flatland-rl/issues/104
-    clear_all_lru_caches()
-    return env
+    # clear_all_lru_caches()
 
-
-# TODO can we not use RailEnvPersister.load()?
-def _init_env(env_dict: dict) -> RailEnv:
-    """
-    Restore a configuration previously stored.
-
-    Parameters
-    ----------
-    env_dict:
-        Dictionary holding config of the env to restore.
-
-    Returns
-    -------
-    RailEnv:
-        The instance of the env.
-    """
-    env = RailEnv(
-        width=30,
-        height=30,
-        number_of_agents=2
-    )
-    _ = env.reset()
-    env.rail.grid = np.array(env_dict["grid"])
-
-    # Initialise the env with the frozen agents in the file
-    env.agents = [load_env_agent(ag) for ag in env_dict.get("agents", [])]
-    env.active_agents = np.arange(len(env.agents))
-    env.distance_map.distance_map = env_dict.get('distance_map', None)
-    env.distance_map.agents = env.agents
-    # For consistency, set number_of_agents, which is the number which will be generated on reset
-    env.number_of_agents = env.get_num_agents()
-
-    env.height, env.width = env.rail.grid.shape
-    env.rail.height = env.height
-    env.rail.width = env.width
-    env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
-    env._max_episode_steps = env_dict['max_episode_steps']
-
-    mf = FileMalfunctionGen(env_dict)
-    env.malfunction = mf
     return env
 
 
@@ -352,7 +311,6 @@ def test_episode(data_sub_dir, ep_id: str):
                 position_collect(positions, ep_id=ep_id, env_time=i, agent_id=agent_id, position=str(actual_position))
             else:
                 expected_position = position_lookup(positions, ep_id=ep_id, env_time=i, agent_id=agent_id)
-                print((data_sub_dir, ep_id, agent_id, i, actual_position, expected_position))
                 assert actual_position == expected_position, (data_sub_dir, ep_id, agent_id, i, actual_position, expected_position)
 
     data = movement_lookup(movements, ep_id)
