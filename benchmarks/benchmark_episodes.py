@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 from pandas import DataFrame
 
-from envs.persistence import RailEnvPersister
 from flatland.envs.malfunction_generators import NoMalfunctionGen
+from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 
@@ -20,7 +20,7 @@ SERIALISED_STATE_SUBDIR = 'serialised_state'
 
 DOWNLOAD_INSTRUCTIONS = "Download from https://flatlandassociation-my.sharepoint.com/:u:/g/personal/christian_eichenberger_flatland-association_org/Ecyre4gqGz9DjAQmo1Shn3UBIEqN7t3sFhTM8qi94uJEJQ?e=gfIyf0 and set BENCHMARK_EPISODES_FOLDER env var."
 
-COLLECT = False
+COLLECT_POSITIONS = False
 
 
 # TODO merge with send_infrastructure_data_change_signal_to_reset_lru_cache?
@@ -57,14 +57,8 @@ def read_train_movements(data_dir: str):
     return pd.read_csv(tmp_dir, sep='\t')
 
 
-def read_train_positions(data_dir: str):
-    """Returns pd df with all actions for all episodes."""
-    tmp_dir = os.path.join(data_dir, TRAIN_POSITION_EVENTS_FNAME)
-    return pd.read_csv(tmp_dir, sep='\t')
-
-
 def read_train_positions(data_dir: str) -> pd.DataFrame:
-    """Returns pd df with all actions for all episodes."""
+    """Returns pd df with all positions for all episodes."""
     f = os.path.join(data_dir, TRAIN_POSITION_EVENTS_FNAME)
     if not os.path.exists(f):
         return pd.DataFrame(columns=['env_time', 'agent_id', 'episode_id', 'position'])
@@ -307,7 +301,7 @@ def test_episode(data_sub_dir, ep_id: str):
         for agent_id in range(n_agents):
             agent = env.agents[agent_id]
             actual_position = (agent.position, agent.direction)
-            if COLLECT:
+            if COLLECT_POSITIONS:
                 position_collect(positions, ep_id=ep_id, env_time=i, agent_id=agent_id, position=str(actual_position))
             else:
                 expected_position = position_lookup(positions, ep_id=ep_id, env_time=i, agent_id=agent_id)
@@ -319,5 +313,5 @@ def test_episode(data_sub_dir, ep_id: str):
     print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
     assert expected_success_rate == actual_success_rate
 
-    if COLLECT:
+    if COLLECT_POSITIONS:
         write_train_positions(positions, data_dir)
