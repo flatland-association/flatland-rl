@@ -1,6 +1,4 @@
 import ast
-import functools
-import gc
 import os
 
 import pandas as pd
@@ -18,31 +16,10 @@ TRAIN_MOVEMEMENT_EVENTS_FNAME = "event_logs/TrainMovementEvents.trains_arrived.t
 TRAIN_POSITION_EVENTS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
+# TODO use non-personal onedrive or something else?
 DOWNLOAD_INSTRUCTIONS = "Download from https://flatlandassociation-my.sharepoint.com/:u:/g/personal/christian_eichenberger_flatland-association_org/Ecyre4gqGz9DjAQmo1Shn3UBIEqN7t3sFhTM8qi94uJEJQ?e=gfIyf0 and set BENCHMARK_EPISODES_FOLDER env var."
 
 COLLECT_POSITIONS = False
-
-
-# TODO merge with send_infrastructure_data_change_signal_to_reset_lru_cache?
-# https://stackoverflow.com/questions/40273767/clear-all-lru-cache-in-python
-def clear_all_lru_caches():
-    gc.collect()
-    wrappers = [
-        a for a in gc.get_objects()
-        if isinstance(a, functools._lru_cache_wrapper)]
-
-    for wrapper in wrappers:
-        wrapper.cache_clear()
-
-
-def info_all_lru_caches():
-    gc.collect()
-    wrappers = [
-        a for a in gc.get_objects()
-        if isinstance(a, functools._lru_cache_wrapper)]
-    for wrapper in wrappers:
-        if wrapper.__name__ == "get_full_transitions":
-            print(f"{wrapper.__name__} {wrapper.cache_info()}")
 
 
 def read_actions(data_dir: str):
@@ -96,11 +73,6 @@ def restore_episode(data_dir: str, ep_id: str) -> RailEnv:
 
     # TODO epidosdes contain strings for malfunction_rate etc. instead of ints - we should fix the serialized pkls?
     env.malfunction_generator = NoMalfunctionGen()
-
-    # TODO using RailEnvPersister.load_new has side effect send_infrastructure_data_change_signal_to_reset_lru_cache - why is it enough?
-    # IMPORTANT! Flatland 4 fails without clearing lru cache! See https://github.com/flatland-association/flatland-rl/issues/104
-    # clear_all_lru_caches()
-
     return env
 
 
@@ -127,7 +99,10 @@ def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) 
         The action to step the env.
     """
     pos = df.loc[(df['env_time'] == env_time) & (df['agent_id'] == agent_id) & (df['episode_id'] == ep_id)]['position']
-    assert len(pos) == 1, f"Found multiple positions for {ep_id} {env_time} {agent_id}"
+    if len(pos) != 1:
+        print(f"Found {len(pos)} positions for {ep_id} {env_time} {agent_id}")
+        print(df[(df['agent_id'] == agent_id) & (df['episode_id'] == ep_id)]["env_time"])
+    assert len(pos) == 1, f"Found {len(pos)} positions for {ep_id} {env_time} {agent_id}"
     return ast.literal_eval(pos.iloc[0])
 
 
