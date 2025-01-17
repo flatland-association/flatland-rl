@@ -73,7 +73,7 @@ def eval(env_fn, num_games: int = 100, render_mode: str | None = None, **env_kwa
 
     rewards = {agent: 0 for agent in env.possible_agents}
 
-    # SB3 models are designed for single-agent settings, we get around this by using he same model for every agent
+    # SB3 models are designed for single-agent settings, we get around this by using the same model for every agent
     # TODO not sure this is correct - what about use of AECEnv in the waterworld example?
     for i in range(num_games):
         obs, _ = env.reset(seed=i)
