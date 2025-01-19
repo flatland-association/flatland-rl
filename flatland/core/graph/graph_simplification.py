@@ -90,11 +90,9 @@ class DecisionPointGraph:
         open = set(micro.edges) - closed
         while not len(open) == 0:
             u, v = next(iter(open))
-            print((u, v))
             branch = DecisionPointGraph._explore_branch(micro, u, v)
             g.add_edge(branch[0], branch[-1], d=DecisionPointGraphEdgeData(path=branch, len=len(branch)))
             for u_, v_, in zip(branch, branch[1:]):
-                print(f" rmove ({(u_, v_)}")
                 open.discard((u_, v_))
 
         return DecisionPointGraph(g)
