@@ -49,6 +49,9 @@ class DecisionPointGraph:
         while len(successors) == 1:
             successor = successors[0]
             branch.append(successor)
+            if successor == u:
+                # loop
+                break
             successors = list(g.successors(successor))
             assert len(successors) > 0
         return branch
@@ -74,9 +77,24 @@ class DecisionPointGraph:
         micro = gtm.g
         decision_nodes = {s for s in micro.nodes if len(list(micro.successors(s))) > 1}
 
-        # add edge for
+        # add edge starting at each decision point
+        closed = set()
         for dp in decision_nodes:
             for n in micro.successors(dp):
                 branch = DecisionPointGraph._explore_branch(micro, dp, n)
                 g.add_edge(branch[0], branch[-1], d=DecisionPointGraphEdgeData(path=branch, len=len(branch)))
+                for u, v, in zip(branch, branch[1:]):
+                    closed.add((u, v))
+
+        # special cases closed loops
+        open = set(micro.edges) - closed
+        while not len(open) == 0:
+            u, v = next(iter(open))
+            print((u, v))
+            branch = DecisionPointGraph._explore_branch(micro, u, v)
+            g.add_edge(branch[0], branch[-1], d=DecisionPointGraphEdgeData(path=branch, len=len(branch)))
+            for u_, v_, in zip(branch, branch[1:]):
+                print(f" rmove ({(u_, v_)}")
+                open.discard((u_, v_))
+
         return DecisionPointGraph(g)
