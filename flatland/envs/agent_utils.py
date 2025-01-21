@@ -1,19 +1,17 @@
-from flatland.envs.rail_trainrun_data_structures import Waypoint
-import numpy as np
 import warnings
-
 from typing import Tuple, Optional, NamedTuple, List
 
-from attr import attr, attrs, attrib, Factory
+import numpy as np
+from attr import attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.timetable_utils import Line
-
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.action_saver import ActionSaver
+from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
-from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
+from flatland.envs.timetable_utils import Line
 
 Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('initial_direction', Grid4TransitionsEnum),
@@ -225,6 +223,41 @@ class EnvAgent:
     def speed_data(self):
         raise ValueError("agent.speed_data is deprecated, please use agent.speed_counter instead")
 
+    def __getstate__(self):
+        return {
+            "initial_position": self.initial_position,
+            "initial_direction": self.initial_direction,
+            "direction": self.direction,
+            "target": self.target,
+            "moving": self.moving,
+            "earliest_departure": self.earliest_departure,
+            "latest_arrival": self.latest_arrival,
+            "handle": self.handle,
+            "speed_counter": self.speed_counter.to_dict(),
+            "action_saver": self.action_saver.to_dict(),
+            "state_machine": self.state_machine.to_dict(),
+            "malfunction_handler": self.malfunction_handler.to_dict(),
+            "position": self.position,
+            "arrival_time": self.arrival_time,
+            "old_direction": self.old_direction,
+            "old_position": self.old_position,
+        }
 
-
-
+    def __setstate__(self, state):
+        self.initial_position = state["initial_position"]
+        self.initial_direction = state["initial_direction"]
+        self.direction = state["direction"]
+        self.target = state["target"]
+        self.moving = state["moving"]
+        self.earliest_departure = state["earliest_departure"]
+        self.latest_arrival = state["latest_arrival"]
+        self.handle = state["handle"]
+        self.speed_counter = SpeedCounter(None).from_dict(state["speed_counter"])
+        self.action_saver = ActionSaver().from_dict(state["action_saver"])
+        self.state_machine = TrainStateMachine().from_dict(state["state_machine"])
+        self.malfunction_handler = MalfunctionHandler().from_dict(state["malfunction_handler"])
+        self.position = state["position"]
+        self.arrival_time = state["arrival_time"]
+        self.old_direction = state["old_direction"]
+        self.old_position = state["old_position"]
+        return self

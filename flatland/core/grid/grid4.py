@@ -1,6 +1,6 @@
 from enum import IntEnum
 from functools import lru_cache
-from typing import Type, List
+from typing import Type, List, Tuple
 
 import numpy as np
 
@@ -76,6 +76,9 @@ class Grid4TransitionsEnum(IntEnum):
                 1: 'E',
                 2: 'S',
                 3: 'W'}[int]
+
+
+HashableGrid4TransitionsState = Tuple[Tuple[int], str, Tuple[str], Tuple[Tuple[int]]]
 
 
 class Grid4Transitions(Transitions):
@@ -282,3 +285,11 @@ class Grid4Transitions(Transitions):
     @lru_cache()
     def get_entry_directions(cell_transition) -> List[int]:
         return [(cell_transition >> ((3 - orientation) * 4)) & 15 > 0 for orientation in range(4)]
+
+    def __getstate__(self):
+        return {
+            "transitions": tuple(self.transitions)
+        }
+
+    def __setstate__(self, state):
+        self.transitions = list(state["transitions"])

@@ -1,6 +1,5 @@
 from functools import lru_cache
 
-import numpy as np
 from flatland.envs.step_utils.states import TrainState
 
 
@@ -54,6 +53,7 @@ class SpeedCounter:
     def from_dict(self, load_dict):
         self._speed = load_dict['speed']
         self.counter = load_dict['counter']
+        return self
 
     def __eq__(self, other):
         return self._speed == other._speed and self.counter == other.counter
