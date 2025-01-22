@@ -100,7 +100,7 @@ class RailEnv(Environment):
                  width,
                  height,
                  rail_generator=None,
-                 line_generator=None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
+                 line_generator: "LineGenerator" = None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
                  number_of_agents=2,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
@@ -167,7 +167,7 @@ class RailEnv(Environment):
         self.rail_generator = rail_generator
         if line_generator is None:
             line_generator = line_gen.sparse_line_generator()
-        self.line_generator = line_generator
+        self.line_generator: LineGenerator = line_generator
         self.timetable_generator = timetable_generator
 
         self.rail: Optional[GridTransitionMap] = None
