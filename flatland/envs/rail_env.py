@@ -283,7 +283,7 @@ class RailEnv(Environment):
 
         send_infrastructure_data_change_signal_to_reset_lru_cache()
 
-        if random_seed:
+        if random_seed is not None:
             self._seed(random_seed)
 
         optionals = {}

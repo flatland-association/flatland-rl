@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+
+### Fixed
+
+* non-deterministic test failures [pr [#103](https://github.com/flatland-association/flatland-rl/pull/103)]
+
+## [4.0.3] - 2024-04-23
+
 ### New
 
 * grid to digraph conversion. [pr [#90](https://github.com/flatland-association/flatland-rl/pull/90)]
