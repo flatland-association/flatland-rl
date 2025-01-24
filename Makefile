@@ -1,4 +1,4 @@
-.PHONY: help, install-deps, lint, test, coverage, docs
+.PHONY: help, install-deps, lint, test, coverage
 .DEFAULT_GOAL := help
 
 help: ## display this help section
@@ -16,6 +16,4 @@ test: ## run tests on every supported Python version
 coverage: ## check code coverage
 	tox -e coverage
 
-docs: ## generate Sphinx HTML documentation, including API docs
-	tox -e docs
 
