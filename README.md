@@ -69,8 +69,12 @@ to the project. We enthusiastically look forward to your contributions!
 
 🔗 Partners
 ---
-
-<a href="https://sbb.ch" target="_blank" style="margin-right:30px"><img src="https://annpr2020.ch/wp-content/uploads/2020/06/SBB.png" alt="SBB" width="140"/></a>
-<a href="https://www.deutschebahn.com/" target="_blank" style="margin-right:30px"><img src="https://i.imgur.com/pjTki15.png" alt="DB"  width="140"/></a>
-<a href="https://www.sncf.com/en" target="_blank" style="margin-right:30px"><img src="https://iconape.com/wp-content/png_logo_vector/logo-sncf.png" alt="SNCF"  width="140"/></a>
-<a href="https://www.aicrowd.com" target="_blank"><img src="https://i.imgur.com/kBZQGI9.png" alt="AIcrowd"  width="140"/></a>
+<a href="https://sbb.ch" target="_blank" style="margin-right:30px"><img src="https://flatland-association.org/members/sbb-cff-ffs-logo.svg" alt="SBB" height="60"/></a>
+&nbsp;
+<a href="https://www.deutschebahn.com/" target="_blank" style="margin-right:30px"><img src="https://i.imgur.com/pjTki15.png" alt="DB"  height="60"/></a>
+&nbsp;
+<a href="https://www.sncf.com/en" target="_blank" style="margin-right:30px"><img src="https://iconape.com/wp-content/png_logo_vector/logo-sncf.png" alt="SNCF"  height="60"/></a>
+&nbsp;
+<a href="https://www.aicrowd.com" target="_blank"><img src="https://i.imgur.com/kBZQGI9.png" alt="AIcrowd"  height="60"/></a>
+&nbsp;
+<a href="https://flatland.cloud" target="_blank"><img src="https://flatland-association.org/members/flatland-community-logo.svg" alt="Flatland Community"  height="60"/></a>
