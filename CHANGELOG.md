@@ -1,11 +1,11 @@
 # Changelog
 
-All notable changes to flatland will be documented in this file.
+All notable changes to Flatland will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [[4.0.4](https://github.com/flatland-association/flatland-rl/milestone/1)]
 
 ### Added
 
@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   see [GitHub Blog](https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/) [pr [#83](https://github.com/flatland-association/flatland-rl/pull/83)].
 * Add `AWS_ENDPOINT_URL` env var to override default S3 endpoint URL in
   `aicrowd_helpers.py` [pr [#112](https://github.com/flatland-association/flatland-rl/pull/112)].
+* Add episodes for benchmarking and regression tests [pr [#105](https://github.com/flatland-association/flatland-rl/pull/105)].
 
 ### Fixed
 
