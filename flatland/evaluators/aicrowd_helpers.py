@@ -1,9 +1,9 @@
 import glob
 import os
+import pathlib
 import random
 import subprocess
 import uuid
-import pathlib
 
 ###############################################################
 # Expected Env Variables
@@ -20,9 +20,11 @@ import pathlib
 ###############################################################
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", False)
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", False)
+AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL", None)
 S3_UPLOAD_PATH_TEMPLATE = os.getenv("S3_UPLOAD_PATH_TEMPLATE", "misc/flatland-rl-Media/{}.mp4")
 S3_BUCKET = os.getenv("S3_BUCKET", "aicrowd-production")
 S3_BUCKET_ACL = "public-read" if S3_BUCKET == "aicrowd-production" else ""
+
 
 def get_boto_client():
     if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
@@ -37,6 +39,8 @@ def get_boto_client():
 
     return boto3.client(
         's3',
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html
+        endpoint_url=AWS_ENDPOINT_URL,
         aws_access_key_id=AWS_ACCESS_KEY_ID,
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY
     )
@@ -51,7 +55,7 @@ def is_aws_configured():
 
 def is_grading():
     return os.getenv("CROWDAI_IS_GRADING", False) or \
-           os.getenv("AICROWD_IS_GRADING", False)
+        os.getenv("AICROWD_IS_GRADING", False)
 
 
 def get_submission_id():
@@ -117,6 +121,7 @@ def upload_folder_to_s3(folderpath):
                     Key=file_target_key,
                     Body=open(localpath, 'rb')
                 )
+
 
 def make_subprocess_call(command, shell=False):
     result = subprocess.run(
