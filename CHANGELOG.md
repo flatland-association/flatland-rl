@@ -7,28 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### New
+### Added
 
-* Grid to digraph conversion. Data structures for simplified graph (decision point graph/overlay
-  graph) [pr [#90](https://github.com/flatland-association/flatland-rl/pull/90)]
+* Grid to DiGraph Conversion and Graph Simplification [pr [#90](https://github.com/flatland-association/flatland-rl/pull/90)]
+  and [pr [flatland-book#6](https://github.com/flatland-association/flatland-book/pull/6)]
 * Policy evaluation and training cli (rllib) [pr [#85](https://github.com/flatland-association/flatland-rl/pull/85)]
     - extract ml dependencies (torch, gym, ray, etc.) to optional dependencies in `pyproject.toml`, new `requirements-ml.txt` and slimmer
       `requirements[-dev].txt`, keep core `gym` free.
     - accordingly, move corresponding code to new `flatland.ml` module
     - accordingly, move corresponding tests to `tests.ml` (tests becomes a Python module)
+* Enable redis in ci and run `test_service.ipynb` in ci [pr [#65](https://github.com/flatland-association/flatland-rl/pull/65)]
 * Run main workflow daily and allow for manual triggering. Update deprecated gh actions versions,
-  see https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/ [pr [#83](https://github.com/flatland-association/flatland-rl/pull/83)].
+  see [GitHub Blog](https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/) [pr [#83](https://github.com/flatland-association/flatland-rl/pull/83)].
+* Add `AWS_ENDPOINT_URL` env var to override default S3 endpoint URL in
+  `aicrowd_helpers.py` [pr [#112](https://github.com/flatland-association/flatland-rl/pull/112)].
 
 ### Fixed
 
+* Add flatland-rl [apidocs](https://flatland-association.github.io/flatland-book/apidocs/index.html) back to flatland book
+  again [pr [flatland-book#7](https://github.com/flatland-association/flatland-book/pull/7)]
 * Fix flapping test malfunctions [pr [#103](https://github.com/flatland-association/flatland-rl/pull/103)]
-* Fix README.md indefinite article before a vowel sound [pr [#95](https://github.com/flatland-association/flatland-rl/pull/95)]
+* Fix `README.md` indefinite article before a vowel sound [pr [#95](https://github.com/flatland-association/flatland-rl/pull/95)]
 
 ### Changed
 
 * Bump jinja2 from 3.1.4 to 3.1.5 [pr [#106](https://github.com/flatland-association/flatland-rl/pull/106)]
 * Bump tornado from 6.4.1 to 6.4.2. [pr [#93](https://github.com/flatland-association/flatland-rl/pull/93)]
 * Bump aiohttp from 3.10.10 to 3.10.11. [pr [#94](https://github.com/flatland-association/flatland-rl/pull/94)]
+* Deployment [flatland-book](https://github.com/flatland-association/flatland-book) to GitHub
+  Pages [pr [flaland-book#4](https://github.com/flatland-association/flatland-book/pull/4)]
+  and [pr [flatland-book#5](https://github.com/flatland-association/flatland-book/pull/5)]
+  and [pr [#98](https://github.com/flatland-association/flatland-rl/pull/98)]
 
 ### Removed
 
