@@ -81,7 +81,7 @@ def position_collect(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int,
 
 
 def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) -> Waypoint:
-    """Method used to retrieve the stored action (if available).
+    """Method used to retrieve the stored position (if available).
 
     Parameters
     ----------
@@ -96,7 +96,7 @@ def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) 
     Returns
     -------
     Waypoint
-        The position in the format ((row,column),direction).
+        The position in the format ((row, column), direction).
     """
     pos = df.loc[(df['env_time'] == env_time) & (df['agent_id'] == agent_id) & (df['episode_id'] == ep_id)]['position']
     if len(pos) != 1:
