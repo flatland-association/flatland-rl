@@ -48,7 +48,7 @@ def write_trains_positions(df: pd.DataFrame, data_dir: str):
     df.to_csv(f, sep='\t', index=False)
 
 
-def get_action_per_episode(actions_df: DataFrame, ep_id: str):
+def get_actions_per_episode(actions_df: DataFrame, ep_id: str):
     return actions_df[actions_df['episode_id'] == ep_id]
 
 
@@ -134,7 +134,7 @@ def action_lookup(actions_df: pd.DataFrame, ep_id: str, env_time: int, agent_id:
     return RailEnvActions(action[0])
 
 
-def movement_lookup(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
+def get_trains_arrived_per_episode(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
     """Method used to retrieve the stored action (if available).
 
     Parameters
@@ -258,10 +258,10 @@ def test_episode(data_sub_dir, ep_id: str):
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = os.path.join(_dir, data_sub_dir)
 
-    positions = read_trains_positions(data_dir)
-
+    trains_positions = read_trains_positions(data_dir)
     actions = read_actions(data_dir)
-    movements = read_trains_arrived(data_dir)
+    trains_arrived = read_trains_arrived(data_dir)
+
     env = restore_episode(data_dir, ep_id)
     done = False
     n_agents = env.get_num_agents()
@@ -277,16 +277,16 @@ def test_episode(data_sub_dir, ep_id: str):
             agent = env.agents[agent_id]
             actual_position = Waypoint(agent.position, agent.direction)
             if COLLECT_POSITIONS:
-                position_collect(positions, ep_id=ep_id, env_time=i, agent_id=agent_id, position=actual_position)
+                position_collect(trains_positions, ep_id=ep_id, env_time=i, agent_id=agent_id, position=actual_position)
             else:
-                expected_position = position_lookup(positions, ep_id=ep_id, env_time=i, agent_id=agent_id)
+                expected_position = position_lookup(trains_positions, ep_id=ep_id, env_time=i, agent_id=agent_id)
                 assert actual_position == expected_position, (data_sub_dir, ep_id, agent_id, i, actual_position, expected_position)
 
-    data = movement_lookup(movements, ep_id)
-    expected_success_rate = data['success_rate']
+    trains_arrived_episode = get_trains_arrived_per_episode(trains_arrived, ep_id)
+    expected_success_rate = trains_arrived_episode['success_rate']
     actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
     print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
     assert expected_success_rate == actual_success_rate
 
     if COLLECT_POSITIONS:
-        write_trains_positions(positions, data_dir)
+        write_trains_positions(trains_positions, data_dir)
