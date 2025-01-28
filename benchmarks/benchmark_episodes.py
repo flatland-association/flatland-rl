@@ -102,7 +102,7 @@ def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) 
 
 
 def action_lookup(actions_df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) -> RailEnvActions:
-    """Method used to retrieve the stored action (if available).
+    """Method used to retrieve the stored action (if available). Defaults to 2 = MOVE_FORWARD.
 
     Parameters
     ----------
