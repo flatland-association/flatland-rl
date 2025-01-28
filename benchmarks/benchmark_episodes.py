@@ -44,7 +44,7 @@ def read_trains_positions(data_dir: str) -> pd.DataFrame:
 def write_trains_positions(df: pd.DataFrame, data_dir: str):
     """Store pd df with all trains' positions for all episodes."""
     f = os.path.join(data_dir, TRAINS_POSITIONS_FNAME)
-    df.to_csv(f, sep='\t')
+    df.to_csv(f, sep='\t', index=False)
 
 
 def get_action_per_episode(actions_df: DataFrame, ep_id: str):
