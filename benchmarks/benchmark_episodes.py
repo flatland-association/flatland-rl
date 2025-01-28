@@ -3,7 +3,6 @@ import os
 
 import pandas as pd
 import pytest
-from pandas import DataFrame
 
 from flatland.envs.malfunction_generators import NoMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
@@ -46,10 +45,6 @@ def write_trains_positions(df: pd.DataFrame, data_dir: str):
     """Store pd df with all trains' positions for all episodes."""
     f = os.path.join(data_dir, TRAINS_POSITIONS_FNAME)
     df.to_csv(f, sep='\t', index=False)
-
-
-def get_actions_per_episode(actions_df: DataFrame, ep_id: str):
-    return actions_df[actions_df['episode_id'] == ep_id]
 
 
 def restore_episode(data_dir: str, ep_id: str) -> RailEnv:
@@ -134,8 +129,8 @@ def action_lookup(actions_df: pd.DataFrame, ep_id: str, env_time: int, agent_id:
     return RailEnvActions(action[0])
 
 
-def get_trains_arrived_per_episode(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
-    """Method used to retrieve the stored action (if available).
+def trains_arrived_lookup(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
+    """Method used to retrieve the trains arrived for the episode.
 
     Parameters
     ----------
@@ -143,6 +138,10 @@ def get_trains_arrived_per_episode(movements_df: pd.DataFrame, ep_id: str) -> pd
         Data frame from event_logs/TrainMovementEvents.trains_arrived.tsv
     ep_id: str
         episode ID
+    Returns
+    -------
+    pd.Series
+        The trains arrived data.
     """
     movement = movements_df.loc[(movements_df['episode_id'] == ep_id)]
 
@@ -241,8 +240,9 @@ def test_episode(data_sub_dir, ep_id: str):
             Contains the data to replay the episodes.
             - {n} trains
                 - event_logs
-                    ActionEvents.discrete_action 		-- holds set of action to be replayed
-                    TrainMovementEvents.trains_arrived 	-- holds success rate for the related episode.
+                    ActionEvents.discrete_action 		 -- holds set of action to be replayed
+                    TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episode.
+                    TrainMovementEvents.trains_positions -- holds the positions for the related episode.
                 - serialised_state
                     Holds the pickled environment version
 
@@ -250,7 +250,7 @@ def test_episode(data_sub_dir, ep_id: str):
 
     Parameters
     ----------
-    data_sub_dir sub directory within BENCHMARK_EPISODES_FOLDER
+    data_sub_dir subdirectory within BENCHMARK_EPISODES_FOLDER
     ep_id the episode ID
     """
 
@@ -282,7 +282,7 @@ def test_episode(data_sub_dir, ep_id: str):
                 expected_position = position_lookup(trains_positions, ep_id=ep_id, env_time=i, agent_id=agent_id)
                 assert actual_position == expected_position, (data_sub_dir, ep_id, agent_id, i, actual_position, expected_position)
 
-    trains_arrived_episode = get_trains_arrived_per_episode(trains_arrived, ep_id)
+    trains_arrived_episode = trains_arrived_lookup(trains_arrived, ep_id)
     expected_success_rate = trains_arrived_episode['success_rate']
     actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
     print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
