@@ -9,6 +9,7 @@ from flatland.envs.malfunction_generators import NoMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 # TODO add code to generate episodes, add intermediate positions and rewards as well? Maybe add intermediate pkls without distance_map as well?
 DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
@@ -63,23 +64,23 @@ def restore_episode(data_dir: str, ep_id: str) -> RailEnv:
 
     Returns
     -------
-    str
-        identifier for the episode to be replayed.
+    RailEnv
+        the episode
     """
 
     f = os.path.join(data_dir, SERIALISED_STATE_SUBDIR, f'{ep_id}.pkl')
     env, _ = RailEnvPersister.load_new(f)
 
-    # TODO epidosdes contain strings for malfunction_rate etc. instead of ints - we should fix the serialized pkls?
+    # TODO episodes contain strings for malfunction_rate etc. instead of ints - we should fix the serialized pkls?
     env.malfunction_generator = NoMalfunctionGen()
     return env
 
 
-def position_collect(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int, position):
+def position_collect(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int, position: Waypoint):
     df.loc[len(df)] = {'env_time': env_time, 'agent_id': agent_id, 'episode_id': ep_id, 'position': position}
 
 
-def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) -> RailEnvActions:
+def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) -> Waypoint:
     """Method used to retrieve the stored action (if available).
 
     Parameters
@@ -94,15 +95,15 @@ def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) 
         agent ID
     Returns
     -------
-    int
-        The action to step the env.
+    Waypoint
+        The position in the format ((row,column),direction).
     """
     pos = df.loc[(df['env_time'] == env_time) & (df['agent_id'] == agent_id) & (df['episode_id'] == ep_id)]['position']
     if len(pos) != 1:
         print(f"Found {len(pos)} positions for {ep_id} {env_time} {agent_id}")
         print(df[(df['agent_id'] == agent_id) & (df['episode_id'] == ep_id)]["env_time"])
     assert len(pos) == 1, f"Found {len(pos)} positions for {ep_id} {env_time} {agent_id}"
-    return ast.literal_eval(pos.iloc[0])
+    return Waypoint(*ast.literal_eval(pos.iloc[0]))
 
 
 def action_lookup(actions_df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) -> RailEnvActions:
@@ -120,7 +121,7 @@ def action_lookup(actions_df: pd.DataFrame, ep_id: str, env_time: int, agent_id:
         agent ID
     Returns
     -------
-    int
+    RailEnvActions
         The action to step the env.
     """
     action = actions_df.loc[
@@ -261,7 +262,7 @@ def test_episode(data_sub_dir, ep_id: str):
 
     actions = read_actions(data_dir)
     movements = read_trains_arrived(data_dir)
-    env: RailEnv = restore_episode(data_dir, ep_id)
+    env = restore_episode(data_dir, ep_id)
     done = False
     n_agents = env.get_num_agents()
     assert len(env.agents) == n_agents
@@ -274,9 +275,9 @@ def test_episode(data_sub_dir, ep_id: str):
 
         for agent_id in range(n_agents):
             agent = env.agents[agent_id]
-            actual_position = (agent.position, agent.direction)
+            actual_position = Waypoint(agent.position, agent.direction)
             if COLLECT_POSITIONS:
-                position_collect(positions, ep_id=ep_id, env_time=i, agent_id=agent_id, position=str(actual_position))
+                position_collect(positions, ep_id=ep_id, env_time=i, agent_id=agent_id, position=actual_position)
             else:
                 expected_position = position_lookup(positions, ep_id=ep_id, env_time=i, agent_id=agent_id)
                 assert actual_position == expected_position, (data_sub_dir, ep_id, agent_id, i, actual_position, expected_position)

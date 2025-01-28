@@ -1,4 +1,5 @@
 import pickle
+from typing import Tuple, Dict
 
 import msgpack
 import msgpack_numpy
@@ -98,7 +99,7 @@ class RailEnvPersister(object):
         cls.set_full_state(env, env_dict)
 
     @classmethod
-    def load_new(cls, filename, load_from_package=None):
+    def load_new(cls, filename, load_from_package=None) -> Tuple[rail_env.RailEnv, Dict]:
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
