@@ -238,13 +238,13 @@ def test_episode(data_sub_dir, ep_id: str):
     The data is structured as follows:
         -30x30 map
             Contains the data to replay the episodes.
-            - {n} trains
+            - <n>_trains                                 -- for n in 10,15,20,50
                 - event_logs
-                    ActionEvents.discrete_action 		 -- holds set of action to be replayed
-                    TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episode.
-                    TrainMovementEvents.trains_positions -- holds the positions for the related episode.
+                    ActionEvents.discrete_action 		 -- holds set of action to be replayed for the related episodes.
+                    TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episodes.
+                    TrainMovementEvents.trains_positions -- holds the positions for the related episodes.
                 - serialised_state
-                    Holds the pickled environment version
+                    <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
 
     All these episodes are with constant speed of 1 and malfunctions free.
 
