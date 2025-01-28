@@ -10,13 +10,13 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
-# TODO add code to generate episodes, add intermediate positions and rewards as well? Maybe add intermediate pkls without distance_map as well?
 DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
 TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
 TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
 DOWNLOAD_INSTRUCTIONS = "Download from https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
+# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER.zip 30x30\ map -x "*.DS_Store"
 
 COLLECT_POSITIONS = False
 
@@ -150,7 +150,6 @@ def trains_arrived_lookup(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
     raise
 
 
-# TODO episodes with different speeds and malfunctions
 @pytest.mark.parametrize("data_sub_dir,ep_id", [
     ("30x30 map/10_trains", "1649ef98-e3a8-4dd3-a289-bbfff12876ce"),
     ("30x30 map/10_trains", "4affa89b-72f6-4305-aeca-e5182efbe467"),
@@ -233,7 +232,11 @@ def trains_arrived_lookup(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
     ("30x30 map/50_trains", "ec716f73-b22a-4fae-833a-7f58eed3968d"),
     ("30x30 map/50_trains", "f70202cc-2dec-4080-bfef-7884ab47b1b4"),
 ])
-def test_episode(data_sub_dir, ep_id: str):
+def test_episode(data_sub_dir: str, ep_id: str):
+    run_episode(data_sub_dir, ep_id)
+
+
+def run_episode(data_sub_dir: str, ep_id: str):
     """
     The data is structured as follows:
         -30x30 map
@@ -253,7 +256,6 @@ def test_episode(data_sub_dir, ep_id: str):
     data_sub_dir subdirectory within BENCHMARK_EPISODES_FOLDER
     ep_id the episode ID
     """
-
     _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = os.path.join(_dir, data_sub_dir)
@@ -287,6 +289,5 @@ def test_episode(data_sub_dir, ep_id: str):
     actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
     print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
     assert expected_success_rate == actual_success_rate
-
     if COLLECT_POSITIONS:
         write_trains_positions(trains_positions, data_dir)
