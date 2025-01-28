@@ -12,11 +12,11 @@ from flatland.envs.rail_env_action import RailEnvActions
 
 # TODO add code to generate episodes, add intermediate positions and rewards as well? Maybe add intermediate pkls without distance_map as well?
 DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
-TRAIN_MOVEMEMENT_EVENTS_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
-TRAIN_POSITION_EVENTS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
+TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
+TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
-DOWNLOAD_INSTRUCTIONS = "Download from hhttps://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
+DOWNLOAD_INSTRUCTIONS = "Download from https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
 
 COLLECT_POSITIONS = False
 
@@ -27,23 +27,23 @@ def read_actions(data_dir: str):
     return pd.read_csv(tmp_dir, sep='\t')
 
 
-def read_train_movements(data_dir: str):
-    """Returns pd df with all actions for all episodes."""
-    tmp_dir = os.path.join(data_dir, TRAIN_MOVEMEMENT_EVENTS_FNAME)
+def read_trains_arrived(data_dir: str):
+    """Returns pd df with success rate for all episodes."""
+    tmp_dir = os.path.join(data_dir, TRAINS_ARRIVED_FNAME)
     return pd.read_csv(tmp_dir, sep='\t')
 
 
-def read_train_positions(data_dir: str) -> pd.DataFrame:
-    """Returns pd df with all positions for all episodes."""
-    f = os.path.join(data_dir, TRAIN_POSITION_EVENTS_FNAME)
+def read_trains_positions(data_dir: str) -> pd.DataFrame:
+    """Returns pd df with all trains' positions for all episodes."""
+    f = os.path.join(data_dir, TRAINS_POSITIONS_FNAME)
     if not os.path.exists(f):
         return pd.DataFrame(columns=['env_time', 'agent_id', 'episode_id', 'position'])
     return pd.read_csv(f, sep='\t')
 
 
-def write_train_positions(df: pd.DataFrame, data_dir: str):
-    """Returns pd df with all actions for all episodes."""
-    f = os.path.join(data_dir, TRAIN_POSITION_EVENTS_FNAME)
+def write_trains_positions(df: pd.DataFrame, data_dir: str):
+    """Store pd df with all trains' positions for all episodes."""
+    f = os.path.join(data_dir, TRAINS_POSITIONS_FNAME)
     df.to_csv(f, sep='\t')
 
 
@@ -257,10 +257,10 @@ def test_episode(data_sub_dir, ep_id: str):
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = os.path.join(_dir, data_sub_dir)
 
-    positions = read_train_positions(data_dir)
+    positions = read_trains_positions(data_dir)
 
     actions = read_actions(data_dir)
-    movements = read_train_movements(data_dir)
+    movements = read_trains_arrived(data_dir)
     env: RailEnv = restore_episode(data_dir, ep_id)
     done = False
     n_agents = env.get_num_agents()
@@ -288,4 +288,4 @@ def test_episode(data_sub_dir, ep_id: str):
     assert expected_success_rate == actual_success_rate
 
     if COLLECT_POSITIONS:
-        write_train_positions(positions, data_dir)
+        write_trains_positions(positions, data_dir)
