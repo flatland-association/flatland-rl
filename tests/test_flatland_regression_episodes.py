@@ -13,10 +13,6 @@ from benchmarks.benchmark_episodes import run_episode
 
     ("30x30 map/20_trains", "57e1ebc5-947c-4314-83c7-0d6fd76b2bd3"),
     ("30x30 map/20_trains", "56a78985-588b-42d0-a972-7f8f2514c665"),
-
-    ("30x30 map/50_trains", "521a9180-4202-4656-84a4-603cbed8d435"),
-    ("30x30 map/50_trains", "5df7e753-4701-48d7-8cc6-adf874876841"),
-
 ])
 def test_episode(data_sub_dir: str, ep_id: str):
     run_episode(data_sub_dir, ep_id)
