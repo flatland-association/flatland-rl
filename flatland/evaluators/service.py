@@ -2,31 +2,31 @@
 from __future__ import print_function
 
 import glob
+import itertools
+import json
 import os
+import pickle
 import random
+import re
 import shutil
 import time
 import traceback
-import json
-import yaml
-import itertools
-import re
 
 import crowdai_api
 import msgpack
 import msgpack_numpy as m
-import pickle
 import numpy as np
 import pandas as pd
 import redis
 import timeout_decorator
+import yaml
 
 import flatland
+from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.step_utils.states import TrainState
 from flatland.evaluators import aicrowd_helpers
 from flatland.evaluators import messages
 from flatland.utils.rendertools import RenderTool
-from flatland.envs.persistence import RailEnvPersister
 
 use_signals_in_timeout = True
 if os.name == 'nt':
@@ -665,7 +665,7 @@ class FlatlandRemoteEvaluationService:
         Handles a ENV_CREATE command from the client
         """
 
-        print(" -- [DEBUG] [env_create] EVAL DONE: ",self.evaluation_done)
+        print(" -- [DEBUG] [env_create] EVAL DONE: ", self.evaluation_done)
 
         # Check if the previous episode was finished
         if not self.simulation_done and not self.evaluation_done:
@@ -720,7 +720,7 @@ class FlatlandRemoteEvaluationService:
             """
 
             print("=" * 15)
-            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count+1, len(self.env_file_paths)))
+            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count + 1, len(self.env_file_paths)))
 
             test_env_file_path = os.path.join(
                 self.test_env_folder,
@@ -1011,7 +1011,6 @@ class FlatlandRemoteEvaluationService:
         agent_current_delays = []  # only for not arrived trains
         agent_rewards = list(self.env.rewards_dict.values())
 
-
         for i_agent in range(self.env.get_num_agents()):
             agent = self.env.agents[i_agent]
 
@@ -1053,7 +1052,6 @@ class FlatlandRemoteEvaluationService:
             json.dump(self.analysis_data, fOut)
 
         self.analysis_data = {}
-
 
     def save_merged_env(self):
         sfEnv = self.env_file_paths[self.simulation_count]
@@ -1149,7 +1147,6 @@ class FlatlandRemoteEvaluationService:
             else:
                 print("[WARNING] Ignoring uploading action_dir to S3")
 
-
         if self.analysis_data_dir:
             if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
                 aicrowd_helpers.upload_folder_to_s3(self.analysis_data_dir)
@@ -1194,6 +1191,13 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["meta"]["percentage_complete"] = mean_percentage_complete
         self.evaluation_state["meta"]["termination_cause"] = self.termination_cause
         self.handle_aicrowd_success_event(self.evaluation_state)
+
+        if self.result_output_path:
+            evaluation_state_output_path = self.result_output_path.replace(".csv", ".json")
+            if evaluation_state_output_path == self.result_output_path:
+                evaluation_state_output_path = evaluation_state_output_path + ".json"
+            with open(evaluation_state_output_path, "w") as out:
+                json.dump(self.evaluation_state, out)
 
         print("#" * 100)
         print("EVALUATION COMPLETE !!")
