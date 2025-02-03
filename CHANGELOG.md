@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * Add `AWS_ENDPOINT_URL` env var to override default S3 endpoint URL in
   `aicrowd_helpers.py` [pr [#112](https://github.com/flatland-association/flatland-rl/pull/112)].
 * Add episodes for benchmarking and regression tests [pr [#105](https://github.com/flatland-association/flatland-rl/pull/105)].
+* Dump `results.json` (evaluation state) along `results.csv` [pr [#115](https://github.com/flatland-association/flatland-rl/pull/115)].
 
 ### Fixed
 
