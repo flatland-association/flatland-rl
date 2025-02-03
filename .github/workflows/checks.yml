@@ -37,6 +37,11 @@ jobs:
                 uses: actions/setup-python@v5
                 with:
                     python-version: ${{ matrix.python-version }}
+            -   name: Download episodes
+                run: |
+                    wget "https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    mkdir -p episodes
+                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -78,3 +83,4 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Run examples
                 run: tox run -e examples
+
