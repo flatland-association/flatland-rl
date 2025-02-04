@@ -112,7 +112,7 @@ class FlatlandRemoteEvaluationService:
 
     def __init__(
         self,
-        test_env_folder="/tmp",
+        test_env_folder=None,
         flatland_rl_service_id=FLATLAND_RL_SERVICE_ID,
         remote_host=os.getenv("redis_ip", '127.0.0.1'),
         remote_port=6379,
@@ -172,7 +172,13 @@ class FlatlandRemoteEvaluationService:
         print("=" * 20)
 
         # Test Env folder Paths
-        self.test_env_folder = test_env_folder
+        if test_env_folder is not None:
+            self.test_env_folder = test_env_folder
+        else:
+            self.test_env_folder = os.getenv(
+                'AICROWD_TESTS_FOLDER',
+                '/tmp'
+            )
         self.video_generation_envs = video_generation_envs
         self.env_file_paths = self.get_env_filepaths()
         print(self.env_file_paths)
