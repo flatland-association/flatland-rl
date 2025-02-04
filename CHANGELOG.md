@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `aicrowd_helpers.py` [pr [#112](https://github.com/flatland-association/flatland-rl/pull/112)].
 * Add episodes for benchmarking and regression tests [pr [#105](https://github.com/flatland-association/flatland-rl/pull/105)].
 * Dump `results.json` (evaluation state) along `results.csv` [pr [#115](https://github.com/flatland-association/flatland-rl/pull/115)].
+* Make test env folder configurable for evaluation service via `AICROWD_TESTS_FOLDER` as for client [pr [#115](https://github.com/flatland-association/flatland-rl/pull/115)].
 
 ### Fixed
 
