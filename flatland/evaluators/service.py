@@ -1205,6 +1205,13 @@ class FlatlandRemoteEvaluationService:
             with open(evaluation_state_output_path, "w") as out:
                 json.dump(self.evaluation_state, out)
 
+            # Upload the evaluation state file to S3 as well
+            if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
+                evaluation_state_s3_key = aicrowd_helpers.upload_to_s3(
+                    evaluation_state_output_path
+                )
+                self.evaluation_state["meta"]["private_evaluation_state_s3_key"] = evaluation_state_s3_key
+
         print("#" * 100)
         print("EVALUATION COMPLETE !!")
         print("#" * 100)
