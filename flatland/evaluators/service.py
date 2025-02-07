@@ -83,10 +83,7 @@ DEFAULT_COMMAND_TIMEOUT = int(os.getenv(
 
 RANDOM_SEED = int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
 
-SUPPORTED_CLIENT_VERSIONS = \
-    [
-        flatland.__version__
-    ]
+SUPPORTED_CLIENT_VERSIONS = os.getenv("SUPPORTED_CLIENT_VERSIONS", "").split(",") + [flatland.__version__]
 
 
 class FlatlandRemoteEvaluationService:
