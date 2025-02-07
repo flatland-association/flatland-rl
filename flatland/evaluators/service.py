@@ -85,6 +85,7 @@ RANDOM_SEED = int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
 
 SUPPORTED_CLIENT_VERSIONS = os.getenv("SUPPORTED_CLIENT_VERSIONS", "").split(",") + [flatland.__version__]
 
+TEST_ID_FILTER = os.getenv("TEST_ID_FILTER", None)
 
 class FlatlandRemoteEvaluationService:
     """
@@ -365,6 +366,18 @@ class FlatlandRemoteEvaluationService:
                  for ext in ["pkl", "mpk"]]))
             existing_paths = [os.path.relpath(sPath, self.merge_dir) for sPath in existing_paths]
             env_paths = set(env_paths) - set(existing_paths)
+
+        if TEST_ID_FILTER is not None:
+            test_ids = set(TEST_ID_FILTER.split(","))
+            print(test_ids)
+            filtered_env_paths = []
+            for p in env_paths:
+                for f in test_ids:
+                    if p.startswith(f):
+                        filtered_env_paths.append(p)
+                        break
+            env_paths = filtered_env_paths
+
 
         return env_paths
 
