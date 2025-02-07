@@ -712,7 +712,7 @@ class FlatlandRemoteEvaluationService:
             env_test, env_level = self.get_env_test_and_level(test_env_file_path)
 
         # Did we just finish a test, and if yes did it reach high enough mean percentage done?
-        if self.current_test != env_test and env_test != 0:
+        if self.current_test != env_test and self.simulation_count > 0:
             if self.current_test not in self.simulation_percentage_complete_per_test:
                 print("No environment was finished at all during test {}!".format(self.current_test))
                 mean_test_complete_percentage = 0.0
