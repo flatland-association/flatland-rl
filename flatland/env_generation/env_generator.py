@@ -7,7 +7,7 @@ from flatland.envs.rail_generators import sparse_rail_generator
 
 
 # defaults from Flatland 3 Round 2 Test_0, see https://flatland.aicrowd.com/challenges/flatland3/envconfig.html
-def env_creator(n_agents=7,
+def env_generator(n_agents=7,
                 x_dim=30,
                 y_dim=30,
                 n_cities=2,

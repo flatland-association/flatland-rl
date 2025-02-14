@@ -21,7 +21,7 @@ from ray.tune.registry import registry_get_input
 
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
-from flatland.ml.ray.wrappers import ray_env_creator
+from flatland.ml.ray.wrappers import ray_env_generator
 
 
 def add_flatland_inference_with_random_policy_args():
@@ -58,7 +58,7 @@ def add_flatland_inference_with_random_policy_args():
 
 def rollout(args: Namespace):
     # Create an env to do inference in.
-    env = ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)())
+    env = ray_env_generator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)())
     obs, _ = env.reset()
 
     num_episodes = 0

@@ -1,19 +1,19 @@
 import numpy as np
 
 from flatland.core.env_observation_builder import AgentHandle
-from flatland.env_generation.env_creator import env_creator
+from flatland.env_generation.env_generator import env_generator
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenNormalizedTreeObsForRailEnv
 
 
 def test_flatten_tree_obs_for_rail_env():
     obs_builder = FlattenNormalizedTreeObsForRailEnv(max_depth=1, predictor=ShortestPathPredictorForRailEnv(max_depth=10))
-    env_creator(n_agents=7, obs_builder_object=obs_builder)
+    env_generator(n_agents=7, obs_builder_object=obs_builder)
     obs = obs_builder.get()
     assert obs.dtype == float
     assert obs.shape == (5 * 12,)
 
-    env_creator(obs_builder_object=obs_builder, seed=42)
+    env_generator(obs_builder_object=obs_builder, seed=42)
     obs = obs_builder.get_many(list(range(7)))
 
     assert len(obs) == 7

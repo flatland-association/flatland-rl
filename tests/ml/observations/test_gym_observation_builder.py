@@ -2,11 +2,11 @@ import pytest
 
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.env_generation.env_creator import env_creator
+from flatland.env_generation.env_generator import env_generator
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenNormalizedTreeObsForRailEnv
 from flatland.ml.observations.gym_observation_builder import DummyObservationBuilderGym, GlobalObsForRailEnvGym
-from flatland.ml.ray.wrappers import ray_env_creator
+from flatland.ml.ray.wrappers import ray_env_generator
 
 
 def test_dummy_observation_builder_gym():
@@ -28,7 +28,7 @@ def test_dummy_observation_builder_gym():
 
 def test_global_obs_for_rail_env():
     obs_builder = GlobalObsForRailEnvGym()
-    env = env_creator(obs_builder_object=obs_builder)
+    env = env_generator(obs_builder_object=obs_builder)
     obs = obs_builder.get()
     assert obs.shape == (env.width * env.height * (16 + 5 + 2),)
     assert obs.dtype == float
@@ -59,7 +59,7 @@ def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape):
     expected_dtype = float
     expected_agent_ids = ['0', '1', '2', '3', '4', '5', '6']
 
-    env = ray_env_creator(obs_builder_object=obs_builder)
+    env = ray_env_generator(obs_builder_object=obs_builder)
 
     assert env.agents == expected_agent_ids, env.agents
     for agent_id in env.agents:

@@ -20,7 +20,7 @@ from ray.rllib.utils.typing import ResultDict
 from ray.tune.registry import get_trainable_cls, register_env, registry_get_input
 
 from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
-from flatland.ml.ray.wrappers import ray_env_creator
+from flatland.ml.ray.wrappers import ray_env_generator
 
 
 def setup_func():
@@ -95,7 +95,7 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
         **init_args,
     )
     env_name = "flatland_env"
-    register_env(env_name, lambda _: ray_env_creator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
+    register_env(env_name, lambda _: ray_env_generator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
     base_config = (
         # N.B. the warning `passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64`
         #   comes from ray.tune.registry._register_all() -->  import ray.rllib.algorithms.dreamerv3 as dreamerv3!
