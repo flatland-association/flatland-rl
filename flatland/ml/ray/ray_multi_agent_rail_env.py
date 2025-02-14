@@ -71,13 +71,13 @@ class RayMultiAgentWrapper(MultiAgentEnv):
         # report obs/done/info only once per agent per episode,
         # see https://github.com/ray-project/ray/issues/10761
         terminateds = copy.deepcopy(terminateds)
+        terminateds = {str(i): terminateds[i] for i in self.wrap.get_agent_handles()}
+        terminateds["__all__"] = all(terminateds.values())
         for i in self.wrap.get_agent_handles():
             if prev_dones[i] is True:
                 del obs[str(i)]
                 del terminateds[str(i)]
                 del infos[str(i)]
-        terminateds = {str(i): terminateds[i] for i in self.wrap.get_agent_handles()}
-        terminateds["__all__"] = all(terminateds.values())
         truncateds = {"__all__": False}
 
         if self.render_mode is not None:
