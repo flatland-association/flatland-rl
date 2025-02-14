@@ -10,17 +10,17 @@ async-timeout==5.0.1
     # via redis
 attr==0.3.2
     # via flatland-rl (pyproject.toml)
-boto3==1.35.76
+boto3==1.36.20
     # via flatland-rl (pyproject.toml)
-botocore==1.35.76
+botocore==1.36.20
     # via
     #   boto3
     #   s3transfer
-certifi==2024.8.30
+certifi==2025.1.31
     # via requests
-charset-normalizer==3.4.0
+charset-normalizer==3.4.1
     # via requests
-click==8.1.7
+click==8.1.8
     # via flatland-rl (pyproject.toml)
 comm==0.2.2
     # via ipywidgets
@@ -36,9 +36,9 @@ decorator==5.1.1
     # via ipython
 exceptiongroup==1.2.2
     # via ipython
-executing==2.1.0
+executing==2.2.0
     # via stack-data
-fonttools==4.55.2
+fonttools==4.56.0
     # via matplotlib
 graphviz==0.20.3
     # via flatland-rl (pyproject.toml)
@@ -50,7 +50,7 @@ ipycanvas==0.13.3
     # via flatland-rl (pyproject.toml)
 ipyevents==2.0.2
     # via flatland-rl (pyproject.toml)
-ipython==8.30.0
+ipython==8.32.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipywidgets
@@ -67,11 +67,11 @@ jmespath==1.0.1
     #   botocore
 jupyterlab-widgets==3.0.13
     # via ipywidgets
-kiwisolver==1.4.7
+kiwisolver==1.4.8
     # via matplotlib
-lxml==5.3.0
+lxml==5.3.1
     # via svgutils
-matplotlib==3.9.3
+matplotlib==3.10.0
     # via
     #   flatland-rl (pyproject.toml)
     #   seaborn
@@ -104,31 +104,31 @@ parso==0.8.4
     # via jedi
 pexpect==4.9.0
     # via ipython
-pillow==11.0.0
+pillow==11.1.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
     #   matplotlib
-prompt-toolkit==3.0.48
+prompt-toolkit==3.0.50
     # via ipython
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pyglet==2.0.20
+pyglet==2.1.2
     # via flatland-rl (pyproject.toml)
-pygments==2.18.0
+pygments==2.19.1
     # via ipython
-pyparsing==3.2.0
+pyparsing==3.2.1
     # via matplotlib
 python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   matplotlib
     #   pandas
-python-gitlab==5.1.0
+python-gitlab==5.6.0
     # via crowdai-api
-pytz==2024.2
+pytz==2025.1
     # via pandas
 pyyaml==6.0.2
     # via flatland-rl (pyproject.toml)
@@ -145,7 +145,7 @@ requests==2.32.3
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via python-gitlab
-s3transfer==0.10.4
+s3transfer==0.11.2
     # via boto3
 seaborn==0.13.2
     # via flatland-rl (pyproject.toml)
@@ -167,9 +167,9 @@ traitlets==5.14.3
     #   matplotlib-inline
 typing-extensions==4.12.2
     # via ipython
-tzdata==2024.2
+tzdata==2025.1
     # via pandas
-urllib3==2.2.3
+urllib3==2.3.0
     # via
     #   botocore
     #   requests

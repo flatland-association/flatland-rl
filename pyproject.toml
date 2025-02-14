@@ -70,7 +70,9 @@ dev = [
 ml = [
     "ray[default,rllib]",
     "wandb",
-    "torch"
+    "torch",
+    # pin dm-tree, 0.1.9 has import errors under MacOS M1 at least.
+    "dm-tree<0.1.9"
     #    "supersuit",
     #    "pettingzoo",
     #    "stable_baselines3",
