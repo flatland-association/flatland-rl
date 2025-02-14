@@ -80,8 +80,11 @@ def rollout(args: Namespace):
         obss = np.stack(list(obs.values()))
         if args.cp is not None:
             rl_module_out = rl_module.forward_inference({"obs": torch.from_numpy(obss).unsqueeze(0).float()})
-            logits = convert_to_numpy(rl_module_out[Columns.ACTION_DIST_INPUTS])
-            action_dict = {str(h): np.random.choice(len(RailEnvActions), p=softmax(l)) for h, l in enumerate(logits[0])}
+            if Columns.ACTIONS in rl_module_out:
+                action_dict = dict(zip(env.agents, convert_to_numpy(rl_module_out[Columns.ACTIONS][0])))
+            else:
+                logits = convert_to_numpy(rl_module_out[Columns.ACTION_DIST_INPUTS])
+                action_dict = {str(h): np.random.choice(len(RailEnvActions), p=softmax(l)) for h, l in enumerate(logits[0])}
         else:
             action_dict = rl_module.forward_inference({"obs": np.expand_dims(obs, 0)})
             action_dict = {h: a[0] for h, a in action_dict['actions'].items()}

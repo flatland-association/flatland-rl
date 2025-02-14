@@ -96,6 +96,13 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
     )
     env_name = "flatland_env"
     register_env(env_name, lambda _: ray_env_generator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
+
+    # TODO could be extracted to cli - keep it low key as illustration only
+    additional_training_config = {}
+    if args.algo == "DQN":
+        additional_training_config = {"replay_buffer_config": {
+            "type": "MultiAgentEpisodeReplayBuffer",
+        }}
     base_config = (
         # N.B. the warning `passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64`
         #   comes from ray.tune.registry._register_all() -->  import ray.rllib.algorithms.dreamerv3 as dreamerv3!
@@ -111,7 +118,8 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
             model={
                 "vf_share_layers": True,
             },
-            train_batch_size=args.train_batch_size_per_learner
+            train_batch_size=args.train_batch_size_per_learner,
+            **additional_training_config
         )
         .rl_module(
             rl_module_spec=MultiRLModuleSpec(

@@ -23,10 +23,7 @@ from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import tr
         [
             # https://docs.ray.io/en/latest/rllib/rllib-algorithms.html
             "PPO",
-            # TODO dqn not working:  rewards = scipy.signal.lfilter([1], [1, -gamma], raw_rewards[::-1], axis=0)[
-            #                                                      ~~~~~~~~~~~^^^^^^
-            # TypeError: unhashable type: 'slice'
-            # "DQN",
+            "DQN",
             "IMPALA",
             "APPO",
         ]
