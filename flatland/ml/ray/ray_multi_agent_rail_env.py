@@ -14,6 +14,11 @@ from flatland.utils.rendertools import RenderTool
 
 
 class RayMultiAgentWrapper(MultiAgentEnv):
+    """
+    Agents are identified by AgentIDs (string).
+    See `ray.rllib.MultiAgentEnv`.
+    Otherwise, there are flapping errors in runs: "IndexError: list index out of range" -> "ray.rllib.utils.error.MultiAgentEnvError: Agent 0 already had its `SingleAgentEpisode.is_done` set to True, but still received data in a following step! obs=None act=None rew=0 info=None extra_model_outputs=None."
+    """
 
     def __init__(self, wrap: RailEnv, render_mode: Optional[str] = None):
         assert hasattr(wrap.obs_builder, "get_observation_space"), f"{type(wrap.obs_builder)} is not gym-compatible, missing get_observation_space"
