@@ -29,7 +29,6 @@ class RayMultiAgentWrapper(MultiAgentEnv):
             self.env_renderer = RenderTool(wrap)
 
         self.action_space: gym.spaces.Dict = spaces.Dict({
-            # TODO document why str is necessary - is it?
             str(i): gym.spaces.Discrete(5)
             for i in range(self.wrap.number_of_agents)
         })
