@@ -185,7 +185,7 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
     )
 
     env.reset()
-    env._max_episode_steps = 555
+    env._max_episode_steps = 5
 
     # set the initial position
     agent_0 = env.agents[0]
@@ -235,15 +235,10 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
         waypoints.append(cur)
     expected = [
         # agent 0 and agent 1 both want to enter the diamond-crossing at (3,2)
-        [Waypoint(position=(3, 1), direction=1), Waypoint(position=(2, 2), direction=2)],
-        # agent 0 and agent 1 can enter the level-free diamond crossing at (3,2)
-        [Waypoint(position=(3, 2), direction=1), Waypoint(position=(3, 2), direction=2)],
-        [Waypoint(position=(3, 3), direction=1), Waypoint(position=(4, 2), direction=2)],
-        [Waypoint(position=(3, 4), direction=1), Waypoint(position=(5, 2), direction=2)],
-        [Waypoint(position=(3, 5), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(3, 7), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(3, 8), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(0, 0), direction=1), Waypoint(position=(0, 0), direction=2)]
-    ]
+        [Waypoint(position=(3, 1), direction=1), Waypoint(position=(3, 3), direction=3)],
+        # agent 0 and agent 1 are stuck (head-on)
+        [Waypoint(position=(3, 2), direction=1), Waypoint(position=(3, 3), direction=3)],
+        [Waypoint(position=(3, 2), direction=1), Waypoint(position=(3, 3), direction=3)],
+        [Waypoint(position=(3, 2), direction=1), Waypoint(position=(3, 3), direction=3)],
+        [Waypoint(position=(3, 2), direction=1), Waypoint(position=(3, 3), direction=3)]]
     assert expected == waypoints, waypoints

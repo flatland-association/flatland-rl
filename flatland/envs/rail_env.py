@@ -564,12 +564,16 @@ class RailEnv(Environment):
                                                                           direction=new_direction,
                                                                           preprocessed_action=preprocessed_action)
 
+            # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
+            new_position_level_free = new_position
+            if new_position in self.level_free:
+                new_position_level_free = (new_position, new_direction % 2)
+            agent_position_level_free = agent.position
+            if agent.position in self.level_free:
+                agent_position_level_free = (agent.position, agent.direction % 2)
+
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
-            if new_position not in self.level_free:
-                self.motionCheck.addAgent(i_agent, agent.position, new_position)
-            else:
-                # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
-                self.motionCheck.addAgent(i_agent, agent.position, (new_position, agent.direction % 2))
+            self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
 
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
@@ -577,11 +581,15 @@ class RailEnv(Environment):
         for agent in self.agents:
             i_agent = agent.handle
 
+            agent_position_level_free = agent.position
+            if agent.position in self.level_free:
+                agent_position_level_free = (agent.position, agent.direction % 2)
+
             ## Update positions
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position)
+                movement_allowed = self.motionCheck.check_motion(i_agent, agent_position_level_free)
 
             movement_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
             movement_allowed = movement_allowed or movement_inside_cell
