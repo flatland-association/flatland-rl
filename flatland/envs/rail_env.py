@@ -205,6 +205,8 @@ class RailEnv(Environment):
 
         self.motionCheck = ac.MotionCheck()
 
+        self.level_free = set()
+
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
         random.seed(seed)
@@ -563,7 +565,11 @@ class RailEnv(Environment):
                                                                           preprocessed_action=preprocessed_action)
 
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
-            self.motionCheck.addAgent(i_agent, agent.position, new_position)
+            if new_position not in self.level_free:
+                self.motionCheck.addAgent(i_agent, agent.position, new_position)
+            else:
+                # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
+                self.motionCheck.addAgent(i_agent, agent.position, (new_position, agent.direction % 2))
 
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
