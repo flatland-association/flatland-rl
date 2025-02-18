@@ -95,7 +95,7 @@ def test_malfunction_process():
     # Move target to unreachable position in order to not interfere with test
     env.agents[0].target = (0, 0)
 
-    # Add in max episode steps because scheudule generator sets it to 0 for dummy data
+    # Add in max episode steps because schedule generator sets it to 0 for dummy data
     env._max_episode_steps = 200
     for step in range(100):
         actions = {}
@@ -190,7 +190,7 @@ def test_malfunction_before_entry():
     env.agents[0].target = (0, 0)
 
     # Test initial malfunction values for all agents
-    # we want some agents to be malfuncitoning already and some to be working
+    # we want some agents to be malfunctioning already and some to be working
     # we want different next_malfunction values for the agents
     malfunction_values = [env.malfunction_generator(env.np_random).num_broken_steps for _ in range(1000)]
     expected_value = (1 - np.exp(-0.5)) * 10
