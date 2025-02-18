@@ -16,7 +16,7 @@ from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import tr
         [
             "DummyObservationBuilderGym",
             "GlobalObsForRailEnvGym",
-            "FlattenNormalizedTreeObsForRailEnv_max_depth_3_50",
+            "FlattenedNormalizedTreeObsForRailEnv_max_depth_3_50",
 
         ]
         for algo in

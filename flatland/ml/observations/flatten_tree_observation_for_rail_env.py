@@ -12,7 +12,7 @@ from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.ml.observations.gym_observation_builder import GymObservationBuilder
 
 
-class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRailEnv):
+class FlattenedTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRailEnv):
     """
     Gym-ified and flattened normalized tree observation.
     """
@@ -26,15 +26,15 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._len_data = FlattenTreeObsForRailEnv._get_len_data(self.max_depth, self.NUM_DATA_FEATURE_GROUP)
-        self._len_distance = FlattenTreeObsForRailEnv._get_len_data(self.max_depth, self.NUM_DISTANCE_FEATURE_GROUP)
-        self._len_agent_data = FlattenTreeObsForRailEnv._get_len_data(self.max_depth, self.NUM_AGENT_DATA_FEATURE_GROUP)
+        self._len_data = FlattenedTreeObsForRailEnv._get_len_data(self.max_depth, self.NUM_DATA_FEATURE_GROUP)
+        self._len_distance = FlattenedTreeObsForRailEnv._get_len_data(self.max_depth, self.NUM_DISTANCE_FEATURE_GROUP)
+        self._len_agent_data = FlattenedTreeObsForRailEnv._get_len_data(self.max_depth, self.NUM_AGENT_DATA_FEATURE_GROUP)
 
     @staticmethod
     def _get_len_data(tree_depth: int, num_features):
         k = num_features
         for _ in range(tree_depth):
-            k = k * FlattenTreeObsForRailEnv.NUM_BRANCHES + num_features
+            k = k * FlattenedTreeObsForRailEnv.NUM_BRANCHES + num_features
         return k
 
     @staticmethod
@@ -123,7 +123,7 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
         return data, distance, agent_data
 
     def get(self, handle: Optional[AgentHandle] = 0) -> np.ndarray:
-        observation = super(FlattenTreeObsForRailEnv, self).get(handle)
+        observation = super(FlattenedTreeObsForRailEnv, self).get(handle)
         data, distance, agent_data = self.split_tree_into_feature_groups(observation, self.max_depth)
 
         flattened_ops = np.concatenate((np.concatenate((data, distance)), agent_data))
@@ -153,13 +153,13 @@ class FlattenTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRail
         Length of the flattened tree obs.
         """
 
-        k = FlattenTreeObsForRailEnv.NUM_FEATURES
+        k = FlattenedTreeObsForRailEnv.NUM_FEATURES
         for _ in range(self.max_depth):
-            k = k * FlattenTreeObsForRailEnv.NUM_BRANCHES + FlattenTreeObsForRailEnv.NUM_FEATURES
+            k = k * FlattenedTreeObsForRailEnv.NUM_BRANCHES + FlattenedTreeObsForRailEnv.NUM_FEATURES
         return k
 
 
-class FlattenNormalizedTreeObsForRailEnv(FlattenTreeObsForRailEnv):
+class FlattenedNormalizedTreeObsForRailEnv(FlattenedTreeObsForRailEnv):
     def __init__(self, observation_radius: int = 2, **kwargs):
         super().__init__(**kwargs)
         self.observation_radius = observation_radius
@@ -241,5 +241,5 @@ class FlattenNormalizedTreeObsForRailEnv(FlattenTreeObsForRailEnv):
         return np.concatenate((np.concatenate((data, distance)), agent_data))
 
     def get(self, handle: Optional[AgentHandle] = 0) -> np.ndarray:
-        observation = super(FlattenNormalizedTreeObsForRailEnv, self).get(handle)
+        observation = super(FlattenedNormalizedTreeObsForRailEnv, self).get(handle)
         return self.normalize_obs(observation)
