@@ -31,7 +31,6 @@ dependencies = [
     "ipython",
     "ipywidgets",
     "matplotlib",
-    "methodtools",
     "msgpack_numpy",
     "msgpack",
     "networkx",
