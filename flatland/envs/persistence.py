@@ -187,7 +187,7 @@ class RailEnvPersister(object):
         -------
         env_dict: dict
         """
-        env.rail.grid = np.array(env_dict["grid"])
+        grid = np.array(env_dict["grid"])
 
         # Initialise the env with the frozen agents in the file
         env.agents = env_dict.get("agents", [])
@@ -195,9 +195,11 @@ class RailEnvPersister(object):
         # For consistency, set number_of_agents, which is the number which will be generated on reset
         env.number_of_agents = env.get_num_agents()
 
-        env.height, env.width = env.rail.grid.shape
-        env.rail.height = env.height
-        env.rail.width = env.width
+        env.height, env.width = grid.shape
+
+        # use new rail object instance for lru cache scoping and garbage collection to work properly
+        env.rail = GridTransitionMap(height=env.height, width=env.width)
+        env.rail.grid = grid
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
 
         # TODO merge with https://github.com/flatland-association/flatland-rl/pull/97/files

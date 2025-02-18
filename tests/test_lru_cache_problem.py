@@ -4,6 +4,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 
 
+# TODO refactor parametrized load and load_new!
 def test_lru_load():
     # seed 42
     env_42 = RailEnv(width=30, height=30,
@@ -64,8 +65,8 @@ def test_lru_load():
     for r in range(30):
         for c in range(30):
             transitions_42_tri[(r, c)] = env_42_tri.rail.get_full_transitions(r, c)
-    # load() does not invalidate cache (so env_43 transitions are still in the cache) - TODO to be fixed
-    assert set(transitions_42.items()) != set(transitions_42_tri.items())
+    # load() now invalidates cache correctly
+    assert set(transitions_42.items()) == set(transitions_42_tri.items())
 
 
 def test_lru_load_new():
@@ -120,8 +121,8 @@ def test_lru_load_new():
     # reset clears the cache, so the transitions are indeed different
     assert set(transitions_42.items()) != set(transitions_43.items())
 
-    # load env_42 from file
-    # N.B.line `env.rail = GridTransitionMap(1, 1)` in `load_new` has side effect of clearing infrastructure cache, but not `load()` TODO fix load()
+    # load_new() env_42 from file
+    # N.B.line `env.rail = GridTransitionMap(1, 1)` in `load_new` has side effect of clearing infrastructure cache.
     env_42_tri, _ = RailEnvPersister.load_new("env_42.pkl")
 
     transitions_42_tri = {}
