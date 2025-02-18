@@ -23,7 +23,7 @@ dependencies = [
     "crowdai_api",
     "dataclasses",
     "graphviz",
-    "importlib_resources<2.0.0",
+    "importlib_resources",
     "ipycanvas",
     "ipyevents",
     "ipython",
