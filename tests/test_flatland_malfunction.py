@@ -13,7 +13,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail2
-from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
+from tests.test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 
 class SingleAgentNavigationObs(ObservationBuilder):
@@ -95,7 +95,7 @@ def test_malfunction_process():
     # Move target to unreachable position in order to not interfere with test
     env.agents[0].target = (0, 0)
 
-    # Add in max episode steps because scheudule generator sets it to 0 for dummy data
+    # Add in max episode steps because schedule generator sets it to 0 for dummy data
     env._max_episode_steps = 200
     for step in range(100):
         actions = {}
@@ -130,7 +130,7 @@ def test_malfunction_process():
 def test_malfunction_process_statistically():
     """Tests that malfunctions are produced by stochastic_data!"""
     # Set fixed malfunction duration for this test
-    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 5,  # Rate of malfunction occurrence
+    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 5,  # Rate of malfunction occurence
                                             min_duration=5,  # Minimal duration of malfunction
                                             max_duration=5  # Max duration of malfunction
                                             )
@@ -190,7 +190,7 @@ def test_malfunction_before_entry():
     env.agents[0].target = (0, 0)
 
     # Test initial malfunction values for all agents
-    # we want some agents to be malfuncitoning already and some to be working
+    # we want some agents to be malfunctioning already and some to be working
     # we want different next_malfunction values for the agents
     malfunction_values = [env.malfunction_generator(env.np_random).num_broken_steps for _ in range(1000)]
     expected_value = (1 - np.exp(-0.5)) * 10

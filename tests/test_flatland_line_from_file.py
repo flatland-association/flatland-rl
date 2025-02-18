@@ -1,8 +1,7 @@
-from test_utils import create_and_save_env
-
+from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
-from flatland.envs.line_generators import sparse_line_generator, line_from_file
+from tests.test_utils import create_and_save_env
 
 
 def test_line_from_file_sparse():

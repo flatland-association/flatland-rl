@@ -40,32 +40,17 @@ jobs:
                 uses: actions/setup-python@v5
                 with:
                     python-version: ${{ matrix.python-version }}
+            -   name: Download episodes
+                run: |
+                    wget "https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    mkdir -p episodes
+                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run tests
                 run: tox
-
-    docs:
-        runs-on: ubuntu-22.04
-        steps:
-            -   uses: actions/checkout@v4
-            -   name: Set up Python
-                uses: actions/setup-python@v5
-                with:
-                    python-version: "3.10"
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
-            -   name: Run docs
-                run: tox run -e docs
-            -   name: Archive docs
-                uses: actions/upload-artifact@v4
-                with:
-                    name: docs
-                    path: docs/_build/html
 
     notebooks:
         if: ${{ false }}  # disabled for now, some need custom kernel
@@ -121,6 +106,12 @@ jobs:
                 uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
+            -   name: Download episodes
+                run: |
+                    wget "https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    mkdir -p episodes
+                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+                working-directory: ${{ github.workspace }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
