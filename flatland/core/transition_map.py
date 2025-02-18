@@ -1,12 +1,12 @@
 """
 TransitionMap and derived classes.
 """
-from functools import lru_cache
+import traceback
 
+import methodtools
 import numpy as np
 from importlib_resources import path
 from numpy import array
-import traceback
 
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position, get_direction
@@ -14,7 +14,7 @@ from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
-from flatland.utils.decorators import enable_infrastructure_lru_cache, send_infrastructure_data_change_signal_to_reset_lru_cache
+from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.ordered_set import OrderedSet
 
 
@@ -146,7 +146,7 @@ class GridTransitionMap(TransitionMap):
             self.random_generator.seed(random_seed)
         self.grid = np.zeros((height, width), dtype=self.transitions.get_type())
 
-    @enable_infrastructure_lru_cache(maxsize=1_000_000)
+    @methodtools.lru_cache(maxsize=1_000_000)
     def get_full_transitions(self, row, column):
         """
         Returns the full transitions for the cell at (row, column) in the format transition_map's transitions.
@@ -165,7 +165,7 @@ class GridTransitionMap(TransitionMap):
         """
         return self.grid[(row, column)]
 
-    @enable_infrastructure_lru_cache(maxsize=4_000_000)
+    @methodtools.lru_cache(maxsize=4_000_000)
     def get_transitions(self, row, column, orientation):
         """
         Return a tuple of transitions available in a cell specified by
@@ -207,16 +207,16 @@ class GridTransitionMap(TransitionMap):
 
         """
         send_infrastructure_data_change_signal_to_reset_lru_cache()
-        #assert len(cell_id) in (2, 3), \
+        # assert len(cell_id) in (2, 3), \
         #    'GridTransitionMap.set_transitions() ERROR: cell_id tuple must have length 2 or 3.'
         if len(cell_id) == 3:
             self.grid[cell_id[0:2]] = self.transitions.set_transitions(self.grid[cell_id[0:2]],
-                                                                                 cell_id[2],
-                                                                                 new_transitions)
+                                                                       cell_id[2],
+                                                                       new_transitions)
         elif len(cell_id) == 2:
             self.grid[cell_id] = new_transitions
 
-    @enable_infrastructure_lru_cache(maxsize=4_000_000)
+    @methodtools.lru_cache(maxsize=4_000_000)
     def get_transition(self, cell_id, transition_index):
         """
         Return the status of whether an agent in cell `cell_id` can perform a
@@ -343,7 +343,7 @@ class GridTransitionMap(TransitionMap):
         self.height = new_height
         self.grid = new_grid
 
-    @enable_infrastructure_lru_cache(maxsize=1_000_000)
+    @methodtools.lru_cache(maxsize=1_000_000)
     def is_dead_end(self, rcPos: IntVector2DArray):
         """
         Check if the cell is a dead-end.
@@ -360,7 +360,7 @@ class GridTransitionMap(TransitionMap):
         cell_transition = self.get_full_transitions(rcPos[0], rcPos[1])
         return Grid4Transitions.has_deadend(cell_transition)
 
-    @enable_infrastructure_lru_cache(maxsize=1_000_000)
+    @methodtools.lru_cache(maxsize=1_000_000)
     def is_simple_turn(self, rcPos: IntVector2DArray):
         """
         Check if the cell is a left/right simple turn
@@ -388,7 +388,7 @@ class GridTransitionMap(TransitionMap):
 
         return is_simple_turn(tmp)
 
-    @enable_infrastructure_lru_cache(maxsize=4_000_000)
+    @methodtools.lru_cache(maxsize=4_000_000)
     def check_path_exists(self, start: IntVector2DArray, direction: int, end: IntVector2DArray):
         """
         Breath first search for a possible path from one node with a certain orientation to a target node.
@@ -417,7 +417,7 @@ class GridTransitionMap(TransitionMap):
 
         return False
 
-    @enable_infrastructure_lru_cache(maxsize=1_000_000)
+    @methodtools.lru_cache(maxsize=1_000_000)
     def cell_neighbours_valid(self, rcPos: IntVector2DArray, check_this_cell=False):
         """
         Check validity of cell at rcPos = tuple(row, column)
@@ -625,7 +625,7 @@ class GridTransitionMap(TransitionMap):
             self.set_transitions((rcPos[0], rcPos[1]), transition)
         return True
 
-    @enable_infrastructure_lru_cache(maxsize=1_000_000)
+    @methodtools.lru_cache(maxsize=1_000_000)
     def validate_new_transition(self, prev_pos: IntVector2D, current_pos: IntVector2D,
                                 new_pos: IntVector2D, end_pos: IntVector2D):
         """
