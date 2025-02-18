@@ -68,8 +68,11 @@ dev = [
 ]
 # TODO https://github.com/flatland-association/flatland-rl/issues/73 merge whole of flatland/contrib into flatland/ml and add all dependencies from flatland/contrib/requirements_training.txt here
 ml = [
-    "ray[default]",
+    "ray[default,rllib]",
     "wandb",
+    "torch",
+    # pin dm-tree, 0.1.9 has import errors under MacOS M1 at least.
+    "dm-tree<0.1.9"
     #    "supersuit",
     #    "pettingzoo",
     #    "stable_baselines3",
@@ -88,3 +91,8 @@ evaluator = "flatland.cli:evaluator"
 find = { }
 
 [tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]

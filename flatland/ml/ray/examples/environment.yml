@@ -1,0 +1,10 @@
+name: flatland-rllib-cli
+channels:
+    - defaults
+dependencies:
+    - python=3.11
+    - pip=24.2
+    -   pip:
+            # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#api-reference
+            # When specifying a path to a requirements.txt file, the file must be present on your local machine and it must be a valid absolute path or relative filepath relative to your local current working directory, not relative to the working_dir specified in the runtime_env.
+            - -r ${RAY_RUNTIME_ENV_CREATE_WORKING_DIR}/requirements-ml.txt

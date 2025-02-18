@@ -7,7 +7,7 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_grid_transition_map
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail
-from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
+from tests.test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 
@@ -54,7 +54,7 @@ def test_multi_speed_init():
                   rail_generator=sparse_rail_generator(seed=2), line_generator=sparse_line_generator(),
                   random_seed=3,
                   number_of_agents=3)
-    
+
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
     agent = RandomAgent(218, 4)
 
@@ -394,13 +394,13 @@ def test_multispeed_actions_malfunction_no_blocking():
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
-    
+
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
     for _ in range(max([agent.earliest_departure for agent in env.agents]) + 1):
         env.step({}) # DO_NOTHING for all agents
 
     env._max_episode_steps = 10000
-    
+
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
@@ -534,11 +534,11 @@ def test_multispeed_actions_no_malfunction_invalid_actions():
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
-    
+
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
     for _ in range(max([agent.earliest_departure for agent in env.agents])):
         env.step({}) # DO_NOTHING for all agents
-    
+
     env._max_episode_steps = 10000
 
     set_penalties_for_replay(env)

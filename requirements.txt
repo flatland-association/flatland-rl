@@ -4,27 +4,27 @@
 #
 #    pip-compile --output-file=requirements.txt pyproject.toml
 #
-asttokens==2.4.1
+asttokens==3.0.0
     # via stack-data
-async-timeout==4.0.3
+async-timeout==5.0.1
     # via redis
 attr==0.3.2
     # via flatland-rl (pyproject.toml)
-boto3==1.35.49
+boto3==1.36.20
     # via flatland-rl (pyproject.toml)
-botocore==1.35.49
+botocore==1.36.20
     # via
     #   boto3
     #   s3transfer
-certifi==2024.8.30
+certifi==2025.1.31
     # via requests
-charset-normalizer==3.4.0
+charset-normalizer==3.4.1
     # via requests
-click==8.1.7
+click==8.1.8
     # via flatland-rl (pyproject.toml)
 comm==0.2.2
     # via ipywidgets
-contourpy==1.3.0
+contourpy==1.3.1
     # via matplotlib
 crowdai-api==0.1.22
     # via flatland-rl (pyproject.toml)
@@ -36,9 +36,9 @@ decorator==5.1.1
     # via ipython
 exceptiongroup==1.2.2
     # via ipython
-executing==2.1.0
+executing==2.2.0
     # via stack-data
-fonttools==4.54.1
+fonttools==4.56.0
     # via matplotlib
 graphviz==0.20.3
     # via flatland-rl (pyproject.toml)
@@ -50,7 +50,7 @@ ipycanvas==0.13.3
     # via flatland-rl (pyproject.toml)
 ipyevents==2.0.2
     # via flatland-rl (pyproject.toml)
-ipython==8.29.0
+ipython==8.32.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipywidgets
@@ -59,7 +59,7 @@ ipywidgets==8.1.5
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
     #   ipyevents
-jedi==0.19.1
+jedi==0.19.2
     # via ipython
 jmespath==1.0.1
     # via
@@ -67,11 +67,11 @@ jmespath==1.0.1
     #   botocore
 jupyterlab-widgets==3.0.13
     # via ipywidgets
-kiwisolver==1.4.7
+kiwisolver==1.4.8
     # via matplotlib
-lxml==5.3.0
+lxml==5.3.1
     # via svgutils
-matplotlib==3.9.2
+matplotlib==3.10.0
     # via
     #   flatland-rl (pyproject.toml)
     #   seaborn
@@ -94,7 +94,7 @@ numpy==1.26.4
     #   msgpack-numpy
     #   pandas
     #   seaborn
-packaging==24.1
+packaging==24.2
     # via matplotlib
 pandas==2.2.3
     # via
@@ -104,37 +104,37 @@ parso==0.8.4
     # via jedi
 pexpect==4.9.0
     # via ipython
-pillow==11.0.0
+pillow==11.1.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
     #   matplotlib
-prompt-toolkit==3.0.48
+prompt-toolkit==3.0.50
     # via ipython
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pyglet==2.0.18
+pyglet==2.1.2
     # via flatland-rl (pyproject.toml)
-pygments==2.18.0
+pygments==2.19.1
     # via ipython
-pyparsing==3.2.0
+pyparsing==3.2.1
     # via matplotlib
 python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   matplotlib
     #   pandas
-python-gitlab==5.0.0
+python-gitlab==5.6.0
     # via crowdai-api
-pytz==2024.2
+pytz==2025.1
     # via pandas
 pyyaml==6.0.2
     # via flatland-rl (pyproject.toml)
 recordtype==1.4
     # via flatland-rl (pyproject.toml)
-redis==5.2.0
+redis==5.2.1
     # via
     #   crowdai-api
     #   flatland-rl (pyproject.toml)
@@ -145,13 +145,12 @@ requests==2.32.3
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via python-gitlab
-s3transfer==0.10.3
+s3transfer==0.11.2
     # via boto3
 seaborn==0.13.2
     # via flatland-rl (pyproject.toml)
-six==1.16.0
+six==1.17.0
     # via
-    #   asttokens
     #   python-dateutil
     #   recordtype
 stack-data==0.6.3
@@ -168,9 +167,9 @@ traitlets==5.14.3
     #   matplotlib-inline
 typing-extensions==4.12.2
     # via ipython
-tzdata==2024.2
+tzdata==2025.1
     # via pandas
-urllib3==2.2.3
+urllib3==2.3.0
     # via
     #   botocore
     #   requests
