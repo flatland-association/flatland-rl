@@ -10,6 +10,8 @@ Line = NamedTuple('Line', [
     ('agent_speeds', List[float]),
 ])
 
-Timetable = NamedTuple('Timetable',  [('earliest_departures', List[int]),
-                                    ('latest_arrivals', List[int]),
-                                    ('max_episode_steps', int)])
+Timetable = NamedTuple('Timetable', [
+    ('earliest_departures', List[List[int]]),
+    ('latest_arrivals', List[List[int]]),
+    ('max_episode_steps', List[int])
+])
