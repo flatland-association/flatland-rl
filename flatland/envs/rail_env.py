@@ -328,8 +328,10 @@ class RailEnv(Environment):
             self._max_episode_steps = timetable.max_episode_steps
 
             for agent_i, agent in enumerate(self.agents):
-                agent.earliest_departure = timetable.earliest_departures[agent_i]
-                agent.latest_arrival = timetable.latest_arrivals[agent_i]
+                agent.earliest_departure = timetable.earliest_departures[agent_i][0]
+                agent.latest_arrival = timetable.latest_arrivals[agent_i][0]
+                agent.intermediate_earliest_departure = timetable.earliest_departures[agent_i][1:]
+                agent.intermediate_latest_arrival = timetable.latest_arrivals[agent_i][1:]
         else:
             self.distance_map.reset(self.agents, self.rail)
 
@@ -726,6 +728,7 @@ class RailEnv(Environment):
         return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
                                     show_predictions=show_predictions,
                                     show_rowcols=show_rowcols, return_image=return_image)
+
     def initialize_renderer(self, mode, gl,
                             agent_render_variant,
                             show_debug,

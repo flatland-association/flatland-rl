@@ -33,24 +33,25 @@ Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
 
 
 def load_env_agent(agent_tuple: Agent):
-     return EnvAgent(
-                        initial_position = agent_tuple.initial_position,
-                        initial_direction = agent_tuple.initial_direction,
-                        direction = agent_tuple.direction,
-                        target = agent_tuple.target,
-                        moving = agent_tuple.moving,
-                        earliest_departure = agent_tuple.earliest_departure,
-                        latest_arrival = agent_tuple.latest_arrival,
-                        handle = agent_tuple.handle,
-                        position = agent_tuple.position,
-                        arrival_time = agent_tuple.arrival_time,
-                        old_direction = agent_tuple.old_direction,
-                        old_position = agent_tuple.old_position,
-                        speed_counter = agent_tuple.speed_counter,
-                        action_saver = agent_tuple.action_saver,
-                        state_machine = agent_tuple.state_machine,
-                        malfunction_handler = agent_tuple.malfunction_handler,
-                    )
+    return EnvAgent(
+        initial_position=agent_tuple.initial_position,
+        initial_direction=agent_tuple.initial_direction,
+        direction=agent_tuple.direction,
+        target=agent_tuple.target,
+        moving=agent_tuple.moving,
+        earliest_departure=agent_tuple.earliest_departure,
+        latest_arrival=agent_tuple.latest_arrival,
+        handle=agent_tuple.handle,
+        position=agent_tuple.position,
+        arrival_time=agent_tuple.arrival_time,
+        old_direction=agent_tuple.old_direction,
+        old_position=agent_tuple.old_position,
+        speed_counter=agent_tuple.speed_counter,
+        action_saver=agent_tuple.action_saver,
+        state_machine=agent_tuple.state_machine,
+        malfunction_handler=agent_tuple.malfunction_handler,
+    )
+
 
 @attrs
 class EnvAgent:
@@ -65,15 +66,19 @@ class EnvAgent:
     earliest_departure = attrib(default=None, type=int)  # default None during _from_line()
     latest_arrival = attrib(default=None, type=int)  # default None during _from_line()
 
+    intermediate_targets = attrib(type=List[Tuple[int, int]], default=Factory(lambda: []))
+    intermediate_earliest_departure = attrib(type=List[int], default=Factory(lambda: []))
+    intermediate_latest_arrival = attrib(type=List[int], default=Factory(lambda: []))
+
     handle = attrib(default=None)
     # INIT TILL HERE IN _from_line()
 
     # Env step facelift
-    speed_counter = attrib(default = Factory(lambda: SpeedCounter(1.0)), type=SpeedCounter)
-    action_saver = attrib(default = Factory(lambda: ActionSaver()), type=ActionSaver)
-    state_machine = attrib(default= Factory(lambda: TrainStateMachine(initial_state=TrainState.WAITING)) ,
+    speed_counter = attrib(default=Factory(lambda: SpeedCounter(1.0)), type=SpeedCounter)
+    action_saver = attrib(default=Factory(lambda: ActionSaver()), type=ActionSaver)
+    state_machine = attrib(default=Factory(lambda: TrainStateMachine(initial_state=TrainState.WAITING)),
                            type=TrainStateMachine)
-    malfunction_handler = attrib(default = Factory(lambda: MalfunctionHandler()), type=MalfunctionHandler)
+    malfunction_handler = attrib(default=Factory(lambda: MalfunctionHandler()), type=MalfunctionHandler)
 
     position = attrib(default=None, type=Optional[Tuple[int, int]])
 
@@ -83,7 +88,6 @@ class EnvAgent:
     # used in rendering
     old_direction = attrib(default=None)
     old_position = attrib(default=None)
-
 
     def reset(self):
         """
@@ -122,7 +126,7 @@ class EnvAgent:
                      malfunction_handler=self.malfunction_handler)
 
     def get_shortest_path(self, distance_map) -> List[Waypoint]:
-        from flatland.envs.rail_env_shortest_paths import get_shortest_paths # Circular dep fix
+        from flatland.envs.rail_env_shortest_paths import get_shortest_paths  # Circular dep fix
         return get_shortest_paths(distance_map=distance_map, agent_handle=self.handle)[self.handle]
 
     def get_travel_time_on_shortest_path(self, distance_map) -> int:
@@ -143,8 +147,7 @@ class EnvAgent:
         -ve if arrival time is projected after latest arrival
         '''
         return self.get_time_remaining_until_latest_arrival(elapsed_steps) - \
-               self.get_travel_time_on_shortest_path(distance_map)
-
+            self.get_travel_time_on_shortest_path(distance_map)
 
     @classmethod
     def from_line(cls, line: Line):
@@ -157,14 +160,17 @@ class EnvAgent:
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
 
             agent = EnvAgent(initial_position=line.agent_positions[i_agent][0],
-                            initial_direction = line.agent_directions[i_agent],
-                            direction = line.agent_directions[i_agent],
-                            target = line.agent_targets[i_agent],
-                            moving = False,
-                            earliest_departure = None,
-                            latest_arrival = None,
-                            handle = i_agent,
-                            speed_counter = SpeedCounter(speed=speed))
+                             initial_direction=line.agent_directions[i_agent],
+                             direction=line.agent_directions[i_agent],
+                             target=line.agent_targets[i_agent],
+                             intermediate_targets=line.agent_positions[i_agent][1:],
+                             moving=False,
+                             earliest_departure=None,
+                             latest_arrival=None,
+                             intermediate_earliest_departure=None,
+                             intermediate_latest_arrival=None,
+                             handle=i_agent,
+                             speed_counter=SpeedCounter(speed=speed))
             agent_list.append(agent)
 
         return agent_list
@@ -175,14 +181,14 @@ class EnvAgent:
         for i, static_agent in enumerate(static_agents_data):
             if len(static_agent) >= 6:
                 agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
-                                direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
-                                speed_counter=SpeedCounter(static_agent[4]['speed']), handle=i)
+                                 direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
+                                 speed_counter=SpeedCounter(static_agent[4]['speed']), handle=i)
             else:
                 agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
-                                direction=static_agent[1], target=static_agent[2],
-                                moving=False,
-                                speed_counter=SpeedCounter(1.0),
-                                handle=i)
+                                 direction=static_agent[1], target=static_agent[2],
+                                 moving=False,
+                                 speed_counter=SpeedCounter(1.0),
+                                 handle=i)
             agents.append(agent)
         return agents
 
@@ -222,7 +228,3 @@ class EnvAgent:
     @property
     def speed_data(self):
         raise ValueError("agent.speed_data is deprecated, please use agent.speed_counter instead")
-
-
-
-
