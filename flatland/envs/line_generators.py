@@ -153,6 +153,7 @@ class SparseLineGen(BaseLineGen):
         max_episode_steps = int(
             timedelay_factor * alpha * (rail.width + rail.height + num_agents / len(city_positions)))
 
+        agents_position = [[ap] for ap in agents_position]
         return Line(agent_positions=agents_position, agent_directions=agents_direction,
                     agent_targets=agents_target, agent_speeds=speeds)
 
@@ -183,7 +184,7 @@ def line_from_file(filename, load_from_package=None) -> LineGenerator:
         agents = env_dict["agents"]
 
         # setup with loaded data
-        agents_position = [a.initial_position for a in agents]
+        agents_position = [[a.initial_position] for a in agents]
 
         # this logic is wrong - we should really load the initial_direction as the direction.
         # agents_direction = [a.direction for a in agents]

@@ -1,19 +1,17 @@
-from flatland.envs.rail_trainrun_data_structures import Waypoint
-import numpy as np
 import warnings
-
 from typing import Tuple, Optional, NamedTuple, List
 
-from attr import attr, attrs, attrib, Factory
+import numpy as np
+from attr import attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.timetable_utils import Line
-
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.action_saver import ActionSaver
+from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
-from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
+from flatland.envs.timetable_utils import Line
 
 Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
                              ('initial_direction', Grid4TransitionsEnum),
@@ -158,7 +156,7 @@ class EnvAgent:
         for i_agent in range(num_agents):
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
 
-            agent = EnvAgent(initial_position = line.agent_positions[i_agent],
+            agent = EnvAgent(initial_position=line.agent_positions[i_agent][0],
                             initial_direction = line.agent_directions[i_agent],
                             direction = line.agent_directions[i_agent],
                             target = line.agent_targets[i_agent],
