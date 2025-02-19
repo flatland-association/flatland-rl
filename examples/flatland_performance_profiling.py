@@ -1,4 +1,5 @@
 import cProfile
+import sys
 from timeit import default_timer
 from typing import Union
 
@@ -174,7 +175,7 @@ def end_timer(label: str, time_profiler: Timer):
 
 
 @click.command()
-@click.option('--n_agents',
+@click.option('--n-agents',
               type=int,
               help="Number of agents.",
               default=200,
@@ -192,18 +193,18 @@ def end_timer(label: str, time_profiler: Timer):
               default=100,
               required=False
               )
-@click.option('--max_steps',
+@click.option('--max-steps',
               type=int,
               help="Max number of steps in simulation. Use <= 0 to skip simulation.",
               default=200,
               required=False
               )
-@click.option('--profiling_folder',
-              type=click.Path(exists=True),
-              help="Path to folder to write profile results to.",
+@click.option('--output-file', '-o',
+              type=click.Path(file_okay=True, writable=True),
+              help="Prof output file.",
               required=False
               )
-@click.option('--run_snakeviz',
+@click.option('--run-snakeviz',
               # action='store_true',
               help="Run snakeviz after profiling. --profiling_folder must be present.",
               default=False,
@@ -217,7 +218,7 @@ def execute_standard_flatland_application(
     width=100,
     height=100,
     max_steps=200,
-    profiling_folder=None,
+    output_file=None,
     run_snakeviz=False
 ):
     print("Start ...")
@@ -244,17 +245,16 @@ def execute_standard_flatland_application(
 
     if max_steps > 0:
         time_profiler = start_timer(use_time_profiler)
-        if profiling_folder is not None:
-            filename = f"{profiling_folder}/run_simulation.prof"
+        if output_file is not None:
             cProfile.run(f'run_simulation(get_rail_env(nAgents={n_agents}, use_dummy_obs={use_dummy_obs}, width={width}, height={height}), {do_rendering})',
-                         filename=filename)
+                         filename=output_file)
         else:
             run_simulation(env_fast, do_rendering)
         end_timer('run simulation', time_profiler)
-        if profiling_folder and profiling_folder is not None and run_snakeviz:
-            snakeviz.cli.main([filename])
+        if output_file and output_file is not None and run_snakeviz:
+            snakeviz.cli.main([output_file])
     print("... end.")
 
 
 if __name__ == "__main__":
-    execute_standard_flatland_application(["--profiling_folder", "."])
+    sys.exit(execute_standard_flatland_application())
