@@ -1,4 +1,5 @@
 import cProfile
+from timeit import default_timer
 from typing import Union
 
 import click
@@ -12,8 +13,30 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
-from flatland.utils.Timer import Timer
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+
+
+# inline from flatland.utils.Timer import Timer as < 4.0.0 versions don't have this, still want to profile them
+class Timer(object):
+    def __init__(self):
+        self.total_time = 0.0
+        self.start_time = 0.0
+
+    def start(self):
+        self.start_time = default_timer()
+
+    def end(self):
+        self.total_time += self.get_current()
+        return self.get_total_time()
+
+    def get_total_time(self):
+        return self.total_time
+
+    def get_current(self):
+        return default_timer() - self.start_time
+
+    def reset(self):
+        self.__init__()
 
 
 class RandomAgent:
