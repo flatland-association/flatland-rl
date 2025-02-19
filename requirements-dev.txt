@@ -38,8 +38,6 @@ backports-tarfile==1.2.0
     # via jaraco-context
 beautifulsoup4==4.13.3
     # via nbconvert
-benchmarker==4.0.1
-    # via flatland-rl (pyproject.toml)
 bleach==6.2.0
     # via nbconvert
 boto3==1.36.20
