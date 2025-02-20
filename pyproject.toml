@@ -19,7 +19,7 @@ classifiers = [
     'Programming Language :: Python :: 3.12',
 ]
 dependencies = [
-    "attr",
+    "attrs",
     "boto3",
     "click",
     "crowdai_api",
@@ -42,6 +42,8 @@ dependencies = [
     "recordtype",
     "redis",
     "seaborn",
+    # https://docs.python.org/3/whatsnew/3.12.html: Python 3.12 has removed pkg_resources from the standard library (moved to setuptools):
+    "setuptools",
     "svgutils",
     "timeout_decorator",
 
