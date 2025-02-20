@@ -1,7 +1,7 @@
 import cProfile
 import sys
 from timeit import default_timer
-from typing import Union
+from typing import Optional
 
 import click
 import numpy as np
@@ -15,29 +15,6 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
-
-
-# inline from flatland.utils.Timer import Timer as < 4.0.0 versions don't have this, still want to profile them
-class Timer(object):
-    def __init__(self):
-        self.total_time = 0.0
-        self.start_time = 0.0
-
-    def start(self):
-        self.start_time = default_timer()
-
-    def end(self):
-        self.total_time += self.get_current()
-        return self.get_total_time()
-
-    def get_total_time(self):
-        return self.total_time
-
-    def get_current(self):
-        return default_timer() - self.start_time
-
-    def reset(self):
-        self.__init__()
 
 
 class RandomAgent:
@@ -160,18 +137,16 @@ def run_simulation(env_fast: RailEnv, do_rendering, max_steps=200):
         env_renderer.close_window()
 
 
-def start_timer(USE_TIME_PROFILER: bool) -> Union[Timer, None]:
+def start_timer(USE_TIME_PROFILER: bool) -> Optional[float]:
     if USE_TIME_PROFILER:
-        time_profiler = Timer()
-        time_profiler.start()
-        return time_profiler
+        return default_timer()
     return None
 
 
-def end_timer(label: str, time_profiler: Timer):
+def end_timer(label: str, time_profiler: Optional[float]):
     if time_profiler is None:
         return
-    print('{:>20} \t {:7.5f}ms'.format(label, time_profiler.end()))
+    print('{:>20} \t {:7.5f}ms'.format(label, default_timer() - time_profiler))
 
 
 @click.command()
