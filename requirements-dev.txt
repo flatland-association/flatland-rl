@@ -24,11 +24,10 @@ async-lru==2.0.4
     # via jupyterlab
 async-timeout==5.0.1
     # via redis
-attr==0.3.2
-    # via flatland-rl (pyproject.toml)
 attrs==25.1.0
     # via
     #   flake8-eradicate
+    #   flatland-rl (pyproject.toml)
     #   jsonschema
     #   referencing
 babel==2.17.0

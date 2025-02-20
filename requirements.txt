@@ -8,7 +8,7 @@ asttokens==3.0.0
     # via stack-data
 async-timeout==5.0.1
     # via redis
-attr==0.3.2
+attrs==25.1.0
     # via flatland-rl (pyproject.toml)
 boto3==1.36.20
     # via flatland-rl (pyproject.toml)
