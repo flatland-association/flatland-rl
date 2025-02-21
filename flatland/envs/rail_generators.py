@@ -1,4 +1,4 @@
-"""Rail generators (infrastructure manager, "Infrastrukturbetreiber")."""
+"""Rail generators: infrastructure manager (IM) / Infrastrukturbetreiber (ISB)."""
 import warnings
 from typing import Callable, Tuple, Optional, Dict, List
 

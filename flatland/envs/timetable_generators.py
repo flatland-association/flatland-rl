@@ -1,3 +1,4 @@
+"""Timetable generators: Railway Undertaking (RU) / Eisenbahnverkehrsunternehmen (EVU)."""
 from typing import List
 
 import numpy as np
