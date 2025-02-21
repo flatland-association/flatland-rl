@@ -77,7 +77,7 @@ class RailEnv(Environment):
 
     Every time an agent stops, an agent has a certain probability of malfunctioning. Malfunctions of trains follow a
     poisson process with a certain rate. Not all trains will be affected by malfunctions during episodes to keep
-    complexity managable.
+    complexity manageable.
 
     TODO: currently, the parameters that control the stochasticity of the environment are hard-coded in init().
     For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
@@ -140,7 +140,7 @@ class RailEnv(Environment):
             vectors for each agent.
         remove_agents_at_target : bool
             If remove_agents_at_target is set to true then the agents will be removed by placing to
-            RailEnv.DEPOT_POSITION when the agent has reach it's target position.
+            RailEnv.DEPOT_POSITION when the agent has reached its target position.
         random_seed : int or None
             if None, then its ignored, else the random generators are seeded with this number to ensure
             that stochastic operations are replicable across multiple operations
@@ -440,7 +440,7 @@ class RailEnv(Environment):
 
         action = action_preprocessing.preprocess_moving_action(action, self.rail, current_position, current_direction)
 
-        # Check transitions, bounts for executing the action in the given position and directon
+        # Check transitions, bounts for executing the action in the given position and direction
         if action.is_moving_action() and not check_valid_action(action, self.rail, current_position, current_direction):
             action = RailEnvActions.STOP_MOVING
 
@@ -673,7 +673,7 @@ class RailEnv(Environment):
     def _exp_distirbution_synced(self, rate: float) -> float:
         """
         Generates sample from exponential distribution
-        We need this to guarantee synchronity between different instances with same seed.
+        We need this to guarantee synchronicity between different instances with the same seed.
         :param rate:
         :return:
         """
@@ -683,7 +683,7 @@ class RailEnv(Environment):
 
     def _is_agent_ok(self, agent: EnvAgent) -> bool:
         """
-        Check if an agent is ok, meaning it can move and is not malfuncitoinig
+        Check if an agent is ok, meaning it can move and is not malfunctionig
         Parameters
         ----------
         agent
@@ -705,7 +705,7 @@ class RailEnv(Environment):
                show_observations=False, show_predictions=False,
                show_rowcols=False, return_image=True):
         """
-        This methods provides the option to render the
+        This method provides the option to render the
         environment's behavior as an image or to a window.
         Parameters
         ----------
@@ -763,7 +763,7 @@ class RailEnv(Environment):
 
     def close(self):
         """
-        This methods closes any renderer window.
+        This method closes any renderer window.
         """
         if hasattr(self, "renderer") and self.renderer is not None:
             try:
