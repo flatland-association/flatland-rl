@@ -21,3 +21,19 @@ def test_rewards_late_arrival():
 
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -2
+
+
+def test_rewards_early_arrival():
+    rewards = Rewards()
+    agent = EnvAgent(initial_position=(0, 0),
+                     initial_direction=5,
+                     target=(3, 3),
+                     direction=3,
+                     state_machine=TrainStateMachine(initial_state=TrainState.DONE),
+                     earliest_departure=3,
+                     latest_arrival=14,
+                     arrival_time=12)
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+
+    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == 0
