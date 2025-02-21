@@ -683,7 +683,7 @@ class RailEnv(Environment):
 
     def _is_agent_ok(self, agent: EnvAgent) -> bool:
         """
-        Check if an agent is ok, meaning it can move and is not malfunctionig
+        Checks if an agent is ok, meaning it can move and is not malfunctioning.
         Parameters
         ----------
         agent
