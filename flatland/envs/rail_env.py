@@ -99,7 +99,7 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator=None,
+                 rail_generator: "RailGenerator" = None,
                  line_generator: "LineGenerator" = None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
                  number_of_agents=2,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
