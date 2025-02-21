@@ -8,7 +8,7 @@ from flatland.envs import persistence
 from flatland.envs.timetable_utils import Line
 
 AgentPosition = Tuple[int, int]
-LineGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[int]], Line]
+LineGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[int], Optional[RandomState]], Line]
 
 
 def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None,
