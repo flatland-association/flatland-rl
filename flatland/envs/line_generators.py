@@ -157,13 +157,6 @@ class SparseLineGen(BaseLineGen):
         else:
             speeds = [1.0] * len(agents_position)
 
-        # We add multiply factors to the max number of time steps to simplify task in Flatland challenge.
-        # These factors might change in the future.
-        timedelay_factor = 4
-        alpha = 2
-        max_episode_steps = int(
-            timedelay_factor * alpha * (rail.width + rail.height + num_agents / len(city_positions)))
-
         agents_position = [[ap] for ap in agents_position]
         return Line(agent_positions=agents_position, agent_directions=agents_direction,
                     agent_targets=agents_target, agent_speeds=speeds)
@@ -187,18 +180,10 @@ def line_from_file(filename, load_from_package=None) -> LineGenerator:
                   np_random: RandomState = None) -> Line:
         env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
 
-        max_episode_steps = env_dict.get("max_episode_steps", 0)
-        if (max_episode_steps == 0):
-            print("This env file has no max_episode_steps (deprecated) - setting to 100")
-            max_episode_steps = 100
-
         agents = env_dict["agents"]
 
         # setup with loaded data
         agents_position = [[a.initial_position] for a in agents]
-
-        # this logic is wrong - we should really load the initial_direction as the direction.
-        # agents_direction = [a.direction for a in agents]
         agents_direction = [a.initial_direction for a in agents]
         agents_target = [a.target for a in agents]
         agents_speed = [a.speed_counter.speed for a in agents]
