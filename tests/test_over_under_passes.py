@@ -15,11 +15,9 @@ from flatland.utils.simple_rail import make_diamond_crossing_rail
 def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
     rail, rail_map, optionals = make_diamond_crossing_rail()
 
-    # TODO better way to init state?
     env = RailEnv(
         width=rail_map.shape[1],
         height=rail_map.shape[0],
-        # TODO typing
         rail_generator=rail_from_grid_transition_map(rail, optionals),
         line_generator=sparse_line_generator(),
         number_of_agents=2,
@@ -92,11 +90,9 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
 def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
     rail, rail_map, optionals = make_diamond_crossing_rail()
 
-    # TODO better way to init state?
     env = RailEnv(
         width=rail_map.shape[1],
         height=rail_map.shape[0],
-        # TODO typing
         rail_generator=rail_from_grid_transition_map(rail, optionals),
         line_generator=sparse_line_generator(),
         number_of_agents=2,
@@ -172,18 +168,15 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
 def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = False):
     rail, rail_map, optionals = make_diamond_crossing_rail()
 
-    # TODO better way to init state?
     env = RailEnv(
         width=rail_map.shape[1],
         height=rail_map.shape[0],
-        # TODO typing
         rail_generator=rail_from_grid_transition_map(rail, optionals),
         line_generator=sparse_line_generator(),
         number_of_agents=2,
         obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
         record_steps=True
     )
-
     env.reset()
     env._max_episode_steps = 5
 
