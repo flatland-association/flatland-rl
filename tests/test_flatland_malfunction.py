@@ -13,7 +13,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail2
-from test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
+from tests.test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
 
 
 class SingleAgentNavigationObs(ObservationBuilder):
@@ -130,7 +130,7 @@ def test_malfunction_process():
 def test_malfunction_process_statistically():
     """Tests that malfunctions are produced by stochastic_data!"""
     # Set fixed malfunction duration for this test
-    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 5,  # Rate of malfunction occurrence
+    stochastic_data = MalfunctionParameters(malfunction_rate=1 / 5,  # Rate of malfunction occurence
                                             min_duration=5,  # Minimal duration of malfunction
                                             max_duration=5  # Max duration of malfunction
                                             )

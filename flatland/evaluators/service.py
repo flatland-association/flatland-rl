@@ -2,31 +2,31 @@
 from __future__ import print_function
 
 import glob
+import itertools
+import json
 import os
+import pickle
 import random
+import re
 import shutil
 import time
 import traceback
-import json
-import yaml
-import itertools
-import re
 
 import crowdai_api
 import msgpack
 import msgpack_numpy as m
-import pickle
 import numpy as np
 import pandas as pd
 import redis
 import timeout_decorator
+import yaml
 
 import flatland
+from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.step_utils.states import TrainState
 from flatland.evaluators import aicrowd_helpers
 from flatland.evaluators import messages
 from flatland.utils.rendertools import RenderTool
-from flatland.envs.persistence import RailEnvPersister
 
 use_signals_in_timeout = True
 if os.name == 'nt':
@@ -83,11 +83,9 @@ DEFAULT_COMMAND_TIMEOUT = int(os.getenv(
 
 RANDOM_SEED = int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
 
-SUPPORTED_CLIENT_VERSIONS = \
-    [
-        flatland.__version__
-    ]
+SUPPORTED_CLIENT_VERSIONS = os.getenv("SUPPORTED_CLIENT_VERSIONS", "").split(",") + [flatland.__version__]
 
+TEST_ID_FILTER = os.getenv("TEST_ID_FILTER", None)
 
 class FlatlandRemoteEvaluationService:
     """
@@ -112,7 +110,7 @@ class FlatlandRemoteEvaluationService:
 
     def __init__(
         self,
-        test_env_folder="/tmp",
+        test_env_folder=None,
         flatland_rl_service_id=FLATLAND_RL_SERVICE_ID,
         remote_host=os.getenv("redis_ip", '127.0.0.1'),
         remote_port=6379,
@@ -172,7 +170,13 @@ class FlatlandRemoteEvaluationService:
         print("=" * 20)
 
         # Test Env folder Paths
-        self.test_env_folder = test_env_folder
+        if test_env_folder is not None:
+            self.test_env_folder = test_env_folder
+        else:
+            self.test_env_folder = os.getenv(
+                'AICROWD_TESTS_FOLDER',
+                '/tmp'
+            )
         self.video_generation_envs = video_generation_envs
         self.env_file_paths = self.get_env_filepaths()
         print(self.env_file_paths)
@@ -362,6 +366,18 @@ class FlatlandRemoteEvaluationService:
                  for ext in ["pkl", "mpk"]]))
             existing_paths = [os.path.relpath(sPath, self.merge_dir) for sPath in existing_paths]
             env_paths = set(env_paths) - set(existing_paths)
+
+        if TEST_ID_FILTER is not None:
+            test_ids = set(TEST_ID_FILTER.split(","))
+            print(test_ids)
+            filtered_env_paths = []
+            for p in env_paths:
+                for f in test_ids:
+                    if p.startswith(f):
+                        filtered_env_paths.append(p)
+                        break
+            env_paths = filtered_env_paths
+
 
         return env_paths
 
@@ -665,7 +681,7 @@ class FlatlandRemoteEvaluationService:
         Handles a ENV_CREATE command from the client
         """
 
-        print(" -- [DEBUG] [env_create] EVAL DONE: ",self.evaluation_done)
+        print(" -- [DEBUG] [env_create] EVAL DONE: ", self.evaluation_done)
 
         # Check if the previous episode was finished
         if not self.simulation_done and not self.evaluation_done:
@@ -696,7 +712,7 @@ class FlatlandRemoteEvaluationService:
             env_test, env_level = self.get_env_test_and_level(test_env_file_path)
 
         # Did we just finish a test, and if yes did it reach high enough mean percentage done?
-        if self.current_test != env_test and env_test != 0:
+        if self.current_test != env_test and self.simulation_count > 0:
             if self.current_test not in self.simulation_percentage_complete_per_test:
                 print("No environment was finished at all during test {}!".format(self.current_test))
                 mean_test_complete_percentage = 0.0
@@ -720,7 +736,7 @@ class FlatlandRemoteEvaluationService:
             """
 
             print("=" * 15)
-            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count+1, len(self.env_file_paths)))
+            print("Evaluating {} ({}/{})".format(test_env_file_path, self.simulation_count + 1, len(self.env_file_paths)))
 
             test_env_file_path = os.path.join(
                 self.test_env_folder,
@@ -1011,7 +1027,6 @@ class FlatlandRemoteEvaluationService:
         agent_current_delays = []  # only for not arrived trains
         agent_rewards = list(self.env.rewards_dict.values())
 
-
         for i_agent in range(self.env.get_num_agents()):
             agent = self.env.agents[i_agent]
 
@@ -1053,7 +1068,6 @@ class FlatlandRemoteEvaluationService:
             json.dump(self.analysis_data, fOut)
 
         self.analysis_data = {}
-
 
     def save_merged_env(self):
         sfEnv = self.env_file_paths[self.simulation_count]
@@ -1149,7 +1163,6 @@ class FlatlandRemoteEvaluationService:
             else:
                 print("[WARNING] Ignoring uploading action_dir to S3")
 
-
         if self.analysis_data_dir:
             if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
                 aicrowd_helpers.upload_folder_to_s3(self.analysis_data_dir)
@@ -1194,6 +1207,20 @@ class FlatlandRemoteEvaluationService:
         self.evaluation_state["meta"]["percentage_complete"] = mean_percentage_complete
         self.evaluation_state["meta"]["termination_cause"] = self.termination_cause
         self.handle_aicrowd_success_event(self.evaluation_state)
+
+        if self.result_output_path:
+            evaluation_state_output_path = self.result_output_path.replace(".csv", ".json")
+            if evaluation_state_output_path == self.result_output_path:
+                evaluation_state_output_path = evaluation_state_output_path + ".json"
+            with open(evaluation_state_output_path, "w") as out:
+                json.dump(self.evaluation_state, out)
+
+            # Upload the evaluation state file to S3 as well
+            if aicrowd_helpers.is_grading() and aicrowd_helpers.is_aws_configured():
+                evaluation_state_s3_key = aicrowd_helpers.upload_to_s3(
+                    evaluation_state_output_path
+                )
+                self.evaluation_state["meta"]["private_evaluation_state_s3_key"] = evaluation_state_s3_key
 
         print("#" * 100)
         print("EVALUATION COMPLETE !!")

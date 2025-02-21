@@ -44,7 +44,7 @@ def load_flatland_environment_from_file(file_name: str,
     return environment
 
 
-def env_creator(n_agents: int = 7,
+def env_generator(n_agents: int = 7,
                 x_dim: int = 30,
                 y_dim: int = 30,
                 n_cities: int = 2,

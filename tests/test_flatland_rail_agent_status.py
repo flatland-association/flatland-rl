@@ -5,7 +5,7 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail
-from test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
+from tests.test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
 from flatland.envs.step_utils.states import TrainState
 
 def test_initial_status():
