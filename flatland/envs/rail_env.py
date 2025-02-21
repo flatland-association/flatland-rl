@@ -3,7 +3,7 @@ Definition of the RailEnv environment.
 """
 import random
 from functools import lru_cache
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Set
 
 import numpy as np
 
@@ -11,6 +11,7 @@ import flatland.envs.timetable_generators as ttg
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid_utils import Vector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
@@ -205,7 +206,7 @@ class RailEnv(Environment):
 
         self.motionCheck = ac.MotionCheck()
 
-        self.level_free = set()
+        self.level_free_positions: Set[Vector2D] = set()
 
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
@@ -316,6 +317,8 @@ class RailEnv(Environment):
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
+            if optionals and 'level_free_positions' in optionals:
+                self.level_free_positions = optionals['level_free_positions']
 
             line = self.line_generator(self.rail, self.number_of_agents, agents_hints,
                                        self.num_resets, self.np_random)
@@ -566,10 +569,10 @@ class RailEnv(Environment):
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
             new_position_level_free = new_position
-            if new_position in self.level_free:
+            if new_position in self.level_free_positions:
                 new_position_level_free = (new_position, new_direction % 2)
             agent_position_level_free = agent.position
-            if agent.position in self.level_free:
+            if agent.position in self.level_free_positions:
                 agent_position_level_free = (agent.position, agent.direction % 2)
 
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
@@ -582,7 +585,7 @@ class RailEnv(Environment):
             i_agent = agent.handle
 
             agent_position_level_free = agent.position
-            if agent.position in self.level_free:
+            if agent.position in self.level_free_positions:
                 agent_position_level_free = (agent.position, agent.direction % 2)
 
             ## Update positions
@@ -741,6 +744,7 @@ class RailEnv(Environment):
         return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
                                     show_predictions=show_predictions,
                                     show_rowcols=show_rowcols, return_image=return_image)
+
     def initialize_renderer(self, mode, gl,
                             agent_render_variant,
                             show_debug,
