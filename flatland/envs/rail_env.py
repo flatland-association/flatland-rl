@@ -23,6 +23,7 @@ from flatland.envs.distance_map import DistanceMap
 from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
@@ -56,21 +57,7 @@ class RailEnv(Environment):
     The actions of the agents are executed in order of their handle to prevent
     deadlocks and to allow them to learn relative priorities.
 
-    Reward Function:
 
-    It costs each agent a step_penalty for every time-step taken in the environment. Independent of the movement
-    of the agent. Currently all other penalties such as penalty for stopping, starting and invalid actions are set to 0.
-
-    alpha = 0
-    beta = 0
-    Reward function parameters:
-
-    - invalid_action_penalty = 0
-    - step_penalty = -alpha
-    - global_reward = beta
-    - epsilon = avoid rounding errors
-    - stop_penalty = 0  # penalty for stopping a moving agent
-    - start_penalty = 0  # penalty for starting a stopped agent
 
     Stochastic malfunctioning of trains:
     Trains in RailEnv can malfunction if they are halted too often (either by their own choice or because an invalid
@@ -84,18 +71,6 @@ class RailEnv(Environment):
     For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
 
     """
-    # Epsilon to avoid rounding errors
-    epsilon = 0.01
-    # NEW : REW: Sparse Reward
-    alpha = 0
-    beta = 0
-    step_penalty = -1 * alpha
-    global_reward = 1 * beta
-    invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
-    stop_penalty = 0  # penalty for stopping a moving agent
-    start_penalty = 0  # penalty for starting a stopped agent
-    cancellation_factor = 1
-    cancellation_time_buffer = 0
 
     def __init__(self,
                  width,
@@ -207,6 +182,8 @@ class RailEnv(Environment):
         self.motionCheck = ac.MotionCheck()
 
         self.level_free_positions: Set[Vector2D] = set()
+
+        self.rewards = Rewards()
 
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
@@ -492,7 +469,7 @@ class RailEnv(Environment):
             ((self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps)):
 
             for i_agent, agent in enumerate(self.agents):
-                reward = self._handle_end_reward(agent)
+                reward = self.rewards.end_of_episode_reward(agent, self.distance_map, self._elapsed_steps)
                 self.rewards_dict[i_agent] += reward
 
                 self.dones[i_agent] = True
@@ -632,7 +609,7 @@ class RailEnv(Environment):
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
             ## Update rewards
-            self.update_step_rewards(i_agent)
+            self.rewards_dict[i_agent] += self.rewards.step_reward(agent, self.distance_map, self._elapsed_steps)
 
             ## Update counters (malfunction and speed)
             agent.speed_counter.update_counter(agent.state, agent.old_position)
