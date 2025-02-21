@@ -38,9 +38,10 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
 
 
 class BaseLineGen(object):
-    def __init__(self, speed_ratio_map: Mapping[float, float] = None, seed: int = 1):
+    def __init__(self, speed_ratio_map: Mapping[float, float] = None, seed: int = 1, line_length: int = 2):
         self.speed_ratio_map = speed_ratio_map
         self.seed = seed
+        self.line_length = line_length
 
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
                  np_random: RandomState = None) -> Line:
@@ -50,12 +51,12 @@ class BaseLineGen(object):
         return self.generate(*args, **kwargs)
 
 
-def sparse_line_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1) -> LineGenerator:
-    return SparseLineGen(speed_ratio_map, seed)
+def sparse_line_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1, line_length: int = 2) -> LineGenerator:
+    return SparseLineGen(speed_ratio_map, seed, line_length)
 
 
 class SparseLineGen(BaseLineGen):
-    def __init__(self, speed_ratio_map: Mapping[float, float] = None, seed: int = 1):
+    def __init__(self, speed_ratio_map: Mapping[float, float] = None, seed: int = 1, line_length: int = 2):
         """
 
         This is the line generator which is used for Round 2 of the Flatland challenge. It produces lines
@@ -63,11 +64,14 @@ class SparseLineGen(BaseLineGen):
 
         Parameters
         ----------
-        speed_ratio_map: Speed ratios of all agents. They are probabilities of all different speeds and have to
-                add up to 1.
-        seed: Initiate random seed generator
+        speed_ratio_map : Mapping[float, float]
+            Speed ratios of all agents. They are probabilities of all different speeds and have to add up to 1.
+        seed : int
+            Initiate random seed generator
+        line_length : int
+            The length of the lines.
         """
-        super().__init__(speed_ratio_map, seed)
+        super().__init__(speed_ratio_map, seed, line_length)
 
     def decide_orientation(self, rail, start, target, possible_orientations, np_random: RandomState) -> int:
         feasible_orientations = []
@@ -137,7 +141,7 @@ class SparseLineGen(BaseLineGen):
         for agent_idx in range(num_agents):
             if (agent_idx % 2 == 0):
                 # Select 2 cities, find their num_stations and possible orientations
-                city_idx: List[int] = np_random.choice(len(city_positions), 2, replace=False)
+                city_idx: List[int] = np_random.choice(len(city_positions), self.line_length, replace=False)
 
                 city1 = city_idx[0]
                 city2 = city_idx[-1]
