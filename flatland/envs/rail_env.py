@@ -705,7 +705,7 @@ class RailEnv(Environment):
                show_observations=False, show_predictions=False,
                show_rowcols=False, return_image=True):
         """
-        This method provides the option to render the
+        Provides the option to render the
         environment's behavior as an image or to a window.
         Parameters
         ----------
@@ -763,7 +763,7 @@ class RailEnv(Environment):
 
     def close(self):
         """
-        This method closes any renderer window.
+        Closes any renderer window.
         """
         if hasattr(self, "renderer") and self.renderer is not None:
             try:
