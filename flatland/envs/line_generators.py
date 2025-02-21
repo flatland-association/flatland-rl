@@ -12,15 +12,15 @@ AgentPosition = Tuple[int, int]
 LineGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[int], Optional[RandomState]], Line]
 
 
-def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None,
-                                seed: int = None, np_random: RandomState = None) -> List[float]:
+def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None, np_random: RandomState = None) -> List[float]:
     """
     Parameters
     ----------
     nb_agents : int
         The number of agents to generate a speed for
     speed_ratio_map : Mapping[float,float]
-        A map of speeds mappint to their ratio of appearance. The ratios must sum up to 1.
+        A map of speeds mapping to their ratio of appearance. The ratios must sum up to 1.
+    np_random : RandomState
 
     Returns
     -------
@@ -43,8 +43,7 @@ class BaseLineGen(object):
         self.seed = seed
         self.line_length = line_length
 
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
-                 np_random: RandomState = None) -> Line:
+    def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
         pass
 
     def __call__(self, *args, **kwargs):
@@ -73,7 +72,8 @@ class SparseLineGen(BaseLineGen):
         """
         super().__init__(speed_ratio_map, seed, line_length)
 
-    def decide_orientation(self, rail, start, target, possible_orientations, np_random: RandomState) -> int:
+    @staticmethod
+    def decide_orientation(rail, start, target, possible_orientations, np_random: RandomState) -> int:
         feasible_orientations = []
 
         for orientation in possible_orientations:
@@ -95,7 +95,7 @@ class SparseLineGen(BaseLineGen):
         city_start_possible_orientations = [city_orientation[city_start],
                                             (city_orientation[city_start] + 2) % 4]
 
-        agent_start_idx = ((2 * np_random.randint(0, 10))) % city_start_num_stations
+        agent_start_idx = (2 * np_random.randint(0, 10)) % city_start_num_stations
         agent_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city_target_num_stations
 
         agent_start = train_stations[city_start][agent_start_idx]
@@ -106,8 +106,7 @@ class SparseLineGen(BaseLineGen):
 
         return agent_start, agent_orientation, agent_target
 
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict, num_resets: int,
-                 np_random: RandomState) -> Line:
+    def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
         """
         Assigns tasks to all the agents.
 
@@ -121,6 +120,7 @@ class SparseLineGen(BaseLineGen):
             Hints provided by the rail_generator These include positions of start/target positions
         num_resets: int
             How often the generator has been reset.
+        np_random : RandomState
 
         Returns
         -------
@@ -136,20 +136,21 @@ class SparseLineGen(BaseLineGen):
         agents_target = []
         agents_direction = []
 
-        city1, city2 = None, None
+        city1: Optional[int] = None
+        city2: Optional[int] = None
 
         for agent_idx in range(num_agents):
-            if (agent_idx % 2 == 0):
+            if agent_idx % 2 == 0:
                 # Select 2 cities, find their num_stations and possible orientations
                 city_idx: List[int] = np_random.choice(len(city_positions), self.line_length, replace=False)
 
                 city1 = city_idx[0]
                 city2 = city_idx[-1]
 
-                # Run a train in the from city1..city2
+                # Run a train in from city1...city2
                 agent_start, agent_orientation, agent_target = self._assign_station_in_start_and_target_city(hints, rail, city1, city2, np_random)
             else:
-                # Run a train in the opposite direction city2..city1
+                # Run a train in the opposite direction city2...city1
                 agent_start, agent_orientation, agent_target = self._assign_station_in_start_and_target_city(hints, rail, city2, city1, np_random)
 
             agents_position.append((agent_start[0][0], agent_start[0][1]))
@@ -157,7 +158,7 @@ class SparseLineGen(BaseLineGen):
             agents_direction.append(agent_orientation)
 
         if self.speed_ratio_map:
-            speeds = speed_initialization_helper(num_agents, self.speed_ratio_map, seed=_runtime_seed, np_random=np_random)
+            speeds = speed_initialization_helper(num_agents, self.speed_ratio_map, np_random=np_random)
         else:
             speeds = [1.0] * len(agents_position)
 
@@ -166,13 +167,15 @@ class SparseLineGen(BaseLineGen):
                     agent_targets=agents_target, agent_speeds=speeds)
 
 
-def line_from_file(filename, load_from_package=None) -> LineGenerator:
+def line_from_file(filename, load_from_package: str = None) -> LineGenerator:
     """
     Utility to load pickle file
 
     Parameters
     ----------
     filename : Pickle file generated by env.save() or editor
+    load_from_package : str
+                package
 
     Returns
     -------
