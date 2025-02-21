@@ -14,10 +14,12 @@ classifiers = [
     'Development Status :: 4 - Beta',
     'Intended Audience :: Developers',
     'Natural Language :: English',
-    'Programming Language :: Python :: 3.10 - 3.12',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
 ]
 dependencies = [
-    "attr",
+    "attrs",
     "boto3",
     "click",
     "crowdai_api",
@@ -40,6 +42,8 @@ dependencies = [
     "recordtype",
     "redis",
     "seaborn",
+    # https://docs.python.org/3/whatsnew/3.12.html: Python 3.12 has removed pkg_resources from the standard library (moved to setuptools):
+    "setuptools",
     "svgutils",
     "timeout_decorator",
 
@@ -68,8 +72,11 @@ dev = [
 ]
 # TODO https://github.com/flatland-association/flatland-rl/issues/73 merge whole of flatland/contrib into flatland/ml and add all dependencies from flatland/contrib/requirements_training.txt here
 ml = [
-    "ray[default]",
+    "ray[default,rllib]",
     "wandb",
+    "torch",
+    # pin dm-tree, 0.1.9 has import errors under MacOS M1 at least.
+    "dm-tree<0.1.9"
     #    "supersuit",
     #    "pettingzoo",
     #    "stable_baselines3",
@@ -88,3 +95,8 @@ evaluator = "flatland.cli:evaluator"
 find = { }
 
 [tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]

@@ -24,11 +24,10 @@ async-lru==2.0.4
     # via jupyterlab
 async-timeout==5.0.1
     # via redis
-attr==0.3.2
-    # via flatland-rl (pyproject.toml)
 attrs==25.1.0
     # via
     #   flake8-eradicate
+    #   flatland-rl (pyproject.toml)
     #   jsonschema
     #   referencing
 babel==2.17.0
@@ -144,7 +143,7 @@ imagesize==1.4.1
     # via sphinx
 importlib-metadata==8.6.1
     # via keyring
-importlib-resources==6.5.2
+importlib-resources==1.5.0
     # via flatland-rl (pyproject.toml)
 iniconfig==2.0.0
     # via pytest

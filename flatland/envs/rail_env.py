@@ -219,8 +219,8 @@ class RailEnv(Environment):
         return [seed]
 
     # no more agent_handles
-    def get_agent_handles(self):
-        return range(self.get_num_agents())
+    def get_agent_handles(self) -> List[int]:
+        return list(range(self.get_num_agents()))
 
     def get_num_agents(self) -> int:
         return len(self.agents)
@@ -499,7 +499,7 @@ class RailEnv(Environment):
             if self.remove_agents_at_target:
                 agent.position = None
 
-    def step(self, action_dict_: Dict[int, RailEnvActions]):
+    def step(self, action_dict: Dict[int, RailEnvActions]):
         """
         Updates rewards for the agents at a step.
         """
@@ -525,7 +525,7 @@ class RailEnv(Environment):
             agent.malfunction_handler.generate_malfunction(self.malfunction_generator, self.np_random)
 
             # Get action for the agent
-            action = action_dict_.get(i_agent, RailEnvActions.DO_NOTHING)
+            action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
 
             preprocessed_action = self.preprocess_action(action, agent)
 
@@ -628,7 +628,7 @@ class RailEnv(Environment):
 
         self._update_agent_positions_map()
         if self.record_steps:
-            self.record_timestep(action_dict_)
+            self.record_timestep(action_dict)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
@@ -726,7 +726,6 @@ class RailEnv(Environment):
         return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
                                     show_predictions=show_predictions,
                                     show_rowcols=show_rowcols, return_image=return_image)
-
     def initialize_renderer(self, mode, gl,
                             agent_render_variant,
                             show_debug,
