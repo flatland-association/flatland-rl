@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.step_utils.states import TrainState
@@ -20,21 +22,30 @@ class Rewards:
     - epsilon = avoid rounding errors
     - stop_penalty = 0  # penalty for stopping a moving agent
     - start_penalty = 0  # penalty for starting a stopped agent
+    - intermediate_not_served_penalty = -1
+    - intermediate_late_arrival_penalty_factor = 0.2
+    - intermediate_early_departure_penalty_factor = 0.5
     """
+    # Epsilon to avoid rounding errors
+    epsilon = 0.01
+    # NEW : REW: Sparse Reward
+    alpha = 0
+    beta = 0
+    step_penalty = -1 * alpha
+    global_reward = 1 * beta
+    invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
+    stop_penalty = 0  # penalty for stopping a moving agent
+    start_penalty = 0  # penalty for starting a stopped agent
+    cancellation_factor = 1
+    cancellation_time_buffer = 0
+    intermediate_not_served_penalty = -1
+    intermediate_late_arrival_penalty_factor = 0.2
+    intermediate_early_departure_penalty_factor = 0.5
 
     def __init__(self):
-        # Epsilon to avoid rounding errors
-        self.epsilon = 0.01
-        # NEW : REW: Sparse Reward
-        self.alpha = 0
-        self.beta = 0
-        self.step_penalty = -1 * self.alpha
-        self.global_reward = 1 * self.beta
-        self.invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
-        self.stop_penalty = 0  # penalty for stopping a moving agent
-        self.start_penalty = 0  # penalty for starting a stopped agent
-        self.cancellation_factor = 1
-        self.cancellation_time_buffer = 0
+        # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
+        self.arrivals = defaultdict(defaultdict)
+        self.departures = defaultdict(defaultdict)
 
     def step_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int):
         """
@@ -46,6 +57,9 @@ class Rewards:
         distance_map: DistanceMap
         elapsed_steps: int
         """
+        if agent.position not in self.arrivals[agent.handle]:
+            self.arrivals[agent.handle][agent.position] = elapsed_steps
+            self.departures[agent.handle][agent.old_position] = elapsed_steps
         return 0
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> int:
@@ -76,4 +90,12 @@ class Rewards:
             if (agent.state.is_on_map_state()):
                 reward = agent.get_current_delay(elapsed_steps, distance_map)
 
+        for et, la, ed in zip(agent.intermediate_targets, agent.intermediate_latest_arrival, agent.intermediate_earliest_departure):
+            if et not in self.arrivals[agent.handle]:
+                reward += self.intermediate_not_served_penalty
+            else:
+                reward += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][et], 0)
+                # if arrival but not departure, handled by above by departed but never reached.
+                if et in self.departures[agent.handle]:
+                    reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][et] - ed, 0)
         return reward

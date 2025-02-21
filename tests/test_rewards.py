@@ -18,7 +18,6 @@ def test_rewards_late_arrival():
                      latest_arrival=10,
                      arrival_time=12)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
-
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -2
 
@@ -34,6 +33,96 @@ def test_rewards_early_arrival():
                      latest_arrival=14,
                      arrival_time=12)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
-
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == 0
+
+
+def test_rewards_intermediate_not_served_penalty():
+    rewards = Rewards()
+    rewards.intermediate_not_served_penalty = -33
+    agent = EnvAgent(initial_position=(0, 0),
+                     initial_direction=5,
+                     target=(3, 3),
+                     direction=3,
+                     state_machine=TrainStateMachine(initial_state=TrainState.DONE),
+                     earliest_departure=3,
+                     latest_arrival=10,
+                     intermediate_targets=[(2, 2)],
+                     intermediate_earliest_departure=[7],
+                     intermediate_latest_arrival=[11],
+                     arrival_time=10)
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -33
+
+
+def test_rewards_intermediate_intermediate_early_departure_penalty():
+    rewards = Rewards()
+    rewards.intermediate_early_departure_penalty_factor = 33
+    agent = EnvAgent(initial_position=(0, 0),
+                     initial_direction=5,
+                     target=(3, 3),
+                     direction=3,
+                     state_machine=TrainStateMachine(initial_state=TrainState.DONE),
+                     earliest_departure=3,
+                     latest_arrival=10,
+                     intermediate_targets=[(2, 2)],
+                     intermediate_earliest_departure=[7],
+                     intermediate_latest_arrival=[11],
+                     arrival_time=10)
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    agent.old_position = (0, 0)
+    agent.position = (2, 2)
+    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
+    agent.old_position = (2, 2)
+    agent.position = (3, 3)
+    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -66
+
+
+def test_rewards_intermediate_intermediate_late_arrival_penalty():
+    rewards = Rewards()
+    rewards.intermediate_late_arrival_penalty_factor = 33
+    agent = EnvAgent(initial_position=(0, 0),
+                     initial_direction=5,
+                     target=(3, 3),
+                     direction=3,
+                     state_machine=TrainStateMachine(initial_state=TrainState.DONE),
+                     earliest_departure=3,
+                     latest_arrival=10,
+                     intermediate_targets=[(2, 2)],
+                     intermediate_earliest_departure=[5],
+                     intermediate_latest_arrival=[2],
+                     arrival_time=10)
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    agent.old_position = (0, 0)
+    agent.position = (2, 2)
+    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
+    agent.old_position = (2, 2)
+    agent.position = (3, 3)
+    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -99
+
+
+def test_rewards_departed_but_never_arrived():
+    rewards = Rewards()
+    rewards.intermediate_late_arrival_penalty_factor = 33
+    agent = EnvAgent(initial_position=(0, 0),
+                     initial_direction=5,
+                     target=(3, 3),
+                     direction=3,
+                     state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+                     earliest_departure=3,
+                     latest_arrival=10,
+                     intermediate_targets=[(2, 2)],
+                     intermediate_earliest_departure=[5],
+                     intermediate_latest_arrival=[2],
+                     arrival_time=10)
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    agent.old_position = (0, 0)
+    agent.position = (2, 2)
+    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -99 - 15
