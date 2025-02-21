@@ -1,4 +1,4 @@
-"""Line generators (railway undertaking, "EVU")."""
+"""Line generators: Railway Undertaking (RU) / Eisenbahnverkehrsunternehmen (EVU)."""
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 from numpy.random.mtrand import RandomState
