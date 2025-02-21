@@ -3,6 +3,7 @@ from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 from numpy.random.mtrand import RandomState
 
+from flatland.core.grid.grid_utils import IntVector2DArray
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import persistence
 from flatland.envs.timetable_utils import Line
@@ -80,6 +81,27 @@ class SparseLineGen(BaseLineGen):
         else:
             return 0
 
+    def _assign_station_in_start_and_target_city(self, hints: dict, rail: GridTransitionMap, city_start: int, city_target: int,
+                                                 np_random: RandomState):
+        train_stations = hints['train_stations']
+        city_orientation = hints['city_orientations']
+        city_start_num_stations = len(train_stations[city_start])
+        city_target_num_stations = len(train_stations[city_target])
+
+        city_start_possible_orientations = [city_orientation[city_start],
+                                            (city_orientation[city_start] + 2) % 4]
+
+        agent_start_idx = ((2 * np_random.randint(0, 10))) % city_start_num_stations
+        agent_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city_target_num_stations
+
+        agent_start = train_stations[city_start][agent_start_idx]
+        agent_target = train_stations[city_target][agent_target_idx]
+
+        agent_orientation = self.decide_orientation(
+            rail, agent_start, agent_target, city_start_possible_orientations, np_random)
+
+        return agent_start, agent_orientation, agent_target
+
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict, num_resets: int,
                  np_random: RandomState) -> Line:
         """
@@ -103,55 +125,29 @@ class SparseLineGen(BaseLineGen):
         """
 
         _runtime_seed = self.seed + num_resets
+        city_positions: IntVector2DArray = hints['city_positions']
 
-        train_stations = hints['train_stations']
-        city_positions = hints['city_positions']
-        city_orientation = hints['city_orientations']
         # Place agents and targets within available train stations
         agents_position = []
         agents_target = []
         agents_direction = []
 
         city1, city2 = None, None
-        city1_num_stations, city2_num_stations = None, None
-        city1_possible_orientations, city2_possible_orientations = None, None
 
         for agent_idx in range(num_agents):
-
             if (agent_idx % 2 == 0):
                 # Select 2 cities, find their num_stations and possible orientations
-                city_idx = np_random.choice(len(city_positions), 2, replace=False)
+                city_idx: List[int] = np_random.choice(len(city_positions), 2, replace=False)
+
                 city1 = city_idx[0]
-                city2 = city_idx[1]
-                city1_num_stations = len(train_stations[city1])
-                city2_num_stations = len(train_stations[city2])
-                city1_possible_orientations = [city_orientation[city1],
-                                               (city_orientation[city1] + 2) % 4]
-                city2_possible_orientations = [city_orientation[city2],
-                                               (city_orientation[city2] + 2) % 4]
+                city2 = city_idx[-1]
 
-                # Agent 1 : city1 > city2, Agent 2: city2 > city1
-                agent_start_idx = ((2 * np_random.randint(0, 10))) % city1_num_stations
-                agent_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city2_num_stations
-
-                agent_start = train_stations[city1][agent_start_idx]
-                agent_target = train_stations[city2][agent_target_idx]
-
-                agent_orientation = self.decide_orientation(
-                    rail, agent_start, agent_target, city1_possible_orientations, np_random)
-
-
+                # Run a train in the from city1..city2
+                agent_start, agent_orientation, agent_target = self._assign_station_in_start_and_target_city(hints, rail, city1, city2, np_random)
             else:
-                agent_start_idx = ((2 * np_random.randint(0, 10))) % city2_num_stations
-                agent_target_idx = ((2 * np_random.randint(0, 10)) + 1) % city1_num_stations
+                # Run a train in the opposite direction city2..city1
+                agent_start, agent_orientation, agent_target = self._assign_station_in_start_and_target_city(hints, rail, city2, city1, np_random)
 
-                agent_start = train_stations[city2][agent_start_idx]
-                agent_target = train_stations[city1][agent_target_idx]
-
-                agent_orientation = self.decide_orientation(
-                    rail, agent_start, agent_target, city2_possible_orientations, np_random)
-
-            # agent1 details
             agents_position.append((agent_start[0][0], agent_start[0][1]))
             agents_target.append((agent_target[0][0], agent_target[0][1]))
             agents_direction.append(agent_orientation)
