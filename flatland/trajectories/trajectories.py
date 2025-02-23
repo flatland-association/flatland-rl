@@ -2,10 +2,13 @@ import ast
 import os
 import uuid
 from pathlib import Path
+from typing import Optional, Any
 
 import pandas as pd
 from attr import attrs, attrib
 
+from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.env_generation.env_generator import env_generator
 from flatland.envs.malfunction_generators import NoMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
@@ -20,6 +23,12 @@ SERIALISED_STATE_SUBDIR = 'serialised_state'
 COLLECT_POSITIONS = False
 
 
+class Policy:
+    def act(self, handle: int, observation: Any, **kwargs):
+        pass
+
+
+# TODO one subdirectory per trajectory?
 @attrs
 class Trajectory:
     """
@@ -38,13 +47,17 @@ class Trajectory:
 
     def read_actions(self):
         """Returns pd df with all actions for all episodes."""
-        tmp_dir = os.path.join(self.data_dir, DISCRETE_ACTION_FNAME)
-        return pd.read_csv(tmp_dir, sep='\t')
+        f = os.path.join(self.data_dir, DISCRETE_ACTION_FNAME)
+        if not os.path.exists(f):
+            return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'action'])
+        return pd.read_csv(f, sep='\t')
 
     def read_trains_arrived(self):
         """Returns pd df with success rate for all episodes."""
-        tmp_dir = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
-        return pd.read_csv(tmp_dir, sep='\t')
+        f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
+        if not os.path.exists(f):
+            return pd.DataFrame(columns=['episode_id', 'env_time', 'success_rate'])
+        return pd.read_csv(f, sep='\t')
 
     def read_trains_positions(self) -> pd.DataFrame:
         """Returns pd df with all trains' positions for all episodes."""
@@ -56,6 +69,7 @@ class Trajectory:
     def write_trains_positions(self, df: pd.DataFrame):
         """Store pd df with all trains' positions for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
+        Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
     def restore_episode(self) -> RailEnv:
@@ -146,6 +160,11 @@ class Trajectory:
             return movement.iloc[0]
         raise
 
+    # TODO add cli
+    # TODO same as verify?
+    # TODO add rendering?
+    # TODO merge with demo cli?
+    # TODO add collect stats rewards etc from evaluator...?
     def run(self):
         """
         The data is structured as follows:
@@ -198,3 +217,42 @@ class Trajectory:
         assert expected_success_rate == actual_success_rate
         if COLLECT_POSITIONS:
             self.write_trains_positions(trains_positions)
+
+    # TODO add cli
+    # TODO add progres bar
+    # TODO generate a subfolder with generated episode_id as name for the new trajectory?
+    @staticmethod
+    def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None):
+        # TODO extract params for env generation to interface
+        env, observations, _ = env_generator(obs_builder_object=obs_builder)
+
+        trajectory = Trajectory(data_dir=data_dir)
+        trains_positions = trajectory.read_trains_positions()
+        actions = trajectory.read_actions()
+        trains_arrived = trajectory.read_trains_arrived()
+
+        done = False
+        n_agents = env.get_num_agents()
+        assert len(env.agents) == n_agents
+
+        i = 0
+        while not done:
+            action_dict = dict()
+            for handle in env.get_agent_handles():
+                action = policy.act(handle, observations[handle])
+                action_dict.update({handle: action})
+
+            _, _, dones, _ = env.step(action_dict)
+            done = dones['__all__']
+            i += 1
+
+            for agent_id in range(n_agents):
+                agent = env.agents[agent_id]
+                actual_position = Waypoint(agent.position, agent.direction)
+                trajectory.position_collect(trains_positions, env_time=i, agent_id=agent_id, position=actual_position)
+
+        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
+        trajectory.write_trains_positions(trains_positions)
+
+        # TODO write positions and trains arrived
+        # TODO write state at interval
