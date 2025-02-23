@@ -8,18 +8,18 @@ from flatland.envs.rail_generators import sparse_rail_generator
 
 # defaults from Flatland 3 Round 2 Test_0, see https://flatland.aicrowd.com/challenges/flatland3/envconfig.html
 def env_generator(n_agents=7,
-                x_dim=30,
-                y_dim=30,
-                n_cities=2,
-                max_rail_pairs_in_city=4,
-                grid_mode=False,
-                max_rails_between_cities=2,
-                malfunction_duration_min=20,
-                malfunction_duration_max=50,
-                malfunction_interval=540,
-                speed_ratios=None,
-                seed=42,
-                obs_builder_object=None) -> RailEnv:
+                  x_dim=30,
+                  y_dim=30,
+                  n_cities=2,
+                  max_rail_pairs_in_city=4,
+                  grid_mode=False,
+                  max_rails_between_cities=2,
+                  malfunction_duration_min=20,
+                  malfunction_duration_max=50,
+                  malfunction_interval=540,
+                  speed_ratios=None,
+                  seed=42,
+                  obs_builder_object=None) -> RailEnv:
     if speed_ratios is None:
         speed_ratios = {1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}
     if obs_builder_object is None:
