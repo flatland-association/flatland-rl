@@ -1,13 +1,15 @@
+import importlib
 import re
 import tempfile
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import pytest
 
 from flatland.env_generation.env_generator import env_generator
 from flatland.trajectories.trajectories import Policy, Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
-    cli_from_submission, cli_run
+    cli_from_submission, cli_run, gen_trajectories_from_metadata
 from flatland.utils.seeding import np_random, random_state_to_hashablestate
 
 
@@ -82,3 +84,17 @@ def test_cli_from_submission():
         with pytest.raises(SystemExit) as e_info:
             cli_run(["--data-dir", data_dir, "--ep-id", ep_id])
         assert e_info.value.code == 0
+
+
+@pytest.mark.skip  # TODO import heuristic baseline as example, add rendering to cli
+def test_gen_trajectories_from_metadata():
+    metadata_csv = importlib.resources.files("env_data.tests.service_test").joinpath("metadata.csv")
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        with importlib.resources.as_file(metadata_csv) as template_file:
+            tmpdir = Path(tmpdirname)
+            gen_trajectories_from_metadata(template_file, tmpdir)
+            df = pd.read_csv(tmpdir / TRAINS_ARRIVED_FNAME, sep="\t")
+            assert df["success_rate"].to_list() == [0.8571428571428571, 1.0, 0.8571428571428571, 1.0]
+            assert df["env_time"].to_list() == [391, 165, 391, 165]
+
+# TODO test cli after installed! paths and tuples etc.

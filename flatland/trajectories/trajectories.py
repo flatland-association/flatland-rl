@@ -10,7 +10,7 @@ import pandas as pd
 import tqdm
 from attr import attrs, attrib
 
-from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.core.env_observation_builder import ObservationBuilder, AgentHandle, ObservationType
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
@@ -233,9 +233,23 @@ class Trajectory:
 
     # TODO generate a subfolder with generated episode_id as name for the new trajectory?
     # TODO finalize naming
-    # TODO extract params for env generation to interface
     @staticmethod
-    def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None, snapshot_interval: int = 1) -> "Trajectory":
+    def from_submission(policy: Policy,
+                        data_dir: Path,
+                        n_agents=7,
+                        x_dim=30,
+                        y_dim=30,
+                        n_cities=2,
+                        max_rail_pairs_in_city=4,
+                        grid_mode=False,
+                        max_rails_between_cities=2,
+                        malfunction_duration_min=20,
+                        malfunction_duration_max=50,
+                        malfunction_interval=540,
+                        speed_ratios=None,
+                        seed=42,
+                        obs_builder: Optional[ObservationBuilder] = None,
+                        snapshot_interval: int = 1) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
 
@@ -255,7 +269,20 @@ class Trajectory:
         Trajectory
 
         """
-        env, observations, _ = env_generator(obs_builder_object=obs_builder)
+        env, observations, _ = env_generator(
+            n_agents=n_agents,
+            x_dim=x_dim,
+            y_dim=y_dim,
+            n_cities=n_cities,
+            max_rail_pairs_in_city=max_rail_pairs_in_city,
+            grid_mode=grid_mode,
+            max_rails_between_cities=max_rails_between_cities,
+            malfunction_duration_min=malfunction_duration_min,
+            malfunction_duration_max=malfunction_duration_max,
+            malfunction_interval=malfunction_interval,
+            speed_ratios=speed_ratios,
+            seed=seed,
+            obs_builder_object=obs_builder)
         trajectory = Trajectory(data_dir=data_dir)
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
         RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
@@ -268,7 +295,7 @@ class Trajectory:
         assert len(env.agents) == n_agents
         env_time = 0
         for env_time in tqdm.tqdm(range(env._max_episode_steps)):
-            if env_time % snapshot_interval == 0:
+            if snapshot_interval > 0 and env_time % snapshot_interval == 0:
                 RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time:04d}.pkl"))
             action_dict = dict()
             for handle in env.get_agent_handles():
@@ -284,7 +311,7 @@ class Trajectory:
                 trajectory.position_collect(trains_positions, env_time=env_time + 1, agent_id=agent_id, position=actual_position)
             done = dones['__all__']
 
-            if done and (env_time + 1) % snapshot_interval == 0:
+            if snapshot_interval > 0 and done and (env_time + 1) % snapshot_interval == 0:
                 RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time + 1:04d}.pkl"))
             if done:
                 break
@@ -328,25 +355,183 @@ def cli_run(data_dir: Path, ep_id: str):
               help="Policy class name.",
               required=True
               )
-def cli_from_submission(data_dir: Path, policy_pkg: str, policy_cls: str):
+@click.option('--obs-builder-pkg',
+              type=str,
+              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              required=False,
+              default=None
+              )
+@click.option('--obs-builder-cls',
+              type=str,
+              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              required=False,
+              default=None
+              )
+@click.option('--n_agents',
+              type=int,
+              help="Number of agents.",
+              required=False,
+              default=7)
+@click.option('--x_dim',
+              type=int,
+              help="Number of columns.",
+              required=False,
+              default=30)
+@click.option('--y_dim',
+              type=int,
+              help="Number of rows.",
+              required=False,
+              default=30)
+@click.option('--n_cities',
+              type=int,
+              help="Max number of cities to build. The generator tries to achieve this numbers given all the parameters. Goes into `sparse_rail_generator`. ",
+              required=False,
+              default=2)
+@click.option('--max_rail_pairs_in_city',
+              type=int,
+              help="Number of parallel tracks in the city. This represents the number of tracks in the train stations. Goes into `sparse_rail_generator`.",
+              required=False,
+              default=4)
+@click.option('--grid_mode',
+              type=bool,
+              help="How to distribute the cities in the path, either equally in a grid or random. Goes into `sparse_rail_generator`.",
+              required=False,
+              default=False)
+@click.option('--max_rails_between_cities',
+              type=int,
+              help="Max number of rails connecting to a city. This is only the number of connection points at city boarder.",
+              required=False,
+              default=2)
+@click.option('--malfunction_duration_min',
+              type=int,
+              help="Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.",
+              required=False,
+              default=20)
+@click.option('--malfunction_duration_max',
+              type=int,
+              help="Max duration of malfunction. Goes into `ParamMalfunctionGen`.",
+              required=False,
+              default=50)
+@click.option('--malfunction_interval',
+              type=int,
+              help="Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.",
+              required=False,
+              default=540)
+@click.option('--speed_ratios',
+              multiple=True,
+              nargs=2,
+              type=click.Tuple(types=[float, float]),
+              help="Speed ratios of all agents. They are probabilities of all different speeds and have to add up to 1. Goes into `sparse_line_generator`. Defaults to `{1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}`.",
+              required=False,
+              default=None)
+@click.option('--seed',
+              type=int,
+              help="Initiate random seed generators. Goes into `reset`.",
+              required=False, default=42)
+@click.option('--snapshot-interval',
+              type=int,
+              help="Interval to right snapshots. Use 0 to switch off, 1 for every step, ....",
+              required=False,
+              default=1)
+def cli_from_submission(data_dir: Path,
+                        policy_pkg: str, policy_cls: str,
+                        obs_builder_pkg: str, obs_builder_cls: str,
+                        n_agents=7,
+                        x_dim=30,
+                        y_dim=30,
+                        n_cities=2,
+                        max_rail_pairs_in_city=4,
+                        grid_mode=False,
+                        max_rails_between_cities=2,
+                        malfunction_duration_min=20,
+                        malfunction_duration_max=50,
+                        malfunction_interval=540,
+                        speed_ratios=None,
+                        seed: int = 42,
+                        snapshot_interval: int = 1):
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
 
-    Trajectory.from_submission(policy=policy_cls(), data_dir=data_dir)
+    obs_builder = None
+    if obs_builder_pkg is not None and obs_builder_cls is not None:
+        module = importlib.import_module(obs_builder_pkg)
+        obs_builder_cls = getattr(module, obs_builder_cls)
+        obs_builder = obs_builder_cls()
+    Trajectory.from_submission(policy=policy_cls(),
+                               data_dir=data_dir,
+                               n_agents=n_agents,
+                               x_dim=x_dim,
+                               y_dim=y_dim,
+                               n_cities=n_cities,
+                               max_rail_pairs_in_city=max_rail_pairs_in_city,
+                               grid_mode=grid_mode,
+                               max_rails_between_cities=max_rails_between_cities,
+                               malfunction_duration_min=malfunction_duration_min,
+                               malfunction_duration_max=malfunction_duration_max,
+                               malfunction_interval=malfunction_interval,
+                               speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
+                               seed=seed,
+                               obs_builder=obs_builder,
+                               snapshot_interval=snapshot_interval
+                               )
 
-# if __name__ == '__main__':
-#     for tsv in Path("/Users/che/workspaces/flatland-rl/episodes/30x30 map").rglob("ActionEvents.discrete_action.tsv"):
-#         df = pd.read_csv(tsv, sep="\t")
-#         print(df.dtypes)
-#
-#         print(df["agent_id"].unique())
-#         continue
-#
-#         # assert df["env_time"].min() == 1
-#         #df["agent_id"] = df["agent_id"].str.replace("agent_", "")
-#         df["agent_id"] = df["agent_id"].astype(int)
-#
-#         # assert df["env_time"].min() == 1
-#         # df["env_time"] = df["env_time"] + 1
-#         assert df["env_time"].min() == 2
-#         df.to_csv(tsv, sep="\t", index=False)
+
+# TODO move to heuristic baseline example
+class FullStateObservationBuilder(ObservationBuilder):
+    def get(self, handle: AgentHandle = 0) -> ObservationType:
+        """
+        Called whenever an observation has to be computed for the `env` environment, possibly
+        for each agent independently (agent id `handle`).
+
+        Parameters
+        ----------
+        handle : int, optional
+            Handle of the agent for which to compute the observation vector.
+
+        Returns
+        -------
+        function
+            An observation structure, specific to the corresponding environment.
+        """
+        return self.env
+
+    def reset(self):
+        pass
+
+
+# TODO stats on number of malfunctions and number of motion check situations
+def gen_trajectories_from_metadata(metadata_csv: Path, data_dir: Path):
+    metadata = pd.read_csv(metadata_csv)
+    for k, v in metadata.iterrows():
+        try:
+            cli_from_submission(
+                ["--data-dir", data_dir,
+                 # TODO import heuristic baseline
+                 "--policy-pkg", "src.policy.deadlock_avoidance_policy", "--policy-cls", "DeadLockAvoidancePolicy",
+                 "--obs-builder-pkg", "flatland.trajectories.trajectories", "--obs-builder-cls", "FullStateObservationBuilder",
+                 "--n_agents", v["n_agents"],
+                 "--x_dim", v["x_dim"],
+                 "--y_dim", v["y_dim"],
+                 "--n_cities", v["n_cities"],
+                 "--max_rail_pairs_in_city", v["max_rail_pairs_in_city"],
+                 "--grid_mode", v["grid_mode"],
+                 "--max_rails_between_cities", v["max_rails_between_cities"],
+                 "--malfunction_duration_min", v["malfunction_duration_min"],
+                 "--malfunction_duration_max", v["malfunction_duration_max"],
+                 "--malfunction_interval", v["malfunction_interval"],
+                 "--speed_ratios", "1.0", "0.25",
+                 "--speed_ratios", "0.5", "0.25",
+                 "--speed_ratios", "0.33", "0.25",
+                 "--speed_ratios", "0.25", "0.25",
+                 "--seed", v["seed"],
+                 "--snapshot-interval", 0
+                 ])
+        except SystemExit as exc:
+            assert exc.code == 0
+
+
+# TODO remove after generation
+if __name__ == '__main__':
+    metadata_csv = Path("/Users/che/workspaces/flatland-rl/benchmarks/metadata.csv")
+    data_dir = Path("/Users/che/workspaces/flatland-rl/episodes/malfunction")
+    gen_trajectories_from_metadata(metadata_csv=metadata_csv, data_dir=data_dir)
