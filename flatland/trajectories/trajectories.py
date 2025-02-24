@@ -26,7 +26,7 @@ COLLECT_POSITIONS = False
 
 
 class Policy:
-    def act(self, handle: int, observation: Any, **kwargs):
+    def act(self, handle: int, observation: Any, **kwargs) -> RailEnvActions:
         pass
 
 
@@ -279,7 +279,6 @@ class Trajectory:
         actions = trajectory.read_actions()
         trains_arrived = trajectory.read_trains_arrived()
 
-        done = False
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
 
