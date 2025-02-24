@@ -118,4 +118,5 @@ def run_episode(data_sub_dir: str, ep_id: str):
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = os.path.join(_dir, data_sub_dir)
 
-    Trajectory(data_dir=data_dir, ep_id=ep_id).run()
+    # TODO re-encode instead without agent_
+    Trajectory(data_dir=data_dir, ep_id=ep_id).run(prefix="agent_")

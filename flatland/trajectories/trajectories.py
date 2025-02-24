@@ -2,8 +2,9 @@ import ast
 import os
 import uuid
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, Tuple
 
+import numpy as np
 import pandas as pd
 from attr import attrs, attrib
 
@@ -13,19 +14,23 @@ from flatland.envs.malfunction_generators import NoMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
 TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
 TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
+# TODO remove
 COLLECT_POSITIONS = False
 
 
 class Policy:
     def act(self, handle: int, observation: Any, **kwargs):
         pass
+
+
+def _uuid_str():
+    return str(uuid.uuid4())
 
 
 # TODO one subdirectory per trajectory?
@@ -43,7 +48,7 @@ class Trajectory:
         <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
     """
     data_dir = attrib(type=Path)
-    ep_id = attrib(type=str, factory=uuid.uuid4)
+    ep_id = attrib(type=str, factory=_uuid_str)
 
     def read_actions(self):
         """Returns pd df with all actions for all episodes."""
@@ -63,12 +68,24 @@ class Trajectory:
         """Returns pd df with all trains' positions for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
         if not os.path.exists(f):
-            return pd.DataFrame(columns=['env_time', 'agent_id', 'episode_id', 'position'])
+            return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'position'])
         return pd.read_csv(f, sep='\t')
 
     def write_trains_positions(self, df: pd.DataFrame):
         """Store pd df with all trains' positions for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
+        Path(f).parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(f, sep='\t', index=False)
+
+    def write_actions(self, df: pd.DataFrame):
+        """Store pd df with all trains' actions for all episodes."""
+        f = os.path.join(self.data_dir, DISCRETE_ACTION_FNAME)
+        Path(f).parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(f, sep='\t', index=False)
+
+    def write_trains_arrived(self, df: pd.DataFrame):
+        """Store pd df with all trains' success rates for all episodes."""
+        f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
@@ -91,10 +108,17 @@ class Trajectory:
         env.malfunction_generator = NoMalfunctionGen()
         return env
 
-    def position_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, position: Waypoint):
-        df.loc[len(df)] = {'env_time': env_time, 'agent_id': agent_id, 'episode_id': self.ep_id, 'position': position}
+    def position_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
+        df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position}
 
-    def position_lookup(self, df: pd.DataFrame, env_time: int, agent_id: int) -> Waypoint:
+    # TODO re-encode regression without agent_ prefix
+    def action_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, action: RailEnvActions):
+        df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'action': action}
+
+    def arrived_collect(self, df: pd.DataFrame, env_time: int, success_rate: float):
+        df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate}
+
+    def position_lookup(self, df: pd.DataFrame, env_time: int, agent_id: int) -> Tuple[Tuple[int, int], int]:
         """Method used to retrieve the stored position (if available).
 
         Parameters
@@ -102,12 +126,12 @@ class Trajectory:
         df: pd.DataFrame
             Data frame from ActionEvents.discrete_action.tsv
         env_time: int
-            episode step
+            position before (!) step env_time
         agent_id: int
             agent ID
         Returns
         -------
-        Waypoint
+        Tuple[Tuple[int, int], int]
             The position in the format ((row, column), direction).
         """
         pos = df.loc[(df['env_time'] == env_time) & (df['agent_id'] == agent_id) & (df['episode_id'] == self.ep_id)]['position']
@@ -115,7 +139,7 @@ class Trajectory:
             print(f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}")
             print(df[(df['agent_id'] == agent_id) & (df['episode_id'] == self.ep_id)]["env_time"])
         assert len(pos) == 1, f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}"
-        return Waypoint(*ast.literal_eval(pos.iloc[0]))
+        return ast.literal_eval(pos.iloc[0])
 
     def action_lookup(self, actions_df: pd.DataFrame, env_time: int, agent_id: int) -> RailEnvActions:
         """Method used to retrieve the stored action (if available). Defaults to 2 = MOVE_FORWARD.
@@ -125,7 +149,7 @@ class Trajectory:
         actions_df: pd.DataFrame
             Data frame from ActionEvents.discrete_action.tsv
         env_time: int
-            episode step
+            action going into step env_time
         agent_id: int
             agent ID
         Returns
@@ -135,7 +159,7 @@ class Trajectory:
         """
         action = actions_df.loc[
             (actions_df['env_time'] == env_time) &
-            (actions_df['agent_id'] == f'agent_{agent_id}') &
+            (actions_df['agent_id'] == agent_id) &
             (actions_df['episode_id'] == self.ep_id)
             ]['action'].to_numpy()
         if len(action) == 0:
@@ -165,7 +189,7 @@ class Trajectory:
     # TODO add rendering?
     # TODO merge with demo cli?
     # TODO add collect stats rewards etc from evaluator...?
-    def run(self):
+    def run(self, prefix=""):
         """
         The data is structured as follows:
             -30x30 map
@@ -194,21 +218,23 @@ class Trajectory:
         done = False
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
-        i = 0
+        env_time = 0
         while not done:
-            action = {agent_id: self.action_lookup(actions, env_time=env._elapsed_steps - 1, agent_id=agent_id) for agent_id in range(n_agents)}
+            # TODO re-encode regression data to have action for step i, starts at 1 for step 0
+            action = {agent_id: self.action_lookup(actions, env_time=env_time - 1, agent_id=agent_id if not prefix else f"{prefix}{agent_id}") for agent_id in
+                      range(n_agents)}
             _, _, dones, _ = env.step(action)
             done = dones['__all__']
-            i += 1
+            env_time += 1
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
-                actual_position = Waypoint(agent.position, agent.direction)
+                actual_position = (agent.position, agent.direction)
                 if COLLECT_POSITIONS:
-                    self.position_collect(trains_positions, env_time=i, agent_id=agent_id, position=actual_position)
+                    self.position_collect(trains_positions, env_time=env_time, agent_id=agent_id, position=actual_position)
                 else:
-                    expected_position = self.position_lookup(trains_positions, env_time=i, agent_id=agent_id)
-                    assert actual_position == expected_position, (self.data_dir, self.ep_id, agent_id, i, actual_position, expected_position)
+                    expected_position = self.position_lookup(trains_positions, env_time=env_time, agent_id=agent_id)
+                    assert actual_position == expected_position, (self.data_dir, self.ep_id, env_time, agent_id, actual_position, expected_position)
 
         trains_arrived_episode = self.trains_arrived_lookup(trains_arrived)
         expected_success_rate = trains_arrived_episode['success_rate']
@@ -222,11 +248,13 @@ class Trajectory:
     # TODO add progres bar
     # TODO generate a subfolder with generated episode_id as name for the new trajectory?
     @staticmethod
-    def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None):
+    def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None) -> "Trajectory":
         # TODO extract params for env generation to interface
-        env, observations, _ = env_generator(obs_builder_object=obs_builder)
-
+        env, observations, _ = env_generator(obs_builder_object=obs_builder, malfunction_interval=np.inf)
         trajectory = Trajectory(data_dir=data_dir)
+        (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
+        RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
+
         trains_positions = trajectory.read_trains_positions()
         actions = trajectory.read_actions()
         trains_arrived = trajectory.read_trains_arrived()
@@ -241,18 +269,24 @@ class Trajectory:
             for handle in env.get_agent_handles():
                 action = policy.act(handle, observations[handle])
                 action_dict.update({handle: action})
+                # TODO re-encode regression episodes instead
+                trajectory.action_collect(actions, env_time=i - 1, agent_id=handle, action=action)
 
             _, _, dones, _ = env.step(action_dict)
-            done = dones['__all__']
             i += 1
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
-                actual_position = Waypoint(agent.position, agent.direction)
+                actual_position = (agent.position, agent.direction)
                 trajectory.position_collect(trains_positions, env_time=i, agent_id=agent_id, position=actual_position)
 
-        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        trajectory.write_trains_positions(trains_positions)
+            done = dones['__all__']
 
-        # TODO write positions and trains arrived
+        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
+        trajectory.arrived_collect(trains_arrived, i, actual_success_rate)
+        trajectory.write_trains_positions(trains_positions)
+        trajectory.write_actions(actions)
+        trajectory.write_trains_arrived(trains_arrived)
+        return trajectory
+
         # TODO write state at interval
