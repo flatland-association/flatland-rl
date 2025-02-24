@@ -248,7 +248,26 @@ class Trajectory:
     # TODO add progres bar
     # TODO generate a subfolder with generated episode_id as name for the new trajectory?
     @staticmethod
-    def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None) -> "Trajectory":
+    def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None, snapshot_interval: int = 1) -> "Trajectory":
+        """
+        Creates trajectory by running submission (policy and obs builder).
+
+        Parameters
+        ----------
+        policy : Policy
+            the submission's policy
+        data_dir : Path
+            the path to write the trajectory to
+        obs_builder : ObservationBuilder
+            the submission's obs builder
+        snapshot_interval : int
+            interval to write pkl snapshots
+
+        Returns
+        -------
+        Trajectory
+
+        """
         # TODO extract params for env generation to interface
         env, observations, _ = env_generator(obs_builder_object=obs_builder, malfunction_interval=np.inf)
         trajectory = Trajectory(data_dir=data_dir)
@@ -265,6 +284,8 @@ class Trajectory:
 
         i = 0
         while not done:
+            if i % snapshot_interval == 0:
+                RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{i:04d}.pkl"))
             action_dict = dict()
             for handle in env.get_agent_handles():
                 action = policy.act(handle, observations[handle])
@@ -281,6 +302,8 @@ class Trajectory:
                 trajectory.position_collect(trains_positions, env_time=i, agent_id=agent_id, position=actual_position)
 
             done = dones['__all__']
+            if done and i % snapshot_interval == 0:
+                RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{i:04d}.pkl"))
 
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         trajectory.arrived_collect(trains_arrived, i, actual_success_rate)
@@ -288,5 +311,3 @@ class Trajectory:
         trajectory.write_actions(actions)
         trajectory.write_trains_arrived(trains_arrived)
         return trajectory
-
-        # TODO write state at interval

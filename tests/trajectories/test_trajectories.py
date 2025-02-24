@@ -18,12 +18,17 @@ def test_from_submission():
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = Trajectory.from_submission(policy=RandomPolicy(), data_dir=data_dir)
+        trajectory = Trajectory.from_submission(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
 
         assert (data_dir / DISCRETE_ACTION_FNAME).exists()
         assert (data_dir / TRAINS_ARRIVED_FNAME).exists()
         assert (data_dir / TRAINS_POSITIONS_FNAME).exists()
         assert (data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl").exists()
+
+        assert (data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl").exists()
+        snapshots = list((data_dir / SERIALISED_STATE_SUBDIR).glob("*step*"))
+        assert len(snapshots) == 95
+        assert set(snapshots) == {data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{i * 5:04d}.pkl" for i in range(95)}
 
         assert "episode_id	env_time	agent_id	action" in (data_dir / DISCRETE_ACTION_FNAME).read_text()
         assert "episode_id	env_time	success_rate" in (data_dir / TRAINS_ARRIVED_FNAME).read_text()
