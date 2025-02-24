@@ -21,9 +21,6 @@ TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
 TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
-# TODO remove
-COLLECT_POSITIONS = False
-
 
 # TODO add wrapper for rllib/Pettingzoo policy from checkpoint
 class Policy:
@@ -226,11 +223,8 @@ class Trajectory:
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
                 actual_position = (agent.position, agent.direction)
-                if COLLECT_POSITIONS:
-                    self.position_collect(trains_positions, env_time=env_time + 1, agent_id=agent_id, position=actual_position)
-                else:
-                    expected_position = self.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
-                    assert actual_position == expected_position, (self.data_dir, self.ep_id, env_time + 1, agent_id, actual_position, expected_position)
+                expected_position = self.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
+                assert actual_position == expected_position, (self.data_dir, self.ep_id, env_time + 1, agent_id, actual_position, expected_position)
 
             if done:
                 break
@@ -240,8 +234,6 @@ class Trajectory:
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
         assert expected_success_rate == actual_success_rate
-        if COLLECT_POSITIONS:
-            self.write_trains_positions(trains_positions)
 
     # TODO generate a subfolder with generated episode_id as name for the new trajectory?
     # TODO finalize naming
