@@ -24,11 +24,10 @@ async-timeout==5.0.1
     # via
     #   aiohttp
     #   redis
-attr==0.3.2
-    # via flatland-rl (pyproject.toml)
 attrs==25.1.0
     # via
     #   aiohttp
+    #   flatland-rl (pyproject.toml)
     #   jsonschema
     #   referencing
 boto3==1.36.20
