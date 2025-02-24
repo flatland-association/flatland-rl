@@ -182,7 +182,6 @@ class Trajectory:
 
     # TODO same as verify? Finalize naming
     # TODO add rendering?
-    # TODO merge with demo cli?
     # TODO add collect stats rewards etc from evaluator...?
     def run(self, prefix=""):
         """
@@ -237,6 +236,7 @@ class Trajectory:
 
     # TODO generate a subfolder with generated episode_id as name for the new trajectory?
     # TODO finalize naming
+    # TODO extract params for env generation to interface
     @staticmethod
     def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None, snapshot_interval: int = 1) -> "Trajectory":
         """
@@ -258,7 +258,6 @@ class Trajectory:
         Trajectory
 
         """
-        # TODO extract params for env generation to interface
         env, observations, _ = env_generator(obs_builder_object=obs_builder)
         trajectory = Trajectory(data_dir=data_dir)
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
