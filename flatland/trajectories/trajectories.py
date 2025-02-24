@@ -107,7 +107,6 @@ class Trajectory:
     def position_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position}
 
-    # TODO re-encode regression without agent_ prefix
     def action_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, action: RailEnvActions):
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'action': action}
 
@@ -183,7 +182,7 @@ class Trajectory:
     # TODO same as verify? Finalize naming
     # TODO add rendering?
     # TODO add collect stats rewards etc from evaluator...?
-    def run(self, prefix=""):
+    def run(self):
         """
         The data is structured as follows:
             -30x30 map
@@ -213,9 +212,7 @@ class Trajectory:
         assert len(env.agents) == n_agents
 
         for env_time in tqdm.tqdm(range(env._max_episode_steps)):
-            # TODO re-encode regression data to have action for step i, starts at 1 for step 0
-            action = {agent_id: self.action_lookup(actions, env_time=env_time - 1, agent_id=agent_id if not prefix else f"{prefix}{agent_id}") for agent_id in
-                      range(n_agents)}
+            action = {agent_id: self.action_lookup(actions, env_time=env_time, agent_id=agent_id) for agent_id in range(n_agents)}
             _, _, dones, _ = env.step(action)
             done = dones['__all__']
 
@@ -269,7 +266,7 @@ class Trajectory:
 
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
-
+        env_time = 0
         for env_time in tqdm.tqdm(range(env._max_episode_steps)):
             if env_time % snapshot_interval == 0:
                 RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time:04d}.pkl"))
@@ -277,8 +274,7 @@ class Trajectory:
             for handle in env.get_agent_handles():
                 action = policy.act(handle, observations[handle])
                 action_dict.update({handle: action})
-                # TODO re-encode regression episodes instead
-                trajectory.action_collect(actions, env_time=env_time - 1, agent_id=handle, action=action)
+                trajectory.action_collect(actions, env_time=env_time, agent_id=handle, action=action)
 
             _, _, dones, _ = env.step(action_dict)
 
@@ -337,3 +333,20 @@ def cli_from_submission(data_dir: Path, policy_pkg: str, policy_cls: str):
     policy_cls = getattr(module, policy_cls)
 
     Trajectory.from_submission(policy=policy_cls(), data_dir=data_dir)
+
+# if __name__ == '__main__':
+#     for tsv in Path("/Users/che/workspaces/flatland-rl/episodes/30x30 map").rglob("ActionEvents.discrete_action.tsv"):
+#         df = pd.read_csv(tsv, sep="\t")
+#         print(df.dtypes)
+#
+#         print(df["agent_id"].unique())
+#         continue
+#
+#         # assert df["env_time"].min() == 1
+#         #df["agent_id"] = df["agent_id"].str.replace("agent_", "")
+#         df["agent_id"] = df["agent_id"].astype(int)
+#
+#         # assert df["env_time"].min() == 1
+#         # df["env_time"] = df["env_time"] + 1
+#         assert df["env_time"].min() == 2
+#         df.to_csv(tsv, sep="\t", index=False)

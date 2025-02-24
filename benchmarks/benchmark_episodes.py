@@ -2,8 +2,8 @@ import os
 
 import pytest
 
-DOWNLOAD_INSTRUCTIONS = "Download from https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
-# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER.zip 30x30\ map -x "*.DS_Store"
+DOWNLOAD_INSTRUCTIONS = "Download from https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
+# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip 30x30\ map -x "*.DS_Store"
 from flatland.trajectories.trajectories import Trajectory
 
 
@@ -118,5 +118,4 @@ def run_episode(data_sub_dir: str, ep_id: str):
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = os.path.join(_dir, data_sub_dir)
 
-    # TODO re-encode instead without agent_
-    Trajectory(data_dir=data_dir, ep_id=ep_id).run(prefix="agent_")
+    Trajectory(data_dir=data_dir, ep_id=ep_id).run()
