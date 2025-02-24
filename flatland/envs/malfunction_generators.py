@@ -5,9 +5,9 @@ from typing import Callable, NamedTuple, Optional, Tuple
 import numpy as np
 from numpy.random.mtrand import RandomState
 
+from flatland.envs import persistence
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
-from flatland.envs import persistence
 
 # why do we have both MalfunctionParameters and MalfunctionProcessData - they are both the same!
 MalfunctionParameters = NamedTuple('MalfunctionParameters',
@@ -86,8 +86,8 @@ class FileMalfunctionGen(ParamMalfunctionGen):
         """
         if env_dict is None:
             env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
-
-        if env_dict.get('malfunction') is not None:
+        if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
+            env_dict.get('malfunction').min_duration, int) and isinstance(env_dict.get('malfunction').max_duration, int):
             oMFP = MalfunctionParameters(*env_dict["malfunction"])
         else:
             oMFP = MalfunctionParameters(0, 0, 0)  # no malfunctions
