@@ -10,9 +10,9 @@ async-timeout==5.0.1
     # via redis
 attrs==25.1.0
     # via flatland-rl (pyproject.toml)
-boto3==1.36.20
+boto3==1.36.23
     # via flatland-rl (pyproject.toml)
-botocore==1.36.20
+botocore==1.36.23
     # via
     #   boto3
     #   s3transfer
