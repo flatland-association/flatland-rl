@@ -1,9 +1,11 @@
 import ast
+import importlib
 import os
 import uuid
 from pathlib import Path
 from typing import Optional, Any, Tuple
 
+import click
 import pandas as pd
 import tqdm
 from attr import attrs, attrib
@@ -181,8 +183,7 @@ class Trajectory:
             return movement.iloc[0]
         raise
 
-    # TODO add cli
-    # TODO same as verify?
+    # TODO same as verify? Finalize naming
     # TODO add rendering?
     # TODO merge with demo cli?
     # TODO add collect stats rewards etc from evaluator...?
@@ -242,9 +243,8 @@ class Trajectory:
         if COLLECT_POSITIONS:
             self.write_trains_positions(trains_positions)
 
-    # TODO add cli
     # TODO generate a subfolder with generated episode_id as name for the new trajectory?
-
+    # TODO finalize naming
     @staticmethod
     def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None, snapshot_interval: int = 1) -> "Trajectory":
         """
@@ -308,3 +308,41 @@ class Trajectory:
         trajectory.write_actions(actions)
         trajectory.write_trains_arrived(trains_arrived)
         return trajectory
+
+
+@click.command()
+@click.option('--data-dir',
+              type=click.Path(exists=True),
+              help="Path to folder containing Flatland episode",
+              required=True
+              )
+@click.option('--ep-id',
+              type=str,
+              help="Episode ID.",
+              required=True
+              )
+def cli_run(data_dir: Path, ep_id: str):
+    Trajectory(data_dir=data_dir, ep_id=ep_id).run()
+
+
+@click.command()
+@click.option('--data-dir',
+              type=click.Path(exists=True),
+              help="Path to folder containing Flatland episode",
+              required=True
+              )
+@click.option('--policy-pkg',
+              type=str,
+              help="Policy's fully qualified package name.",
+              required=True
+              )
+@click.option('--policy-cls',
+              type=str,
+              help="Policy class name.",
+              required=True
+              )
+def cli_from_submission(data_dir: Path, policy_pkg: str, policy_cls: str):
+    module = importlib.import_module(policy_pkg)
+    policy_cls = getattr(module, policy_cls)
+
+    Trajectory.from_submission(policy=policy_cls(), data_dir=data_dir)
