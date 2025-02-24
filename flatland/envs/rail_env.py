@@ -2,6 +2,7 @@
 Definition of the RailEnv environment.
 """
 import random
+from functools import lru_cache
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
@@ -26,8 +27,7 @@ from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
 from flatland.utils import seeding
-from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
-    enable_infrastructure_lru_cache
+from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
@@ -239,8 +239,9 @@ class RailEnv(Environment):
             agent.reset()
         self.active_agents = [i for i in range(len(self.agents))]
 
-    @enable_infrastructure_lru_cache()
-    def action_required(self, agent_state, is_cell_entry):
+    @lru_cache()
+    @staticmethod
+    def action_required(agent_state, is_cell_entry):
         """
         Check if an agent needs to provide an action
 
@@ -459,7 +460,7 @@ class RailEnv(Environment):
                     state - State from the trains's state machine
         """
         info_dict = {
-            'action_required': {i: self.action_required(agent.state, agent.speed_counter.is_cell_entry)
+            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_entry)
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
