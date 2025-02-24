@@ -6,6 +6,7 @@ from typing import Optional, Any, Tuple
 
 import numpy as np
 import pandas as pd
+import tqdm
 from attr import attrs, attrib
 
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -215,26 +216,27 @@ class Trajectory:
         trains_arrived = self.read_trains_arrived()
 
         env = self.restore_episode()
-        done = False
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
-        env_time = 0
-        while not done:
+
+        for env_time in tqdm.tqdm(range(env._max_episode_steps)):
             # TODO re-encode regression data to have action for step i, starts at 1 for step 0
             action = {agent_id: self.action_lookup(actions, env_time=env_time - 1, agent_id=agent_id if not prefix else f"{prefix}{agent_id}") for agent_id in
                       range(n_agents)}
             _, _, dones, _ = env.step(action)
             done = dones['__all__']
-            env_time += 1
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
                 actual_position = (agent.position, agent.direction)
                 if COLLECT_POSITIONS:
-                    self.position_collect(trains_positions, env_time=env_time, agent_id=agent_id, position=actual_position)
+                    self.position_collect(trains_positions, env_time=env_time + 1, agent_id=agent_id, position=actual_position)
                 else:
-                    expected_position = self.position_lookup(trains_positions, env_time=env_time, agent_id=agent_id)
-                    assert actual_position == expected_position, (self.data_dir, self.ep_id, env_time, agent_id, actual_position, expected_position)
+                    expected_position = self.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
+                    assert actual_position == expected_position, (self.data_dir, self.ep_id, env_time + 1, agent_id, actual_position, expected_position)
+
+            if done:
+                break
 
         trains_arrived_episode = self.trains_arrived_lookup(trains_arrived)
         expected_success_rate = trains_arrived_episode['success_rate']
@@ -245,7 +247,6 @@ class Trajectory:
             self.write_trains_positions(trains_positions)
 
     # TODO add cli
-    # TODO add progres bar
     # TODO generate a subfolder with generated episode_id as name for the new trajectory?
     @staticmethod
     def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None, snapshot_interval: int = 1) -> "Trajectory":
@@ -282,31 +283,31 @@ class Trajectory:
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
 
-        i = 0
-        while not done:
-            if i % snapshot_interval == 0:
-                RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{i:04d}.pkl"))
+        for env_time in tqdm.tqdm(range(env._max_episode_steps)):
+            if env_time % snapshot_interval == 0:
+                RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time:04d}.pkl"))
             action_dict = dict()
             for handle in env.get_agent_handles():
                 action = policy.act(handle, observations[handle])
                 action_dict.update({handle: action})
                 # TODO re-encode regression episodes instead
-                trajectory.action_collect(actions, env_time=i - 1, agent_id=handle, action=action)
+                trajectory.action_collect(actions, env_time=env_time - 1, agent_id=handle, action=action)
 
             _, _, dones, _ = env.step(action_dict)
-            i += 1
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
                 actual_position = (agent.position, agent.direction)
-                trajectory.position_collect(trains_positions, env_time=i, agent_id=agent_id, position=actual_position)
-
+                trajectory.position_collect(trains_positions, env_time=env_time + 1, agent_id=agent_id, position=actual_position)
             done = dones['__all__']
-            if done and i % snapshot_interval == 0:
-                RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{i:04d}.pkl"))
+
+            if done and (env_time + 1) % snapshot_interval == 0:
+                RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time + 1:04d}.pkl"))
+            if done:
+                break
 
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        trajectory.arrived_collect(trains_arrived, i, actual_success_rate)
+        trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
         trajectory.write_trains_positions(trains_positions)
         trajectory.write_actions(actions)
         trajectory.write_trains_arrived(trains_arrived)

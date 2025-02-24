@@ -44,6 +44,7 @@ dependencies = [
     "seaborn",
     # https://docs.python.org/3/whatsnew/3.12.html: Python 3.12 has removed pkg_resources from the standard library (moved to setuptools):
     "setuptools",
+    "tqdm",
     "svgutils",
     "timeout_decorator",
 
