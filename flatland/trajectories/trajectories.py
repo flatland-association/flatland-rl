@@ -4,14 +4,12 @@ import uuid
 from pathlib import Path
 from typing import Optional, Any, Tuple
 
-import numpy as np
 import pandas as pd
 import tqdm
 from attr import attrs, attrib
 
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.env_generation.env_generator import env_generator
-from flatland.envs.malfunction_generators import NoMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
@@ -25,6 +23,7 @@ SERIALISED_STATE_SUBDIR = 'serialised_state'
 COLLECT_POSITIONS = False
 
 
+# TODO add wrapper for rllib/Pettingzoo policy from checkpoint
 class Policy:
     def act(self, handle: int, observation: Any, **kwargs) -> RailEnvActions:
         pass
@@ -104,9 +103,6 @@ class Trajectory:
 
         f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
         env, _ = RailEnvPersister.load_new(f)
-
-        # TODO episodes contain strings for malfunction_rate etc. instead of ints - we should fix the serialized pkls?
-        env.malfunction_generator = NoMalfunctionGen()
         return env
 
     def position_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
@@ -248,6 +244,7 @@ class Trajectory:
 
     # TODO add cli
     # TODO generate a subfolder with generated episode_id as name for the new trajectory?
+
     @staticmethod
     def from_submission(policy: Policy, data_dir: Path, obs_builder: Optional[ObservationBuilder] = None, snapshot_interval: int = 1) -> "Trajectory":
         """
@@ -270,7 +267,7 @@ class Trajectory:
 
         """
         # TODO extract params for env generation to interface
-        env, observations, _ = env_generator(obs_builder_object=obs_builder, malfunction_interval=np.inf)
+        env, observations, _ = env_generator(obs_builder_object=obs_builder)
         trajectory = Trajectory(data_dir=data_dir)
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
         RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))

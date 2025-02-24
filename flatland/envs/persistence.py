@@ -8,7 +8,7 @@ import numpy as np
 msgpack_numpy.patch()
 
 from flatland.envs import rail_env
-
+from flatland.utils.seeding import random_state_to_hashablestate
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent, load_env_agent
@@ -114,8 +114,6 @@ class RailEnvPersister(object):
                                                    load_from_package=load_from_package),
             line_generator=line_gen.line_from_file(filename,
                                                    load_from_package=load_from_package),
-            # malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
-            #    load_from_package=load_from_package),
             malfunction_generator=mal_gen.FileMalfunctionGen(env_dict),
             obs_builder_object=DummyObservationBuilder(),
             record_steps=True)
@@ -200,7 +198,6 @@ class RailEnvPersister(object):
         env.rail.width = env.width
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
 
-        # TODO merge with https://github.com/flatland-association/flatland-rl/pull/97/files
         max_episode_steps = env_dict.get('max_episode_steps', None)
         if max_episode_steps is not None:
             env._max_episode_steps = max_episode_steps
@@ -208,6 +205,28 @@ class RailEnvPersister(object):
         env.distance_map.distance_map = env_dict.get('distance_map', None)
         env.distance_map.reset(env.agents, env.rail)
         env.distance_map._compute(env.agents, env.rail)
+
+        random_seed = env.random_seed = env_dict.get("random_seed", None)
+        if random_seed is not None:
+            env.random_seed = random_seed
+
+        seed_history = env_dict.get("seed_history", None)
+        if seed_history is not None:
+            env.seed_history = seed_history
+
+        # it's not sufficient to store random_seed, as seeding from random_seed is done
+        # at start of reset (before rail/line/timetable (re-)generation,
+        # hence np_random depends on rail/line/timetable generation
+        # TODO would it be better to have env_generation without reset? Conceptually, the env should be initialised with a state incl. the seed
+        np_random_state = env_dict.get("np_random_state", None)
+        if np_random_state is not None:
+            env.np_random.set_state(np_random_state)
+        dev_pred_dict_ = env_dict.get("dev_pred_dict", None)
+        if dev_pred_dict_ is not None:
+            env.dev_pred_dict = dev_pred_dict_
+        dev_obs_dict_ = env_dict.get("dev_obs_dict", None)
+        if dev_pred_dict_ is not None:
+            env.dev_obs_dict = dev_obs_dict_
 
     @classmethod
     def get_full_state(cls, env):
@@ -219,7 +238,6 @@ class RailEnvPersister(object):
 
         # msgpack cannot persist EnvAgent so use the Agent namedtuple.
         agent_data = [agent.to_agent() for agent in env.agents]
-        # print("get_full_state - agent_data:", agent_data)
         malfunction_data: mal_gen.MalfunctionProcessData = env.malfunction_process_data
 
         msg_data_dict = {
@@ -227,6 +245,11 @@ class RailEnvPersister(object):
             "agents": agent_data,
             "malfunction": malfunction_data,
             "max_episode_steps": env._max_episode_steps,
+            "random_seed": env.random_seed,
+            "seed_history": env.seed_history,
+            "np_random_state": random_state_to_hashablestate(env.np_random),
+            "dev_pred_dict": env.dev_pred_dict,
+            "dev_obs_dict": env.dev_obs_dict,
         }
         return msg_data_dict
 
