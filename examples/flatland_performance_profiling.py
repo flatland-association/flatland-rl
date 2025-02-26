@@ -1,8 +1,12 @@
-from typing import Union
+import cProfile
+import sys
+from timeit import default_timer
+from typing import Optional
 
+import click
 import numpy as np
+import snakeviz.cli
 
-from flatland.utils.Timer import Timer
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import MalfunctionParameters, ParamMalfunctionGen
@@ -96,12 +100,12 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
         obs_builder_object=observation_builder,
         malfunction_generator=malfunction_generator
     )
+    env.reset()
     return env
 
 
-def run_simulation(env_fast: RailEnv, do_rendering):
+def run_simulation(env_fast: RailEnv, do_rendering, max_steps=200):
     agent = RandomAgent(action_size=5)
-    max_steps = 200
 
     env_renderer = None
     if do_rendering:
@@ -133,61 +137,99 @@ def run_simulation(env_fast: RailEnv, do_rendering):
         env_renderer.close_window()
 
 
-USE_TIME_PROFILER = True
-
-RUN_SIMULATION = True
-DO_RENDERING = False
-
-USE_DUMMY_OBS = True
-
-N_AGENTS = 200
-WIDTH = 100
-HEIGHT = 100
-
-
-def start_timer() -> Union[Timer, None]:
+def start_timer(USE_TIME_PROFILER: bool) -> Optional[float]:
     if USE_TIME_PROFILER:
-        time_profiler = Timer()
-        time_profiler.start()
-        return time_profiler
+        return default_timer()
     return None
 
 
-def end_timer(label: str, time_profiler: Timer):
+def end_timer(label: str, time_profiler: Optional[float]):
     if time_profiler is None:
         return
-    print('{:>20} \t {:7.5f}ms'.format(label, time_profiler.end()))
+    print('{:>20} \t {:7.5f}ms'.format(label, default_timer() - time_profiler))
 
 
-def execute_standard_flatland_application():
-    time_profiler = start_timer()
-    env_fast = get_rail_env(nAgents=N_AGENTS, use_dummy_obs=USE_DUMMY_OBS, width=WIDTH, height=HEIGHT)
+@click.command()
+@click.option('--n-agents',
+              type=int,
+              help="Number of agents.",
+              default=200,
+              required=False
+              )
+@click.option('--width',
+              type=int,
+              help="Grid width.",
+              default=100,
+              required=False
+              )
+@click.option('--height',
+              type=int,
+              help="Grid height.",
+              default=100,
+              required=False
+              )
+@click.option('--max-steps',
+              type=int,
+              help="Max number of steps in simulation. Use <= 0 to skip simulation.",
+              default=200,
+              required=False
+              )
+@click.option('--output-file', '-o',
+              type=click.Path(file_okay=True, writable=True),
+              help="Prof output file.",
+              required=False
+              )
+@click.option('--run-snakeviz',
+              # action='store_true',
+              help="Run snakeviz after profiling. --profiling_folder must be present.",
+              default=False,
+              is_flag=True,
+              )
+def execute_standard_flatland_application(
+    use_time_profiler=True,
+    do_rendering=False,
+    use_dummy_obs=True,
+    n_agents=200,
+    width=100,
+    height=100,
+    max_steps=200,
+    output_file=None,
+    run_snakeviz=False
+):
+    print("Start ...")
+    time_profiler = start_timer(use_time_profiler)
+    env_fast = get_rail_env(nAgents=n_agents, use_dummy_obs=use_dummy_obs, width=width, height=height)
     end_timer('Create env', time_profiler)
 
-    time_profiler = start_timer()
+    time_profiler = start_timer(use_time_profiler)
     env_fast.reset(random_seed=1)
     end_timer('Reset env', time_profiler)
 
-    time_profiler = start_timer()
+    time_profiler = start_timer(use_time_profiler)
     action_dict = {agent.handle: 0 for agent in env_fast.agents}
     end_timer('Build actions', time_profiler)
 
-    time_profiler = start_timer()
+    time_profiler = start_timer(use_time_profiler)
     for i in range(1):
         env_fast.step(action_dict)
     end_timer('Step env', time_profiler)
 
-    time_profiler = start_timer()
+    time_profiler = start_timer(use_time_profiler)
     obs = env_fast._get_observations()
     end_timer('get observations', time_profiler)
 
-    if RUN_SIMULATION:
-        time_profiler = start_timer()
-        run_simulation(env_fast, DO_RENDERING)
+    if max_steps > 0:
+        time_profiler = start_timer(use_time_profiler)
+        if output_file is not None:
+            cProfile.run(f'run_simulation(get_rail_env(nAgents={n_agents}, use_dummy_obs={use_dummy_obs}, width={width}, height={height}), {do_rendering})',
+                         filename=output_file)
+        else:
+            run_simulation(env_fast, do_rendering)
         end_timer('run simulation', time_profiler)
+        if output_file and output_file is not None and run_snakeviz:
+            snakeviz.cli.main([output_file])
+    print("... end.")
 
 
 if __name__ == "__main__":
-    print("Start ...")
-    execute_standard_flatland_application()
-    print("... end.")
+    sys.exit(execute_standard_flatland_application())
