@@ -2,13 +2,21 @@ from flatland.core.grid.grid_utils import IntVector2D
 from flatland.envs.step_utils.states import TrainState
 
 EPSILON = 0.01
+SEGMENT_LENGTH = 1
 
 
 class SpeedCounter:
-    def __init__(self, speed):
+    def __init__(self, speed: float, max_speed: float = None):
         self._speed = speed
         self._distance = 0.0
         self._is_cell_entry = True
+        if max_speed is not None:
+            self._max_speed = max_speed
+        else:
+            # old constant speed behaviour
+            self._max_speed = speed
+        assert self._max_speed <= 1.0
+        assert self._speed <= self._max_speed
         self.reset()
 
     def step(self, state: TrainState, old_position: IntVector2D, speed: float = None):
@@ -25,17 +33,16 @@ class SpeedCounter:
             Set new speed effective immediately.
         """
         if speed is not None:
-            self._speed = speed
-        # TODO bad code smell: this logic should not be part of SpeedCounter?
+            self._speed = max(min(speed, self._max_speed), 0.0)
+        # TODO bad code smell: the following condition should not be part of SpeedCounter?
         # Can't start counting when adding train to the map
-        if state == TrainState.MOVING and old_position is not None:
+        if state == TrainState.MOVING and old_position is not None and self._speed > 0:
             self._distance += self._speed
 
-            if self._distance >= 1.0 - EPSILON and self._distance <= 1.0 + EPSILON:
+            if 1.0 - EPSILON <= self._distance <= 1.0 + EPSILON:
                 self._distance = 1.0
-            # travelling cells in any direction has distance 1
-            # trains are in state stopped if they cannot move to the next cell
-            self._distance = self._distance % 1
+            # If trains cannot move to the next cell, they are in state stopped, so we compute the distance travelled in the new cell by taking modulo:
+            self._distance = self._distance % SEGMENT_LENGTH
             if self._distance < self._speed:
                 self._is_cell_entry = True
             else:
@@ -43,6 +50,7 @@ class SpeedCounter:
 
     def __repr__(self):
         return f"speed: {self.speed} \
+                 max_speed: {self.max_speed} \
                  distance: {self.distance} \
                  is_cell_entry: {self.is_cell_entry} \
                  is_cell_exit: {self.is_cell_exit}"
@@ -71,6 +79,10 @@ class SpeedCounter:
         return self._speed
 
     @property
+    def max_speed(self):
+        return self._max_speed
+
+    @property
     def distance(self):
         """
         Distance travelled in current cell.
@@ -80,6 +92,7 @@ class SpeedCounter:
     def __getstate__(self):
         return {
             "speed": self._speed,
+            "max_speed": self._max_speed,
             "distance": self._distance,
             "is_cell_entry": self._is_cell_entry,
         }
@@ -97,6 +110,13 @@ class SpeedCounter:
             self._distance = load_dict['distance']
         if "is_cell_entry" in load_dict:
             self._is_cell_entry = load_dict['distance']
+        if "max_speed" in load_dict:
+            self._max_speed = load_dict["max_speed"]
+        else:
+            # old pickles have constant speed
+            self._max_speed = self._speed
 
     def __eq__(self, other):
-        return self._speed == other._speed and self._distance == other._distance
+        if not isinstance(other, SpeedCounter):
+            return False
+        return self._speed == other._speed and self._distance == other._distance and self._max_speed == other._max_speed

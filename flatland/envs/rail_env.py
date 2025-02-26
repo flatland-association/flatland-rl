@@ -99,12 +99,12 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator=None,
-                 line_generator: "LineGenerator" = None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
+                 rail_generator: "RailGenerator" = None,
+                 line_generator: "LineGenerator" = None,
                  number_of_agents=2,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
-                 malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
-                 malfunction_generator=None,
+                 malfunction_generator_and_process_data=None,
+                 malfunction_generator: "MalfunctionGenerator" = None,
                  remove_agents_at_target=True,
                  random_seed=None,
                  record_steps=False,
@@ -167,7 +167,7 @@ class RailEnv(Environment):
         self.rail_generator = rail_generator
         if line_generator is None:
             line_generator = line_gen.sparse_line_generator()
-        self.line_generator: LineGenerator = line_generator
+        self.line_generator = line_generator
         self.timetable_generator = timetable_generator
 
         self.rail: Optional[GridTransitionMap] = None
@@ -614,8 +614,15 @@ class RailEnv(Environment):
             ## Update rewards
             self.update_step_rewards(i_agent)
 
+            ## Compute speed update
+            new_speed = agent.speed_counter.speed
+            # if preprocessed_action == RailEnvActions.MOVE_FORWARD:
+            #     new_speed += RailEnv.acceleration_delta
+            # elif preprocessed_action == RailEnvActions.STOP_MOVING:
+            #     new_speed += RailEnv.braking_delta
+
             ## Update counters (malfunction and speed)
-            agent.speed_counter.step(agent.state, agent.old_position)
+            agent.speed_counter.step(agent.state, agent.old_position, speed=new_speed)
             #    agent.state_machine.previous_state)
             agent.malfunction_handler.update_counter()
 
