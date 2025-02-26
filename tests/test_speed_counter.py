@@ -2,7 +2,7 @@ from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 
 
-def test_update_counter_speed025():
+def test_step_counter_speed025():
     sc = SpeedCounter(speed=0.25)
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit == False
@@ -34,7 +34,7 @@ def test_update_counter_speed025():
     assert sc.speed == 0.25
 
 
-def test_update_counter_speed05():
+def test_step_counter_speed05():
     sc = SpeedCounter(speed=0.5)
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit == False
@@ -54,7 +54,7 @@ def test_update_counter_speed05():
     assert sc.speed == 0.5
 
 
-def test_update_counter_speed25_05():
+def test_step_counter_speed25_05():
     sc = SpeedCounter(speed=0.25)
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit == False
