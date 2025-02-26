@@ -8,31 +8,31 @@ def test_update_counter_speed025():
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit == False
     assert sc.counter == 0
-    assert sc.max_count == 3
+    assert sc.max_count == 4
 
     sc.update_counter(TrainState.MOVING, (0, 0))
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit == False
     assert sc.counter == 1
-    assert sc.max_count == 3
+    assert sc.max_count == 4
 
     sc.update_counter(TrainState.MOVING, (0, 0))
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit == False
     assert sc.counter == 2
-    assert sc.max_count == 3
+    assert sc.max_count == 4
 
     sc.update_counter(TrainState.MOVING, (0, 0))
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit == True
     assert sc.counter == 3
-    assert sc.max_count == 3
+    assert sc.max_count == 4
 
     sc.update_counter(TrainState.MOVING, (1, 0))
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit == False
     assert sc.counter == 0
-    assert sc.max_count == 3
+    assert sc.max_count == 4
 
 
 def test_update_counter_speed05():
@@ -40,16 +40,16 @@ def test_update_counter_speed05():
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit == False
     assert sc.counter == 0
-    assert sc.max_count == 1
+    assert sc.max_count == 2
 
     sc.update_counter(TrainState.MOVING, (0, 0))
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit == True
     assert sc.counter == 1
-    assert sc.max_count == 1
+    assert sc.max_count == 2
 
     sc.update_counter(TrainState.MOVING, (0, 0))
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit == False
     assert sc.counter == 0
-    assert sc.max_count == 1
+    assert sc.max_count == 2
