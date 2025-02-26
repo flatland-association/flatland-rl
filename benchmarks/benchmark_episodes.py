@@ -3,7 +3,7 @@ import os
 import pytest
 
 DOWNLOAD_INSTRUCTIONS = "Download from https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
-# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip 30x30\ map -x "*.DS_Store"
+# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip 30x30\ map -x "*.DS_Store"; zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip malfunction_deadlock_avoidance_heuristics -x "*.DS_Store"
 from flatland.trajectories.trajectories import Trajectory
 
 
@@ -88,6 +88,57 @@ from flatland.trajectories.trajectories import Trajectory
     ("30x30 map/50_trains", "968ec1c3-2e37-4937-b6f1-d7bb188a0bb6"),
     ("30x30 map/50_trains", "ec716f73-b22a-4fae-833a-7f58eed3968d"),
     ("30x30 map/50_trains", "f70202cc-2dec-4080-bfef-7884ab47b1b4"),
+
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_0", "Test_00_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_1", "Test_00_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_2", "Test_00_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_3", "Test_00_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_4", "Test_00_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_5", "Test_00_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_6", "Test_00_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_7", "Test_00_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_8", "Test_00_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_9", "Test_00_Level_9"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_0", "Test_01_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_1", "Test_01_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_2", "Test_01_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_3", "Test_01_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_4", "Test_01_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_5", "Test_01_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_6", "Test_01_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_7", "Test_01_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_8", "Test_01_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_9", "Test_01_Level_9"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_0", "Test_02_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_1", "Test_02_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_2", "Test_02_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_3", "Test_02_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_4", "Test_02_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_5", "Test_02_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_6", "Test_02_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_7", "Test_02_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_8", "Test_02_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_9", "Test_02_Level_9"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_0", "Test_03_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_1", "Test_03_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_2", "Test_03_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_3", "Test_03_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_4", "Test_03_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_5", "Test_03_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_6", "Test_03_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_7", "Test_03_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_8", "Test_03_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_9", "Test_03_Level_9"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_0", "Test_04_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_1", "Test_04_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_2", "Test_04_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_3", "Test_04_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_4", "Test_04_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_5", "Test_04_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_6", "Test_04_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_7", "Test_04_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_8", "Test_04_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_9", "Test_04_Level_9"),
 ])
 def test_episode(data_sub_dir: str, ep_id: str):
     run_episode(data_sub_dir, ep_id)

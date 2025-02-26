@@ -10,7 +10,7 @@ import pandas as pd
 import tqdm
 from attr import attrs, attrib
 
-from flatland.core.env_observation_builder import ObservationBuilder, AgentHandle, ObservationType
+from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
@@ -22,7 +22,6 @@ TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
 
-# TODO add wrapper for rllib/Pettingzoo policy from checkpoint
 class Policy:
     def act(self, handle: int, observation: Any, **kwargs) -> RailEnvActions:
         pass
@@ -32,7 +31,6 @@ def _uuid_str():
     return str(uuid.uuid4())
 
 
-# TODO one subdirectory per trajectory?
 @attrs
 class Trajectory:
     """
@@ -179,9 +177,6 @@ class Trajectory:
             return movement.iloc[0]
         raise
 
-    # TODO same as verify? Finalize naming
-    # TODO add rendering?
-    # TODO add collect stats rewards etc from evaluator...?
     def run(self):
         """
         The data is structured as follows:
@@ -231,25 +226,27 @@ class Trajectory:
         print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
         assert expected_success_rate == actual_success_rate
 
-    # TODO generate a subfolder with generated episode_id as name for the new trajectory?
     # TODO finalize naming
     @staticmethod
-    def from_submission(policy: Policy,
-                        data_dir: Path,
-                        n_agents=7,
-                        x_dim=30,
-                        y_dim=30,
-                        n_cities=2,
-                        max_rail_pairs_in_city=4,
-                        grid_mode=False,
-                        max_rails_between_cities=2,
-                        malfunction_duration_min=20,
-                        malfunction_duration_max=50,
-                        malfunction_interval=540,
-                        speed_ratios=None,
-                        seed=42,
-                        obs_builder: Optional[ObservationBuilder] = None,
-                        snapshot_interval: int = 1) -> "Trajectory":
+    def from_submission(
+        policy: Policy,
+        data_dir: Path,
+        n_agents=7,
+        x_dim=30,
+        y_dim=30,
+        n_cities=2,
+        max_rail_pairs_in_city=4,
+        grid_mode=False,
+        max_rails_between_cities=2,
+        malfunction_duration_min=20,
+        malfunction_duration_max=50,
+        malfunction_interval=540,
+        speed_ratios=None,
+        seed=42,
+        obs_builder: Optional[ObservationBuilder] = None,
+        snapshot_interval: int = 1,
+        ep_id: str = None
+    ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
 
@@ -283,7 +280,10 @@ class Trajectory:
             speed_ratios=speed_ratios,
             seed=seed,
             obs_builder_object=obs_builder)
-        trajectory = Trajectory(data_dir=data_dir)
+        if ep_id is not None:
+            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
+        else:
+            trajectory = Trajectory(data_dir=data_dir)
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
         RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
 
@@ -433,22 +433,29 @@ def cli_run(data_dir: Path, ep_id: str):
               help="Interval to right snapshots. Use 0 to switch off, 1 for every step, ....",
               required=False,
               default=1)
-def cli_from_submission(data_dir: Path,
-                        policy_pkg: str, policy_cls: str,
-                        obs_builder_pkg: str, obs_builder_cls: str,
-                        n_agents=7,
-                        x_dim=30,
-                        y_dim=30,
-                        n_cities=2,
-                        max_rail_pairs_in_city=4,
-                        grid_mode=False,
-                        max_rails_between_cities=2,
-                        malfunction_duration_min=20,
-                        malfunction_duration_max=50,
-                        malfunction_interval=540,
-                        speed_ratios=None,
-                        seed: int = 42,
-                        snapshot_interval: int = 1):
+@click.option('--ep-id',
+              type=str,
+              help="Set the episode ID used - if not set, a UUID will be sampled.",
+              required=False)
+def cli_from_submission(
+    data_dir: Path,
+    policy_pkg: str, policy_cls: str,
+    obs_builder_pkg: str, obs_builder_cls: str,
+    n_agents=7,
+    x_dim=30,
+    y_dim=30,
+    n_cities=2,
+    max_rail_pairs_in_city=4,
+    grid_mode=False,
+    max_rails_between_cities=2,
+    malfunction_duration_min=20,
+    malfunction_duration_max=50,
+    malfunction_interval=540,
+    speed_ratios=None,
+    seed: int = 42,
+    snapshot_interval: int = 1,
+    ep_id: str = None
+):
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
 
@@ -457,58 +464,41 @@ def cli_from_submission(data_dir: Path,
         module = importlib.import_module(obs_builder_pkg)
         obs_builder_cls = getattr(module, obs_builder_cls)
         obs_builder = obs_builder_cls()
-    Trajectory.from_submission(policy=policy_cls(),
-                               data_dir=data_dir,
-                               n_agents=n_agents,
-                               x_dim=x_dim,
-                               y_dim=y_dim,
-                               n_cities=n_cities,
-                               max_rail_pairs_in_city=max_rail_pairs_in_city,
-                               grid_mode=grid_mode,
-                               max_rails_between_cities=max_rails_between_cities,
-                               malfunction_duration_min=malfunction_duration_min,
-                               malfunction_duration_max=malfunction_duration_max,
-                               malfunction_interval=malfunction_interval,
-                               speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
-                               seed=seed,
-                               obs_builder=obs_builder,
-                               snapshot_interval=snapshot_interval
-                               )
+    Trajectory.from_submission(
+        policy=policy_cls(),
+        data_dir=data_dir,
+        n_agents=n_agents,
+        x_dim=x_dim,
+        y_dim=y_dim,
+        n_cities=n_cities,
+        max_rail_pairs_in_city=max_rail_pairs_in_city,
+        grid_mode=grid_mode,
+        max_rails_between_cities=max_rails_between_cities,
+        malfunction_duration_min=malfunction_duration_min,
+        malfunction_duration_max=malfunction_duration_max,
+        malfunction_interval=malfunction_interval,
+        speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
+        seed=seed,
+        obs_builder=obs_builder,
+        snapshot_interval=snapshot_interval,
+        ep_id=ep_id
+    )
 
 
-# TODO move to heuristic baseline example
-class FullStateObservationBuilder(ObservationBuilder):
-    def get(self, handle: AgentHandle = 0) -> ObservationType:
-        """
-        Called whenever an observation has to be computed for the `env` environment, possibly
-        for each agent independently (agent id `handle`).
-
-        Parameters
-        ----------
-        handle : int, optional
-            Handle of the agent for which to compute the observation vector.
-
-        Returns
-        -------
-        function
-            An observation structure, specific to the corresponding environment.
-        """
-        return self.env
-
-    def reset(self):
-        pass
-
-
-# TODO stats on number of malfunctions and number of motion check situations
-def gen_trajectories_from_metadata(metadata_csv: Path, data_dir: Path):
+def gen_trajectories_from_metadata(
+    metadata_csv: Path,
+    data_dir: Path,
+    policy_pkg: str, policy_cls: str,
+    obs_builder_pkg: str, obs_builder_cls: str):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
         try:
+            test_folder = data_dir / v["test_id"] / v["env_id"]
+            test_folder.mkdir(parents=True, exist_ok=True)
             cli_from_submission(
-                ["--data-dir", data_dir,
-                 # TODO import heuristic baseline
-                 "--policy-pkg", "src.policy.deadlock_avoidance_policy", "--policy-cls", "DeadLockAvoidancePolicy",
-                 "--obs-builder-pkg", "flatland.trajectories.trajectories", "--obs-builder-cls", "FullStateObservationBuilder",
+                ["--data-dir", test_folder,
+                 "--policy-pkg", policy_pkg, "--policy-cls", policy_cls,
+                 "--obs-builder-pkg", obs_builder_pkg, "--obs-builder-cls", obs_builder_cls,
                  "--n_agents", v["n_agents"],
                  "--x_dim", v["x_dim"],
                  "--y_dim", v["y_dim"],
@@ -524,14 +514,22 @@ def gen_trajectories_from_metadata(metadata_csv: Path, data_dir: Path):
                  "--speed_ratios", "0.33", "0.25",
                  "--speed_ratios", "0.25", "0.25",
                  "--seed", v["seed"],
-                 "--snapshot-interval", 0
+                 "--snapshot-interval", 0,
+                 "--ep-id", v["test_id"] + "_" + v["env_id"]
                  ])
         except SystemExit as exc:
             assert exc.code == 0
 
 
-# TODO remove after generation
 if __name__ == '__main__':
-    metadata_csv = Path("/Users/che/workspaces/flatland-rl/benchmarks/metadata.csv")
-    data_dir = Path("/Users/che/workspaces/flatland-rl/episodes/malfunction")
-    gen_trajectories_from_metadata(metadata_csv=metadata_csv, data_dir=data_dir)
+    metadata_csv = Path("../../episodes/malfunction_deadlock_avoidance_heuristics/metadata.csv")
+    data_dir = Path("../../episodes/malfunction_deadlock_avoidance_heuristics")
+    gen_trajectories_from_metadata(
+        metadata_csv=metadata_csv,
+        data_dir=data_dir,
+        # TODO https://github.com/flatland-association/flatland-rl/issues/101 import heuristic baseline as example
+        policy_pkg="src.policy.deadlock_avoidance_policy",
+        policy_cls="DeadLockAvoidancePolicy",
+        obs_builder_pkg="src.observation.full_state_observation",
+        obs_builder_cls="FullStateObservationBuilder"
+    )

@@ -86,15 +86,23 @@ def test_cli_from_submission():
         assert e_info.value.code == 0
 
 
-@pytest.mark.skip  # TODO import heuristic baseline as example, add rendering to cli
+@pytest.mark.skip  # TODO https://github.com/flatland-association/flatland-rl/issues/101 import heuristic baseline as example
 def test_gen_trajectories_from_metadata():
-    metadata_csv = importlib.resources.files("env_data.tests.service_test").joinpath("metadata.csv")
+    metadata_csv_path = importlib.resources.files("env_data.tests.service_test").joinpath("metadata.csv")
     with tempfile.TemporaryDirectory() as tmpdirname:
-        with importlib.resources.as_file(metadata_csv) as template_file:
+        with importlib.resources.as_file(metadata_csv_path) as metadata_csv:
             tmpdir = Path(tmpdirname)
-            gen_trajectories_from_metadata(template_file, tmpdir)
-            df = pd.read_csv(tmpdir / TRAINS_ARRIVED_FNAME, sep="\t")
-            assert df["success_rate"].to_list() == [0.8571428571428571, 1.0, 0.8571428571428571, 1.0]
-            assert df["env_time"].to_list() == [391, 165, 391, 165]
-
-# TODO test cli after installed! paths and tuples etc.
+            gen_trajectories_from_metadata(
+                metadata_csv=metadata_csv,
+                data_dir=tmpdir,
+                # TODO https://github.com/flatland-association/flatland-rl/issues/101 import heuristic baseline as example
+                policy_pkg="src.policy.deadlock_avoidance_policy",
+                policy_cls="DeadLockAvoidancePolicy",
+                obs_builder_pkg="src.observation.full_state_observation",
+                obs_builder_cls="FullStateObservationBuilder"
+            )
+            metadata = pd.read_csv(metadata_csv)
+            for sr, t, (k, v) in zip([0.8571428571428571, 1.0, 0.8571428571428571, 1.0], [391, 165, 391, 165], metadata.iterrows()):
+                df = pd.read_csv(tmpdir / v["test_id"] / v["env_id"] / TRAINS_ARRIVED_FNAME, sep="\t")
+                assert df["success_rate"].to_list() == [sr]
+                assert df["env_time"].to_list() == [t]
