@@ -177,7 +177,7 @@ class Trajectory:
             return movement.iloc[0]
         raise
 
-    def run(self):
+    def evaluate(self):
         """
         The data is structured as follows:
             -30x30 map
@@ -226,9 +226,8 @@ class Trajectory:
         print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
         assert expected_success_rate == actual_success_rate
 
-    # TODO finalize naming
     @staticmethod
-    def from_submission(
+    def create_from_policy(
         policy: Policy,
         data_dir: Path,
         n_agents=7,
@@ -256,8 +255,32 @@ class Trajectory:
             the submission's policy
         data_dir : Path
             the path to write the trajectory to
-        obs_builder : ObservationBuilder
-            the submission's obs builder
+        n_agents: int
+            number of agents
+        x_dim: int
+            number of columns
+        y_dim: int
+            number of rows
+        n_cities: int
+           Max number of cities to build. The generator tries to achieve this numbers given all the parameters. Goes into `sparse_rail_generator`.
+        max_rail_pairs_in_city: int
+            Number of parallel tracks in the city. This represents the number of tracks in the train stations. Goes into `sparse_rail_generator`.
+        grid_mode: bool
+            How to distribute the cities in the path, either equally in a grid or random. Goes into `sparse_rail_generator`.
+        max_rails_between_cities: int
+            Max number of rails connecting to a city. This is only the number of connection points at city boarder.
+        malfunction_duration_min: int
+            Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.
+        malfunction_duration_max: int
+            Max duration of malfunction. Goes into `ParamMalfunctionGen`.
+        malfunction_interval: int
+            Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.
+        speed_ratios: Dict[float, float]
+            Speed ratios of all agents. They are probabilities of all different speeds and have to add up to 1. Goes into `sparse_line_generator`. Defaults to `{1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}`.
+        seed: int
+             Initiate random seed generators. Goes into `reset`.
+        obs_builder: Optional[ObservationBuilder]
+            Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
         snapshot_interval : int
             interval to write pkl snapshots
 
@@ -335,8 +358,8 @@ class Trajectory:
               help="Episode ID.",
               required=True
               )
-def cli_run(data_dir: Path, ep_id: str):
-    Trajectory(data_dir=data_dir, ep_id=ep_id).run()
+def evaluate_trajectory(data_dir: Path, ep_id: str):
+    Trajectory(data_dir=data_dir, ep_id=ep_id).evaluate()
 
 
 @click.command()
@@ -437,7 +460,7 @@ def cli_run(data_dir: Path, ep_id: str):
               type=str,
               help="Set the episode ID used - if not set, a UUID will be sampled.",
               required=False)
-def cli_from_submission(
+def generate_trajectory_from_policy(
     data_dir: Path,
     policy_pkg: str, policy_cls: str,
     obs_builder_pkg: str, obs_builder_cls: str,
@@ -464,7 +487,7 @@ def cli_from_submission(
         module = importlib.import_module(obs_builder_pkg)
         obs_builder_cls = getattr(module, obs_builder_cls)
         obs_builder = obs_builder_cls()
-    Trajectory.from_submission(
+    Trajectory.create_from_policy(
         policy=policy_cls(),
         data_dir=data_dir,
         n_agents=n_agents,
@@ -485,7 +508,7 @@ def cli_from_submission(
     )
 
 
-def gen_trajectories_from_metadata(
+def generate_trajectories_from_metadata(
     metadata_csv: Path,
     data_dir: Path,
     policy_pkg: str, policy_cls: str,
@@ -495,7 +518,7 @@ def gen_trajectories_from_metadata(
         try:
             test_folder = data_dir / v["test_id"] / v["env_id"]
             test_folder.mkdir(parents=True, exist_ok=True)
-            cli_from_submission(
+            generate_trajectory_from_policy(
                 ["--data-dir", test_folder,
                  "--policy-pkg", policy_pkg, "--policy-cls", policy_cls,
                  "--obs-builder-pkg", obs_builder_pkg, "--obs-builder-cls", obs_builder_cls,
@@ -524,7 +547,7 @@ def gen_trajectories_from_metadata(
 if __name__ == '__main__':
     metadata_csv = Path("../../episodes/malfunction_deadlock_avoidance_heuristics/metadata.csv")
     data_dir = Path("../../episodes/malfunction_deadlock_avoidance_heuristics")
-    gen_trajectories_from_metadata(
+    generate_trajectories_from_metadata(
         metadata_csv=metadata_csv,
         data_dir=data_dir,
         # TODO https://github.com/flatland-association/flatland-rl/issues/101 import heuristic baseline as example

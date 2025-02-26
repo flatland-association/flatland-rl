@@ -92,8 +92,8 @@ ml = [
 flatland-demo = "flatland.cli:demo"
 evaluator = "flatland.cli:evaluator"
 flatland-evaluator = "flatland.cli:evaluator"
-flatland-policy-run = "flatland.trajectories.trajectories:cli_from_submission"
-flatland-trajectory-run = "flatland.trajectories.trajectories:cli_run"
+flatland-trajectory-generate-from-policy = "flatland.trajectories.trajectories:generate_trajectory_from_policy"
+flatland-trajectory-evaluate = "flatland.trajectories.trajectories:evaluate_trajectory"
 
 [tool.setuptools.packages]
 find = { }
