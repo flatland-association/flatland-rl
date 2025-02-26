@@ -1,7 +1,12 @@
-Data Model
-==========
+Trajectories
+============
 
-TODO move to flatland-book?
+
+TODO move to `flatland-book`?
+
+
+Data Model
+----------
 
 ```mermaid
 classDiagram
@@ -60,3 +65,31 @@ Remarks:
 
 * Trajectory needs not start at step 0
 * Trajectory needs not contain state for every step - however, when starting the trajectory from an intermediate step, the snapshot must exist.
+
+Flow Trajectory Run
+-------------------
+
+```mermaid
+flowchart TD
+    subgraph Trajectory.run
+        start((start)) -->|data_dir| D0
+        D0(RailEnvPersister.load_new) -->|env| E{env done?}
+        E -->|no:\nobservations| G{Agent loop:\n more agents?}
+        G --->|observation| G1(policy.act)
+        G1 -->|action| G
+        G -->|no:\n actions| F3(env.step)
+        F3 -->|observations,rewards,info| E
+        E -->|yes:\n rewards| H(((end)))
+    end
+
+    style Policy fill: #ffe, stroke: #333, stroke-width: 1px
+    style G1 fill: #ffe, stroke: #333, stroke-width: 1px
+    style Env fill: #fcc, stroke: #333, stroke-width: 1px, color: #300
+    style F3 fill: #fcc, stroke: #333, stroke-width: 1px, color: #300
+    subgraph legend
+        Env(Environment)
+        Policy(Policy)
+        Trajectory(Trajectory)
+    end
+
+```
