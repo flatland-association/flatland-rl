@@ -615,7 +615,7 @@ class RailEnv(Environment):
             self.update_step_rewards(i_agent)
 
             ## Update counters (malfunction and speed)
-            agent.speed_counter.update_counter(agent.state, agent.old_position)
+            agent.speed_counter.step(agent.state, agent.old_position)
             #    agent.state_machine.previous_state)
             agent.malfunction_handler.update_counter()
 

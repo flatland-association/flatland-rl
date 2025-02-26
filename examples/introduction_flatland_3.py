@@ -212,7 +212,7 @@ print("=========================================")
 for agent_idx, agent in enumerate(env.agents):
     print(
         "Agent {} speed is: {:.2f} with the current fractional position being {}/{}".format(
-            agent_idx, agent.speed_counter.speed, agent.speed_counter.counter, agent.speed_counter.max_count))
+            agent_idx, agent.speed_counter.speed, agent.speed_counter.distance, 1.0))
 
 # New the agents can also have stochastic malfunctions happening which will lead to them being unable to move
 # for a certain amount of time steps. The malfunction data of the agents can easily be accessed as follows
