@@ -9,7 +9,7 @@ class SpeedCounter:
         self._is_cell_entry = True
         self.reset()
 
-    def step(self, state: TrainState, old_position: IntVector2D):
+    def step(self, state: TrainState, old_position: IntVector2D, speed: float = None):
         """
         Step the speed counter.
 
@@ -19,7 +19,11 @@ class SpeedCounter:
             Distance incremented only in MOVING state.
         old_position : IntVector2D
             Distance incremented only if already in grid (when we enter the grid, we enter at position zero).
+        speed : float
+            Set new speed effective immediately.
         """
+        if speed is not None:
+            self._speed = speed
         # TODO bad code smell: this logic should not be part of SpeedCounter?
         # Can't start counting when adding train to the map
         if state == TrainState.MOVING and old_position is not None:
