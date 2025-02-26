@@ -1,6 +1,8 @@
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.envs.step_utils.states import TrainState
 
+EPSILON = 0.01
+
 
 class SpeedCounter:
     def __init__(self, speed):
@@ -28,6 +30,9 @@ class SpeedCounter:
         # Can't start counting when adding train to the map
         if state == TrainState.MOVING and old_position is not None:
             self._distance += self._speed
+
+            if self._distance >= 1.0 - EPSILON and self._distance <= 1.0 + EPSILON:
+                self._distance = 1.0
             # travelling cells in any direction has distance 1
             # trains are in state stopped if they cannot move to the next cell
             self._distance = self._distance % 1
@@ -59,7 +64,7 @@ class SpeedCounter:
         """
         With current speed, do we exit cell at next time step?
         """
-        return self._distance + self._speed >= 1.0
+        return self._distance + self._speed >= 1.0 - EPSILON
 
     @property
     def speed(self):
