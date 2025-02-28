@@ -96,9 +96,6 @@ class RailEnv(Environment):
     cancellation_factor = 1
     cancellation_time_buffer = 0
 
-    acceleration_delta = 1.0  # as speed is between 0.0 and 1.0, MOVE_FORWARD sets to max speed allowed for train
-    braking_delta = -1.0  # similarly, STOP_MOVING sets to 0.
-
     def __init__(self,
                  width,
                  height,
@@ -112,6 +109,8 @@ class RailEnv(Environment):
                  random_seed=None,
                  record_steps=False,
                  timetable_generator=ttg.timetable_generator,
+                 acceleration_delta=1.0,
+                 braking_delta=-1.0
                  ):
         """
         Environment init.
@@ -147,6 +146,13 @@ class RailEnv(Environment):
         random_seed : int or None
             if None, then its ignored, else the random generators are seeded with this number to ensure
             that stochastic operations are replicable across multiple operations
+        acceleration_delta : float
+            Determines how much speed is increased by MOVE_FORWARD action up to max_speed set by train's Line (sampled from `speed_ratios` by `LineGenerator`).
+            As speed is between 0.0 and 1.0, acceleration_delta=1.0 restores to previous constant speed behaviour
+            (i.e. MOVE_FORWARD always sets to max speed allowed for train).
+        braking_delta : float
+            Determines how much speed is decreased by STOP_MOVING action.
+            As speed is between 0.0 and 1.0, braking_delta=1.0 restores to previous full stop behaviour.
         """
         super().__init__()
 
@@ -207,6 +213,9 @@ class RailEnv(Environment):
         self.list_actions = []  # save actions in here
 
         self.motionCheck = ac.MotionCheck()
+
+        self.acceleration_delta = acceleration_delta
+        self.braking_delta = braking_delta
 
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
@@ -530,9 +539,9 @@ class RailEnv(Environment):
 
             new_speed = agent.speed_counter.speed
             if preprocessed_action == RailEnvActions.MOVE_FORWARD:
-                new_speed += RailEnv.acceleration_delta
+                new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
-                new_speed += RailEnv.braking_delta
+                new_speed += self.braking_delta
 
             # Train's next position can change if train is at cell's exit and train is not in malfunction
             position_update_allowed = agent.speed_counter.is_cell_exit(new_speed) and \
@@ -586,10 +595,9 @@ class RailEnv(Environment):
             ## Compute speed update
             new_speed = agent.speed_counter.speed
             if preprocessed_action == RailEnvActions.MOVE_FORWARD:
-                new_speed += RailEnv.acceleration_delta
+                new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
-                new_speed += RailEnv.braking_delta
-
+                new_speed += self.braking_delta
 
             ## Update states
             state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, desired_movement_allowed, new_speed)
