@@ -367,30 +367,23 @@ class RailEnv(Environment):
                 if agent.old_position is not None:
                     self.agent_positions[agent.old_position] = -1
 
-    def generate_state_transition_signals(self, agent, preprocessed_action, movement_allowed):
+    def generate_state_transition_signals(self, agent: EnvAgent, preprocessed_action: RailEnvActions, movement_allowed: bool):
         """ Generate State Transitions Signals used in the state machine """
         st_signals = StateTransitionSignals()
 
-        # Malfunction starts when in_malfunction is set to true
         st_signals.in_malfunction = agent.malfunction_handler.in_malfunction
 
-        # Malfunction counter complete - Malfunction ends next timestep
         st_signals.malfunction_counter_complete = agent.malfunction_handler.malfunction_counter_complete
 
-        # Earliest departure reached - Train is allowed to move now
         st_signals.earliest_departure_reached = self._elapsed_steps >= agent.earliest_departure
 
-        # Stop Action Given
         st_signals.stop_action_given = (preprocessed_action == RailEnvActions.STOP_MOVING)
 
-        # Valid Movement action Given
         st_signals.valid_movement_action_given = preprocessed_action.is_moving_action() and movement_allowed
 
-        # Target Reached
         st_signals.target_reached = fast_position_equal(agent.position, agent.target)
 
-        # Movement conflict - Multiple trains trying to move into same cell
-        # If speed counter is not in cell exit, the train can enter the cell
+        # TODO can this be simplified to not movement allowed?
         st_signals.movement_conflict = (not movement_allowed) and agent.speed_counter.is_cell_exit
 
         return st_signals
@@ -564,31 +557,27 @@ class RailEnv(Environment):
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
             self.motionCheck.addAgent(i_agent, agent.position, new_position)
 
+            stopped_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
+            if stopped_inside_cell:
+                assert agent.position == new_position
+
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
 
         for agent in self.agents:
             i_agent = agent.handle
 
-            ## Update positions
-            if agent.malfunction_handler.in_malfunction:
-                movement_allowed = False
-            else:
-                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position)
-
-            movement_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
-            movement_allowed = movement_allowed or movement_inside_cell
+            ## Movement allowed if not in malfunction and motion is allowed (if any).
+            movement_allowed = not agent.malfunction_handler.in_malfunction and self.motionCheck.check_motion2(i_agent, agent.position)
 
             # Fetch the saved transition data
             agent_transition_data = temp_transition_data[i_agent]
             preprocessed_action = agent_transition_data.preprocessed_action
 
             ## Update states
-            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action,
-                                                                              movement_allowed)
+            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, movement_allowed)
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
-
 
             # Agent is being added to map
             if agent.state.is_on_map_state():
@@ -731,6 +720,7 @@ class RailEnv(Environment):
         return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
                                     show_predictions=show_predictions,
                                     show_rowcols=show_rowcols, return_image=return_image)
+
     def initialize_renderer(self, mode, gl,
                             agent_render_variant,
                             show_debug,

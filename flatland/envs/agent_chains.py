@@ -1,8 +1,8 @@
+from typing import List, Tuple, Set, Union
+
+import graphviz as gv
 import networkx as nx
 import numpy as np
-
-from typing import List, Tuple, Set, Union
-import graphviz as gv
 
 
 class MotionCheck(object):
@@ -17,12 +17,11 @@ class MotionCheck(object):
         self.nDeadlocks = 0
         self.svDeadlocked = set()
         self._G_reversed: Union[nx.DiGraph, None] = None
-        
 
     def get_G_reversed(self):
-        #if self._G_reversed is None:
+        # if self._G_reversed is None:
         #    self._G_reversed = self.G.reverse()
-        #return self._G_reversed
+        # return self._G_reversed
         return self.Grev
 
     def reset_G_reversed(self):
@@ -236,6 +235,7 @@ class MotionCheck(object):
                 #        self.G.nodes[vPred]["color"] = "red"
                 self.block_preds(diAgCell.values(), "red")
 
+    # TODO https://github.com/flatland-association/flatland-rl/pull/87 remove as unused
     def check_motion(self, iAgent, rcPos):
         """ Returns tuple of boolean can the agent move, and the cell it will move into.
             If agent position is None, we use a dummy position of (-1, iAgent)
@@ -267,6 +267,41 @@ class MotionCheck(object):
         rcNext = self.G.successors(rcPos).__next__()
         if rcNext == rcPos:  # the agent didn't want to move
             return False
+        # The agent wanted to move, and it can
+        return True
+
+    def check_motion2(self, iAgent, rcPos):
+        """ Returns tuple of boolean can the agent move, and the cell it will move into.
+            If agent position is None, we use a dummy position of (-1, iAgent).
+            In contrast to check_motion, returns true if the agent does not want to move.
+        """
+
+        if rcPos is None:
+            rcPos = (-1, iAgent)
+
+        dAttr = self.G.nodes.get(rcPos)
+        # print("pos:", rcPos, "dAttr:", dAttr)
+
+        if dAttr is None:
+            dAttr = {}
+
+        # If it's been marked red or purple then it can't move
+        if "color" in dAttr:
+            sColor = dAttr["color"]
+            if sColor in ["red", "purple"]:
+                return False
+
+        dSucc = self.G.succ[rcPos]
+
+        # This should never happen - only the next cell of an agent has no successor
+        if len(dSucc) == 0:
+            print(f"error condition - agent {iAgent} node {rcPos} has no successor")
+            return False
+
+        # This agent has a successor
+        rcNext = self.G.successors(rcPos).__next__()
+        if rcNext == rcPos:  # the agent didn't want to move
+            return True
         # The agent wanted to move, and it can
         return True
 
