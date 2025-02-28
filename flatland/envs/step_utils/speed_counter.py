@@ -42,7 +42,7 @@ class SpeedCounter:
             # TODO required for test_service.ipynb only - need to better understand why - can we get rid of this? Also check that sum of all rewards are the same with with
             if 1.0 - EPSILON <= self._distance <= 1.0 + EPSILON:
                 self._distance = 1.0
-            # If trains cannot move to the next cell, they are in state stopped, so we compute the distance travelled in the new cell by taking modulo:
+            # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
             self._distance = self._distance % SEGMENT_LENGTH
             if self._distance < self._speed:
                 self._is_cell_entry = True
@@ -53,14 +53,13 @@ class SpeedCounter:
         return f"speed: {self.speed} \
                  max_speed: {self.max_speed} \
                  distance: {self.distance} \
-                 is_cell_entry: {self.is_cell_entry} \
-                 is_cell_exit: {self.is_cell_exit}"
+                 is_cell_entry: {self.is_cell_entry}"
 
     def reset(self):
         self._distance = 0
         self._is_cell_entry = True
 
-    # TODO why do we need this at all?
+    # TODO why do we need is_cell_entry this at all? Only two usages one of which seems wrong.
     @property
     def is_cell_entry(self):
         """
@@ -68,12 +67,12 @@ class SpeedCounter:
         """
         return self._is_cell_entry
 
-    @property
-    def is_cell_exit(self):
+    def is_cell_exit(self, speed: float):
         """
-        With current speed, do we exit cell at next time step?
+        With the given speed, do we exit cell at next time step?
         """
-        return self._distance + self._speed >= 1.0 - EPSILON
+        speed = max(min(speed, self._max_speed), 0.0)
+        return self._distance + speed >= 1.0 - EPSILON
 
     @property
     def speed(self):

@@ -454,6 +454,7 @@ class RailEnv(Environment):
                     state - State from the trains's state machine
         """
         info_dict = {
+            # TODO is_cell_entry seems to be wrong (action is required when entering a cell not after a cell is entered
             'action_required': {i: self.action_required(agent.state, agent.speed_counter.is_cell_entry)
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
@@ -527,8 +528,14 @@ class RailEnv(Environment):
             # Save moving actions in not already saved
             agent.action_saver.save_action_if_allowed(preprocessed_action, agent.state)
 
+            new_speed = agent.speed_counter.speed
+            if preprocessed_action == RailEnvActions.MOVE_FORWARD:
+                new_speed += RailEnv.acceleration_delta
+            elif preprocessed_action == RailEnvActions.STOP_MOVING:
+                new_speed += RailEnv.braking_delta
+
             # Train's next position can change if train is at cell's exit and train is not in malfunction
-            position_update_allowed = agent.speed_counter.is_cell_exit and \
+            position_update_allowed = agent.speed_counter.is_cell_exit(new_speed) and \
                                       not agent.malfunction_handler.malfunction_down_counter > 0 and \
                                       not preprocessed_action == RailEnvActions.STOP_MOVING
 
@@ -559,7 +566,7 @@ class RailEnv(Environment):
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
             self.motionCheck.addAgent(i_agent, agent.position, new_position)
 
-            stopped_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
+            stopped_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit(new_speed)
             if stopped_inside_cell:
                 assert agent.position == new_position
 
@@ -581,13 +588,20 @@ class RailEnv(Environment):
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
 
+            ## Compute speed update
+            new_speed = agent.speed_counter.speed
+            if preprocessed_action == RailEnvActions.MOVE_FORWARD:
+                new_speed += RailEnv.acceleration_delta
+            elif preprocessed_action == RailEnvActions.STOP_MOVING:
+                new_speed += RailEnv.braking_delta
+
             # Agent is being added to map
             if agent.state.is_on_map_state():
                 if agent.state_machine.previous_state.is_off_map_state():
                     agent.position = agent.initial_position
                     agent.direction = agent.initial_direction
                 # Speed counter completes
-                elif desired_movement_allowed and agent.state != TrainState.DONE and agent.speed_counter.is_cell_exit:
+                elif desired_movement_allowed and agent.state != TrainState.DONE and agent.speed_counter.is_cell_exit(new_speed):
                     agent.position = agent_transition_data.position
                     agent.direction = agent_transition_data.direction
                     agent.state_machine.update_if_reached(agent.position, agent.target)
@@ -602,13 +616,6 @@ class RailEnv(Environment):
 
             ## Update rewards
             self.update_step_rewards(i_agent)
-
-            ## Compute speed update
-            new_speed = agent.speed_counter.speed
-            # if preprocessed_action == RailEnvActions.MOVE_FORWARD:
-            #     new_speed += RailEnv.acceleration_delta
-            # elif preprocessed_action == RailEnvActions.STOP_MOVING:
-            #     new_speed += RailEnv.braking_delta
 
             ## Update counters (malfunction and speed)
             agent.speed_counter.step(agent.state, agent.old_position, speed=new_speed)
