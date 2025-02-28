@@ -589,8 +589,6 @@ class RailEnv(Environment):
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
 
-            # Needed when not removing agents at target
-            movement_allowed = movement_allowed and agent.state != TrainState.DONE
 
             # Agent is being added to map
             if agent.state.is_on_map_state():
@@ -598,7 +596,7 @@ class RailEnv(Environment):
                     agent.position = agent.initial_position
                     agent.direction = agent.initial_direction
                 # Speed counter completes
-                elif movement_allowed and (agent.speed_counter.is_cell_exit):
+                elif movement_allowed and agent.state != TrainState.DONE and agent.speed_counter.is_cell_exit:
                     agent.position = agent_transition_data.position
                     agent.direction = agent_transition_data.direction
                     agent.state_machine.update_if_reached(agent.position, agent.target)
