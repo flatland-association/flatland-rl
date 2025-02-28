@@ -49,7 +49,7 @@ class StateTransitionSignals:
     # Earliest departure reached - Train is allowed to move now
     earliest_departure_reached: bool = False
 
-    # Stop Action Given - User provided a stop action. Action preprocessing can also change a moving action to a stop action if the train tries to move into a invalid or occupied position.
+    # Stop Action Given - User provided a stop action and speed 0 reached. Action preprocessing can also change a moving action to a stop action if the train tries to move into a invalid or occupied position.
     stop_action_given: bool = False
 
     # Movement action is provided and no movement conflict (see below).

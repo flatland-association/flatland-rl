@@ -370,7 +370,7 @@ class RailEnv(Environment):
                 if agent.old_position is not None:
                     self.agent_positions[agent.old_position] = -1
 
-    def generate_state_transition_signals(self, agent: EnvAgent, preprocessed_action: RailEnvActions, desired_movement_allowed: bool):
+    def generate_state_transition_signals(self, agent: EnvAgent, preprocessed_action: RailEnvActions, desired_movement_allowed: bool, new_speed: float):
         """ Generate State Transitions Signals used in the state machine """
         st_signals = StateTransitionSignals()
 
@@ -380,7 +380,7 @@ class RailEnv(Environment):
 
         st_signals.earliest_departure_reached = self._elapsed_steps >= agent.earliest_departure
 
-        st_signals.stop_action_given = (preprocessed_action == RailEnvActions.STOP_MOVING)
+        st_signals.stop_action_given = (preprocessed_action == RailEnvActions.STOP_MOVING) and (new_speed <= 0.0)
 
         st_signals.valid_movement_action_given = preprocessed_action.is_moving_action() and desired_movement_allowed
 
@@ -583,17 +583,18 @@ class RailEnv(Environment):
             agent_transition_data = temp_transition_data[i_agent]
             preprocessed_action = agent_transition_data.preprocessed_action
 
-            ## Update states
-            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, desired_movement_allowed)
-            agent.state_machine.set_transition_signals(state_transition_signals)
-            agent.state_machine.step()
-
             ## Compute speed update
             new_speed = agent.speed_counter.speed
             if preprocessed_action == RailEnvActions.MOVE_FORWARD:
                 new_speed += RailEnv.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
                 new_speed += RailEnv.braking_delta
+
+
+            ## Update states
+            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, desired_movement_allowed, new_speed)
+            agent.state_machine.set_transition_signals(state_transition_signals)
+            agent.state_machine.step()
 
             # Agent is being added to map
             if agent.state.is_on_map_state():
