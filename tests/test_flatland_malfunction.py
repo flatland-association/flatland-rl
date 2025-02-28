@@ -586,13 +586,13 @@ def test_last_malfunction_step():
         if env.agents[0].malfunction_handler.malfunction_down_counter < 1:
             agent_can_move = True
         # Store the position before and after the step
-        pre_position = env.agents[0].speed_counter.counter
+        pre_position = env.agents[0].speed_counter.distance
         _, reward, _, _ = env.step(action_dict)
         # Check if the agent is still allowed to move in this step
 
         if env.agents[0].malfunction_handler.malfunction_down_counter > 0:
             agent_can_move = False
-        post_position = env.agents[0].speed_counter.counter
+        post_position = env.agents[0].speed_counter.distance
         # Assert that the agent moved while it was still allowed
         if agent_can_move:
             assert pre_position != post_position

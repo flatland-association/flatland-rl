@@ -8,9 +8,9 @@ from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_shortest_paths
-from flatland.utils.ordered_set import OrderedSet
-from flatland.envs.step_utils.states import TrainState
 from flatland.envs.step_utils import transition_utils
+from flatland.envs.step_utils.states import TrainState
+from flatland.utils.ordered_set import OrderedSet
 
 
 class DummyPredictorForRailEnv(PredictionBuilder):
@@ -142,7 +142,8 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                 continue
 
             agent_virtual_direction = agent.direction
-            agent_speed = agent.speed_counter.speed
+            # assume constant max_speed
+            agent_speed = agent.speed_counter.max_speed
             times_per_cell = int(np.reciprocal(agent_speed))
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
             prediction[0] = [0, *agent_virtual_position, agent_virtual_direction, 0]

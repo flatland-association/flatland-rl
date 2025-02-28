@@ -1,15 +1,15 @@
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_grid_transition_map
-from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.step_utils.speed_counter import SpeedCounter
+from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
 from tests.test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
-from flatland.envs.step_utils.states import TrainState
-from flatland.envs.step_utils.speed_counter import SpeedCounter
 
 
 # Use the sparse_rail_generator to generate feasible network configurations with corresponding tasks
@@ -51,8 +51,8 @@ class RandomAgent:
 
 def test_multi_speed_init():
     env = RailEnv(width=50, height=50,
-                  rail_generator=sparse_rail_generator(seed=2), line_generator=sparse_line_generator(),
-                  random_seed=3,
+                  rail_generator=sparse_rail_generator(seed=2, max_num_cities=4), line_generator=sparse_line_generator(),
+                  random_seed=42,
                   number_of_agents=3)
 
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
@@ -66,6 +66,7 @@ def test_multi_speed_init():
     env.reset(False, False)
     env._max_episode_steps = 1000
 
+    assert len(set({env.agents[a_idx].initial_position for a_idx in range(len(env.agents))})) == len(env.agents)
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position =  env.agents[a_idx].initial_position
         env.agents[a_idx]._set_state(TrainState.MOVING)
