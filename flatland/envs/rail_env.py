@@ -95,6 +95,7 @@ class RailEnv(Environment):
     start_penalty = 0  # penalty for starting a stopped agent
     cancellation_factor = 1
     cancellation_time_buffer = 0
+    crash_penalty_factor = 0.0  # penalty for stopping train in conflict
 
     def __init__(self,
                  width,
@@ -444,7 +445,7 @@ class RailEnv(Environment):
 
         action = action_preprocessing.preprocess_moving_action(action, self.rail, current_position, current_direction)
 
-        # Check transitions, bounts for executing the action in the given position and direction
+        # Check transitions for executing the action in the given position and direction
         if action.is_moving_action() and not check_valid_action(action, self.rail, current_position, current_direction):
             action = RailEnvActions.STOP_MOVING
 
@@ -473,12 +474,6 @@ class RailEnv(Environment):
             'state': {i: agent.state for i, agent in enumerate(self.agents)}
         }
         return info_dict
-
-    def update_step_rewards(self, i_agent):
-        """
-        Update the rewards dict for agent id i_agent for every timestep
-        """
-        pass
 
     def end_of_episode_update(self, have_all_agents_ended):
         """
@@ -586,13 +581,15 @@ class RailEnv(Environment):
             i_agent = agent.handle
 
             ## Movement allowed if not in malfunction and motion is allowed (if any).
-            desired_movement_allowed = not agent.malfunction_handler.in_malfunction and self.motionCheck.check_motion2(i_agent, agent.position)
+            motion_check_agent = self.motionCheck.check_motion2(i_agent, agent.position)
+            desired_movement_allowed = not agent.malfunction_handler.in_malfunction and motion_check_agent
 
             # Fetch the saved transition data
             agent_transition_data = temp_transition_data[i_agent]
             preprocessed_action = agent_transition_data.preprocessed_action
 
             ## Compute speed update
+            speed_before = agent.speed_counter.speed
             new_speed = agent.speed_counter.speed
             if preprocessed_action == RailEnvActions.MOVE_FORWARD:
                 new_speed += self.acceleration_delta
@@ -624,11 +621,11 @@ class RailEnv(Environment):
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
             ## Update rewards
-            self.update_step_rewards(i_agent)
+            if agent.state_machine.previous_state == TrainState.MOVING and (not motion_check_agent):
+                self.rewards_dict[i_agent] = speed_before * RailEnv.crash_penalty_factor
 
             ## Update counters (malfunction and speed)
             agent.speed_counter.step(agent.state, agent.old_position, speed=new_speed)
-            #    agent.state_machine.previous_state)
             agent.malfunction_handler.update_counter()
 
             # Clear old action when starting in new cell
