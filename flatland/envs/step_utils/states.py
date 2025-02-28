@@ -41,26 +41,24 @@ class TrainState(IntEnum):
 @dataclass(repr=True)
 class StateTransitionSignals:
     # Malfunction states start when in_malfunction is set to true
-    in_malfunction : bool = False
+    in_malfunction: bool = False
 
     # Malfunction counter complete - Malfunction state ends this timestep and actions are allowed from next timestep
-    malfunction_counter_complete : bool = False
+    malfunction_counter_complete: bool = False
 
     # Earliest departure reached - Train is allowed to move now
-    earliest_departure_reached : bool = False
+    earliest_departure_reached: bool = False
 
     # Stop Action Given - User provided a stop action. Action preprocessing can also change a moving action to a stop action if the train tries to move into a invalid or occupied position.
-    stop_action_given : bool = False
+    stop_action_given: bool = False
 
-    # Movement action is provided and movement is allowed.
-    # Movement allowed if not in malfunction and desired motion is allowed (if any).
-    # Note that a train can move into an occupied cell if that cell is being emptied by the train that was previously occupied it.
-    valid_movement_action_given : bool = False
+    # Movement action is provided and no movement conflict (see below).
+    valid_movement_action_given: bool = False
 
     # Target position is reached
-    target_reached : bool = False
+    target_reached: bool = False
 
-    # Movement conflict
-    # Multiple trains trying to move into same cell, i.e. is_cell_exit and check_motion both True
-    movement_conflict : bool = False
-
+    # Movement conflict: desired movement (if any) not allowed (i.e. MotionCheck NOK or in malfunction).
+    # Desired movement allowed if not in malfunction and desired motion is allowed (if any).
+    # Note that a train can move into an occupied cell if that cell is being emptied by the train that was previously occupied it.
+    movement_conflict: bool = False

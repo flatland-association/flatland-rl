@@ -379,7 +379,6 @@ class RailEnv(Environment):
 
         st_signals.stop_action_given = (preprocessed_action == RailEnvActions.STOP_MOVING)
 
-        # TODO can this be simplified to only moving action?
         st_signals.valid_movement_action_given = preprocessed_action.is_moving_action() and desired_movement_allowed
 
         st_signals.target_reached = fast_position_equal(agent.position, agent.target)
