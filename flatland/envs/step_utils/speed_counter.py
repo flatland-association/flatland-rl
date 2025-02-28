@@ -39,6 +39,7 @@ class SpeedCounter:
         if state == TrainState.MOVING and old_position is not None and self._speed > 0:
             self._distance += self._speed
 
+            # TODO required for test_service.ipynb only - need to better understand why - can we get rid of this? Also check that sum of all rewards are the same with with
             if 1.0 - EPSILON <= self._distance <= 1.0 + EPSILON:
                 self._distance = 1.0
             # If trains cannot move to the next cell, they are in state stopped, so we compute the distance travelled in the new cell by taking modulo:
