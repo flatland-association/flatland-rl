@@ -367,7 +367,7 @@ class RailEnv(Environment):
                 if agent.old_position is not None:
                     self.agent_positions[agent.old_position] = -1
 
-    def generate_state_transition_signals(self, agent: EnvAgent, preprocessed_action: RailEnvActions, movement_allowed: bool):
+    def generate_state_transition_signals(self, agent: EnvAgent, preprocessed_action: RailEnvActions, desired_movement_allowed: bool):
         """ Generate State Transitions Signals used in the state machine """
         st_signals = StateTransitionSignals()
 
@@ -379,12 +379,12 @@ class RailEnv(Environment):
 
         st_signals.stop_action_given = (preprocessed_action == RailEnvActions.STOP_MOVING)
 
-        st_signals.valid_movement_action_given = preprocessed_action.is_moving_action() and movement_allowed
+        # TODO can this be simplified to only moving action?
+        st_signals.valid_movement_action_given = preprocessed_action.is_moving_action() and desired_movement_allowed
 
         st_signals.target_reached = fast_position_equal(agent.position, agent.target)
 
-        # TODO can this be simplified to not movement allowed?
-        st_signals.movement_conflict = (not movement_allowed) and agent.speed_counter.is_cell_exit
+        st_signals.movement_conflict = (not desired_movement_allowed)
 
         return st_signals
 
@@ -568,14 +568,14 @@ class RailEnv(Environment):
             i_agent = agent.handle
 
             ## Movement allowed if not in malfunction and motion is allowed (if any).
-            movement_allowed = not agent.malfunction_handler.in_malfunction and self.motionCheck.check_motion2(i_agent, agent.position)
+            desired_movement_allowed = not agent.malfunction_handler.in_malfunction and self.motionCheck.check_motion2(i_agent, agent.position)
 
             # Fetch the saved transition data
             agent_transition_data = temp_transition_data[i_agent]
             preprocessed_action = agent_transition_data.preprocessed_action
 
             ## Update states
-            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, movement_allowed)
+            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, desired_movement_allowed)
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
 
@@ -585,7 +585,7 @@ class RailEnv(Environment):
                     agent.position = agent.initial_position
                     agent.direction = agent.initial_direction
                 # Speed counter completes
-                elif movement_allowed and agent.state != TrainState.DONE and agent.speed_counter.is_cell_exit:
+                elif desired_movement_allowed and agent.state != TrainState.DONE and agent.speed_counter.is_cell_exit:
                     agent.position = agent_transition_data.position
                     agent.direction = agent_transition_data.direction
                     agent.state_machine.update_if_reached(agent.position, agent.target)

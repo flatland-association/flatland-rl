@@ -279,12 +279,18 @@ class MotionCheck(object):
         if rcPos is None:
             rcPos = (-1, iAgent)
 
+        # / check_motion2
+        # if another wants to move to my cell and I want to stay, it may have a color, so exit here.
+        # TODO https://github.com/flatland-association/flatland-rl/pull/87  Definitely need to cleanup/simplify motion check
+        rcNext = self.G.successors(rcPos).__next__()
+        if rcNext == rcPos:  # the agent didn't want to move
+            return True
+        # \ check_motion2
+
         dAttr = self.G.nodes.get(rcPos)
-        # print("pos:", rcPos, "dAttr:", dAttr)
 
         if dAttr is None:
             dAttr = {}
-
         # If it's been marked red or purple then it can't move
         if "color" in dAttr:
             sColor = dAttr["color"]
@@ -301,7 +307,7 @@ class MotionCheck(object):
         # This agent has a successor
         rcNext = self.G.successors(rcPos).__next__()
         if rcNext == rcPos:  # the agent didn't want to move
-            return True
+            return False
         # The agent wanted to move, and it can
         return True
 
