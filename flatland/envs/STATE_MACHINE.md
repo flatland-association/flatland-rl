@@ -24,16 +24,16 @@ stateDiagram-v2
     READY_TO_DEPART --> MOVING: <font color=green>valid_movement_action_given</font>
     MALFUNCTION_OFF_MAP --> MOVING: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <font color=red>earliest_departure_reached</font> <br/> <font color=green>valid_movement_action_given</font>
     MALFUNCTION_OFF_MAP --> STOPPED: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <font color=red>earliest_departure_reached</font> <br/> <font color=red>stop_action_given</font>
-    MALFUNCTION_OFF_MAP --> READY_TO_DEPART: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <font color=red>earliest_departure_reached</font> <br/> <span>NOT <font color=red>stop_action_given</font></span> <br/> <span>NOT <font color=green>valid_movement_action_given</font></span>
-    MALFUNCTION_OFF_MAP --> WAITING: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <span>NOT <font color=red>earliest_departure_reached</font></span>
+    MALFUNCTION_OFF_MAP --> READY_TO_DEPART: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <font color=red>earliest_departure_reached</font> <br/> <nobr>NOT <font color=red>stop_action_given</font></nobr> <br/> <nobr>NOT <font color=green>valid_movement_action_given</font></nobr>
+    MALFUNCTION_OFF_MAP --> WAITING: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <nobr>NOT <font color=red>earliest_departure_reached</font></nobr>
     MOVING --> MALFUNCTION: <font color=red>in_malfunction</font>
-    MOVING --> DONE: <span>NOT <font color=red>in_malfunction</font></span> <br/> <font color=green>target_reached</font>
-    MOVING --> STOPPED: <span>NOT <font color=red>in_malfunction</font></span> <br/> <span>NOT <font color=green>target_reached</font></span> <br/> <font color=red>stop_action_given</font>
-    MOVING --> STOPPED: <span>NOT <font color=red>in_malfunction</font></span> <br/> <span>NOT <font color=green>target_reached</font></span> <br/> <font color=red>movement_conflict</font>
+    MOVING --> DONE: <nobr>NOT <font color=red>in_malfunction</font></nobr> <br/> <font color=green>target_reached</font>
+    MOVING --> STOPPED: <nobr>NOT <font color=red>in_malfunction</font></nobr> <br/> <nobr>NOT <font color=green>target_reached</font></nobr> <br/> <font color=red>stop_action_given</font>
+    MOVING --> STOPPED: <nobr>NOT <font color=red>in_malfunction</font></nobr> <br/> <nobr>NOT <font color=green>target_reached</font></nobr> <br/> <font color=red>movement_conflict</font>
     STOPPED --> MALFUNCTION: <font color=red>in_malfunction</font>
-    STOPPED --> MOVING: <span>NOT <font color=red>in_malfunction</font></span> <br/> <font color=green>valid_movement_action_given</font>
+    STOPPED --> MOVING: <nobr>NOT <font color=red>in_malfunction</font></nobr> <br/> <font color=green>valid_movement_action_given</font>
     MALFUNCTION --> MOVING: <font color=green>malfunction_counter_complete</font> <br/> <font color=green>valid_movement_action_given</font>
-    MALFUNCTION --> STOPPED: <font color=green>malfunction_counter_complete</font> <br/> <span>NOT <font color=green>valid_movement_action_given</font></span>
+    MALFUNCTION --> STOPPED: <font color=green>malfunction_counter_complete</font> <br/> <nobr>NOT <font color=green>valid_movement_action_given</font></nobr>
     DONE --> [*]
     classDef OffMapState font-style: italic, font-weight: bold, fill: yellow, color: black
     classDef OnMapState font-style: italic, font-weight: bold, fill: green, color: black
