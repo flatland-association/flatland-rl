@@ -96,6 +96,9 @@ class RailEnv(Environment):
     cancellation_factor = 1
     cancellation_time_buffer = 0
 
+    acceleration_delta = 1.0  # as speed is between 0.0 and 1.0, MOVE_FORWARD sets to max speed allowed for train
+    braking_delta = -1.0  # similarly, STOP_MOVING sets to 0.
+
     def __init__(self,
                  width,
                  height,
