@@ -109,7 +109,7 @@ class FileTimetableGenerator():
     def __init__(self, filename: Path):
         self.filename = filename
 
-    def generate(self) -> Timetable:
+    def generate(self, *args, **kwargs) -> Timetable:
         with open(self.filename, "rb") as file_in:
             return pickle.loads(file_in.read())
 
@@ -117,3 +117,6 @@ class FileTimetableGenerator():
     def save(filename: Path, tt: Timetable):
         with open(filename, "wb") as file_out:
             file_out.write(pickle.dumps(tt))
+
+    def __call__(self, *args, **kwargs):
+        return self.generate(*args, **kwargs)
