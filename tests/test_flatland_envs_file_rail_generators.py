@@ -12,12 +12,12 @@ from flatland.envs.rail_generators import sparse_rail_generator, FileRailFromGri
     (30, 32, 33, 30, 32, 33, False),
     (30, 32, 33, 40, 42, 33, True),
 ])
-def test_generate(w, h, na, w2, h2, na2, warn):
-    expected: RailGeneratorProduct = sparse_rail_generator()(w, h, na)
+def test_generate(w: int, h: int, na: int, w2: int, h2: int, na2: int, warn: bool):
+    expected: RailGeneratorProduct = sparse_rail_generator()(w, h, na, 0)
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        pkl = Path(tmpdirname) / (f"{uuid.uuid4()}.pkl")
-        FileRailFromGridGen.save(filename=pkl, prod=expected)
+    with tempfile.TemporaryDirectory() as tmp_dir_name:
+        pkl = Path(tmp_dir_name) / f"{uuid.uuid4()}.pkl"
+        FileRailFromGridGen.save_rail_generator_product(filename=pkl, prod=expected)
 
         if warn:
             with pytest.warns(UserWarning) as record:

@@ -832,7 +832,7 @@ class FileRailFromGridGen(RailGen):
         return rail, dict["hints"]
 
     @staticmethod
-    def get_dict(prod: RailGeneratorProduct):
+    def to_dict(prod: RailGeneratorProduct):
         rail, hints = prod
         return {
             "grid": rail.grid.tolist(),
@@ -840,6 +840,6 @@ class FileRailFromGridGen(RailGen):
         }
 
     @staticmethod
-    def save(filename: Path, prod: RailGeneratorProduct):
+    def save_rail_generator_product(filename: Path, prod: RailGeneratorProduct):
         with open(filename, "wb") as file_out:
-            file_out.write(pickle.dumps(FileRailFromGridGen.get_dict(prod)))
+            file_out.write(pickle.dumps(FileRailFromGridGen.to_dict(prod)))
