@@ -1,12 +1,12 @@
 """
 TransitionMap and derived classes.
 """
-from functools import lru_cache
+import traceback
+import warnings
 
 import numpy as np
 from importlib_resources import path
 from numpy import array
-import traceback
 
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position, get_direction
@@ -120,7 +120,7 @@ class GridTransitionMap(TransitionMap):
     GridTransitionMap implements utility functions.
     """
 
-    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), random_seed=None):
+    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), random_seed=None, grid: np.ndarray = None):
         """
         Builder for GridTransitionMap object.
 
@@ -144,7 +144,12 @@ class GridTransitionMap(TransitionMap):
             self.random_generator.seed(12)
         else:
             self.random_generator.seed(random_seed)
-        self.grid = np.zeros((height, width), dtype=self.transitions.get_type())
+        if grid is None:
+            self.grid = np.zeros((height, width), dtype=self.transitions.get_type())
+        else:
+            if grid.dtype != self.transitions.get_type():
+                warnings.warn(f"Expected dtype {self.transitions.get_type()}, found {grid.dtype}.")
+            self.grid = grid
 
     @enable_infrastructure_lru_cache(maxsize=1_000_000)
     def get_full_transitions(self, row, column):

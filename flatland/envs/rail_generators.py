@@ -1,5 +1,7 @@
 """Rail generators (infrastructure manager, "Infrastrukturbetreiber")."""
+import pickle
 import warnings
+from pathlib import Path
 from typing import Callable, Tuple, Optional, Dict, List
 
 import numpy as np
@@ -109,7 +111,7 @@ def rail_from_grid_transition_map(rail_map, optionals=None) -> RailGenerator:
     return RailFromGridGen(rail_map, optionals)
 
 
-def sparse_rail_generator(*args, **kwargs):
+def sparse_rail_generator(*args: object, **kwargs: object) -> RailGenerator:
     return SparseRailGen(*args, **kwargs)
 
 
@@ -145,7 +147,7 @@ class SparseRailGen(RailGen):
         self.seed = seed
 
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                 np_random: RandomState = None) -> RailGenerator:
+                 np_random: RandomState = None) -> RailGeneratorProduct:
         """
 
         Parameters
@@ -806,3 +808,38 @@ class SparseRailGen(RailGen):
         Returns True if the cities overlap and False otherwise
         """
         return np.abs(center_1[0] - center_2[0]) < radius and np.abs(center_1[1] - center_2[1]) < radius
+
+
+class FileRailFromGridGen(RailGen):
+    def __init__(self, filename: Path):
+        self.filename = filename
+
+    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
+                 np_random: RandomState = None) -> RailGeneratorProduct:
+        with open(self.filename, "rb") as file_in:
+            from_dict = self.from_dict(pickle.loads(file_in.read()))
+            if from_dict[0].height != height:
+                warnings.warn(f"Expected height {height}, found {from_dict[0].height}.")
+            if from_dict[0].width != width:
+                warnings.warn(f"Expected width {width}, found {from_dict[0].width}.")
+            return from_dict
+
+    @staticmethod
+    def from_dict(dict):
+        grid = np.array(dict["grid"], dtype=RailEnvTransitions().get_type())
+        rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=RailEnvTransitions(), grid=grid)
+
+        return rail, dict["hints"]
+
+    @staticmethod
+    def get_dict(prod: RailGeneratorProduct):
+        rail, hints = prod
+        return {
+            "grid": rail.grid.tolist(),
+            "hints": hints
+        }
+
+    @staticmethod
+    def save(filename: Path, prod: RailGeneratorProduct):
+        with open(filename, "wb") as file_out:
+            file_out.write(pickle.dumps(FileRailFromGridGen.get_dict(prod)))
