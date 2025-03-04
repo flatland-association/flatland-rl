@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from envs.line_generators import FileLineGenerator
+from flatland.envs.line_generators import FileLineGenerator
 from flatland.envs.timetable_utils import Line
 
 
