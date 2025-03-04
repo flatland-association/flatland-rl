@@ -17,7 +17,7 @@ def test_generate(w: int, h: int, na: int, w2: int, h2: int, na2: int, warn: boo
 
     with tempfile.TemporaryDirectory() as tmp_dir_name:
         pkl = Path(tmp_dir_name) / f"{uuid.uuid4()}.pkl"
-        FileRailFromGridGen.save_rail_generator_product(filename=pkl, prod=expected)
+        FileRailFromGridGen.save(filename=pkl, prod=expected)
 
         if warn:
             with pytest.warns(UserWarning) as record:

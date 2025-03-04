@@ -212,3 +212,12 @@ class FileLineGenerator(BaseLineGen):
     def save(filename: Path, line: Line):
         with open(filename, "wb") as file_out:
             file_out.write(pickle.dumps(line))
+
+    @staticmethod
+    def wrap(line_generator: LineGenerator, line_pkl: Path) -> LineGenerator:
+        def _wrap(*args, **kwargs):
+            line = line_generator(*args, **kwargs)
+            FileLineGenerator.save(line_pkl, line)
+            return line
+
+        return _wrap

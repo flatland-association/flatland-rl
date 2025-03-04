@@ -120,3 +120,12 @@ class FileTimetableGenerator():
 
     def __call__(self, *args, **kwargs):
         return self.generate(*args, **kwargs)
+
+    @staticmethod
+    def wrap(timetable_generator: timetable_generator, tt_pkl: Path) -> timetable_generator:
+        def _wrap(*args, **kwargs):
+            tt = timetable_generator(*args, **kwargs)
+            FileTimetableGenerator.save(tt_pkl, tt)
+            return tt
+
+        return _wrap

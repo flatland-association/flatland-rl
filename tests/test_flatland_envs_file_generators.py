@@ -6,40 +6,13 @@ import numpy as np
 
 from flatland.envs import timetable_generators
 from flatland.envs.line_generators import FileLineGenerator
-from flatland.envs.line_generators import sparse_line_generator, LineGenerator
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import ParamMalfunctionGen, MalfunctionParameters
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import FileRailFromGridGen, sparse_rail_generator, RailGenerator
+from flatland.envs.rail_generators import FileRailFromGridGen, sparse_rail_generator
 from flatland.envs.timetable_generators import FileTimetableGenerator
-
-
-def wrap_rail_generator(rail_generator: RailGenerator, rail_pkl: Path) -> RailGenerator:
-    def _wrap(*args, **kwargs):
-        prod = rail_generator(*args, **kwargs)
-        FileRailFromGridGen.save_rail_generator_product(rail_pkl, prod)
-        return prod
-
-    return _wrap
-
-
-def wrap_line_generator(line_generator: LineGenerator, line_pkl: Path) -> LineGenerator:
-    def _wrap(*args, **kwargs):
-        line = line_generator(*args, **kwargs)
-        FileLineGenerator.save(line_pkl, line)
-        return line
-
-    return _wrap
-
-
-def wrap_timetable_generator(timetable_generator: timetable_generators.timetable_generator, tt_pkl: Path) -> timetable_generators.timetable_generator:
-    def _wrap(*args, **kwargs):
-        tt = timetable_generator(*args, **kwargs)
-        FileTimetableGenerator.save(tt_pkl, tt)
-        return tt
-
-    return _wrap
 
 
 def test_rail_env():
@@ -64,7 +37,7 @@ def test_rail_env():
         rail_env = RailEnv(
             width=x_dim,
             height=y_dim,
-            rail_generator=wrap_rail_generator(sparse_rail_generator(
+            rail_generator=FileRailFromGridGen.wrap(sparse_rail_generator(
                 max_num_cities=n_cities,
                 seed=seed,
                 grid_mode=grid_mode,
@@ -73,8 +46,8 @@ def test_rail_env():
             ), rail_pkl=rail_pkl),
             malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(
                 min_duration=malfunction_duration_min, max_duration=malfunction_duration_max, malfunction_rate=1.0 / malfunction_interval)),
-            line_generator=wrap_line_generator(sparse_line_generator(speed_ratio_map=speed_ratios, seed=seed), line_pkl),
-            timetable_generator=wrap_timetable_generator(timetable_generators.timetable_generator, tt_pkl),
+            line_generator=FileLineGenerator.wrap(sparse_line_generator(speed_ratio_map=speed_ratios, seed=seed), line_pkl),
+            timetable_generator=FileTimetableGenerator.wrap(timetable_generators.timetable_generator, tt_pkl),
             number_of_agents=n_agents,
             obs_builder_object=obs_builder_object,
             record_steps=True

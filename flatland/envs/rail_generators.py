@@ -183,7 +183,7 @@ class SparseRailGen(RailGen):
         min_nr_rail_pairs_in_city = 1  # (min pair must be 1)
         rail_pairs_in_city = min_nr_rail_pairs_in_city if self.max_rail_pairs_in_city < min_nr_rail_pairs_in_city else self.max_rail_pairs_in_city  # (pairs can be 1,2,3)
         rails_between_cities = (rail_pairs_in_city * 2) if self.max_rails_between_cities > (
-                rail_pairs_in_city * 2) else self.max_rails_between_cities
+            rail_pairs_in_city * 2) else self.max_rails_between_cities
 
         # We compute the city radius by the given max number of rails it can contain.
         # The radius is equal to the number of tracks divided by 2
@@ -840,6 +840,15 @@ class FileRailFromGridGen(RailGen):
         }
 
     @staticmethod
-    def save_rail_generator_product(filename: Path, prod: RailGeneratorProduct):
+    def save(filename: Path, prod: RailGeneratorProduct):
         with open(filename, "wb") as file_out:
             file_out.write(pickle.dumps(FileRailFromGridGen.to_dict(prod)))
+
+    @staticmethod
+    def wrap(rail_generator: RailGenerator, rail_pkl: Path) -> RailGenerator:
+        def _wrap(*args, **kwargs):
+            prod = rail_generator(*args, **kwargs)
+            FileRailFromGridGen.save(rail_pkl, prod)
+            return prod
+
+        return _wrap
