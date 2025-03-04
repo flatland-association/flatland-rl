@@ -1,16 +1,14 @@
 """Line generators (railway undertaking, "EVU")."""
-import warnings
+import pickle
+from pathlib import Path
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
-import numpy as np
 from numpy.random.mtrand import RandomState
+from typing_extensions import deprecated
 
-from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.timetable_utils import Line
 from flatland.envs import persistence
-from flatland.utils.decorators import enable_infrastructure_lru_cache
+from flatland.envs.timetable_utils import Line
 
 AgentPosition = Tuple[int, int]
 LineGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[int]], Line]
@@ -46,8 +44,7 @@ class BaseLineGen(object):
         self.speed_ratio_map = speed_ratio_map
         self.seed = seed
 
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any=None, num_resets: int = 0,
-        np_random: RandomState = None) -> Line:
+    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
         pass
 
     def __call__(self, *args, **kwargs):
@@ -81,7 +78,7 @@ class SparseLineGen(BaseLineGen):
             return 0
 
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict, num_resets: int,
-                  np_random: RandomState) -> Line:
+                 np_random: RandomState) -> Line:
         """
 
         The generator that assigns tasks to all the agents
@@ -102,11 +99,9 @@ class SparseLineGen(BaseLineGen):
         agents_target = []
         agents_direction = []
 
-
         city1, city2 = None, None
         city1_num_stations, city2_num_stations = None, None
         city1_possible_orientations, city2_possible_orientations = None, None
-
 
         for agent_idx in range(num_agents):
 
@@ -118,9 +113,9 @@ class SparseLineGen(BaseLineGen):
                 city1_num_stations = len(train_stations[city1])
                 city2_num_stations = len(train_stations[city2])
                 city1_possible_orientations = [city_orientation[city1],
-                                                (city_orientation[city1] + 2) % 4]
+                                               (city_orientation[city1] + 2) % 4]
                 city2_possible_orientations = [city_orientation[city2],
-                                                (city_orientation[city2] + 2) % 4]
+                                               (city_orientation[city2] + 2) % 4]
 
                 # Agent 1 : city1 > city2, Agent 2: city2 > city1
                 agent_start_idx = ((2 * np_random.randint(0, 10))) % city1_num_stations
@@ -143,12 +138,10 @@ class SparseLineGen(BaseLineGen):
                 agent_orientation = self.decide_orientation(
                     rail, agent_start, agent_target, city2_possible_orientations, np_random)
 
-
             # agent1 details
             agents_position.append((agent_start[0][0], agent_start[0][1]))
             agents_target.append((agent_target[0][0], agent_target[0][1]))
             agents_direction.append(agent_orientation)
-
 
         if self.speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, self.speed_ratio_map, seed=_runtime_seed, np_random=np_random)
@@ -163,9 +156,10 @@ class SparseLineGen(BaseLineGen):
             timedelay_factor * alpha * (rail.width + rail.height + num_agents / len(city_positions)))
 
         return Line(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=speeds)
+                    agent_targets=agents_target, agent_speeds=speeds)
 
 
+@deprecated("Use FileLineGenerator instead.")
 def line_from_file(filename, load_from_package=None) -> LineGenerator:
     """
     Utility to load pickle file
@@ -182,11 +176,10 @@ def line_from_file(filename, load_from_package=None) -> LineGenerator:
 
     def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
                   np_random: RandomState = None) -> Line:
-
         env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
 
         max_episode_steps = env_dict.get("max_episode_steps", 0)
-        if (max_episode_steps==0):
+        if (max_episode_steps == 0):
             print("This env file has no max_episode_steps (deprecated) - setting to 100")
             max_episode_steps = 100
 
@@ -196,12 +189,26 @@ def line_from_file(filename, load_from_package=None) -> LineGenerator:
         agents_position = [a.initial_position for a in agents]
 
         # this logic is wrong - we should really load the initial_direction as the direction.
-        #agents_direction = [a.direction for a in agents]
+        # agents_direction = [a.direction for a in agents]
         agents_direction = [a.initial_direction for a in agents]
         agents_target = [a.target for a in agents]
         agents_speed = [a.speed_counter.speed for a in agents]
 
         return Line(agent_positions=agents_position, agent_directions=agents_direction,
-                        agent_targets=agents_target, agent_speeds=agents_speed)
+                    agent_targets=agents_target, agent_speeds=agents_speed)
 
     return generator
+
+
+class FileLineGenerator(BaseLineGen):
+    def __init__(self, filename: Path):
+        self.filename = filename
+
+    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
+        with open(self.filename, "rb") as file_in:
+            return pickle.loads(file_in.read())
+
+    @staticmethod
+    def save(filename: Path, line: Line):
+        with open(filename, "wb") as file_out:
+            file_out.write(pickle.dumps(line))
