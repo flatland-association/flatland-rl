@@ -52,7 +52,6 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-    "benchmarker",
     "coverage",
     "flake8",
     "flake8-eradicate",
@@ -66,6 +65,7 @@ dev = [
     "numpydoc",
     "pip-tools",
     "pytest",
+    "snakeviz",
     "tox",
     "twine",
     "twine",
