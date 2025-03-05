@@ -22,18 +22,18 @@ stateDiagram-v2
     WAITING --> READY_TO_DEPART: <font color=red>earliest_departure_reached</font>
     READY_TO_DEPART --> MALFUNCTION_OFF_MAP: <font color=red>in_malfunction</font>
     READY_TO_DEPART --> MOVING: <font color=green>valid_movement_action_given</font>
-    MALFUNCTION_OFF_MAP --> MOVING: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <font color=red>earliest_departure_reached</font> <br/> <font color=green>valid_movement_action_given</font>
-    MALFUNCTION_OFF_MAP --> STOPPED: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <font color=red>earliest_departure_reached</font> <br/> <font color=red>stop_action_given</font>
-    MALFUNCTION_OFF_MAP --> READY_TO_DEPART: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <font color=red>earliest_departure_reached</font> <br/> <nobr>NOT <font color=red>stop_action_given</font></nobr> <br/> <nobr>NOT <font color=green>valid_movement_action_given</font></nobr>
-    MALFUNCTION_OFF_MAP --> WAITING: <font color=green><font color=green>malfunction_counter_complete</font></font> <br/> <nobr>NOT <font color=red>earliest_departure_reached</font></nobr>
+    MALFUNCTION_OFF_MAP --> MOVING: <font color=green>malfunction_counter_complete</font><br/><font color=red>earliest_departure_reached</font><br/><font color=green>valid_movement_action_given</font>
+    MALFUNCTION_OFF_MAP --> STOPPED: <font color=green>malfunction_counter_complete</font><br/><font color=red>earliest_departure_reached</font><br/><font color=red>stop_action_given</font>
+    MALFUNCTION_OFF_MAP --> READY_TO_DEPART: <font color=green>malfunction_counter_complete</font><br/><font color=red>earliest_departure_reached</font><br/>NOT#nbsp;<font color=red>stop_action_given</font><br/>NOT#nbsp;<font color=green>valid_movement_action_given</font>
+    MALFUNCTION_OFF_MAP --> WAITING: <font color=green>malfunction_counter_complete</font><br/>NOT#nbsp;<font color=red>earliest_departure_reached</font>
     MOVING --> MALFUNCTION: <font color=red>in_malfunction</font>
-    MOVING --> DONE: <nobr>NOT <font color=red>in_malfunction</font></nobr> <br/> <font color=green>target_reached</font>
-    MOVING --> STOPPED: <nobr>NOT <font color=red>in_malfunction</font></nobr> <br/> <nobr>NOT <font color=green>target_reached</font></nobr> <br/> <font color=red>stop_action_given</font>
-    MOVING --> STOPPED: <nobr>NOT <font color=red>in_malfunction</font></nobr> <br/> <nobr>NOT <font color=green>target_reached</font></nobr> <br/> <font color=red>movement_conflict</font>
+    MOVING --> DONE: NOT#nbsp;<font color=red>in_malfunction</font><br/><font color=green>target_reached</font>
+    MOVING --> STOPPED: NOT#nbsp;<font color=red>in_malfunction</font><br/>NOT#nbsp;<font color=green>target_reached</font><br/><font color=red>stop_action_given</font>
+    MOVING --> STOPPED: NOT#nbsp;<font color=red>in_malfunction</font><br/>NOT#nbsp;<font color=green>target_reached</font><br/><font color=red>movement_conflict</font>
     STOPPED --> MALFUNCTION: <font color=red>in_malfunction</font>
-    STOPPED --> MOVING: <nobr>NOT <font color=red>in_malfunction</font></nobr> <br/> <font color=green>valid_movement_action_given</font>
-    MALFUNCTION --> MOVING: <font color=green>malfunction_counter_complete</font> <br/> <font color=green>valid_movement_action_given</font>
-    MALFUNCTION --> STOPPED: <font color=green>malfunction_counter_complete</font> <br/> <nobr>NOT <font color=green>valid_movement_action_given</font></nobr>
+    STOPPED --> MOVING: NOT#nbsp;<font color=red>in_malfunction</font><br/><font color=green>valid_movement_action_given</font>
+    MALFUNCTION --> MOVING: <font color=green>malfunction_counter_complete</font><br/><font color=green>valid_movement_action_given</font>
+    MALFUNCTION --> STOPPED: <font color=green>malfunction_counter_complete</font><br/>NOT#nbsp;<font color=green>valid_movement_action_given</font>
     DONE --> [*]
     classDef OffMapState font-style: italic, font-weight: bold, fill: yellow, color: black
     classDef OnMapState font-style: italic, font-weight: bold, fill: green, color: black
