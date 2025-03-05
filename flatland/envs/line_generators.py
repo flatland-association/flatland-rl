@@ -136,33 +136,31 @@ class SparseLineGen(BaseLineGen):
         agents_target = []
         agents_direction = []
 
-        city1: Optional[int] = None
-        city2: Optional[int] = None
-
         for agent_idx in range(num_agents):
             if agent_idx % 2 == 0:
-                # Select 2 cities, find their num_stations and possible orientations
+                # Select line_length cities, find their num_stations and possible orientations
                 city_idx: List[int] = np_random.choice(len(city_positions), self.line_length, replace=False)
+                # Run a train in from city 0 to city -1
 
-                city1 = city_idx[0]
-                city2 = city_idx[-1]
-
-                # Run a train in from city1...city2
-                agent_start, agent_orientation, agent_target = self._assign_station_in_start_and_target_city(hints, rail, city1, city2, np_random)
             else:
-                # Run a train in the opposite direction city2...city1
-                agent_start, agent_orientation, agent_target = self._assign_station_in_start_and_target_city(hints, rail, city2, city1, np_random)
+                # Run a train in the opposite direction city -1 ...city 0
+                city_idx = list(reversed(city_idx))
 
-            agents_position.append((agent_start[0][0], agent_start[0][1]))
+            agent_orientations = []
+            agent_positions = []
+            for city1, city2 in zip(city_idx, city_idx[1:]):
+                agent_start, agent_orientation, agent_target = self._assign_station_in_start_and_target_city(hints, rail, city1, city2, np_random)
+                agent_positions.append((agent_start[0][0], agent_start[0][1]))
+                agent_orientations.append(agent_orientation)
+            agents_position.append(agent_positions)
             agents_target.append((agent_target[0][0], agent_target[0][1]))
-            agents_direction.append(agent_orientation)
+            agents_direction.append(agent_orientations[0])
 
         if self.speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, self.speed_ratio_map, np_random=np_random)
         else:
             speeds = [1.0] * len(agents_position)
 
-        agents_position = [[ap] for ap in agents_position]
         return Line(agent_positions=agents_position, agent_directions=agents_direction,
                     agent_targets=agents_target, agent_speeds=speeds)
 
