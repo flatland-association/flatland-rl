@@ -19,7 +19,7 @@ class PredictionBuilder:
 
     def __init__(self, max_depth: int = 20):
         self.max_depth = max_depth
-        self.env = None
+        self.env: "RailEnv" = None
 
     def set_env(self, env: Environment):
         self.env = env

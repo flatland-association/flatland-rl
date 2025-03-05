@@ -2,27 +2,23 @@ import hashlib
 import json
 import logging
 import os
+import pickle
 import random
 import time
 
 import msgpack
 import msgpack_numpy as m
-import pickle
 import numpy as np
 import redis
 
 import flatland
-from flatland.envs.malfunction_generators import FileMalfunctionGen
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import rail_from_file
-from flatland.envs.line_generators import line_from_file
-from flatland.evaluators import messages
 from flatland.core.env_observation_builder import DummyObservationBuilder
+from flatland.envs.persistence import RailEnvPersister
+from flatland.evaluators import messages
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 m.patch()
-
 
 # CONSTANTS
 FLATLAND_RL_SERVICE_ID = os.getenv(
@@ -80,7 +76,7 @@ class FlatlandRemoteClient(object):
         )
         # for timeout messages sent out-of-band
         self.error_channel = "{}::{}::errors".format(
-            self.namespace, 
+            self.namespace,
             self.service_id
         )
 
@@ -268,10 +264,7 @@ class FlatlandRemoteClient(object):
         if self.verbose:
             print("Current env path : ", test_env_file_path)
         self.current_env_path = test_env_file_path
-        self.env = RailEnv(width=1, height=1, rail_generator=rail_from_file(test_env_file_path),
-                           line_generator=line_from_file(test_env_file_path),
-                           malfunction_generator=FileMalfunctionGen(filename=test_env_file_path),
-                           obs_builder_object=obs_builder_object)
+        self.env, _ = RailEnvPersister.load_new(test_env_file_path)
 
         time_start = time.time()
         # Use the local observation
@@ -348,7 +341,7 @@ class FlatlandRemoteClient(object):
         if os.getenv("AICROWD_BLOCKING_SUBMIT"):
             """
             If the submission is supposed to happen as a blocking submit,
-            then wait indefinitely for the evaluator to decide what to 
+            then wait indefinitely for the evaluator to decide what to
             do with the container.
             """
             while True:

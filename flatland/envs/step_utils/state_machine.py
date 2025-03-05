@@ -1,7 +1,6 @@
 from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
-from flatland.envs.step_utils import env_utils
-from flatland.envs.fast_methods import fast_position_equal
+
 
 class TrainStateMachine:
     def __init__(self, initial_state=TrainState.WAITING):
@@ -13,9 +12,6 @@ class TrainStateMachine:
 
     def _handle_waiting(self):
         """" Waiting state goes to ready to depart when earliest departure is reached"""
-        # TODO: Important - The malfunction handling is not like proper state machine
-        #                   Both transition signals can happen at the same time
-        #                   Atleast mention it in the diagram
         if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
         elif self.st_signals.earliest_departure_reached:
@@ -34,19 +30,15 @@ class TrainStateMachine:
 
     def _handle_malfunction_off_map(self):
         if self.st_signals.malfunction_counter_complete:
-
             if self.st_signals.earliest_departure_reached:
-
                 if self.st_signals.valid_movement_action_given:
                     self.next_state = TrainState.MOVING
                 elif self.st_signals.stop_action_given:
                     self.next_state = TrainState.STOPPED
                 else:
                     self.next_state = TrainState.READY_TO_DEPART
-
             else:
                 self.next_state = TrainState.WAITING
-
         else:
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
 
@@ -165,9 +157,12 @@ class TrainStateMachine:
         return {"state": self._state,
                 "previous_state": self.previous_state}
 
-    def from_dict(self, load_dict):
-        self.set_state(load_dict['state'])
-        self.previous_state = load_dict['previous_state']
+    @staticmethod
+    def from_dict(load_dict) -> "TrainStateMachine":
+        sm = TrainStateMachine()
+        sm.set_state(load_dict['state'])
+        sm.previous_state = load_dict['previous_state']
+        return sm
 
     def __eq__(self, other):
         return self._state == other._state and self.previous_state == other.previous_state
