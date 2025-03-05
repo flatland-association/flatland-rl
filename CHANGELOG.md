@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 * 78 Extract performance profiling cli. by @chenkins in [pr[#88](https://github.com/flatland-association/flatland-rl/pull/88)]
+* 110 Over- and underpasses (aka. level-free diamond crossings). by @chenkins in [pr[#120](https://github.com/flatland-association/flatland-rl/pull/120)]
 
 ### Fixed
 
