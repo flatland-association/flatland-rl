@@ -51,9 +51,12 @@ class RailEnv(Environment):
     Moving forward in a dead-end cell makes the agent turn 180 degrees and step
     to the cell it came from.
 
+    In order for agents to be able to "understand" the simulation behaviour from the observations,
+    the execution order of actions should not matter (i.e. not depend on the agent handle).
+    However, the agent ordering is still used to resolve conflicts between two agents trying to move into the same cell,
+    for example, head-on collisions, or agents "merging" at junctions.
+    See `MotionCheck` for more details.
 
-    The actions of the agents are executed in order of their handle to prevent
-    deadlocks and to allow them to learn relative priorities.
 
     Reward Function:
 
