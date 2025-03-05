@@ -66,9 +66,9 @@ class EnvAgent:
     earliest_departure = attrib(default=None, type=int)  # default None during _from_line()
     latest_arrival = attrib(default=None, type=int)  # default None during _from_line()
 
-    intermediate_targets = attrib(type=List[Tuple[int, int]], default=Factory(lambda: []))
-    intermediate_earliest_departure = attrib(type=List[int], default=Factory(lambda: []))
-    intermediate_latest_arrival = attrib(type=List[int], default=Factory(lambda: []))
+    waypoints = attrib(type=List[Tuple[int, int]], default=Factory(lambda: []))
+    waypoints_earliest_departure = attrib(type=List[int], default=Factory(lambda: []))
+    waypoints_latest_arrival = attrib(type=List[int], default=Factory(lambda: []))
 
     handle = attrib(default=None)
     # INIT TILL HERE IN _from_line()
@@ -163,12 +163,12 @@ class EnvAgent:
                              initial_direction=line.agent_directions[i_agent],
                              direction=line.agent_directions[i_agent],
                              target=line.agent_targets[i_agent],
-                             intermediate_targets=line.agent_positions[i_agent][1:],
+                             waypoints=line.agent_positions[i_agent][1:-1],
                              moving=False,
                              earliest_departure=None,
                              latest_arrival=None,
-                             intermediate_earliest_departure=None,
-                             intermediate_latest_arrival=None,
+                             waypoints_earliest_departure=None,
+                             waypoints_latest_arrival=None,
                              handle=i_agent,
                              speed_counter=SpeedCounter(speed=speed))
             agent_list.append(agent)

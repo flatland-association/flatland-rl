@@ -47,9 +47,9 @@ def test_rewards_intermediate_not_served_penalty():
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
-                     intermediate_targets=[(2, 2)],
-                     intermediate_earliest_departure=[7],
-                     intermediate_latest_arrival=[11],
+                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints_earliest_departure=[3, 7, None],
+                     waypoints_latest_arrival=[None, 11, 10],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
@@ -65,10 +65,10 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
                      direction=3,
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
-                     latest_arrival=10,
-                     intermediate_targets=[(2, 2)],
-                     intermediate_earliest_departure=[7],
-                     intermediate_latest_arrival=[11],
+                     latest_arrival=11,
+                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints_earliest_departure=[3, 7, None],
+                     waypoints_latest_arrival=[None, 11, 11],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
@@ -91,9 +91,9 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
-                     intermediate_targets=[(2, 2)],
-                     intermediate_earliest_departure=[5],
-                     intermediate_latest_arrival=[2],
+                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints_earliest_departure=[3, 5, None],
+                     waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
@@ -116,9 +116,9 @@ def test_rewards_departed_but_never_arrived():
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=10,
-                     intermediate_targets=[(2, 2)],
-                     intermediate_earliest_departure=[5],
-                     intermediate_latest_arrival=[2],
+                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints_earliest_departure=[3, 5, None],
+                     waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))

@@ -90,7 +90,7 @@ class Rewards:
             if (agent.state.is_on_map_state()):
                 reward = agent.get_current_delay(elapsed_steps, distance_map)
 
-        for et, la, ed in zip(agent.intermediate_targets, agent.intermediate_latest_arrival, agent.intermediate_earliest_departure):
+        for et, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
             if et not in self.arrivals[agent.handle]:
                 reward += self.intermediate_not_served_penalty
             else:
