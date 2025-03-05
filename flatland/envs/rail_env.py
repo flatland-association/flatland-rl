@@ -464,7 +464,7 @@ class RailEnv(Environment):
                     state - State from the trains's state machine
         """
         info_dict = {
-            # TODO is_cell_entry seems to be wrong (action is required when entering a cell not after a cell is entered
+            # TODO https://github.com/flatland-association/flatland-rl/issues/149 revise action required
             'action_required': {i: self.action_required(agent.state, agent.speed_counter.is_cell_entry)
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
