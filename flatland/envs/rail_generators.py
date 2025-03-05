@@ -241,7 +241,7 @@ class SparseRailGen(RailGen):
         # choose p_level_free percentage of diamond crossings to be level-free
         num_diamond_crossings = np.count_nonzero(grid_map.grid[grid_map.grid == RailEnvTransitionsEnum.diamond_crossing])
         num_level_free_diamond_crossings = math.floor(self.p_level_free * num_diamond_crossings)
-        # ceil with probability p_ceail
+        # ceil with probability p_ceil
         p_ceil = (self.p_level_free * num_diamond_crossings) % 1.0
         num_level_free_diamond_crossings += np_random.choice([1, 0], p=(p_ceil, 1 - p_ceil))
         level_free_positions = set()
