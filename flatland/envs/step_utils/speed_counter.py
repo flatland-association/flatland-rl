@@ -56,7 +56,6 @@ class SpeedCounter:
         self._distance = 0
         self._is_cell_entry = True
 
-    # TODO why do we need is_cell_entry this at all? Only two usages one of which seems wrong.
     @property
     def is_cell_entry(self):
         """
