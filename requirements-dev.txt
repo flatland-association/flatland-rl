@@ -438,6 +438,9 @@ pytest==8.3.4
     # via
     #   flatland-rl (pyproject.toml)
     #   nbmake
+    #   pytest-retry
+pytest-retry==1.7.0
+    # via flatland-rl (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
     #   arrow
