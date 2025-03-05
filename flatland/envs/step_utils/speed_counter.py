@@ -7,14 +7,14 @@ SEGMENT_LENGTH = 1
 
 class SpeedCounter:
     def __init__(self, speed: float, max_speed: float = None):
-        self._speed = speed
+        self._speed = 1 / (round(1 / speed))
         self._distance = 0.0
         self._is_cell_entry = True
         if max_speed is not None:
             self._max_speed = max_speed
         else:
             # old constant speed behaviour
-            self._max_speed = speed
+            self._max_speed = self._speed
         assert self._max_speed <= 1.0
         assert self._speed <= self._max_speed
         self.reset()
