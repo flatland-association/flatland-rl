@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 from numpy.random.mtrand import RandomState
-from typing_extensions import deprecated
 
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import persistence
@@ -159,7 +158,6 @@ class SparseLineGen(BaseLineGen):
                     agent_targets=agents_target, agent_speeds=speeds)
 
 
-@deprecated("Use FileLineGenerator instead.")
 def line_from_file(filename, load_from_package=None) -> LineGenerator:
     """
     Utility to load pickle file
