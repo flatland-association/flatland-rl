@@ -1,7 +1,3 @@
-from flatland.core.grid.grid_utils import IntVector2D
-from flatland.envs.step_utils.states import TrainState
-
-EPSILON = 0.01
 SEGMENT_LENGTH = 1
 
 
@@ -19,32 +15,26 @@ class SpeedCounter:
         assert self._speed <= self._max_speed
         self.reset()
 
-    def step(self, state: TrainState, old_position: IntVector2D, speed: float = None):
+    def step(self, speed: float = None):
         """
         Step the speed counter.
 
         Parameters
         ----------
-        state : TrainState
-            Distance incremented only in MOVING state.
-        old_position : IntVector2D
-            Distance incremented only if already in grid (when we enter the grid, we enter at position zero).
         speed : float
             Set new speed effective immediately.
         """
         if speed is not None:
             self._speed = max(min(speed, self._max_speed), 0.0)
-        # TODO bad code smell: the following condition should not be part of SpeedCounter?
-        # Can't start counting when adding train to the map
-        if state == TrainState.MOVING and old_position is not None and self._speed > 0:
-            self._distance += self._speed
 
-            # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
-            self._distance = self._distance % SEGMENT_LENGTH
-            if self._distance < self._speed:
-                self._is_cell_entry = True
-            else:
-                self._is_cell_entry = False
+        self._distance += self._speed
+
+        # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
+        self._distance = self._distance % SEGMENT_LENGTH
+        if self._distance < self._speed:
+            self._is_cell_entry = True
+        else:
+            self._is_cell_entry = False
 
     def __repr__(self):
         return f"speed: {self.speed} \
@@ -68,7 +58,7 @@ class SpeedCounter:
         With the given speed, do we exit cell at next time step?
         """
         speed = max(min(speed, self._max_speed), 0.0)
-        return self._distance + speed >= 1.0 - EPSILON
+        return self._distance + speed >= 1.0
 
     @property
     def speed(self):

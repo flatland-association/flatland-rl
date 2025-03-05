@@ -624,8 +624,13 @@ class RailEnv(Environment):
             if agent.state_machine.previous_state == TrainState.MOVING and (not motion_check_agent):
                 self.rewards_dict[i_agent] = speed_before * RailEnv.crash_penalty_factor
 
-            ## Update counters (malfunction and speed)
-            agent.speed_counter.step(agent.state, agent.old_position, speed=new_speed)
+            # Update speed and distance if moving.
+            # When adding train to the map, no distance is travelled in the first time step!
+            # TODO is cell_entry handled correctly?
+            if agent.state == TrainState.MOVING and agent.old_position is not None:
+                agent.speed_counter.step(speed=new_speed)
+
+            # Update malfunction counter
             agent.malfunction_handler.update_counter()
 
             # Clear old action when starting in new cell
