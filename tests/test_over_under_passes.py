@@ -124,7 +124,6 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)
 
-    # TODO improve interface and documentation for level-free diamond crossings
     env.level_free_positions.add((3, 2))
 
     env.distance_map._compute(env.agents, env.rail)
@@ -201,7 +200,6 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)
 
-    # TODO improve interface and documentation for level-free diamond crossings
     env.level_free_positions.add((3, 2))
 
     env.distance_map._compute(env.agents, env.rail)
