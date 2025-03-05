@@ -163,7 +163,8 @@ class EnvAgent:
                              initial_direction=line.agent_directions[i_agent],
                              direction=line.agent_directions[i_agent],
                              target=line.agent_targets[i_agent],
-                             waypoints=line.agent_positions[i_agent][1:-1],
+                             # TODO harmonize to include target as well
+                             waypoints=line.agent_positions[i_agent][1:],
                              moving=False,
                              earliest_departure=None,
                              latest_arrival=None,

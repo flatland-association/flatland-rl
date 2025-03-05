@@ -4,6 +4,7 @@ from numpy.random import RandomState
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.line_generators import LineGenerator, sparse_line_generator
 from flatland.envs.timetable_utils import Line
 
@@ -424,3 +425,6 @@ def test_sparse_line_generator_with_intermediate_stops():
   agent_directions=[3, 0, 2, 1, 1, 1, 1, 1, 1, 0],
   agent_targets=[(27, 41), (12, 40), (10, 40), (20, 27), (45, 34), (39, 8), (12, 40), (18, 5), (20, 25), (39, 8)],
   agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+ for a in EnvAgent.from_line(line):
+  print(
+   f"EnvAgent(handle={a.handle}, initial_position={a.initial_position}, initial_direction={a.initial_direction}, target={a.target}, direction={a.direction}, waypoints={a.waypoints}, waypoints_latest_arrival={a.waypoints_earliest_departure}, waypoints_earliest_departure={a.waypoints_latest_arrival}),")
