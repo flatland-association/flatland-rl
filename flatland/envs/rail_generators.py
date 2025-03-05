@@ -1,4 +1,5 @@
-"""Rail generators (infrastructure manager, "Infrastrukturbetreiber")."""
+"""Rail generators: infrastructure manager (IM) / Infrastrukturbetreiber (ISB)."""
+import math
 import warnings
 from typing import Callable, Tuple, Optional, Dict, List
 
@@ -9,7 +10,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import direction_to_point
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D, \
     Vec2dOperations
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
+from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import persistence
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
@@ -35,8 +36,7 @@ class RailGen(object):
         """
         pass
 
-    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                 np_random: RandomState = None) -> RailGeneratorProduct:
+    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0, np_random: RandomState = None) -> RailGeneratorProduct:
         pass
 
     def __call__(self, *args, **kwargs) -> RailGeneratorProduct:
@@ -53,8 +53,7 @@ class EmptyRailGen(RailGen):
     Primarily used by the editor
     """
 
-    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                 np_random: RandomState = None) -> RailGenerator:
+    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0, np_random: RandomState = None) -> RailGenerator:
         rail_trans = RailEnvTransitions()
         grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
         rail_array = grid_map.grid
@@ -100,8 +99,7 @@ class RailFromGridGen(RailGen):
         self.rail_map = rail_map
         self.optionals = optionals
 
-    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                 np_random: RandomState = None) -> RailGeneratorProduct:
+    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0, np_random: RandomState = None) -> RailGeneratorProduct:
         return self.rail_map, self.optionals
 
 
@@ -116,7 +114,7 @@ def sparse_rail_generator(*args, **kwargs):
 class SparseRailGen(RailGen):
 
     def __init__(self, max_num_cities: int = 2, grid_mode: bool = False, max_rails_between_cities: int = 2,
-                 max_rail_pairs_in_city: int = 2, seed=None) -> RailGenerator:
+                 max_rail_pairs_in_city: int = 2, seed=None, p_level_free: float = 0) -> RailGenerator:
         """
         Generates railway networks with cities and inner city rails
 
@@ -133,6 +131,8 @@ class SparseRailGen(RailGen):
             Number of parallel tracks in the city. This represents the number of tracks in the trainstations
         seed: int
             Initiate the seed
+        p_level_free : float
+            Percentage of diamond-crossings which are level-free.
 
         Returns
         -------
@@ -143,9 +143,9 @@ class SparseRailGen(RailGen):
         self.max_rails_between_cities = max_rails_between_cities
         self.max_rail_pairs_in_city = max_rail_pairs_in_city
         self.seed = seed
+        self.p_level_free = p_level_free
 
-    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0,
-                 np_random: RandomState = None) -> RailGenerator:
+    def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0, np_random: RandomState = None) -> RailGeneratorProduct:
         """
 
         Parameters
@@ -181,7 +181,7 @@ class SparseRailGen(RailGen):
         min_nr_rail_pairs_in_city = 1  # (min pair must be 1)
         rail_pairs_in_city = min_nr_rail_pairs_in_city if self.max_rail_pairs_in_city < min_nr_rail_pairs_in_city else self.max_rail_pairs_in_city  # (pairs can be 1,2,3)
         rails_between_cities = (rail_pairs_in_city * 2) if self.max_rails_between_cities > (
-                rail_pairs_in_city * 2) else self.max_rails_between_cities
+            rail_pairs_in_city * 2) else self.max_rails_between_cities
 
         # We compute the city radius by the given max number of rails it can contain.
         # The radius is equal to the number of tracks divided by 2
@@ -237,11 +237,28 @@ class SparseRailGen(RailGen):
 
         # Fix all transition elements
         self._fix_transitions(city_cells, inter_city_lines, grid_map, vector_field)
-        return grid_map, {'agents_hints': {
-            'city_positions': city_positions,
-            'train_stations': train_stations,
-            'city_orientations': city_orientations
-        }}
+
+        # choose p_level_free percentage of diamond crossings to be level-free
+        num_diamond_crossings = np.count_nonzero(grid_map.grid[grid_map.grid == RailEnvTransitionsEnum.diamond_crossing])
+        num_level_free_diamond_crossings = math.floor(self.p_level_free * num_diamond_crossings)
+        # ceil with probability p_ceil
+        p_ceil = (self.p_level_free * num_diamond_crossings) % 1.0
+        num_level_free_diamond_crossings += np_random.choice([1, 0], p=(p_ceil, 1 - p_ceil))
+        level_free_positions = set()
+        if num_level_free_diamond_crossings > 0:
+            choice = np_random.choice(num_diamond_crossings, size=num_level_free_diamond_crossings, replace=False)
+            positions_diamond_crossings = (grid_map.grid == RailEnvTransitionsEnum.diamond_crossing).nonzero()
+            level_free_positions = {tuple(positions_diamond_crossings[choice[i]]) for i in range(len(choice))}
+
+        return grid_map, {
+            'agents_hints':
+                {
+                    'city_positions': city_positions,
+                    'train_stations': train_stations,
+                    'city_orientations': city_orientations
+                },
+            'level_free_positions': level_free_positions
+        }
 
     def _generate_random_city_positions(self, num_cities: int, city_radius: int, width: int,
                                         height: int, np_random: RandomState = None) -> Tuple[
@@ -264,7 +281,6 @@ class SparseRailGen(RailGen):
         Returns
         -------
         Returns a list of all city positions as coordinates (x,y)
-
         """
 
         city_positions: IntVector2DArray = []
@@ -322,7 +338,6 @@ class SparseRailGen(RailGen):
         Returns
         -------
         Returns a list of all city positions as coordinates (x,y)
-
         """
         aspect_ratio = height / width
         # Compute max numbe of possible cities per row and col.
@@ -526,7 +541,7 @@ class SparseRailGen(RailGen):
         """
         Given a list of clostest neighbours in each direction this returns the city index of the neighbor in a given
         direction. Direction is a 90 degree cone facing the desired directiont.
-        Exampe:
+        Example:
             North: The closes neighbour in the North direction is within the cone spanned by a line going
             North-West and North-East
 
@@ -677,7 +692,6 @@ class SparseRailGen(RailGen):
             Each cell contains the prefered orientation of cells. If no prefered orientation is present it is set to -1
         grid_map: RailEnvTransitions
             The grid map containing the rails. Used to draw new rails
-
         """
 
         # Fix all cities with illegal transition maps
