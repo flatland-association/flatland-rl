@@ -65,6 +65,7 @@ dev = [
     "numpydoc",
     "pip-tools",
     "pytest",
+    "pytest-retry",
     "snakeviz",
     "tox",
     "twine",
