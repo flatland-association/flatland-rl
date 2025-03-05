@@ -53,14 +53,18 @@ jobs:
                 run: tox
 
     notebooks:
-        if: ${{ false }}  # disabled for now, some need custom kernel
         runs-on: ubuntu-22.04
         steps:
             -   uses: actions/checkout@v4
-            -   name: Set up Python
+            -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
                 with:
                     python-version: "3.10"
+            -   name: Start Redis
+                uses: supercharge/redis-github-action@1.7.0
+                with:
+                    redis-version: 7.4.2
+                    redis-port: 6379
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
