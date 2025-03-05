@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * 143 Retry for ml tests. by @chenkins in [pr[#146](https://github.com/flatland-association/flatland-rl/pull/146)]
 * Enable running notebooks in main workflow by @chenkins in [pr[#144](https://github.com/flatland-association/flatland-rl/pull/144)]
 
-## [[4.0.4](https://github.com/flatland-association/flatland-rl/compare/v4.0.3...v4.0.4)] - 2025-02-18
+## [[4.0.4](https://github.com/flatland-association/flatland-rl/compare/v4.0.2...v4.0.4)] - 2025-02-18
 
 ### Added
 
