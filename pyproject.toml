@@ -46,7 +46,6 @@ dependencies = [
     "setuptools",
     "svgutils",
     "timeout_decorator",
-
 ]
 dynamic = ["version"]
 
