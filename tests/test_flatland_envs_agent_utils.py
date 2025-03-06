@@ -1,4 +1,4 @@
-from core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
