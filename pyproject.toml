@@ -47,13 +47,11 @@ dependencies = [
     "tqdm",
     "svgutils",
     "timeout_decorator",
-
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-    "benchmarker",
     "coverage",
     "flake8",
     "flake8-eradicate",
@@ -67,6 +65,8 @@ dev = [
     "numpydoc",
     "pip-tools",
     "pytest",
+    "pytest-retry",
+    "snakeviz",
     "tox",
     "twine",
     "twine",

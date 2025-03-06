@@ -2,7 +2,8 @@
 Definition of the RailEnv environment.
 """
 import random
-from typing import List, Optional, Dict, Tuple
+from functools import lru_cache
+from typing import List, Optional, Dict, Tuple, Set
 
 import numpy as np
 
@@ -10,6 +11,7 @@ import flatland.envs.timetable_generators as ttg
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid_utils import Vector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
@@ -26,8 +28,7 @@ from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
 from flatland.utils import seeding
-from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
-    enable_infrastructure_lru_cache
+from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
@@ -99,7 +100,7 @@ class RailEnv(Environment):
     def __init__(self,
                  width,
                  height,
-                 rail_generator=None,
+                 rail_generator: "RailGenerator" = None,
                  line_generator: "LineGenerator" = None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
                  number_of_agents=2,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
@@ -167,7 +168,7 @@ class RailEnv(Environment):
         self.rail_generator = rail_generator
         if line_generator is None:
             line_generator = line_gen.sparse_line_generator()
-        self.line_generator: LineGenerator = line_generator
+        self.line_generator: "LineGenerator" = line_generator
         self.timetable_generator = timetable_generator
 
         self.rail: Optional[GridTransitionMap] = None
@@ -205,6 +206,8 @@ class RailEnv(Environment):
 
         self.motionCheck = ac.MotionCheck()
 
+        self.level_free_positions: Set[Vector2D] = set()
+
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
         random.seed(seed)
@@ -239,8 +242,9 @@ class RailEnv(Environment):
             agent.reset()
         self.active_agents = [i for i in range(len(self.agents))]
 
-    @enable_infrastructure_lru_cache()
-    def action_required(self, agent_state, is_cell_entry):
+    @lru_cache()
+    @staticmethod
+    def action_required(agent_state, is_cell_entry):
         """
         Check if an agent needs to provide an action
 
@@ -313,6 +317,8 @@ class RailEnv(Environment):
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
+            if optionals and 'level_free_positions' in optionals:
+                self.level_free_positions = optionals['level_free_positions']
 
             line = self.line_generator(self.rail, self.number_of_agents, agents_hints,
                                        self.num_resets, self.np_random)
@@ -459,7 +465,7 @@ class RailEnv(Environment):
                     state - State from the trains's state machine
         """
         info_dict = {
-            'action_required': {i: self.action_required(agent.state, agent.speed_counter.is_cell_entry)
+            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_entry)
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
@@ -561,8 +567,16 @@ class RailEnv(Environment):
                                                                           direction=new_direction,
                                                                           preprocessed_action=preprocessed_action)
 
+            # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
+            new_position_level_free = new_position
+            if new_position in self.level_free_positions:
+                new_position_level_free = (new_position, new_direction % 2)
+            agent_position_level_free = agent.position
+            if agent.position in self.level_free_positions:
+                agent_position_level_free = (agent.position, agent.direction % 2)
+
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
-            self.motionCheck.addAgent(i_agent, agent.position, new_position)
+            self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
 
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
@@ -570,11 +584,15 @@ class RailEnv(Environment):
         for agent in self.agents:
             i_agent = agent.handle
 
+            agent_position_level_free = agent.position
+            if agent.position in self.level_free_positions:
+                agent_position_level_free = (agent.position, agent.direction % 2)
+
             ## Update positions
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position)
+                movement_allowed = self.motionCheck.check_motion(i_agent, agent_position_level_free)
 
             movement_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
             movement_allowed = movement_allowed or movement_inside_cell
@@ -726,6 +744,7 @@ class RailEnv(Environment):
         return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
                                     show_predictions=show_predictions,
                                     show_rowcols=show_rowcols, return_image=return_image)
+
     def initialize_renderer(self, mode, gl,
                             agent_render_variant,
                             show_debug,

@@ -4,13 +4,14 @@ import warnings
 import numpy as np
 
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
-from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.rendertools import RenderTool
 
-#deactivated: need a fix to match with astar, to activate rename def test_sparse... 
+
+# deactivated: need a fix to match with astar, to activate rename def test_sparse...
 def notest_sparse_rail_generator():
     env = RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(max_num_cities=10,
                                                                             max_rails_between_cities=3,
@@ -503,7 +504,8 @@ def notest_sparse_rail_generator():
     assert s0 == 36, "actual={}".format(s0)
     assert s1 == 27, "actual={}".format(s1)
 
-#deactivated test: need a fix for astar, to activate rename test_sparse...
+
+# deactivated test: need a fix for astar, to activate rename test_sparse...
 def notest_sparse_rail_generator_deterministic():
     """Check that sparse_rail_generator runs deterministic over different python versions!"""
 
@@ -1274,6 +1276,7 @@ def notest_sparse_rail_generator_deterministic():
     assert env.rail.get_full_transitions(29, 23) == 0, "[29][23]"
     assert env.rail.get_full_transitions(29, 24) == 0, "[29][24]"
 
+
 def test_rail_env_action_required_info():
     speed_ration_map = {1.: 0.25,  # Fast passenger train
                         1. / 2.: 0.25,  # Fast freight train
@@ -1285,7 +1288,7 @@ def test_rail_env_action_required_info():
         seed=5,  # Random seed
         grid_mode=False  # Ordered distribution of nodes
     ), line_generator=sparse_line_generator(speed_ration_map), number_of_agents=10,
-                                 obs_builder_object=GlobalObsForRailEnv(), remove_agents_at_target=False)
+                                obs_builder_object=GlobalObsForRailEnv(), remove_agents_at_target=False)
 
     env_only_if_action_required = RailEnv(width=50, height=50, rail_generator=sparse_rail_generator(
         max_num_cities=10,
@@ -1315,7 +1318,7 @@ def test_rail_env_action_required_info():
                 action_dict_only_if_action_required.update({a: action})
             else:
                 print("[{}] not action_required {}, speed_counter={}".format(step, a,
-                                                                          env_always_action.agents[a].speed_counter))
+                                                                             env_always_action.agents[a].speed_counter))
 
         obs_always_action, rewards_always_action, done_always_action, info_always_action = env_always_action.step(
             action_dict_always_action)
@@ -1435,22 +1438,141 @@ def test_sparse_generator_changes_to_grid_mode():
     with warnings.catch_warnings(record=True) as w:
         rail_env.reset(True, True, random_seed=15)
         assert "[WARNING]" in str(w[-1].message)
-    
+
+
+def test_sparse_generator_with_level_free_03():
+    """Check that sparse generator generates level-free diamond-crossings."""
+
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=sparse_rail_generator(
+                      max_num_cities=5,
+                      max_rails_between_cities=3,
+                      seed=215545,  # Random seed
+                      grid_mode=True,
+                      p_level_free=0.3
+                  ),
+                  line_generator=sparse_line_generator(speed_ration_map),
+                  number_of_agents=1,
+                  random_seed=1)
+    env.reset()
+    assert env.level_free_positions == set()
+
+
+def test_sparse_generator_with_level_free_04():
+    """Check that sparse generator generates level-free diamond crossings."""
+
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=sparse_rail_generator(
+                      max_num_cities=5,
+                      max_rails_between_cities=3,
+                      seed=215545,  # Random seed
+                      grid_mode=True,
+                      p_level_free=0.4
+                  ),
+                  line_generator=sparse_line_generator(speed_ration_map),
+                  number_of_agents=1,
+                  random_seed=1)
+    env.reset()
+    assert env.level_free_positions == {(12, 20)}
+
+
+def test_sparse_generator_with_level_free_08():
+    """Check that sparse generator generates level with diamond crossings."""
+
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=sparse_rail_generator(
+                      max_num_cities=5,
+                      max_rails_between_cities=3,
+                      seed=215545,  # Random seed
+                      grid_mode=True,
+                      p_level_free=0.8
+                  ),
+                  line_generator=sparse_line_generator(speed_ration_map),
+                  number_of_agents=1,
+                  random_seed=1)
+    env.reset()
+    assert env.level_free_positions == {(12, 20)}
+
+
+def test_sparse_generator_with_level_free_09():
+    """Check that sparse generator generates level with diamond crossings."""
+
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=sparse_rail_generator(
+                      max_num_cities=5,
+                      max_rails_between_cities=3,
+                      seed=215545,  # Random seed
+                      grid_mode=True,
+                      p_level_free=0.9
+                  ),
+                  line_generator=sparse_line_generator(speed_ration_map),
+                  number_of_agents=1,
+                  random_seed=1)
+    env.reset()
+    assert env.level_free_positions == {(12, 20), (4, 18)}
+
+
+def test_sparse_generator_with_level_free_10():
+    """Check that sparse generator generates all diamond crossings as level-free if p_level_free=1.0."""
+
+    speed_ration_map = {1.: 1.,  # Fast passenger train
+                        1. / 2.: 0.,  # Fast freight train
+                        1. / 3.: 0.,  # Slow commuter train
+                        1. / 4.: 0.}  # Slow freight train
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=sparse_rail_generator(
+                      max_num_cities=5,
+                      max_rails_between_cities=3,
+                      seed=215545,  # Random seed
+                      grid_mode=True,
+                      p_level_free=1
+                  ),
+                  line_generator=sparse_line_generator(speed_ration_map),
+                  number_of_agents=1,
+                  random_seed=1)
+    env.reset()
+    assert env.level_free_positions == {(4, 18), (12, 20)}
 
 
 def main():
     # Make warnings into errors, to generate stack backtraces
-    warnings.simplefilter("error",) #  category=DeprecationWarning)
+    warnings.simplefilter("error", )  # category=DeprecationWarning)
 
     # Then run selected tests.
-    #test_sparse_rail_generator()
-    #test_sparse_rail_generator_deterministic()
-    #test_rail_env_action_required_info()
-    #test_rail_env_malfunction_speed_info()
-    #test_sparse_generator_with_too_man_cities_does_not_break_down()
-    #test_sparse_generator_with_illegal_params_aborts()
-    #test_sparse_generator_changes_to_grid_mode()
+    # test_sparse_rail_generator()
+    # test_sparse_rail_generator_deterministic()
+    # test_rail_env_action_required_info()
+    # test_rail_env_malfunction_speed_info()
+    # test_sparse_generator_with_too_man_cities_does_not_break_down()
+    # test_sparse_generator_with_illegal_params_aborts()
+    # test_sparse_generator_changes_to_grid_mode()
+
 
 if __name__ == "__main__":
     main()
-
