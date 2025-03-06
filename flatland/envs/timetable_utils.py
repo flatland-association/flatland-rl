@@ -13,5 +13,5 @@ Line = NamedTuple('Line', [
 Timetable = NamedTuple('Timetable', [
     ('earliest_departures', List[List[int]]),
     ('latest_arrivals', List[List[int]]),
-    ('max_episode_steps', List[int])
+    ('max_episode_steps', int)
 ])
