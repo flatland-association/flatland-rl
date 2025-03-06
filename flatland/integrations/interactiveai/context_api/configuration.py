@@ -14,13 +14,13 @@
 import copy
 import http.client as httplib
 import logging
-from logging import FileHandler
 import multiprocessing
 import sys
+from logging import FileHandler
 from typing import Any, ClassVar, Dict, List, Literal, Optional, TypedDict
-from typing_extensions import NotRequired, Self
 
 import urllib3
+from typing_extensions import NotRequired, Self
 
 JSON_SCHEMA_VALIDATION_KEYWORDS = {
     'multipleOf', 'maximum', 'exclusiveMaximum',
