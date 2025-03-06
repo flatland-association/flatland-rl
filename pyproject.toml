@@ -38,6 +38,7 @@ dependencies = [
     "pandas",
     "Pillow",
     "pyglet",
+    "pydantic",
     "PyYAML",
     "recordtype",
     "redis",

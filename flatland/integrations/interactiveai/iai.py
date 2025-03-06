@@ -1,6 +1,11 @@
+import datetime
 import logging
 
 import requests
+
+from flatland.integrations.interactiveai.event_api import ApiClient
+from flatland.integrations.interactiveai.event_api import EventApiApi
+from flatland.integrations.interactiveai.event_api import EventIn
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +26,32 @@ def main(
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
     }
-    # response = requests.post(api_url, data=json.dumps(todo), headers=headers)
+
     print(requests.get(api_url, headers=headers).json())
+    ApiClient.get_default().set_default_header("Authorization", f"Bearer {access_token}")
+    events_api = EventApiApi()
+
+    events = events_api.api_v1_events_get()
+    print(events)
+
+    events_api.api_v1_events_post_with_http_info(EventIn.from_dict({
+        "criticality": "LOW",
+        "description": "Wonderland",
+        # TODO problem with optionals in generated client code, leaving empty leads to 500
+        "end_date": datetime.datetime.now(),
+        "start_date": datetime.datetime.now(),
+        "title": "Alice",
+        "use_case": "Railway",
+        "data": {
+            "event_type": "blala",
+            "delay": 300,
+            "agent_id": "55",
+            "id_train": "20"
+        }
+    }))
+
+    events = events_api.api_v1_events_get()
+    print(events)
 
 
 def get_access_token_password_grant(token_url, client_id, username, password) -> str:
