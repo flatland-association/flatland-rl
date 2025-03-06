@@ -26,7 +26,7 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
 
     inputs:
         agents - List of all the agents rail_env.agents
-        distance_map - Distance map of positions to tagets of each agent in each direction
+        distance_map - Distance map of positions to targets of each agent in each direction
         agent_hints - Uses the number of cities
         np_random - RNG state for seeding
     returns:
