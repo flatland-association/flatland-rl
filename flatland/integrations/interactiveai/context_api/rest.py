@@ -110,13 +110,13 @@ class RESTClientObject:
             self.pool_manager = urllib3.PoolManager(**pool_args)
 
     def request(
-        self,
-        method,
-        url,
-        headers=None,
-        body=None,
-        post_params=None,
-        _request_timeout=None
+            self,
+            method,
+            url,
+            headers=None,
+            body=None,
+            post_params=None,
+            _request_timeout=None
     ):
         """Perform requests.
 
@@ -156,8 +156,8 @@ class RESTClientObject:
             if isinstance(_request_timeout, (int, float)):
                 timeout = urllib3.Timeout(total=_request_timeout)
             elif (
-                isinstance(_request_timeout, tuple)
-                and len(_request_timeout) == 2
+                    isinstance(_request_timeout, tuple)
+                    and len(_request_timeout) == 2
             ):
                 timeout = urllib3.Timeout(
                     connect=_request_timeout[0],
@@ -171,8 +171,8 @@ class RESTClientObject:
                 # no content type provided or payload is json
                 content_type = headers.get('Content-Type')
                 if (
-                    not content_type
-                    or re.search('json', content_type, re.IGNORECASE)
+                        not content_type
+                        or re.search('json', content_type, re.IGNORECASE)
                 ):
                     request_body = None
                     if body is not None:

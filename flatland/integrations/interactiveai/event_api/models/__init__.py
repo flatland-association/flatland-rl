@@ -16,6 +16,7 @@
 from flatland.integrations.interactiveai.event_api.models.event_in import EventIn
 from flatland.integrations.interactiveai.event_api.models.event_out import EventOut
 from flatland.integrations.interactiveai.event_api.models.http_error import HTTPError
+from flatland.integrations.interactiveai.event_api.models.metadata_schema_railway import MetadataSchemaRailway
 from flatland.integrations.interactiveai.event_api.models.use_case_in import UseCaseIn
 from flatland.integrations.interactiveai.event_api.models.use_case_out import UseCaseOut
 from flatland.integrations.interactiveai.event_api.models.validation_error import ValidationError

@@ -17,22 +17,21 @@ __version__ = "1.0.0"
 
 # import apis into sdk package
 from flatland.integrations.interactiveai.context_api.api.context_api_api import ContextApiApi
-
+from flatland.integrations.interactiveai.context_api.api_client import ApiClient
 # import ApiClient
 from flatland.integrations.interactiveai.context_api.api_response import ApiResponse
-from flatland.integrations.interactiveai.context_api.api_client import ApiClient
 from flatland.integrations.interactiveai.context_api.configuration import Configuration
-from flatland.integrations.interactiveai.context_api.exceptions import OpenApiException
-from flatland.integrations.interactiveai.context_api.exceptions import ApiTypeError
-from flatland.integrations.interactiveai.context_api.exceptions import ApiValueError
-from flatland.integrations.interactiveai.context_api.exceptions import ApiKeyError
 from flatland.integrations.interactiveai.context_api.exceptions import ApiAttributeError
 from flatland.integrations.interactiveai.context_api.exceptions import ApiException
-
+from flatland.integrations.interactiveai.context_api.exceptions import ApiKeyError
+from flatland.integrations.interactiveai.context_api.exceptions import ApiTypeError
+from flatland.integrations.interactiveai.context_api.exceptions import ApiValueError
+from flatland.integrations.interactiveai.context_api.exceptions import OpenApiException
 # import models into sdk package
 from flatland.integrations.interactiveai.context_api.models.context_in import ContextIn
 from flatland.integrations.interactiveai.context_api.models.context_out import ContextOut
 from flatland.integrations.interactiveai.context_api.models.http_error import HTTPError
+from flatland.integrations.interactiveai.context_api.models.metadata_schema_railway import MetadataSchemaRailway
 from flatland.integrations.interactiveai.context_api.models.use_case_in import UseCaseIn
 from flatland.integrations.interactiveai.context_api.models.use_case_out import UseCaseOut
 from flatland.integrations.interactiveai.context_api.models.validation_error import ValidationError
