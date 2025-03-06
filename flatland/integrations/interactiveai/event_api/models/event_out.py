@@ -12,15 +12,18 @@
 """  # noqa: E501
 
 from __future__ import annotations
+
+import json
 import pprint
 import re  # noqa: F401
-import json
-
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List
 from typing import Optional, Set
+
+from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
 from typing_extensions import Self
+
+from flatland.integrations.interactiveai.event_api.models.metadata_schema_railway import MetadataSchemaRailway
 
 
 class EventOut(BaseModel):
@@ -28,7 +31,7 @@ class EventOut(BaseModel):
     EventOut
     """  # noqa: E501
     criticality: Optional[StrictStr] = None
-    data: Optional[Dict[str, Any]] = None
+    data: Optional[MetadataSchemaRailway] = None
     description: Optional[StrictStr] = None
     end_date: Optional[datetime] = None
     id: Optional[StrictInt] = None
@@ -80,6 +83,9 @@ class EventOut(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of data
+        if self.data:
+            _dict['data'] = self.data.to_dict()
         # set to None if end_date (nullable) is None
         # and model_fields_set contains the field
         if self.end_date is None and "end_date" in self.model_fields_set:
@@ -108,7 +114,7 @@ class EventOut(BaseModel):
 
         _obj = cls.model_validate({
             "criticality": obj.get("criticality"),
-            "data": obj.get("data"),
+            "data": MetadataSchemaRailway.from_dict(obj["data"]) if obj.get("data") is not None else None,
             "description": obj.get("description"),
             "end_date": obj.get("end_date"),
             "id": obj.get("id"),

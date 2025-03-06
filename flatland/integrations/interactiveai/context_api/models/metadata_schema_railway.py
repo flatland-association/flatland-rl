@@ -19,19 +19,19 @@ import re  # noqa: F401
 from typing import Any, ClassVar, Dict, List
 from typing import Optional, Set
 
-from pydantic import BaseModel, ConfigDict, Field
-from typing_extensions import Annotated
+from pydantic import BaseModel, ConfigDict, StrictInt
 from typing_extensions import Self
 
 
-class UseCaseIn(BaseModel):
+class MetadataSchemaRailway(BaseModel):
     """
-    UseCaseIn
+    MetadataSchemaRailway
     """  # noqa: E501
-    event_manager_class: Optional[Annotated[str, Field(min_length=1, strict=True, max_length=255)]] = None
-    metadata_schema_class: Optional[Annotated[str, Field(min_length=1, strict=True, max_length=255)]] = None
-    name: Annotated[str, Field(min_length=1, strict=True, max_length=255)]
-    __properties: ClassVar[List[str]] = ["event_manager_class", "metadata_schema_class", "name"]
+    direction_agents: Optional[List[StrictInt]] = None
+    list_of_target: Optional[Dict[str, Any]] = None
+    position_agents: Optional[Dict[str, Any]] = None
+    trains: Optional[List[Dict[str, Any]]] = None
+    __properties: ClassVar[List[str]] = ["direction_agents", "list_of_target", "position_agents", "trains"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -50,7 +50,7 @@ class UseCaseIn(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of UseCaseIn from a JSON string"""
+        """Create an instance of MetadataSchemaRailway from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -75,7 +75,7 @@ class UseCaseIn(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of UseCaseIn from a dict"""
+        """Create an instance of MetadataSchemaRailway from a dict"""
         if obj is None:
             return None
 
@@ -83,8 +83,9 @@ class UseCaseIn(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "event_manager_class": obj.get("event_manager_class"),
-            "metadata_schema_class": obj.get("metadata_schema_class"),
-            "name": obj.get("name")
+            "direction_agents": obj.get("direction_agents"),
+            "list_of_target": obj.get("list_of_target"),
+            "position_agents": obj.get("position_agents"),
+            "trains": obj.get("trains")
         })
         return _obj
