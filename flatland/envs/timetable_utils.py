@@ -5,7 +5,7 @@ from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2DArrayArra
 
 Line = NamedTuple('Line', [
     ('agent_positions', IntVector2DArrayArray),
-    ('agent_directions', List[Grid4TransitionsEnum]),
+    ('agent_directions', List[List[Grid4TransitionsEnum]]),
     ('agent_targets', IntVector2DArray),
     ('agent_speeds', List[float]),
 ])

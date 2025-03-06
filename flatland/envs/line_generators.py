@@ -3,6 +3,7 @@ from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 from numpy.random.mtrand import RandomState
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid_utils import IntVector2DArray
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import persistence
@@ -151,10 +152,10 @@ class SparseLineGen(BaseLineGen):
             for city1, city2 in zip(city_idx, city_idx[1:]):
                 agent_start, agent_orientation, agent_target = self._assign_station_in_start_and_target_city(hints, rail, city1, city2, np_random)
                 agent_positions.append((agent_start[0][0], agent_start[0][1]))
-                agent_orientations.append(agent_orientation)
+                agent_orientations.append(Grid4TransitionsEnum(agent_orientation))
             agents_position.append(agent_positions)
             agents_target.append((agent_target[0][0], agent_target[0][1]))
-            agents_direction.append(agent_orientations[0])
+            agents_direction.append(agent_orientations)
 
         if self.speed_ratio_map:
             speeds = speed_initialization_helper(num_agents, self.speed_ratio_map, np_random=np_random)
@@ -189,7 +190,7 @@ def line_from_file(filename, load_from_package: str = None) -> LineGenerator:
 
         # setup with loaded data
         agents_position = [[a.initial_position] for a in agents]
-        agents_direction = [a.initial_direction for a in agents]
+        agents_direction = [[a.initial_direction] for a in agents]
         agents_target = [a.target for a in agents]
         agents_speed = [a.speed_counter.speed for a in agents]
 

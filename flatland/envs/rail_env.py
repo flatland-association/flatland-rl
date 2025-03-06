@@ -304,7 +304,7 @@ class RailEnv(Environment):
             # Reset distance map - basically initializing
             self.distance_map.reset(self.agents, self.rail)
 
-            # NEW : Time Schedule Generation
+            # NEW : Timetable Generation
             timetable = self.timetable_generator(self.agents, self.distance_map,
                                                  agents_hints, self.np_random)
 

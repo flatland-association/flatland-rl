@@ -160,8 +160,8 @@ class EnvAgent:
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
 
             agent = EnvAgent(initial_position=line.agent_positions[i_agent][0],
-                             initial_direction=line.agent_directions[i_agent],
-                             direction=line.agent_directions[i_agent],
+                             initial_direction=line.agent_directions[i_agent][0],
+                             direction=line.agent_directions[i_agent][0],
                              target=line.agent_targets[i_agent],
                              # TODO harmonize to include target as well
                              waypoints=line.agent_positions[i_agent][1:],
