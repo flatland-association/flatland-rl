@@ -310,11 +310,7 @@ class RailEnv(Environment):
 
             self._max_episode_steps = timetable.max_episode_steps
 
-            for agent_i, agent in enumerate(self.agents):
-                agent.earliest_departure = timetable.earliest_departures[agent_i][0]
-                agent.latest_arrival = timetable.latest_arrivals[agent_i][-1]
-                agent.waypoints_earliest_departure = timetable.earliest_departures[agent_i][1:]
-                agent.waypoints_latest_arrival = timetable.latest_arrivals[agent_i][1:]
+            EnvAgent.apply_timetable(self.agents, timetable)
         else:
             self.distance_map.reset(self.agents, self.rail)
 

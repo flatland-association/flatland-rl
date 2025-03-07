@@ -11,25 +11,29 @@ from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
-from flatland.envs.timetable_utils import Line
+from flatland.envs.timetable_utils import Line, Timetable
 
-Agent = NamedTuple('Agent', [('initial_position', Tuple[int, int]),
-                             ('initial_direction', Grid4TransitionsEnum),
-                             ('direction', Grid4TransitionsEnum),
-                             ('target', Tuple[int, int]),
-                             ('moving', bool),
-                             ('earliest_departure', int),
-                             ('latest_arrival', int),
-                             ('handle', int),
-                             ('position', Tuple[int, int]),
-                             ('arrival_time', int),
-                             ('old_direction', Grid4TransitionsEnum),
-                             ('old_position', Tuple[int, int]),
-                             ('speed_counter', SpeedCounter),
-                             ('action_saver', ActionSaver),
-                             ('state_machine', TrainStateMachine),
-                             ('malfunction_handler', MalfunctionHandler),
-                             ])
+
+class Agent(NamedTuple):
+    initial_position: Tuple[int, int]
+    initial_direction: Grid4TransitionsEnum
+    direction: Grid4TransitionsEnum
+    target: Tuple[int, int]
+    moving: bool
+    earliest_departure: int
+    latest_arrival: int
+    handle: int
+    position: Tuple[int, int]
+    arrival_time: int
+    old_direction: Grid4TransitionsEnum
+    old_position: Tuple[int, int]
+    speed_counter: SpeedCounter
+    action_saver: ActionSaver
+    state_machine: TrainStateMachine
+    malfunction_handler: MalfunctionHandler
+    waypoints: List[Waypoint] = None
+    waypoints_earliest_departure: List[int] = None
+    waypoints_latest_arrival: List[int] = None
 
 
 def load_env_agent(agent_tuple: Agent):
@@ -50,6 +54,12 @@ def load_env_agent(agent_tuple: Agent):
         action_saver=agent_tuple.action_saver,
         state_machine=agent_tuple.state_machine,
         malfunction_handler=agent_tuple.malfunction_handler,
+        waypoints=agent_tuple.waypoints if agent_tuple.waypoints is not None else [Waypoint(agent_tuple.initial_position, agent_tuple.initial_direction),
+                                                                                   Waypoint(agent_tuple.target, None)],
+        waypoints_earliest_departure=agent_tuple.waypoints_earliest_departure if agent_tuple.waypoints_earliest_departure is not None else [
+            agent_tuple.earliest_departure, None],
+        waypoints_latest_arrival=agent_tuple.waypoints_latest_arrival if agent_tuple.waypoints_latest_arrival is not None else [None,
+                                                                                                                                agent_tuple.latest_arrival],
     )
 
 
@@ -66,8 +76,11 @@ class EnvAgent:
     earliest_departure = attrib(default=None, type=int)  # default None during _from_line()
     latest_arrival = attrib(default=None, type=int)  # default None during _from_line()
 
-    waypoints = attrib(type=List[Tuple[int, int]], default=Factory(lambda: []))
+    # including initial and target
+    waypoints = attrib(type=List[Waypoint], default=Factory(lambda: []))
+    # None at target
     waypoints_earliest_departure = attrib(type=List[int], default=Factory(lambda: []))
+    # None at initial
     waypoints_latest_arrival = attrib(type=List[int], default=Factory(lambda: []))
 
     handle = attrib(default=None)
@@ -123,7 +136,11 @@ class EnvAgent:
                      action_saver=self.action_saver,
                      arrival_time=self.arrival_time,
                      state_machine=self.state_machine,
-                     malfunction_handler=self.malfunction_handler)
+                     malfunction_handler=self.malfunction_handler,
+                     waypoints=self.waypoints,
+                     waypoints_earliest_departure=self.waypoints_earliest_departure,
+                     waypoints_latest_arrival=self.waypoints_latest_arrival,
+                     )
 
     def get_shortest_path(self, distance_map) -> List[Waypoint]:
         from flatland.envs.rail_env_shortest_paths import get_shortest_paths  # Circular dep fix
@@ -163,8 +180,8 @@ class EnvAgent:
                              initial_direction=line.agent_directions[i_agent][0],
                              direction=line.agent_directions[i_agent][0],
                              target=line.agent_targets[i_agent],
-                             # TODO harmonize to include target as well
-                             waypoints=line.agent_positions[i_agent][1:],
+                             waypoints=[Waypoint((r, c), d) for ((r, c), d) in zip(line.agent_positions[i_agent], line.agent_directions[i_agent])] + [
+                                 Waypoint(line.agent_targets[i_agent], None)],
                              moving=False,
                              earliest_departure=None,
                              latest_arrival=None,
@@ -229,3 +246,11 @@ class EnvAgent:
     @property
     def speed_data(self):
         raise ValueError("agent.speed_data is deprecated, please use agent.speed_counter instead")
+
+    @classmethod
+    def apply_timetable(cls, agents: List["EnvAgent"], timetable: Timetable):
+        for agent_i, agent in enumerate(agents):
+            agent.earliest_departure = timetable.earliest_departures[agent_i][0]
+            agent.latest_arrival = timetable.latest_arrivals[agent_i][-1]
+            agent.waypoints_earliest_departure = timetable.earliest_departures[agent_i]
+            agent.waypoints_latest_arrival = timetable.latest_arrivals[agent_i]

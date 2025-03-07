@@ -431,4 +431,4 @@ def test_sparse_line_generator_with_intermediate_stops():
         agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     for a in EnvAgent.from_line(line):
         print(
-            f"EnvAgent(handle={a.handle}, initial_position={a.initial_position}, initial_direction={a.initial_direction}, target={a.target}, direction={a.direction}, waypoints={a.waypoints}, waypoints_latest_arrival={a.waypoints_earliest_departure}, waypoints_earliest_departure={a.waypoints_latest_arrival}),")
+            f"EnvAgent(handle={a.handle}, initial_position={a.initial_position}, initial_direction={a.initial_direction}, target={a.target}, direction={a.direction.value}, waypoints={a.waypoints}, waypoints_latest_arrival={a.waypoints_earliest_departure}, waypoints_earliest_departure={a.waypoints_latest_arrival}),")
