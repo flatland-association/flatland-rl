@@ -15,7 +15,7 @@ TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
 TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
-DOWNLOAD_INSTRUCTIONS = "Download from https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
+DOWNLOAD_INSTRUCTIONS = "Download from https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
 # zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER.zip 30x30\ map -x "*.DS_Store"
 
 COLLECT_POSITIONS = False
