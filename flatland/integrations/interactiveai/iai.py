@@ -6,7 +6,6 @@ from typing import Optional
 
 import requests
 
-from benchmarks.benchmark_episodes import DOWNLOAD_INSTRUCTIONS
 from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.envs.rail_env import RailEnv
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
@@ -104,6 +103,7 @@ class FlatlandInteractiveAI(FlatlandCallbacks):
                     "title": f"Malfunction Train {agent.handle}",
                     "description": f"Malfunction Train {agent.handle}",
                     "start_date": now,
+                    # TODO offset?
                     "end_date": now + datetime.timedelta(milliseconds=agent.malfunction_handler.malfunction_down_counter * step_to_millis),
                     "data": {
                         "event_type": "Malfunction",
@@ -132,8 +132,8 @@ if __name__ == '__main__':
     data_sub_dir = "malfunction_deadlock_avoidance_heuristics/Test_03/Level_2"
     ep_id = "Test_03_Level_2"
     _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
-    assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
-    assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
+    assert _dir is not None, _dir
+    assert os.path.exists(_dir), _dir
     data_dir = os.path.join(_dir, data_sub_dir)
 
     TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id), callbacks=FlatlandInteractiveAI()).evaluate()
