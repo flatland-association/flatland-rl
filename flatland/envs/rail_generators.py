@@ -1,5 +1,6 @@
 """Rail generators: infrastructure manager (IM) / Infrastrukturbetreiber (ISB)."""
 import math
+import pickle
 import warnings
 from pathlib import Path
 from typing import Callable, Tuple, Optional, Dict, List
