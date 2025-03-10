@@ -3,7 +3,7 @@ import importlib
 import os
 import uuid
 from pathlib import Path
-from typing import Optional, Any, Tuple
+from typing import Optional, Tuple
 
 import click
 import pandas as pd
@@ -11,6 +11,7 @@ import tqdm
 from attr import attrs, attrib
 
 from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
@@ -22,11 +23,6 @@ TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
 
-class Policy:
-    def act(self, handle: int, observation: Any, **kwargs) -> RailEnvActions:
-        pass
-
-
 def _uuid_str():
     return str(uuid.uuid4())
 
@@ -34,9 +30,13 @@ def _uuid_str():
 @attrs
 class Trajectory:
     """
+    Encapsulates episode data for one or multiple episodes.
     Aka. Episode
     Aka. Recording
 
+    In contrast to rllib (https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_episode.py), we use a tabular approach (tsv-backed) instead of `dict`s.
+
+    Directory structure:
     - event_logs
         ActionEvents.discrete_action 		 -- holds set of action to be replayed for the related episodes.
         TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episodes.
@@ -230,23 +230,23 @@ class Trajectory:
 
     @staticmethod
     def create_from_policy(
-        policy: Policy,
-        data_dir: Path,
-        n_agents=7,
-        x_dim=30,
-        y_dim=30,
-        n_cities=2,
-        max_rail_pairs_in_city=4,
-        grid_mode=False,
-        max_rails_between_cities=2,
-        malfunction_duration_min=20,
-        malfunction_duration_max=50,
-        malfunction_interval=540,
-        speed_ratios=None,
-        seed=42,
-        obs_builder: Optional[ObservationBuilder] = None,
-        snapshot_interval: int = 1,
-        ep_id: str = None
+            policy: Policy,
+            data_dir: Path,
+            n_agents=7,
+            x_dim=30,
+            y_dim=30,
+            n_cities=2,
+            max_rail_pairs_in_city=4,
+            grid_mode=False,
+            max_rails_between_cities=2,
+            malfunction_duration_min=20,
+            malfunction_duration_max=50,
+            malfunction_interval=540,
+            speed_ratios=None,
+            seed=42,
+            obs_builder: Optional[ObservationBuilder] = None,
+            snapshot_interval: int = 1,
+            ep_id: str = None
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -463,23 +463,23 @@ def evaluate_trajectory(data_dir: Path, ep_id: str):
               help="Set the episode ID used - if not set, a UUID will be sampled.",
               required=False)
 def generate_trajectory_from_policy(
-    data_dir: Path,
-    policy_pkg: str, policy_cls: str,
-    obs_builder_pkg: str, obs_builder_cls: str,
-    n_agents=7,
-    x_dim=30,
-    y_dim=30,
-    n_cities=2,
-    max_rail_pairs_in_city=4,
-    grid_mode=False,
-    max_rails_between_cities=2,
-    malfunction_duration_min=20,
-    malfunction_duration_max=50,
-    malfunction_interval=540,
-    speed_ratios=None,
-    seed: int = 42,
-    snapshot_interval: int = 1,
-    ep_id: str = None
+        data_dir: Path,
+        policy_pkg: str, policy_cls: str,
+        obs_builder_pkg: str, obs_builder_cls: str,
+        n_agents=7,
+        x_dim=30,
+        y_dim=30,
+        n_cities=2,
+        max_rail_pairs_in_city=4,
+        grid_mode=False,
+        max_rails_between_cities=2,
+        malfunction_duration_min=20,
+        malfunction_duration_max=50,
+        malfunction_interval=540,
+        speed_ratios=None,
+        seed: int = 42,
+        snapshot_interval: int = 1,
+        ep_id: str = None
 ):
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
@@ -511,10 +511,10 @@ def generate_trajectory_from_policy(
 
 
 def generate_trajectories_from_metadata(
-    metadata_csv: Path,
-    data_dir: Path,
-    policy_pkg: str, policy_cls: str,
-    obs_builder_pkg: str, obs_builder_cls: str):
+        metadata_csv: Path,
+        data_dir: Path,
+        policy_pkg: str, policy_cls: str,
+        obs_builder_pkg: str, obs_builder_cls: str):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
         try:

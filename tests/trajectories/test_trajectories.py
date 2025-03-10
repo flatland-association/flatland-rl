@@ -7,8 +7,9 @@ from typing import Any
 import pandas as pd
 import pytest
 
+from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
-from flatland.trajectories.trajectories import Policy, Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
+from flatland.trajectories.trajectories import Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
     generate_trajectory_from_policy, evaluate_trajectory, generate_trajectories_from_metadata
 from flatland.utils.seeding import np_random, random_state_to_hashablestate
 
