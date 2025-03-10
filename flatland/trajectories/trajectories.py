@@ -30,7 +30,8 @@ def _uuid_str():
 @attrs
 class Trajectory:
     """
-    Encapsulates episode data for one or multiple episodes.
+    Encapsulates episode data (actions, positions etc.) for one or multiple episodes for further analysis/evaluation.
+
     Aka. Episode
     Aka. Recording
 
@@ -179,55 +180,6 @@ class Trajectory:
             return movement.iloc[0]
         raise
 
-    def evaluate(self):
-        """
-        The data is structured as follows:
-            -30x30 map
-                Contains the data to replay the episodes.
-                - <n>_trains                                 -- for n in 10,15,20,50
-                    - event_logs
-                        ActionEvents.discrete_action 		 -- holds set of action to be replayed for the related episodes.
-                        TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episodes.
-                        TrainMovementEvents.trains_positions -- holds the positions for the related episodes.
-                    - serialised_state
-                        <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
-
-        All these episodes are with constant speed of 1 and malfunctions free.
-
-        Parameters
-        ----------
-        data_sub_dir subdirectory within BENCHMARK_EPISODES_FOLDER
-        ep_id the episode ID
-        """
-
-        trains_positions = self.read_trains_positions()
-        actions = self.read_actions()
-        trains_arrived = self.read_trains_arrived()
-
-        env = self.restore_episode()
-        n_agents = env.get_num_agents()
-        assert len(env.agents) == n_agents
-
-        for env_time in tqdm.tqdm(range(env._max_episode_steps)):
-            action = {agent_id: self.action_lookup(actions, env_time=env_time, agent_id=agent_id) for agent_id in range(n_agents)}
-            _, _, dones, _ = env.step(action)
-            done = dones['__all__']
-
-            for agent_id in range(n_agents):
-                agent = env.agents[agent_id]
-                actual_position = (agent.position, agent.direction)
-                expected_position = self.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
-                assert actual_position == expected_position, (self.data_dir, self.ep_id, env_time + 1, agent_id, actual_position, expected_position)
-
-            if done:
-                break
-
-        trains_arrived_episode = self.trains_arrived_lookup(trains_arrived)
-        expected_success_rate = trains_arrived_episode['success_rate']
-        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
-        assert expected_success_rate == actual_success_rate
-
     @staticmethod
     def create_from_policy(
             policy: Policy,
@@ -347,21 +299,6 @@ class Trajectory:
         trajectory.write_actions(actions)
         trajectory.write_trains_arrived(trains_arrived)
         return trajectory
-
-
-@click.command()
-@click.option('--data-dir',
-              type=click.Path(exists=True),
-              help="Path to folder containing Flatland episode",
-              required=True
-              )
-@click.option('--ep-id',
-              type=str,
-              help="Episode ID.",
-              required=True
-              )
-def evaluate_trajectory(data_dir: Path, ep_id: str):
-    Trajectory(data_dir=data_dir, ep_id=ep_id).evaluate()
 
 
 @click.command()

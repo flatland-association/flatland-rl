@@ -9,8 +9,9 @@ import pytest
 
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
+from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
 from flatland.trajectories.trajectories import Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
-    generate_trajectory_from_policy, evaluate_trajectory, generate_trajectories_from_metadata
+    generate_trajectory_from_policy, generate_trajectories_from_metadata
 from flatland.utils.seeding import np_random, random_state_to_hashablestate
 
 
@@ -56,7 +57,7 @@ def test_from_submission():
         assert "episode_id	env_time	success_rate" in (data_dir / TRAINS_ARRIVED_FNAME).read_text()
         assert "episode_id	env_time	agent_id	position" in (data_dir / TRAINS_POSITIONS_FNAME).read_text()
 
-        trajectory.evaluate()
+        TrajectoryEvaluator(trajectory).evaluate()
 
 
 def test_cli_from_submission():

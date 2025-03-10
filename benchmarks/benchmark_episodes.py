@@ -2,6 +2,8 @@ import os
 
 import pytest
 
+from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
+
 DOWNLOAD_INSTRUCTIONS = "Download from https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
 # zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip 30x30\ map -x "*.DS_Store"; zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip malfunction_deadlock_avoidance_heuristics -x "*.DS_Store"
 from flatland.trajectories.trajectories import Trajectory
@@ -169,4 +171,4 @@ def run_episode(data_sub_dir: str, ep_id: str):
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = os.path.join(_dir, data_sub_dir)
 
-    Trajectory(data_dir=data_dir, ep_id=ep_id).evaluate()
+    TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id)).evaluate()
