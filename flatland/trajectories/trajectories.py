@@ -10,6 +10,7 @@ import pandas as pd
 import tqdm
 from attr import attrs, attrib
 
+from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
@@ -198,13 +199,15 @@ class Trajectory:
             seed=42,
             obs_builder: Optional[ObservationBuilder] = None,
             snapshot_interval: int = 1,
-            ep_id: str = None
+            ep_id: str = None,
+            callbacks: FlatlandCallbacks = None
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
 
         Parameters
         ----------
+
         policy : Policy
             the submission's policy
         data_dir : Path
@@ -237,6 +240,10 @@ class Trajectory:
             Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
         snapshot_interval : int
             interval to write pkl snapshots
+        ep_id: str
+            episode ID to store data under
+        callbacks: FlatlandCallbacks
+            callbacks to run during trajectory creation
 
         Returns
         -------
@@ -281,6 +288,8 @@ class Trajectory:
                 trajectory.action_collect(actions, env_time=env_time, agent_id=handle, action=action)
 
             _, _, dones, _ = env.step(action_dict)
+            if callbacks is not None:
+                callbacks.on_episode_step(env=env)
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
@@ -292,7 +301,6 @@ class Trajectory:
                 RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time + 1:04d}.pkl"))
             if done:
                 break
-
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
         trajectory.write_trains_positions(trains_positions)

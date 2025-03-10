@@ -3,12 +3,14 @@ from pathlib import Path
 import click
 import tqdm
 
+from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.trajectories.trajectories import Trajectory
 
 
 class TrajectoryEvaluator:
-    def __init__(self, trajectory: Trajectory):
+    def __init__(self, trajectory: Trajectory, callbacks: FlatlandCallbacks = None):
         self.trajectory = trajectory
+        self.callbacks = callbacks
 
     def __call__(self, *args, **kwargs):
         self.evaluate()
@@ -45,6 +47,9 @@ class TrajectoryEvaluator:
         for env_time in tqdm.tqdm(range(env._max_episode_steps)):
             action = {agent_id: self.trajectory.action_lookup(actions, env_time=env_time, agent_id=agent_id) for agent_id in range(n_agents)}
             _, _, dones, _ = env.step(action)
+            if self.callbacks is not None:
+                self.callbacks.on_episode_step(env=env)
+
             done = dones['__all__']
 
             for agent_id in range(n_agents):
@@ -60,7 +65,7 @@ class TrajectoryEvaluator:
         trains_arrived_episode = self.trajectory.trains_arrived_lookup(trains_arrived)
         expected_success_rate = trains_arrived_episode['success_rate']
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
+        print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
         assert expected_success_rate == actual_success_rate
 
 

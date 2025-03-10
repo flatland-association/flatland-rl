@@ -2,11 +2,13 @@ import importlib
 import re
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 import pytest
 
+from flatland.callbacks.callbacks import FlatlandCallbacks
+from flatland.envs.rail_env import RailEnv
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
@@ -57,7 +59,19 @@ def test_from_submission():
         assert "episode_id	env_time	success_rate" in (data_dir / TRAINS_ARRIVED_FNAME).read_text()
         assert "episode_id	env_time	agent_id	position" in (data_dir / TRAINS_POSITIONS_FNAME).read_text()
 
-        TrajectoryEvaluator(trajectory).evaluate()
+        class DummyCallbacks(FlatlandCallbacks):
+            def on_episode_step(
+                self,
+                *,
+                env: Optional[RailEnv] = None,
+                **kwargs,
+            ) -> None:
+                (data_dir / f"step{env._elapsed_steps - 1}").touch()
+
+        TrajectoryEvaluator(trajectory, callbacks=DummyCallbacks()).evaluate()
+        for i in range(471):
+            assert (data_dir / f"step{i}").exists()
+        assert not (data_dir / f"step471").exists()
 
 
 def test_cli_from_submission():
