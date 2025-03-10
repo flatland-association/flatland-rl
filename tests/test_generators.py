@@ -3,14 +3,14 @@
 
 import numpy as np
 
+from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
+from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_from_file, empty_rail_generator
-from flatland.envs.line_generators import sparse_line_generator, line_from_file
-from flatland.utils.simple_rail import make_simple_rail
-from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.step_utils.states import TrainState
+from flatland.utils.simple_rail import make_simple_rail
 
 
 def test_empty_rail_generator():
@@ -53,29 +53,31 @@ def tests_rail_from_file():
     file_name = "test_with_distance_map.pkl"
 
     # Test to save and load file with distance map.
-
     rail, rail_map, optionals = make_simple_rail()
 
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
-    #env.save(file_name)
     RailEnvPersister.save(env, file_name)
     dist_map_shape = np.shape(env.distance_map.get())
     rails_initial = env.rail.grid
     agents_initial = env.agents
 
     env = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
-                  line_generator=line_from_file(file_name), number_of_agents=1,
+                  line_generator=line_from_file(file_name),
+                  number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
     env.reset()
     rails_loaded = env.rail.grid
     agents_loaded = env.agents
     # override `earliest_departure` & `latest_arrival` since they aren't expected to be the same
+    # TODO use timeteable from file instead: https://github.com/flatland-association/flatland-rl/pull/141
     for agent_initial, agent_loaded in zip(agents_initial, agents_loaded):
         agent_loaded.earliest_departure = agent_initial.earliest_departure
         agent_loaded.latest_arrival = agent_initial.latest_arrival
+        agent_loaded.waypoints_earliest_departure = [agent_initial.earliest_departure, None]
+        agent_loaded.waypoints_latest_arrival = [None, agent_initial.latest_arrival]
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
@@ -105,9 +107,12 @@ def tests_rail_from_file():
     rails_loaded_2 = env2.rail.grid
     agents_loaded_2 = env2.agents
     # override `earliest_departure` & `latest_arrival` since they aren't expected to be the same
+    # TODO use timeteable from file instead: https://github.com/flatland-association/flatland-rl/pull/141
     for agent_initial, agent_loaded in zip(agents_initial_2, agents_loaded_2):
         agent_loaded.earliest_departure = agent_initial.earliest_departure
         agent_loaded.latest_arrival = agent_initial.latest_arrival
+        agent_loaded.waypoints_earliest_departure = [agent_initial.earliest_departure, None]
+        agent_loaded.waypoints_latest_arrival = [None, agent_initial.latest_arrival]
 
     assert np.all(np.array_equal(rails_initial_2, rails_loaded_2))
     assert agents_initial_2 == agents_loaded_2
@@ -125,6 +130,8 @@ def tests_rail_from_file():
     for agent_initial, agent_loaded in zip(agents_initial, agents_loaded_3):
         agent_loaded.earliest_departure = agent_initial.earliest_departure
         agent_loaded.latest_arrival = agent_initial.latest_arrival
+        agent_loaded.waypoints_earliest_departure = [agent_initial.earliest_departure, None]
+        agent_loaded.waypoints_latest_arrival = [None, agent_initial.latest_arrival]
 
     assert np.all(np.array_equal(rails_initial, rails_loaded_3))
     assert agents_initial == agents_loaded_3
@@ -143,10 +150,13 @@ def tests_rail_from_file():
     rails_loaded_4 = env4.rail.grid
     agents_loaded_4 = env4.agents
     # override `earliest_departure` & `latest_arrival` since they aren't expected to be the same
+    # TODO use timeteable from file instead: https://github.com/flatland-association/flatland-rl/pull/141
     for agent_initial, agent_loaded in zip(agents_initial_2, agents_loaded_4):
         agent_loaded.earliest_departure = agent_initial.earliest_departure
         agent_loaded.latest_arrival = agent_initial.latest_arrival
-        
+        agent_loaded.waypoints_earliest_departure = [agent_initial.earliest_departure, None]
+        agent_loaded.waypoints_latest_arrival = [None, agent_initial.latest_arrival]
+
     # Check that no distance map was saved
     assert not hasattr(env2.obs_builder, "distance_map")
     assert np.all(np.array_equal(rails_initial_2, rails_loaded_4))

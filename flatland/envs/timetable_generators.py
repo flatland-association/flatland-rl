@@ -26,7 +26,7 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
 
     inputs:
         agents - List of all the agents rail_env.agents
-        distance_map - Distance map of positions to tagets of each agent in each direction
+        distance_map - Distance map of positions to targets of each agent in each direction
         agent_hints - Uses the number of cities
         np_random - RNG state for seeding
     returns:
@@ -41,8 +41,9 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
 
     timedelay_factor = 4
     alpha = 2
+    num_agents = len(agents)
     max_episode_steps = int(timedelay_factor * alpha * \
-                            (distance_map.rail.width + distance_map.rail.height + (len(agents) / num_cities)))
+                            (distance_map.rail.width + distance_map.rail.height + (num_agents / num_cities)))
 
     # Multipliers
     old_max_episode_steps_multiplier = 3.0
@@ -52,8 +53,34 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
     end_buffer_multiplier = 0.05
     mean_shortest_path_multiplier = 0.2
 
-    shortest_paths = get_shortest_paths(distance_map)
-    shortest_paths_lengths = [len_handle_none(v) for k, v in shortest_paths.items()]
+    if len(agents[0].waypoints) > 1:
+        # distance for intermediates parts and sum up
+        line_length = len(agents[0].waypoints) - 1
+        fake_agents = []
+        for i in range(line_length):
+            for a in agents:
+                waypoints = a.waypoints
+
+                fake_agents.append(EnvAgent(
+                    handle=i * num_agents + a.handle,
+                    initial_position=waypoints[i].position,
+                    initial_direction=waypoints[i].direction,
+                    position=waypoints[i].position,
+                    direction=waypoints[i].direction,
+                    target=waypoints[i + 1].position,
+                ))
+        distance_map_with_intermediates = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
+        distance_map_with_intermediates.reset(fake_agents, distance_map.rail)
+
+        shortest_paths = get_shortest_paths(distance_map_with_intermediates)
+        shortest_path_segment_lengths = [[] for _ in range(num_agents)]
+        for k, v in shortest_paths.items():
+            shortest_path_segment_lengths[k % num_agents].append(len_handle_none(v))
+        shortest_paths_lengths = [sum(l) for l in shortest_path_segment_lengths]
+    else:
+        shortest_paths = get_shortest_paths(distance_map)
+        shortest_paths_lengths = [len_handle_none(v) for k, v in shortest_paths.items()]
+        shortest_path_segment_lengths = [[l] for l in shortest_paths_lengths]
 
     # Find mean_shortest_path_time
     agent_speeds = [agent.speed_counter.speed for agent in agents]
@@ -72,7 +99,6 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
     end_buffer = int(max_episode_steps * end_buffer_multiplier)
     latest_arrival_max = max_episode_steps - end_buffer
 
-    # Useless unless needed by returning
     earliest_departures = []
     latest_arrivals = []
 
@@ -85,11 +111,22 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
         earliest_departure = np_random.randint(0, departure_window_max)
         latest_arrival = earliest_departure + agent_travel_time_max
 
-        earliest_departures.append(earliest_departure)
-        latest_arrivals.append(latest_arrival)
-
         agent.earliest_departure = earliest_departure
         agent.latest_arrival = latest_arrival
+        ed = earliest_departure
+        eds = [earliest_departure]
+        for l in shortest_path_segment_lengths[agent.handle]:
+            ed += l
+            eds.append(ed)
+        la = latest_arrival
+        las = [latest_arrival]
+        for l in reversed(shortest_path_segment_lengths[agent.handle]):
+            la -= l
+            las.insert(0, la)
+        eds[-1] = None
+        las[0] = None
+        earliest_departures.append(eds)
+        latest_arrivals.append(las)
 
     return Timetable(earliest_departures=earliest_departures, latest_arrivals=latest_arrivals,
                      max_episode_steps=max_episode_steps)
@@ -97,8 +134,8 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
 
 def ttgen_flatland2(agents: List[EnvAgent], distance_map: DistanceMap,
                     agents_hints: dict, np_random: RandomState = None) -> Timetable:
-    nMaxSteps = 1000
+    n_max_steps = 1000
     return Timetable(
-        earliest_departures=[0] * len(agents),
-        latest_arrivals=[nMaxSteps] * len(agents),
-        max_episode_steps=1000)
+        earliest_departures=[[0]] * len(agents),
+        latest_arrivals=[[n_max_steps]] * len(agents),
+        max_episode_steps=n_max_steps)
