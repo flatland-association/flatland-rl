@@ -2,7 +2,8 @@
 Definition of the RailEnv environment.
 """
 import random
-from typing import List, Optional, Dict, Tuple
+from functools import lru_cache
+from typing import List, Optional, Dict, Tuple, Set
 
 import numpy as np
 
@@ -10,6 +11,7 @@ import flatland.envs.timetable_generators as ttg
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid_utils import Vector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
@@ -21,13 +23,13 @@ from flatland.envs.distance_map import DistanceMap
 from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
 from flatland.utils import seeding
-from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
-    enable_infrastructure_lru_cache
+from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
@@ -55,21 +57,7 @@ class RailEnv(Environment):
     The actions of the agents are executed in order of their handle to prevent
     deadlocks and to allow them to learn relative priorities.
 
-    Reward Function:
 
-    It costs each agent a step_penalty for every time-step taken in the environment. Independent of the movement
-    of the agent. Currently all other penalties such as penalty for stopping, starting and invalid actions are set to 0.
-
-    alpha = 0
-    beta = 0
-    Reward function parameters:
-
-    - invalid_action_penalty = 0
-    - step_penalty = -alpha
-    - global_reward = beta
-    - epsilon = avoid rounding errors
-    - stop_penalty = 0  # penalty for stopping a moving agent
-    - start_penalty = 0  # penalty for starting a stopped agent
 
     Stochastic malfunctioning of trains:
     Trains in RailEnv can malfunction if they are halted too often (either by their own choice or because an invalid
@@ -83,24 +71,12 @@ class RailEnv(Environment):
     For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
 
     """
-    # Epsilon to avoid rounding errors
-    epsilon = 0.01
-    # NEW : REW: Sparse Reward
-    alpha = 0
-    beta = 0
-    step_penalty = -1 * alpha
-    global_reward = 1 * beta
-    invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
-    stop_penalty = 0  # penalty for stopping a moving agent
-    start_penalty = 0  # penalty for starting a stopped agent
-    cancellation_factor = 1
-    cancellation_time_buffer = 0
 
     def __init__(self,
                  width,
                  height,
-                 rail_generator=None,
-                 line_generator: "LineGenerator" = None,  # : line_gen.LineGenerator = line_gen.random_line_generator(),
+                 rail_generator: "RailGenerator" = None,
+                 line_generator: "LineGenerator" = None,
                  number_of_agents=2,
                  obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
                  malfunction_generator_and_process_data=None,  # mal_gen.no_malfunction_generator(),
@@ -167,7 +143,7 @@ class RailEnv(Environment):
         self.rail_generator = rail_generator
         if line_generator is None:
             line_generator = line_gen.sparse_line_generator()
-        self.line_generator: LineGenerator = line_generator
+        self.line_generator: "LineGenerator" = line_generator
         self.timetable_generator = timetable_generator
 
         self.rail: Optional[GridTransitionMap] = None
@@ -205,6 +181,10 @@ class RailEnv(Environment):
 
         self.motionCheck = ac.MotionCheck()
 
+        self.level_free_positions: Set[Vector2D] = set()
+
+        self.rewards = Rewards()
+
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
         random.seed(seed)
@@ -239,8 +219,9 @@ class RailEnv(Environment):
             agent.reset()
         self.active_agents = [i for i in range(len(self.agents))]
 
-    @enable_infrastructure_lru_cache()
-    def action_required(self, agent_state, is_cell_entry):
+    @lru_cache()
+    @staticmethod
+    def action_required(agent_state, is_cell_entry):
         """
         Check if an agent needs to provide an action
 
@@ -313,6 +294,8 @@ class RailEnv(Environment):
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
+            if optionals and 'level_free_positions' in optionals:
+                self.level_free_positions = optionals['level_free_positions']
 
             line = self.line_generator(self.rail, self.number_of_agents, agents_hints,
                                        self.num_resets, self.np_random)
@@ -321,15 +304,13 @@ class RailEnv(Environment):
             # Reset distance map - basically initializing
             self.distance_map.reset(self.agents, self.rail)
 
-            # NEW : Time Schedule Generation
+            # NEW : Timetable Generation
             timetable = self.timetable_generator(self.agents, self.distance_map,
                                                  agents_hints, self.np_random)
 
             self._max_episode_steps = timetable.max_episode_steps
 
-            for agent_i, agent in enumerate(self.agents):
-                agent.earliest_departure = timetable.earliest_departures[agent_i]
-                agent.latest_arrival = timetable.latest_arrivals[agent_i]
+            EnvAgent.apply_timetable(self.agents, timetable)
         else:
             self.distance_map.reset(self.agents, self.rail)
 
@@ -459,7 +440,7 @@ class RailEnv(Environment):
                     state - State from the trains's state machine
         """
         info_dict = {
-            'action_required': {i: self.action_required(agent.state, agent.speed_counter.is_cell_entry)
+            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_entry)
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
@@ -484,7 +465,7 @@ class RailEnv(Environment):
             ((self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps)):
 
             for i_agent, agent in enumerate(self.agents):
-                reward = self._handle_end_reward(agent)
+                reward = self.rewards.end_of_episode_reward(agent, self.distance_map, self._elapsed_steps)
                 self.rewards_dict[i_agent] += reward
 
                 self.dones[i_agent] = True
@@ -561,8 +542,16 @@ class RailEnv(Environment):
                                                                           direction=new_direction,
                                                                           preprocessed_action=preprocessed_action)
 
+            # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
+            new_position_level_free = new_position
+            if new_position in self.level_free_positions:
+                new_position_level_free = (new_position, new_direction % 2)
+            agent_position_level_free = agent.position
+            if agent.position in self.level_free_positions:
+                agent_position_level_free = (agent.position, agent.direction % 2)
+
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
-            self.motionCheck.addAgent(i_agent, agent.position, new_position)
+            self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
 
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
@@ -570,11 +559,15 @@ class RailEnv(Environment):
         for agent in self.agents:
             i_agent = agent.handle
 
+            agent_position_level_free = agent.position
+            if agent.position in self.level_free_positions:
+                agent_position_level_free = (agent.position, agent.direction % 2)
+
             ## Update positions
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                movement_allowed = self.motionCheck.check_motion(i_agent, agent.position)
+                movement_allowed = self.motionCheck.check_motion(i_agent, agent_position_level_free)
 
             movement_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
             movement_allowed = movement_allowed or movement_inside_cell
@@ -612,7 +605,7 @@ class RailEnv(Environment):
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
             ## Update rewards
-            self.update_step_rewards(i_agent)
+            self.rewards_dict[i_agent] += self.rewards.step_reward(agent, self.distance_map, self._elapsed_steps)
 
             ## Update counters (malfunction and speed)
             agent.speed_counter.update_counter(agent.state, agent.old_position)
@@ -726,6 +719,7 @@ class RailEnv(Environment):
         return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
                                     show_predictions=show_predictions,
                                     show_rowcols=show_rowcols, return_image=return_image)
+
     def initialize_renderer(self, mode, gl,
                             agent_render_variant,
                             show_debug,
