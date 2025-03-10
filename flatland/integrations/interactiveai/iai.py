@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import time
 from typing import Optional
 
 import requests
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class FlatlandInteractiveAI(FlatlandCallbacks):
     def __init__(self, client_id="opfab-client",
-                 username="railway_user",
+                 username="admin",
                  password="test",
                  token_url="http://frontend/auth/token"):
         self.token_url = token_url
@@ -28,9 +29,10 @@ class FlatlandInteractiveAI(FlatlandCallbacks):
         self.username = username
         self.password = password
         self.access_token = None
-        self.context_api = None
-        self.historic_api = None
-        self.events_api = None
+        self.context_api: ContextApiApi = None
+        self.historic_api: HistoricApiApi = None
+        self.events_api: EventApiApi = None
+        self.in_malfunction = {}
 
     def connect(self):
         access_token = self._get_access_token_password_grant(token_url=self.token_url, client_id=self.client_id, username=self.username, password=self.password)
@@ -42,6 +44,7 @@ class FlatlandInteractiveAI(FlatlandCallbacks):
         self.context_api.api_client.set_default_header("Authorization", f"Bearer {access_token}")
         self.historic_api = HistoricApiApi()
         self.historic_api.api_client.set_default_header("Authorization", f"Bearer {access_token}")
+        self.access_token = access_token
 
     def _get_access_token_password_grant(self, token_url, client_id, username, password) -> str:
         payload = f"username={username}&password={password}&grant_type=password&clientId={client_id}"
@@ -54,10 +57,10 @@ class FlatlandInteractiveAI(FlatlandCallbacks):
         return json_response.get("access_token")
 
     def on_episode_step(
-        self,
-        *,
-        env: Optional[RailEnv] = None,
-        **kwargs,
+            self,
+            *,
+            env: Optional[RailEnv] = None,
+            **kwargs,
     ) -> None:
         """Called on each episode step (after the action(s) has/have been logged).
 
@@ -71,52 +74,70 @@ class FlatlandInteractiveAI(FlatlandCallbacks):
         """
         if self.access_token is None:
             self.connect()
+        if env._elapsed_steps == 1:
+            # self.events_api.api_v1_delete_
+            # self.historic_api.api_v1_delete_all_data_delete()
+            # self.context_api.api_v1_delete_all_data_delete()
+            for event in self.events_api.api_v1_events_get():
+                self.events_api.api_v1_event_event_id_delete(event_id=event.id_event)
+            print(self.events_api.api_v1_events_get())
+            print(self.historic_api.api_v1_traces_get())
+            print(self.context_api.api_v1_contexts_get())
+        now = datetime.datetime.now()
 
-        print(self.events_api.api_v1_events_get())
-        print(self.historic_api.api_v1_traces_get())
-        print(self.context_api.api_v1_contexts_get())
-        self.events_api.api_v1_events_post_with_http_info(EventIn.from_dict({
-            "criticality": "LOW",
-            "description": "Wonderland",
-            # TODO problem with optionals in generated client code, leaving empty leads to 500
-            "end_date": datetime.datetime.now() + datetime.timedelta(hours=1),
-            "start_date": datetime.datetime.now(),
-            "title": "Alice",
-            "use_case": "Railway",
-            "data": {
-                "event_type": "blala",
-                "delay": 300,
-                "agent_id": "55",
-                "id_train": "20"
-            }
-        }))
+        # TODO refine
+        step_to_millis = 1000
+        # TODO mapping
+        # https://opendata.swiss/de/dataset/haltestelle-perronoberflache1
+        origin_lat = 47.3534027132627
+        origin_lon = 7.90817796008907
+        xy_delta = 0.001
+
+        for agent in env.agents:
+            prev = self.in_malfunction.get(agent.handle, False)
+            cur = agent.malfunction_handler.in_malfunction
+            self.in_malfunction[agent.handle] = cur
+            if not prev and cur:
+                self.events_api.api_v1_events_post(EventIn.from_dict({
+                    "use_case": "Railway",
+                    "criticality": "LOW",
+                    "title": f"Malfunction Train {agent.handle}",
+                    "description": f"Malfunction Train {agent.handle}",
+                    "start_date": now,
+                    "end_date": now + datetime.timedelta(milliseconds=agent.malfunction_handler.malfunction_down_counter * step_to_millis),
+                    "data": {
+                        "event_type": "Malfunction",
+                        "delay": 300,
+                        "agent_id": f"{agent.handle}",
+                        "id_train": f"{agent.handle}",
+                    }
+                }))
+        # TODO use non-blocking calls or queue?
         self.context_api.api_v1_contexts_post(ContextIn.from_dict({
             "use_case": "Railway",
             "data": {
-                # https://opendata.swiss/de/dataset/haltestelle-perronoberflache1
-                "trains": [{
-                    'failure': False, 'id_train': 'Olten	Mittelperron	8/9', 'latitude': '47.3534027132627', 'longitude': '7.90817796008907',
-                    'nb_passengers_connection': 13, 'nb_passengers_onboard': 200, 'speed': 300},
-                    {'failure': False, 'id_train': 'Olten	Mittelperron	2/3 ', 'latitude': '47.3515361449108', 'longitude': '7.90724203700411',
-                     'nb_passengers_connection': 13, 'nb_passengers_onboard': 200, 'speed': 300},
-                    {'failure': True, 'id_train': 'Olten Hammer	Mittelperron	2/3 ', 'latitude': '47.3481023003965', 'longitude': '7.89839041783048',
-                     'nb_passengers_connection': 13, 'nb_passengers_onboard': 200, 'speed': 300}
-                ]
+                "trains": [
+                    {
+                        'id_train': f'Train {agent.handle}',
+                        'latitude': f"{origin_lat + agent.position[1] * xy_delta}",
+                        'longitude': f'{origin_lon + agent.position[0] * xy_delta}',
+                    } for agent in env.agents if agent.position is not None]
             }
         }))
-
-        print("***")
-        print(self.events_api.api_v1_events_get())
-        print(self.historic_api.api_v1_traces_get())
-        print(self.context_api.api_v1_contexts_get())
+        # TODO refine
+        time.sleep(step_to_millis * 0.001)
 
 
 if __name__ == '__main__':
-    data_sub_dir = "30x30 map/10_trains"
-    ep_id = "1649ef98-e3a8-4dd3-a289-bbfff12876ce"
+    data_sub_dir = "malfunction_deadlock_avoidance_heuristics/Test_03/Level_2"
+    ep_id = "Test_03_Level_2"
     _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
     assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = os.path.join(_dir, data_sub_dir)
 
     TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id), callbacks=FlatlandInteractiveAI()).evaluate()
+    # TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id)).evaluate() # 29.38it/s
+    # fiai = FlatlandInteractiveAI()
+    # fiai.connect()
+    # fiai.on_episode_step()
