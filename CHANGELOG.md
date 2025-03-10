@@ -5,7 +5,28 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [[4.0.4](https://github.com/flatland-association/flatland-rl/milestone/1)]
+## [[4.0.5](https://github.com/flatland-association/flatland-rl/compare/v4.0.4...v4.0.5)] - 2025-03-XX
+
+### Added
+
+* 78 Extract performance profiling cli. by @chenkins in [pr[#88](https://github.com/flatland-association/flatland-rl/pull/88)]
+* 110 Over- and underpasses (aka. level-free diamond crossings). by @chenkins in [pr[#120](https://github.com/flatland-association/flatland-rl/pull/120)]
+* 109 Multi-stop Schedules (w/o alternatives/routing flexibility). by @chenkins in [pr[#124](https://github.com/flatland-association/flatland-rl/pull/124)]
+
+### Fixed
+
+* fix: from attr import attr, attrs, attrib, Factory ImportError: cannot import name 'attrs' from 'attr' by @chenkins
+  in [pr[#127](https://github.com/flatland-association/flatland-rl/pull/127)]
+* Fix grammar and spelling in comments rail_env py by @SergeCroise in [pr[#130](https://github.com/flatland-association/flatland-rl/pull/130)]
+* 118 Add test_lru_cache_problem.py. by @chenkins in [pr[#119](https://github.com/flatland-association/flatland-rl/pull/119)]
+
+### Changed
+
+* 143 Retry for ml tests. by @chenkins in [pr[#146](https://github.com/flatland-association/flatland-rl/pull/146)]
+* Enable running notebooks in main workflow by @chenkins in [pr[#144](https://github.com/flatland-association/flatland-rl/pull/144)]
+* Use flatland-scenarios instead of data.flatland.cloud for trajectories. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/153
+
+## [[4.0.4](https://github.com/flatland-association/flatland-rl/compare/v4.0.2...v4.0.4)] - 2025-02-18
 
 ### Added
 
