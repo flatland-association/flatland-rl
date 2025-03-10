@@ -1,13 +1,15 @@
 
-import pyglet as pgl
 import time
 
+import pyglet as pgl
 from PIL import Image
-# from numpy import array
-# from pkg_resources import resource_string as resource_bytes
 
 # from flatland.utils.graphics_layer import GraphicsLayer
 from flatland.utils.graphics_pil import PILSVG
+
+
+# from numpy import array
+# from pkg_resources import resource_string as resource_bytes
 
 
 class PGLGL(PILSVG):
@@ -22,6 +24,10 @@ class PGLGL(PILSVG):
         print("open_window - pyglet")
         assert self.window_open is False, "Window is already open!"
         self.window = pgl.window.Window(resizable=True, vsync=False, width=1200, height=800)
+
+        @self.window.event
+        def on_key_press(symbol, modifiers):
+            print(f'A key was pressed {symbol}')
         #self.__class__.window.title("Flatland")
         #self.__class__.window.configure(background='grey')
         self.window_open = True
@@ -33,7 +39,7 @@ class PGLGL(PILSVG):
             self.window.clear()
             self.show(from_event=True)
             #print("pyglet draw event done")
-            
+
 
         @self.window.event
         def on_resize(width, height):
@@ -59,7 +65,7 @@ class PGLGL(PILSVG):
             if not self.closed:
                 self.close_window()
             return
-            
+
         #tStart = time.time()
         self._processEvents()
 
@@ -69,7 +75,7 @@ class PGLGL(PILSVG):
         # convert our PIL image to pyglet:
         bytes_image = pil_img_resized.tobytes()
         pgl_image = pgl.image.ImageData(pil_img_resized.width, pil_img_resized.height,
-            #self.window.width, self.window.height, 
+                                        # self.window.width, self.window.height,
             'RGBA',
             bytes_image, pitch=-pil_img_resized.width * 4)
 
@@ -90,8 +96,6 @@ class PGLGL(PILSVG):
             self.window.dispatch_events()
             self.window.flip()
         #print(" events done")
-        
-        
 
     def idle(self, seconds=0.00001):
         tStart = time.time()
@@ -120,7 +124,7 @@ def test_event_loop():
         pil_img_resized = pil_img.resize((window.width, window.height), resample=Image.NEAREST)
         bytes_image = pil_img_resized.tobytes()
         pgl_image = pgl.image.ImageData(pil_img_resized.width, pil_img_resized.height,
-            #self.window.width, self.window.height, 
+                                        #self.window.width, self.window.height,
             'RGBA',
             bytes_image, pitch=-pil_img_resized.width * 4)
         pgl_image.blit(0,0)
@@ -131,7 +135,7 @@ def test_event_loop():
         window.clear()
         show()
         print("pyglet draw event done")
-            
+
 
         @window.event
         def on_resize(width, height):
@@ -143,7 +147,7 @@ def test_event_loop():
         def on_close():
             #self.close_requested = True
             print("close")
-    
+
     pgl.app.run()
 
 
