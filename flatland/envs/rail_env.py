@@ -21,6 +21,7 @@ from flatland.envs.distance_map import DistanceMap
 from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_env_post_hook import PostHook
 from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
@@ -109,6 +110,7 @@ class RailEnv(Environment):
                  random_seed=None,
                  record_steps=False,
                  timetable_generator=ttg.timetable_generator,
+                 post_hook: PostHook = None
                  ):
         """
         Environment init.
@@ -204,6 +206,8 @@ class RailEnv(Environment):
         self.list_actions = []  # save actions in here
 
         self.motionCheck = ac.MotionCheck()
+
+        self.post_hook = post_hook
 
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
@@ -342,6 +346,10 @@ class RailEnv(Environment):
         # Agent positions map
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
         self._update_agent_positions_map(ignore_old_positions=False)
+
+        if self.post_hook is not None:
+            self.post_hook(self)
+
 
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
 
@@ -629,6 +637,9 @@ class RailEnv(Environment):
         self._update_agent_positions_map()
         if self.record_steps:
             self.record_timestep(action_dict)
+
+        if self.post_hook is not None:
+            self.post_hook(self)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
