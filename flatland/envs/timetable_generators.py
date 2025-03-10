@@ -134,8 +134,8 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
 
 def ttgen_flatland2(agents: List[EnvAgent], distance_map: DistanceMap,
                     agents_hints: dict, np_random: RandomState = None) -> Timetable:
-    nMaxSteps = 1000
+    n_max_steps = 1000
     return Timetable(
         earliest_departures=[[0]] * len(agents),
-        latest_arrivals=[[nMaxSteps]] * len(agents),
-        max_episode_steps=1000)
+        latest_arrivals=[[n_max_steps]] * len(agents),
+        max_episode_steps=n_max_steps)
