@@ -26,6 +26,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
+from flatland.envs.step_utils.action_preprocessing import process_illegal_action
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.envs.step_utils.transition_utils import check_valid_action
 from flatland.utils import seeding
@@ -411,7 +412,8 @@ class RailEnv(Environment):
             * Block all actions when in waiting state
             * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
         """
-        action = action_preprocessing.preprocess_raw_action(action, agent.state, agent.action_saver.saved_action)
+        action = RailEnvActions(action)
+        action = process_illegal_action(action)
         action = action_preprocessing.preprocess_action_when_waiting(action, agent.state)
 
         # Try moving actions on current position
