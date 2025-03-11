@@ -32,6 +32,8 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12" ]
         steps:
+            -   name: Check disk space
+                run: df . -h
             -   uses: actions/checkout@v4
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
@@ -48,6 +50,8 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Run tests
                 run: tox
+            -   name: Check disk space
+                run: df . -h
 
     notebooks:
         runs-on: ubuntu-22.04
