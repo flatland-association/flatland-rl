@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from benchmarks.benchmark_episodes import run_episode
@@ -20,4 +21,7 @@ from benchmarks.benchmark_episodes import run_episode
     ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_2", "Test_03_Level_2"),
 ])
 def test_episode(data_sub_dir: str, ep_id: str):
-    run_episode(data_sub_dir, ep_id)
+    # run with snapshots
+    run_episode(data_sub_dir, ep_id, snapshot_interval=1)
+    # start episode from a snapshot to ensure snapshot contains full state!
+    run_episode(data_sub_dir, ep_id, start_step=np.random.randint(0,50))

@@ -58,6 +58,9 @@ def test_from_submission():
         assert "episode_id	env_time	agent_id	position" in (data_dir / TRAINS_POSITIONS_FNAME).read_text()
 
         trajectory.evaluate()
+        trajectory.evaluate(start_step=5)
+        with pytest.raises(FileNotFoundError):
+            trajectory.evaluate(start_step=4)
 
 
 def test_cli_from_submission():

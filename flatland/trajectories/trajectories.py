@@ -15,6 +15,7 @@ from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.utils.rendertools import RenderTool
 
 DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
 TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
@@ -86,21 +87,25 @@ class Trajectory:
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def restore_episode(self) -> RailEnv:
+    def restore_episode(self, start_step: int = None) -> RailEnv:
         """Restore an episode.
 
         Parameters
         ----------
-
+        start_step : Optional[int]
+            start from snapshot (if it exists)
         Returns
         -------
         RailEnv
             the episode
         """
-
-        f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-        env, _ = RailEnvPersister.load_new(f)
-        return env
+        if start_step is None:
+            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
+            env, _ = RailEnvPersister.load_new(f)
+            return env
+        else:
+            env, _ = RailEnvPersister.load_new(os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{start_step:04d}.pkl"))
+            return env
 
     def position_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position}
@@ -133,7 +138,9 @@ class Trajectory:
             print(df[(df['agent_id'] == agent_id) & (df['episode_id'] == self.ep_id)]["env_time"])
         assert len(pos) == 1, f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}"
         iloc_ = pos.iloc[0]
-        iloc_ = iloc_.replace("<Grid4TransitionsEnum.NORTH: 0>", "0").replace("<Grid4TransitionsEnum.EAST: 1>", "1").replace("<Grid4TransitionsEnum.SOUTH: 2>", "2").replace("<Grid4TransitionsEnum.WEST: 3>", "3")
+        iloc_ = iloc_.replace("<Grid4TransitionsEnum.NORTH: 0>", "0").replace("<Grid4TransitionsEnum.EAST: 1>", "1").replace("<Grid4TransitionsEnum.SOUTH: 2>",
+                                                                                                                             "2").replace(
+            "<Grid4TransitionsEnum.WEST: 3>", "3")
         return ast.literal_eval(iloc_)
 
     def action_lookup(self, actions_df: pd.DataFrame, env_time: int, agent_id: int) -> RailEnvActions:
@@ -179,7 +186,7 @@ class Trajectory:
             return movement.iloc[0]
         raise
 
-    def evaluate(self):
+    def evaluate(self, start_step: int = None, rendering=False, snapshot_interval=0):
         """
         The data is structured as follows:
             -30x30 map
@@ -193,25 +200,42 @@ class Trajectory:
                         <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
 
         All these episodes are with constant speed of 1 and malfunctions free.
-
-        Parameters
+         Parameters
         ----------
-        data_sub_dir subdirectory within BENCHMARK_EPISODES_FOLDER
-        ep_id the episode ID
+        start_step : int
+            start evaluation from intermediate step (requires snapshot to be present)
+        rendering : bool
+            render while evaluating
+        snapshot_interval : int
+            interval to write pkl snapshots. 1 means at every step. 0 means never.
         """
 
         trains_positions = self.read_trains_positions()
         actions = self.read_actions()
         trains_arrived = self.read_trains_arrived()
 
-        env = self.restore_episode()
+        env = self.restore_episode(start_step)
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
+        if start_step is None:
+            start_step = 0
 
-        for env_time in tqdm.tqdm(range(env._max_episode_steps)):
+        if rendering:
+            renderer = RenderTool(env)
+            renderer.render_env(show=True, frames=False, show_observations=False)
+
+        if rendering:
+            renderer.render_env(show=True, show_observations=True)
+        for env_time in tqdm.tqdm(range(start_step, env._max_episode_steps)):
+
+            if snapshot_interval > 0 and env_time % snapshot_interval == 0:
+                RailEnvPersister.save(env, os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{env_time:04d}.pkl"))
             action = {agent_id: self.action_lookup(actions, env_time=env_time, agent_id=agent_id) for agent_id in range(n_agents)}
             _, _, dones, _ = env.step(action)
             done = dones['__all__']
+
+            if rendering:
+                renderer.render_env(show=True, show_observations=True)
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
@@ -230,23 +254,23 @@ class Trajectory:
 
     @staticmethod
     def create_from_policy(
-        policy: Policy,
-        data_dir: Path,
-        n_agents=7,
-        x_dim=30,
-        y_dim=30,
-        n_cities=2,
-        max_rail_pairs_in_city=4,
-        grid_mode=False,
-        max_rails_between_cities=2,
-        malfunction_duration_min=20,
-        malfunction_duration_max=50,
-        malfunction_interval=540,
-        speed_ratios=None,
-        seed=42,
-        obs_builder: Optional[ObservationBuilder] = None,
-        snapshot_interval: int = 1,
-        ep_id: str = None
+            policy: Policy,
+            data_dir: Path,
+            n_agents=7,
+            x_dim=30,
+            y_dim=30,
+            n_cities=2,
+            max_rail_pairs_in_city=4,
+            grid_mode=False,
+            max_rails_between_cities=2,
+            malfunction_duration_min=20,
+            malfunction_duration_max=50,
+            malfunction_interval=540,
+            speed_ratios=None,
+            seed=42,
+            obs_builder: Optional[ObservationBuilder] = None,
+            snapshot_interval: int = 1,
+            ep_id: str = None
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -285,7 +309,8 @@ class Trajectory:
             Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
         snapshot_interval : int
             interval to write pkl snapshots
-
+        ep_id: str
+            if not provide, generate one.
         Returns
         -------
         Trajectory
@@ -463,23 +488,23 @@ def evaluate_trajectory(data_dir: Path, ep_id: str):
               help="Set the episode ID used - if not set, a UUID will be sampled.",
               required=False)
 def generate_trajectory_from_policy(
-    data_dir: Path,
-    policy_pkg: str, policy_cls: str,
-    obs_builder_pkg: str, obs_builder_cls: str,
-    n_agents=7,
-    x_dim=30,
-    y_dim=30,
-    n_cities=2,
-    max_rail_pairs_in_city=4,
-    grid_mode=False,
-    max_rails_between_cities=2,
-    malfunction_duration_min=20,
-    malfunction_duration_max=50,
-    malfunction_interval=540,
-    speed_ratios=None,
-    seed: int = 42,
-    snapshot_interval: int = 1,
-    ep_id: str = None
+        data_dir: Path,
+        policy_pkg: str, policy_cls: str,
+        obs_builder_pkg: str, obs_builder_cls: str,
+        n_agents=7,
+        x_dim=30,
+        y_dim=30,
+        n_cities=2,
+        max_rail_pairs_in_city=4,
+        grid_mode=False,
+        max_rails_between_cities=2,
+        malfunction_duration_min=20,
+        malfunction_duration_max=50,
+        malfunction_interval=540,
+        speed_ratios=None,
+        seed: int = 42,
+        snapshot_interval: int = 1,
+        ep_id: str = None
 ):
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
@@ -511,10 +536,10 @@ def generate_trajectory_from_policy(
 
 
 def generate_trajectories_from_metadata(
-    metadata_csv: Path,
-    data_dir: Path,
-    policy_pkg: str, policy_cls: str,
-    obs_builder_pkg: str, obs_builder_cls: str):
+        metadata_csv: Path,
+        data_dir: Path,
+        policy_pkg: str, policy_cls: str,
+        obs_builder_pkg: str, obs_builder_cls: str):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
         try:

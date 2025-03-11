@@ -144,7 +144,7 @@ def test_episode(data_sub_dir: str, ep_id: str):
     run_episode(data_sub_dir, ep_id)
 
 
-def run_episode(data_sub_dir: str, ep_id: str):
+def run_episode(data_sub_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None):
     """
     The data is structured as follows:
         -30x30 map
@@ -161,12 +161,20 @@ def run_episode(data_sub_dir: str, ep_id: str):
 
     Parameters
     ----------
-    data_sub_dir subdirectory within BENCHMARK_EPISODES_FOLDER
-    ep_id the episode ID
+    data_sub_dir: str
+        subdirectory within BENCHMARK_EPISODES_FOLDER
+    ep_id : str
+        the episode ID
+    start_step : int
+        start evaluation from intermediate step (requires snapshot to be present)
+    rendering : bool
+        render while evaluating
+    snapshot_interval : int
+        interval to write pkl snapshots. 1 means at every step. 0 means never.
     """
     _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
     assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = os.path.join(_dir, data_sub_dir)
 
-    Trajectory(data_dir=data_dir, ep_id=ep_id).evaluate()
+    Trajectory(data_dir=data_dir, ep_id=ep_id).evaluate(start_step, rendering=rendering, snapshot_interval=snapshot_interval)
