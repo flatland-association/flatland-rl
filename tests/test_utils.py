@@ -43,7 +43,7 @@ def set_penalties_for_replay(env: RailEnv):
     env.invalid_action_penalty = -29
 
 
-def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False, activate_agents=True, 
+def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering: bool = False, activate_agents=True,
                       skip_reward_check=False, set_ready_to_depart=False, skip_action_required_check=False):
     """
     Runs the replay configs and checks assertions.
@@ -57,7 +57,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
     - `status` is verified (optionally, only if not `None` in `Replay`)
     - `set_malfunction` is applied (optionally, only if not `None` in `Replay`)
     - `malfunction` is verified
-    - `action` must only be provided if action_required from previous step (initally all True)
+    - `action` must only be provided if action_required from previous step (initially all True)
 
     *Step*
     - performed with the given `action`
@@ -111,19 +111,19 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                                                                                                    expected)
 
         action_dict = {}
-
+        print(f"[{step}] BEFORE stepping: verify position/direction/state")
         for a, test_config in enumerate(test_configs):
             agent: EnvAgent = env.agents[a]
             replay = test_config.replay[step]
             # if not agent.position == replay.position:
-                # import pdb; pdb.set_trace()   
+                # import pdb; pdb.set_trace()
             _assert(a, agent.position, replay.position, 'position')
             _assert(a, agent.direction, replay.direction, 'direction')
             if replay.state is not None:
                 _assert(a, agent.state, replay.state, 'state')
 
             if replay.action is not None:
-                if not skip_action_required_check:    
+                if not skip_action_required_check:
                     assert info_dict['action_required'][
                            a] == True or agent.state == TrainState.READY_TO_DEPART, "[{}] agent {} expecting action_required={} or agent status READY_TO_DEPART".format(
                     step, a, True)
@@ -140,8 +140,9 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 # We also set next malfunction to infitiy to avoid interference with our tests
                 env.agents[a].malfunction_handler._set_malfunction_down_counter(replay.set_malfunction)
             _assert(a, agent.malfunction_handler.malfunction_down_counter, replay.malfunction, 'malfunction')
-        print(step)
+        print(f"[{step}] STEPping with actions {action_dict}")
         _, rewards_dict, _, info_dict = env.step(action_dict)
+        print(f"[{step}] AFTER stepping: verify rewards")
         # import pdb; pdb.set_trace()
         if rendering:
             renderer.render_env(show=True, show_observations=True)
