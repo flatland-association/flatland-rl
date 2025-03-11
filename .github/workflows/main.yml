@@ -80,7 +80,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run tests
-                run: tox -e py${{ matrix.python-version }}
+                run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
             -   name: Check disk space
                 run: df . -h
 
@@ -106,7 +106,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run notebooks
-                run: tox run -e notebooks
+                run: tox run -e py${{ matrix.python-version }}-notebooks
 
     examples:
         runs-on: ubuntu-22.04
@@ -125,7 +125,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run examples
-                run: tox run -e examples
+                run: tox run -e py${{ matrix.python-version }}-examples
 
     profiling:
         runs-on: ubuntu-22.04
