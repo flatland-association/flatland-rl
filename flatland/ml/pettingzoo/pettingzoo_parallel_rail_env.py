@@ -1,3 +1,11 @@
+"""
+Flatland wrapper for Pettingzoo parallel API (https://pettingzoo.farama.org/api/parallel/) for environments where all agents have simultaneous actions and observations.
+This API is based around the paradigm of Partially Observable Stochastic Games (POSGs) and the details are similar to RLlib’s MultiAgent environment specification,
+except it allows for different observation and action spaces between the agents.
+
+See also PettingZoo: A Standard API for Multi-Agent Reinforcement Learning, https://arxiv.org/pdf/2009.14471
+"""
+import copy
 from typing import Optional
 
 import gymnasium as gym
@@ -8,12 +16,13 @@ from pettingzoo.utils.env import AgentID, ObsType, ActionType
 from flatland.envs.rail_env import RailEnv
 
 
-class PettingZooParallelEnvWrapper(ParallelEnv):
+class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env):
     metadata = {'render.modes': ['human', "rgb_array"], 'name': "flatland_pettingzoo",
                 'video.frames_per_second': 10,
                 'semantics.autoreset': False}
 
     def __init__(self, wrap: RailEnv, render_mode: Optional[str] = None):
+        assert hasattr(wrap.obs_builder, "get_observation_space"), f"{type(wrap.obs_builder)} is not gym-compatible, missing get_observation_space"
         self.wrap = wrap
         self.agents: list[AgentID] = self.wrap.get_agent_handles()
         self.possible_agents: list[AgentID] = self.wrap.get_agent_handles()
@@ -39,7 +48,18 @@ class PettingZooParallelEnvWrapper(ParallelEnv):
         """
         if options is None:
             options = {}
-        return self.wrap.reset(random_seed=seed, **options)
+
+        observations, infos = self.wrap.reset(random_seed=seed, **options)
+        infos = {
+            i:
+                {
+                    'action_required': infos['action_required'][i],
+                    'malfunction': infos['malfunction'][i],
+                    'speed': infos['speed'][i],
+                    'state': infos['state'][i]
+                } for i in self.wrap.get_agent_handles()
+        }
+        return observations, infos
 
     def step(
         self, actions: dict[AgentID, ActionType]
@@ -50,7 +70,9 @@ class PettingZooParallelEnvWrapper(ParallelEnv):
         and info dictionary, where each dictionary is keyed by the agent.
         """
         observations, rewards, terminations, infos = self.wrap.step(action_dict=actions)
-        truncations = {"__all__": False}
+        truncations = {i: False for i in self.wrap.get_agent_handles()}
+        terminations = copy.deepcopy(terminations)
+        del terminations["__all__"]
         infos = {
             i:
                 {
