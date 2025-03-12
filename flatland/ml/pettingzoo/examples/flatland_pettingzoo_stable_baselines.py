@@ -15,13 +15,13 @@ from pettingzoo import ParallelEnv
 from stable_baselines3 import PPO
 from stable_baselines3.ppo import MlpPolicy
 
-from flatland.env_generation.env_creator import env_creator
+from flatland.env_generation.env_generator import env_generator
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenTreeObsForRailEnv
+from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenedNormalizedTreeObsForRailEnv
 from flatland.ml.pettingzoo.wrappers import PettingzooFlatland
 
 
-def train_butterfly_supersuit(
+def train_flatland_pettingzoo_supersuit(
     env_fn, steps: int = 10_000, seed: int | None = 0, **env_kwargs
 ):
     # Train a single model to play as each agent in a cooperative Parallel environment
@@ -53,9 +53,9 @@ def train_butterfly_supersuit(
     env.close()
 
 
-def eval(env_fn, num_games: int = 100, render_mode: str | None = None, **env_kwargs):
+def eval_flatland_pettingzoo(env_fn, num_games: int = 100, render_mode: str | None = None, **env_kwargs):
     # Evaluate a trained agent vs a random agent
-    env: ParallelEnv = env_fn.env(render_mode=render_mode, **env_kwargs)
+    env: ParallelEnv = env_fn.parallel_env(render_mode=render_mode, **env_kwargs)
 
     print(
         f"\nStarting evaluation on {str(env.metadata['name'])} (num_games={num_games}, render_mode={render_mode})"
@@ -73,8 +73,6 @@ def eval(env_fn, num_games: int = 100, render_mode: str | None = None, **env_kwa
 
     rewards = {agent: 0 for agent in env.possible_agents}
 
-    # SB3 models are designed for single-agent settings, we get around this by using the same model for every agent
-    # TODO not sure this is correct - what about use of AECEnv in the waterworld example?
     for i in range(num_games):
         obs, _ = env.reset(seed=i)
 
@@ -95,14 +93,15 @@ def eval(env_fn, num_games: int = 100, render_mode: str | None = None, **env_kwa
 
 
 if __name__ == "__main__":
-    env_fn = PettingzooFlatland(env_creator(obs_builder_object=FlattenTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))))
+    env_fn = PettingzooFlatland(
+        env_generator(obs_builder_object=FlattenedNormalizedTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))))
     env_kwargs = {}
 
     # Train a model
-    train_butterfly_supersuit(env_fn, steps=196_608, seed=0, **env_kwargs)
+    train_flatland_pettingzoo_supersuit(env_fn, steps=196_608, seed=0, **env_kwargs)
 
     # Evaluate 10 games (average reward should be positive but can vary significantly)
-    eval(env_fn, num_games=10, render_mode=None, **env_kwargs)
+    eval_flatland_pettingzoo(env_fn, num_games=10, render_mode=None, **env_kwargs)
 
     # Watch 2 games
-    eval(env_fn, num_games=2, render_mode="human", **env_kwargs)
+    eval_flatland_pettingzoo(env_fn, num_games=2, render_mode="human", **env_kwargs)

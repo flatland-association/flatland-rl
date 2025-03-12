@@ -7,9 +7,5 @@ class PettingzooFlatland:
         assert hasattr(wrap.obs_builder, "get_observation_space"), f"{type(wrap.obs_builder)} is not gym-compatible, missing get_observation_space"
         self.wrap = wrap
 
-    # TODO should be AEC instead?
-    def env(self, **kwargs):
-        return PettingZooParallelEnvWrapper(self.wrap, **kwargs)
-
     def parallel_env(self, **kwargs):
         return PettingZooParallelEnvWrapper(self.wrap, **kwargs)
