@@ -1,6 +1,6 @@
-import os
-
 import pytest
+
+from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 
 DOWNLOAD_INSTRUCTIONS = "Download from https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
 # zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip 30x30\ map -x "*.DS_Store"; zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip malfunction_deadlock_avoidance_heuristics -x "*.DS_Store"
@@ -141,12 +141,7 @@ from flatland.trajectories.trajectories import Trajectory
     ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_9", "Test_04_Level_9"),
 ])
 def test_episode(data_sub_dir: str, ep_id: str):
-    _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
-    assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
-    assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
-    data_dir = os.path.join(_dir, data_sub_dir)
-
-    run_episode(data_dir, ep_id)
+    run_episode(data_sub_dir, ep_id)
 
 
 def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None):
@@ -177,4 +172,4 @@ def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0,
     snapshot_interval : int
         interval to write pkl snapshots. 1 means at every step. 0 means never.
     """
-    Trajectory(data_dir=data_dir, ep_id=ep_id).evaluate(start_step, rendering=rendering, snapshot_interval=snapshot_interval)
+    TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id)).evaluate(start_step=start_step, rendering=rendering, snapshot_interval=snapshot_interval)
