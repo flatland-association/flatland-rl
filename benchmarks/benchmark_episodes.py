@@ -1,153 +1,10 @@
-import ast
 import os
 
-import pandas as pd
 import pytest
 
-from flatland.envs.malfunction_generators import NoMalfunctionGen
-from flatland.envs.persistence import RailEnvPersister
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.rail_trainrun_data_structures import Waypoint
-
-DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
-TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
-TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
-SERIALISED_STATE_SUBDIR = 'serialised_state'
-
-DOWNLOAD_INSTRUCTIONS = "Download from https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
-# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER.zip 30x30\ map -x "*.DS_Store"
-
-COLLECT_POSITIONS = False
-
-
-def read_actions(data_dir: str):
-    """Returns pd df with all actions for all episodes."""
-    tmp_dir = os.path.join(data_dir, DISCRETE_ACTION_FNAME)
-    return pd.read_csv(tmp_dir, sep='\t')
-
-
-def read_trains_arrived(data_dir: str):
-    """Returns pd df with success rate for all episodes."""
-    tmp_dir = os.path.join(data_dir, TRAINS_ARRIVED_FNAME)
-    return pd.read_csv(tmp_dir, sep='\t')
-
-
-def read_trains_positions(data_dir: str) -> pd.DataFrame:
-    """Returns pd df with all trains' positions for all episodes."""
-    f = os.path.join(data_dir, TRAINS_POSITIONS_FNAME)
-    if not os.path.exists(f):
-        return pd.DataFrame(columns=['env_time', 'agent_id', 'episode_id', 'position'])
-    return pd.read_csv(f, sep='\t')
-
-
-def write_trains_positions(df: pd.DataFrame, data_dir: str):
-    """Store pd df with all trains' positions for all episodes."""
-    f = os.path.join(data_dir, TRAINS_POSITIONS_FNAME)
-    df.to_csv(f, sep='\t', index=False)
-
-
-def restore_episode(data_dir: str, ep_id: str) -> RailEnv:
-    """Restore an episode.
-
-    Parameters
-    ----------
-    data_dir: str
-        sub dir of the episode
-    ep_id: str
-        String identifier for the episode to be replayed.
-
-    Returns
-    -------
-    RailEnv
-        the episode
-    """
-
-    f = os.path.join(data_dir, SERIALISED_STATE_SUBDIR, f'{ep_id}.pkl')
-    env, _ = RailEnvPersister.load_new(f)
-
-    # TODO episodes contain strings for malfunction_rate etc. instead of ints - we should fix the serialized pkls?
-    env.malfunction_generator = NoMalfunctionGen()
-    return env
-
-
-def position_collect(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int, position: Waypoint):
-    df.loc[len(df)] = {'env_time': env_time, 'agent_id': agent_id, 'episode_id': ep_id, 'position': position}
-
-
-def position_lookup(df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) -> Waypoint:
-    """Method used to retrieve the stored position (if available).
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        Data frame from ActionEvents.discrete_action.tsv
-    ep_id: str
-        episode ID
-    env_time: int
-        episode step
-    agent_id: int
-        agent ID
-    Returns
-    -------
-    Waypoint
-        The position in the format ((row, column), direction).
-    """
-    pos = df.loc[(df['env_time'] == env_time) & (df['agent_id'] == agent_id) & (df['episode_id'] == ep_id)]['position']
-    if len(pos) != 1:
-        print(f"Found {len(pos)} positions for {ep_id} {env_time} {agent_id}")
-        print(df[(df['agent_id'] == agent_id) & (df['episode_id'] == ep_id)]["env_time"])
-    assert len(pos) == 1, f"Found {len(pos)} positions for {ep_id} {env_time} {agent_id}"
-    return Waypoint(*ast.literal_eval(pos.iloc[0]))
-
-
-def action_lookup(actions_df: pd.DataFrame, ep_id: str, env_time: int, agent_id: int) -> RailEnvActions:
-    """Method used to retrieve the stored action (if available). Defaults to 2 = MOVE_FORWARD.
-
-    Parameters
-    ----------
-    actions_df: pd.DataFrame
-        Data frame from ActionEvents.discrete_action.tsv
-    ep_id: str
-        episode ID
-    env_time: int
-        episode step
-    agent_id: int
-        agent ID
-    Returns
-    -------
-    RailEnvActions
-        The action to step the env.
-    """
-    action = actions_df.loc[
-        (actions_df['env_time'] == env_time) &
-        (actions_df['agent_id'] == f'agent_{agent_id}') &
-        (actions_df['episode_id'] == ep_id)
-        ]['action'].to_numpy()
-    if len(action) == 0:
-        return RailEnvActions(2)
-    return RailEnvActions(action[0])
-
-
-def trains_arrived_lookup(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
-    """Method used to retrieve the trains arrived for the episode.
-
-    Parameters
-    ----------
-    movements_df: pd.DataFrame
-        Data frame from event_logs/TrainMovementEvents.trains_arrived.tsv
-    ep_id: str
-        episode ID
-    Returns
-    -------
-    pd.Series
-        The trains arrived data.
-    """
-    movement = movements_df.loc[(movements_df['episode_id'] == ep_id)]
-
-    if len(movement) == 1:
-        return movement.iloc[0]
-    raise
+DOWNLOAD_INSTRUCTIONS = "Download from https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
+# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip 30x30\ map -x "*.DS_Store"; zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip malfunction_deadlock_avoidance_heuristics -x "*.DS_Store"
+from flatland.trajectories.trajectories import Trajectory
 
 
 @pytest.mark.parametrize("data_sub_dir,ep_id", [
@@ -231,12 +88,68 @@ def trains_arrived_lookup(movements_df: pd.DataFrame, ep_id: str) -> pd.Series:
     ("30x30 map/50_trains", "968ec1c3-2e37-4937-b6f1-d7bb188a0bb6"),
     ("30x30 map/50_trains", "ec716f73-b22a-4fae-833a-7f58eed3968d"),
     ("30x30 map/50_trains", "f70202cc-2dec-4080-bfef-7884ab47b1b4"),
+
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_0", "Test_00_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_1", "Test_00_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_2", "Test_00_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_3", "Test_00_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_4", "Test_00_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_5", "Test_00_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_6", "Test_00_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_7", "Test_00_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_8", "Test_00_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_9", "Test_00_Level_9"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_0", "Test_01_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_1", "Test_01_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_2", "Test_01_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_3", "Test_01_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_4", "Test_01_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_5", "Test_01_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_6", "Test_01_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_7", "Test_01_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_8", "Test_01_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_9", "Test_01_Level_9"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_0", "Test_02_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_1", "Test_02_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_2", "Test_02_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_3", "Test_02_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_4", "Test_02_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_5", "Test_02_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_6", "Test_02_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_7", "Test_02_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_8", "Test_02_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_9", "Test_02_Level_9"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_0", "Test_03_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_1", "Test_03_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_2", "Test_03_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_3", "Test_03_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_4", "Test_03_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_5", "Test_03_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_6", "Test_03_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_7", "Test_03_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_8", "Test_03_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_9", "Test_03_Level_9"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_0", "Test_04_Level_0"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_1", "Test_04_Level_1"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_2", "Test_04_Level_2"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_3", "Test_04_Level_3"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_4", "Test_04_Level_4"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_5", "Test_04_Level_5"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_6", "Test_04_Level_6"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_7", "Test_04_Level_7"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_8", "Test_04_Level_8"),
+    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_9", "Test_04_Level_9"),
 ])
 def test_episode(data_sub_dir: str, ep_id: str):
-    run_episode(data_sub_dir, ep_id)
+    _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
+    assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
+    assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
+    data_dir = os.path.join(_dir, data_sub_dir)
+
+    run_episode(data_dir, ep_id)
 
 
-def run_episode(data_sub_dir: str, ep_id: str):
+def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None):
     """
     The data is structured as follows:
         -30x30 map
@@ -253,42 +166,15 @@ def run_episode(data_sub_dir: str, ep_id: str):
 
     Parameters
     ----------
-    data_sub_dir subdirectory within BENCHMARK_EPISODES_FOLDER
-    ep_id the episode ID
+    data_dir: str
+        data dir with trajectory
+    ep_id : str
+        the episode ID
+    start_step : int
+        start evaluation from intermediate step (requires snapshot to be present)
+    rendering : bool
+        render while evaluating
+    snapshot_interval : int
+        interval to write pkl snapshots. 1 means at every step. 0 means never.
     """
-    _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
-    assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
-    assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
-    data_dir = os.path.join(_dir, data_sub_dir)
-
-    trains_positions = read_trains_positions(data_dir)
-    actions = read_actions(data_dir)
-    trains_arrived = read_trains_arrived(data_dir)
-
-    env = restore_episode(data_dir, ep_id)
-    done = False
-    n_agents = env.get_num_agents()
-    assert len(env.agents) == n_agents
-    i = 0
-    while not done:
-        action = {agent_id: action_lookup(actions, ep_id, env_time=env._elapsed_steps - 1, agent_id=agent_id) for agent_id in range(n_agents)}
-        _, _, dones, _ = env.step(action)
-        done = dones['__all__']
-        i += 1
-
-        for agent_id in range(n_agents):
-            agent = env.agents[agent_id]
-            actual_position = Waypoint(agent.position, agent.direction)
-            if COLLECT_POSITIONS:
-                position_collect(trains_positions, ep_id=ep_id, env_time=i, agent_id=agent_id, position=actual_position)
-            else:
-                expected_position = position_lookup(trains_positions, ep_id=ep_id, env_time=i, agent_id=agent_id)
-                assert actual_position == expected_position, (data_sub_dir, ep_id, agent_id, i, actual_position, expected_position)
-
-    trains_arrived_episode = trains_arrived_lookup(trains_arrived, ep_id)
-    expected_success_rate = trains_arrived_episode['success_rate']
-    actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-    print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
-    assert expected_success_rate == actual_success_rate
-    if COLLECT_POSITIONS:
-        write_trains_positions(trains_positions, data_dir)
+    Trajectory(data_dir=data_dir, ep_id=ep_id).evaluate(start_step, rendering=rendering, snapshot_interval=snapshot_interval)

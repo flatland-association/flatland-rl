@@ -40,9 +40,7 @@ def ray_env_generator(render_mode: Optional[str] = None, **kwargs) -> MultiAgent
     -------
 
     """
-    rail_env = env_generator(**kwargs)
-    # install agents!
-    rail_env.reset()
+    rail_env, _, _ = env_generator(**kwargs)
     # https://discuss.ray.io/t/multi-agent-where-does-the-first-structure-comes-from/7010/8
     env = ray_multi_agent_env_wrapper(wrap=rail_env, render_mode=render_mode)
     return env
