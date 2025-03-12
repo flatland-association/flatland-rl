@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import click
+import numpy as np
 import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks
@@ -76,7 +77,7 @@ class TrajectoryEvaluator:
                 actual_position = (agent.position, agent.direction)
                 expected_position = self.trajectory.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
                 assert actual_position == expected_position, (
-                self.trajectory.data_dir, self.trajectory.ep_id, env_time + 1, agent_id, actual_position, expected_position)
+                    self.trajectory.data_dir, self.trajectory.ep_id, env_time + 1, agent_id, actual_position, expected_position)
 
             if done:
                 break
@@ -85,7 +86,7 @@ class TrajectoryEvaluator:
         expected_success_rate = trains_arrived_episode['success_rate']
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
-        assert expected_success_rate == actual_success_rate
+        assert np.isclose(expected_success_rate, actual_success_rate)
 
 
 @click.command()
