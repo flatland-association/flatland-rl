@@ -27,7 +27,6 @@ class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env):
         self.agents: list[AgentID] = self.wrap.get_agent_handles()
         self.possible_agents: list[AgentID] = self.wrap.get_agent_handles()
         self.observation_spaces: dict[AgentID, gym.spaces.Space] = {
-            # TODO bad smell: must be gymobservationbuilder
             handle: self.wrap.obs_builder.get_observation_space(handle)
             for handle in self.wrap.get_agent_handles()
         }
