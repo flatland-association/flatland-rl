@@ -1,5 +1,5 @@
-from envs.rail_env import RailEnv
-from ml.pettingzoo.pettingzoo_parallel_rail_env import PettingZooParallelEnvWrapper
+from flatland.envs.rail_env import RailEnv
+from flatland.ml.pettingzoo.pettingzoo_parallel_rail_env import PettingZooParallelEnvWrapper
 
 
 class PettingzooFlatland:
