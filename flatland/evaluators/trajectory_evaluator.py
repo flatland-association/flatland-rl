@@ -7,7 +7,7 @@ import tqdm
 from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.envs.persistence import RailEnvPersister
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
-from utils.rendertools import RenderTool
+from flatland.utils.rendertools import RenderTool
 
 
 class TrajectoryEvaluator:
