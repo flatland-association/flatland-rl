@@ -14,6 +14,8 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12" ]
         steps:
+            -   name: Check disk space
+                run: df . -h
             -   uses: actions/checkout@v4
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
@@ -21,7 +23,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v2.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Install tox
@@ -29,7 +31,9 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run tests
-                run: tox
+                run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
+            -   name: Check disk space
+                run: df . -h
 
     publish:
         runs-on: ubuntu-22.04
