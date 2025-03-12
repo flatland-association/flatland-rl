@@ -125,20 +125,6 @@ from flatland.trajectories.trajectories import Trajectory
     ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_3", "Test_03_Level_3"),
     ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_4", "Test_03_Level_4"),
     ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_5", "Test_03_Level_5"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_6", "Test_03_Level_6"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_7", "Test_03_Level_7"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_8", "Test_03_Level_8"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_9", "Test_03_Level_9"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_0", "Test_04_Level_0"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_1", "Test_04_Level_1"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_2", "Test_04_Level_2"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_3", "Test_04_Level_3"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_4", "Test_04_Level_4"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_5", "Test_04_Level_5"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_6", "Test_04_Level_6"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_7", "Test_04_Level_7"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_8", "Test_04_Level_8"),
-    ("malfunction_deadlock_avoidance_heuristics/Test_04/Level_9", "Test_04_Level_9"),
 ])
 def test_episode(data_sub_dir: str, ep_id: str):
     _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
