@@ -3,6 +3,7 @@ import importlib
 import os
 import uuid
 from pathlib import Path
+from typing import Optional, Any, Tuple
 from typing import Optional, Tuple
 
 import click
@@ -17,6 +18,7 @@ from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.utils.rendertools import RenderTool
 
 DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
 TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
@@ -88,21 +90,25 @@ class Trajectory:
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def restore_episode(self) -> RailEnv:
+    def restore_episode(self, start_step: int = None) -> RailEnv:
         """Restore an episode.
 
         Parameters
         ----------
-
+        start_step : Optional[int]
+            start from snapshot (if it exists)
         Returns
         -------
         RailEnv
             the episode
         """
-
-        f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-        env, _ = RailEnvPersister.load_new(f)
-        return env
+        if start_step is None:
+            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
+            env, _ = RailEnvPersister.load_new(f)
+            return env
+        else:
+            env, _ = RailEnvPersister.load_new(os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{start_step:04d}.pkl"))
+            return env
 
     def position_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position}
@@ -135,7 +141,9 @@ class Trajectory:
             print(df[(df['agent_id'] == agent_id) & (df['episode_id'] == self.ep_id)]["env_time"])
         assert len(pos) == 1, f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}"
         iloc_ = pos.iloc[0]
-        iloc_ = iloc_.replace("<Grid4TransitionsEnum.NORTH: 0>", "0").replace("<Grid4TransitionsEnum.EAST: 1>", "1").replace("<Grid4TransitionsEnum.SOUTH: 2>", "2").replace("<Grid4TransitionsEnum.WEST: 3>", "3")
+        iloc_ = iloc_.replace("<Grid4TransitionsEnum.NORTH: 0>", "0").replace("<Grid4TransitionsEnum.EAST: 1>", "1").replace("<Grid4TransitionsEnum.SOUTH: 2>",
+                                                                                                                             "2").replace(
+            "<Grid4TransitionsEnum.WEST: 3>", "3")
         return ast.literal_eval(iloc_)
 
     def action_lookup(self, actions_df: pd.DataFrame, env_time: int, agent_id: int) -> RailEnvActions:
@@ -207,7 +215,6 @@ class Trajectory:
 
         Parameters
         ----------
-
         policy : Policy
             the submission's policy
         data_dir : Path
@@ -241,7 +248,7 @@ class Trajectory:
         snapshot_interval : int
             interval to write pkl snapshots
         ep_id: str
-            episode ID to store data under
+            episode ID to store data under. If not provided, generate one.
         callbacks: FlatlandCallbacks
             callbacks to run during trajectory creation
 
@@ -301,12 +308,28 @@ class Trajectory:
                 RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time + 1:04d}.pkl"))
             if done:
                 break
+
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
         trajectory.write_trains_positions(trains_positions)
         trajectory.write_actions(actions)
         trajectory.write_trains_arrived(trains_arrived)
         return trajectory
+
+
+@click.command()
+@click.option('--data-dir',
+              type=click.Path(exists=True),
+              help="Path to folder containing Flatland episode",
+              required=True
+              )
+@click.option('--ep-id',
+              type=str,
+              help="Episode ID.",
+              required=True
+              )
+def evaluate_trajectory(data_dir: Path, ep_id: str):
+    Trajectory(data_dir=data_dir, ep_id=ep_id).evaluate()
 
 
 @click.command()

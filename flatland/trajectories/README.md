@@ -74,12 +74,12 @@ flowchart TD
     subgraph Trajectory.run
         start((start)) -->|data_dir| D0
         D0(RailEnvPersister.load_new) -->|env| E{env done?}
-        E -->|no:\nobservations| G{Agent loop:\n more agents?}
+        E -->|no:<br/>observations| G{Agent loop:<br/> more agents?}
         G --->|observation| G1(policy.act)
         G1 -->|action| G
-        G -->|no:\n actions| F3(env.step)
+        G -->|no:<br/> actions| F3(env.step)
         F3 -->|observations,rewards,info| E
-        E -->|yes:\n rewards| H(((end)))
+        E -->|yes:<br/> rewards| H(((end)))
     end
 
     style Policy fill: #ffe, stroke: #333, stroke-width: 1px, color: black
@@ -122,14 +122,14 @@ flowchart TD
         direction TB
         start((start)) --> pre_step_loop
         subgraph pre_step_loop_ [pre step loop]
-            pre_step_loop{Agent loop:\n more agents?} -->|yes| preprocess_action
+            pre_step_loop{Agent loop:<br/> more agents?} -->|yes| preprocess_action
             preprocess_action --> motionCheck.addAgent
             motionCheck.addAgent --> pre_step_loop
         end
         pre_step_loop -->|no| find_conflicts
         find_conflicts --> step_loop
         subgraph step_loop_ [step loop]
-            step_loop{Agent loop:\n more agents?} -->|yes| check_motion
+            step_loop{Agent loop:<br/> more agents?} -->|yes| check_motion
             check_motion --> state_machen.step
             state_machen.step --> step_loop
         end
