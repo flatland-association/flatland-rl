@@ -1,3 +1,6 @@
+"""
+Flatland wrapper for ray RLlib multi-agent environment (https://docs.ray.io/en/latest/rllib/multi-agent-envs.html).
+"""
 import copy
 from typing import Tuple, Set, Optional
 
