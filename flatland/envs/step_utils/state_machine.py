@@ -1,7 +1,6 @@
 from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
-from flatland.envs.step_utils import env_utils
-from flatland.envs.fast_methods import fast_position_equal
+
 
 class TrainStateMachine:
     def __init__(self, initial_state=TrainState.WAITING):
@@ -122,7 +121,6 @@ class TrainStateMachine:
         # Set next state
         self.set_state(self.next_state)
 
-
     def clear_next_state(self):
         self.next_state = None
 
@@ -158,7 +156,7 @@ class TrainStateMachine:
 
     def __repr__(self):
         return f"\n \
-                 state: {str(self.state)}      previous_state {str(self.previous_state)} \n \
+                 state: {str(self.state.name)}      previous_state {str(self.previous_state.name)} \n \
                  st_signals: {self.st_signals}"
 
     def to_dict(self):
@@ -171,6 +169,3 @@ class TrainStateMachine:
 
     def __eq__(self, other):
         return self._state == other._state and self.previous_state == other.previous_state
-
-
-
