@@ -178,6 +178,7 @@ class RailEnv(Environment):
         self.record_steps = record_steps  # whether to save timesteps
         # save timesteps in here: [[[row, col, dir, malfunction],...nAgents], ...nSteps]
         self.cur_episode = []
+        self.cur_episode2 = []
         self.list_actions = []  # save actions in here
 
         self.motionCheck = ac.MotionCheck()
@@ -366,6 +367,8 @@ class RailEnv(Environment):
         st_signals.stop_action_given = (preprocessed_action == RailEnvActions.STOP_MOVING)
 
         # Valid Movement action Given
+        # TODO is this XOR stop_action_given? SM not well defined otherwise
+        # TODO get rid of movement_allowed in favor of conflict = motionCheck
         st_signals.valid_movement_action_given = preprocessed_action.is_moving_action() and movement_allowed
 
         # Target Reached
@@ -414,7 +417,6 @@ class RailEnv(Environment):
         """
         action = RailEnvActions(action)
         action = process_illegal_action(action)
-        action = action_preprocessing.preprocess_action_when_waiting(action, agent.state)
 
         # Try moving actions on current position
         current_position, current_direction = agent.position, agent.direction
@@ -499,7 +501,7 @@ class RailEnv(Environment):
         self.motionCheck = ac.MotionCheck()  # reset the motion check
 
         temp_transition_data = {}
-
+        endangered = []
         for agent in self.agents:
             i_agent = agent.handle
             agent.old_position = agent.position
@@ -512,38 +514,45 @@ class RailEnv(Environment):
 
             preprocessed_action = self.preprocess_action(action, agent)
 
-            # Save moving actions in not already saved
-            agent.action_saver.save_action_if_allowed(preprocessed_action, agent.state)
+            stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
 
-            # Train's next position can change if train is at cell's exit and train is not in malfunction
-            position_update_allowed = agent.speed_counter.is_cell_exit and \
-                                      not agent.malfunction_handler.malfunction_down_counter > 0 and \
-                                      not preprocessed_action == RailEnvActions.STOP_MOVING
-
-            # Calculate new position
-            # Keep agent in same place if already done
+            # TODO can we harmoize with post-find-conflicts loop and SM?
             if agent.state == TrainState.DONE:
                 new_position, new_direction = agent.position, agent.direction
-            # Add agent to the map if not on it yet
-            elif agent.position is None and agent.action_saver.is_action_saved:
+            elif agent.state == TrainState.READY_TO_DEPART and preprocessed_action.is_moving_action():
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
-            # If movement is allowed apply saved action independent of other agents
-            elif agent.action_saver.is_action_saved and position_update_allowed:
-                saved_action = agent.action_saver.saved_action
-                # Apply action independent of other agents and get temporary new position and direction
-                new_position, new_direction = env_utils.apply_action_independent(saved_action,
-                                                                                 self.rail,
-                                                                                 agent.position,
-                                                                                 agent.direction)
-                preprocessed_action = saved_action
+            elif agent.state.is_on_map_state():
+                if agent.state == TrainState.MOVING and not stop_action_given and agent.speed_counter.is_cell_exit:
+                    new_position, new_direction = env_utils.apply_action_independent(preprocessed_action,
+                                                                                     self.rail,
+                                                                                     agent.position,
+                                                                                     agent.direction)
+                # TODO double check state machine -> should we use simulation of SM with no-conflict?
+                elif agent.state == TrainState.MALFUNCTION and not agent.malfunction_handler.in_malfunction and not stop_action_given:
+                    new_position, new_direction = env_utils.apply_action_independent(preprocessed_action,
+                                                                                     self.rail,
+                                                                                     agent.position,
+                                                                                     agent.direction)
+                elif agent.state == TrainState.STOPPED and preprocessed_action.is_moving_action() and agent.speed_counter.is_cell_exit:
+                    new_position, new_direction = env_utils.apply_action_independent(preprocessed_action,
+                                                                                     self.rail,
+                                                                                     agent.position,
+                                                                                     agent.direction)
+                else:
+                    new_position, new_direction = agent.position, agent.direction
+
+            elif agent.state == TrainState.MALFUNCTION_OFF_MAP and not agent.malfunction_handler.in_malfunction:
+                new_position = agent.initial_position
+                new_direction = agent.initial_direction
             else:
-                new_position, new_direction = agent.position, agent.direction
+                assert agent.state.is_off_map_state() or agent.state == TrainState.DONE
+                new_position = None
+                new_direction = None
 
             temp_transition_data[i_agent] = env_utils.AgentTransitionData(position=new_position,
                                                                           direction=new_direction,
                                                                           preprocessed_action=preprocessed_action)
-
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
             new_position_level_free = new_position
             if new_position in self.level_free_positions:
@@ -552,11 +561,17 @@ class RailEnv(Environment):
             if agent.position in self.level_free_positions:
                 agent_position_level_free = (agent.position, agent.direction % 2)
 
-            # This is for storing and later checking for conflicts of agents trying to occupy same cell
             self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
+            if agent.earliest_departure > self._elapsed_steps and new_position_level_free is not None:
+                endangered.append(agent)
 
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
+
+        # which tests are concerned?
+        for agent in endangered:
+            dAttr = self.motionCheck.G.nodes.get((-1, agent.handle))
+            assert dAttr is None or "color" not in dAttr or dAttr["color"] not in ["red", "purple"], agent
 
         for agent in self.agents:
             i_agent = agent.handle
@@ -569,7 +584,8 @@ class RailEnv(Environment):
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                movement_allowed = self.motionCheck.check_motion(i_agent, agent_position_level_free)
+                motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)
+                movement_allowed = motion_check
 
             movement_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
             movement_allowed = movement_allowed or movement_inside_cell
@@ -579,24 +595,24 @@ class RailEnv(Environment):
             preprocessed_action = agent_transition_data.preprocessed_action
 
             ## Update states
-            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action,
-                                                                              movement_allowed)
+            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, movement_allowed)
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
 
-            # Needed when not removing agents at target
-            movement_allowed = movement_allowed and agent.state != TrainState.DONE
-
             # Agent is being added to map
-            if agent.state.is_on_map_state():
-                if agent.state_machine.previous_state.is_off_map_state():
-                    agent.position = agent.initial_position
-                    agent.direction = agent.initial_direction
-                # Speed counter completes
-                elif movement_allowed and (agent.speed_counter.is_cell_exit):
-                    agent.position = agent_transition_data.position
-                    agent.direction = agent_transition_data.direction
-                    agent.state_machine.update_if_reached(agent.position, agent.target)
+            if (
+                agent.state_machine.previous_state == TrainState.READY_TO_DEPART or agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP) and agent.state == TrainState.MOVING:
+                agent.position = agent.initial_position
+                agent.direction = agent.initial_direction
+            elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
+                agent.position = agent.initial_position
+                agent.direction = agent.initial_direction
+            # only speed update while MOVING
+            elif agent.state == TrainState.MOVING:
+                agent.speed_counter.update_counter(agent.state, agent.old_position)
+                agent.position = agent_transition_data.position
+                agent.direction = agent_transition_data.direction
+                agent.state_machine.update_if_reached(agent.position, agent.target)
 
             # Off map or on map state and position should match
             env_utils.state_position_sync_check(agent.state, agent.position, agent.handle)
@@ -609,14 +625,8 @@ class RailEnv(Environment):
             ## Update rewards
             self.rewards_dict[i_agent] += self.rewards.step_reward(agent, self.distance_map, self._elapsed_steps)
 
-            ## Update counters (malfunction and speed)
-            agent.speed_counter.update_counter(agent.state, agent.old_position)
             #    agent.state_machine.previous_state)
             agent.malfunction_handler.update_counter()
-
-            # Clear old action when starting in new cell
-            if agent.speed_counter.is_cell_entry and agent.position is not None:
-                agent.action_saver.clear_saved_action()
 
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
@@ -649,6 +659,11 @@ class RailEnv(Environment):
             ])
 
         self.cur_episode.append(list_agents_state)
+        agents_ = [agent.to_agent()._asdict() for agent in self.agents]
+        for a in agents_:
+            a["state_machine"] = str(a["state_machine"])
+            a["speed_counter"] = str(a["speed_counter"])
+        self.cur_episode2.append(agents_)
         self.list_actions.append(dActions)
 
     def _get_observations(self):

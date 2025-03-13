@@ -6,14 +6,15 @@ from attr import attrs, attrib
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.line_generators import LineGenerator
 from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params
+from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnvActions, RailEnv
 from flatland.envs.rail_generators import RailGenerator
-from flatland.envs.line_generators import LineGenerator
-from flatland.utils.rendertools import RenderTool
-from flatland.envs.persistence import RailEnvPersister
-from flatland.envs.step_utils.states import TrainState
 from flatland.envs.step_utils.speed_counter import SpeedCounter
+from flatland.envs.step_utils.states import TrainState
+from flatland.utils.rendertools import RenderTool
+
 
 @attrs
 class Replay(object):
@@ -80,6 +81,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         'action_required': [True for _ in test_configs]
     }
 
+    env.record_steps = True
+
     for step in range(len(test_configs[0].replay)):
         if step == 0:
             for a, test_config in enumerate(test_configs):
@@ -105,13 +108,22 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
         def _assert(a, actual, expected, msg):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))
+            if actual != expected:
+                print("")
+                for a in range(len(env.agents)):
+                    print(f"agent {a}")
+                    for j in range(step):
+                        print(f"      agent {a} {j + 1}")
+                        print(f'                 {env.cur_episode2[j][a]["position"]}')
+                        print(f'                 {env.cur_episode2[j][a]["state_machine"]}')
+                        print(f'                 {env.cur_episode2[j][a]["speed_counter"]}')
             assert (actual == expected) or (
                 np.allclose(actual, expected)), "[{}] agent {} {}:  actual={}, expected={}".format(step, a, msg,
                                                                                                    actual,
                                                                                                    expected)
 
         action_dict = {}
-        print(f"[{step}] BEFORE stepping: verify position/direction/state")
+        print(f"[{step}] BEFORE stepping: verify position/direction/state/malfunction")
         for a, test_config in enumerate(test_configs):
             agent: EnvAgent = env.agents[a]
             replay = test_config.replay[step]
@@ -120,7 +132,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             _assert(a, agent.position, replay.position, 'position')
             _assert(a, agent.direction, replay.direction, 'direction')
             if replay.state is not None:
-                _assert(a, agent.state, replay.state, 'state')
+                _assert(a, TrainState(agent.state).name, TrainState(replay.state).name, 'state')
 
             if replay.action is not None:
                 if not skip_action_required_check:

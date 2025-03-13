@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Tuple
 
-from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.step_utils import transition_utils
-from flatland.envs.rail_env_action import RailEnvActions
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.step_utils import transition_utils
 from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 
@@ -28,11 +28,9 @@ def apply_action_independent(action, rail, position, direction):
         Returns: new_position - New position after applying the action
                     new_direction - New direction after applying the action
     """
-    if action.is_moving_action():
-        new_direction, _ = transition_utils.check_action(action, position, direction, rail)
-        new_position = get_new_position(position, new_direction)
-    else:
-        new_position, new_direction = position, direction
+
+    new_direction, _ = transition_utils.check_action(action, position, direction, rail)
+    new_position = get_new_position(position, new_direction)
     return new_position, new_direction
 
 def state_position_sync_check(state, position, i_agent):

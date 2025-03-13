@@ -48,9 +48,11 @@ class TrajectoryEvaluator:
         trains_arrived = self.trajectory.read_trains_arrived()
 
         env = self.trajectory.restore_episode(start_step)
+        env.record_steps = True
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
         if start_step is None:
+            # TODO revise indexing - start at 1? use elapsed which reflects better?
             start_step = 0
 
         if rendering:
@@ -76,8 +78,17 @@ class TrajectoryEvaluator:
                 agent = env.agents[agent_id]
                 actual_position = (agent.position, agent.direction)
                 expected_position = self.trajectory.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
+                if actual_position != expected_position:
+                    print(f"positions = {[a.position for a in env.agents]}")
+                    print(f"initial_position = {[a.initial_position for a in env.agents]}")
+                    print(f"earliest_departure = {[a.earliest_departure for a in env.agents]}")
+                    print(f"state = {[a.state for a in env.agents]}")
+                    print(f"state = {agent.state}")
+                    print(f"previous_state = {[a.state_machine.previous_state for a in env.agents]}")
+                    print(f"previous_state = {agent.state_machine.previous_state}")
                 assert actual_position == expected_position, (
-                    self.trajectory.data_dir, self.trajectory.ep_id, env_time + 1, agent_id, actual_position, expected_position)
+                    self.trajectory.data_dir, self.trajectory.ep_id, env_time + 1, agent_id, actual_position, expected_position, agent.earliest_departure,
+                    env._elapsed_steps, env.agents)
 
             if done:
                 break

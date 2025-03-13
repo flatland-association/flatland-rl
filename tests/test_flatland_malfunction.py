@@ -264,16 +264,22 @@ def test_initial_malfunction():
             Replay(  # 0
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
-                action=RailEnvActions.MOVE_FORWARD,
                 set_malfunction=3,
                 malfunction=3,
+                state=TrainState.MOVING.value,
+
+                action=RailEnvActions.MOVE_FORWARD,
+
                 reward=env.step_penalty  # full step penalty when malfunctioning
             ),
             Replay(  # 1
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
-                action=RailEnvActions.MOVE_FORWARD,
+                state=TrainState.MALFUNCTION.value,
                 malfunction=2,
+
+                action=RailEnvActions.MOVE_FORWARD,
+
                 reward=env.step_penalty  # full step penalty when malfunctioning
             ),
             # malfunction stops in the next step and we're still at the beginning of the cell
@@ -281,23 +287,32 @@ def test_initial_malfunction():
             Replay(  # 2
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
-                action=RailEnvActions.MOVE_FORWARD,
+                state=TrainState.MALFUNCTION.value,
                 malfunction=1,
+
+                action=RailEnvActions.MOVE_FORWARD,
+
                 reward=env.step_penalty
 
             ),  # malfunctioning ends: starting and running at speed 1.0
             Replay(  # 3
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
-                action=RailEnvActions.MOVE_FORWARD,
+                state=TrainState.MALFUNCTION.value,
                 malfunction=0,
+
+                action=RailEnvActions.MOVE_FORWARD,
+
                 reward=env.start_penalty + env.step_penalty * 1.0  # running at speed 1.0
             ),
             Replay(  # 4
                 position=(3, 3),
                 direction=Grid4TransitionsEnum.EAST,
-                action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
+                state=TrainState.MOVING.value,
+
+                action=RailEnvActions.MOVE_FORWARD,
+
                 reward=env.step_penalty  # running at speed 1.0
             )
         ],

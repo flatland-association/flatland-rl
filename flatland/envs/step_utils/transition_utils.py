@@ -1,4 +1,5 @@
 from typing import Tuple
+
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero
 from flatland.envs.rail_env_action import RailEnvActions
@@ -38,7 +39,7 @@ def check_action(action, position, direction, rail):
 
     new_direction %= 4  # Dipam : Why?
 
-    if action == RailEnvActions.MOVE_FORWARD and num_transitions == 1:
+    if num_transitions == 1:
         # - dead-end, straight line or curved line;
         # new_direction will be the only valid transition
         # - take only available transition
@@ -75,15 +76,15 @@ def check_action_on_agent(action, rail, position, direction):
 
     # If transition validity hasn't been checked yet.
     if transition_valid is None:
-        transition_valid = rail.get_transition( (*position, direction), new_direction)
+        transition_valid = rail.get_transition((*position, direction), new_direction)
 
     return new_cell_valid, new_direction, new_position, transition_valid
 
 
 def check_valid_action(action, rail, position, direction):
-	new_cell_valid, _, _, transition_valid = check_action_on_agent(action, rail, position, direction)
-	action_is_valid = new_cell_valid and transition_valid
-	return action_is_valid
+    new_cell_valid, _, _, transition_valid = check_action_on_agent(action, rail, position, direction)
+    action_is_valid = new_cell_valid and transition_valid
+    return action_is_valid
 
 
 def check_bounds(position, height, width):
