@@ -26,16 +26,15 @@ class TrainStateMachine:
         """ Can only go to MOVING if a valid action is provided """
         if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
-        elif self.st_signals.valid_movement_action_given:
+        elif self.st_signals.movement_action_given and self.st_signals.movement_allowed:
             self.next_state = TrainState.MOVING
         else:
             self.next_state = TrainState.READY_TO_DEPART
 
     def _handle_malfunction_off_map(self):
         if self.st_signals.malfunction_counter_complete:
-
             if self.st_signals.earliest_departure_reached:
-                if self.st_signals.valid_movement_action_given:
+                if self.st_signals.movement_action_given and self.st_signals.movement_allowed:
                     self.next_state = TrainState.MOVING
                 elif self.st_signals.stop_action_given:
                     self.next_state = TrainState.STOPPED
@@ -51,7 +50,7 @@ class TrainStateMachine:
             self.next_state = TrainState.MALFUNCTION
         elif self.st_signals.target_reached:
             self.next_state = TrainState.DONE
-        elif self.st_signals.stop_action_given or self.st_signals.movement_conflict:
+        elif self.st_signals.stop_action_given or not self.st_signals.movement_allowed:
             self.next_state = TrainState.STOPPED
         else:
             self.next_state = TrainState.MOVING
@@ -59,14 +58,14 @@ class TrainStateMachine:
     def _handle_stopped(self):
         if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION
-        elif self.st_signals.valid_movement_action_given:
+        elif self.st_signals.movement_action_given and self.st_signals.movement_allowed:
             self.next_state = TrainState.MOVING
         else:
             self.next_state = TrainState.STOPPED
 
     def _handle_malfunction(self):
         if self.st_signals.malfunction_counter_complete:
-            if self.st_signals.valid_movement_action_given:
+            if self.st_signals.movement_action_given and self.st_signals.movement_allowed:
                 self.next_state = TrainState.MOVING
             else:
                 self.next_state = TrainState.STOPPED

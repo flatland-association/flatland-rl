@@ -52,7 +52,8 @@ class RandomAgent:
 def test_multi_speed_init():
     env = RailEnv(width=50, height=50,
                   rail_generator=sparse_rail_generator(seed=2), line_generator=sparse_line_generator(),
-                  random_seed=3,
+                  # fix random_seed where all agents have different initial_position
+                  random_seed=4,
                   number_of_agents=3)
 
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
