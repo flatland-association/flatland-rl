@@ -1,21 +1,15 @@
 import numpy as np
 
 from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
-from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.step_utils.states import TrainState
 
 
 def test_get_global_observation():
     number_of_agents = 20
-
-    stochastic_data = {'prop_malfunction': 1.,  # Percentage of defective agents
-                       'malfunction_rate': 30,  # Rate of malfunction occurence
-                       'min_duration': 3,  # Minimal duration of malfunction
-                       'max_duration': 20  # Max duration of malfunction
-                       }
 
     speed_ration_map = {1.: 0.25,  # Fast passenger train
                         1. / 2.: 0.25,  # Fast freight train
@@ -33,14 +27,14 @@ def test_get_global_observation():
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
     for _ in range(max([agent.earliest_departure for agent in env.agents])):
-        env.step({}) # DO_NOTHING for all agents
+        env.step({})  # DO_NOTHING for all agents
 
     obs, all_rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in range(number_of_agents)})
     for i in range(len(env.agents)):
         agent: EnvAgent = env.agents[i]
         print("[{}] state={}, position={}, target={}, initial_position={}".format(i, agent.state, agent.position,
-                                                                                   agent.target,
-                                                                                   agent.initial_position))
+                                                                                  agent.target,
+                                                                                  agent.initial_position))
 
     for i, agent in enumerate(env.agents):
         obs_agents_state = obs[i][1]
@@ -104,7 +98,7 @@ def test_get_global_observation():
                 has_agent = False
                 for other_i, other_agent in enumerate(env.agents):
                     if other_agent.state in [TrainState.MOVING, TrainState.MALFUNCTION, TrainState.STOPPED,
-                                              TrainState.DONE] and other_agent.position == (r, c):
+                                             TrainState.DONE] and other_agent.position == (r, c):
                         assert np.isclose(obs_agents_state[(r, c)][2], other_agent.malfunction_handler.malfunction_down_counter), \
                             "agent {} in state {} at {} should see agent malfunction {}, found = {}" \
                                 .format(i, agent.state, (r, c), other_agent.malfunction_handler.malfunction_down_counter,

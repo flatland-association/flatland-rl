@@ -1,8 +1,5 @@
 from functools import lru_cache
 
-import numpy as np
-from flatland.envs.step_utils.states import TrainState
-
 
 @lru_cache()
 def _calc_max_count(speed):
@@ -15,11 +12,9 @@ class SpeedCounter:
         self.counter = None
         self.reset_counter()
 
-    def update_counter(self, state, old_position):
-        # Can't start counting when adding train to the map
-        if state == TrainState.MOVING and old_position is not None:
-            self.counter += 1
-            self.counter = self.counter % (self.max_count + 1)
+    def update_counter(self):
+        self.counter += 1
+        self.counter = self.counter % (self.max_count + 1)
 
     def __repr__(self):
         return f"speed: {self.speed} \

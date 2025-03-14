@@ -84,6 +84,18 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
         [Waypoint(position=(3, 8), direction=1), Waypoint(position=(0, 0), direction=2)],
         [Waypoint(position=(0, 0), direction=1), Waypoint(position=(0, 0), direction=2)]
     ]
+    for i, (act, exp) in enumerate(zip(waypoints, expected)):
+        if act != exp:
+            print("")
+            for a in range(2):
+                print(f"agent {a}")
+                for j in range(i + 1):
+                    print(f"      agent {a} {j}")
+                    print(f'                 {env.cur_episode2[j][a]["position"]}')
+                    print(f'                 {env.cur_episode2[j][a]["state_machine"]}')
+                    print(f'                 {env.cur_episode2[j][a]["speed_counter"]}')
+        assert act == exp, (i, act, exp, env.cur_episode2)
+
     assert expected == waypoints, waypoints
 
 
