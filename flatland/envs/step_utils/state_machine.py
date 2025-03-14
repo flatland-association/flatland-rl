@@ -154,6 +154,15 @@ class TrainStateMachine:
     def set_transition_signals(self, state_transition_signals):
         self.st_signals = state_transition_signals
 
+    def state_position_sync_check(self, position, i_agent):
+        """ Check for whether on map and off map states are matching with position being None """
+        if self.state.is_on_map_state() and position is None:
+            raise ValueError("Agent ID {} Agent State {} is on map Agent Position {} if off map ".format(
+                i_agent, str(self.state), str(position)))
+        elif self.state.is_off_map_state() and position is not None:
+            raise ValueError("Agent ID {} Agent State {} is off map Agent Position {} if on map ".format(
+                i_agent, str(self.state), str(position)))
+
     def __repr__(self):
         return f"\n \
                  state: {str(self.state.name)}      previous_state {str(self.previous_state.name) if self.previous_state is not None else None} \n \

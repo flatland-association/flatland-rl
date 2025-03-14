@@ -1387,7 +1387,7 @@ def test_rail_env_malfunction_speed_info():
                                                                             ),
                   line_generator=sparse_line_generator(), number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
-    env.reset(False, False)
+    env.reset(False, False, random_seed=42)
 
     env_renderer = RenderTool(env, gl="PILSVG", )
     for step in range(100):
