@@ -193,6 +193,7 @@ class Trajectory:
     def create_from_policy(
             policy: Policy,
             data_dir: Path,
+            env: RailEnv = None,
             n_agents=7,
             x_dim=30,
             y_dim=30,
@@ -219,6 +220,8 @@ class Trajectory:
             the submission's policy
         data_dir : Path
             the path to write the trajectory to
+        env: RailEnv
+            directly inject env, skip env generation
         n_agents: int
             number of agents
         x_dim: int
@@ -257,20 +260,23 @@ class Trajectory:
         Trajectory
 
         """
-        env, observations, _ = env_generator(
-            n_agents=n_agents,
-            x_dim=x_dim,
-            y_dim=y_dim,
-            n_cities=n_cities,
-            max_rail_pairs_in_city=max_rail_pairs_in_city,
-            grid_mode=grid_mode,
-            max_rails_between_cities=max_rails_between_cities,
-            malfunction_duration_min=malfunction_duration_min,
-            malfunction_duration_max=malfunction_duration_max,
-            malfunction_interval=malfunction_interval,
-            speed_ratios=speed_ratios,
-            seed=seed,
-            obs_builder_object=obs_builder)
+        if env is not None:
+            observations, _  = env.reset()
+        else:
+            env, observations, _ = env_generator(
+                n_agents=n_agents,
+                x_dim=x_dim,
+                y_dim=y_dim,
+                n_cities=n_cities,
+                max_rail_pairs_in_city=max_rail_pairs_in_city,
+                grid_mode=grid_mode,
+                max_rails_between_cities=max_rails_between_cities,
+                malfunction_duration_min=malfunction_duration_min,
+                malfunction_duration_max=malfunction_duration_max,
+                malfunction_interval=malfunction_interval,
+                speed_ratios=speed_ratios,
+                seed=seed,
+                obs_builder_object=obs_builder)
         if ep_id is not None:
             trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
         else:
