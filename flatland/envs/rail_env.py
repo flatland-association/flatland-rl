@@ -497,7 +497,7 @@ class RailEnv(Environment):
         self.motionCheck = ac.MotionCheck()  # reset the motion check
 
         temp_transition_data = {}
-
+        endangered = []
         for agent in self.agents:
             i_agent = agent.handle
             agent.old_position = agent.position
@@ -552,9 +552,35 @@ class RailEnv(Environment):
 
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
             self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
+            if agent.earliest_departure > self._elapsed_steps and new_position_level_free is not None:
+                endangered.append(agent)
 
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
+
+        # situation
+        # problem with waiting two agents A + B
+        #  - same initial position
+        #  - agent A has malfunction during WAITING -> MALFUNCTION_OFF_MAP (MOVE_FORWARD action gets saved , as preprocessing does set to DO_NOTHING only in WAITING)-> WAITING with action saved
+        # in step k:
+        # - agent A is WAITING
+        # - agent B gets READY_TO_DEPART -> saves MOVE_FORWARD (as not WAITING)
+        # in step > k:
+        # - agent A is still WAITING
+        # - agent B issues MOVE_FORWARD
+        # MotionCheck gets A -> P and B -> P, however A -> P should never be added as not ready to depart. In the consequence, B cannot move in k+1
+        # -> both forever (?) blocked
+
+        # which tests/agents are concerned?
+        hanging = []
+        for agent in endangered:
+            dAttr = self.motionCheck.G.nodes.get((-1, agent.handle))
+            safe = dAttr is None or "color" not in dAttr or dAttr["color"] not in ["red", "purple"]
+            if not safe:
+                hanging.append(agent)
+        if len(hanging) > 0:
+            print(hanging, list(self.motionCheck.G.edges))
+        assert len(hanging) == 0, (hanging, list(self.motionCheck.G.edges))
 
         for agent in self.agents:
             i_agent = agent.handle
