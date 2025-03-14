@@ -192,6 +192,7 @@ class Trajectory:
     def create_from_policy(
         policy: Policy,
         data_dir: Path,
+        env: RailEnv = None,
         n_agents=7,
         x_dim=30,
         y_dim=30,
@@ -207,8 +208,7 @@ class Trajectory:
         obs_builder: Optional[ObservationBuilder] = None,
         snapshot_interval: int = 1,
         ep_id: str = None,
-        callbacks: FlatlandCallbacks = None,
-        env: RailEnv = None
+        callbacks: FlatlandCallbacks = None
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -219,6 +219,8 @@ class Trajectory:
             the submission's policy
         data_dir : Path
             the path to write the trajectory to
+        env: RailEnv
+            directly inject env, skip env generation
         n_agents: int
             number of agents
         x_dim: int
@@ -257,7 +259,9 @@ class Trajectory:
         Trajectory
 
         """
-        if env is None:
+        if env is not None:
+            observations, _ = env.reset()
+        else:
             env, observations, _ = env_generator(
                 n_agents=n_agents,
                 x_dim=x_dim,
@@ -272,8 +276,6 @@ class Trajectory:
                 speed_ratios=speed_ratios,
                 seed=seed,
                 obs_builder_object=obs_builder)
-        else:
-            observations = env._get_observations()
         if ep_id is not None:
             trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
         else:
