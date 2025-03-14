@@ -572,12 +572,12 @@ class RailEnv(Environment):
         # -> both forever (?) blocked
 
         # which tests/agents are concerned?
-        hanging = set()
+        hanging = []
         for agent in endangered:
             dAttr = self.motionCheck.G.nodes.get((-1, agent.handle))
             safe = dAttr is None or "color" not in dAttr or dAttr["color"] not in ["red", "purple"]
             if not safe:
-                hanging.add(agent)
+                hanging.append(agent)
         if len(hanging) > 0:
             print(hanging, list(self.motionCheck.G.edges))
         assert len(hanging) == 0, (hanging, list(self.motionCheck.G.edges))
