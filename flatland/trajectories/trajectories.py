@@ -4,13 +4,16 @@ import os
 import uuid
 from pathlib import Path
 from typing import Optional, Any, Tuple
+from typing import Optional, Tuple
 
 import click
 import pandas as pd
 import tqdm
 from attr import attrs, attrib
 
+from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
@@ -23,11 +26,6 @@ TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 
 
-class Policy:
-    def act(self, handle: int, observation: Any, **kwargs) -> RailEnvActions:
-        pass
-
-
 def _uuid_str():
     return str(uuid.uuid4())
 
@@ -35,9 +33,14 @@ def _uuid_str():
 @attrs
 class Trajectory:
     """
+    Encapsulates episode data (actions, positions etc.) for one or multiple episodes for further analysis/evaluation.
+
     Aka. Episode
     Aka. Recording
 
+    In contrast to rllib (https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_episode.py), we use a tabular approach (tsv-backed) instead of `dict`s.
+
+    Directory structure:
     - event_logs
         ActionEvents.discrete_action 		 -- holds set of action to be replayed for the related episodes.
         TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episodes.
@@ -186,72 +189,6 @@ class Trajectory:
             return movement.iloc[0]
         raise
 
-    def evaluate(self, start_step: int = None, rendering=False, snapshot_interval=0):
-        """
-        The data is structured as follows:
-            -30x30 map
-                Contains the data to replay the episodes.
-                - <n>_trains                                 -- for n in 10,15,20,50
-                    - event_logs
-                        ActionEvents.discrete_action 		 -- holds set of action to be replayed for the related episodes.
-                        TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episodes.
-                        TrainMovementEvents.trains_positions -- holds the positions for the related episodes.
-                    - serialised_state
-                        <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
-
-        All these episodes are with constant speed of 1 and malfunctions free.
-         Parameters
-        ----------
-        start_step : int
-            start evaluation from intermediate step (requires snapshot to be present)
-        rendering : bool
-            render while evaluating
-        snapshot_interval : int
-            interval to write pkl snapshots. 1 means at every step. 0 means never.
-        """
-
-        trains_positions = self.read_trains_positions()
-        actions = self.read_actions()
-        trains_arrived = self.read_trains_arrived()
-
-        env = self.restore_episode(start_step)
-        n_agents = env.get_num_agents()
-        assert len(env.agents) == n_agents
-        if start_step is None:
-            start_step = 0
-
-        if rendering:
-            renderer = RenderTool(env)
-            renderer.render_env(show=True, frames=False, show_observations=False)
-
-        if rendering:
-            renderer.render_env(show=True, show_observations=True)
-        for env_time in tqdm.tqdm(range(start_step, env._max_episode_steps)):
-
-            if snapshot_interval > 0 and env_time % snapshot_interval == 0:
-                RailEnvPersister.save(env, os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{env_time:04d}.pkl"))
-            action = {agent_id: self.action_lookup(actions, env_time=env_time, agent_id=agent_id) for agent_id in range(n_agents)}
-            _, _, dones, _ = env.step(action)
-            done = dones['__all__']
-
-            if rendering:
-                renderer.render_env(show=True, show_observations=True)
-
-            for agent_id in range(n_agents):
-                agent = env.agents[agent_id]
-                actual_position = (agent.position, agent.direction)
-                expected_position = self.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
-                assert actual_position == expected_position, (self.data_dir, self.ep_id, env_time + 1, agent_id, actual_position, expected_position)
-
-            if done:
-                break
-
-        trains_arrived_episode = self.trains_arrived_lookup(trains_arrived)
-        expected_success_rate = trains_arrived_episode['success_rate']
-        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%.")
-        assert expected_success_rate == actual_success_rate
-
     @staticmethod
     def create_from_policy(
             policy: Policy,
@@ -270,7 +207,8 @@ class Trajectory:
             seed=42,
             obs_builder: Optional[ObservationBuilder] = None,
             snapshot_interval: int = 1,
-            ep_id: str = None
+            ep_id: str = None,
+            callbacks: FlatlandCallbacks = None
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -310,7 +248,10 @@ class Trajectory:
         snapshot_interval : int
             interval to write pkl snapshots
         ep_id: str
-            if not provide, generate one.
+            episode ID to store data under. If not provided, generate one.
+        callbacks: FlatlandCallbacks
+            callbacks to run during trajectory creation
+
         Returns
         -------
         Trajectory
@@ -354,6 +295,8 @@ class Trajectory:
                 trajectory.action_collect(actions, env_time=env_time, agent_id=handle, action=action)
 
             _, _, dones, _ = env.step(action_dict)
+            if callbacks is not None:
+                callbacks.on_episode_step(env=env)
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
