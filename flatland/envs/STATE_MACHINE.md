@@ -71,6 +71,12 @@ stateDiagram-v2
 * `MOVING --> STOPPED`: **not in_malfunction and not target_reached** and (stop_action_given or movement_conflict)
 * `MALFUNCTION --> STOPPED`: malfunction_counter_complete **and not in_malfunction and not valid_movement_action_given**
 
+# ===================================================================
+
+BELOW UPDATED TEXT AND DIAGRAM FOR FLATLAND-BOOK
+
+# ===================================================================
+
 # State machine
 
 Flatland 3 introduces a state machine as a refactor of `env.step` function in Flatland. The functionality is essentially the same as Flatland 2, this change is
@@ -81,7 +87,62 @@ The goal is to provide a unified state machine which controls the state and tran
 
 The figure below illustrates the working of the state machine.
 
-![](../assets/images/Flatland_3_State_Machine.jpg)
+```mermaid
+---
+title: Flatland 3 State Machine
+---
+%%{ init: { 'theme': 'base', 'themeVariables': { 'background': '#f4f4f4' } } }%%
+stateDiagram-v2
+  [*] --> WAITING
+  WAITING:::OffMapState
+  READY_TO_DEPART:::OffMapState
+  MALFUNCTION_OFF_MAP:::OffMapState
+  MOVING:::OnMapState
+  STOPPED:::OnMapState
+  MALFUNCTION:::OnMapState
+  DONE:::OffMapState
+  WAITING --> MALFUNCTION_OFF_MAP: <font color=red>in_malfunction</font>
+  WAITING --> READY_TO_DEPART: <font color=red>earliest_departure_reached</font>
+  READY_TO_DEPART --> MALFUNCTION_OFF_MAP: <font color=red>in_malfunction</font>
+  READY_TO_DEPART --> MOVING: <font color=green>valid_movement_action_given</font>
+  MALFUNCTION_OFF_MAP --> MOVING: <font color=green>malfunction_counter_complete</font><br/><font color=red>earliest_departure_reached</font><br/><font color=green>valid_movement_action_given</font>
+  MALFUNCTION_OFF_MAP --> STOPPED: <font color=green>malfunction_counter_complete</font><br/><font color=red>earliest_departure_reached</font><br/><font color=red>stop_action_given</font>
+  MALFUNCTION_OFF_MAP --> READY_TO_DEPART: <font color=green>malfunction_counter_complete</font><br/><font color=red>earliest_departure_reached</font><br/>NOT#nbsp;<font color=red>stop_action_given</font><br/>NOT#nbsp;<font color=green>valid_movement_action_given</font>
+  MALFUNCTION_OFF_MAP --> WAITING: <font color=green>malfunction_counter_complete</font><br/>NOT#nbsp;<font color=red>earliest_departure_reached</font>
+  MOVING --> MALFUNCTION: <font color=red>in_malfunction</font>
+  MOVING --> DONE: NOT#nbsp;<font color=red>in_malfunction</font><br/><font color=green>target_reached</font>
+  MOVING --> STOPPED: NOT#nbsp;<font color=red>in_malfunction</font><br/>NOT#nbsp;<font color=green>target_reached</font><br/><font color=red>stop_action_given</font>
+  MOVING --> STOPPED: NOT#nbsp;<font color=red>in_malfunction</font><br/>NOT#nbsp;<font color=green>target_reached</font><br/>NOT#nbsp;<font color=red>movement_allowed</font>
+  STOPPED --> MALFUNCTION: <font color=red>in_malfunction</font>
+  STOPPED --> MOVING: NOT#nbsp;<font color=red>in_malfunction</font><br/><font color=green>valid_movement_action_given</font>
+  MALFUNCTION --> MOVING: <font color=green>malfunction_counter_complete</font><br/><font color=green>valid_movement_action_given</font>
+  MALFUNCTION --> STOPPED: <font color=green>malfunction_counter_complete</font><br/>NOT#nbsp;<font color=green>valid_movement_action_given</font>
+  DONE --> [*]
+  classDef OffMapState font-style: italic, font-weight: bold, fill: yellow, color: black
+  classDef OnMapState font-style: italic, font-weight: bold, fill: green, color: black
+```
+
+`valid_movement_action_given` stands for `movement_action_given` and `movement_allowed`
+
+Legend:
+
+```mermaid
+%%{ init: { 'theme': 'base', 'themeVariables': { 'background': '#f4f4f4' } } }%%
+stateDiagram-v2
+  direction LR
+  state "On Map State" as OnMapState
+  state "Off Map State" as OffMapState
+  OffMapState:::OffMapState
+  OnMapState:::OnMapState
+  state "State 1" as State1
+  state "State 2" as State2
+  state "State 1" as State3
+  state "State 2" as State4
+  State1 --> State2: <font color=red>Stopping signal</font>
+  State3 --> State4: <font color=green>Moving signal</font>
+  classDef OffMapState font-style: italic, font-weight: bold, fill: yellow, color: black
+  classDef OnMapState font-style: italic, font-weight: bold, fill: green, color: black
+```
 
 The principles we try to implement are as follows:
 
@@ -109,15 +170,15 @@ The purpose of each state is described below:
 
 The corresponding signals in the state machine are described below
 
-| State Transition Signal      | Description                                                                                                                                                                            |
-|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| in_malfunction               | Malfunction states start when in_malfunction is set to true                                                                                                                            |
-| malfunction_counter_complete | Malfunction counter complete - Malfunction state ends this timestep and actions are allowed from next timestep                                                                         |
-| earliest_departure_reached   | Earliest departure reached - Train is allowed to move now                                                                                                                              |
-| stop_action_given            | Stop Action Given - User provided a stop action. Action preprocessing can also change a moving action to a stop action if the train tries to move into a invalid or occupied position. |
-| valid_movement_action_given  | Movement action is provided and movement is allowed, note that a train can move into an occupied cell if that cell is being emptied by the train that was previously occupied it.      |
-| target_reached               | Target position is reached                                                                                                                                                             |
-| movement_conflict            | Movement conflict - Multiple trains trying to move into same cell                                                                                                                      |
+| State Transition Signal        | Description                                                                                                                                                                            |
+|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `in_malfunction`               | Malfunction states start when in_malfunction is set to true                                                                                                                            |
+| `malfunction_counter_complete` | Malfunction counter complete - No malfunction or malfunction state ends in next step and actions are allowed from next timestep                                                        |
+| `earliest_departure_reached`   | Earliest departure reached - Train is allowed to move now                                                                                                                              |
+| `stop_action_given`            | Stop Action Given - User provided a stop action. Action preprocessing can also change a moving action to a stop action if the train tries to move into a invalid or occupied position. |
+| `movement_action_given`        | Movement action is provided.                                                                                                                                                           |
+| `target_reached`               | Target position is reached                                                                                                                                                             |
+| `movement_allowed`             | Movement allowed if inside cell or at end of cell and no conflict with other trains                                                                                                    |
 
 
 
