@@ -311,7 +311,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 0
                     position=(3, 9),  # east dead-end
                     direction=Grid4TransitionsEnum.EAST,
-                    state=TrainState.MOVING.value,
+                    state=TrainState.MOVING,
 
                     action=RailEnvActions.MOVE_FORWARD,
 
@@ -320,7 +320,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 1
                     position=(3, 9),
                     direction=Grid4TransitionsEnum.EAST,
-                    state=TrainState.MOVING.value,
+                    state=TrainState.MOVING,
 
                     action=None,
 
@@ -330,7 +330,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 2
                     position=(3, 9),
                     direction=Grid4TransitionsEnum.EAST,
-                    state=TrainState.STOPPED.value,
+                    state=TrainState.STOPPED,
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
 
@@ -339,7 +339,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 3
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.MOVING.value,
+                    state=TrainState.MOVING,
 
                     action=RailEnvActions.MOVE_FORWARD,
 
@@ -348,7 +348,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 4
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.MOVING.value,
+                    state=TrainState.MOVING,
 
                     action=None,
 
@@ -358,7 +358,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 5
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.STOPPED.value,
+                    state=TrainState.STOPPED,
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
 
@@ -368,7 +368,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 6
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.MOVING.value,
+                    state=TrainState.MOVING,
 
                     action=RailEnvActions.MOVE_FORWARD,
 
@@ -377,7 +377,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 7
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.MOVING.value,
+                    state=TrainState.MOVING,
 
                     action=None,
 
@@ -387,7 +387,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 8
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.STOPPED.value,
+                    state=TrainState.STOPPED,
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
 
@@ -397,7 +397,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(  # 9
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.MOVING.value,
+                    state=TrainState.MOVING,
 
                     action=None,
                     reward=env.step_penalty * 0.5  # running at speed 0.5
@@ -405,7 +405,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 Replay(
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.MOVING.value,
+                    state=TrainState.MOVING,
 
                     action=RailEnvActions.MOVE_LEFT,
 
