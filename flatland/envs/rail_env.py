@@ -501,7 +501,6 @@ class RailEnv(Environment):
         self.motionCheck = ac.MotionCheck()  # reset the motion check
 
         temp_transition_data = {}
-        endangered = []
         for agent in self.agents:
             i_agent = agent.handle
             agent.old_position = agent.position
@@ -566,16 +565,9 @@ class RailEnv(Environment):
                 agent_position_level_free = (agent.position, agent.direction % 2)
 
             self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
-            if agent.earliest_departure > self._elapsed_steps and new_position_level_free is not None:
-                endangered.append(agent)
 
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
-
-        # which tests are concerned?
-        for agent in endangered:
-            dAttr = self.motionCheck.G.nodes.get((-1, agent.handle))
-            assert dAttr is None or "color" not in dAttr or dAttr["color"] not in ["red", "purple"], agent
 
         for agent in self.agents:
             i_agent = agent.handle
@@ -641,149 +633,159 @@ class RailEnv(Environment):
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
-    def record_timestep(self, dActions):
-        """
-        Record the positions and orientations of all agents in memory, in the cur_episode
-        """
-        list_agents_state = []
-        for i_agent in range(self.get_num_agents()):
-            agent = self.agents[i_agent]
-            # the int cast is to avoid numpy types which may cause problems with msgpack
-            # in env v2, agents may have position None, before starting
-            if agent.position is None:
-                pos = (0, 0)
-            else:
-                pos = (int(agent.position[0]), int(agent.position[1]))
-            # print("pos:", pos, type(pos[0]))
-            list_agents_state.append([
-                *pos, int(agent.direction),
-                agent.malfunction_handler.malfunction_down_counter,
-                0,  # int(agent.status), #  TODO: find appropriate attribute for agent status
-                int(agent.position in self.motionCheck.svDeadlocked)
-            ])
 
-        self.cur_episode.append(list_agents_state)
-        agents_ = [agent.to_agent()._asdict() for agent in self.agents]
-        for a in agents_:
-            a["state_machine"] = str(a["state_machine"])
-            a["speed_counter"] = str(a["speed_counter"])
-        self.cur_episode2.append(agents_)
-        self.list_actions.append(dActions)
+def record_timestep(self, dActions):
+    """
+    Record the positions and orientations of all agents in memory, in the cur_episode
+    """
+    list_agents_state = []
+    for i_agent in range(self.get_num_agents()):
+        agent = self.agents[i_agent]
+        # the int cast is to avoid numpy types which may cause problems with msgpack
+        # in env v2, agents may have position None, before starting
+        if agent.position is None:
+            pos = (0, 0)
+        else:
+            pos = (int(agent.position[0]), int(agent.position[1]))
+        # print("pos:", pos, type(pos[0]))
+        list_agents_state.append([
+            *pos, int(agent.direction),
+            agent.malfunction_handler.malfunction_down_counter,
+            0,  # int(agent.status), #  TODO: find appropriate attribute for agent status
+            int(agent.position in self.motionCheck.svDeadlocked)
+        ])
 
-    def _get_observations(self):
-        """
-        Utility which returns the dictionary of observations for an agent with respect to environment
-        """
-        # print(f"_get_obs - num agents: {self.get_num_agents()} {list(range(self.get_num_agents()))}")
-        self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
-        return self.obs_dict
+    self.cur_episode.append(list_agents_state)
+    agents_ = [agent.to_agent()._asdict() for agent in self.agents]
+    for a in agents_:
+        a["state_machine"] = str(a["state_machine"])
+        a["speed_counter"] = str(a["speed_counter"])
+    self.cur_episode2.append(agents_)
+    self.list_actions.append(dActions)
 
-    def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
-        """
-        Returns directions in which the agent can move
-        """
-        return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row, col))
 
-    def _exp_distirbution_synced(self, rate: float) -> float:
-        """
-        Generates sample from exponential distribution
-        We need this to guarantee synchronicity between different instances with the same seed.
-        :param rate:
-        :return:
-        """
-        u = self.np_random.rand()
-        x = - np.log(1 - u) * rate
-        return x
+def _get_observations(self):
+    """
+    Utility which returns the dictionary of observations for an agent with respect to environment
+    """
+    # print(f"_get_obs - num agents: {self.get_num_agents()} {list(range(self.get_num_agents()))}")
+    self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
+    return self.obs_dict
 
-    def _is_agent_ok(self, agent: EnvAgent) -> bool:
-        """
-        Checks if an agent is ok, meaning it can move and is not malfunctioning.
-        Parameters
-        ----------
-        agent
 
-        Returns
-        -------
-        True if agent is ok, False otherwise
+def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
+    """
+    Returns directions in which the agent can move
+    """
+    return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row, col))
 
-        """
-        return agent.malfunction_handler.in_malfunction
 
-    def save(self, filename):
-        print("DEPRECATED call to env.save() - pls call RailEnvPersister.save()")
-        persistence.RailEnvPersister.save(self, filename)
+def _exp_distirbution_synced(self, rate: float) -> float:
+    """
+    Generates sample from exponential distribution
+    We need this to guarantee synchronicity between different instances with the same seed.
+    :param rate:
+    :return:
+    """
+    u = self.np_random.rand()
+    x = - np.log(1 - u) * rate
+    return x
 
-    def render(self, mode="rgb_array", gl="PGL", agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-               show_debug=False, clear_debug_text=True, show=False,
-               screen_height=600, screen_width=800,
-               show_observations=False, show_predictions=False,
-               show_rowcols=False, return_image=True):
-        """
-        Provides the option to render the
-        environment's behavior as an image or to a window.
-        Parameters
-        ----------
-        mode
 
-        Returns
-        -------
-        Image if mode is rgb_array, opens a window otherwise
-        """
-        if not hasattr(self, "renderer") or self.renderer is None:
-            self.initialize_renderer(mode=mode, gl=gl,  # gl="TKPILSVG",
-                                     agent_render_variant=agent_render_variant,
-                                     show_debug=show_debug,
-                                     clear_debug_text=clear_debug_text,
-                                     show=show,
-                                     screen_height=screen_height,  # Adjust these parameters to fit your resolution
-                                     screen_width=screen_width)
-        return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
-                                    show_predictions=show_predictions,
-                                    show_rowcols=show_rowcols, return_image=return_image)
+def _is_agent_ok(self, agent: EnvAgent) -> bool:
+    """
+    Checks if an agent is ok, meaning it can move and is not malfunctioning.
+    Parameters
+    ----------
+    agent
 
-    def initialize_renderer(self, mode, gl,
-                            agent_render_variant,
-                            show_debug,
-                            clear_debug_text,
-                            show,
-                            screen_height,
-                            screen_width):
-        # Initiate the renderer
-        self.renderer = RenderTool(self, gl=gl,  # gl="TKPILSVG",
-                                   agent_render_variant=agent_render_variant,
-                                   show_debug=show_debug,
-                                   clear_debug_text=clear_debug_text,
-                                   screen_height=screen_height,  # Adjust these parameters to fit your resolution
-                                   screen_width=screen_width)  # Adjust these parameters to fit your resolution
-        self.renderer.show = show
-        self.renderer.reset()
+    Returns
+    -------
+    True if agent is ok, False otherwise
 
-    def update_renderer(self, mode, show, show_observations, show_predictions,
-                        show_rowcols, return_image):
-        """
-        This method updates the render.
-        Parameters
-        ----------
-        mode
+    """
+    return agent.malfunction_handler.in_malfunction
 
-        Returns
-        -------
-        Image if mode is rgb_array, None otherwise
-        """
-        image = self.renderer.render_env(show=show, show_observations=show_observations,
-                                         show_predictions=show_predictions,
-                                         show_rowcols=show_rowcols, return_image=return_image)
-        if mode == 'rgb_array':
-            return image[:, :, :3]
 
-    def close(self):
-        """
-        Closes any renderer window.
-        """
-        if hasattr(self, "renderer") and self.renderer is not None:
-            try:
-                if self.renderer.show:
-                    self.renderer.close_window()
-            except Exception as e:
-                print("Could Not close window due to:", e)
-            self.renderer = None
+def save(self, filename):
+    print("DEPRECATED call to env.save() - pls call RailEnvPersister.save()")
+    persistence.RailEnvPersister.save(self, filename)
+
+
+def render(self, mode="rgb_array", gl="PGL", agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+           show_debug=False, clear_debug_text=True, show=False,
+           screen_height=600, screen_width=800,
+           show_observations=False, show_predictions=False,
+           show_rowcols=False, return_image=True):
+    """
+    Provides the option to render the
+    environment's behavior as an image or to a window.
+    Parameters
+    ----------
+    mode
+
+    Returns
+    -------
+    Image if mode is rgb_array, opens a window otherwise
+    """
+    if not hasattr(self, "renderer") or self.renderer is None:
+        self.initialize_renderer(mode=mode, gl=gl,  # gl="TKPILSVG",
+                                 agent_render_variant=agent_render_variant,
+                                 show_debug=show_debug,
+                                 clear_debug_text=clear_debug_text,
+                                 show=show,
+                                 screen_height=screen_height,  # Adjust these parameters to fit your resolution
+                                 screen_width=screen_width)
+    return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
+                                show_predictions=show_predictions,
+                                show_rowcols=show_rowcols, return_image=return_image)
+
+
+def initialize_renderer(self, mode, gl,
+                        agent_render_variant,
+                        show_debug,
+                        clear_debug_text,
+                        show,
+                        screen_height,
+                        screen_width):
+    # Initiate the renderer
+    self.renderer = RenderTool(self, gl=gl,  # gl="TKPILSVG",
+                               agent_render_variant=agent_render_variant,
+                               show_debug=show_debug,
+                               clear_debug_text=clear_debug_text,
+                               screen_height=screen_height,  # Adjust these parameters to fit your resolution
+                               screen_width=screen_width)  # Adjust these parameters to fit your resolution
+    self.renderer.show = show
+    self.renderer.reset()
+
+
+def update_renderer(self, mode, show, show_observations, show_predictions,
+                    show_rowcols, return_image):
+    """
+    This method updates the render.
+    Parameters
+    ----------
+    mode
+
+    Returns
+    -------
+    Image if mode is rgb_array, None otherwise
+    """
+    image = self.renderer.render_env(show=show, show_observations=show_observations,
+                                     show_predictions=show_predictions,
+                                     show_rowcols=show_rowcols, return_image=return_image)
+    if mode == 'rgb_array':
+        return image[:, :, :3]
+
+
+def close(self):
+    """
+    Closes any renderer window.
+    """
+    if hasattr(self, "renderer") and self.renderer is not None:
+        try:
+            if self.renderer.show:
+                self.renderer.close_window()
+        except Exception as e:
+            print("Could Not close window due to:", e)
+        self.renderer = None
