@@ -35,17 +35,14 @@ class TrainStateMachine:
         if self.st_signals.malfunction_counter_complete:
 
             if self.st_signals.earliest_departure_reached:
-
                 if self.st_signals.valid_movement_action_given:
                     self.next_state = TrainState.MOVING
                 elif self.st_signals.stop_action_given:
                     self.next_state = TrainState.STOPPED
                 else:
                     self.next_state = TrainState.READY_TO_DEPART
-
             else:
                 self.next_state = TrainState.WAITING
-
         else:
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
 

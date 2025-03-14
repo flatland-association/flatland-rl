@@ -350,36 +350,6 @@ class RailEnv(Environment):
                 if agent.old_position is not None:
                     self.agent_positions[agent.old_position] = -1
 
-    def generate_state_transition_signals(self, agent, preprocessed_action, movement_allowed):
-        """ Generate State Transitions Signals used in the state machine """
-        st_signals = StateTransitionSignals()
-
-        # Malfunction starts when in_malfunction is set to true
-        st_signals.in_malfunction = agent.malfunction_handler.in_malfunction
-
-        # Malfunction counter complete - Malfunction ends next timestep
-        st_signals.malfunction_counter_complete = agent.malfunction_handler.malfunction_counter_complete
-
-        # Earliest departure reached - Train is allowed to move now
-        st_signals.earliest_departure_reached = self._elapsed_steps >= agent.earliest_departure
-
-        # Stop Action Given
-        st_signals.stop_action_given = (preprocessed_action == RailEnvActions.STOP_MOVING)
-
-        # Valid Movement action Given
-        # TODO is this XOR stop_action_given? SM not well defined otherwise
-        # TODO get rid of movement_allowed in favor of conflict = motionCheck
-        st_signals.valid_movement_action_given = preprocessed_action.is_moving_action() and movement_allowed
-
-        # Target Reached
-        st_signals.target_reached = fast_position_equal(agent.position, agent.target)
-
-        # Movement conflict - Multiple trains trying to move into same cell
-        # If speed counter is not in cell exit, the train can enter the cell
-        st_signals.movement_conflict = (not movement_allowed) and agent.speed_counter.is_cell_exit
-
-        return st_signals
-
     def _handle_end_reward(self, agent: EnvAgent) -> int:
         '''
         Handles end-of-episode reward for a particular agent.
@@ -533,7 +503,6 @@ class RailEnv(Environment):
                                                                                      self.rail,
                                                                                      agent.position,
                                                                                      agent.direction)
-
                 elif agent.state == TrainState.STOPPED and preprocessed_action.is_moving_action() and agent.speed_counter.is_cell_exit:
                     new_position, new_direction = env_utils.apply_action_independent(preprocessed_action,
                                                                                      self.rail,
@@ -577,10 +546,10 @@ class RailEnv(Environment):
                 agent_position_level_free = (agent.position, agent.direction % 2)
 
             ## Update positions
+            motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)
                 movement_allowed = motion_check
 
             movement_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
@@ -591,13 +560,30 @@ class RailEnv(Environment):
             preprocessed_action = agent_transition_data.preprocessed_action
 
             ## Update states
-            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, movement_allowed)
+            state_transition_signals = StateTransitionSignals(
+                # Malfunction starts when in_malfunction is set to true
+                in_malfunction=agent.malfunction_handler.in_malfunction,
+                # Malfunction counter complete - Malfunction ends next timestep
+                malfunction_counter_complete=agent.malfunction_handler.malfunction_counter_complete,
+                # Earliest departure reached - Train is allowed to move now
+                earliest_departure_reached=self._elapsed_steps >= agent.earliest_departure,
+                # Stop Action Given
+                stop_action_given=(preprocessed_action == RailEnvActions.STOP_MOVING),
+                # Valid Movement action Given
+                # TODO is this XOR stop_action_given? SM not well defined otherwise
+                # TODO get rid of movement_allowed in favor of conflict = motionCheck
+                valid_movement_action_given=preprocessed_action.is_moving_action() and movement_allowed,
+                # Target Reached
+                target_reached=fast_position_equal(agent.position, agent.target),
+                # If speed counter is not in cell exit, the train can enter the cell
+                movement_conflict=not motion_check and agent.speed_counter.is_cell_exit
+            )
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
 
             # Agent is being added to map
-            if (
-                agent.state_machine.previous_state == TrainState.READY_TO_DEPART or agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP) and agent.state == TrainState.MOVING:
+            if ((agent.state_machine.previous_state == TrainState.READY_TO_DEPART or agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP)
+                and agent.state == TrainState.MOVING):
                 agent.position = agent.initial_position
                 agent.direction = agent.initial_direction
             elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
@@ -633,159 +619,149 @@ class RailEnv(Environment):
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
+    def record_timestep(self, dActions):
+        """
+        Record the positions and orientations of all agents in memory, in the cur_episode
+        """
+        list_agents_state = []
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
+            # the int cast is to avoid numpy types which may cause problems with msgpack
+            # in env v2, agents may have position None, before starting
+            if agent.position is None:
+                pos = (0, 0)
+            else:
+                pos = (int(agent.position[0]), int(agent.position[1]))
+            # print("pos:", pos, type(pos[0]))
+            list_agents_state.append([
+                *pos, int(agent.direction),
+                agent.malfunction_handler.malfunction_down_counter,
+                0,  # int(agent.status), #  TODO: find appropriate attribute for agent status
+                int(agent.position in self.motionCheck.svDeadlocked)
+            ])
 
-def record_timestep(self, dActions):
-    """
-    Record the positions and orientations of all agents in memory, in the cur_episode
-    """
-    list_agents_state = []
-    for i_agent in range(self.get_num_agents()):
-        agent = self.agents[i_agent]
-        # the int cast is to avoid numpy types which may cause problems with msgpack
-        # in env v2, agents may have position None, before starting
-        if agent.position is None:
-            pos = (0, 0)
-        else:
-            pos = (int(agent.position[0]), int(agent.position[1]))
-        # print("pos:", pos, type(pos[0]))
-        list_agents_state.append([
-            *pos, int(agent.direction),
-            agent.malfunction_handler.malfunction_down_counter,
-            0,  # int(agent.status), #  TODO: find appropriate attribute for agent status
-            int(agent.position in self.motionCheck.svDeadlocked)
-        ])
+        self.cur_episode.append(list_agents_state)
+        agents_ = [agent.to_agent()._asdict() for agent in self.agents]
+        for a in agents_:
+            a["state_machine"] = str(a["state_machine"])
+            a["speed_counter"] = str(a["speed_counter"])
+        self.cur_episode2.append(agents_)
+        self.list_actions.append(dActions)
 
-    self.cur_episode.append(list_agents_state)
-    agents_ = [agent.to_agent()._asdict() for agent in self.agents]
-    for a in agents_:
-        a["state_machine"] = str(a["state_machine"])
-        a["speed_counter"] = str(a["speed_counter"])
-    self.cur_episode2.append(agents_)
-    self.list_actions.append(dActions)
+    def _get_observations(self):
+        """
+        Utility which returns the dictionary of observations for an agent with respect to environment
+        """
+        # print(f"_get_obs - num agents: {self.get_num_agents()} {list(range(self.get_num_agents()))}")
+        self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
+        return self.obs_dict
 
+    def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
+        """
+        Returns directions in which the agent can move
+        """
+        return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row, col))
 
-def _get_observations(self):
-    """
-    Utility which returns the dictionary of observations for an agent with respect to environment
-    """
-    # print(f"_get_obs - num agents: {self.get_num_agents()} {list(range(self.get_num_agents()))}")
-    self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
-    return self.obs_dict
+    def _exp_distirbution_synced(self, rate: float) -> float:
+        """
+        Generates sample from exponential distribution
+        We need this to guarantee synchronicity between different instances with the same seed.
+        :param rate:
+        :return:
+        """
+        u = self.np_random.rand()
+        x = - np.log(1 - u) * rate
+        return x
 
+    def _is_agent_ok(self, agent: EnvAgent) -> bool:
+        """
+        Checks if an agent is ok, meaning it can move and is not malfunctioning.
+        Parameters
+        ----------
+        agent
 
-def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
-    """
-    Returns directions in which the agent can move
-    """
-    return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row, col))
+        Returns
+        -------
+        True if agent is ok, False otherwise
 
+        """
+        return agent.malfunction_handler.in_malfunction
 
-def _exp_distirbution_synced(self, rate: float) -> float:
-    """
-    Generates sample from exponential distribution
-    We need this to guarantee synchronicity between different instances with the same seed.
-    :param rate:
-    :return:
-    """
-    u = self.np_random.rand()
-    x = - np.log(1 - u) * rate
-    return x
+    def save(self, filename):
+        print("DEPRECATED call to env.save() - pls call RailEnvPersister.save()")
+        persistence.RailEnvPersister.save(self, filename)
 
+    def render(self, mode="rgb_array", gl="PGL", agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
+               show_debug=False, clear_debug_text=True, show=False,
+               screen_height=600, screen_width=800,
+               show_observations=False, show_predictions=False,
+               show_rowcols=False, return_image=True):
+        """
+        Provides the option to render the
+        environment's behavior as an image or to a window.
+        Parameters
+        ----------
+        mode
 
-def _is_agent_ok(self, agent: EnvAgent) -> bool:
-    """
-    Checks if an agent is ok, meaning it can move and is not malfunctioning.
-    Parameters
-    ----------
-    agent
+        Returns
+        -------
+        Image if mode is rgb_array, opens a window otherwise
+        """
+        if not hasattr(self, "renderer") or self.renderer is None:
+            self.initialize_renderer(mode=mode, gl=gl,  # gl="TKPILSVG",
+                                     agent_render_variant=agent_render_variant,
+                                     show_debug=show_debug,
+                                     clear_debug_text=clear_debug_text,
+                                     show=show,
+                                     screen_height=screen_height,  # Adjust these parameters to fit your resolution
+                                     screen_width=screen_width)
+        return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
+                                    show_predictions=show_predictions,
+                                    show_rowcols=show_rowcols, return_image=return_image)
 
-    Returns
-    -------
-    True if agent is ok, False otherwise
+    def initialize_renderer(self, mode, gl,
+                            agent_render_variant,
+                            show_debug,
+                            clear_debug_text,
+                            show,
+                            screen_height,
+                            screen_width):
+        # Initiate the renderer
+        self.renderer = RenderTool(self, gl=gl,  # gl="TKPILSVG",
+                                   agent_render_variant=agent_render_variant,
+                                   show_debug=show_debug,
+                                   clear_debug_text=clear_debug_text,
+                                   screen_height=screen_height,  # Adjust these parameters to fit your resolution
+                                   screen_width=screen_width)  # Adjust these parameters to fit your resolution
+        self.renderer.show = show
+        self.renderer.reset()
 
-    """
-    return agent.malfunction_handler.in_malfunction
+    def update_renderer(self, mode, show, show_observations, show_predictions,
+                        show_rowcols, return_image):
+        """
+        This method updates the render.
+        Parameters
+        ----------
+        mode
 
+        Returns
+        -------
+        Image if mode is rgb_array, None otherwise
+        """
+        image = self.renderer.render_env(show=show, show_observations=show_observations,
+                                         show_predictions=show_predictions,
+                                         show_rowcols=show_rowcols, return_image=return_image)
+        if mode == 'rgb_array':
+            return image[:, :, :3]
 
-def save(self, filename):
-    print("DEPRECATED call to env.save() - pls call RailEnvPersister.save()")
-    persistence.RailEnvPersister.save(self, filename)
-
-
-def render(self, mode="rgb_array", gl="PGL", agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-           show_debug=False, clear_debug_text=True, show=False,
-           screen_height=600, screen_width=800,
-           show_observations=False, show_predictions=False,
-           show_rowcols=False, return_image=True):
-    """
-    Provides the option to render the
-    environment's behavior as an image or to a window.
-    Parameters
-    ----------
-    mode
-
-    Returns
-    -------
-    Image if mode is rgb_array, opens a window otherwise
-    """
-    if not hasattr(self, "renderer") or self.renderer is None:
-        self.initialize_renderer(mode=mode, gl=gl,  # gl="TKPILSVG",
-                                 agent_render_variant=agent_render_variant,
-                                 show_debug=show_debug,
-                                 clear_debug_text=clear_debug_text,
-                                 show=show,
-                                 screen_height=screen_height,  # Adjust these parameters to fit your resolution
-                                 screen_width=screen_width)
-    return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
-                                show_predictions=show_predictions,
-                                show_rowcols=show_rowcols, return_image=return_image)
-
-
-def initialize_renderer(self, mode, gl,
-                        agent_render_variant,
-                        show_debug,
-                        clear_debug_text,
-                        show,
-                        screen_height,
-                        screen_width):
-    # Initiate the renderer
-    self.renderer = RenderTool(self, gl=gl,  # gl="TKPILSVG",
-                               agent_render_variant=agent_render_variant,
-                               show_debug=show_debug,
-                               clear_debug_text=clear_debug_text,
-                               screen_height=screen_height,  # Adjust these parameters to fit your resolution
-                               screen_width=screen_width)  # Adjust these parameters to fit your resolution
-    self.renderer.show = show
-    self.renderer.reset()
-
-
-def update_renderer(self, mode, show, show_observations, show_predictions,
-                    show_rowcols, return_image):
-    """
-    This method updates the render.
-    Parameters
-    ----------
-    mode
-
-    Returns
-    -------
-    Image if mode is rgb_array, None otherwise
-    """
-    image = self.renderer.render_env(show=show, show_observations=show_observations,
-                                     show_predictions=show_predictions,
-                                     show_rowcols=show_rowcols, return_image=return_image)
-    if mode == 'rgb_array':
-        return image[:, :, :3]
-
-
-def close(self):
-    """
-    Closes any renderer window.
-    """
-    if hasattr(self, "renderer") and self.renderer is not None:
-        try:
-            if self.renderer.show:
-                self.renderer.close_window()
-        except Exception as e:
-            print("Could Not close window due to:", e)
-        self.renderer = None
+    def close(self):
+        """
+        Closes any renderer window.
+        """
+        if hasattr(self, "renderer") and self.renderer is not None:
+            try:
+                if self.renderer.show:
+                    self.renderer.close_window()
+            except Exception as e:
+                print("Could Not close window due to:", e)
+            self.renderer = None
