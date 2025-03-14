@@ -156,7 +156,7 @@ class TrainStateMachine:
 
     def __repr__(self):
         return f"\n \
-                 state: {str(self.state.name)}      previous_state {str(self.previous_state.name)} \n \
+                 state: {str(self.state.name)}      previous_state {str(self.previous_state.name) if self.previous_state is not None else None} \n \
                  st_signals: {self.st_signals}"
 
     def to_dict(self):
