@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
@@ -127,7 +129,11 @@ from flatland.trajectories.trajectories import Trajectory
     ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_5", "Test_03_Level_5"),
 ])
 def test_episode(data_sub_dir: str, ep_id: str):
-    run_episode(data_sub_dir, ep_id)
+    _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
+    assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
+    assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
+    data_dir = os.path.join(_dir, data_sub_dir)
+    run_episode(data_dir, ep_id)
 
 
 def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None):
