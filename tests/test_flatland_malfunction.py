@@ -266,7 +266,7 @@ def test_initial_malfunction():
                 direction=Grid4TransitionsEnum.EAST,
                 set_malfunction=3,
                 malfunction=3,
-                state=TrainState.MOVING.value,
+                state=TrainState.MOVING,
 
                 action=RailEnvActions.MOVE_FORWARD,
 
@@ -275,7 +275,7 @@ def test_initial_malfunction():
             Replay(  # 1
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
-                state=TrainState.MALFUNCTION.value,
+                state=TrainState.MALFUNCTION,
                 malfunction=2,
 
                 action=RailEnvActions.MOVE_FORWARD,
@@ -287,7 +287,7 @@ def test_initial_malfunction():
             Replay(  # 2
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
-                state=TrainState.MALFUNCTION.value,
+                state=TrainState.MALFUNCTION,
                 malfunction=1,
 
                 action=RailEnvActions.MOVE_FORWARD,
@@ -298,7 +298,7 @@ def test_initial_malfunction():
             Replay(  # 3
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
-                state=TrainState.MALFUNCTION.value,
+                state=TrainState.MALFUNCTION,
                 malfunction=0,
 
                 action=RailEnvActions.MOVE_FORWARD,
@@ -309,7 +309,7 @@ def test_initial_malfunction():
                 position=(3, 3),
                 direction=Grid4TransitionsEnum.EAST,
                 malfunction=0,
-                state=TrainState.MOVING.value,
+                state=TrainState.MOVING,
 
                 action=RailEnvActions.MOVE_FORWARD,
 
