@@ -4,14 +4,21 @@ import re
 import tempfile
 from pathlib import Path
 from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 import pytest
 
+from flatland.callbacks.callbacks import FlatlandCallbacks
+from flatland.envs.rail_env import RailEnv
+from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.trajectories.trajectories import Policy, Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
     generate_trajectory_from_policy, evaluate_trajectory, generate_trajectories_from_metadata
+from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
+from flatland.trajectories.trajectories import Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
+    generate_trajectory_from_policy, generate_trajectories_from_metadata
 from flatland.utils.seeding import np_random, random_state_to_hashablestate
 
 
@@ -57,10 +64,23 @@ def test_from_submission():
         assert "episode_id	env_time	success_rate" in (data_dir / TRAINS_ARRIVED_FNAME).read_text()
         assert "episode_id	env_time	agent_id	position" in (data_dir / TRAINS_POSITIONS_FNAME).read_text()
 
-        trajectory.evaluate()
-        trajectory.evaluate(start_step=5)
+        class DummyCallbacks(FlatlandCallbacks):
+            def on_episode_step(
+                self,
+                *,
+                env: Optional[RailEnv] = None,
+                **kwargs,
+            ) -> None:
+                (data_dir / f"step{env._elapsed_steps - 1}").touch()
+
+        TrajectoryEvaluator(trajectory, callbacks=DummyCallbacks()).evaluate()
+        for i in range(471):
+            assert (data_dir / f"step{i}").exists()
+        assert not (data_dir / f"step471").exists()
+
+        TrajectoryEvaluator(trajectory).evaluate(start_step=5)
         with pytest.raises(FileNotFoundError):
-            trajectory.evaluate(start_step=4)
+            TrajectoryEvaluator(trajectory).evaluate(start_step=4)
 
 
 def test_cli_from_submission():
