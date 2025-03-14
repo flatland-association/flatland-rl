@@ -27,7 +27,7 @@ class TransitionMap:
     cells.
     """
 
-    def get_transitions(self, cell_id):
+    def get_transitions(self, row, column, orientation):
         """
         Return a tuple of transitions available in a cell specified by
         `cell_id` (e.g., a tuple of size of the maximum number of transitions,
@@ -36,9 +36,9 @@ class TransitionMap:
 
         Parameters
         ----------
-        cell_id : [cell identifier]
-            The cell_id object depends on the specific implementation.
-            It generally is an int (e.g., an index) or a tuple of indices.
+        row : int
+        column : int
+        orientation : int
 
         Returns
         -------
@@ -176,7 +176,7 @@ class GridTransitionMap(TransitionMap):
         return self.grid[(row, column)]
 
     @lru_cache(maxsize=4_000_000)
-    def get_transitions(self, row, column, orientation):
+    def get_transitions(self, row: int, column: int, orientation: int):
         """
         Return a tuple of transitions available in a cell specified by
         `cell_id` (e.g., a tuple of size of the maximum number of transitions,
@@ -199,7 +199,7 @@ class GridTransitionMap(TransitionMap):
         """
         return self.transitions.get_transitions(self.grid[(row, column)], orientation)
 
-    def set_transitions(self, cell_id, new_transitions):
+    def set_transitions(self, cell_id: IntVector2D, new_transitions: Transitions):
         """
         Replaces the available transitions in cell `cell_id` with the tuple
         `new_transitions'. `new_transitions` must have

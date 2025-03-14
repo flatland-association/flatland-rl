@@ -28,7 +28,7 @@ from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.action_preprocessing import process_illegal_action
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
-from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.envs.step_utils.transition_utils import check_valid_action, check_valid_position_direction
 from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
@@ -534,6 +534,7 @@ class RailEnv(Environment):
                                                                                      self.rail,
                                                                                      agent.position,
                                                                                      agent.direction)
+
                 elif agent.state == TrainState.STOPPED and preprocessed_action.is_moving_action() and agent.speed_counter.is_cell_exit:
                     new_position, new_direction = env_utils.apply_action_independent(preprocessed_action,
                                                                                      self.rail,
@@ -549,6 +550,9 @@ class RailEnv(Environment):
                 assert agent.state.is_off_map_state() or agent.state == TrainState.DONE
                 new_position = None
                 new_direction = None
+
+            if new_position is not None:
+                check_valid_position_direction(self.rail, new_position, new_direction)
 
             temp_transition_data[i_agent] = env_utils.AgentTransitionData(position=new_position,
                                                                           direction=new_direction,
@@ -615,7 +619,7 @@ class RailEnv(Environment):
                 agent.state_machine.update_if_reached(agent.position, agent.target)
 
             # Off map or on map state and position should match
-            env_utils.state_position_sync_check(agent.state, agent.position, agent.handle)
+            agent.state_machine.state_position_sync_check(agent.position, agent.handle)
 
             # Handle done state actions, optionally remove agents
             self.handle_done_state(agent)

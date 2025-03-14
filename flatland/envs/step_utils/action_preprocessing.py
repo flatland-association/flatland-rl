@@ -1,6 +1,5 @@
 from functools import lru_cache
 
-from flatland.core.grid.grid_utils import position_to_coordinate
 from flatland.envs.agent_utils import TrainState
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils.transition_utils import check_valid_action
