@@ -571,10 +571,16 @@ class RailEnv(Environment):
         # MotionCheck gets A -> P and B -> P, however A -> P should never be added as not ready to depart. In the consequence, B cannot move in k+1
         # -> both forever (?) blocked
 
-        # which tests are concerned?
+        # which tests/agents are concerned?
+        hanging = set()
         for agent in endangered:
             dAttr = self.motionCheck.G.nodes.get((-1, agent.handle))
-            assert dAttr is None or "color" not in dAttr or dAttr["color"] not in ["red", "purple"], agent
+            safe = dAttr is None or "color" not in dAttr or dAttr["color"] not in ["red", "purple"]
+            if not safe:
+                hanging.add(agent)
+        if len(hanging) > 0:
+            print(hanging, list(self.motionCheck.G.edges))
+        assert len(hanging) == 0, (hanging, list(self.motionCheck.G.edges))
 
         for agent in self.agents:
             i_agent = agent.handle
