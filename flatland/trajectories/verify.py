@@ -5,8 +5,13 @@ from pathlib import Path
 import pandas as pd
 import tqdm
 
-from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
+from flatland.envs.persistence import RailEnvPersister
+from flatland.envs.rail_env import RailEnv
 from flatland.trajectories.trajectories import Trajectory
+
+# TODO cleanup heuristic baseline
+from src.observation.full_state_observation import FullStateObservationBuilder
+from src.policy.deadlock_avoidance_policy import DeadLockAvoidancePolicy
 
 if __name__ == '__main__':
 
@@ -22,13 +27,30 @@ if __name__ == '__main__':
         level = p.parent.parent.name
         test = p.parent.parent.parent.name
         data_dir = p.resolve().parent.parent
-        print(level)
-        print(data_dir)
         if len(non_exclusives) > 0:
             warnings.warn(str(p))
             print(non_exclusives)
+            ep_id = f"{test}_{level}"
 
-            TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=f"{test}_{level}")).evaluate()
+            env_path = (p.parent.parent / "serialised_state" / f"{test}_{level}.pkl").resolve()
+
+            data_dir = Path("/tmp/blup")
+            data_dir.mkdir(exist_ok=True)
+
+            policy_pkg = ""
+            policy_cls = "DeadLockAvoidancePolicy"
+
+            env, _ = RailEnvPersister.load_new(str(env_path))
+            env: RailEnv = env
+            env.obs_builder = FullStateObservationBuilder()
+            # TODO improve
+            env.obs_builder.env = env
+
+            Trajectory.create_from_policy(
+                policy=DeadLockAvoidancePolicy(),
+                data_dir=data_dir,
+                env=env
+            )
 
     # 52%|█████▎    | 21/40 [00:00<00:00, 21.42it/s]/Users/che/workspaces/flatland-rl-2/flatland/trajectories/verify.py:19: UserWarning: ../../episodes/malfunction_deadlock_avoidance_heuristics/Test_02/Level_1/event_logs/TrainMovementEvents.trains_positions.tsv
     # warnings.warn(str(p))
