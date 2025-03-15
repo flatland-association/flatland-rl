@@ -1,4 +1,6 @@
 """Timetable generators: Railway Undertaking (RU) / Eisenbahnverkehrsunternehmen (EVU)."""
+import pickle
+from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -139,3 +141,29 @@ def ttgen_flatland2(agents: List[EnvAgent], distance_map: DistanceMap,
         earliest_departures=[[0]] * len(agents),
         latest_arrivals=[[n_max_steps]] * len(agents),
         max_episode_steps=n_max_steps)
+
+
+class FileTimetableGenerator():
+    def __init__(self, filename: Path):
+        self.filename = filename
+
+    def generate(self, *args, **kwargs) -> Timetable:
+        with open(self.filename, "rb") as file_in:
+            return pickle.loads(file_in.read())
+
+    @staticmethod
+    def save(filename: Path, tt: Timetable):
+        with open(filename, "wb") as file_out:
+            file_out.write(pickle.dumps(tt))
+
+    def __call__(self, *args, **kwargs):
+        return self.generate(*args, **kwargs)
+
+    @staticmethod
+    def wrap(timetable_generator: timetable_generator, tt_pkl: Path) -> timetable_generator:
+        def _wrap(*args, **kwargs):
+            tt = timetable_generator(*args, **kwargs)
+            FileTimetableGenerator.save(tt_pkl, tt)
+            return tt
+
+        return _wrap
