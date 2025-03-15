@@ -3,6 +3,7 @@ Definition of the RailEnv environment.
 """
 import random
 import warnings
+from collections import defaultdict
 from functools import lru_cache
 from typing import List, Optional, Dict, Tuple, Set
 
@@ -536,6 +537,11 @@ class RailEnv(Environment):
                                                                                  agent.position,
                                                                                  agent.direction)
                 preprocessed_action = saved_action
+            # / TEMPORARY FIX FOR MALFUNCTION_OFF_MAP getting into map without motion check
+            elif agent.state == TrainState.MALFUNCTION_OFF_MAP and preprocessed_action == RailEnvActions.STOP_MOVING:
+                new_position = agent.initial_position
+                new_direction = agent.initial_direction
+            # \ TEMPORARY FIX FOR MALFUNCTION_OFF_MAP getting into map without motion check
             else:
                 new_position, new_direction = agent.position, agent.direction
 
@@ -565,10 +571,11 @@ class RailEnv(Environment):
                 agent_position_level_free = (agent.position, agent.direction % 2)
 
             ## Update positions
+            motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)
             if agent.malfunction_handler.in_malfunction:
                 movement_allowed = False
             else:
-                movement_allowed = self.motionCheck.check_motion(i_agent, agent_position_level_free)
+                movement_allowed = motion_check
 
             movement_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
             movement_allowed = movement_allowed or movement_inside_cell
@@ -582,6 +589,12 @@ class RailEnv(Environment):
                                                                               movement_allowed)
             agent.state_machine.set_transition_signals(state_transition_signals)
             agent.state_machine.step()
+
+            # / TEMPORARY FIX FOR MALFUNCTION_OFF_MAP getting into map without motion check
+            if agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED and not motion_check:
+                warnings.warn("TEMPORARILY FIX ERRONEOUS STATE TRANSITION MALFUNCTION_OFF_MAP->STOPPED LEADING TO TWO AGENTS OCCUPYING SAME CELL")
+                agent.state_machine.set_state(TrainState.READY_TO_DEPART)
+            # \ TEMPORARY FIX FOR MALFUNCTION_OFF_MAP getting into map without motion check
 
             # Needed when not removing agents at target
             movement_allowed = movement_allowed and agent.state != TrainState.DONE
@@ -630,15 +643,27 @@ class RailEnv(Environment):
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
     def _verify_mutually_exclusive_cell_occupation(self):
-        agent_positions = []
+        agent_positions_same_level = []
+        agent_positions_level_free = defaultdict(lambda: [])
         for agent in self.agents:
             if agent.position is not None:
-                # TODO refine for level free - does not ensure
-                # assert agent.position not in agent_positions or agent.position in self.level_free_positions
-                agent_positions.append(agent.position)
-        if len(agent_positions) != len(set(agent_positions)):
-            warnings.warn(f"{self._elapsed_steps} - non-none {agent_positions} - non-non unique: {set(agent_positions)}")
-        assert len(agent_positions) == len(set(agent_positions)), (self._elapsed_steps, agent_positions, set(agent_positions))
+                if agent.position in self.level_free_positions:
+                    agent_positions_level_free[agent.position].append(agent.direction)
+                else:
+                    agent_positions_same_level.append(agent.position)
+        if  len(agent_positions_same_level) != len(set(agent_positions_same_level)):
+            warnings.warn(f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}")
+        assert len(agent_positions_same_level) == len(set(agent_positions_same_level)), (self._elapsed_steps, agent_positions_same_level)
+
+        for position, directions in agent_positions_level_free.items():
+            if len(directions) >= 2:
+                warnings.warn(f"Found more than two agents occupying same level-free cell in step {self._elapsed_steps}: {agent_positions_level_free}")
+            assert len(directions) <= 2
+            if len(directions) == 2:
+                conflict = directions[0] % 2 == directions[1] % 2
+                if conflict:
+                    warnings.warn(f"Found two agents occupying same level-free cell along the same axis in step {self._elapsed_steps}: {agent_positions_level_free}")
+                assert not conflict
 
     def record_timestep(self, dActions):
         """
