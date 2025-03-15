@@ -2,6 +2,7 @@
 Definition of the RailEnv environment.
 """
 import random
+import warnings
 from functools import lru_cache
 from typing import List, Optional, Dict, Tuple, Set
 
@@ -620,10 +621,24 @@ class RailEnv(Environment):
         self.end_of_episode_update(have_all_agents_ended)
 
         self._update_agent_positions_map()
+
+        self._verify_mutually_exclusive_cell_occupation()
+
         if self.record_steps:
             self.record_timestep(action_dict)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
+
+    def _verify_mutually_exclusive_cell_occupation(self):
+        agent_positions = []
+        for agent in self.agents:
+            if agent.position is not None:
+                # TODO refine for level free - does not ensure
+                # assert agent.position not in agent_positions or agent.position in self.level_free_positions
+                agent_positions.append(agent.position)
+        if len(agent_positions) != len(set(agent_positions)):
+            warnings.warn(f"{self._elapsed_steps} - non-none {agent_positions} - non-non unique: {set(agent_positions)}")
+        assert len(agent_positions) == len(set(agent_positions)), (self._elapsed_steps, agent_positions, set(agent_positions))
 
     def record_timestep(self, dActions):
         """
