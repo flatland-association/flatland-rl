@@ -5,6 +5,9 @@ from pathlib import Path
 import pandas as pd
 import tqdm
 
+from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
+from flatland.trajectories.trajectories import Trajectory
+
 if __name__ == '__main__':
 
     for p in tqdm.tqdm(sorted(Path("../../episodes/malfunction_deadlock_avoidance_heuristics/").rglob("**/TrainMovementEvents.trains_positions.tsv"))):
@@ -16,9 +19,16 @@ if __name__ == '__main__':
         df["position"] = df['position'].apply(lambda x: x if x is not None else "None")
         position_counts = df[df["position"] != "None"].groupby("env_time").agg({"position": ['nunique', 'count']}).reset_index()
         non_exclusives = position_counts[position_counts[("position", "nunique")] != position_counts[("position", "count")]]
+        level = p.parent.parent.name
+        test = p.parent.parent.parent.name
+        data_dir = p.resolve().parent.parent
+        print(level)
+        print(data_dir)
         if len(non_exclusives) > 0:
             warnings.warn(str(p))
-            # print(non_exclusives)
+            print(non_exclusives)
+
+            TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=f"{test}_{level}")).evaluate()
 
     # 52%|█████▎    | 21/40 [00:00<00:00, 21.42it/s]/Users/che/workspaces/flatland-rl-2/flatland/trajectories/verify.py:19: UserWarning: ../../episodes/malfunction_deadlock_avoidance_heuristics/Test_02/Level_1/event_logs/TrainMovementEvents.trains_positions.tsv
     # warnings.warn(str(p))
