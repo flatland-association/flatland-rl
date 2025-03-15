@@ -36,7 +36,7 @@ class TrainStateMachine:
             if self.st_signals.earliest_departure_reached:
                 if self.st_signals.movement_action_given and self.st_signals.movement_allowed:
                     self.next_state = TrainState.MOVING
-                elif self.st_signals.stop_action_given:
+                elif self.st_signals.stop_action_given and self.st_signals.movement_allowed:
                     self.next_state = TrainState.STOPPED
                 else:
                     self.next_state = TrainState.READY_TO_DEPART
@@ -49,6 +49,7 @@ class TrainStateMachine:
         if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION
         elif self.st_signals.target_reached:
+            # this branch is never used as target reached is not handled by state_machine.step() but by state_machine.update_if_reached()!
             self.next_state = TrainState.DONE
         elif self.st_signals.stop_action_given or not self.st_signals.movement_allowed:
             self.next_state = TrainState.STOPPED
@@ -150,13 +151,16 @@ class TrainStateMachine:
     def set_transition_signals(self, state_transition_signals):
         self.st_signals = state_transition_signals
 
-    def state_position_sync_check(self, position, i_agent):
+    def state_position_sync_check(self, position, i_agent, remove_agents_at_target):
         """ Check for whether on map and off map states are matching with position being None """
         if self.state.is_on_map_state() and position is None:
             raise ValueError("Agent ID {} Agent State {} is on map Agent Position {} if off map ".format(
                 i_agent, str(self.state), str(position)))
         elif self.state.is_off_map_state() and position is not None:
             raise ValueError("Agent ID {} Agent State {} is off map Agent Position {} if on map ".format(
+                i_agent, str(self.state), str(position)))
+        elif self.state == TrainState.DONE and remove_agents_at_target and position is not None:
+            raise ValueError("Agent ID {} Agent State {} is not None Agent Position {} if remove_agents_at_target".format(
                 i_agent, str(self.state), str(position)))
 
     def __repr__(self):

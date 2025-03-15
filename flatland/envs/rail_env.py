@@ -2,6 +2,8 @@
 Definition of the RailEnv environment.
 """
 import random
+import warnings
+from collections import defaultdict
 from functools import lru_cache
 from typing import List, Optional, Dict, Tuple, Set
 
@@ -497,6 +499,7 @@ class RailEnv(Environment):
                     movement_possible = agent.state == TrainState.MOVING and not stop_action_given
                     movement_possible |= agent.state == TrainState.MALFUNCTION and not in_malfunction and not stop_action_given
                     movement_possible |= agent.state == TrainState.STOPPED and movement_action_given
+                    movement_possible &= not in_malfunction
                     if movement_possible:
                         new_position, new_direction = env_utils.apply_action_independent(
                             preprocessed_action,
@@ -504,6 +507,7 @@ class RailEnv(Environment):
                             agent.position,
                             agent.direction
                         )
+                assert agent.position is not None
             else:
                 assert agent.state.is_off_map_state() or agent.state == TrainState.DONE
                 new_position = None
@@ -582,12 +586,13 @@ class RailEnv(Environment):
                     agent.direction = agent_transition_data.direction
                 agent.state_machine.update_if_reached(agent.position, agent.target)
 
-            # Off map or on map state and position should match
-            agent.state_machine.state_position_sync_check(agent.position, agent.handle)
 
             # Handle done state actions, optionally remove agents
             self.handle_done_state(agent)
             have_all_agents_ended &= (agent.state == TrainState.DONE)
+
+            # Off map or on map state and position should match
+            agent.state_machine.state_position_sync_check(agent.position, agent.handle, self.remove_agents_at_target)
 
             ## Update rewards
             self.rewards_dict[i_agent] += self.rewards.step_reward(agent, self.distance_map, self._elapsed_steps)
@@ -608,13 +613,28 @@ class RailEnv(Environment):
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
     def _verify_mutually_exclusive_cell_occupation(self):
-        agent_positions = set()
+        agent_positions_same_level = []
+        agent_positions_level_free = defaultdict(lambda: [])
         for agent in self.agents:
             if agent.position is not None:
-                # TODO refine - does not ensure
-                assert agent.position not in agent_positions or agent.position in self.level_free_positions
-                agent_positions.add(agent.position)
-        assert len(agent_positions) == len(set(agent_positions)), (agent_positions, set(agent_positions))
+                if agent.position in self.level_free_positions:
+                    agent_positions_level_free[agent.position].append(agent.direction)
+                else:
+                    agent_positions_same_level.append(agent.position)
+        if len(agent_positions_same_level) != len(set(agent_positions_same_level)):
+            warnings.warn(f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}")
+        assert len(agent_positions_same_level) == len(set(agent_positions_same_level)), (self._elapsed_steps, agent_positions_same_level)
+
+        for position, directions in agent_positions_level_free.items():
+            if len(directions) >= 2:
+                warnings.warn(f"Found more than two agents occupying same level-free cell in step {self._elapsed_steps}: {agent_positions_level_free}")
+            assert len(directions) <= 2
+            if len(directions) == 2:
+                conflict = directions[0] % 2 == directions[1] % 2
+                if conflict:
+                    warnings.warn(
+                        f"Found two agents occupying same level-free cell along the same axis in step {self._elapsed_steps}: {agent_positions_level_free}")
+                assert not conflict
 
     def record_timestep(self, dActions):
         """

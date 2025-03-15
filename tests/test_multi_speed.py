@@ -65,6 +65,7 @@ def test_multi_speed_init():
     # Set all the different speeds
     # Reset environment and get initial observations for all agents
     env.reset(False, False)
+    assert len(set([a.initial_position for a in env.agents])) == 3
     env._max_episode_steps = 1000
 
     for a_idx in range(len(env.agents)):
