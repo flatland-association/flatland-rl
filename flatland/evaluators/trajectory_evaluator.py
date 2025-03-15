@@ -69,6 +69,10 @@ class TrajectoryEvaluator:
             if self.callbacks is not None:
                 self.callbacks.on_episode_step(env=env)
 
+            if snapshot_interval > 0 and (env_time + 1) % snapshot_interval == 0:
+                RailEnvPersister.save(env,
+                                      os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR, f"{self.trajectory.ep_id}_step{(env_time + 1):04d}.pkl"))
+
             done = dones['__all__']
 
             if rendering:
@@ -76,19 +80,16 @@ class TrajectoryEvaluator:
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
-                actual_position = (agent.position, agent.direction)
                 expected_position = self.trajectory.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
-                if actual_position != expected_position:
-                    print(f"positions = {[a.position for a in env.agents]}")
-                    print(f"initial_position = {[a.initial_position for a in env.agents]}")
-                    print(f"earliest_departure = {[a.earliest_departure for a in env.agents]}")
-                    print(f"state = {[a.state for a in env.agents]}")
-                    print(f"state = {agent.state}")
-                    print(f"previous_state = {[a.state_machine.previous_state for a in env.agents]}")
-                    print(f"previous_state = {agent.state_machine.previous_state}")
-                assert actual_position == expected_position, (
-                    self.trajectory.data_dir, self.trajectory.ep_id, env_time + 1, agent_id, actual_position, expected_position, agent.earliest_departure,
-                    env._elapsed_steps, env.agents)
+                actual_position = (agent.position, agent.direction)
+                assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
+                                                             f"- actual_position:\t{actual_position}\n" \
+                                                             f"- expected_position:\t{expected_position}\n" \
+                                                             f"- trajectory:\tTrajectory({self.trajectory.data_dir}, {self.trajectory.ep_id})\n" \
+                                                             f"- agent:\t{agent} \n- state_machine:\t{agent.state_machine}\n" \
+                                                             f"- speed_counter:\t{agent.speed_counter}\n" \
+                                                             f"- breakpoint:\tself._elapsed_steps == {env_time + 1} and agent.handle == {agent.handle}\n\n\n" \
+                                                             f"- agents:\t{env.agents}"
 
             if done:
                 break
