@@ -52,7 +52,8 @@ class RandomAgent:
 def test_multi_speed_init():
     env = RailEnv(width=50, height=50,
                   rail_generator=sparse_rail_generator(seed=2), line_generator=sparse_line_generator(),
-                  random_seed=3,
+                  # fix random_seed where all agents have different initial_position
+                  random_seed=4,
                   number_of_agents=3)
 
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
@@ -64,6 +65,7 @@ def test_multi_speed_init():
     # Set all the different speeds
     # Reset environment and get initial observations for all agents
     env.reset(False, False)
+    assert len(set([a.initial_position for a in env.agents])) == 3
     env._max_episode_steps = 1000
 
     for a_idx in range(len(env.agents)):
