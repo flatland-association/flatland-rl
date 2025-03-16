@@ -538,7 +538,8 @@ class RailEnv(Environment):
                                                                                  agent.direction)
                 preprocessed_action = saved_action
             # / TEMPORARY FIX FOR MALFUNCTION_OFF_MAP getting into map without motion check
-            elif agent.state == TrainState.MALFUNCTION_OFF_MAP and preprocessed_action == RailEnvActions.STOP_MOVING:
+            elif agent.state == TrainState.MALFUNCTION_OFF_MAP and (preprocessed_action == RailEnvActions.STOP_MOVING or preprocessed_action.is_moving_action()):
+                # weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
             # \ TEMPORARY FIX FOR MALFUNCTION_OFF_MAP getting into map without motion check
@@ -597,6 +598,7 @@ class RailEnv(Environment):
                     motion_check = False
                 # while in MALFUNCTION_OFF_MAP and not malfunction complete, do not hinder others
                 elif agent.state == TrainState.MALFUNCTION_OFF_MAP and agent.malfunction_handler.malfunction_down_counter > 0:
+                    # moving action and stop action tries to put them on the map
                     motion_check = False
                 else:
                     motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)
@@ -628,8 +630,8 @@ class RailEnv(Environment):
             agent.state_machine.step()
 
             # / TEMPORARY FIX FOR MALFUNCTION_OFF_MAP getting into map without motion check
-            if agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED and not motion_check:
-                warnings.warn("TEMPORARILY FIX ERRONEOUS STATE TRANSITION MALFUNCTION_OFF_MAP->STOPPED LEADING TO TWO AGENTS OCCUPYING SAME CELL")
+            if agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and (agent.state == TrainState.STOPPED or agent.state == TrainState.MOVING) and not motion_check:
+                warnings.warn("TEMPORARILY FIX ERRONEOUS STATE TRANSITION MALFUNCTION_OFF_MAP->STOPPED/MOVING LEADING TO TWO AGENTS OCCUPYING SAME CELL")
                 agent.state_machine.set_state(TrainState.READY_TO_DEPART)
             # \ TEMPORARY FIX
 
