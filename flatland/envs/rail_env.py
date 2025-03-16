@@ -566,6 +566,9 @@ class RailEnv(Environment):
                 # while in READY_TO_DEPART, do not hinder others
                 elif agent.state == TrainState.READY_TO_DEPART and not preprocessed_action.is_moving_action():
                     pass
+                # while in MALFUNCTION_OFF_MAP and not malfunction complete, do not hinder others
+                elif agent.state == TrainState.MALFUNCTION_OFF_MAP and agent.malfunction_handler.malfunction_down_counter > 0:
+                    pass
                 else:
                     self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
             # \ TEMPORARY FIX
@@ -591,6 +594,9 @@ class RailEnv(Environment):
                     motion_check = False
                 # while in READY_TO_DEPART, do not hinder others
                 elif agent.state == TrainState.READY_TO_DEPART and not preprocessed_action.is_moving_action():
+                    motion_check = False
+                # while in MALFUNCTION_OFF_MAP and not malfunction complete, do not hinder others
+                elif agent.state == TrainState.MALFUNCTION_OFF_MAP and agent.malfunction_handler.malfunction_down_counter > 0:
                     motion_check = False
                 else:
                     motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)
