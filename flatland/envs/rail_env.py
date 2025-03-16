@@ -598,7 +598,7 @@ class RailEnv(Environment):
             agent.state_machine.set_transition_signals(state_transition_signals)
 
             # / TEMPORARY FIX avoid setting agent to STOPPED after malfunction unnecessarily
-            if agent.state_machine.previous_state == TrainState.MALFUNCTION and agent.state.is_malfunction_state() and not agent.speed_counter.is_cell_exit and preprocessed_action.is_moving_action():
+            if agent.state.is_malfunction_state() and not agent.speed_counter.is_cell_exit and preprocessed_action.is_moving_action():
                 state_transition_signals.valid_movement_action_given = True
                 agent.state_machine.set_transition_signals(state_transition_signals)
             # \ TEMPORARY FIX
