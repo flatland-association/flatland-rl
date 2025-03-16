@@ -59,7 +59,7 @@ def regen_trajectories(data_dir, ep_id, output_dir):
 
 
 if __name__ == '__main__':
-    # verify()
+    verify()
     l = [
         ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_0", "Test_00_Level_0"),
         ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_1", "Test_00_Level_1"),
