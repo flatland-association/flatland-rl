@@ -560,7 +560,10 @@ class RailEnv(Environment):
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
             # / TEMPORARY FIX as adding agent to motion check can hinder other agents having earliest_departure_reached to start
             if agent.earliest_departure <= self._elapsed_steps or (agent.state == TrainState == TrainState.DONE and agent.position is not None):
-                self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
+                if agent.state == TrainState.WAITING and not preprocessed_action.is_moving_action():
+                    pass
+                else:
+                    self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
             # \ TEMPORARY FIX
 
         # Find conflicts between trains trying to occupy same cell
@@ -573,9 +576,17 @@ class RailEnv(Environment):
             if agent.position in self.level_free_positions:
                 agent_position_level_free = (agent.position, agent.direction % 2)
 
+            # Fetch the saved transition data
+            agent_transition_data = temp_transition_data[i_agent]
+            preprocessed_action = agent_transition_data.preprocessed_action
+
             # / TEMPORARY FIX as adding agent to motion check can hinder other agents having earliest_departure_reached to start
             if agent.earliest_departure <= self._elapsed_steps or (agent.state == TrainState == TrainState.DONE and agent.position is not None):
-                motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)
+                # in timestep WAITING->GETTING_READY_TO_DEPART, do not block other agents unnecessarily
+                if agent.state == TrainState.WAITING and not preprocessed_action.is_moving_action():
+                    motion_check = False
+                else:
+                    motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)
             else:
                 motion_check = False
             # \ TEMPORARY FIX
@@ -588,9 +599,7 @@ class RailEnv(Environment):
             movement_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit
             movement_allowed = movement_allowed or movement_inside_cell
 
-            # Fetch the saved transition data
-            agent_transition_data = temp_transition_data[i_agent]
-            preprocessed_action = agent_transition_data.preprocessed_action
+
 
             ## Update states
             state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action,

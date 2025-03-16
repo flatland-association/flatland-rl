@@ -246,6 +246,73 @@ def test_malfunction_malfunction_motion_check_order_when_earliest_departure_is_n
     # \ TEMPORARY FIX
 
 
+
+def test_malfunction_malfunction_motion_check_order_when_earliest_departure_reached_but_not_moving_action():
+    """
+    Avoid adding agent to motion check as it can hinder other agents having earliest_departure_reached to start.
+    """
+    stochastic_data = MalfunctionParameters(malfunction_rate=0,  # Rate of malfunction occurence
+                                            min_duration=0,  # Minimal duration of malfunction
+                                            max_duration=0  # Max duration of malfunction
+                                            )
+
+    rail, _, optionals = make_simple_rail()
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=10),
+                  number_of_agents=2,
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
+                  )
+
+    env.reset(False, False, random_seed=10)
+
+    env.agents[0].initial_position = (6, 6)
+    env.agents[0].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[0].target = (0, 3)
+    env.agents[0].earliest_departure = 3
+    env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
+
+    env.agents[1].initial_position = (6, 6)
+    env.agents[1].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[1].target = (0, 3)
+    env.agents[1].earliest_departure = 2
+
+    # step 1
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+
+    assert env.agents[0].position == None
+    assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
+    assert env.agents[0].action_saver.saved_action == None
+
+    assert env.agents[1].position == None
+    assert env.agents[1].state == TrainState.WAITING
+
+    # step 2
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+
+    assert env.agents[0].position == None
+    assert env.agents[0].state == TrainState.WAITING
+    # this is the root cause: the motion check for agent 0 returns OK, the action preprocessing converts to DO_NOTHING only in state WAITING, but not MALFUNCTION_OFF_MAP
+    assert env.agents[0].action_saver.saved_action == RailEnvActions.MOVE_FORWARD
+    assert env.agents[1].position == None
+    assert env.agents[1].state == TrainState.READY_TO_DEPART
+
+    # step 3
+    env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.MOVE_FORWARD})
+    assert env.agents[0].position == None
+    assert env.agents[0].state == TrainState.READY_TO_DEPART
+
+    # / TEMPORARY FIX as adding agent to motion check can hinder other agents having earliest_departure_reached to start
+    # WITHOUT FIX:
+    # - agent 0 with the lower index wins, despite sending DO_NOTHING
+    # - agent 1 is blocked, despite having reached earliest departure
+    assert env.agents[1].position == (6, 6)
+    assert env.agents[1].state == TrainState.MOVING
+    # \ TEMPORARY FIX
+
 def test_malfunction_malfunction_malfunction_to_moving_instead_of_stopped():
     """
     MALFUNCTION to MOVING without going to STOPPED unnecessarily
