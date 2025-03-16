@@ -560,7 +560,11 @@ class RailEnv(Environment):
             # This is for storing and later checking for conflicts of agents trying to occupy same cell
             # / TEMPORARY FIX as adding agent to motion check can hinder other agents having earliest_departure_reached to start
             if agent.earliest_departure <= self._elapsed_steps or (agent.state == TrainState == TrainState.DONE and agent.position is not None):
+                # in time-step WAITING->READY_TO_DEPART, do not block other agents
                 if agent.state == TrainState.WAITING and not preprocessed_action.is_moving_action():
+                    pass
+                # while in READY_TO_DEPART, do not hinder others
+                elif agent.state == TrainState.READY_TO_DEPART and not preprocessed_action.is_moving_action():
                     pass
                 else:
                     self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
@@ -584,6 +588,9 @@ class RailEnv(Environment):
             if agent.earliest_departure <= self._elapsed_steps or (agent.state == TrainState == TrainState.DONE and agent.position is not None):
                 # in timestep WAITING->GETTING_READY_TO_DEPART, do not block other agents unnecessarily
                 if agent.state == TrainState.WAITING and not preprocessed_action.is_moving_action():
+                    motion_check = False
+                # while in READY_TO_DEPART, do not hinder others
+                elif agent.state == TrainState.READY_TO_DEPART and not preprocessed_action.is_moving_action():
                     motion_check = False
                 else:
                     motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)
