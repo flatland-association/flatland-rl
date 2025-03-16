@@ -486,11 +486,14 @@ class RailEnv(Environment):
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
             movement_action_given = preprocessed_action.is_moving_action()
+            earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
 
             if agent.state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
-            elif agent.state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction:
+            elif agent.state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
+                preprocessed_action.is_moving_action() or preprocessed_action == RailEnvActions.STOP_MOVING):
+                # weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
             elif agent.state.is_on_map_state():
@@ -585,7 +588,6 @@ class RailEnv(Environment):
                     agent.position = agent_transition_data.position
                     agent.direction = agent_transition_data.direction
                 agent.state_machine.update_if_reached(agent.position, agent.target)
-
 
             # Handle done state actions, optionally remove agents
             self.handle_done_state(agent)
