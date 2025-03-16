@@ -138,7 +138,7 @@ ipywidgets==8.1.5
     #   ipyevents
 jedi==0.19.2
     # via ipython
-jinja2==3.1.5
+jinja2==3.1.6
     # via torch
 jmespath==1.0.1
     # via
