@@ -93,7 +93,7 @@ def eval_flatland_pettingzoo(env_fn, num_games: int = 100, render_mode: str | No
 
 
 if __name__ == "__main__":
-    raw_env = env_generator(obs_builder_object=FlattenedNormalizedTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
+    raw_env, _, _ = env_generator(obs_builder_object=FlattenedNormalizedTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
     env_fn = PettingzooFlatland(raw_env)
     env_kwargs = {}
 
