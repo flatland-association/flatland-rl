@@ -52,7 +52,6 @@ class TrajectoryEvaluator:
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
         if start_step is None:
-            # TODO revise indexing - start at 1? use elapsed which reflects better?
             start_step = 0
 
         if rendering:
