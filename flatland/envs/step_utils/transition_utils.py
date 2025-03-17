@@ -58,7 +58,7 @@ def check_action_on_agent(
     new_position = get_new_position(position, new_direction)
 
     new_cell_valid = check_bounds(new_position, rail.height, rail.width)
-    new_cell_valid &= rail.get_full_transitions(*new_position) > 0
+    new_cell_valid = new_cell_valid and rail.get_full_transitions(*new_position) > 0
 
     # If transition validity hasn't been checked yet.
     if transition_valid is None:
