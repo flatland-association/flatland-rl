@@ -666,8 +666,8 @@ class RailEnv(Environment):
             list_agents_state.append([
                 *pos, int(agent.direction),
                 agent.malfunction_handler.malfunction_down_counter,
-                0,  # int(agent.status), #  TODO: find appropriate attribute for agent status
-                int(agent.position in self.motionCheck.svDeadlocked)
+                agent.state.value,
+                int(agent.position in self.motionCheck.svDeadlocked),
             ])
 
         self.cur_episode.append(list_agents_state)
