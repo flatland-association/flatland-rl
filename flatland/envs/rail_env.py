@@ -622,9 +622,23 @@ class RailEnv(Environment):
                     agent_positions_level_free[agent.position].append(agent.direction)
                 else:
                     agent_positions_same_level.append(agent.position)
+        msgs = f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}"
         if len(agent_positions_same_level) != len(set(agent_positions_same_level)):
-            warnings.warn(f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}")
-        assert len(agent_positions_same_level) == len(set(agent_positions_same_level)), (self._elapsed_steps, agent_positions_same_level)
+            warnings.warn(msgs)
+            counts = {pos: agent_positions_same_level.count(pos) for pos in set(agent_positions_same_level)}
+            dup_positions = [pos for pos, count in counts.items() if count > 1]
+            for dup in dup_positions:
+                for agent in self.agents:
+                    if agent.position == dup:
+                        msg = f"\n================== BAD AGENT ==================================\n\n\n\n\n"
+                        f"- agent:\t{agent} \n"
+                        f"- state_machine:\t{agent.state_machine}\n"
+                        f"- speed_counter:\t{agent.speed_counter}\n"
+                        f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n\n\n"
+                        f"- agents:\t{self.agents}"
+                        warnings.warn(msg)
+                        msgs += msg
+        assert len(agent_positions_same_level) == len(set(agent_positions_same_level)), msgs
 
         for position, directions in agent_positions_level_free.items():
             if len(directions) >= 2:
