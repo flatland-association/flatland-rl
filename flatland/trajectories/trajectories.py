@@ -284,8 +284,6 @@ class Trajectory:
         actions = trajectory.read_actions()
         trains_arrived = trajectory.read_trains_arrived()
 
-        policy.env = env
-
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
         env_time = 0
