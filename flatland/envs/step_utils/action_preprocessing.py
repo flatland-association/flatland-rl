@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from flatland.envs.agent_utils import TrainState
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.envs.step_utils.transition_utils import check_action_on_agent
 from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 
@@ -65,3 +65,9 @@ def preprocess_moving_action(action, rail, position, direction):
         action = process_left_right(action, rail, position, direction)
 
     return action
+
+
+def check_valid_action(action, rail, position, direction):
+    new_cell_valid, _, _, transition_valid = check_action_on_agent(action, rail, position, direction)
+    action_is_valid = new_cell_valid and transition_valid
+    return action_is_valid

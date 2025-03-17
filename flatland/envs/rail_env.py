@@ -25,11 +25,9 @@ from flatland.envs.distance_map import DistanceMap
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import Rewards
-from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.action_preprocessing import process_illegal_action
+from flatland.envs.step_utils.action_preprocessing import process_illegal_action, check_valid_action, preprocess_moving_action
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
-from flatland.envs.step_utils.transition_utils import check_valid_action, check_valid_position_direction
 from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
@@ -393,9 +391,9 @@ class RailEnv(Environment):
         if current_position is None:  # Agent not added on map yet
             current_position, current_direction = agent.initial_position, agent.initial_direction
 
-        action = action_preprocessing.preprocess_moving_action(action, self.rail, current_position, current_direction)
+        action = preprocess_moving_action(action, self.rail, current_position, current_direction)
 
-        # Check transitions, bounts for executing the action in the given position and direction
+        # Check transitions, bounds for executing the action in the given position and direction
         if action.is_moving_action() and not check_valid_action(action, self.rail, current_position, current_direction):
             action = RailEnvActions.STOP_MOVING
 
@@ -516,7 +514,8 @@ class RailEnv(Environment):
                 new_direction = None
 
             if new_position is not None:
-                check_valid_position_direction(self.rail, new_position, new_direction)
+                valid_position_direction = any(self.rail.get_transitions(*new_position, new_direction))
+                assert valid_position_direction
 
             temp_transition_data[i_agent] = env_utils.AgentTransitionData(position=new_position,
                                                                           direction=new_direction,
