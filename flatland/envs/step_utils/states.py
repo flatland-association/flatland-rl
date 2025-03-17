@@ -28,8 +28,6 @@ class TrainState(IntEnum):
 @dataclass(repr=True)
 class StateTransitionSignals:
     in_malfunction : bool = False
-    # TODO drop
-    malfunction_counter_complete : bool = False
     earliest_departure_reached : bool = False
     stop_action_given : bool = False
     movement_action_given: bool = False

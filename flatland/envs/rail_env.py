@@ -553,11 +553,8 @@ class RailEnv(Environment):
 
             # state machine step
             agent.state_machine.set_transition_signals(StateTransitionSignals(
-                # Malfunction starts when in_malfunction is set to true
+                # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
                 in_malfunction=agent.malfunction_handler.in_malfunction,
-                # TODO this is inverse of in_malfunction - keep only one of the two
-                # Malfunction counter complete - no malfunction or malfunction ends next timestep or
-                malfunction_counter_complete=agent.malfunction_handler.malfunction_counter_complete,
                 # Earliest departure reached - Train is allowed to move now
                 earliest_departure_reached=self._elapsed_steps >= agent.earliest_departure,
                 # Stop action given
