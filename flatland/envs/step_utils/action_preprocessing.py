@@ -1,73 +1,35 @@
 from functools import lru_cache
+from typing import Any, Tuple
 
-from flatland.envs.agent_utils import TrainState
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils.transition_utils import check_action_on_agent
 from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 
 @lru_cache()
-def process_illegal_action(action: RailEnvActions):
+def process_illegal_action(action: Any) -> RailEnvActions:
+    """
+    Returns the action if valid (either int value or in RailEnvActions), returns RailEnvActions.DO_NOTHING otherwise.
+    """
     if not RailEnvActions.is_action_valid(action):
         return RailEnvActions.DO_NOTHING
     else:
         return RailEnvActions(action)
 
 
-def process_do_nothing(state: TrainState, saved_action: RailEnvActions):
-    if state == TrainState.MOVING:
-        action = RailEnvActions.MOVE_FORWARD
-    elif saved_action:
-        action = saved_action
-    else:
-        action = RailEnvActions.DO_NOTHING
-    return action
-
-
-@enable_infrastructure_lru_cache(maxsize=1_000_000)
-def process_left_right(action, rail, position, direction):
-    if not check_valid_action(action, rail, position, direction):
-        action = RailEnvActions.MOVE_FORWARD
-    return action
-
-
 @enable_infrastructure_lru_cache()
-def preprocess_action_when_waiting(action, state):
-    """
-    Set action to DO_NOTHING if in waiting state
-    """
-    if state == TrainState.WAITING:
-        action = RailEnvActions.DO_NOTHING
-    return action
-
-
-@enable_infrastructure_lru_cache()
-def preprocess_raw_action(action, state, saved_action):
-    """
-    Preprocesses actions to handle different situations of usage of action based on context
-        - DO_NOTHING is converted to FORWARD if train is moving
-    """
-    action = process_illegal_action(action)
-
-    if action == RailEnvActions.DO_NOTHING:
-        action = process_do_nothing(state, saved_action)
-
-    return action
-
-
-@enable_infrastructure_lru_cache()
-def preprocess_moving_action(action, rail, position, direction):
+def preprocess_moving_action(action: RailEnvActions, rail: GridTransitionMap, position: Tuple[int, int], direction: Grid4TransitionsEnum):
     """
     LEFT/RIGHT is converted to FORWARD if left/right is not available and train is moving
-    FORWARD is converted to STOP_MOVING if leading to dead end?
     """
-    if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]:
-        action = process_left_right(action, rail, position, direction)
-
+    if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT] and not check_valid_action(action, rail, position, direction):
+        action = RailEnvActions.MOVE_FORWARD
     return action
 
 
-def check_valid_action(action, rail, position, direction):
+def check_valid_action(action: RailEnvActions, rail: GridTransitionMap, position: Tuple[int, int], direction: Grid4TransitionsEnum):
     new_cell_valid, _, _, transition_valid = check_action_on_agent(action, rail, position, direction)
     action_is_valid = new_cell_valid and transition_valid
     return action_is_valid
