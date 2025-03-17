@@ -153,13 +153,21 @@ def test_multispeed_actions_no_malfunction_no_blocking():
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
+                state=TrainState.MOVING,
+                is_cell_exit=False,
+
                 action=RailEnvActions.MOVE_LEFT,
+
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
+                state=TrainState.MOVING,
+                is_cell_exit=True,
+
                 action=RailEnvActions.MOVE_LEFT,
+
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(
@@ -408,6 +416,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
+                    is_cell_exit=True,
 
                     action=RailEnvActions.MOVE_LEFT,
 
@@ -496,6 +505,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MALFUNCTION,
+                malfunction=0,
 
                 action=RailEnvActions.MOVE_FORWARD,
 
@@ -568,10 +578,10 @@ def test_multispeed_actions_malfunction_no_blocking():
             Replay(  # 13
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
-
                 state=TrainState.MOVING,
 
                 action=None,
+
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             # DO_NOTHING keeps moving!
@@ -597,7 +607,9 @@ def test_multispeed_actions_malfunction_no_blocking():
                 position=(3, 4),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
+
                 action=RailEnvActions.MOVE_FORWARD,
+
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
 
