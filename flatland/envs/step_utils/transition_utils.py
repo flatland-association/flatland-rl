@@ -1,22 +1,36 @@
 from typing import Tuple
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 
 @enable_infrastructure_lru_cache(maxsize=1_000_000)
-def check_action(action, position, direction, rail):
+def check_action_on_agent(
+    action: RailEnvActions, rail: GridTransitionMap, position: Tuple[int, int], direction: Grid4TransitionsEnum) -> Tuple[bool, int, Tuple[int, int], bool]:
     """
+    Gets new position and direction for the action.
+
+
 
     Parameters
     ----------
     action : RailEnvActions
+    rail : GridTransitionMap
+    position: Tuple[int,int]
+    direction : Grid4TransitionsEnum
 
     Returns
     -------
-    Tuple[Grid4TransitionsEnum,Tuple[int,int]]
+    new_cell_valid : bool
+        - whether new cell is within bounds
+    new_direction : int
+    new_position : Tuple[int,int]
+    transition_valid : bool
+
     """
     transition_valid = None
     possible_transitions = rail.get_transitions(*position, direction)
@@ -33,42 +47,18 @@ def check_action(action, position, direction, rail):
         if num_transitions <= 1:
             transition_valid = False
 
-    new_direction %= 4  # Dipam : Why?
+    new_direction %= 4
 
-    if num_transitions == 1:
+    if action == RailEnvActions.MOVE_FORWARD and num_transitions == 1:
         # - dead-end, straight line or curved line;
         # new_direction will be the only valid transition
         # - take only available transition
         new_direction = fast_argmax(possible_transitions)
         transition_valid = True
-    return new_direction, transition_valid
-
-
-@enable_infrastructure_lru_cache(maxsize=1_000_000)
-def check_action_on_agent(action, rail, position, direction):
-    """
-    Parameters
-    ----------
-    action : RailEnvActions
-    agent : EnvAgent
-
-    Returns
-    -------
-    bool
-        Is it a legal move?
-        1) transition allows the new_direction in the cell,
-        2) the new cell is not empty (case 0),
-        3) the cell is free, i.e., no agent is currently in that cell
-
-
-    """
-    # compute number of possible transitions in the current
-    # cell used to check for invalid actions
-    new_direction, transition_valid = check_action(action, position, direction, rail)
     new_position = get_new_position(position, new_direction)
 
-    new_cell_valid = check_bounds(new_position, rail.height, rail.width) and \
-                     rail.get_full_transitions(*new_position) > 0
+    new_cell_valid = check_bounds(new_position, rail.height, rail.width)
+    new_cell_valid &= rail.get_full_transitions(*new_position) > 0
 
     # If transition validity hasn't been checked yet.
     if transition_valid is None:
