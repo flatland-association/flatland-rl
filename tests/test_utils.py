@@ -25,6 +25,7 @@ class Replay(object):
     set_malfunction = attrib(default=None, type=Optional[int])
     reward = attrib(default=None, type=Optional[float])
     state = attrib(default=None, type=Optional[TrainState])
+    is_cell_exit = attrib(default=None, type=Optional[bool])
 
 
 @attrs
@@ -124,6 +125,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             _assert(a, agent.direction, replay.direction, 'direction')
             if replay.state is not None:
                 _assert(a, TrainState(agent.state).name, TrainState(replay.state).name, 'state')
+            if replay.is_cell_exit is not None:
+                _assert(a, agent.speed_counter.is_cell_exit, replay.is_cell_exit, 'is_cell_exit')
 
             if replay.action is not None:
                 if not skip_action_required_check:
