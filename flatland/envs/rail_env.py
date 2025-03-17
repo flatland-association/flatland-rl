@@ -626,12 +626,12 @@ class RailEnv(Environment):
             for dup in dup_positions:
                 for agent in self.agents:
                     if agent.position == dup:
-                        msg = f"\n================== BAD AGENT ==================================\n\n\n\n\n"
-                        f"- agent:\t{agent} \n"
-                        f"- state_machine:\t{agent.state_machine}\n"
-                        f"- speed_counter:\t{agent.speed_counter}\n"
-                        f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n\n\n"
-                        f"- agents:\t{self.agents}"
+                        msg = (f"\n================== BAD AGENT ==================================\n\n\n\n\n"
+                               f"- agent:\t{agent} \n"
+                               f"- state_machine:\t{agent.state_machine}\n"
+                               f"- speed_counter:\t{agent.speed_counter}\n"
+                               f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n\n\n"
+                               f"- agents:\t{self.agents}")
                         warnings.warn(msg)
                         msgs += msg
         assert len(agent_positions_same_level) == len(set(agent_positions_same_level)), msgs
