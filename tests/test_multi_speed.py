@@ -507,7 +507,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 state=TrainState.MALFUNCTION,
                 malfunction=0,
 
-                action=RailEnvActions.MOVE_FORWARD,
+                action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION -> MOVING needs move action
 
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
