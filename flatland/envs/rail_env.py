@@ -497,7 +497,8 @@ class RailEnv(Environment):
                 new_position, new_direction = agent.position, agent.direction
                 if agent.speed_counter.is_cell_exit:
                     movement_possible = agent.state == TrainState.MOVING and not stop_action_given
-                    movement_possible |= agent.state == TrainState.MALFUNCTION and not in_malfunction and not stop_action_given
+                    # malfunction ends and (explicit) movement action given
+                    movement_possible |= agent.state == TrainState.MALFUNCTION and not in_malfunction and movement_action_given
                     movement_possible |= agent.state == TrainState.STOPPED and movement_action_given
                     movement_possible &= not in_malfunction
                     if movement_possible:
@@ -618,7 +619,8 @@ class RailEnv(Environment):
                     agent_positions_level_free[agent.position].append(agent.direction)
                 else:
                     agent_positions_same_level.append(agent.position)
-        msgs = f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}"
+        msgs = f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}\n"
+        msgs += f"- motion check: {list(self.motionCheck.G.edges)}"
         if len(agent_positions_same_level) != len(set(agent_positions_same_level)):
             warnings.warn(msgs)
             counts = {pos: agent_positions_same_level.count(pos) for pos in set(agent_positions_same_level)}
