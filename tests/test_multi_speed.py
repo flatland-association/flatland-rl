@@ -620,7 +620,7 @@ def test_multispeed_actions_malfunction_no_blocking():
         initial_direction=Grid4TransitionsEnum.EAST,
     )
     run_replay_config(env, [test_config], skip_reward_check=True,
-                      # TODO need to fix action_required, see DEADLY above
+                      # TODO https://github.com/flatland-association/flatland-rl/issues/175 fix action_required
                       skip_action_required_check=True
                       )
 
