@@ -301,7 +301,7 @@ def test_initial_malfunction():
                 state=TrainState.MALFUNCTION,
                 malfunction=0,
 
-                action=RailEnvActions.MOVE_FORWARD,
+                action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION_OFF_MAP -> MOVING needs move action
 
                 reward=env.start_penalty + env.step_penalty * 1.0  # running at speed 1.0
             ),
@@ -380,7 +380,7 @@ def test_initial_malfunction_stop_moving():
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
-                action=RailEnvActions.MOVE_FORWARD,
+                action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION_OFF_MAP -> MOVING needs move action
 
                 malfunction=0,
                 reward=env.step_penalty,  # full step penalty while stopped
@@ -483,16 +483,21 @@ def test_initial_malfunction_do_nothing():
             Replay(  # 2
                 position=None,
                 direction=Grid4TransitionsEnum.EAST,
-                action=RailEnvActions.DO_NOTHING,
                 malfunction=1,
+
+                action=None,
+
                 reward=env.step_penalty,  # full step penalty while stopped
                 state=TrainState.MALFUNCTION_OFF_MAP
             ),
             Replay(  # 3
                 position=None,
                 direction=Grid4TransitionsEnum.EAST,
-                action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
+                is_cell_exit=True,
+
+                action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION -> MOVING needs move action
+
                 reward=env.step_penalty,  # full step penalty while stopped
                 state=TrainState.MALFUNCTION_OFF_MAP
             ),
@@ -519,10 +524,9 @@ def test_initial_malfunction_do_nothing():
         initial_direction=Grid4TransitionsEnum.EAST,
     )
     run_replay_config(env, [replay_config], activate_agents=False,
-                      # TODO why?
                       skip_reward_check=True,
                       set_ready_to_depart=True,
-                      # TODO fix/enable again
+                      # TODO https://github.com/flatland-association/flatland-rl/issues/175 fix action_required
                       skip_action_required_check=True
                       )
 
