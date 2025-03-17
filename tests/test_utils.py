@@ -108,15 +108,6 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
         def _assert(a, actual, expected, msg):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))
-            if actual != expected:
-                print("")
-                for a in range(len(env.agents)):
-                    print(f"agent {a}")
-                    for j in range(step):
-                        print(f"      agent {a} {j + 1}")
-                        print(f'                 {env.cur_episode2[j][a]["position"]}')
-                        print(f'                 {env.cur_episode2[j][a]["state_machine"]}')
-                        print(f'                 {env.cur_episode2[j][a]["speed_counter"]}')
             assert (actual == expected) or (
                 np.allclose(actual, expected)), "[{}] agent {} {}:  actual={}, expected={}".format(step, a, msg,
                                                                                                    actual,

@@ -179,7 +179,6 @@ class RailEnv(Environment):
         self.record_steps = record_steps  # whether to save timesteps
         # save timesteps in here: [[[row, col, dir, malfunction],...nAgents], ...nSteps]
         self.cur_episode = []
-        self.cur_episode2 = []
         self.list_actions = []  # save actions in here
 
         self.motionCheck = ac.MotionCheck()
@@ -660,11 +659,6 @@ class RailEnv(Environment):
             ])
 
         self.cur_episode.append(list_agents_state)
-        agents_ = [agent.to_agent()._asdict() for agent in self.agents]
-        for a in agents_:
-            a["state_machine"] = str(a["state_machine"])
-            a["speed_counter"] = str(a["speed_counter"])
-        self.cur_episode2.append(agents_)
         self.list_actions.append(dActions)
 
     def _get_observations(self):
