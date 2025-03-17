@@ -278,7 +278,7 @@ def test_initial_malfunction():
                 state=TrainState.MALFUNCTION,
                 malfunction=2,
 
-                action=RailEnvActions.MOVE_FORWARD,
+                action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION -> MOVING needs move action
 
                 reward=env.step_penalty  # full step penalty when malfunctioning
             ),
