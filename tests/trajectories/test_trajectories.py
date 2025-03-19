@@ -3,20 +3,17 @@ import os
 import re
 import tempfile
 from pathlib import Path
-from typing import Any
 from typing import Any, Optional
 
 import pandas as pd
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks
-from flatland.envs.rail_env import RailEnv
-from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
-from flatland.trajectories.trajectories import Policy, Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
-    generate_trajectory_from_policy, evaluate_trajectory, generate_trajectories_from_metadata
+from flatland.envs.rail_env import RailEnv
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
+from flatland.trajectories.trajectories import Policy, evaluate_trajectory
 from flatland.trajectories.trajectories import Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
     generate_trajectory_from_policy, generate_trajectories_from_metadata
 from flatland.utils.seeding import np_random, random_state_to_hashablestate
@@ -138,7 +135,7 @@ def test_gen_trajectories_from_metadata():
     [43, 44, 1001, 249385789, 289435789]
 )
 def test_persistence_reset(seed):
-    rail_env, _, _ = env_generator(seed=seed, x_dim=40, y_dim=57,)
+    rail_env, _, _ = env_generator(seed=seed, x_dim=40, y_dim=57, )
     np_random_generated = random_state_to_hashablestate(rail_env.np_random)
     dict_generated = RailEnvPersister.get_full_state(rail_env)
 

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import pytest
 
@@ -132,7 +133,7 @@ def test_episode(data_sub_dir: str, ep_id: str):
     _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
     assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
-    data_dir = os.path.join(_dir, data_sub_dir)
+    data_dir = Path(os.path.join(_dir, data_sub_dir))
     run_episode(data_dir, ep_id)
 
 
