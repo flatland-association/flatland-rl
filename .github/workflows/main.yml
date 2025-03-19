@@ -151,7 +151,7 @@ jobs:
         steps:
             -   uses: actions/checkout@v4
             -   name: Install ffmpeg
-                run: apt-get install ffmpeg
+                run: sudo apt-get install ffmpeg
             -   name: Set up Python
                 uses: actions/setup-python@v5
                 with:
