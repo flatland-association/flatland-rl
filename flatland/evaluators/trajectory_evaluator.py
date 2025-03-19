@@ -18,7 +18,7 @@ class TrajectoryEvaluator:
     def __call__(self, *args, **kwargs):
         self.evaluate()
 
-    def evaluate(self, start_step: int = None, rendering=False, snapshot_interval=0):
+    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0):
         """
         The data is structured as follows:
             -30x30 map
@@ -35,7 +35,9 @@ class TrajectoryEvaluator:
          Parameters
         ----------
         start_step : int
-            start evaluation from intermediate step (requires snapshot to be present)
+            start evaluation from intermediate step incl. (requires snapshot to be present)
+        end_step : int
+            stop evaluation at intermediate step excl.
         rendering : bool
             render while evaluating
         snapshot_interval : int
@@ -56,7 +58,9 @@ class TrajectoryEvaluator:
         if start_step is None:
             start_step = 0
 
-        for elapsed_before_step in tqdm.tqdm(range(start_step, env._max_episode_steps)):
+        if end_step is None:
+            end_step = env._max_episode_steps
+        for elapsed_before_step in tqdm.tqdm(range(start_step, end_step)):
             # TODO refactor as callback, too
             if snapshot_interval > 0 and elapsed_before_step % snapshot_interval == 0:
                 RailEnvPersister.save(env, os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR,
@@ -98,7 +102,8 @@ class TrajectoryEvaluator:
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
 
-        assert np.isclose(expected_success_rate, actual_success_rate)
+        if start_step is None and end_step is None:
+            assert np.isclose(expected_success_rate, actual_success_rate)
 
 
 @click.command()
