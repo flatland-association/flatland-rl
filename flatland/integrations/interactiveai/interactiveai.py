@@ -1,26 +1,22 @@
 import datetime
 import logging
-import pickle
 import time
 import warnings
-from pathlib import Path
 from typing import Optional
 
 import requests
 
 from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.envs.rail_env import RailEnv
-from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.integrations.interactiveai.context_api import ContextApiApi, ContextIn
 from flatland.integrations.interactiveai.event_api import EventApiApi
 from flatland.integrations.interactiveai.event_api import EventIn
 from flatland.integrations.interactiveai.historic_api import HistoricApiApi
-from flatland.trajectories.trajectories import Trajectory
 
 logger = logging.getLogger(__name__)
 
 
-class FlatlandInteractiveAI(FlatlandCallbacks):
+class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
     def __init__(self,
                  coordinate_map,
                  client_id="opfab-client",
@@ -146,16 +142,3 @@ class FlatlandInteractiveAI(FlatlandCallbacks):
         time.sleep(self.step_to_millis * 0.001)
 
 
-if __name__ == '__main__':
-    # data from https://github.com/flatland-association/flatland-scenarios/tree/scenario-olten/scenario_olten/data
-    data_dir = Path("../../../../flatland-scenarios2/scenario_olten/data").resolve()
-    trajectory = Trajectory(data_dir, ep_id="olten")
-
-    with (data_dir / "position_to_latlon_olten.pkl").open("rb") as file_in:
-        position_to_latlon_olten = pickle.load(file_in)
-    cb = FlatlandInteractiveAI(position_to_latlon_olten, collect_only=True)
-
-    TrajectoryEvaluator(trajectory, cb).evaluate()
-
-    print(cb.contexts)
-    print(cb.events)
