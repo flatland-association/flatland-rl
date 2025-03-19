@@ -26,7 +26,7 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.action_preprocessing import process_illegal_action, check_valid_action, preprocess_moving_action
+from flatland.envs.step_utils.action_preprocessing import process_illegal_action, check_valid_action, preprocess_left_right_action
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
@@ -391,7 +391,7 @@ class RailEnv(Environment):
         if current_position is None:  # Agent not added on map yet
             current_position, current_direction = agent.initial_position, agent.initial_direction
 
-        action = preprocess_moving_action(action, self.rail, current_position, current_direction)
+        action = preprocess_left_right_action(action, self.rail, current_position, current_direction)
 
         # Check transitions, bounds for executing the action in the given position and direction
         if action.is_moving_action() and not check_valid_action(action, self.rail, current_position, current_direction):

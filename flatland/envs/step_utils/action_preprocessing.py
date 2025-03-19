@@ -20,9 +20,9 @@ def process_illegal_action(action: Any) -> RailEnvActions:
 
 
 @enable_infrastructure_lru_cache()
-def preprocess_moving_action(action: RailEnvActions, rail: GridTransitionMap, position: Tuple[int, int], direction: Grid4TransitionsEnum):
+def preprocess_left_right_action(action: RailEnvActions, rail: GridTransitionMap, position: Tuple[int, int], direction: Grid4TransitionsEnum):
     """
-    LEFT/RIGHT is converted to FORWARD if left/right is not available and train is moving
+    LEFT/RIGHT is converted to FORWARD if left/right is not available.
     """
     if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT] and not check_valid_action(action, rail, position, direction):
         action = RailEnvActions.MOVE_FORWARD
