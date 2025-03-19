@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple
 
+from envs.step_utils.states import StateTransitionSignals
 from flatland.core.grid.grid4 import Grid4Transitions, Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import IntVector2D
@@ -13,10 +14,14 @@ from flatland.utils.decorators import enable_infrastructure_lru_cache
 @dataclass(repr=True)
 class AgentTransitionData:
     """ Class for keeping track of temporary agent data for position update """
-    position: Tuple[int, int]
-    direction: Grid4Transitions
-    speed: int
+    speed: float
+    new_position: Tuple[int, int]
+    new_direction: Grid4Transitions
+    new_speed: float
+    new_position_level_free: float
     preprocessed_action: RailEnvActions
+    agent_position_level_free: Tuple[int, int]
+    state_transition_signal: StateTransitionSignals
 
 
 @enable_infrastructure_lru_cache(maxsize=1_000_000)
