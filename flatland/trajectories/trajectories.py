@@ -337,21 +337,6 @@ class Trajectory:
               help="Path to folder containing Flatland episode",
               required=True
               )
-@click.option('--ep-id',
-              type=str,
-              help="Episode ID.",
-              required=True
-              )
-def evaluate_trajectory(data_dir: Path, ep_id: str):
-    Trajectory(data_dir=data_dir, ep_id=ep_id).evaluate()
-
-
-@click.command()
-@click.option('--data-dir',
-              type=click.Path(exists=True),
-              help="Path to folder containing Flatland episode",
-              required=True
-              )
 @click.option('--policy-pkg',
               type=str,
               help="Policy's fully qualified package name.",
