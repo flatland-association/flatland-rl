@@ -3,6 +3,7 @@ TransitionMap and derived classes.
 """
 import traceback
 import uuid
+import warnings
 from functools import lru_cache
 
 import numpy as np
@@ -120,7 +121,7 @@ class GridTransitionMap(TransitionMap):
     GridTransitionMap implements utility functions.
     """
 
-    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), random_seed=None):
+    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), random_seed=None, grid: np.ndarray = None):
         """
         Builder for GridTransitionMap object.
 
@@ -143,7 +144,12 @@ class GridTransitionMap(TransitionMap):
             self.random_generator.seed(12)
         else:
             self.random_generator.seed(random_seed)
-        self.grid = np.zeros((height, width), dtype=self.transitions.get_type())
+        if grid is None:
+            self.grid = np.zeros((height, width), dtype=self.transitions.get_type())
+        else:
+            if grid.dtype != self.transitions.get_type():
+                warnings.warn(f"Expected dtype {self.transitions.get_type()}, found {grid.dtype}.")
+            self.grid = grid
         self._reset_cache()
 
     def _reset_cache(self):

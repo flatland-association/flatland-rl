@@ -1,4 +1,7 @@
 """Line generators: Railway Undertaking (RU) / Eisenbahnverkehrsunternehmen (EVU)."""
+import pickle
+from pathlib import Path
+
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 from numpy.random.mtrand import RandomState
@@ -197,3 +200,26 @@ def line_from_file(filename, load_from_package: str = None) -> LineGenerator:
                     agent_targets=agents_target, agent_speeds=agents_speed)
 
     return generator
+
+
+class FileLineGenerator(BaseLineGen):
+    def __init__(self, filename: Path):
+        self.filename = filename
+
+    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
+        with open(self.filename, "rb") as file_in:
+            return pickle.loads(file_in.read())
+
+    @staticmethod
+    def save(filename: Path, line: Line):
+        with open(filename, "wb") as file_out:
+            file_out.write(pickle.dumps(line))
+
+    @staticmethod
+    def wrap(line_generator: LineGenerator, line_pkl: Path) -> LineGenerator:
+        def _wrap(*args, **kwargs):
+            line = line_generator(*args, **kwargs)
+            FileLineGenerator.save(line_pkl, line)
+            return line
+
+        return _wrap
