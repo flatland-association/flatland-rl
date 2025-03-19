@@ -368,6 +368,8 @@ def test_rail_env_reset():
     for agent_initial, agent_loaded in zip(agents_initial, agents_loaded):
         agent_loaded.earliest_departure = agent_initial.earliest_departure
         agent_loaded.latest_arrival = agent_initial.latest_arrival
+        agent_loaded.waypoints_earliest_departure = [agent_initial.earliest_departure, None]
+        agent_loaded.waypoints_latest_arrival = [None, agent_initial.latest_arrival]
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
@@ -382,6 +384,8 @@ def test_rail_env_reset():
     for agent_initial, agent_loaded in zip(agents_initial, agents_loaded):
         agent_loaded.earliest_departure = agent_initial.earliest_departure
         agent_loaded.latest_arrival = agent_initial.latest_arrival
+        agent_loaded.waypoints_earliest_departure = [agent_initial.earliest_departure, None]
+        agent_loaded.waypoints_latest_arrival = [None, agent_initial.latest_arrival]
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded

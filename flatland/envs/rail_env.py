@@ -2,7 +2,10 @@
 Definition of the RailEnv environment.
 """
 import random
-from typing import List, Optional, Dict, Tuple
+import warnings
+from collections import defaultdict
+from functools import lru_cache
+from typing import List, Optional, Dict, Tuple, Set
 
 import numpy as np
 
@@ -10,6 +13,7 @@ import flatland.envs.timetable_generators as ttg
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid_utils import Vector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
@@ -18,16 +22,14 @@ from flatland.envs import persistence
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.step_utils import action_preprocessing
+from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils import env_utils
+from flatland.envs.step_utils.action_preprocessing import process_illegal_action, check_valid_action, preprocess_left_right_action
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
-from flatland.envs.step_utils.transition_utils import check_valid_action
 from flatland.utils import seeding
-from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache, \
-    enable_infrastructure_lru_cache
+from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
@@ -55,21 +57,7 @@ class RailEnv(Environment):
     The actions of the agents are executed in order of their handle to prevent
     deadlocks and to allow them to learn relative priorities.
 
-    Reward Function:
 
-    It costs each agent a step_penalty for every time-step taken in the environment. Independent of the movement
-    of the agent. Currently all other penalties such as penalty for stopping, starting and invalid actions are set to 0.
-
-    alpha = 0
-    beta = 0
-    Reward function parameters:
-
-    - invalid_action_penalty = 0
-    - step_penalty = -alpha
-    - global_reward = beta
-    - epsilon = avoid rounding errors
-    - stop_penalty = 0  # penalty for stopping a moving agent
-    - start_penalty = 0  # penalty for starting a stopped agent
 
     Stochastic malfunctioning of trains:
     Trains in RailEnv can malfunction if they are halted too often (either by their own choice or because an invalid
@@ -177,7 +165,7 @@ class RailEnv(Environment):
         self.rail_generator = rail_generator
         if line_generator is None:
             line_generator = line_gen.sparse_line_generator()
-        self.line_generator = line_generator
+        self.line_generator: "LineGenerator" = line_generator
         self.timetable_generator = timetable_generator
 
         self.rail: Optional[GridTransitionMap] = None
@@ -214,6 +202,10 @@ class RailEnv(Environment):
         self.list_actions = []  # save actions in here
 
         self.motionCheck = ac.MotionCheck()
+
+        self.level_free_positions: Set[Vector2D] = set()
+
+        self.rewards = Rewards()
 
         self.acceleration_delta = acceleration_delta
         self.braking_delta = braking_delta
@@ -252,8 +244,9 @@ class RailEnv(Environment):
             agent.reset()
         self.active_agents = [i for i in range(len(self.agents))]
 
-    @enable_infrastructure_lru_cache()
-    def action_required(self, agent_state, is_cell_entry):
+    @lru_cache()
+    @staticmethod
+    def action_required(agent_state, is_cell_entry):
         """
         Check if an agent needs to provide an action
 
@@ -326,6 +319,8 @@ class RailEnv(Environment):
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
+            if optionals and 'level_free_positions' in optionals:
+                self.level_free_positions = optionals['level_free_positions']
 
             line = self.line_generator(self.rail, self.number_of_agents, agents_hints,
                                        self.num_resets, self.np_random)
@@ -334,15 +329,13 @@ class RailEnv(Environment):
             # Reset distance map - basically initializing
             self.distance_map.reset(self.agents, self.rail)
 
-            # NEW : Time Schedule Generation
+            # NEW : Timetable Generation
             timetable = self.timetable_generator(self.agents, self.distance_map,
                                                  agents_hints, self.np_random)
 
             self._max_episode_steps = timetable.max_episode_steps
 
-            for agent_i, agent in enumerate(self.agents):
-                agent.earliest_departure = timetable.earliest_departures[agent_i]
-                agent.latest_arrival = timetable.latest_arrivals[agent_i]
+            EnvAgent.apply_timetable(self.agents, timetable)
         else:
             self.distance_map.reset(self.agents, self.rail)
 
@@ -380,26 +373,6 @@ class RailEnv(Environment):
                 if agent.old_position is not None:
                     self.agent_positions[agent.old_position] = -1
 
-    def generate_state_transition_signals(self, agent: EnvAgent, preprocessed_action: RailEnvActions, movement_allowed: bool, new_speed: float):
-        """ Generate State Transitions Signals used in the state machine """
-        st_signals = StateTransitionSignals()
-
-        st_signals.in_malfunction = agent.malfunction_handler.in_malfunction
-
-        st_signals.malfunction_counter_complete = agent.malfunction_handler.malfunction_counter_complete
-
-        st_signals.earliest_departure_reached = self._elapsed_steps >= agent.earliest_departure
-
-        st_signals.stop_action_given = (preprocessed_action == RailEnvActions.STOP_MOVING) and (new_speed <= 0.0)
-
-        st_signals.valid_movement_action_given = preprocessed_action.is_moving_action() and movement_allowed
-
-        st_signals.target_reached = fast_position_equal(agent.position, agent.target)
-
-        st_signals.movement_conflict = (not movement_allowed)
-
-        return st_signals
-
     def _handle_end_reward(self, agent: EnvAgent) -> int:
         '''
         Handles end-of-episode reward for a particular agent.
@@ -435,17 +408,17 @@ class RailEnv(Environment):
             * Block all actions when in waiting state
             * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
         """
-        action = action_preprocessing.preprocess_raw_action(action, agent.state, agent.action_saver.saved_action)
-        action = action_preprocessing.preprocess_action_when_waiting(action, agent.state)
+        action = RailEnvActions(action)
+        action = process_illegal_action(action)
 
         # Try moving actions on current position
         current_position, current_direction = agent.position, agent.direction
         if current_position is None:  # Agent not added on map yet
             current_position, current_direction = agent.initial_position, agent.initial_direction
 
-        action = action_preprocessing.preprocess_moving_action(action, self.rail, current_position, current_direction)
+        action = preprocess_left_right_action(action, self.rail, current_position, current_direction)
 
-        # Check transitions for executing the action in the given position and direction
+        # Check transitions, bounds for executing the action in the given position and direction
         if action.is_moving_action() and not check_valid_action(action, self.rail, current_position, current_direction):
             action = RailEnvActions.STOP_MOVING
 
@@ -465,7 +438,7 @@ class RailEnv(Environment):
         """
         info_dict = {
             # TODO https://github.com/flatland-association/flatland-rl/issues/149 revise action required
-            'action_required': {i: self.action_required(agent.state, agent.speed_counter.is_cell_entry)
+            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_entry)
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
@@ -484,7 +457,7 @@ class RailEnv(Environment):
             ((self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps)):
 
             for i_agent, agent in enumerate(self.agents):
-                reward = self._handle_end_reward(agent)
+                reward = self.rewards.end_of_episode_reward(agent, self.distance_map, self._elapsed_steps)
                 self.rewards_dict[i_agent] += reward
 
                 self.dones[i_agent] = True
@@ -511,82 +484,94 @@ class RailEnv(Environment):
 
         self.clear_rewards_dict()
 
-        have_all_agents_ended = True  # Boolean flag to check if all agents are done
-
         self.motionCheck = ac.MotionCheck()  # reset the motion check
 
         temp_transition_data = {}
-
         for agent in self.agents:
             i_agent = agent.handle
+
             agent.old_position = agent.position
             agent.old_direction = agent.direction
+
             # Generate malfunction
             agent.malfunction_handler.generate_malfunction(self.malfunction_generator, self.np_random)
 
             # Get action for the agent
-            action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
+            preprocessed_action = self.preprocess_action(action_dict.get(i_agent, RailEnvActions.DO_NOTHING), agent)
 
-            preprocessed_action = self.preprocess_action(action, agent)
-
-            # Save moving actions in not already saved
-            agent.action_saver.save_action_if_allowed(preprocessed_action, agent.state)
+            # get desired new_position and new_direction
+            stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
+            in_malfunction = agent.malfunction_handler.in_malfunction
+            movement_action_given = preprocessed_action.is_moving_action()
+            earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
 
             new_speed = agent.speed_counter.speed
             if preprocessed_action == RailEnvActions.MOVE_FORWARD:
                 new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
                 new_speed += self.braking_delta
+            new_speed = max(0.0, min(agent.speed_counter.max_speed, new_speed))
 
-            # Train's next position can change if train is at cell's exit and train is not in malfunction
-            position_update_allowed = agent.speed_counter.is_cell_exit(new_speed) and \
-                                      not agent.malfunction_handler.malfunction_down_counter > 0 and \
-                                      not preprocessed_action == RailEnvActions.STOP_MOVING
-
-            # Calculate new position
-            # Keep agent in same place if already done
-            if agent.state == TrainState.DONE:
-                new_position, new_direction = agent.position, agent.direction
-            # Add agent to the map if not on it yet
-            elif agent.position is None and agent.action_saver.is_action_saved:
+            if agent.state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
-            # If movement is allowed apply saved action independent of other agents
-            elif agent.action_saver.is_action_saved and position_update_allowed:
-                saved_action = agent.action_saver.saved_action
-                # Apply action independent of other agents and get temporary new position and direction
-                new_position, new_direction = env_utils.apply_action_independent(saved_action,
-                                                                                 self.rail,
-                                                                                 agent.position,
-                                                                                 agent.direction)
-                preprocessed_action = saved_action
-            else:
+            elif agent.state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
+                preprocessed_action.is_moving_action() or preprocessed_action == RailEnvActions.STOP_MOVING):
+                # weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
+                new_position = agent.initial_position
+                new_direction = agent.initial_direction
+            elif agent.state.is_on_map_state():
                 new_position, new_direction = agent.position, agent.direction
+                if agent.speed_counter.is_cell_exit(new_speed):
+                    movement_possible = agent.state == TrainState.MOVING and not stop_action_given
+                    # malfunction ends and (explicit) movement action given
+                    movement_possible |= agent.state == TrainState.MALFUNCTION and not in_malfunction and movement_action_given
+                    movement_possible |= agent.state == TrainState.STOPPED and movement_action_given
+                    movement_possible &= not in_malfunction
+                    if movement_possible:
+                        new_position, new_direction = env_utils.apply_action_independent(
+                            preprocessed_action,
+                            self.rail,
+                            agent.position,
+                            agent.direction
+                        )
+                assert agent.position is not None
+            else:
+                assert agent.state.is_off_map_state() or agent.state == TrainState.DONE
+                new_position = None
+                new_direction = None
 
-            temp_transition_data[i_agent] = env_utils.AgentTransitionData(position=new_position,
-                                                                          direction=new_direction,
-                                                                          preprocessed_action=preprocessed_action)
+            if new_position is not None:
+                valid_position_direction = any(self.rail.get_transitions(*new_position, new_direction))
+                assert valid_position_direction
 
-            # This is for storing and later checking for conflicts of agents trying to occupy same cell
-            self.motionCheck.addAgent(i_agent, agent.position, new_position)
+            temp_transition_data[i_agent] = env_utils.AgentTransitionData(
+                position=new_position,
+                direction=new_direction,
+                speed=new_speed,
+                preprocessed_action=preprocessed_action
+            )
 
-            stopped_inside_cell = agent.state == TrainState.STOPPED and not agent.speed_counter.is_cell_exit(new_speed)
-            if stopped_inside_cell:
-                assert agent.position == new_position
+            # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
+            new_position_level_free = new_position
+            if new_position in self.level_free_positions:
+                new_position_level_free = (new_position, new_direction % 2)
+            agent_position_level_free = agent.position
+            if agent.position in self.level_free_positions:
+                agent_position_level_free = (agent.position, agent.direction % 2)
+
+            self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
 
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()
 
+        have_all_agents_ended = True
         for agent in self.agents:
             i_agent = agent.handle
 
-            ## Movement allowed if not in malfunction and motion is allowed (if any).
-            motion_check_agent = self.motionCheck.check_motion2(i_agent, agent.position)
-            movement_allowed = not agent.malfunction_handler.in_malfunction and motion_check_agent
-
-            # Fetch the saved transition data
-            agent_transition_data = temp_transition_data[i_agent]
-            preprocessed_action = agent_transition_data.preprocessed_action
+            agent_position_level_free = agent.position
+            if agent.position in self.level_free_positions:
+                agent_position_level_free = (agent.position, agent.direction % 2)
 
             ## Compute speed update
             speed_before = agent.speed_counter.speed
@@ -595,56 +580,118 @@ class RailEnv(Environment):
                 new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
                 new_speed += self.braking_delta
+            new_speed = max(0.0, min(agent.speed_counter.max_speed, new_speed))
 
-            ## Update states
-            state_transition_signals = self.generate_state_transition_signals(agent, preprocessed_action, movement_allowed, new_speed)
-            agent.state_machine.set_transition_signals(state_transition_signals)
+            # Is movement allowed?
+            motion_check = self.motionCheck.check_motion(i_agent, agent_position_level_free)  # motion_check is False if agent wants to stay in the cell
+            movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(new_speed)) or motion_check
+
+            # Fetch the saved transition data
+            agent_transition_data = temp_transition_data[i_agent]
+            preprocessed_action = agent_transition_data.preprocessed_action
+
+            # state machine step
+            agent.state_machine.set_transition_signals(StateTransitionSignals(
+                # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
+                in_malfunction=agent.malfunction_handler.in_malfunction,
+                # Earliest departure reached - Train is allowed to move now
+                earliest_departure_reached=self._elapsed_steps >= agent.earliest_departure,
+                # Stop action given
+                stop_action_given=(preprocessed_action == RailEnvActions.STOP_MOVING),
+                # Movement action given
+                movement_action_given=preprocessed_action.is_moving_action(),
+                # Target reached - we only know after state and positions update - see handle_done_state below
+                target_reached=None,
+                # Movement allowed if inside cell or at end of cell and no conflict with other trains
+                movement_allowed=movement_allowed
+            ))
             agent.state_machine.step()
 
-            # Agent is being added to map
-            if agent.state.is_on_map_state():
-                if agent.state_machine.previous_state.is_off_map_state():
-                    agent.position = agent.initial_position
-                    agent.direction = agent.initial_direction
-                # Speed counter completes
-                elif movement_allowed and agent.state != TrainState.DONE and agent.speed_counter.is_cell_exit(new_speed):
+            # position and speed_counter update
+            if ((agent.state_machine.previous_state == TrainState.READY_TO_DEPART or agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP)
+                and agent.state == TrainState.MOVING):
+                agent.position = agent.initial_position
+                agent.direction = agent.initial_direction
+            elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
+                agent.position = agent.initial_position
+                agent.direction = agent.initial_direction
+            elif agent.state == TrainState.MOVING:
+
+                # only position update if MOVING
+
+                # only position update while MOVING and motion_check OK
+                if motion_check:
                     agent.position = agent_transition_data.position
                     agent.direction = agent_transition_data.direction
-                    agent.state_machine.update_if_reached(agent.position, agent.target)
-
-            # Off map or on map state and position should match
-            env_utils.state_position_sync_check(agent.state, agent.position, agent.handle)
+                # TODO add new_speed to transition data as well
+                # TODO is cell_entry handled correctly?
+                agent.speed_counter.step(speed=new_speed)
+                agent.state_machine.update_if_reached(agent.position, agent.target)
 
             # Handle done state actions, optionally remove agents
             self.handle_done_state(agent)
-
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
+            # Off map or on map state and position should match
+            agent.state_machine.state_position_sync_check(agent.position, agent.handle, self.remove_agents_at_target)
+
             ## Update rewards
-            if agent.state_machine.previous_state == TrainState.MOVING and (not motion_check_agent):
+            if agent.state_machine.previous_state == TrainState.MOVING and (not movement_allowed):
                 self.rewards_dict[i_agent] = speed_before * RailEnv.crash_penalty_factor
 
-            # Update speed and distance if moving.
-            # When adding train to the map, no distance is travelled in the first time step!
-            # TODO is cell_entry handled correctly?
-            if agent.state == TrainState.MOVING and agent.old_position is not None:
-                agent.speed_counter.step(speed=new_speed)
-
-            # Update malfunction counter
+            # update malfunction counter
             agent.malfunction_handler.update_counter()
-
-            # Clear old action when starting in new cell
-            if agent.speed_counter.is_cell_entry and agent.position is not None:
-                agent.action_saver.clear_saved_action()
 
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
 
         self._update_agent_positions_map()
+
+        self._verify_mutually_exclusive_cell_occupation()
+
         if self.record_steps:
             self.record_timestep(action_dict)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
+
+    def _verify_mutually_exclusive_cell_occupation(self):
+        agent_positions_same_level = []
+        agent_positions_level_free = defaultdict(lambda: [])
+        for agent in self.agents:
+            if agent.position is not None:
+                if agent.position in self.level_free_positions:
+                    agent_positions_level_free[agent.position].append(agent.direction)
+                else:
+                    agent_positions_same_level.append(agent.position)
+        msgs = f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}\n"
+        msgs += f"- motion check: {list(self.motionCheck.G.edges)}"
+        if len(agent_positions_same_level) != len(set(agent_positions_same_level)):
+            warnings.warn(msgs)
+            counts = {pos: agent_positions_same_level.count(pos) for pos in set(agent_positions_same_level)}
+            dup_positions = [pos for pos, count in counts.items() if count > 1]
+            for dup in dup_positions:
+                for agent in self.agents:
+                    if agent.position == dup:
+                        msg = (f"\n================== BAD AGENT ==================================\n\n\n\n\n"
+                               f"- agent:\t{agent} \n"
+                               f"- state_machine:\t{agent.state_machine}\n"
+                               f"- speed_counter:\t{agent.speed_counter}\n"
+                               f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n\n\n"
+                               f"- agents:\t{self.agents}")
+                        warnings.warn(msg)
+                        msgs += msg
+        assert len(agent_positions_same_level) == len(set(agent_positions_same_level)), msgs
+
+        for position, directions in agent_positions_level_free.items():
+            if len(directions) >= 2:
+                warnings.warn(f"Found more than two agents occupying same level-free cell in step {self._elapsed_steps}: {agent_positions_level_free}")
+            assert len(directions) <= 2
+            if len(directions) == 2:
+                conflict = directions[0] % 2 == directions[1] % 2
+                if conflict:
+                    warnings.warn(
+                        f"Found two agents occupying same level-free cell along the same axis in step {self._elapsed_steps}: {agent_positions_level_free}")
+                assert not conflict
 
     def record_timestep(self, dActions):
         """
@@ -663,8 +710,8 @@ class RailEnv(Environment):
             list_agents_state.append([
                 *pos, int(agent.direction),
                 agent.malfunction_handler.malfunction_down_counter,
-                0,  # int(agent.status), #  TODO: find appropriate attribute for agent status
-                int(agent.position in self.motionCheck.svDeadlocked)
+                agent.state.value,
+                int(agent.position in self.motionCheck.svDeadlocked),
             ])
 
         self.cur_episode.append(list_agents_state)

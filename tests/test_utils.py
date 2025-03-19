@@ -25,6 +25,7 @@ class Replay(object):
     set_malfunction = attrib(default=None, type=Optional[int])
     reward = attrib(default=None, type=Optional[float])
     state = attrib(default=None, type=Optional[TrainState])
+    is_cell_exit = attrib(default=None, type=Optional[bool])
     speed = attrib(default=None, type=Optional[float])
     distance = attrib(default=None, type=Optional[float])
 
@@ -61,7 +62,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
     - `status` is verified (optionally, only if not `None` in `Replay`)
     - `set_malfunction` is applied (optionally, only if not `None` in `Replay`)
     - `malfunction` is verified
-    - `action` must only be provided if action_required from previous step (initally all True)
+    - `action` must only be provided if action_required from previous step (initially all True)
 
     *Step*
     - performed with the given `action`
@@ -84,6 +85,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         'action_required': [True for _ in test_configs]
     }
 
+    env.record_steps = True
+
     for step in range(len(test_configs[0].replay)):
         if step == 0:
             for a, test_config in enumerate(test_configs):
@@ -104,19 +107,18 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                     env.agents[i_agent]._set_state(TrainState.READY_TO_DEPART)
 
             elif activate_agents:
+                assert len(set([a.initial_position for a in env.agents])) == len(env.agents)
                 for a_idx in range(len(env.agents)):
                     env.agents[a_idx].position = env.agents[a_idx].initial_position
                     env.agents[a_idx]._set_state(TrainState.MOVING)
 
-        def _assert(a, actual, expected, msg):
+        def _assert(a, actual, expected, msg, close: bool = True):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))
-            assert (actual == expected) or (
-                np.allclose(actual, expected)), "[{}] agent {} {}:  actual={}, expected={}".format(step, a, msg,
-                                                                                                   actual,
-                                                                                                   expected)
+            msg = "[{}] agent {} {}:  actual={}, expected={}".format(step, a, msg, actual, expected)
+            assert (actual == expected) or (close and np.allclose(actual, expected)), msg
 
         action_dict = {}
-
+        print(f"[{step}] BEFORE stepping: verify position/direction/state/malfunction")
         for a, test_config in enumerate(test_configs):
             agent: EnvAgent = env.agents[a]
             replay = test_config.replay[step]
@@ -125,7 +127,10 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             _assert(a, agent.position, replay.position, 'position')
             _assert(a, agent.direction, replay.direction, 'direction')
             if replay.state is not None:
-                _assert(a, agent.state, replay.state, 'state')
+                _assert(a, TrainState(agent.state).name, TrainState(replay.state).name, 'state', close=False)
+            # TODO fix
+            # if replay.is_cell_exit is not None:
+            #     _assert(a, agent.speed_counter.is_cell_exit, replay.is_cell_exit, 'is_cell_exit')
 
             if replay.action is not None:
                 if not skip_action_required_check:
@@ -145,9 +150,9 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 # We also set next malfunction to infitiy to avoid interference with our tests
                 env.agents[a].malfunction_handler._set_malfunction_down_counter(replay.set_malfunction)
             _assert(a, agent.malfunction_handler.malfunction_down_counter, replay.malfunction, 'malfunction')
-
-        print(step)
+        print(f"[{step}] STEPping with actions {action_dict}")
         _, rewards_dict, _, info_dict = env.step(action_dict)
+        print(f"[{step}] AFTER stepping: verify rewards")
         # import pdb; pdb.set_trace()
         if rendering:
             renderer.render_env(show=True, show_observations=True)

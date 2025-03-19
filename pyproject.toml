@@ -44,15 +44,14 @@ dependencies = [
     "seaborn",
     # https://docs.python.org/3/whatsnew/3.12.html: Python 3.12 has removed pkg_resources from the standard library (moved to setuptools):
     "setuptools",
+    "tqdm",
     "svgutils",
     "timeout_decorator",
-
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-    "benchmarker",
     "coverage",
     "flake8",
     "flake8-eradicate",
@@ -66,20 +65,21 @@ dev = [
     "numpydoc",
     "pip-tools",
     "pytest",
+    "pytest-retry",
+    "snakeviz",
     "tox",
     "twine",
     "twine",
 ]
-# TODO https://github.com/flatland-association/flatland-rl/issues/73 merge whole of flatland/contrib into flatland/ml and add all dependencies from flatland/contrib/requirements_training.txt here
 ml = [
     "ray[default,rllib]",
     "wandb",
     "torch",
     # pin dm-tree, 0.1.9 has import errors under MacOS M1 at least.
-    "dm-tree<0.1.9"
-    #    "supersuit",
-    #    "pettingzoo",
-    #    "stable_baselines3",
+    "dm-tree<0.1.9",
+    "supersuit",
+    "pettingzoo",
+    "stable_baselines3",
 ]
 
 [project.urls]
@@ -89,7 +89,11 @@ ml = [
 
 [project.scripts]
 flatland-demo = "flatland.cli:demo"
+# deprecated, use flatland- prefix for all scripts
 evaluator = "flatland.cli:evaluator"
+flatland-evaluator = "flatland.cli:evaluator"
+flatland-trajectory-generate-from-policy = "flatland.trajectories.trajectories:generate_trajectory_from_policy"
+flatland-trajectory-evaluate = "flatland.evaluators.trajectory_evaluator:evaluate_trajectory"
 
 [tool.setuptools.packages]
 find = { }

@@ -10,9 +10,9 @@ async-timeout==5.0.1
     # via redis
 attrs==25.1.0
     # via flatland-rl (pyproject.toml)
-boto3==1.36.20
+boto3==1.36.23
     # via flatland-rl (pyproject.toml)
-botocore==1.36.20
+botocore==1.36.23
     # via
     #   boto3
     #   s3transfer
@@ -177,3 +177,6 @@ wcwidth==0.2.13
     # via prompt-toolkit
 widgetsnbextension==4.0.13
     # via ipywidgets
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools

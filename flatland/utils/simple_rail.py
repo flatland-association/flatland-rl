@@ -2,7 +2,7 @@ from typing import Tuple, Dict, Any
 
 import numpy as np
 
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
+from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 
 
@@ -42,16 +42,16 @@ def make_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    city_positions = [(0,3), (6, 6)]
+    city_positions = [(0, 3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ],
-                      [( (6, 6), 0 ) ],
-                     ]
+        [((0, 3), 0)],
+        [((6, 6), 0)],
+    ]
     city_orientations = [0, 2]
     agents_hints = {'city_positions': city_positions,
                     'train_stations': train_stations,
                     'city_orientations': city_orientations
-                   }
+                    }
     optionals = {'agents_hints': agents_hints}
     return rail, rail_map, optionals
 
@@ -93,16 +93,16 @@ def make_disconnected_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    city_positions = [(0,3), (6, 6)]
+    city_positions = [(0, 3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ],
-                      [( (6, 6), 0 ) ],
-                     ]
+        [((0, 3), 0)],
+        [((6, 6), 0)],
+    ]
     city_orientations = [0, 2]
     agents_hints = {'city_positions': city_positions,
                     'train_stations': train_stations,
                     'city_orientations': city_orientations
-                   }
+                    }
     optionals = {'agents_hints': agents_hints}
     return rail, rail_map, optionals
 
@@ -141,16 +141,16 @@ def make_simple_rail2() -> Tuple[GridTransitionMap, np.array, Dict]:
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    city_positions = [(0,3), (6, 6)]
+    city_positions = [(0, 3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ],
-                      [( (6, 6), 0 ) ],
-                     ]
+        [((0, 3), 0)],
+        [((6, 6), 0)],
+    ]
     city_orientations = [0, 2]
     agents_hints = {'city_positions': city_positions,
                     'train_stations': train_stations,
                     'city_orientations': city_orientations
-                   }
+                    }
     optionals = {'agents_hints': agents_hints}
     return rail, rail_map, optionals
 
@@ -190,16 +190,16 @@ def make_simple_rail_unconnected() -> Tuple[GridTransitionMap, np.array, Dict]:
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    city_positions = [(0,3), (6, 6)]
+    city_positions = [(0, 3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ],
-                      [( (6, 6), 0 ) ],
-                     ]
+        [((0, 3), 0)],
+        [((6, 6), 0)],
+    ]
     city_orientations = [0, 2]
     agents_hints = {'city_positions': city_positions,
                     'train_stations': train_stations,
                     'city_orientations': city_orientations
-                   }
+                    }
     optionals = {'agents_hints': agents_hints}
     return rail, rail_map, optionals
 
@@ -245,16 +245,16 @@ def make_simple_rail_with_alternatives() -> Tuple[GridTransitionMap, np.array, D
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    city_positions = [(0,3), (6, 6)]
+    city_positions = [(0, 3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ],
-                      [( (6, 6), 0 ) ],
-                     ]
+        [((0, 3), 0)],
+        [((6, 6), 0)],
+    ]
     city_orientations = [0, 2]
     agents_hints = {'city_positions': city_positions,
                     'train_stations': train_stations,
                     'city_orientations': city_orientations
-                   }
+                    }
     optionals = {'agents_hints': agents_hints}
     return rail, rail_map, optionals
 
@@ -294,20 +294,21 @@ def make_invalid_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict[str, A
     rail = GridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    city_positions = [(0,3), (6, 6)]
+    city_positions = [(0, 3), (6, 6)]
     train_stations = [
-                      [( (0, 3), 0 ) ],
-                      [( (6, 6), 0 ) ],
-                     ]
+        [((0, 3), 0)],
+        [((6, 6), 0)],
+    ]
     city_orientations = [0, 2]
     agents_hints = {'city_positions': city_positions,
                     'train_stations': train_stations,
                     'city_orientations': city_orientations
-                   }
+                    }
     optionals = {'agents_hints': agents_hints}
     return rail, rail_map, optionals
 
-def make_oval_rail() -> Tuple[GridTransitionMap, np.array]:
+
+def make_oval_rail() -> Tuple[GridTransitionMap, np.array, Any]:
     transitions = RailEnvTransitions()
     cells = transitions.transition_list
 
@@ -322,7 +323,7 @@ def make_oval_rail() -> Tuple[GridTransitionMap, np.array]:
     rail_map = np.array(
         [[empty] * 9] +
         [[empty] + [right_turn_from_south] + [horizontal_straight] * 5 + [right_turn_from_west] + [empty]] +
-        [[empty] + [vertical_straight] + [empty] * 5 + [vertical_straight] + [empty]]+
+        [[empty] + [vertical_straight] + [empty] * 5 + [vertical_straight] + [empty]] +
         [[empty] + [vertical_straight] + [empty] * 5 + [vertical_straight] + [empty]] +
         [[empty] + [right_turn_from_east] + [horizontal_straight] * 5 + [right_turn_from_north] + [empty]] +
         [[empty] * 9], dtype=np.uint16)
@@ -341,4 +342,39 @@ def make_oval_rail() -> Tuple[GridTransitionMap, np.array]:
                     'city_orientations': city_orientations
                     }
     optionals = {'agents_hints': agents_hints}
-    return  rail, rail_map, optionals
+    return rail, rail_map, optionals
+
+
+def make_diamond_crossing_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
+    # We instantiate a very simple rail network on a 6x10 grid:
+    # Note that  some cells have invalid RailEnvTransitions!
+    #        |
+    #        |
+    #    _ _ | _ _ _ _ _ _ _
+    #        |
+    #        |
+    #        |
+    transitions = RailEnvTransitions()
+    rail_map = np.array(
+        [[RailEnvTransitionsEnum.empty] * 2 + [RailEnvTransitionsEnum.dead_end_from_south] + [RailEnvTransitionsEnum.empty] * 7] +
+        [[RailEnvTransitionsEnum.empty] * 2 + [RailEnvTransitionsEnum.vertical_straight] + [RailEnvTransitionsEnum.empty] * 7] * 2 +
+        [[RailEnvTransitionsEnum.dead_end_from_east] + [RailEnvTransitionsEnum.horizontal_straight] * 1 + [RailEnvTransitionsEnum.diamond_crossing] * 1 + [
+            RailEnvTransitionsEnum.horizontal_straight] * 6 + [RailEnvTransitionsEnum.dead_end_from_west]] +
+        [[RailEnvTransitionsEnum.empty] * 2 + [RailEnvTransitionsEnum.vertical_straight] + [RailEnvTransitionsEnum.empty] * 7] * 2 +
+        [[RailEnvTransitionsEnum.empty] * 2 + [RailEnvTransitionsEnum.dead_end_from_north] + [RailEnvTransitionsEnum.empty] * 7]
+        , dtype=np.uint16)
+    rail = GridTransitionMap(width=rail_map.shape[1],
+                             height=rail_map.shape[0], transitions=transitions)
+    rail.grid = rail_map
+    city_positions = [(1, 4), (4, 4)]
+    train_stations = [
+        [((1, 4), 0)],
+        [((4, 4), 0)],
+    ]
+    city_orientations = [1, 3]
+    agents_hints = {'city_positions': city_positions,
+                    'train_stations': train_stations,
+                    'city_orientations': city_orientations
+                    }
+    optionals = {'agents_hints': agents_hints}
+    return rail, rail_map, optionals
