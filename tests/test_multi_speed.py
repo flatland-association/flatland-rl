@@ -154,7 +154,7 @@ def test_multispeed_actions_no_malfunction_no_blocking():
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
-                is_cell_exit=False,
+                is_cell_exit=(0.5, False),
 
                 action=RailEnvActions.MOVE_LEFT,
 
@@ -164,7 +164,7 @@ def test_multispeed_actions_no_malfunction_no_blocking():
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
-                is_cell_exit=True,
+                is_cell_exit=(0.5, True),
 
                 action=RailEnvActions.MOVE_LEFT,
 
@@ -228,7 +228,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
-                    # speed=1./3.,
+                    speed=1. / 3.,
 
                     action=RailEnvActions.MOVE_FORWARD,
 
@@ -257,21 +257,27 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
+
                     action=RailEnvActions.MOVE_FORWARD,
+
                     reward=env.step_penalty * 1.0 / 3.0  # running at speed 1/3
                 ),
                 Replay(
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
+
                     action=None,
+
                     reward=env.step_penalty * 1.0 / 3.0  # running at speed 1/3
                 ),
                 Replay(
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
+
                     action=None,
+
                     reward=env.step_penalty * 1.0 / 3.0  # running at speed 1/3
                 ),
 
@@ -286,35 +292,45 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
+
                     action=None,
+
                     reward=env.step_penalty * 1.0 / 3.0  # running at speed 1/3
                 ),
                 Replay(
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
+
                     action=None,
+
                     reward=env.step_penalty * 1.0 / 3.0  # running at speed 1/3
                 ),
 
                 Replay(
                     position=(3, 5),
                     direction=Grid4TransitionsEnum.WEST,
+
                     action=RailEnvActions.MOVE_FORWARD,
+
                     reward=env.step_penalty * 1.0 / 3.0  # running at speed 1/3
                 ),
                 Replay(
                     position=(3, 5),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
+
                     action=None,
+
                     reward=env.step_penalty * 1.0 / 3.0  # running at speed 1/3
                 ),
                 Replay(
                     position=(3, 5),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
+
                     action=None,
+
                     reward=env.step_penalty * 1.0 / 3.0  # running at speed 1/3
                 )
             ],
@@ -423,7 +439,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
-                    is_cell_exit=True,
+                    is_cell_exit=(0.5, True),
 
                     action=RailEnvActions.MOVE_LEFT,
 

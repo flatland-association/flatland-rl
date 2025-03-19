@@ -63,13 +63,16 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
     - `set_malfunction` is applied (optionally, only if not `None` in `Replay`)
     - `malfunction` is verified
     - `action` must only be provided if action_required from previous step (initially all True)
+    - `is_cell_exit`
 
     *Step*
     - performed with the given `action`
 
     *After each step*
-    - `reward` is verified after step
+    - `speed` is verified after step
     - `distance` is verified after step
+    - `reward` is verified after step
+
 
 
     Parameters
@@ -129,9 +132,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             _assert(a, agent.direction, replay.direction, 'direction')
             if replay.state is not None:
                 _assert(a, TrainState(agent.state).name, TrainState(replay.state).name, 'state', close=False)
-            # TODO fix
-            # if replay.is_cell_exit is not None:
-            #     _assert(a, agent.speed_counter.is_cell_exit, replay.is_cell_exit, 'is_cell_exit')
+            if replay.is_cell_exit is not None:
+                _assert(a, agent.speed_counter.is_cell_exit(replay.is_cell_exit[0]), replay.is_cell_exit[1], f'is_cell_exit({replay.is_cell_exit[1]}')
 
             if replay.action is not None:
                 if not skip_action_required_check:

@@ -493,7 +493,7 @@ def test_initial_malfunction_do_nothing():
                 position=None,
                 direction=Grid4TransitionsEnum.EAST,
                 malfunction=0,
-                is_cell_exit=True,
+                is_cell_exit=(1.0, True),
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION_OFF_MAP -> MOVING needs move action
