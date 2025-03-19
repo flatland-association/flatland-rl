@@ -13,7 +13,7 @@ from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
-from flatland.trajectories.trajectories import Policy, evaluate_trajectory
+from flatland.trajectories.trajectories import Policy
 from flatland.trajectories.trajectories import Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
     generate_trajectory_from_policy, generate_trajectories_from_metadata
 from flatland.utils.seeding import np_random, random_state_to_hashablestate
