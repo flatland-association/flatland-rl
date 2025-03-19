@@ -2,7 +2,8 @@ import datetime
 import logging
 import time
 import warnings
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Dict, Tuple
 
 import requests
 
@@ -18,15 +19,37 @@ logger = logging.getLogger(__name__)
 
 class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
     def __init__(self,
-                 coordinate_map,
-                 client_id="opfab-client",
-                 username="admin",
-                 password="test",
-                 token_url="http://frontend/auth/token",
-                 step_to_millis=1000,
-                 collect_only=False,
-                 now=None
+                 coordinate_map: Dict[Tuple[int, int], Tuple[float, float]],
+                 client_id: str = "opfab-client",
+                 username: str = "admin",
+                 password: str = "test",
+                 token_url: str = "http://frontend/auth/token",
+                 step_to_millis: int = 1000,
+                 collect_only: bool = False,
+                 now: datetime.datetime = None
                  ):
+        """
+
+        Parameters
+        ----------
+        coordinate_map : Dict[Tuple[int, int], Tuple[float, float]]
+            map (row,column) to (lat,lon)
+        client_id:
+            InteractiveAI client_id
+        username : str
+            InteractiveAI username
+        password : str
+            InteractiveAI password
+        token_url : str
+            InteractiveAI token_url
+        step_to_millis : int
+            how many millis delay till next `env.step()`
+        collect_only : bool
+            Do not send out requests but collect the events and context dicts in the callbacks object.
+        now : datetime.datetime
+            Real-world time for `env._elapsed_steps == 0`.
+            Defaults to `datetime.datetime.now()`.
+        """
         self.token_url = token_url
         self.client_id = client_id
         self.username = username
@@ -71,6 +94,7 @@ class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
         self,
         *,
         env: Optional[RailEnv] = None,
+        data_dir: Path = None,
         **kwargs,
     ) -> None:
         """Called on each episode step (after the action(s) has/have been logged).
@@ -140,5 +164,3 @@ class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
             self.context_api.api_v1_contexts_post(ContextIn.from_dict(context))
 
         time.sleep(self.step_to_millis * 0.001)
-
-
