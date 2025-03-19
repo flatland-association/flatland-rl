@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import click
+import numpy as np
 import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks
@@ -47,6 +48,7 @@ class TrajectoryEvaluator:
         trains_arrived = self.trajectory.read_trains_arrived()
 
         env = self.trajectory.restore_episode(start_step)
+        env.record_steps = True
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
         if start_step is None:
@@ -66,6 +68,10 @@ class TrajectoryEvaluator:
             if self.callbacks is not None:
                 self.callbacks.on_episode_step(env=env)
 
+            if snapshot_interval > 0 and (env_time + 1) % snapshot_interval == 0:
+                RailEnvPersister.save(env,
+                                      os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR, f"{self.trajectory.ep_id}_step{(env_time + 1):04d}.pkl"))
+
             done = dones['__all__']
 
             if rendering:
@@ -73,10 +79,16 @@ class TrajectoryEvaluator:
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
-                actual_position = (agent.position, agent.direction)
                 expected_position = self.trajectory.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
-                assert actual_position == expected_position, (
-                self.trajectory.data_dir, self.trajectory.ep_id, env_time + 1, agent_id, actual_position, expected_position)
+                actual_position = (agent.position, agent.direction)
+                assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
+                                                             f"- actual_position:\t{actual_position}\n" \
+                                                             f"- expected_position:\t{expected_position}\n" \
+                                                             f"- trajectory:\tTrajectory({self.trajectory.data_dir}, {self.trajectory.ep_id})\n" \
+                                                             f"- agent:\t{agent} \n- state_machine:\t{agent.state_machine}\n" \
+                                                             f"- speed_counter:\t{agent.speed_counter}\n" \
+                                                             f"- breakpoint:\tself._elapsed_steps == {env_time + 1} and agent.handle == {agent.handle}\n\n\n" \
+                                                             f"- agents:\t{env.agents}"
 
             if done:
                 break
@@ -85,7 +97,7 @@ class TrajectoryEvaluator:
         expected_success_rate = trains_arrived_episode['success_rate']
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
-        assert expected_success_rate == actual_success_rate
+        assert np.isclose(expected_success_rate, actual_success_rate)
 
 
 @click.command()

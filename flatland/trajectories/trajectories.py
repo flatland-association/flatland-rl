@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import click
+import numpy as np
 import pandas as pd
 import tqdm
 from attr import attrs, attrib

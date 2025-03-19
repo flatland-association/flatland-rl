@@ -1387,7 +1387,7 @@ def test_rail_env_malfunction_speed_info():
                                                                             ),
                   line_generator=sparse_line_generator(), number_of_agents=10,
                   obs_builder_object=GlobalObsForRailEnv())
-    env.reset(False, False)
+    env.reset(False, False, random_seed=42)
 
     env_renderer = RenderTool(env, gl="PILSVG", )
     for step in range(100):
@@ -1397,8 +1397,7 @@ def test_rail_env_malfunction_speed_info():
             action = np.random.choice(np.arange(4))
             action_dict.update({a: action})
 
-        obs, rewards, done, info = env.step(
-            action_dict)
+        obs, rewards, done, info = env.step(action_dict)
 
         assert 'malfunction' in info
         for a in range(env.get_num_agents()):

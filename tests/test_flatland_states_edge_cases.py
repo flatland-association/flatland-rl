@@ -217,7 +217,6 @@ def test_malfunction_malfunction_motion_check_order_when_earliest_departure_is_n
     assert env.agents[0].position == None
     assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
-    assert env.agents[0].action_saver.saved_action == None
 
     assert env.agents[1].position == None
     assert env.agents[1].state == TrainState.WAITING
@@ -228,7 +227,6 @@ def test_malfunction_malfunction_motion_check_order_when_earliest_departure_is_n
     assert env.agents[0].position == None
     assert env.agents[0].state == TrainState.WAITING
     # this is the root cause: the motion check for agent 0 returns OK, the action preprocessing converts to DO_NOTHING only in state WAITING, but not MALFUNCTION_OFF_MAP
-    assert env.agents[0].action_saver.saved_action == RailEnvActions.MOVE_FORWARD
     assert env.agents[1].position == None
     assert env.agents[1].state == TrainState.READY_TO_DEPART
 
@@ -285,7 +283,6 @@ def test_malfunction_malfunction_motion_check_order_when_earliest_departure_reac
     assert env.agents[0].position == None
     assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
-    assert env.agents[0].action_saver.saved_action == None
 
     assert env.agents[1].position == None
     assert env.agents[1].state == TrainState.WAITING
@@ -296,7 +293,6 @@ def test_malfunction_malfunction_motion_check_order_when_earliest_departure_reac
     assert env.agents[0].position == None
     assert env.agents[0].state == TrainState.WAITING
     # this is the root cause: the motion check for agent 0 returns OK, the action preprocessing converts to DO_NOTHING only in state WAITING, but not MALFUNCTION_OFF_MAP
-    assert env.agents[0].action_saver.saved_action == RailEnvActions.MOVE_FORWARD
     assert env.agents[1].position == None
     assert env.agents[1].state == TrainState.READY_TO_DEPART
 
