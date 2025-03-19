@@ -8,7 +8,6 @@ import tqdm
 from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.envs.persistence import RailEnvPersister
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
-from flatland.utils.rendertools import RenderTool
 
 
 class TrajectoryEvaluator:
@@ -48,38 +47,37 @@ class TrajectoryEvaluator:
         trains_arrived = self.trajectory.read_trains_arrived()
 
         env = self.trajectory.restore_episode(start_step)
+        self.trajectory.outputs_dir.mkdir(exist_ok=True)
+        if self.callbacks is not None:
+            self.callbacks.on_episode_start(env=env, data_dir=self.trajectory.outputs_dir)
         env.record_steps = True
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
         if start_step is None:
             start_step = 0
 
-        if rendering:
-            renderer = RenderTool(env)
-            renderer.render_env(show=True, frames=False, show_observations=False)
+        for elapsed_before_step in tqdm.tqdm(range(start_step, env._max_episode_steps)):
+            # TODO refactor as callback, too
+            if snapshot_interval > 0 and elapsed_before_step % snapshot_interval == 0:
+                RailEnvPersister.save(env, os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR,
+                                                        f"{self.trajectory.ep_id}_step{elapsed_before_step:04d}.pkl"))
 
-        for env_time in tqdm.tqdm(range(start_step, env._max_episode_steps)):
-
-            if snapshot_interval > 0 and env_time % snapshot_interval == 0:
-                RailEnvPersister.save(env, os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR, f"{self.trajectory.ep_id}_step{env_time:04d}.pkl"))
-
-            action = {agent_id: self.trajectory.action_lookup(actions, env_time=env_time, agent_id=agent_id) for agent_id in range(n_agents)}
+            action = {agent_id: self.trajectory.action_lookup(actions, env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
             _, _, dones, _ = env.step(action)
             if self.callbacks is not None:
-                self.callbacks.on_episode_step(env=env)
+                self.callbacks.on_episode_step(env=env, data_dir=self.trajectory.outputs_dir)
 
-            if snapshot_interval > 0 and (env_time + 1) % snapshot_interval == 0:
+            elapsed_after_step = elapsed_before_step + 1
+            if snapshot_interval > 0 and (elapsed_after_step) % snapshot_interval == 0:
                 RailEnvPersister.save(env,
-                                      os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR, f"{self.trajectory.ep_id}_step{(env_time + 1):04d}.pkl"))
+                                      os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR,
+                                                   f"{self.trajectory.ep_id}_step{(elapsed_after_step):04d}.pkl"))
 
             done = dones['__all__']
 
-            if rendering:
-                renderer.render_env(show=True, show_observations=True)
-
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
-                expected_position = self.trajectory.position_lookup(trains_positions, env_time=env_time + 1, agent_id=agent_id)
+                expected_position = self.trajectory.position_lookup(trains_positions, env_time=elapsed_after_step, agent_id=agent_id)
                 actual_position = (agent.position, agent.direction)
                 assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
                                                              f"- actual_position:\t{actual_position}\n" \
@@ -87,16 +85,19 @@ class TrajectoryEvaluator:
                                                              f"- trajectory:\tTrajectory({self.trajectory.data_dir}, {self.trajectory.ep_id})\n" \
                                                              f"- agent:\t{agent} \n- state_machine:\t{agent.state_machine}\n" \
                                                              f"- speed_counter:\t{agent.speed_counter}\n" \
-                                                             f"- breakpoint:\tself._elapsed_steps == {env_time + 1} and agent.handle == {agent.handle}\n\n\n" \
+                                                             f"- breakpoint:\tself._elapsed_steps == {elapsed_after_step} and agent.handle == {agent.handle}\n\n\n" \
                                                              f"- agents:\t{env.agents}"
 
             if done:
                 break
+        if self.callbacks is not None:
+            self.callbacks.on_episode_end(env=env, data_dir=self.trajectory.outputs_dir)
 
         trains_arrived_episode = self.trajectory.trains_arrived_lookup(trains_arrived)
         expected_success_rate = trains_arrived_episode['success_rate']
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
+
         assert np.isclose(expected_success_rate, actual_success_rate)
 
 

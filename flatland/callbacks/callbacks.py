@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Optional
 
 from flatland.core.env import Environment
@@ -12,11 +13,34 @@ class FlatlandCallbacks:
     By default, all of these callbacks are no-ops.
     """
 
+    def on_episode_start(
+        self,
+        *,
+        env: Optional[Environment] = None,
+        data_dir: Path = None,
+        **kwargs,
+    ) -> None:
+        """Callback run right after an Episode has been started.
+
+        This method gets called after `env.reset()`.
+
+        Parameters
+        ---------
+            env : Environment
+                the env
+            data_dir : Path
+                trajectory data dir
+            kwargs:
+                Forward compatibility placeholder.
+        """
+        pass
+
     def on_episode_step(
-            self,
-            *,
-            env: Optional[Environment] = None,
-            **kwargs,
+        self,
+        *,
+        env: Optional[Environment] = None,
+        data_dir: Path = None,
+        **kwargs,
     ) -> None:
         """Called on each episode step (after the action(s) has/have been logged).
 
@@ -27,5 +51,84 @@ class FlatlandCallbacks:
         The exact time of the call of this callback is after `env.step([action])` and
         also after the results of this step (observation, reward, terminated, truncated,
         infos) have been logged to the given `episode` object.
+
+        Parameters
+        ---------
+            env : Environment
+                the env
+            data_dir : Path
+                trajectory data dir
+            kwargs:
+                Forward compatibility placeholder.
         """
         pass
+
+    def on_episode_end(
+        self,
+        *,
+        env: Optional[Environment] = None,
+        data_dir: Path = None,
+        **kwargs,
+    ) -> None:
+        """Called when an episode is done (after terminated/truncated have been logged).
+
+        The exact time of the call of this callback is after `env.step([action])`
+
+        Parameters
+        ---------
+            env : Environment
+                the env
+            data_dir : Path
+                trajectory data dir
+            kwargs:
+                Forward compatibility placeholder.
+        """
+        pass
+
+
+def make_multi_callbacks(callback_class_list):
+    class _MultiFlatlandCallbacks(FlatlandCallbacks):
+        IS_CALLBACK_CONTAINER = True
+
+        def __init__(self):
+            super().__init__()
+            self._callback_list = [
+                callback_class() for callback_class in callback_class_list
+            ]
+
+        def on_episode_start(self, **kwargs) -> None:
+            for callback in self._callback_list:
+                callback.on_episode_start(**kwargs)
+
+        def on_episode_step(self, **kwargs) -> None:
+            for callback in self._callback_list:
+                callback.on_episode_step(**kwargs)
+
+        def on_episode_end(self, **kwargs) -> None:
+            for callback in self._callback_list:
+                callback.on_episode_end(**kwargs)
+
+    return _MultiFlatlandCallbacks
+
+
+def make_multi_callbacks_from_instances(callback_list):
+    class _MultiFlatlandCallbacks(FlatlandCallbacks):
+        IS_CALLBACK_CONTAINER = True
+
+        def __init__(self):
+            super().__init__()
+            self._callback_list = callback_list
+
+        def on_episode_start(self, **kwargs) -> None:
+            for callback in self._callback_list:
+                callback.on_episode_start(**kwargs)
+
+        def on_episode_step(self, **kwargs) -> None:
+            for callback in self._callback_list:
+                callback.on_episode_step(**kwargs)
+
+        def on_episode_end(self, **kwargs) -> None:
+            for callback in self._callback_list:
+                callback.on_episode_end(**kwargs)
+
+    return _MultiFlatlandCallbacks

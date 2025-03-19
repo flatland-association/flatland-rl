@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import click
-import numpy as np
 import pandas as pd
 import tqdm
 from attr import attrs, attrib
@@ -23,6 +22,7 @@ DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
 TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
 TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
+OUTPUTS_SUBDIR = 'outputs'
 
 
 def _uuid_str():
@@ -188,6 +188,10 @@ class Trajectory:
             return movement.iloc[0]
         raise
 
+    @property
+    def outputs_dir(self) -> Path:
+        return self.data_dir / OUTPUTS_SUBDIR
+
     @staticmethod
     def create_from_policy(
         policy: Policy,
@@ -287,6 +291,9 @@ class Trajectory:
         actions = trajectory.read_actions()
         trains_arrived = trajectory.read_trains_arrived()
 
+        trajectory.outputs_dir.mkdir(exist_ok=True)
+        if callbacks is not None:
+            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
         env_time = 0
@@ -301,7 +308,7 @@ class Trajectory:
 
             _, _, dones, _ = env.step(action_dict)
             if callbacks is not None:
-                callbacks.on_episode_step(env=env)
+                callbacks.on_episode_step(env=env, data_dir=trajectory.outputs_dir)
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
@@ -313,6 +320,8 @@ class Trajectory:
                 RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time + 1:04d}.pkl"))
             if done:
                 break
+        if callbacks is not None:
+            callbacks.on_episode_end(env=env, data_dir=trajectory.outputs_dir)
 
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
