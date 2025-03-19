@@ -85,7 +85,8 @@ class SpeedCounter:
 
     def __setstate__(self, load_dict):
         if "_speed" in load_dict:
-            self._speed = load_dict['_speed']
+            # backwards compatibility
+            self._speed = 1 / (round(1 / load_dict['_speed']))
         else:
             self._speed = load_dict["speed"]
         if "counter" in load_dict:
