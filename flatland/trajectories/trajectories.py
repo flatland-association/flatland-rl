@@ -3,10 +3,10 @@ import importlib
 import os
 import uuid
 from pathlib import Path
-from typing import Optional, Any, Tuple
 from typing import Optional, Tuple
 
 import click
+import numpy as np
 import pandas as pd
 import tqdm
 from attr import attrs, attrib
@@ -18,7 +18,6 @@ from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.utils.rendertools import RenderTool
 
 DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
 TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
@@ -191,24 +190,25 @@ class Trajectory:
 
     @staticmethod
     def create_from_policy(
-            policy: Policy,
-            data_dir: Path,
-            n_agents=7,
-            x_dim=30,
-            y_dim=30,
-            n_cities=2,
-            max_rail_pairs_in_city=4,
-            grid_mode=False,
-            max_rails_between_cities=2,
-            malfunction_duration_min=20,
-            malfunction_duration_max=50,
-            malfunction_interval=540,
-            speed_ratios=None,
-            seed=42,
-            obs_builder: Optional[ObservationBuilder] = None,
-            snapshot_interval: int = 1,
-            ep_id: str = None,
-            callbacks: FlatlandCallbacks = None
+        policy: Policy,
+        data_dir: Path,
+        n_agents=7,
+        x_dim=30,
+        y_dim=30,
+        n_cities=2,
+        max_rail_pairs_in_city=4,
+        grid_mode=False,
+        max_rails_between_cities=2,
+        malfunction_duration_min=20,
+        malfunction_duration_max=50,
+        malfunction_interval=540,
+        speed_ratios=None,
+        seed=42,
+        obs_builder: Optional[ObservationBuilder] = None,
+        snapshot_interval: int = 1,
+        ep_id: str = None,
+        callbacks: FlatlandCallbacks = None,
+        env: RailEnv = None
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -257,20 +257,23 @@ class Trajectory:
         Trajectory
 
         """
-        env, observations, _ = env_generator(
-            n_agents=n_agents,
-            x_dim=x_dim,
-            y_dim=y_dim,
-            n_cities=n_cities,
-            max_rail_pairs_in_city=max_rail_pairs_in_city,
-            grid_mode=grid_mode,
-            max_rails_between_cities=max_rails_between_cities,
-            malfunction_duration_min=malfunction_duration_min,
-            malfunction_duration_max=malfunction_duration_max,
-            malfunction_interval=malfunction_interval,
-            speed_ratios=speed_ratios,
-            seed=seed,
-            obs_builder_object=obs_builder)
+        if env is None:
+            env, observations, _ = env_generator(
+                n_agents=n_agents,
+                x_dim=x_dim,
+                y_dim=y_dim,
+                n_cities=n_cities,
+                max_rail_pairs_in_city=max_rail_pairs_in_city,
+                grid_mode=grid_mode,
+                max_rails_between_cities=max_rails_between_cities,
+                malfunction_duration_min=malfunction_duration_min,
+                malfunction_duration_max=malfunction_duration_max,
+                malfunction_interval=malfunction_interval,
+                speed_ratios=speed_ratios,
+                seed=seed,
+                obs_builder_object=obs_builder)
+        else:
+            observations = env._get_observations()
         if ep_id is not None:
             trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
         else:
@@ -430,24 +433,30 @@ def evaluate_trajectory(data_dir: Path, ep_id: str):
               type=str,
               help="Set the episode ID used - if not set, a UUID will be sampled.",
               required=False)
+@click.option('--env-path',
+              type=click.Path(exists=True),
+              help="Path to existing RailEnv to start trajectory from",
+              required=False
+              )
 def generate_trajectory_from_policy(
-        data_dir: Path,
-        policy_pkg: str, policy_cls: str,
-        obs_builder_pkg: str, obs_builder_cls: str,
-        n_agents=7,
-        x_dim=30,
-        y_dim=30,
-        n_cities=2,
-        max_rail_pairs_in_city=4,
-        grid_mode=False,
-        max_rails_between_cities=2,
-        malfunction_duration_min=20,
-        malfunction_duration_max=50,
-        malfunction_interval=540,
-        speed_ratios=None,
-        seed: int = 42,
-        snapshot_interval: int = 1,
-        ep_id: str = None
+    data_dir: Path,
+    policy_pkg: str, policy_cls: str,
+    obs_builder_pkg: str, obs_builder_cls: str,
+    n_agents=7,
+    x_dim=30,
+    y_dim=30,
+    n_cities=2,
+    max_rail_pairs_in_city=4,
+    grid_mode=False,
+    max_rails_between_cities=2,
+    malfunction_duration_min=20,
+    malfunction_duration_max=50,
+    malfunction_interval=540,
+    speed_ratios=None,
+    seed: int = 42,
+    snapshot_interval: int = 1,
+    ep_id: str = None,
+    env_path: Path = None
 ):
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
@@ -457,6 +466,9 @@ def generate_trajectory_from_policy(
         module = importlib.import_module(obs_builder_pkg)
         obs_builder_cls = getattr(module, obs_builder_cls)
         obs_builder = obs_builder_cls()
+    env = None
+    if env_path is not None:
+        env, _ = RailEnvPersister.load_new(str(env_path))
     Trajectory.create_from_policy(
         policy=policy_cls(),
         data_dir=data_dir,
@@ -474,15 +486,16 @@ def generate_trajectory_from_policy(
         seed=seed,
         obs_builder=obs_builder,
         snapshot_interval=snapshot_interval,
-        ep_id=ep_id
+        ep_id=ep_id,
+        env=env
     )
 
 
 def generate_trajectories_from_metadata(
-        metadata_csv: Path,
-        data_dir: Path,
-        policy_pkg: str, policy_cls: str,
-        obs_builder_pkg: str, obs_builder_cls: str):
+    metadata_csv: Path,
+    data_dir: Path,
+    policy_pkg: str, policy_cls: str,
+    obs_builder_pkg: str, obs_builder_cls: str):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
         try:

@@ -40,9 +40,9 @@ beautifulsoup4==4.13.3
     # via nbconvert
 bleach==6.2.0
     # via nbconvert
-boto3==1.36.20
+boto3==1.36.23
     # via flatland-rl (pyproject.toml)
-botocore==1.36.20
+botocore==1.36.23
     # via
     #   boto3
     #   s3transfer
@@ -111,7 +111,7 @@ filelock==3.17.0
     # via
     #   tox
     #   virtualenv
-flake8==7.1.1
+flake8==7.1.2
     # via
     #   flake8-eradicate
     #   flatland-rl (pyproject.toml)
@@ -182,7 +182,7 @@ jaraco-functools==4.1.0
     # via keyring
 jedi==0.19.2
     # via ipython
-jinja2==3.1.5
+jinja2==3.1.6
     # via
     #   jupyter-server
     #   jupyterlab
