@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from flatland.core.env import Environment
 
@@ -86,37 +86,12 @@ class FlatlandCallbacks:
         pass
 
 
-def make_multi_callbacks(callback_class_list):
+# https://github.com/ray-project/ray/blob/3b94e5ff0038798a6955cde37459a0d30aa718c4/rllib/callbacks/utils.py#L41
+def make_multi_callbacks(*_callback_list: FlatlandCallbacks):
     class _MultiFlatlandCallbacks(FlatlandCallbacks):
         IS_CALLBACK_CONTAINER = True
 
-        def __init__(self):
-            super().__init__()
-            self._callback_list = [
-                callback_class() for callback_class in callback_class_list
-            ]
-
-        def on_episode_start(self, **kwargs) -> None:
-            for callback in self._callback_list:
-                callback.on_episode_start(**kwargs)
-
-        def on_episode_step(self, **kwargs) -> None:
-            for callback in self._callback_list:
-                callback.on_episode_step(**kwargs)
-
-        def on_episode_end(self, **kwargs) -> None:
-            for callback in self._callback_list:
-                callback.on_episode_end(**kwargs)
-
-    return _MultiFlatlandCallbacks
-
-
-def make_multi_callbacks_from_instances(callback_list):
-    class _MultiFlatlandCallbacks(FlatlandCallbacks):
-        IS_CALLBACK_CONTAINER = True
-
-        def __init__(self):
-            super().__init__()
+        def __init__(self, callback_list: List[FlatlandCallbacks]):
             self._callback_list = callback_list
 
         def on_episode_start(self, **kwargs) -> None:
@@ -131,4 +106,4 @@ def make_multi_callbacks_from_instances(callback_list):
             for callback in self._callback_list:
                 callback.on_episode_end(**kwargs)
 
-    return _MultiFlatlandCallbacks
+    return _MultiFlatlandCallbacks(_callback_list)
