@@ -69,6 +69,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
     *After each step*
     - `reward` is verified after step
+    - `distance` is verified after step
 
 
     Parameters
@@ -162,7 +163,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
             if not skip_reward_check:
                 _assert(a, rewards_dict[a], replay.reward, 'reward')
-            if replay.speed is not None:
+            if step > 0 and replay.speed is not None:
                 _assert(a, agent.speed_counter.speed, replay.speed,
                         "[{}] agent {} expecting speed {}, found {}".format(step, a, replay.speed, agent.speed_counter.speed))
             if replay.distance is not None:

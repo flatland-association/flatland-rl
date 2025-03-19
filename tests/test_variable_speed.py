@@ -1,3 +1,4 @@
+from envs.step_utils.states import TrainState
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
@@ -26,76 +27,94 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
             Replay(  # 0
                 position=(3, 9),  # east dead-end
                 direction=Grid4TransitionsEnum.EAST,
+                speed=0.5,
+
                 action=RailEnvActions.MOVE_FORWARD,
-                speed=0.7,
+
                 distance=0.7
             ),
             Replay(  # 1
                 position=(3, 9),
                 direction=Grid4TransitionsEnum.EAST,
+
                 action=None,
-                # TODO wrong - due to action saver?!
-                speed=0.9,
-                distance=0.6,
+
+                speed=0.7,
+                distance=0.4,
             ),
             Replay(  # 2
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
-                action=RailEnvActions.MOVE_FORWARD,
-                speed=1.0,
-                distance=0.6,
-            ),
 
+                action=RailEnvActions.MOVE_FORWARD,
+
+                speed=0.9,
+                distance=0.3,
+            ),
             Replay(  # 3
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
+
                 action=RailEnvActions.MOVE_FORWARD,
+
                 speed=1.0,
-                distance=0.6,
+                distance=0.3,
             ),
             Replay(  # 4
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
+
                 action=RailEnvActions.MOVE_LEFT,
+
                 speed=1.0,
-                distance=0.6,
+                distance=0.3,
             ),
             Replay(  # 5
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
+
                 action=RailEnvActions.STOP_MOVING,
-                speed=0.8,
-                distance=0.4,
+
+                state=TrainState.MOVING,
+                speed=1.0,
+                distance=0.3,
             ),
             #
             Replay(  # 6
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
+
                 action=RailEnvActions.STOP_MOVING,
-                speed=0.6,
-                distance=0.0,
+
+                speed=0.8,
+                distance=0.1,
             ),
             Replay(  # 7
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
+
                 action=RailEnvActions.DO_NOTHING,
-                speed=0.8,
-                distance=0.8,
+
+                speed=0.6,
+                distance=0.7,
             ),
             Replay(  # 8
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
+
                 action=RailEnvActions.DO_NOTHING,
-                # TODO wrong - due to action saver?!
-                speed=1.0,
-                distance=0.8,
+
+                speed=0.6,
+                distance=0.9,
             ),
             Replay(  # 9
                 position=(5, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
+
                 action=RailEnvActions.DO_NOTHING,
-                speed=1.0,
-                distance=0.8,
+
+                speed=0.6,
+                distance=0.5,
             ),
         ],
         target=(3, 0),  # west dead-end

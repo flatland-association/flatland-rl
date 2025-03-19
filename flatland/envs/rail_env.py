@@ -509,8 +509,10 @@ class RailEnv(Environment):
             if preprocessed_action == RailEnvActions.MOVE_FORWARD:
                 new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
+                # TODO need to modify state machine as stop is braking now -> we do not go to STOPPED in those cases! re-interpret STOPPED as forced stop or speed=0 reached
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent.speed_counter.max_speed, new_speed))
+            print(f"speed update {agent.speed_counter.speed}->{new_speed} ")
 
             if agent.state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
@@ -622,7 +624,7 @@ class RailEnv(Environment):
                     agent.direction = agent_transition_data.new_direction
                 # TODO add new_speed to transition data as well
                 # TODO is cell_entry handled correctly?
-                agent.speed_counter.step(speed=agent_transition_data.speed)
+                agent.speed_counter.step(speed=agent_transition_data.new_speed)
                 agent.state_machine.update_if_reached(agent.position, agent.target)
 
             # Handle done state actions, optionally remove agents
@@ -639,7 +641,6 @@ class RailEnv(Environment):
 
             # Off map or on map state and position should match
             agent.state_machine.state_position_sync_check(agent.position, agent.handle, self.remove_agents_at_target)
-
 
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
