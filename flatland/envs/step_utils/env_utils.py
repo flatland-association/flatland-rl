@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import Tuple
 
-from envs.step_utils.states import StateTransitionSignals
 from flatland.core.grid.grid4 import Grid4Transitions, Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.fast_methods import fast_count_nonzero, fast_argmax
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.step_utils.states import StateTransitionSignals
 from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 
