@@ -526,7 +526,7 @@ class RailEnv(Environment):
                 new_position, new_direction = agent.position, agent.direction
                 if agent.speed_counter.is_cell_exit(new_speed):
                     # movement possible either inside current cell or to next cell
-                    movement_possible = agent.state == TrainState.MOVING and not stop_action_given
+                    movement_possible = agent.state == TrainState.MOVING and not (stop_action_given and new_speed == 0.0)
                     # malfunction ends and (explicit) movement action given
                     movement_possible |= agent.state == TrainState.MALFUNCTION and not in_malfunction and movement_action_given
                     movement_possible |= agent.state == TrainState.STOPPED and movement_action_given
@@ -568,7 +568,9 @@ class RailEnv(Environment):
                 # Target reached - we only know after state and positions update - see handle_done_state below
                 target_reached=None,
                 # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
-                movement_allowed=None
+                movement_allowed=None,
+
+                new_speed=new_speed
             )
 
             agent_transition_data = env_utils.AgentTransitionData(

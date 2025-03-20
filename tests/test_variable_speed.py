@@ -76,7 +76,7 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
             ),
             #
             Replay(  # 6
-                position=(4, 6),
+                position=(5, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
                 speed=0.8,
                 distance=0.1,
@@ -84,7 +84,7 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
                 action=RailEnvActions.STOP_MOVING,
             ),
             Replay(  # 7
-                position=(4, 6),
+                position=(5, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
                 speed=0.6,
                 distance=0.7,
@@ -92,18 +92,18 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
                 action=RailEnvActions.DO_NOTHING,
             ),
             Replay(  # 8
-                position=(4, 6),
+                position=(6, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
                 speed=0.6,
-                distance=0.7,
+                distance=0.3,
 
                 action=RailEnvActions.DO_NOTHING,
             ),
             Replay(  # 9
-                position=(5, 6),
+                position=(6, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
                 speed=0.6,
-                distance=0.5,
+                distance=0.9,
 
                 action=RailEnvActions.DO_NOTHING,
             ),
@@ -114,5 +114,4 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
         initial_position=(3, 9),  # east dead-end
         initial_direction=Grid4TransitionsEnum.EAST,
     )
-
     run_replay_config(env, [test_config], skip_reward_check=True, skip_action_required_check=True)
