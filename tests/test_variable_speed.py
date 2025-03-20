@@ -89,7 +89,7 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
                 speed=0.6,
                 distance=0.7,
 
-                action=RailEnvActions.DO_NOTHING,
+                action=RailEnvActions.MOVE_RIGHT,  # must not accelerate/brake!
             ),
             Replay(  # 8
                 position=(6, 6),
