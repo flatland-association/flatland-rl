@@ -25,7 +25,6 @@ class Replay(object):
     set_malfunction = attrib(default=None, type=Optional[int])
     reward = attrib(default=None, type=Optional[float])
     state = attrib(default=None, type=Optional[TrainState])
-    is_cell_exit = attrib(default=None, type=Optional[bool])
     speed = attrib(default=None, type=Optional[float])
     distance = attrib(default=None, type=Optional[float])
 
@@ -63,14 +62,13 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
     - `set_malfunction` is applied (optionally, only if not `None` in `Replay`)
     - `malfunction` is verified
     - `action` must only be provided if action_required from previous step (initially all True)
-    - `is_cell_exit`
+    - `speed` is verified after step
+    - `distance` is verified after step
 
     *Step*
     - performed with the given `action`
 
     *After each step*
-    - `speed` is verified after step
-    - `distance` is verified after step
     - `reward` is verified after step
 
 
@@ -118,8 +116,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
         def _assert(a, actual, expected, msg, close: bool = True):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))
-            msg = "[{}] agent {} {}:  actual={}, expected={}".format(step, a, msg, actual, expected)
-            assert (actual == expected) or (close and np.allclose(actual, expected)), msg
+            _msg = "[{}] agent {}:  actual={}, expected={}".format(step, a, msg, actual, expected)
+            assert (actual == expected) or (close and np.allclose(actual, expected)), _msg
 
         action_dict = {}
         print(f"[{step}] BEFORE stepping: verify position/direction/state/malfunction")
@@ -132,11 +130,15 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             _assert(a, agent.direction, replay.direction, 'direction')
             if replay.state is not None:
                 _assert(a, TrainState(agent.state).name, TrainState(replay.state).name, 'state', close=False)
-            if replay.is_cell_exit is not None:
-                _assert(a, agent.speed_counter.is_cell_exit(replay.is_cell_exit[0]), replay.is_cell_exit[1], f'is_cell_exit({replay.is_cell_exit[1]}')
+
+            if replay.speed is not None:
+                _assert(a, agent.speed_counter.speed, replay.speed, "speed")
+            if replay.distance is not None:
+                _assert(a, agent.speed_counter.distance, replay.distance, "distance")
 
             if replay.action is not None:
                 if not skip_action_required_check:
+                    print("[{}] verifying action_required on agent {}: actual={}, expected={}".format(step, a, action_dict.get(a), replay.action))
                     assert info_dict['action_required'][
                                a] == True or agent.state == TrainState.READY_TO_DEPART, "[{}] agent {} expecting action_required={} or agent status READY_TO_DEPART".format(
                         step, a, True)
@@ -165,12 +167,6 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
             if not skip_reward_check:
                 _assert(a, rewards_dict[a], replay.reward, 'reward')
-            if step > 0 and replay.speed is not None:
-                _assert(a, agent.speed_counter.speed, replay.speed,
-                        "[{}] agent {} expecting speed {}, found {}".format(step, a, replay.speed, agent.speed_counter.speed))
-            if replay.distance is not None:
-                _assert(a, agent.speed_counter.distance, replay.distance,
-                        "[{}] agent {} expecting distance {}, found {}".format(step, a, replay.distance, agent.speed_counter.distance))
 
 
 def create_and_save_env(file_name: str, line_generator: LineGenerator, rail_generator: RailGenerator):

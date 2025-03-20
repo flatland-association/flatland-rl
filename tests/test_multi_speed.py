@@ -154,7 +154,8 @@ def test_multispeed_actions_no_malfunction_no_blocking():
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
-                is_cell_exit=(0.5, False),
+                speed=0.5,
+                distance=0.0,
 
                 action=RailEnvActions.MOVE_LEFT,
 
@@ -164,7 +165,8 @@ def test_multispeed_actions_no_malfunction_no_blocking():
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
-                is_cell_exit=(0.5, True),
+                speed=0.5,
+                distance=0.5,
 
                 action=RailEnvActions.MOVE_LEFT,
 
@@ -439,7 +441,8 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
-                    is_cell_exit=(0.5, True),
+                    distance=0.5,
+                    speed=0.5,
 
                     action=RailEnvActions.MOVE_LEFT,
 

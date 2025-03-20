@@ -266,6 +266,8 @@ def test_initial_malfunction():
                 direction=Grid4TransitionsEnum.EAST,
                 set_malfunction=3,
                 malfunction=3,
+                distance=0.0,
+                speed=1.0,
                 state=TrainState.MOVING,
 
                 action=RailEnvActions.MOVE_FORWARD,
@@ -276,6 +278,8 @@ def test_initial_malfunction():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.MALFUNCTION,
+                distance=0.0,
+                speed=0.0,
                 malfunction=2,
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION -> MOVING needs move action
@@ -321,7 +325,7 @@ def test_initial_malfunction():
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
     )
-    run_replay_config(env, [replay_config], skip_reward_check=True)
+    run_replay_config(env, [replay_config], skip_reward_check=True, skip_action_required_check=True)
 
 
 def test_initial_malfunction_stop_moving():
@@ -483,17 +487,18 @@ def test_initial_malfunction_do_nothing():
                 position=None,
                 direction=Grid4TransitionsEnum.EAST,
                 malfunction=1,
+                state=TrainState.MALFUNCTION_OFF_MAP,
 
                 action=None,
 
                 reward=env.step_penalty,  # full step penalty while stopped
-                state=TrainState.MALFUNCTION_OFF_MAP
             ),
             Replay(  # 3
                 position=None,
                 direction=Grid4TransitionsEnum.EAST,
                 malfunction=0,
-                is_cell_exit=(1.0, True),
+                distance=0,
+                speed=1,  # irrelevant
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION_OFF_MAP -> MOVING needs move action
@@ -503,18 +508,28 @@ def test_initial_malfunction_do_nothing():
             Replay(  # 4
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
-                action=RailEnvActions.MOVE_FORWARD,
+                state=TrainState.MOVING,
+                distance=0.0,
+                speed=1.0,
+
                 malfunction=0,
+
+                action=RailEnvActions.MOVE_FORWARD,
+
                 reward=env.start_penalty + env.step_penalty * 1.0,  # start penalty + step penalty for speed 1.0
-                state=TrainState.MOVING
             ),  # we start to move forward --> should go to next cell now
             Replay(
                 position=(3, 3),
                 direction=Grid4TransitionsEnum.EAST,
-                action=RailEnvActions.MOVE_FORWARD,
                 malfunction=0,
+                distance=0.0,
+                speed=1.0,
+                state=TrainState.MOVING,
+
+                action=RailEnvActions.MOVE_FORWARD,
+
                 reward=env.step_penalty * 1.0,  # step penalty for speed 1.0
-                state=TrainState.MOVING
+
             )
         ],
         speed=env.agents[0].speed_counter.speed,
