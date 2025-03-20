@@ -27,6 +27,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.action_preprocessing import process_illegal_action, check_valid_action, preprocess_left_right_action
+from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
@@ -509,42 +510,39 @@ class RailEnv(Environment):
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
 
             new_speed = agent.speed_counter.speed
-            # TODO a bit hacky. we should not convert
+            # TODO a bit hacky. we should not convert instead?
+            state = agent.state
             if (preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD) or (
-                (agent.state == TrainState.STOPPED or agent.state == TrainState.MALFUNCTION) and preprocessed_action.is_moving_action()):
+                (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and preprocessed_action.is_moving_action()):
                 new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent.speed_counter.max_speed, new_speed))
 
-            if agent.state == TrainState.READY_TO_DEPART and movement_action_given:
+            if state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
-            elif agent.state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
+            elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
                 preprocessed_action.is_moving_action() or preprocessed_action == RailEnvActions.STOP_MOVING):
-                # weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
+                # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
-            elif agent.state.is_on_map_state():
+            elif state.is_on_map_state():
                 new_position, new_direction = agent.position, agent.direction
-                if agent.speed_counter.is_cell_exit(new_speed):
-                    # TODO rename to can_move_to_next_cell instead?
-                    # movement possible either inside current cell or to next cell
-                    movement_possible = agent.state == TrainState.MOVING and not (stop_action_given and new_speed == 0.0)
-                    # malfunction ends and (explicit) movement action given
-                    movement_possible |= agent.state == TrainState.MALFUNCTION and not in_malfunction and movement_action_given
-                    movement_possible |= agent.state == TrainState.STOPPED and movement_action_given
-                    movement_possible &= not in_malfunction
-                    if movement_possible:
-                        new_position, new_direction = env_utils.apply_action_independent(
-                            preprocessed_action,
-                            self.rail,
-                            agent.position,
-                            agent.direction
-                        )
+                # transition to next cell: at end of cell and next state potentially MOVING
+                if (agent.speed_counter.is_cell_exit(new_speed)
+                    and
+                    TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
+                ):
+                    new_position, new_direction = env_utils.apply_action_independent(
+                        preprocessed_action,
+                        self.rail,
+                        agent.position,
+                        agent.direction
+                    )
                 assert agent.position is not None
             else:
-                assert agent.state.is_off_map_state() or agent.state == TrainState.DONE
+                assert state.is_off_map_state() or state == TrainState.DONE
                 new_position = None
                 new_direction = None
 
