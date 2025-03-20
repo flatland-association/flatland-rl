@@ -114,7 +114,7 @@ def test_malfunction_no_phase_through():
     assert env.agents[0].position == (3, 5)
 
 
-def test_malfunction_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
+def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
     """
     MALFUNCTION_OFF_MAP getting into map must respect without motion check.
     """
@@ -179,7 +179,7 @@ def test_malfunction_malfunction_off_map_not_on_map_with_stop_action_after_malfu
     # \ TEMPORARY FIX
 
 
-def test_malfunction_malfunction_motion_check_order_when_earliest_departure_is_not_reached():
+def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached():
     """
     Avoid adding agent to motion check as it can hinder other agents having earliest_departure_reached to start.
     """
@@ -244,7 +244,7 @@ def test_malfunction_malfunction_motion_check_order_when_earliest_departure_is_n
     # \ TEMPORARY FIX
 
 
-def test_malfunction_malfunction_motion_check_order_when_earliest_departure_reached_but_not_moving_action():
+def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_moving_action():
     """
     Avoid adding agent to motion check as it can hinder other agents having earliest_departure_reached to start.
     """
@@ -309,7 +309,7 @@ def test_malfunction_malfunction_motion_check_order_when_earliest_departure_reac
     # \ TEMPORARY FIX
 
 
-def test_malfunction_malfunction_malfunction_to_moving_instead_of_stopped():
+def test_malfunction_to_moving_instead_of_stopped():
     """
     MALFUNCTION to MOVING without going to STOPPED unnecessarily
     """
@@ -349,6 +349,8 @@ def test_malfunction_malfunction_malfunction_to_moving_instead_of_stopped():
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
     assert env.agents[0].speed_counter.speed == 0.2
+    # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
+    assert env.agents[0].speed_counter.distance == 0.0
 
     # step 3
     env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
@@ -356,15 +358,84 @@ def test_malfunction_malfunction_malfunction_to_moving_instead_of_stopped():
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.MALFUNCTION
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
-    assert env.agents[0].speed_counter.is_cell_exit(env.agents[0].speed_counter.speed) == False
-    # TODO keep speed memory during malfunction?
-    assert env.agents[0].speed_counter.speed == 0.2
+    assert env.agents[0].speed_counter.speed == 0.0
+    assert env.agents[0].speed_counter.distance == 0.0
 
     # step 4
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+
     # / TEMPORARY FIX avoid setting agent to STOPPED after malfunction unnecessarily
     # WITHOUT FIX: agent is STOPPED
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
     assert env.agents[0].speed_counter.speed == 0.2
+    assert env.agents[0].speed_counter.distance == 0.2
     # \ TEMPORARY FIX
+
+
+def test_stop_and_go():
+    """
+
+    """
+    stochastic_data = MalfunctionParameters(malfunction_rate=0,  # Rate of malfunction occurence
+                                            min_duration=0,  # Minimal duration of malfunction
+                                            max_duration=0  # Max duration of malfunction
+                                            )
+
+    rail, _, optionals = make_simple_rail()
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=10),
+                  number_of_agents=2,
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
+                  )
+
+    env.reset(False, False, random_seed=10)
+
+    env.agents[0].initial_position = (6, 6)
+    env.agents[0].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[0].target = (0, 3)
+    env.agents[0].earliest_departure = 0
+    env.agents[0].speed_counter._speed = 0.2
+    env.agents[0].speed_counter._max_speed = 0.2
+
+    # step 1
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+
+    assert env.agents[0].position == None
+    assert env.agents[0].state == TrainState.READY_TO_DEPART
+
+    # step 2
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+
+    assert env.agents[0].position == (6, 6)
+    assert env.agents[0].state == TrainState.MOVING
+    assert env.agents[0].speed_counter.speed == 0.2
+    # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
+    assert env.agents[0].speed_counter.distance == 0.0
+
+    # step 3
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+
+    assert env.agents[0].position == (6, 6)
+    assert env.agents[0].state == TrainState.MOVING
+    assert env.agents[0].speed_counter.speed == 0.2
+    assert env.agents[0].speed_counter.distance == 0.2
+
+    # step 4
+    env.step({0: RailEnvActions.STOP_MOVING, 1: RailEnvActions.MOVE_FORWARD})
+
+    assert env.agents[0].position == (6, 6)
+    assert env.agents[0].state == TrainState.STOPPED
+    assert env.agents[0].speed_counter.speed == 0.0
+    assert env.agents[0].speed_counter.distance == 0.2
+
+    # step 5
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+
+    assert env.agents[0].position == (6, 6)
+    assert env.agents[0].state == TrainState.MOVING
+    assert env.agents[0].speed_counter.speed == 0.2
+    assert env.agents[0].speed_counter.distance == 0.4

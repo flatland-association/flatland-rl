@@ -28,93 +28,84 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
                 position=(3, 9),  # east dead-end
                 direction=Grid4TransitionsEnum.EAST,
                 speed=0.5,
+                distance=0.0,
 
                 action=RailEnvActions.MOVE_FORWARD,
-
-                distance=0.7
             ),
             Replay(  # 1
                 position=(3, 9),
                 direction=Grid4TransitionsEnum.EAST,
+                speed=0.7,
+                distance=0.7,
 
                 action=None,
-
-                speed=0.7,
-                distance=0.4,
             ),
             Replay(  # 2
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
+                speed=0.7,
+                distance=0.4,
 
                 action=RailEnvActions.MOVE_FORWARD,
-
-                speed=0.9,
-                distance=0.3,
             ),
             Replay(  # 3
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
+                speed=0.9,
+                distance=0.3,
 
                 action=RailEnvActions.MOVE_FORWARD,
-
-                speed=1.0,
-                distance=0.3,
             ),
             Replay(  # 4
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
+                speed=1.0,
+                distance=0.3,
 
                 action=RailEnvActions.MOVE_LEFT,
 
-                speed=1.0,
-                distance=0.3,
             ),
             Replay(  # 5
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
-
-                action=RailEnvActions.STOP_MOVING,
-
-                state=TrainState.MOVING,
                 speed=1.0,
                 distance=0.3,
+                state=TrainState.MOVING,
+
+                action=RailEnvActions.STOP_MOVING,
             ),
             #
             Replay(  # 6
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
-
-                action=RailEnvActions.STOP_MOVING,
-
                 speed=0.8,
                 distance=0.1,
+
+                action=RailEnvActions.STOP_MOVING,
             ),
             Replay(  # 7
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
-
-                action=RailEnvActions.DO_NOTHING,
-
                 speed=0.6,
                 distance=0.7,
+
+                action=RailEnvActions.DO_NOTHING,
             ),
             Replay(  # 8
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
+                speed=0.6,
+                distance=0.7,
 
                 action=RailEnvActions.DO_NOTHING,
-
-                speed=0.6,
-                distance=0.9,
             ),
             Replay(  # 9
                 position=(5, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
-
-                action=RailEnvActions.DO_NOTHING,
-
                 speed=0.6,
                 distance=0.5,
+
+                action=RailEnvActions.DO_NOTHING,
             ),
         ],
         target=(3, 0),  # west dead-end

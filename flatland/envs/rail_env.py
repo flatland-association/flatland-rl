@@ -506,13 +506,13 @@ class RailEnv(Environment):
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
 
             new_speed = agent.speed_counter.speed
-            if preprocessed_action == RailEnvActions.MOVE_FORWARD:
+            if preprocessed_action == RailEnvActions.MOVE_FORWARD or (
+                (agent.state == TrainState.STOPPED or agent.state == TrainState.MALFUNCTION) and preprocessed_action.is_moving_action()):
                 new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
                 # TODO need to modify state machine as stop is braking now -> we do not go to STOPPED in those cases! re-interpret STOPPED as forced stop or speed=0 reached
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent.speed_counter.max_speed, new_speed))
-            print(f"speed update {agent.speed_counter.speed}->{new_speed} ")
 
             if agent.state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
@@ -600,7 +600,7 @@ class RailEnv(Environment):
             # motion_check is False if agent wants to stay in the cell
             motion_check = self.motionCheck.check_motion(i_agent, agent_transition_data.agent_position_level_free)
             # Movement allowed if inside cell or at end of cell and no conflict with other trains
-            movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.speed)) or motion_check
+            movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or motion_check
 
             agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
 
@@ -609,6 +609,7 @@ class RailEnv(Environment):
             agent.state_machine.step()
 
             # position and speed_counter update
+            # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
             if ((agent.state_machine.previous_state == TrainState.READY_TO_DEPART or agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP)
                 and agent.state == TrainState.MOVING):
                 agent.position = agent.initial_position
@@ -626,6 +627,10 @@ class RailEnv(Environment):
                 # TODO is cell_entry handled correctly?
                 agent.speed_counter.step(speed=agent_transition_data.new_speed)
                 agent.state_machine.update_if_reached(agent.position, agent.target)
+
+            # # TODO condition could be generalized to not MOVING if we would enforce off_map malf
+            if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
+                agent.speed_counter.step(speed=0)
 
             # Handle done state actions, optionally remove agents
             self.handle_done_state(agent)
@@ -676,7 +681,8 @@ class RailEnv(Environment):
                                f"- agent:\t{agent} \n"
                                f"- state_machine:\t{agent.state_machine}\n"
                                f"- speed_counter:\t{agent.speed_counter}\n"
-                               f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n\n\n"
+                               f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n" \
+                               f"- motion check:\t{list(self.motionCheck.G.edges)}\n\n\n" \
                                f"- agents:\t{self.agents}")
                         warnings.warn(msg)
                         msgs += msg

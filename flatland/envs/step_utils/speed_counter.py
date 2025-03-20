@@ -13,6 +13,7 @@ class SpeedCounter:
             self._max_speed = self._speed
         assert self._max_speed <= 1.0
         assert self._speed <= self._max_speed
+        assert self._speed >= 0.0
         self.reset()
 
     def step(self, speed: float = None):
@@ -26,6 +27,8 @@ class SpeedCounter:
         """
         if speed is not None:
             self._speed = max(min(speed, self._max_speed), 0.0)
+        assert self._speed >= 0
+        assert self.speed <= 1.0
 
         self._distance += self._speed
 
