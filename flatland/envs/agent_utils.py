@@ -199,15 +199,21 @@ class EnvAgent:
         agents = []
         for i, static_agent in enumerate(static_agents_data):
             if len(static_agent) >= 6:
-                agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
-                                 direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
-                                 speed_counter=SpeedCounter(static_agent[4]['speed']), handle=i)
+                agent = EnvAgent(
+                    initial_position=static_agent[0], initial_direction=static_agent[1],
+                    direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
+                    speed_counter=SpeedCounter(static_agent[4]['speed']), handle=i,
+                    earliest_departure=0,
+                )
             else:
-                agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
-                                 direction=static_agent[1], target=static_agent[2],
-                                 moving=False,
-                                 speed_counter=SpeedCounter(1.0),
-                                 handle=i)
+                agent = EnvAgent(
+                    initial_position=static_agent[0], initial_direction=static_agent[1],
+                    direction=static_agent[1], target=static_agent[2],
+                    moving=False,
+                    speed_counter=SpeedCounter(1.0),
+                    handle=i,
+                    earliest_departure=0,
+                )
             agents.append(agent)
         return agents
 

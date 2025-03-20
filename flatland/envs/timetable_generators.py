@@ -177,7 +177,6 @@ class FileTimetableGenerator:
         return _wrap
 
 
-# TODO support old and new format, add test
 def timetable_from_file(filename: Path, load_from_package: bool = None) -> timetable_generator:
     """
     Loads timetable from env pickle file.
