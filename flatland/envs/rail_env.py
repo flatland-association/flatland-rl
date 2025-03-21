@@ -408,7 +408,6 @@ class RailEnv(Environment):
         action = preprocess_left_right_action(action, self.rail, current_position, current_direction)
 
         # Check transitions, bounds for executing the action in the given position and direction
-        # TODO at this point, this should only be a check that the grid transitions are closed, right?
         if action.is_moving_action() and not check_valid_action(action, self.rail, current_position, current_direction):
             action = RailEnvActions.STOP_MOVING
 
