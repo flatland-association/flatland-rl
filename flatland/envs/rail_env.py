@@ -73,6 +73,7 @@ class RailEnv(Environment):
     For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
 
     """
+
     def __init__(self,
                  width,
                  height,
@@ -615,8 +616,6 @@ class RailEnv(Environment):
                 if motion_check:
                     agent.position = agent_transition_data.new_position
                     agent.direction = agent_transition_data.new_direction
-                # TODO add new_speed to transition data as well
-                # TODO is cell_entry handled correctly?
                 agent.speed_counter.step(speed=agent_transition_data.new_speed)
                 agent.state_machine.update_if_reached(agent.position, agent.target)
 
@@ -630,7 +629,6 @@ class RailEnv(Environment):
 
             ## Update rewards
             self.rewards_dict[i_agent] += self.rewards.step_reward(agent, agent_transition_data, self.distance_map, self._elapsed_steps)
-
 
             # update malfunction counter
             agent.malfunction_handler.update_counter()
