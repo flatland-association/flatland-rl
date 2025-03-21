@@ -143,7 +143,7 @@ class RailEnv(Environment):
             (i.e. MOVE_FORWARD always sets to max speed allowed for train).
         braking_delta : float
             Determines how much speed is decreased by STOP_MOVING action.
-            As speed is between 0.0 and 1.0, braking_delta=1.0 restores to previous full stop behaviour.
+            As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
         """
         super().__init__()
 
