@@ -1,3 +1,4 @@
+import sys
 import warnings
 from typing import Tuple, Optional, NamedTuple, List
 
@@ -11,7 +12,8 @@ from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
-from flatland.envs.timetable_utils import Line, Timetable
+from flatland.envs.timetable_utils import Line
+from flatland.envs.timetable_utils import Timetable
 
 
 class Agent(NamedTuple):
@@ -73,8 +75,8 @@ class EnvAgent:
     moving = attrib(default=False, type=bool)
 
     # NEW : EnvAgent - Schedule properties
-    earliest_departure = attrib(default=None, type=int)  # default None during _from_line()
-    latest_arrival = attrib(default=None, type=int)  # default None during _from_line()
+    earliest_departure = attrib(default=0, type=int)
+    latest_arrival = attrib(default=sys.maxsize, type=int)
 
     # including initial and target
     waypoints = attrib(type=List[Waypoint], default=Factory(lambda: []))
@@ -117,7 +119,7 @@ class EnvAgent:
         self.malfunction_handler.reset()
 
         self.action_saver.clear_saved_action()
-        self.speed_counter.reset_counter()
+        self.speed_counter.reset()
         self.state_machine.reset()
 
     def to_agent(self) -> Agent:
@@ -152,7 +154,7 @@ class EnvAgent:
             distance = len(shortest_path)
         else:
             distance = 0
-        speed = self.speed_counter.speed
+        speed = self.speed_counter.max_speed
         return int(np.ceil(distance / speed))
 
     def get_time_remaining_until_latest_arrival(self, elapsed_steps: int) -> int:
@@ -198,15 +200,21 @@ class EnvAgent:
         agents = []
         for i, static_agent in enumerate(static_agents_data):
             if len(static_agent) >= 6:
-                agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
-                                 direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
-                                 speed_counter=SpeedCounter(static_agent[4]['speed']), handle=i)
+                speed = static_agent[4]['speed']
+                speed = 1 / (round(1 / speed))
+                agent = EnvAgent(
+                    initial_position=static_agent[0], initial_direction=static_agent[1],
+                    direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
+                    speed_counter=SpeedCounter(speed), handle=i,
+                )
             else:
-                agent = EnvAgent(initial_position=static_agent[0], initial_direction=static_agent[1],
-                                 direction=static_agent[1], target=static_agent[2],
-                                 moving=False,
-                                 speed_counter=SpeedCounter(1.0),
-                                 handle=i)
+                agent = EnvAgent(
+                    initial_position=static_agent[0], initial_direction=static_agent[1],
+                    direction=static_agent[1], target=static_agent[2],
+                    moving=False,
+                    speed_counter=SpeedCounter(1.0),
+                    handle=i,
+                )
             agents.append(agent)
         return agents
 

@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.states import TrainState
 
 
@@ -41,26 +42,31 @@ class Rewards:
     intermediate_not_served_penalty = -1
     intermediate_late_arrival_penalty_factor = 0.2
     intermediate_early_departure_penalty_factor = 0.5
+    crash_penalty_factor = 0.0  # penalty for stopping train in conflict
 
     def __init__(self):
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals = defaultdict(defaultdict)
         self.departures = defaultdict(defaultdict)
 
-    def step_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int):
+    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int):
         """
         Handles end-of-step-reward for a particular agent.
 
         Parameters
         ----------
         agent: EnvAgent
+        agent_transition_data: AgentTransitionData
         distance_map: DistanceMap
         elapsed_steps: int
         """
+        reward = 0
         if agent.position not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][agent.position] = elapsed_steps
             self.departures[agent.handle][agent.old_position] = elapsed_steps
-        return 0
+        if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED and not agent_transition_data.state_transition_signal.stop_action_given:
+            reward += agent_transition_data.speed * self.crash_penalty_factor
+        return reward
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> int:
         """

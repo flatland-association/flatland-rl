@@ -89,7 +89,8 @@ class TrajectoryEvaluator:
                                                              f"- trajectory:\tTrajectory({self.trajectory.data_dir}, {self.trajectory.ep_id})\n" \
                                                              f"- agent:\t{agent} \n- state_machine:\t{agent.state_machine}\n" \
                                                              f"- speed_counter:\t{agent.speed_counter}\n" \
-                                                             f"- breakpoint:\tself._elapsed_steps == {elapsed_after_step} and agent.handle == {agent.handle}\n\n\n" \
+                                                             f"- breakpoint:\tself._elapsed_steps == {elapsed_after_step} and agent.handle == {agent.handle}\n" \
+                                                             f"- motion check:\t{list(env.motionCheck.G.edges)}\n\n\n" \
                                                              f"- agents:\t{env.agents}"
 
             if done:

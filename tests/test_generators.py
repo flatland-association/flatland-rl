@@ -32,6 +32,7 @@ def test_rail_from_grid_transition_map():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=n_agents)
     env.reset(False, False)
+    assert len(set([a.initial_position for a in env.agents])) == n_agents
 
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position =  env.agents[a_idx].initial_position

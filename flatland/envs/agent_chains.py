@@ -1,8 +1,8 @@
+from typing import List, Tuple, Set, Union
+
+import graphviz as gv
 import networkx as nx
 import numpy as np
-
-from typing import List, Tuple, Set, Union
-import graphviz as gv
 
 
 class MotionCheck(object):
@@ -17,12 +17,11 @@ class MotionCheck(object):
         self.nDeadlocks = 0
         self.svDeadlocked = set()
         self._G_reversed: Union[nx.DiGraph, None] = None
-        
 
     def get_G_reversed(self):
-        #if self._G_reversed is None:
+        # if self._G_reversed is None:
         #    self._G_reversed = self.G.reverse()
-        #return self._G_reversed
+        # return self._G_reversed
         return self.Grev
 
     def reset_G_reversed(self):

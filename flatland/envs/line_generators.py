@@ -1,7 +1,6 @@
 """Line generators: Railway Undertaking (RU) / Eisenbahnverkehrsunternehmen (EVU)."""
 import pickle
 from pathlib import Path
-
 from typing import Tuple, List, Callable, Mapping, Optional, Any
 
 from numpy.random.mtrand import RandomState
