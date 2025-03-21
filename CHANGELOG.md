@@ -5,6 +5,8 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[4.0.6](https://github.com/flatland-association/flatland-rl/compare/v4.0.5...v4.0.6)] - 2025-03-21
+
 ## [[4.0.5](https://github.com/flatland-association/flatland-rl/compare/v4.0.4...v4.0.5)] - 2025-03-10
 
 ### Added
