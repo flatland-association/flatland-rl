@@ -1,0 +1,206 @@
+{
+    "components": {
+        "schemas": {
+            "TraceIn": {
+                "properties": {
+                    "data": {
+                        "type": "object"
+                    },
+                    "date": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "step": {
+                        "enum": [
+                            "EVENT",
+                            "ASKFORHELP",
+                            "SOLUTION",
+                            "AWARD"
+                        ],
+                        "type": "string"
+                    },
+                    "use_case": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "step",
+                    "use_case"
+                ],
+                "type": "object"
+            },
+            "TraceOut": {
+                "properties": {
+                    "data": {
+                        "type": "object"
+                    },
+                    "date": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "id_trace": {
+                        "type": "string"
+                    },
+                    "step": {
+                        "enum": [
+                            "EVENT",
+                            "ASKFORHELP",
+                            "SOLUTION",
+                            "AWARD"
+                        ],
+                        "type": "string"
+                    },
+                    "use_case": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "step",
+                    "use_case"
+                ],
+                "type": "object"
+            },
+            "ValidationError": {
+                "properties": {
+                    "detail": {
+                        "properties": {
+                            "<location>": {
+                                "properties": {
+                                    "<field_name>": {
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "type": "array"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
+    "info": {
+        "title": "APIFlask",
+        "version": "0.1.0"
+    },
+    "openapi": "3.0.3",
+    "paths": {
+        "/api/v1/delete_all_data": {
+            "delete": {
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        },
+                        "description": "Successful response"
+                    }
+                },
+                "summary": "Delete DeleteDataService",
+                "tags": [
+                    "Historic-Api"
+                ]
+            }
+        },
+        "/api/v1/health": {
+            "get": {
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        },
+                        "description": "Successful response"
+                    }
+                },
+                "summary": "Get HealthCheck",
+                "tags": [
+                    "Historic-Api"
+                ]
+            }
+        },
+        "/api/v1/traces": {
+            "get": {
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/TraceOut"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "Successful response"
+                    }
+                },
+                "summary": "Get all traces",
+                "tags": [
+                    "Historic-Api"
+                ]
+            },
+            "post": {
+                "parameters": [],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TraceIn"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TraceOut"
+                                }
+                            }
+                        },
+                        "description": "Successful response"
+                    },
+                    "422": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation error"
+                    }
+                },
+                "summary": "Add an traces",
+                "tags": [
+                    "Historic-Api"
+                ]
+            }
+        }
+    },
+    "servers": [
+        {
+            "url": "http://localhost:5200/"
+        }
+    ],
+    "tags": [
+        {
+            "name": "Historic-Api"
+        }
+    ]
+}
