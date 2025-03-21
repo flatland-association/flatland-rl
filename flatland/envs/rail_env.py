@@ -613,7 +613,6 @@ class RailEnv(Environment):
                 agent.direction = agent.initial_direction
             elif agent.state == TrainState.MOVING:
                 # only position update while MOVING and motion_check OK
-                # TODO we cannot move as desired, we are STOPPED and not in state MOVING, so this guard should be obsolete
                 if motion_check:
                     agent.position = agent_transition_data.new_position
                     agent.direction = agent_transition_data.new_direction
@@ -622,7 +621,7 @@ class RailEnv(Environment):
                 agent.speed_counter.step(speed=agent_transition_data.new_speed)
                 agent.state_machine.update_if_reached(agent.position, agent.target)
 
-            # # TODO condition could be generalized to not MOVING if we would enforce off_map malf
+            # TODO revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
                 agent.speed_counter.step(speed=0)
 

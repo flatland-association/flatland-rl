@@ -375,7 +375,7 @@ def test_malfunction_to_moving_instead_of_stopped():
 
 def test_stop_and_go():
     """
-
+    Test stop and go.
     """
     stochastic_data = MalfunctionParameters(malfunction_rate=0,  # Rate of malfunction occurence
                                             min_duration=0,  # Minimal duration of malfunction
