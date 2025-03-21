@@ -1,8 +1,8 @@
-from envs.step_utils.action_preprocessing import check_valid_action
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.step_utils.action_preprocessing import check_valid_action
 from flatland.envs.step_utils.action_preprocessing import process_illegal_action, preprocess_left_right_action
 
 
