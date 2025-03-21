@@ -621,9 +621,8 @@ class RailEnv(Environment):
                 agent.direction = agent.initial_direction
             elif agent.state == TrainState.MOVING:
                 # only position update while MOVING and motion_check OK
-                if motion_check:
-                    agent.position = agent_transition_data.new_position
-                    agent.direction = agent_transition_data.new_direction
+                agent.position = agent_transition_data.new_position
+                agent.direction = agent_transition_data.new_direction
                 agent.speed_counter.step(speed=agent_transition_data.new_speed)
                 agent.state_machine.update_if_reached(agent.position, agent.target)
 
