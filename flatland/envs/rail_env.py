@@ -577,12 +577,12 @@ class RailEnv(Environment):
                 agent.position = agent.initial_position
                 agent.direction = agent.initial_direction
             elif agent.state == TrainState.MOVING:
+                assert movement_allowed
                 # only position update if MOVING
                 agent.speed_counter.update_counter()
-                # only position update while MOVING and motion_check OK
-                if motion_check:
-                    agent.position = agent_transition_data.position
-                    agent.direction = agent_transition_data.direction
+                # TODO rename to new_position/new_direction
+                agent.position = agent_transition_data.position
+                agent.direction = agent_transition_data.direction
                 agent.state_machine.update_if_reached(agent.position, agent.target)
 
             # Handle done state actions, optionally remove agents
