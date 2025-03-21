@@ -38,6 +38,7 @@ def profile(resource, entry):
                 traceback.print_exc()
             print("cProfile done.")
 
+
 def profile_all_examples():
     for entry in [entry for entry in importlib_resources.contents('examples') if
                   not pkg_resources.resource_isdir('examples', entry)

@@ -74,11 +74,11 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
     agent.position = (2, 2)
-    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
     agent.old_position = (2, 2)
     agent.position = (3, 3)
-    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -66
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
+    assert rewards.end_of_episode_reward(agent, distance_map=distance_map, elapsed_steps=25) == -66
 
 
 def test_rewards_intermediate_intermediate_late_arrival_penalty():
@@ -99,11 +99,11 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
     agent.position = (2, 2)
-    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
     agent.old_position = (2, 2)
     agent.position = (3, 3)
-    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -99
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
+    assert rewards.end_of_episode_reward(agent, distance_map=distance_map, elapsed_steps=25) == -99
 
 
 def test_rewards_departed_but_never_arrived():
@@ -124,5 +124,5 @@ def test_rewards_departed_but_never_arrived():
     distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
     agent.position = (2, 2)
-    rewards.step_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -99 - 15

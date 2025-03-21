@@ -27,9 +27,10 @@ class TrainState(IntEnum):
 
 @dataclass(repr=True)
 class StateTransitionSignals:
-    in_malfunction : bool = False
-    earliest_departure_reached : bool = False
-    stop_action_given : bool = False
+    in_malfunction: bool = False
+    earliest_departure_reached: bool = False
+    stop_action_given: bool = False
     movement_action_given: bool = False
-    target_reached : bool = False
+    target_reached: bool = False
     movement_allowed: bool = False
+    new_speed: float = 0.0

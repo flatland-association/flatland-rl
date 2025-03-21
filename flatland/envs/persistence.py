@@ -17,7 +17,7 @@ from flatland.envs.agent_utils import EnvAgent, load_env_agent
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
-
+from flatland.envs import timetable_generators as tt_gen
 
 class RailEnvPersister(object):
 
@@ -108,12 +108,15 @@ class RailEnvPersister(object):
         width = len(llGrid[0])
 
         # TODO: inefficient - each one of these generators loads the complete env file.
-        env = rail_env.RailEnv(  # width=1, height=1,
+        env = rail_env.RailEnv(
             width=width, height=height,
             rail_generator=rail_gen.rail_from_file(filename,
                                                    load_from_package=load_from_package),
             line_generator=line_gen.line_from_file(filename,
                                                    load_from_package=load_from_package),
+            timetable_generator=tt_gen.timetable_from_file(filename, load_from_package=load_from_package),
+            # malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
+            #    load_from_package=load_from_package),
             malfunction_generator=mal_gen.FileMalfunctionGen(env_dict),
             obs_builder_object=DummyObservationBuilder(),
             record_steps=True)

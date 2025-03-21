@@ -12,9 +12,6 @@ class TrainStateMachine:
 
     def _handle_waiting(self):
         """" Waiting state goes to ready to depart when earliest departure is reached"""
-        # TODO: Important - The malfunction handling is not like proper state machine
-        #                   Both transition signals can happen at the same time
-        #                   Atleast mention it in the diagram
         if self.st_signals.in_malfunction:
             self.next_state = TrainState.MALFUNCTION_OFF_MAP
         elif self.st_signals.earliest_departure_reached:
@@ -34,6 +31,7 @@ class TrainStateMachine:
     def _handle_malfunction_off_map(self):
         if not self.st_signals.in_malfunction:
             if self.st_signals.earliest_departure_reached:
+                # TODO revise design: should we not go to the READY_TO_DEPART first instead of directly to MOVING and STOPPED?
                 if self.st_signals.movement_action_given and self.st_signals.movement_allowed:
                     self.next_state = TrainState.MOVING
                 elif self.st_signals.stop_action_given and self.st_signals.movement_allowed:
@@ -51,7 +49,7 @@ class TrainStateMachine:
         elif self.st_signals.target_reached:
             # this branch is never used as target reached is not handled by state_machine.step() but by state_machine.update_if_reached()!
             self.next_state = TrainState.DONE
-        elif self.st_signals.stop_action_given or not self.st_signals.movement_allowed:
+        elif (self.st_signals.stop_action_given and self.st_signals.new_speed == 0.0) or not self.st_signals.movement_allowed:
             self.next_state = TrainState.STOPPED
         else:
             self.next_state = TrainState.MOVING
@@ -140,6 +138,33 @@ class TrainStateMachine:
             self.next_state = TrainState.DONE
             self.set_state(self.next_state)
 
+    @staticmethod
+    def can_get_moving_independent(state: TrainState, in_malfunction: bool, movement_action_given: bool, new_speed: float, stop_action_given: bool):
+        """
+        Incoming transitions to go into state MOVING (for motions to be checked - independently of other agents' position):
+        - keep MOVING unless (stop action given and reaches new speed is zero) or in malfunction
+        - from MALFUNCTION: if not in malfunction (on or off map) any more and movement action given
+        - from STOPPED: if movement action given and not in malfunction
+
+        Parameters
+        ----------
+        state : TrainState
+        in_malfunction : bool
+        movement_action_given : bool
+        new_speed : float
+        stop_action_given : float
+
+        Returns
+        -------
+        Whether agents wants to move given its state (independently of other agents' position)
+        """
+        can_get_moving = state == TrainState.MOVING and not (stop_action_given and new_speed == 0.0)
+        # malfunction ends and (explicit) movement action given
+        can_get_moving |= state == TrainState.MALFUNCTION and not in_malfunction and movement_action_given
+        can_get_moving |= state == TrainState.STOPPED and movement_action_given
+        can_get_moving &= not in_malfunction
+        return can_get_moving
+
     @property
     def state(self):
         return self._state
@@ -172,9 +197,12 @@ class TrainStateMachine:
         return {"state": self._state,
                 "previous_state": self.previous_state}
 
-    def from_dict(self, load_dict):
-        self.set_state(load_dict['state'])
-        self.previous_state = load_dict['previous_state']
+    @staticmethod
+    def from_dict(load_dict) -> "TrainStateMachine":
+        sm = TrainStateMachine()
+        sm.set_state(load_dict['state'])
+        sm.previous_state = load_dict['previous_state']
+        return sm
 
     def __eq__(self, other):
         return self._state == other._state and self.previous_state == other.previous_state

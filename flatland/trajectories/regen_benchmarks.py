@@ -1,5 +1,7 @@
 """
-Helpers to regenerate benchmark/regression episodes after fix to stepping function.
+Helpers to regenerate existing benchmark/regression episodes after fix to stepping function.
+
+To generate new trajectories from policy, use `Trajectory.generate_trajectories_from_metadata()`.
 """
 import ast
 import shutil
@@ -10,16 +12,13 @@ import pandas as pd
 import tqdm
 
 from flatland.envs.persistence import RailEnvPersister
-from flatland.envs.rail_env import RailEnv
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.trajectories.trajectories import Trajectory
-# TODO https://github.com/flatland-association/flatland-rl/issues/101 cleanup heuristic baseline
-from src.observation.full_state_observation import FullStateObservationBuilder
-from src.policy.deadlock_avoidance_policy import DeadLockAvoidancePolicy
+from flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy import DeadLockAvoidancePolicy
 
 
-def verify_trajectories():
-    for p in tqdm.tqdm(sorted(Path("../../episodes/malfunction_deadlock_avoidance_heuristics/").rglob("**/TrainMovementEvents.trains_positions.tsv"))):
+def verify_trajectories(base_path: Path):
+    for p in tqdm.tqdm(sorted(base_path.rglob("**/TrainMovementEvents.trains_positions.tsv"))):
 
         df = pd.read_csv(str(p), delimiter="\t")
         df["direction"] = df['position'].apply(lambda x: ast.literal_eval(x)[1])
@@ -45,10 +44,6 @@ def regen_trajectories(data_dir, ep_id, output_dir):
     output_dir.mkdir(exist_ok=True)
     shutil.rmtree(output_dir / "event_logs", ignore_errors=True)
     env, _ = RailEnvPersister.load_new(str(data_dir))
-    env: RailEnv = env
-    env.obs_builder = FullStateObservationBuilder()
-    # TODO https://github.com/flatland-association/flatland-rl/issues/101 cleanup heuristic baseline
-    env.obs_builder.env = env
     return Trajectory.create_from_policy(
         policy=DeadLockAvoidancePolicy(),
         data_dir=output_dir,
@@ -59,7 +54,8 @@ def regen_trajectories(data_dir, ep_id, output_dir):
 
 
 if __name__ == '__main__':
-    verify()
+    base_path = Path("../../episodes/malfunction_deadlock_avoidance_heuristics/")
+    verify_trajectories(base_path=base_path)
     l = [
         ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_0", "Test_00_Level_0"),
         ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_1", "Test_00_Level_1"),

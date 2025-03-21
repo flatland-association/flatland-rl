@@ -13,10 +13,10 @@ class FlatlandCallbacks:
     """
 
     def on_episode_step(
-            self,
-            *,
-            env: Optional[Environment] = None,
-            **kwargs,
+        self,
+        *,
+        env: Optional[Environment] = None,
+        **kwargs,
     ) -> None:
         """Called on each episode step (after the action(s) has/have been logged).
 
