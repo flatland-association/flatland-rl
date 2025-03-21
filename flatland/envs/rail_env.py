@@ -73,20 +73,6 @@ class RailEnv(Environment):
     For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
 
     """
-    # Epsilon to avoid rounding errors
-    epsilon = 0.01
-    # NEW : REW: Sparse Reward
-    alpha = 0
-    beta = 0
-    step_penalty = -1 * alpha
-    global_reward = 1 * beta
-    invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
-    stop_penalty = 0  # penalty for stopping a moving agent
-    start_penalty = 0  # penalty for starting a stopped agent
-    cancellation_factor = 1
-    cancellation_time_buffer = 0
-    crash_penalty_factor = 0.0  # penalty for stopping train in conflict
-
     def __init__(self,
                  width,
                  height,
@@ -645,9 +631,8 @@ class RailEnv(Environment):
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
             ## Update rewards
-            # TODO is the condition correct
-            if agent.state_machine.previous_state == TrainState.MOVING and (not movement_allowed):
-                self.rewards_dict[i_agent] = agent_transition_data.speed * RailEnv.crash_penalty_factor
+            self.rewards_dict[i_agent] += self.rewards.step_reward(agent, agent_transition_data, self.distance_map, self._elapsed_steps)
+
 
             # update malfunction counter
             agent.malfunction_handler.update_counter()
