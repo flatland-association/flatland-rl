@@ -88,7 +88,8 @@ class RailEnv(Environment):
                  record_steps=False,
                  timetable_generator=ttg.timetable_generator,
                  acceleration_delta=1.0,
-                 braking_delta=-1.0
+                 braking_delta=-1.0,
+                 rewards: Rewards = None,
                  ):
         """
         Environment init.
@@ -131,6 +132,8 @@ class RailEnv(Environment):
         braking_delta : float
             Determines how much speed is decreased by STOP_MOVING action.
             As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
+        rewards : Rewards
+            The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
         """
         super().__init__()
 
@@ -194,7 +197,10 @@ class RailEnv(Environment):
 
         self.level_free_positions: Set[Vector2D] = set()
 
-        self.rewards = Rewards()
+        if rewards is None:
+            self.rewards = Rewards()
+        else:
+            self.rewards = rewards
 
         self.acceleration_delta = acceleration_delta
         self.braking_delta = braking_delta
@@ -497,8 +503,8 @@ class RailEnv(Environment):
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
 
             new_speed = agent.speed_counter.speed
-            # TODO a bit hacky. we should not convert instead?
             state = agent.state
+            # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING?
             if (preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD) or (
                 (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and preprocessed_action.is_moving_action()):
                 new_speed += self.acceleration_delta
@@ -688,6 +694,7 @@ class RailEnv(Environment):
                         f"Found two agents occupying same level-free cell along the same axis in step {self._elapsed_steps}: {agent_positions_level_free}")
                 assert not conflict
 
+    # TODO extract to callbacks instead!
     def record_timestep(self, dActions):
         """
         Record the positions and orientations of all agents in memory, in the cur_episode

@@ -64,8 +64,7 @@ class Rewards:
         if agent.position not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][agent.position] = elapsed_steps
             self.departures[agent.handle][agent.old_position] = elapsed_steps
-        # TODO test coverage
-        if agent.state_machine.previous_state == TrainState.MOVING and agent_transition_data.state_transition_signal.movement_action_given and agent.state == TrainState.STOPPED:
+        if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED and not agent_transition_data.state_transition_signal.stop_action_given:
             reward += agent_transition_data.speed * self.crash_penalty_factor
         return reward
 
