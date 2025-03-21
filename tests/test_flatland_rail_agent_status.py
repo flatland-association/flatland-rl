@@ -193,7 +193,7 @@ def test_status_done_remove():
                 action=RailEnvActions.MOVE_FORWARD,
                 reward=env.rewards.step_penalty * 0.5,  # running at speed 0.5
             ),
-            Replay(
+            Replay(  # 5
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
@@ -201,21 +201,21 @@ def test_status_done_remove():
                 reward=env.rewards.step_penalty * 0.5,  # running at speed 0.5
 
             ),
-            Replay(
+            Replay(  # 6
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_RIGHT,
                 reward=env.rewards.step_penalty * 0.5,  # running at speed 0.5
                 state=TrainState.MOVING
             ),
-            Replay(
+            Replay(  # 7
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
                 reward=env.rewards.step_penalty * 0.5,  # wrong action is corrected to forward without penalty!
                 state=TrainState.MOVING
             ),
-            Replay(
+            Replay(  # 8
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_FORWARD,

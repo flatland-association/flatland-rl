@@ -47,7 +47,7 @@ def check_action_on_agent(
 
     new_direction %= 4
 
-    if action == RailEnvActions.MOVE_FORWARD and num_transitions == 1:
+    if (action == RailEnvActions.MOVE_FORWARD or action == RailEnvActions.DO_NOTHING) and num_transitions == 1:
         # - dead-end, straight line or curved line;
         # new_direction will be the only valid transition
         # - take only available transition

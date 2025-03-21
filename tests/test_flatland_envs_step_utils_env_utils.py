@@ -8,29 +8,32 @@ from flatland.envs.step_utils.env_utils import apply_action_independent
 
 
 @pytest.mark.parametrize(
-    "elem, direction, expected_left, expected_forward,expected_right",
+    "elem, direction, expected_left, expected_forward,expected_right,expected_do_nothing",
     [pytest.param(*v, id=f"{v[0].name}")
      for v in [
          (RailEnvTransitionsEnum.simple_switch_east_left, Grid4TransitionsEnum.EAST,
           ((-1, 0), Grid4TransitionsEnum.NORTH),
           ((0, 1), Grid4TransitionsEnum.EAST),
-          ((0, 1), Grid4TransitionsEnum.EAST)  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
+          ((0, 1), Grid4TransitionsEnum.EAST),  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
+          ((0, 1), Grid4TransitionsEnum.EAST),
           ),
 
          (RailEnvTransitionsEnum.simple_switch_east_left, Grid4TransitionsEnum.WEST,
           ((0, -1), Grid4TransitionsEnum.WEST),  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
           ((0, -1), Grid4TransitionsEnum.WEST),
-          ((0, -1), Grid4TransitionsEnum.WEST)
+          ((0, -1), Grid4TransitionsEnum.WEST),
+          ((0, -1), Grid4TransitionsEnum.WEST),
           ),
 
          (RailEnvTransitionsEnum.dead_end_from_east, Grid4TransitionsEnum.WEST,
           ((0, 1), Grid4TransitionsEnum.EAST),  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
           ((0, 1), Grid4TransitionsEnum.EAST),
-          ((0, 1), Grid4TransitionsEnum.EAST)  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
+          ((0, 1), Grid4TransitionsEnum.EAST),  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
+          ((0, 1), Grid4TransitionsEnum.EAST),
           ),
      ]]
 )
-def test_apply_action_independent(elem, direction, expected_left, expected_forward, expected_right):
+def test_apply_action_independent(elem, direction, expected_left, expected_forward, expected_right, expected_do_nothing):
     rail = GridTransitionMap(1, 1, RailEnvTransitions())
     rail.set_transitions((0, 0), elem)
 
