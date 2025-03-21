@@ -1,4 +1,4 @@
-SEGMENT_LENGTH = 1
+SEGMENT_LENGTH = 1.0
 
 
 class SpeedCounter:
@@ -27,7 +27,7 @@ class SpeedCounter:
         """
         if speed is not None:
             self._speed = max(min(speed, self._max_speed), 0.0)
-        assert self._speed >= 0
+        assert self._speed >= 0.0
         assert self.speed <= 1.0
 
         self._distance += self._speed
