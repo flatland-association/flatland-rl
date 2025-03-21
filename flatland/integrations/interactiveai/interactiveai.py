@@ -10,6 +10,7 @@ In this notebook, we just log the contexts and events that would be sent out.
 """
 import datetime
 import logging
+import pickle
 import time
 import warnings
 from pathlib import Path
@@ -19,10 +20,12 @@ import requests
 
 from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.envs.rail_env import RailEnv
+from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.integrations.interactiveai.context_api import ContextApiApi, ContextIn
 from flatland.integrations.interactiveai.event_api import EventApiApi
 from flatland.integrations.interactiveai.event_api import EventIn
 from flatland.integrations.interactiveai.historic_api import HistoricApiApi
+from flatland.trajectories.trajectories import Trajectory
 
 logger = logging.getLogger(__name__)
 
@@ -174,3 +177,26 @@ class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
             self.context_api.api_v1_contexts_post(ContextIn.from_dict(context))
 
         time.sleep(self.step_to_millis * 0.001)
+
+
+if __name__ == '__main__':
+    # scenario Olten has step every 3 seconds for an hour
+    STEPS_ONE_HOUR = 1300
+    # how many ms per step if replaying in real-time
+    REALTIME_STEP_TO_MILLIS = 3600 / STEPS_ONE_HOUR * 1000
+    # run faster...
+    SPEEDUP = 1000
+
+    # https://github.com/flatland-association/flatland-scenarios/tree/main/scenario_olten/data
+    data_dir = Path("../../../../flatland-scenarios/scenario_olten/data")
+
+    with (data_dir / "position_to_latlon_olten.pkl").resolve().open("rb") as file_in:
+        position_to_latlon_olten = pickle.loads(file_in.read())
+
+    trajectory = Trajectory(data_dir=data_dir, ep_id="olten")
+
+    # see above for configuration options
+    cb = FlatlandInteractiveAICallbacks(position_to_latlon_olten, collect_only=True, step_to_millis=REALTIME_STEP_TO_MILLIS / SPEEDUP)
+    TrajectoryEvaluator(trajectory, cb).evaluate(end_step=150)
+    print(cb.events)
+    print(cb.contexts)
