@@ -22,6 +22,7 @@ DISCRETE_ACTION_FNAME = "event_logs/ActionEvents.discrete_action.tsv"
 TRAINS_ARRIVED_FNAME = "event_logs/TrainMovementEvents.trains_arrived.tsv"
 TRAINS_POSITIONS_FNAME = "event_logs/TrainMovementEvents.trains_positions.tsv"
 SERIALISED_STATE_SUBDIR = 'serialised_state'
+OUTPUTS_SUBDIR = 'outputs'
 
 
 def _uuid_str():
@@ -187,10 +188,15 @@ class Trajectory:
             return movement.iloc[0]
         raise
 
+    @property
+    def outputs_dir(self) -> Path:
+        return self.data_dir / OUTPUTS_SUBDIR
+
     @staticmethod
     def create_from_policy(
         policy: Policy,
         data_dir: Path,
+        env: RailEnv = None,
         n_agents=7,
         x_dim=30,
         y_dim=30,
@@ -206,8 +212,7 @@ class Trajectory:
         obs_builder: Optional[ObservationBuilder] = None,
         snapshot_interval: int = 1,
         ep_id: str = None,
-        callbacks: FlatlandCallbacks = None,
-        env: RailEnv = None
+        callbacks: FlatlandCallbacks = None
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -218,6 +223,8 @@ class Trajectory:
             the submission's policy
         data_dir : Path
             the path to write the trajectory to
+        env: RailEnv
+            directly inject env, skip env generation
         n_agents: int
             number of agents
         x_dim: int
@@ -256,7 +263,9 @@ class Trajectory:
         Trajectory
 
         """
-        if env is None:
+        if env is not None:
+            observations, _ = env.reset()
+        else:
             env, observations, _ = env_generator(
                 n_agents=n_agents,
                 x_dim=x_dim,
@@ -271,8 +280,6 @@ class Trajectory:
                 speed_ratios=speed_ratios,
                 seed=seed,
                 obs_builder_object=obs_builder)
-        else:
-            observations = env._get_observations()
         if ep_id is not None:
             trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
         else:
@@ -284,6 +291,9 @@ class Trajectory:
         actions = trajectory.read_actions()
         trains_arrived = trajectory.read_trains_arrived()
 
+        trajectory.outputs_dir.mkdir(exist_ok=True)
+        if callbacks is not None:
+            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
         env_time = 0
@@ -298,7 +308,7 @@ class Trajectory:
 
             _, _, dones, _ = env.step(action_dict)
             if callbacks is not None:
-                callbacks.on_episode_step(env=env)
+                callbacks.on_episode_step(env=env, data_dir=trajectory.outputs_dir)
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
@@ -310,6 +320,8 @@ class Trajectory:
                 RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time + 1:04d}.pkl"))
             if done:
                 break
+        if callbacks is not None:
+            callbacks.on_episode_end(env=env, data_dir=trajectory.outputs_dir)
 
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
@@ -317,8 +329,6 @@ class Trajectory:
         trajectory.write_actions(actions)
         trajectory.write_trains_arrived(trains_arrived)
         return trajectory
-
-
 
 
 @click.command()
