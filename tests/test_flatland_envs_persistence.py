@@ -1,5 +1,6 @@
 import importlib_resources as ir
 import numpy as np
+import pytest
 
 from envs.rail_env_action import RailEnvActions
 from flatland.envs.line_generators import sparse_line_generator
@@ -36,7 +37,34 @@ def test_legacy_envs():
     envs = [("env_data.railway", sRes) for sExt in ["mpk", "pkl"] for sRes in ir.contents("env_data.railway") if sRes.endswith(sExt)]
     for package, resource in envs:
         print("Loading: ", package, resource)
-        env, env_dict = RailEnvPersister.load_new(resource, load_from_package=package)
+        env, _ = RailEnvPersister.load_new(resource, load_from_package=package)
         env.reset()
-        for _ in range(10):
-            env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
+        done = False
+        while not done:
+            _, _, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
+            done = done['__all__']
+
+
+@pytest.mark.parametrize(
+    "package, resource, expected",
+    [
+        ("env_data.tests.service_test.Test_0", "Level_0.pkl", -593),
+        ("env_data.tests.service_test.Test_1", "Level_0.pkl", -593),
+        ("env_data.tests.service_test.Test_0", "Level_1.pkl", -561.0),
+        ("env_data.tests.service_test.Test_1", "Level_1.pkl", -561.0),
+    ])
+def test_regression_forward(package, resource, expected):
+    env, _ = RailEnvPersister.load_new(resource, load_from_package=package)
+    env.reset(
+        regenerate_rail=True,
+        regenerate_schedule=True,
+        random_seed=1001
+    )
+    done = False
+    total_rewards = 0
+    while not done:
+        _, rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
+        total_rewards += sum(rewards.values())
+        done = done['__all__']
+
+    assert total_rewards == expected

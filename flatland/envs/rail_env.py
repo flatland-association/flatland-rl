@@ -14,6 +14,7 @@ from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid_utils import Vector2D
+from flatland.core.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
@@ -548,6 +549,9 @@ class RailEnv(Environment):
 
             if new_position is not None:
                 valid_position_direction = any(self.rail.get_transitions(*new_position, new_direction))
+                if not valid_position_direction:
+                    print(f"{(new_position, new_direction)} not valid on the grid."
+                          f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
                 assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)

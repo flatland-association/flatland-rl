@@ -1,3 +1,4 @@
+import sys
 import warnings
 from typing import Tuple, Optional, NamedTuple, List
 
@@ -74,8 +75,8 @@ class EnvAgent:
     moving = attrib(default=False, type=bool)
 
     # NEW : EnvAgent - Schedule properties
-    earliest_departure = attrib(default=None, type=int)  # default None during _from_line()
-    latest_arrival = attrib(default=None, type=int)  # default None during _from_line()
+    earliest_departure = attrib(default=0, type=int)
+    latest_arrival = attrib(default=sys.maxsize, type=int)
 
     # including initial and target
     waypoints = attrib(type=List[Waypoint], default=Factory(lambda: []))
@@ -199,11 +200,12 @@ class EnvAgent:
         agents = []
         for i, static_agent in enumerate(static_agents_data):
             if len(static_agent) >= 6:
+                speed = static_agent[4]['speed']
+                speed = 1 / (round(1 / speed))
                 agent = EnvAgent(
                     initial_position=static_agent[0], initial_direction=static_agent[1],
                     direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
-                    speed_counter=SpeedCounter(static_agent[4]['speed']), handle=i,
-                    earliest_departure=0,
+                    speed_counter=SpeedCounter(speed), handle=i,
                 )
             else:
                 agent = EnvAgent(
@@ -212,7 +214,6 @@ class EnvAgent:
                     moving=False,
                     speed_counter=SpeedCounter(1.0),
                     handle=i,
-                    earliest_departure=0,
                 )
             agents.append(agent)
         return agents
