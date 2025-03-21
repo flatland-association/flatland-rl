@@ -2,10 +2,10 @@ import importlib_resources as ir
 import numpy as np
 import pytest
 
-from envs.rail_env_action import RailEnvActions
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.utils.simple_rail import make_simple_rail
 
