@@ -8,7 +8,7 @@ from typing import Any, Optional
 import pandas as pd
 import pytest
 
-from flatland.callbacks.callbacks import FlatlandCallbacks
+from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
@@ -70,7 +70,7 @@ def test_from_submission():
             ) -> None:
                 (data_dir / f"step{env._elapsed_steps - 1}").touch()
 
-        TrajectoryEvaluator(trajectory, callbacks=DummyCallbacks()).evaluate()
+        TrajectoryEvaluator(trajectory, callbacks=make_multi_callbacks(DummyCallbacks())).evaluate()
         for i in range(471):
             assert (data_dir / f"step{i}").exists()
         assert not (data_dir / f"step471").exists()
