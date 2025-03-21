@@ -401,7 +401,7 @@ class RailEnv(Environment):
         Preprocess the provided action
             * Change to DO_NOTHING if illegal action (not one of the defined action)
             * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
-            * Change to STOP_MOVING if the grid transitions are inconsistent.
+            * Change to STOP_MOVING if the movement is not possible in the grid (e.g. if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element or leads outside of bounds).
         """
         action = RailEnvActions(action)
         action = process_illegal_action(action)
@@ -414,10 +414,12 @@ class RailEnv(Environment):
         # TODO revise design: should we stop the agent instead and penalize it?
         action = preprocess_left_right_action(action, self.rail, current_position, current_direction)
 
-        # Check transitions, bounds for executing the action in the given position and direction
-        if action.is_moving_action() and not check_valid_action(action, self.rail, current_position, current_direction):
+        # TODO https://github.com/flatland-association/flatland-rl/issues/185 Streamline flatland.envs.step_utils.transition_utils and flatland.envs.step_utils.action_preprocessing
+        if ((action.is_moving_action() or action == RailEnvActions.DO_NOTHING)
+            and
+            not check_valid_action(action, self.rail, current_position, current_direction)):
+            # TODO revise design: should we add penalty if the action cannot be executed?
             action = RailEnvActions.STOP_MOVING
-
         return action
 
     def clear_rewards_dict(self):
@@ -542,7 +544,7 @@ class RailEnv(Environment):
             if new_position is not None:
                 valid_position_direction = any(self.rail.get_transitions(*new_position, new_direction))
                 if not valid_position_direction:
-                    print(f"{(new_position, new_direction)} not valid on the grid."
+                    warnings.warn(f"{(new_position, new_direction)} not valid on the grid."
                           f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
                 assert valid_position_direction
 

@@ -68,3 +68,28 @@ def test_regression_forward(package, resource, expected):
         done = done['__all__']
 
     assert total_rewards == expected
+
+
+@pytest.mark.parametrize(
+    "package, resource",
+    [
+        ("env_data.tests.service_test.Test_0", "Level_0.pkl"),
+        ("env_data.tests.service_test.Test_1", "Level_0.pkl"),
+        ("env_data.tests.service_test.Test_0", "Level_1.pkl"),
+        ("env_data.tests.service_test.Test_1", "Level_1.pkl"),
+    ])
+def test_regression_random(package, resource):
+    # N.B. grid contains symmetric switch - find edge cases with random controller...
+    for _ in range(100):
+        env, _ = RailEnvPersister.load_new(resource, load_from_package=package)
+        env.reset(
+            regenerate_rail=True,
+            regenerate_schedule=True,
+            random_seed=1001
+        )
+        done = False
+        total_rewards = 0
+        while not done:
+            _, rewards, done, _ = env.step({i: np.random.randint(0, 5) for i in env.get_agent_handles()})
+            total_rewards += sum(rewards.values())
+            done = done['__all__']
