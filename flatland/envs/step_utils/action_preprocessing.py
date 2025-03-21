@@ -30,6 +30,22 @@ def preprocess_left_right_action(action: RailEnvActions, rail: GridTransitionMap
 
 
 def check_valid_action(action: RailEnvActions, rail: GridTransitionMap, position: Tuple[int, int], direction: Grid4TransitionsEnum):
+    """
+    Checks whether action at position and direction leads to a valid new position in the grid.
+
+    Fails if the grid is not valid or if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element.
+
+    Parameters
+    ----------
+    action : RailEnvActions
+    rail : GridTransitionMap
+    position : Tuple[int, int]
+    direction: Grid4TransitionsEnum
+
+    Returns
+    -------
+    bool
+    """
     new_cell_valid, _, _, transition_valid = check_action_on_agent(action, rail, position, direction)
     action_is_valid = new_cell_valid and transition_valid
     return action_is_valid

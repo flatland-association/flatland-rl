@@ -73,12 +73,13 @@ def test_regression_forward(package, resource, expected):
 @pytest.mark.parametrize(
     "package, resource",
     [
-        # ("env_data.tests.service_test.Test_0", "Level_0.pkl"),
-        # ("env_data.tests.service_test.Test_1", "Level_0.pkl"),
+        ("env_data.tests.service_test.Test_0", "Level_0.pkl"),
+        ("env_data.tests.service_test.Test_1", "Level_0.pkl"),
         ("env_data.tests.service_test.Test_0", "Level_1.pkl"),
-        # ("env_data.tests.service_test.Test_1", "Level_1.pkl"),
+        ("env_data.tests.service_test.Test_1", "Level_1.pkl"),
     ])
 def test_regression_random(package, resource):
+    # N.B. grid contains symmetric switch - find edge cases with random controller...
     for _ in range(100):
         env, _ = RailEnvPersister.load_new(resource, load_from_package=package)
         env.reset(

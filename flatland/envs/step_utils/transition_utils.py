@@ -14,8 +14,6 @@ def check_action_on_agent(
     """
     Gets new position and direction for the action.
 
-
-
     Parameters
     ----------
     action : RailEnvActions

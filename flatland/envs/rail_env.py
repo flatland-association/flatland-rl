@@ -401,7 +401,7 @@ class RailEnv(Environment):
         Preprocess the provided action
             * Change to DO_NOTHING if illegal action (not one of the defined action)
             * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
-            * Change to STOP_MOVING if the grid transitions are inconsistent.
+            * Change to STOP_MOVING if the movement is not possible in the grid (e.g. if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element or leads outside of bounds).
         """
         action = RailEnvActions(action)
         action = process_illegal_action(action)
@@ -414,9 +414,8 @@ class RailEnv(Environment):
         # TODO revise design: should we stop the agent instead and penalize it?
         action = preprocess_left_right_action(action, self.rail, current_position, current_direction)
 
-        # Check transitions, bounds for executing the action in the given position and direction
-        # TODO at this point, this should only be a check that the grid transitions are closed, right?
-        if action.is_moving_action() and not check_valid_action(action, self.rail, current_position, current_direction):
+        # TODO revise design: should we add penalty if the action cannot be executed?
+        if not check_valid_action(action, self.rail, current_position, current_direction):
             action = RailEnvActions.STOP_MOVING
 
         return action
