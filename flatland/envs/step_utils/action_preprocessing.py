@@ -47,5 +47,4 @@ def check_valid_action(action: RailEnvActions, rail: GridTransitionMap, position
     bool
     """
     new_cell_valid, _, _, transition_valid = check_action_on_agent(action, rail, position, direction)
-    action_is_valid = new_cell_valid and transition_valid
-    return action_is_valid
+    return new_cell_valid and transition_valid

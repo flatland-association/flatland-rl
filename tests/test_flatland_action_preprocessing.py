@@ -1,3 +1,4 @@
+from envs.step_utils.action_preprocessing import check_valid_action
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
@@ -32,3 +33,15 @@ def test_moving_action():
     assert preprocess_left_right_action(RailEnvActions.MOVE_FORWARD, rail, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.MOVE_FORWARD
     assert preprocess_left_right_action(RailEnvActions.MOVE_RIGHT, rail, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.MOVE_RIGHT
     assert preprocess_left_right_action(RailEnvActions.STOP_MOVING, rail, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.STOP_MOVING
+
+
+def test_check_valid_action():
+    rail = GridTransitionMap(3, 3, RailEnvTransitions())
+    rail.set_transitions((1, 1,), RailEnvTransitionsEnum.symmetric_switch_from_north)
+    rail.set_transitions((1, 0), RailEnvTransitionsEnum.horizontal_straight)
+    rail.set_transitions((1, 2), RailEnvTransitionsEnum.horizontal_straight)
+
+    assert not check_valid_action(RailEnvActions.MOVE_FORWARD, rail, (1, 1), Grid4TransitionsEnum.SOUTH)
+    assert not check_valid_action(RailEnvActions.DO_NOTHING, rail, (1, 1), Grid4TransitionsEnum.SOUTH)
+    assert check_valid_action(RailEnvActions.MOVE_LEFT, rail, (1, 1), Grid4TransitionsEnum.SOUTH)
+    assert check_valid_action(RailEnvActions.MOVE_RIGHT, rail, (1, 1), Grid4TransitionsEnum.SOUTH)

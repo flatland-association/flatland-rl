@@ -130,3 +130,8 @@ class RailEnvTransitionsEnum(IntEnum):
     simple_switch_east_right = fast_grid4_rotate_transition(simple_switch_north_right, 90)
     simple_switch_south_right = fast_grid4_rotate_transition(simple_switch_north_right, 180)
     simple_switch_west_right = fast_grid4_rotate_transition(simple_switch_north_right, 270)
+
+    @staticmethod
+    def is_deadend(transition):
+        return transition in {RailEnvTransitionsEnum.dead_end_from_east, RailEnvTransitionsEnum.dead_end_from_south, RailEnvTransitionsEnum.dead_end_from_north,
+                              RailEnvTransitionsEnum.dead_end_from_west}

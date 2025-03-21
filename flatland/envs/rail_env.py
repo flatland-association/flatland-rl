@@ -414,10 +414,12 @@ class RailEnv(Environment):
         # TODO revise design: should we stop the agent instead and penalize it?
         action = preprocess_left_right_action(action, self.rail, current_position, current_direction)
 
-        # TODO revise design: should we add penalty if the action cannot be executed?
-        if not check_valid_action(action, self.rail, current_position, current_direction):
+        # TODO https://github.com/flatland-association/flatland-rl/issues/185 Streamline flatland.envs.step_utils.transition_utils and flatland.envs.step_utils.action_preprocessing
+        if ((action.is_moving_action() or action == RailEnvActions.DO_NOTHING)
+            and
+            not check_valid_action(action, self.rail, current_position, current_direction)):
+            # TODO revise design: should we add penalty if the action cannot be executed?
             action = RailEnvActions.STOP_MOVING
-
         return action
 
     def clear_rewards_dict(self):
