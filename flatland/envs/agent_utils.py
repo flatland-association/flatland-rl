@@ -262,3 +262,47 @@ class EnvAgent:
             agent.latest_arrival = timetable.latest_arrivals[agent_i][-1]
             agent.waypoints_earliest_departure = timetable.earliest_departures[agent_i]
             agent.waypoints_latest_arrival = timetable.latest_arrivals[agent_i]
+    def __getstate__(self):
+        return {
+            "initial_position": self.initial_position,
+            "initial_direction": self.initial_direction,
+            "direction": self.direction,
+            "target": self.target,
+            "moving": self.moving,
+            "earliest_departure": self.earliest_departure,
+            "latest_arrival": self.latest_arrival,
+            "handle": self.handle,
+            "speed_counter": self.speed_counter.__getstate__(),
+            "action_saver": self.action_saver.to_dict(),
+            "state_machine": self.state_machine.to_dict(),
+            "malfunction_handler": self.malfunction_handler.to_dict(),
+            "position": self.position,
+            "arrival_time": self.arrival_time,
+            "old_direction": self.old_direction,
+            "old_position": self.old_position,
+            "waypoints": self.waypoints,
+            "waypoints_earliest_departure": self.waypoints_earliest_departure,
+            "waypoints_latest_arrival": self.waypoints_latest_arrival,
+        }
+
+    def __setstate__(self, state):
+        self.initial_position = state["initial_position"]
+        self.initial_direction = state["initial_direction"]
+        self.direction = state["direction"]
+        self.target = state["target"]
+        self.moving = state["moving"]
+        self.earliest_departure = state["earliest_departure"]
+        self.latest_arrival = state["latest_arrival"]
+        self.handle = state["handle"]
+        self.speed_counter = SpeedCounter(1.0).__setstate__(state["speed_counter"])
+        self.action_saver = ActionSaver().from_dict(state["action_saver"])
+        self.state_machine = TrainStateMachine().from_dict(state["state_machine"])
+        self.malfunction_handler = MalfunctionHandler().from_dict(state["malfunction_handler"])
+        self.position = state["position"]
+        self.arrival_time = state["arrival_time"]
+        self.old_direction = state["old_direction"]
+        self.old_position = state["old_position"]
+        self.waypoints = state["waypoints"]
+        self.waypoints_earliest_departure = state["waypoints_earliest_departure"]
+        self.waypoints_latest_arrival = state["waypoints_latest_arrival"]
+        return self
