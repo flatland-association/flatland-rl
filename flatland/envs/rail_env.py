@@ -545,7 +545,7 @@ class RailEnv(Environment):
                 valid_position_direction = any(self.rail.get_transitions(*new_position, new_direction))
                 if not valid_position_direction:
                     warnings.warn(f"{(new_position, new_direction)} not valid on the grid."
-                          f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
+                                  f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
                 assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
@@ -566,10 +566,10 @@ class RailEnv(Environment):
                 # Movement action given
                 movement_action_given=preprocessed_action.is_moving_action(),
                 # Target reached - we only know after state and positions update - see handle_done_state below
-                target_reached=None,
+                target_reached=None,  # we only know after motion check
                 # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
-                movement_allowed=None,
-
+                movement_allowed=None,  # we only know after motion check
+                # New desired speed if movement allowed
                 new_speed=new_speed
             )
 
@@ -611,20 +611,18 @@ class RailEnv(Environment):
             agent.state_machine.step()
 
             # position and speed_counter update
-            # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
-            if ((agent.state_machine.previous_state == TrainState.READY_TO_DEPART or agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP)
-                and agent.state == TrainState.MOVING):
-                agent.position = agent.initial_position
-                agent.direction = agent.initial_direction
-            elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
-                agent.position = agent.initial_position
-                agent.direction = agent.initial_direction
-            elif agent.state == TrainState.MOVING:
+            if agent.state == TrainState.MOVING:
                 # only position update while MOVING and motion_check OK
                 agent.position = agent_transition_data.new_position
                 agent.direction = agent_transition_data.new_direction
-                agent.speed_counter.step(speed=agent_transition_data.new_speed)
+                # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
+                if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
+                        agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
+                    agent.speed_counter.step(speed=agent_transition_data.new_speed)
                 agent.state_machine.update_if_reached(agent.position, agent.target)
+            elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
+                agent.position = agent.initial_position
+                agent.direction = agent.initial_direction
 
             # TODO revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
