@@ -272,7 +272,7 @@ class EnvAgent:
             "earliest_departure": self.earliest_departure,
             "latest_arrival": self.latest_arrival,
             "handle": self.handle,
-            "speed_counter": self.speed_counter.to_dict(),
+            "speed_counter": self.speed_counter.__getstate__(),
             "action_saver": self.action_saver.to_dict(),
             "state_machine": self.state_machine.to_dict(),
             "malfunction_handler": self.malfunction_handler.to_dict(),
@@ -280,6 +280,9 @@ class EnvAgent:
             "arrival_time": self.arrival_time,
             "old_direction": self.old_direction,
             "old_position": self.old_position,
+            "waypoints": self.waypoints,
+            "waypoints_earliest_departure": self.waypoints_earliest_departure,
+            "waypoints_latest_arrival": self.waypoints_latest_arrival,
         }
 
     def __setstate__(self, state):
@@ -291,7 +294,7 @@ class EnvAgent:
         self.earliest_departure = state["earliest_departure"]
         self.latest_arrival = state["latest_arrival"]
         self.handle = state["handle"]
-        self.speed_counter = SpeedCounter(None).from_dict(state["speed_counter"])
+        self.speed_counter = SpeedCounter(1.0).__setstate__(state["speed_counter"])
         self.action_saver = ActionSaver().from_dict(state["action_saver"])
         self.state_machine = TrainStateMachine().from_dict(state["state_machine"])
         self.malfunction_handler = MalfunctionHandler().from_dict(state["malfunction_handler"])
@@ -299,4 +302,7 @@ class EnvAgent:
         self.arrival_time = state["arrival_time"]
         self.old_direction = state["old_direction"]
         self.old_position = state["old_position"]
+        self.waypoints = state["waypoints"]
+        self.waypoints_earliest_departure = state["waypoints_earliest_departure"]
+        self.waypoints_latest_arrival = state["waypoints_latest_arrival"]
         return self

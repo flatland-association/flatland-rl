@@ -1,12 +1,11 @@
 """
 TransitionMap and derived classes.
 """
+import base64
 import traceback
 import uuid
 import warnings
 from functools import lru_cache
-import base64
-import traceback
 from typing import Tuple
 
 import numpy as np
@@ -125,7 +124,7 @@ class GridTransitionMap(TransitionMap):
     GridTransitionMap implements utility functions.
     """
 
-    def __init__(self, width, height, transitions: Transitions =None, random_seed=None, grid: np.ndarray = None):
+    def __init__(self, width, height, transitions: Transitions = None, random_seed=None, grid: np.ndarray = None):
         """
         Builder for GridTransitionMap object.
 
@@ -142,7 +141,6 @@ class GridTransitionMap(TransitionMap):
         """
         if transitions is None:
             transitions = Grid4Transitions([])
-        send_infrastructure_data_change_signal_to_reset_lru_cache()
         self.width = width
         self.height = height
         self.transitions = transitions

@@ -50,6 +50,7 @@ def test_legacy_envs():
             _, _, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
             done = done['__all__']
 
+
 # TODO use env_creator from https://github.com/flatland-association/flatland-rl/pull/85 instead
 def create_env():
     nAgents = 5
@@ -126,13 +127,14 @@ def test_dump_load_pickle():
     # pickle dump and load (new implementation) restores state ==
     expected = env.__getstate__(True)
     actual = env_loaded.__getstate__(True)
-    assert expected == actual
+    assert actual == expected
 
     # pickle dump and load (new implementation) restores full_state as well
     full_state = RailEnvPersister.get_full_state(env)
     full_state_loaded = RailEnvPersister.get_full_state(env_loaded)
-    assert full_state == full_state_loaded
-    assert pickle.dumps(full_state) == pickle.dumps(full_state_loaded)
+    assert full_state_loaded == full_state
+    assert pickle.dumps(full_state_loaded) == pickle.dumps(full_state)
+
 
 @pytest.mark.skip(
     "TODO dictionary keys converted to string, https://stackoverflow.com/questions/1450957/pythons-json-module-converts-int-dictionary-keys-to-strings")
