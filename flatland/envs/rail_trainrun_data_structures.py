@@ -1,12 +1,22 @@
 from typing import NamedTuple, Tuple, List, Dict
 
+from attrs import define, field
+
+
 # A way point is the entry into a cell defined by
 # - the row and column coordinates of the cell entered
 # - direction, in which the agent is facing to enter the cell.
 # This induces a graph on top of the FLATland cells:
 # - four possible way points per cell
 # - edges are the possible transitions in the cell.
-Waypoint = NamedTuple('Waypoint', [('position', Tuple[int, int]), ('direction', int)])
+# Waypoint = NamedTuple('Waypoint', [('position', Tuple[int, int]), ('direction', int)])
+@define
+class Waypoint:
+    position = field(type=Tuple[int, int])
+    direction = field(type=int, converter=lambda d: d if d is None else int(d))
+
+
+
 
 # A train run is represented by the waypoints traversed and the times of traversal
 # The terminology follows https://github.com/crowdAI/train-schedule-optimisation-challenge-starter-kit/blob/master/documentation/output_data_model.md

@@ -219,21 +219,25 @@ class EnvAgent:
         return agents
 
     def __str__(self):
-        return f"\n \
-                 handle(agent index): {self.handle} \n \
-                 initial_position: {self.initial_position}  \n \
-                 initial_direction: {self.initial_direction} \n \
-                 position: {self.position}  \n \
-                 direction: {self.direction}  \n \
-                 target: {self.target} \n \
-                 old_position: {self.old_position} \n \
-                 old_direction {self.old_direction} \n \
-                 earliest_departure: {self.earliest_departure}  \n \
-                 latest_arrival: {self.latest_arrival} \n \
-                 state: {str(self.state)} \n \
-                 malfunction_handler: {self.malfunction_handler} \n \
-                 action_saver: {self.action_saver} \n \
-                 speed_counter: {self.speed_counter}"
+        return (
+            f"EnvAgent(\n"
+            f"\thandle={self.handle},\n"
+            f"\tinitial_position={self.initial_position},\n"
+            f"\tinitial_direction={self.initial_direction},\n"
+            f"\tposition={self.position},\n"
+            f"\tdirection={self.direction if self.direction is None else Grid4TransitionsEnum(self.direction).value},\n"
+            f"\ttarget={self.target},\n"
+            f"\told_position={self.old_position},\n"
+            f"\told_direction={self.old_direction},\n"
+            f"\tearliest_departure={self.earliest_departure},\n"
+            f"\tlatest_arrival={self.latest_arrival},\n"
+            f"\tstate_machine={str(self.state_machine)},\n"
+            f"\tmalfunction_handler={self.malfunction_handler},\n"
+            f"\twaypoints={self.waypoints},\n"
+            f"\twaypoints_earliest_departure={self.waypoints_earliest_departure},\n"
+            f"\twaypoints_latest_arrival={self.waypoints_latest_arrival},\n"
+            f")"
+        )
 
     @property
     def state(self):
