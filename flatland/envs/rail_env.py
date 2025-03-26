@@ -27,9 +27,10 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.action_preprocessing import process_illegal_action, check_valid_action, preprocess_left_right_action
+from flatland.envs.step_utils.action_preprocessing import process_illegal_action, preprocess_left_right_action
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+from flatland.envs.step_utils.transition_utils import check_valid_action
 from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant

@@ -2,7 +2,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.step_utils.transition_utils import check_action_on_agent
+from flatland.envs.step_utils.transition_utils import check_action_on_agent, check_valid_action
 
 
 def test_check_action_on_agent_horizontal_straight():
@@ -57,3 +57,27 @@ def test_check_action_on_agent_symmetric_switch_from_west():
     assert new_direction == Grid4TransitionsEnum.EAST
     assert new_position == (1, 2)
     assert not transition_valid
+
+
+def test_check_valid_action_symmetric_switch():
+    rail = GridTransitionMap(3, 3, RailEnvTransitions())
+    rail.set_transitions((1, 1,), RailEnvTransitionsEnum.symmetric_switch_from_north)
+    rail.set_transitions((1, 0), RailEnvTransitionsEnum.horizontal_straight)
+    rail.set_transitions((1, 2), RailEnvTransitionsEnum.horizontal_straight)
+
+    assert not check_valid_action(RailEnvActions.MOVE_FORWARD, rail, (1, 1), Grid4TransitionsEnum.SOUTH)
+    assert not check_valid_action(RailEnvActions.DO_NOTHING, rail, (1, 1), Grid4TransitionsEnum.SOUTH)
+    assert check_valid_action(RailEnvActions.MOVE_LEFT, rail, (1, 1), Grid4TransitionsEnum.SOUTH)
+    assert check_valid_action(RailEnvActions.MOVE_RIGHT, rail, (1, 1), Grid4TransitionsEnum.SOUTH)
+
+
+def test_check_valid_action_dead_end():
+    rail = GridTransitionMap(3, 3, RailEnvTransitions())
+    rail.set_transitions((1, 1,), RailEnvTransitionsEnum.dead_end_from_west)
+    rail.set_transitions((1, 0), RailEnvTransitionsEnum.horizontal_straight)
+    rail.set_transitions((1, 2), RailEnvTransitionsEnum.horizontal_straight)
+
+    assert check_valid_action(RailEnvActions.MOVE_FORWARD, rail, (1, 1), Grid4TransitionsEnum.EAST)
+    assert check_valid_action(RailEnvActions.DO_NOTHING, rail, (1, 1), Grid4TransitionsEnum.EAST)
+    assert not check_valid_action(RailEnvActions.MOVE_LEFT, rail, (1, 1), Grid4TransitionsEnum.EAST)
+    assert not check_valid_action(RailEnvActions.MOVE_RIGHT, rail, (1, 1), Grid4TransitionsEnum.EAST)
