@@ -25,8 +25,6 @@ def preprocess_left_right_action(action: RailEnvActions, rail: GridTransitionMap
     LEFT/RIGHT is converted to FORWARD if left/right is not available.
     """
     if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT] and not check_valid_action(action, rail, position, direction):
+        # TODO revise design: this may accelerate!
         action = RailEnvActions.MOVE_FORWARD
     return action
-
-
-

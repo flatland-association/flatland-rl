@@ -34,5 +34,3 @@ def test_moving_action_simple_switch():
     assert preprocess_left_right_action(RailEnvActions.MOVE_FORWARD, rail, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.MOVE_FORWARD
     assert preprocess_left_right_action(RailEnvActions.MOVE_RIGHT, rail, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.MOVE_RIGHT
     assert preprocess_left_right_action(RailEnvActions.STOP_MOVING, rail, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.STOP_MOVING
-
-
