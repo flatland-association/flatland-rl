@@ -393,7 +393,7 @@ def test_rail_env_reset():
 
 def test_process_illegal_action():
     assert RailEnv._process_illegal_action(None) == RailEnvActions.DO_NOTHING
-    assert RailEnv._rocess_illegal_action(0) == RailEnvActions.DO_NOTHING
+    assert RailEnv._process_illegal_action(0) == RailEnvActions.DO_NOTHING
     assert RailEnv._process_illegal_action(RailEnvActions.DO_NOTHING) == RailEnvActions.DO_NOTHING
     assert RailEnv._process_illegal_action("Alice") == RailEnvActions.DO_NOTHING
     assert RailEnv._process_illegal_action("MOVE_LEFT") == RailEnvActions.DO_NOTHING

@@ -58,7 +58,7 @@ def test_moving_action_simple_switch():
     rail.set_transitions((1, 1,), RailEnvTransitionsEnum.simple_switch_north_right)
     rail.set_transitions((1, 2,), RailEnvTransitionsEnum.horizontal_straight)
     assert rail.preprocess_left_right_action(RailEnvActions.DO_NOTHING, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.DO_NOTHING
-    assert rail.reprocess_left_right_action(RailEnvActions.MOVE_LEFT, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.MOVE_FORWARD
+    assert rail.preprocess_left_right_action(RailEnvActions.MOVE_LEFT, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.MOVE_FORWARD
     assert rail.preprocess_left_right_action(RailEnvActions.MOVE_FORWARD, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.MOVE_FORWARD
     assert rail.preprocess_left_right_action(RailEnvActions.MOVE_RIGHT, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.MOVE_RIGHT
     assert rail.preprocess_left_right_action(RailEnvActions.STOP_MOVING, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.STOP_MOVING
