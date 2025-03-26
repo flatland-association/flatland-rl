@@ -3,15 +3,16 @@ from typing import NamedTuple, Tuple, List, Dict
 from attrs import define, field
 
 
-# A way point is the entry into a cell defined by
-# - the row and column coordinates of the cell entered
-# - direction, in which the agent is facing to enter the cell.
-# This induces a graph on top of the FLATland cells:
-# - four possible way points per cell
-# - edges are the possible transitions in the cell.
-# Waypoint = NamedTuple('Waypoint', [('position', Tuple[int, int]), ('direction', int)])
-@define
+@define(frozen=True)
 class Waypoint:
+    """
+    A way point is the entry into a cell defined by
+     - the row and column coordinates of the cell entered
+     - direction, in which the agent is facing to enter the cell.
+    This induces a graph on top of the FLATland cells:
+     - four possible way points per cell
+     - edges are the possible transitions in the cell.
+    """
     position = field(type=Tuple[int, int])
     direction = field(type=int, converter=lambda d: d if d is None else int(d))
 
