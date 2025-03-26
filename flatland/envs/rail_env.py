@@ -91,7 +91,7 @@ class RailEnv(Environment):
                  acceleration_delta=1.0,
                  braking_delta=-1.0,
                  rewards: Rewards = None,
-                 effects_generator: EffectsGenerator = None
+                 effects_generator: EffectsGenerator["RailEnv"] = None
                  ):
         """
         Environment init.
