@@ -30,7 +30,6 @@ from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
-from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 
 
@@ -279,9 +278,6 @@ class RailEnv(Environment):
         info_dict: Dict with agent specific information
 
         """
-
-        send_infrastructure_data_change_signal_to_reset_lru_cache()
-
         if random_seed is not None:
             self._seed(random_seed)
 
