@@ -8,9 +8,9 @@ from functools import lru_cache
 from typing import List, Optional, Dict, Tuple, Set
 
 import numpy as np
-from flatland.core.effects_creator import EffectsGenerator
 
 import flatland.envs.timetable_generators as ttg
+from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
@@ -351,7 +351,6 @@ class RailEnv(Environment):
         if self.effects_generator is not None:
             self.effects_generator(self)
 
-
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
 
         # Reset the state of the observation builder with the new environment
@@ -553,7 +552,7 @@ class RailEnv(Environment):
                 valid_position_direction = any(self.rail.get_transitions(*new_position, new_direction))
                 if not valid_position_direction:
                     warnings.warn(f"{(new_position, new_direction)} not valid on the grid."
-                          f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
+                                  f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
                 assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
