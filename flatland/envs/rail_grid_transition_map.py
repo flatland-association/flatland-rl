@@ -6,6 +6,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.core.grid.grid_utils import IntVector2D
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.core.transitions import Transitions
@@ -142,3 +143,75 @@ class RailGridTransitionMap(GridTransitionMap):
         """
         new_cell_valid, _, _, transition_valid = self.check_action_on_agent(action, position, direction)
         return new_cell_valid and transition_valid
+
+    def _check_action_new(self, action: RailEnvActions, position: IntVector2D, direction: int):
+        """
+        Returns
+
+        Parameters
+        ----------
+        agent : EnvAgent
+        action : RailEnvActions
+
+        Returns
+        -------
+        Tuple[Grid4TransitionsEnum, bool]
+            the new direction and whether the the action was valid
+        """
+        possible_transitions = self.get_transitions(*position, direction)
+        num_transitions = fast_count_nonzero(possible_transitions)
+
+        if num_transitions == 1:
+            # - dead-end, straight line or curved line;
+            # new_direction will be the only valid transition
+            # - take only available transition
+            new_direction = fast_argmax(possible_transitions)
+            transition_valid = True
+            return new_direction, transition_valid
+
+        if action == RailEnvActions.MOVE_LEFT:
+            new_direction = (direction - 1) % 4
+            if possible_transitions[new_direction]:
+                return new_direction, True
+
+        elif action == RailEnvActions.MOVE_RIGHT:
+            new_direction = (direction + 1) % 4
+            if possible_transitions[new_direction]:
+                return new_direction, True
+
+        return direction, False
+
+    @lru_cache(maxsize=1_000_000)
+    def apply_action_independent(self, action: RailEnvActions, position: IntVector2D, direction: Grid4TransitionsEnum):
+        """ Apply the action on the train regardless of locations of other trains.
+            Checks for valid cells to move and valid rail transitions.
+
+            Parameters
+            ----------
+            action : RailEnvActions
+                Action to execute
+            position : IntVector2D
+                current position of the train
+            direction : int
+                current direction of the train
+
+            Returns
+            -------
+            new_position
+                New position after applying the action
+            new_direction
+                New direction after applying the action
+        """
+        new_direction, _ = self._check_action_new(action, position, direction)
+        new_position = get_new_position(position, new_direction)
+        return new_position, new_direction
+
+    @lru_cache()
+    def preprocess_left_right_action(self, action: RailEnvActions, position: Tuple[int, int], direction: Grid4TransitionsEnum):
+        """
+        LEFT/RIGHT is converted to FORWARD if left/right is not available.
+        """
+        if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT] and not self.check_valid_action(action, position, direction):
+            # TODO revise design: this may accelerate!
+            action = RailEnvActions.MOVE_FORWARD
+        return action

@@ -5,7 +5,7 @@ import random
 import warnings
 from collections import defaultdict
 from functools import lru_cache
-from typing import List, Optional, Dict, Tuple, Set
+from typing import List, Optional, Dict, Tuple, Set, Any
 
 import numpy as np
 
@@ -27,7 +27,6 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.action_preprocessing import process_illegal_action, preprocess_left_right_action
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
@@ -403,7 +402,7 @@ class RailEnv(Environment):
             * Change to STOP_MOVING if the movement is not possible in the grid (e.g. if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element or leads outside of bounds).
         """
         action = RailEnvActions(action)
-        action = process_illegal_action(action)
+        action = RailEnv._process_illegal_action(action)
 
         # Try moving actions on current position
         current_position, current_direction = agent.position, agent.direction
@@ -411,7 +410,7 @@ class RailEnv(Environment):
             current_position, current_direction = agent.initial_position, agent.initial_direction
 
         # TODO revise design: should we stop the agent instead and penalize it?
-        action = preprocess_left_right_action(action, self.rail, current_position, current_direction)
+        action = self.rail.preprocess_left_right_action(action, current_position, current_direction)
 
         # TODO https://github.com/flatland-association/flatland-rl/issues/185 Streamline flatland.envs.step_utils.transition_utils and flatland.envs.step_utils.action_preprocessing
         if ((action.is_moving_action() or action == RailEnvActions.DO_NOTHING)
@@ -528,9 +527,8 @@ class RailEnv(Environment):
                     and
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
                 ):
-                    new_position, new_direction = env_utils.apply_action_independent(
+                    new_position, new_direction = self.rail.apply_action_independent(
                         preprocessed_action,
-                        self.rail,
                         agent.position,
                         agent.direction
                     )
@@ -834,3 +832,14 @@ class RailEnv(Environment):
             except Exception as e:
                 print("Could Not close window due to:", e)
             self.renderer = None
+
+    @staticmethod
+    @lru_cache()
+    def _process_illegal_action(action: Any) -> RailEnvActions:
+        """
+        Returns the action if valid (either int value or in RailEnvActions), returns RailEnvActions.DO_NOTHING otherwise.
+        """
+        if not RailEnvActions.is_action_valid(action):
+            return RailEnvActions.DO_NOTHING
+        else:
+            return RailEnvActions(action)
