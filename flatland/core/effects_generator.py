@@ -21,11 +21,11 @@ class EffectsGenerator[U]:
         return self._hook(*args, **kwargs)
 
 
-def post_hook_wrapper(*post_hooks: EffectsGenerator[EnvironmentType]):
+def effects_generator_wrapper[V](*post_hooks: EffectsGenerator[V]):
     def strict_compose(*funcs):
         *funcs, penultimate, last = funcs
         if funcs:
             penultimate = strict_compose(*funcs, penultimate)
         return lambda *args, **kwargs: penultimate(last(*args, **kwargs))
 
-    return EffectsGenerator[EnvironmentType](strict_compose(*post_hooks))
+    return EffectsGenerator[V](strict_compose(*post_hooks))
