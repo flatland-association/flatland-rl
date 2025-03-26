@@ -6,11 +6,10 @@ import msgpack_numpy
 import numpy as np
 
 msgpack_numpy.patch()
-
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs import rail_env
 from flatland.utils.seeding import random_state_to_hashablestate
 from flatland.core.env_observation_builder import DummyObservationBuilder
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent, load_env_agent
 
 # cannot import objects / classes directly because of circular import
@@ -18,6 +17,7 @@ from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
 from flatland.envs import timetable_generators as tt_gen
+
 
 class RailEnvPersister(object):
 
@@ -121,7 +121,7 @@ class RailEnvPersister(object):
             obs_builder_object=DummyObservationBuilder(),
             record_steps=True)
 
-        env.rail = GridTransitionMap(1, 1)  # dummy
+        env.rail = RailGridTransitionMap(1, 1)  # dummy
 
         # TODO bad code smell - agent_position initialized in reset() only.
         env.agent_positions = np.zeros((env.height, env.width), dtype=int) - 1
@@ -199,7 +199,7 @@ class RailEnvPersister(object):
         env.height, env.width = grid.shape
 
         # use new rail object instance for lru cache scoping and garbage collection to work properly
-        env.rail = GridTransitionMap(height=env.height, width=env.width)
+        env.rail = RailGridTransitionMap(height=env.height, width=env.width)
         env.rail.grid = grid
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
 

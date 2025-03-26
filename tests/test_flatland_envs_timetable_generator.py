@@ -2,9 +2,9 @@ import numpy as np
 from numpy.random import RandomState
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.timetable_generators import timetable_generator
 
@@ -43,7 +43,7 @@ def test_timetable_generator():
                               1, 0, 2, 1,
                               1, 1]
     }
-    rail = GridTransitionMap(50, 50, RailEnvTransitions())
+    rail = RailGridTransitionMap(50, 50, RailEnvTransitions())
     rail.grid = np.array(
         [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -327,7 +327,7 @@ def test_timetable_generator_intermediate():
                               1, 0, 2, 1,
                               1, 1]
     }
-    rail = GridTransitionMap(50, 50, RailEnvTransitions())
+    rail = RailGridTransitionMap(50, 50, RailEnvTransitions())
     rail.grid = np.array(
         [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

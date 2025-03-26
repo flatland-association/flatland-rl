@@ -7,8 +7,6 @@ import numpy as np
 from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.rail_env_shortest_paths import get_shortest_paths
-from flatland.envs.step_utils import transition_utils
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.ordered_set import OrderedSet
 
@@ -66,7 +64,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
                     continue
                 for action in action_priorities:
                     new_cell_isValid, new_direction, new_position, transition_isValid = \
-                        transition_utils.check_action_on_agent(action, self.env.rail, agent.position, agent.direction)
+                        self.env.rail.check_action_on_agent(action, agent.position, agent.direction)
                     if all([new_cell_isValid, transition_isValid]):
                         # move and change direction to face the new_direction that was
                         # performed
@@ -123,7 +121,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
             agents = [self.env.agents[handle]]
         distance_map: DistanceMap = self.env.distance_map
 
-        shortest_paths = get_shortest_paths(distance_map, max_depth=self.max_depth)
+        shortest_paths = distance_map.get_shortest_paths(max_depth=self.max_depth)
 
         prediction_dict = {}
         for agent in agents:

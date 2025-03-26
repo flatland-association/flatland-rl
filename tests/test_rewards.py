@@ -1,7 +1,7 @@
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
@@ -18,7 +18,7 @@ def test_rewards_late_arrival():
                      latest_arrival=10,
                      arrival_time=12)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
-    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -2
 
 
@@ -33,7 +33,7 @@ def test_rewards_early_arrival():
                      latest_arrival=14,
                      arrival_time=12)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
-    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == 0
 
 
@@ -52,7 +52,7 @@ def test_rewards_intermediate_not_served_penalty():
                      waypoints_latest_arrival=[None, 11, 10],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
-    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -33
 
 
@@ -71,7 +71,7 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
                      waypoints_latest_arrival=[None, 11, 11],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
-    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
     agent.position = (2, 2)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
@@ -96,7 +96,7 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
                      waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
-    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
     agent.position = (2, 2)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
@@ -121,7 +121,7 @@ def test_rewards_departed_but_never_arrived():
                      waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
-    distance_map.reset(agents=[agent], rail=GridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
     agent.position = (2, 2)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)

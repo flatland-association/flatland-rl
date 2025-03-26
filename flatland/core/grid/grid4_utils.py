@@ -4,7 +4,6 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid_utils import IntVector2D
-from flatland.utils.decorators import enable_infrastructure_lru_cache
 
 
 def get_direction(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
@@ -33,7 +32,7 @@ def mirror(dir):
 MOVEMENT_ARRAY = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 
 
-@enable_infrastructure_lru_cache(maxsize=1_000_000)
+@lru_cache(maxsize=1_000_000)
 def get_new_position(position, movement):
     m = MOVEMENT_ARRAY[movement]
     return (position[0] + m[0], position[1] + m[1])

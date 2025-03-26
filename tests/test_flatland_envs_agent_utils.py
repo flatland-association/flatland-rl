@@ -123,18 +123,3 @@ def test_from_line():
     assert env_agents[9].initial_position == (9, 27)
     assert env_agents[9].initial_direction == 3
     assert env_agents[9].target == (44, 22)
-
-
-# def test_latest_arrival_validity():
-#     pass
-
-
-# def test_time_remaining_until_latest_arrival():
-#     pass
-
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()

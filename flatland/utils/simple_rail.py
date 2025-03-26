@@ -3,10 +3,10 @@ from typing import Tuple, Dict, Any
 import numpy as np
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
-from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
 
-def make_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
+def make_simple_rail() -> Tuple[RailGridTransitionMap, np.array, Dict]:
     # We instantiate a very simple rail network on a 7x10 grid:
     # Note that that cells have invalid RailEnvTransitions!
     #        |
@@ -39,7 +39,7 @@ def make_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
          [horizontal_straight] * 2 + [dead_end_from_west]] +
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
-    rail = GridTransitionMap(width=rail_map.shape[1],
+    rail = RailGridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
@@ -56,7 +56,7 @@ def make_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
     return rail, rail_map, optionals
 
 
-def make_disconnected_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
+def make_disconnected_simple_rail() -> Tuple[RailGridTransitionMap, np.array, Dict]:
     # We instantiate a very simple rail network on a 7x10 grid:
     # Note that that cells have invalid RailEnvTransitions!
     #        |
@@ -90,7 +90,7 @@ def make_disconnected_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
          [horizontal_straight] * 2 + [dead_end_from_west]] +
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
-    rail = GridTransitionMap(width=rail_map.shape[1],
+    rail = RailGridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
@@ -107,7 +107,7 @@ def make_disconnected_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
     return rail, rail_map, optionals
 
 
-def make_simple_rail2() -> Tuple[GridTransitionMap, np.array, Dict]:
+def make_simple_rail2() -> Tuple[RailGridTransitionMap, np.array, Dict]:
     # We instantiate a very simple rail network on a 7x10 grid:
     #        |
     #        |
@@ -138,7 +138,7 @@ def make_simple_rail2() -> Tuple[GridTransitionMap, np.array, Dict]:
          [horizontal_straight] * 2 + [dead_end_from_west]] +
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
-    rail = GridTransitionMap(width=rail_map.shape[1],
+    rail = RailGridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
@@ -155,7 +155,7 @@ def make_simple_rail2() -> Tuple[GridTransitionMap, np.array, Dict]:
     return rail, rail_map, optionals
 
 
-def make_simple_rail_unconnected() -> Tuple[GridTransitionMap, np.array, Dict]:
+def make_simple_rail_unconnected() -> Tuple[RailGridTransitionMap, np.array, Dict]:
     # We instantiate a very simple rail network on a 7x10 grid:
     # Note that that cells have invalid RailEnvTransitions!
     #        |
@@ -187,7 +187,7 @@ def make_simple_rail_unconnected() -> Tuple[GridTransitionMap, np.array, Dict]:
          [horizontal_straight] * 2 + [dead_end_from_west]] +
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
-    rail = GridTransitionMap(width=rail_map.shape[1],
+    rail = RailGridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
@@ -204,7 +204,7 @@ def make_simple_rail_unconnected() -> Tuple[GridTransitionMap, np.array, Dict]:
     return rail, rail_map, optionals
 
 
-def make_simple_rail_with_alternatives() -> Tuple[GridTransitionMap, np.array, Dict]:
+def make_simple_rail_with_alternatives() -> Tuple[RailGridTransitionMap, np.array, Dict]:
     # We instantiate a very simple rail network on a 7x10 grid:
     #  0 1 2 3 4 5 6 7 8 9  10
     # 0        /-------------\
@@ -242,7 +242,7 @@ def make_simple_rail_with_alternatives() -> Tuple[GridTransitionMap, np.array, D
         [[empty] * 6 + [simple_switch_north_right] + [horizontal_straight] * 2 + [right_turn_from_north]] +
         [[empty] * 6 + [vertical_straight] + [empty] * 3] +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
-    rail = GridTransitionMap(width=rail_map.shape[1],
+    rail = RailGridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
@@ -259,7 +259,7 @@ def make_simple_rail_with_alternatives() -> Tuple[GridTransitionMap, np.array, D
     return rail, rail_map, optionals
 
 
-def make_invalid_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict[str, Any]]:
+def make_invalid_simple_rail() -> Tuple[RailGridTransitionMap, np.array, Dict[str, Any]]:
     # We instantiate a very simple rail network on a 7x10 grid:
     #        |
     #        |
@@ -291,7 +291,7 @@ def make_invalid_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict[str, A
          [horizontal_straight] * 2 + [dead_end_from_west]] +
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
-    rail = GridTransitionMap(width=rail_map.shape[1],
+    rail = RailGridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
@@ -308,7 +308,7 @@ def make_invalid_simple_rail() -> Tuple[GridTransitionMap, np.array, Dict[str, A
     return rail, rail_map, optionals
 
 
-def make_oval_rail() -> Tuple[GridTransitionMap, np.array, Any]:
+def make_oval_rail() -> Tuple[RailGridTransitionMap, np.array, Any]:
     transitions = RailEnvTransitions()
     cells = transitions.transition_list
 
@@ -328,7 +328,7 @@ def make_oval_rail() -> Tuple[GridTransitionMap, np.array, Any]:
         [[empty] + [right_turn_from_east] + [horizontal_straight] * 5 + [right_turn_from_north] + [empty]] +
         [[empty] * 9], dtype=np.uint16)
 
-    rail = GridTransitionMap(width=rail_map.shape[1],
+    rail = RailGridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(1, 4), (4, 4)]
@@ -345,7 +345,7 @@ def make_oval_rail() -> Tuple[GridTransitionMap, np.array, Any]:
     return rail, rail_map, optionals
 
 
-def make_diamond_crossing_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
+def make_diamond_crossing_rail() -> Tuple[RailGridTransitionMap, np.array, Dict]:
     # We instantiate a very simple rail network on a 6x10 grid:
     # Note that  some cells have invalid RailEnvTransitions!
     #        |
@@ -363,7 +363,7 @@ def make_diamond_crossing_rail() -> Tuple[GridTransitionMap, np.array, Dict]:
         [[RailEnvTransitionsEnum.empty] * 2 + [RailEnvTransitionsEnum.vertical_straight] + [RailEnvTransitionsEnum.empty] * 7] * 2 +
         [[RailEnvTransitionsEnum.empty] * 2 + [RailEnvTransitionsEnum.dead_end_from_north] + [RailEnvTransitionsEnum.empty] * 7]
         , dtype=np.uint16)
-    rail = GridTransitionMap(width=rail_map.shape[1],
+    rail = RailGridTransitionMap(width=rail_map.shape[1],
                              height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(1, 4), (4, 4)]

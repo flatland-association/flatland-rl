@@ -189,9 +189,14 @@ class TrainStateMachine:
                 i_agent, str(self.state), str(position)))
 
     def __repr__(self):
-        return f"\n \
-                 state: {str(self.state.name)}      previous_state {str(self.previous_state.name) if self.previous_state is not None else None} \n \
-                 st_signals: {self.st_signals}"
+        return (
+            f"TrainStateMachine(\n"
+            f"\tstate={str(self.state)},\n"
+            f"\tprevious_state={str(self.previous_state) if self.previous_state is not None else None},\n"
+            f"\tst_signals={self.st_signals}\n"
+            f")"
+        )
+
 
     def to_dict(self):
         return {"state": self._state,

@@ -10,7 +10,6 @@ from numpy.random.mtrand import RandomState
 from flatland.envs import persistence
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.envs.timetable_utils import Timetable
 
 
@@ -76,13 +75,13 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
         distance_map_with_intermediates = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
         distance_map_with_intermediates.reset(fake_agents, distance_map.rail)
 
-        shortest_paths = get_shortest_paths(distance_map_with_intermediates)
+        shortest_paths = distance_map_with_intermediates.get_shortest_paths()
         shortest_path_segment_lengths = [[] for _ in range(num_agents)]
         for k, v in shortest_paths.items():
             shortest_path_segment_lengths[k % num_agents].append(len_handle_none(v))
         shortest_paths_lengths = [sum(l) for l in shortest_path_segment_lengths]
     else:
-        shortest_paths = get_shortest_paths(distance_map)
+        shortest_paths = distance_map.get_shortest_paths()
         shortest_paths_lengths = [len_handle_none(v) for k, v in shortest_paths.items()]
         shortest_path_segment_lengths = [[l] for l in shortest_paths_lengths]
 
