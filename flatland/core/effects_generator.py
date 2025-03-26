@@ -7,7 +7,7 @@ EnvironmentType = TypeVar('EnvironmentType', bound=Environment, covariant=True)
 
 class EffectsGenerator[U]:
     """
-    PostHook for external events modifying the env (state) before observations and rewards are computed.
+    Hook for external events modifying the env (state) before observations and rewards are computed.
 
     See https://github.com/flatland-association/flatland-workshop-2024/blob/main/next-flatland/documentation/core_concept.md#effect-creator
     """
