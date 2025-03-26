@@ -18,15 +18,15 @@ from typing import Optional, Dict, Tuple
 
 import requests
 
-from evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.envs.rail_env import RailEnv
+from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.integrations.interactiveai import event_api, context_api, historic_api
 from flatland.integrations.interactiveai.context_api import ContextApiApi, ContextIn
 from flatland.integrations.interactiveai.event_api import EventApiApi
 from flatland.integrations.interactiveai.event_api import EventIn
 from flatland.integrations.interactiveai.historic_api import HistoricApiApi
-from trajectories.trajectories import Trajectory
+from flatland.trajectories.trajectories import Trajectory
 
 logger = logging.getLogger(__name__)
 
