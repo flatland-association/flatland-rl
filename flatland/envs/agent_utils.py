@@ -145,8 +145,7 @@ class EnvAgent:
                      )
 
     def get_shortest_path(self, distance_map) -> List[Waypoint]:
-        from flatland.envs.rail_env_shortest_paths import get_shortest_paths  # Circular dep fix
-        return get_shortest_paths(distance_map=distance_map, agent_handle=self.handle)[self.handle]
+        return distance_map.get_shortest_paths(agent_handle=self.handle)[self.handle]
 
     def get_travel_time_on_shortest_path(self, distance_map) -> int:
         shortest_path = self.get_shortest_path(distance_map)

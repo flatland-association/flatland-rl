@@ -15,7 +15,6 @@ from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid_utils import Vector2D
 from flatland.core.grid.rail_env_grid import RailEnvTransitionsEnum
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_generators as mal_gen
@@ -25,12 +24,12 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.action_preprocessing import process_illegal_action, preprocess_left_right_action
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
-from flatland.envs.step_utils.transition_utils import check_valid_action
 from flatland.utils import seeding
 from flatland.utils.decorators import send_infrastructure_data_change_signal_to_reset_lru_cache
 from flatland.utils.rendertools import RenderTool, AgentRenderVariant
@@ -161,7 +160,7 @@ class RailEnv(Environment):
         self.line_generator: "LineGenerator" = line_generator
         self.timetable_generator = timetable_generator
 
-        self.rail: Optional[GridTransitionMap] = None
+        self.rail: Optional[RailGridTransitionMap] = None
         self.width = width
         self.height = height
 
@@ -259,8 +258,7 @@ class RailEnv(Environment):
         return agent_state == TrainState.READY_TO_DEPART or \
             (agent_state.is_on_map_state() and is_cell_entry)
 
-    def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *,
-              random_seed: int = None) -> Tuple[Dict, Dict]:
+    def reset(self, regenerate_rail: bool = True, regenerate_schedule: bool = True, *, random_seed: int = None) -> Tuple[Dict, Dict]:
         """
         reset(regenerate_rail, regenerate_schedule, activate_agents, random_seed)
 
@@ -418,7 +416,7 @@ class RailEnv(Environment):
         # TODO https://github.com/flatland-association/flatland-rl/issues/185 Streamline flatland.envs.step_utils.transition_utils and flatland.envs.step_utils.action_preprocessing
         if ((action.is_moving_action() or action == RailEnvActions.DO_NOTHING)
             and
-            not check_valid_action(action, self.rail, current_position, current_direction)):
+            not self.rail.check_valid_action(action, current_position, current_direction)):
             # TODO revise design: should we add penalty if the action cannot be executed?
             action = RailEnvActions.STOP_MOVING
         return action

@@ -1,7 +1,7 @@
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.step_utils.action_preprocessing import process_illegal_action, preprocess_left_right_action
 
 
@@ -15,7 +15,7 @@ def test_process_illegal_action():
 
 
 def test_moving_action_straight():
-    rail = GridTransitionMap(3, 3, RailEnvTransitions())
+    rail = RailGridTransitionMap(3, 3, RailEnvTransitions())
     rail.set_transitions((1, 1,), RailEnvTransitionsEnum.horizontal_straight)
 
     assert preprocess_left_right_action(RailEnvActions.DO_NOTHING, rail, (1, 1), Grid4TransitionsEnum.EAST) == RailEnvActions.DO_NOTHING
@@ -26,7 +26,7 @@ def test_moving_action_straight():
 
 
 def test_moving_action_simple_switch():
-    rail = GridTransitionMap(3, 3, RailEnvTransitions())
+    rail = RailGridTransitionMap(3, 3, RailEnvTransitions())
     rail.set_transitions((1, 1,), RailEnvTransitionsEnum.simple_switch_north_right)
     rail.set_transitions((1, 2,), RailEnvTransitionsEnum.horizontal_straight)
     assert preprocess_left_right_action(RailEnvActions.DO_NOTHING, rail, (1, 1), Grid4TransitionsEnum.NORTH) == RailEnvActions.DO_NOTHING
