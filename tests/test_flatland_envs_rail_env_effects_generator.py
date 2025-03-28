@@ -4,13 +4,34 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 
 
-class TestMalfunctionEffectsGenerator(EffectsGenerator[RailEnv]):
-    def __call__(self, env: RailEnv, *args, **kwargs) -> RailEnv:
-        env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
+def test_rail_env_effects_generator_post_reset():
+    class TestMalfunctionEffectsGenerator(EffectsGenerator[RailEnv]):
+        def post_reset(self, env: RailEnv, *args, **kwargs) -> RailEnv:
+            env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
+
+    env, _, _ = env_generator(effects_generator=TestMalfunctionEffectsGenerator())
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 999999
+    env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 999998
 
 
-def test_rail_env_effects_generator():
-    env, _, _ = env_generator()
-    env.effects_generator = TestMalfunctionEffectsGenerator()
+def test_rail_env_effects_generator_pre_step():
+    class TestMalfunctionEffectsGenerator(EffectsGenerator[RailEnv]):
+        def pre_step(self, env: RailEnv, *args, **kwargs) -> RailEnv:
+            env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
+
+    env, _, _ = env_generator(effects_generator=TestMalfunctionEffectsGenerator())
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
+    env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 999998
+
+
+def test_rail_env_effects_generator_post_step():
+    class TestMalfunctionEffectsGenerator(EffectsGenerator[RailEnv]):
+        def post_step(self, env: RailEnv, *args, **kwargs) -> RailEnv:
+            env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
+
+    env, _, _ = env_generator(effects_generator=TestMalfunctionEffectsGenerator())
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
     env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 999999
