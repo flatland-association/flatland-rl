@@ -37,7 +37,7 @@ def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool):
         shutil.copytree(data_dir, tmpdirname, dirs_exist_ok=True)
 
         # run with snapshots
-        run_episode(data_dir, ep_id, snapshot_interval=1 if run_from_intermediate else 0)
+        run_episode(Path(tmpdirname), ep_id, snapshot_interval=1 if run_from_intermediate else 0)
         if run_from_intermediate:
             # start episode from a snapshot to ensure snapshot contains full state!
-            run_episode(data_dir, ep_id, start_step=np.random.randint(0, 50))
+            run_episode(Path(tmpdirname), ep_id, start_step=np.random.randint(0, 50))
