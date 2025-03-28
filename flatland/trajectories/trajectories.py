@@ -308,10 +308,8 @@ class Trajectory:
 
         for env_time in tqdm.tqdm(range(env._max_episode_steps)):
 
-            action_dict = dict()
-            for handle in env.get_agent_handles():
-                action = policy.act(handle, observations[handle])
-                action_dict.update({handle: action})
+            action_dict = policy.act_many(env.get_agent_handles(), observations)
+            for handle, action in action_dict.items():
                 trajectory.action_collect(actions, env_time=env_time, agent_id=handle, action=action)
 
             _, _, dones, _ = env.step(action_dict)
