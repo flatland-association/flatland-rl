@@ -10,7 +10,7 @@ import pandas as pd
 import tqdm
 from attr import attrs, attrib
 
-from flatland.callbacks.callbacks import FlatlandCallbacks
+from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
@@ -287,6 +287,13 @@ class Trajectory:
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
         RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
 
+        if snapshot_interval >= 0:
+            from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
+            if callbacks is None:
+                callbacks = TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval)
+            else:
+                callbacks = make_multi_callbacks(callbacks, TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval))
+
         trains_positions = trajectory.read_trains_positions()
         actions = trajectory.read_actions()
         trains_arrived = trajectory.read_trains_arrived()
@@ -297,9 +304,9 @@ class Trajectory:
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
         env_time = 0
+
         for env_time in tqdm.tqdm(range(env._max_episode_steps)):
-            if snapshot_interval > 0 and env_time % snapshot_interval == 0:
-                RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time:04d}.pkl"))
+
             action_dict = dict()
             for handle in env.get_agent_handles():
                 action = policy.act(handle, observations[handle])
@@ -307,8 +314,6 @@ class Trajectory:
                 trajectory.action_collect(actions, env_time=env_time, agent_id=handle, action=action)
 
             _, _, dones, _ = env.step(action_dict)
-            if callbacks is not None:
-                callbacks.on_episode_step(env=env, data_dir=trajectory.outputs_dir)
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
@@ -316,8 +321,9 @@ class Trajectory:
                 trajectory.position_collect(trains_positions, env_time=env_time + 1, agent_id=agent_id, position=actual_position)
             done = dones['__all__']
 
-            if snapshot_interval > 0 and done and (env_time + 1) % snapshot_interval == 0:
-                RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env_time + 1:04d}.pkl"))
+            if callbacks is not None:
+                callbacks.on_episode_step(env=env, data_dir=trajectory.outputs_dir)
+
             if done:
                 break
         if callbacks is not None:
