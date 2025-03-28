@@ -287,7 +287,7 @@ class Trajectory:
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
         RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
 
-        if snapshot_interval >= 0:
+        if snapshot_interval > 0:
             from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
             if callbacks is None:
                 callbacks = TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval)
