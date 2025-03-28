@@ -106,7 +106,6 @@ ENV/
 .vscode/
 
 
-images/test/
 test_save.dat
 
 .visualizations
@@ -117,4 +116,4 @@ playground/
 
 *.pkl
 
-images
+/images/
