@@ -1,11 +1,13 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 
+from flatland.core.effects_generator import EffectsGenerator
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import ParamMalfunctionGen, MalfunctionParameters
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
+from flatland.envs.rewards import Rewards
 
 
 # defaults from Flatland 3 Round 2 Test_0, see https://flatland.aicrowd.com/challenges/flatland3/envconfig.html
@@ -21,7 +23,12 @@ def env_generator(n_agents=7,
                   malfunction_interval=540,
                   speed_ratios=None,
                   seed=42,
-                  obs_builder_object=None) -> Tuple[RailEnv, Dict, Dict]:
+                  obs_builder_object=None,
+                  acceleration_delta=1.0,
+                  braking_delta=-1.0,
+                  rewards: Rewards = None,
+                  effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+                  ) -> Tuple[RailEnv, Dict, Dict]:
     """
     Create an env with a given spec using `sparse_rail_generator`.
     Defaults are taken from Flatland 3 Round 2 Test_0, see `Environment Configurations <https://flatland.aicrowd.com/challenges/flatland3/envconfig.html`_.
@@ -86,7 +93,11 @@ def env_generator(n_agents=7,
         number_of_agents=n_agents,
         obs_builder_object=obs_builder_object,
         record_steps=True,
-        random_seed=seed
+        random_seed=seed,
+        acceleration_delta=acceleration_delta,
+        braking_delta=braking_delta,
+        rewards=rewards,
+        effects_generator=effects_generator,
     )
     observations, info = env.reset(random_seed=seed)
     return env, observations, info

@@ -10,6 +10,7 @@ from typing import List, Optional, Dict, Tuple, Set
 import numpy as np
 
 import flatland.envs.timetable_generators as ttg
+from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
@@ -90,6 +91,7 @@ class RailEnv(Environment):
                  acceleration_delta=1.0,
                  braking_delta=-1.0,
                  rewards: Rewards = None,
+                 effects_generator: EffectsGenerator["RailEnv"] = None
                  ):
         """
         Environment init.
@@ -134,6 +136,8 @@ class RailEnv(Environment):
             As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
         rewards : Rewards
             The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
+        effects_generator : Optional[EffectsGenerator["RailEnv"]]
+            The effects generator that can modify the env at the beginning of the env step and at the end of the env step.
         """
         super().__init__()
 
@@ -204,6 +208,8 @@ class RailEnv(Environment):
 
         self.acceleration_delta = acceleration_delta
         self.braking_delta = braking_delta
+
+        self.effects_generator = effects_generator
 
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
@@ -343,6 +349,9 @@ class RailEnv(Environment):
         # Agent positions map
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
         self._update_agent_positions_map(ignore_old_positions=False)
+
+        if self.effects_generator is not None:
+            self.effects_generator.post_reset(self)
 
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
 
@@ -491,6 +500,8 @@ class RailEnv(Environment):
             agent.old_position = agent.position
             agent.old_direction = agent.direction
 
+            if self.effects_generator is not None:
+                self.effects_generator.pre_step(self)
             # Generate malfunction
             agent.malfunction_handler.generate_malfunction(self.malfunction_generator, self.np_random)
 
@@ -545,7 +556,7 @@ class RailEnv(Environment):
                 valid_position_direction = any(self.rail.get_transitions(*new_position, new_direction))
                 if not valid_position_direction:
                     warnings.warn(f"{(new_position, new_direction)} not valid on the grid."
-                          f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
+                                  f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
                 assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
@@ -654,6 +665,9 @@ class RailEnv(Environment):
         if self.record_steps:
             self.record_timestep(action_dict)
 
+        if self.effects_generator is not None:
+            self.effects_generator.post_step(self)
+
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
     def _verify_mutually_exclusive_cell_occupation(self):
@@ -678,8 +692,8 @@ class RailEnv(Environment):
                                f"- agent:\t{agent} \n"
                                f"- state_machine:\t{agent.state_machine}\n"
                                f"- speed_counter:\t{agent.speed_counter}\n"
-                               f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n" \
-                               f"- motion check:\t{list(self.motionCheck.G.edges)}\n\n\n" \
+                               f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n"
+                               f"- motion check:\t{list(self.motionCheck.G.edges)}\n\n\n"
                                f"- agents:\t{self.agents}")
                         warnings.warn(msg)
                         msgs += msg
