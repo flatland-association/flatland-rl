@@ -1,13 +1,11 @@
-import os
 from pathlib import Path
 
 import click
 import numpy as np
 import tqdm
 
-from flatland.callbacks.callbacks import FlatlandCallbacks
-from flatland.envs.persistence import RailEnvPersister
-from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
+from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
+from flatland.trajectories.trajectories import Trajectory
 
 
 class TrajectoryEvaluator:
@@ -41,7 +39,7 @@ class TrajectoryEvaluator:
         rendering : bool
             render while evaluating
         snapshot_interval : int
-            interval to write pkl snapshots. 1 means at every step. 0 means never.
+            interval to write pkl snapshots to outputs/serialised_state subdirectory (not serialised_state subdirectory directly). 1 means at every step. 0 means never.
         tqdm_args: dict
             additional kwargs for tqdm
         """
@@ -55,6 +53,14 @@ class TrajectoryEvaluator:
 
         env = self.trajectory.restore_episode(start_step)
         self.trajectory.outputs_dir.mkdir(exist_ok=True)
+
+        if snapshot_interval > 0:
+            from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
+            if self.callbacks is None:
+                self.callbacks = TrajectorySnapshotCallbacks(self.trajectory, snapshot_interval=snapshot_interval)
+            else:
+                self.callbacks = make_multi_callbacks(self.callbacks, TrajectorySnapshotCallbacks(self.trajectory, snapshot_interval=snapshot_interval))
+
         if self.callbacks is not None:
             self.callbacks.on_episode_start(env=env, data_dir=self.trajectory.outputs_dir)
         env.record_steps = True
@@ -72,10 +78,6 @@ class TrajectoryEvaluator:
                 self.callbacks.on_episode_step(env=env, data_dir=self.trajectory.outputs_dir)
 
             elapsed_after_step = elapsed_before_step + 1
-            if snapshot_interval > 0 and (elapsed_after_step) % snapshot_interval == 0:
-                RailEnvPersister.save(env,
-                                      os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR,
-                                                   f"{self.trajectory.ep_id}_step{(elapsed_after_step):04d}.pkl"))
 
             done = dones['__all__']
 

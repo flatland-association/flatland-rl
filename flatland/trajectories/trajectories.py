@@ -290,9 +290,10 @@ class Trajectory:
         if snapshot_interval > 0:
             from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
             if callbacks is None:
-                callbacks = TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval)
+                callbacks = TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir)
             else:
-                callbacks = make_multi_callbacks(callbacks, TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval))
+                callbacks = make_multi_callbacks(callbacks,
+                                                 TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir))
 
         trains_positions = trajectory.read_trains_positions()
         actions = trajectory.read_actions()
