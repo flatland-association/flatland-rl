@@ -19,7 +19,7 @@ class TrajectorySnapshotCallbacks(FlatlandCallbacks):
         data_dir: Path = None,
         **kwargs,
     ) -> None:
-        if self.snapshot_interval >= 0:
+        if self.snapshot_interval > 0:
             RailEnvPersister.save(env, str(self.trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{self.trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl"))
 
     def on_episode_step(
