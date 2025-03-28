@@ -1,13 +1,11 @@
-import os
 from pathlib import Path
 
 import click
 import numpy as np
 import tqdm
 
-from flatland.callbacks.callbacks import FlatlandCallbacks
-from flatland.envs.persistence import RailEnvPersister
-from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
+from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
+from flatland.trajectories.trajectories import Trajectory
 
 
 class TrajectoryEvaluator:
@@ -18,7 +16,7 @@ class TrajectoryEvaluator:
     def __call__(self, *args, **kwargs):
         self.evaluate()
 
-    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0):
+    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0, tqdm_kwargs: dict = None):
         """
         The data is structured as follows:
             -30x30 map
@@ -41,15 +39,28 @@ class TrajectoryEvaluator:
         rendering : bool
             render while evaluating
         snapshot_interval : int
-            interval to write pkl snapshots. 1 means at every step. 0 means never.
+            interval to write pkl snapshots to outputs/serialised_state subdirectory (not serialised_state subdirectory directly). 1 means at every step. 0 means never.
+        tqdm_args: dict
+            additional kwargs for tqdm
         """
 
         trains_positions = self.trajectory.read_trains_positions()
         actions = self.trajectory.read_actions()
         trains_arrived = self.trajectory.read_trains_arrived()
 
+        if tqdm_kwargs is None:
+            tqdm_kwargs = {}
+
         env = self.trajectory.restore_episode(start_step)
         self.trajectory.outputs_dir.mkdir(exist_ok=True)
+
+        if snapshot_interval > 0:
+            from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
+            if self.callbacks is None:
+                self.callbacks = TrajectorySnapshotCallbacks(self.trajectory, snapshot_interval=snapshot_interval)
+            else:
+                self.callbacks = make_multi_callbacks(self.callbacks, TrajectorySnapshotCallbacks(self.trajectory, snapshot_interval=snapshot_interval))
+
         if self.callbacks is not None:
             self.callbacks.on_episode_start(env=env, data_dir=self.trajectory.outputs_dir)
         env.record_steps = True
@@ -60,22 +71,13 @@ class TrajectoryEvaluator:
 
         if end_step is None:
             end_step = env._max_episode_steps
-        for elapsed_before_step in tqdm.tqdm(range(start_step, end_step)):
-            # TODO refactor as callback, too
-            if snapshot_interval > 0 and elapsed_before_step % snapshot_interval == 0:
-                RailEnvPersister.save(env, os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR,
-                                                        f"{self.trajectory.ep_id}_step{elapsed_before_step:04d}.pkl"))
-
+        for elapsed_before_step in tqdm.tqdm(range(start_step, end_step), **tqdm_kwargs):
             action = {agent_id: self.trajectory.action_lookup(actions, env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
             _, _, dones, _ = env.step(action)
             if self.callbacks is not None:
                 self.callbacks.on_episode_step(env=env, data_dir=self.trajectory.outputs_dir)
 
             elapsed_after_step = elapsed_before_step + 1
-            if snapshot_interval > 0 and (elapsed_after_step) % snapshot_interval == 0:
-                RailEnvPersister.save(env,
-                                      os.path.join(self.trajectory.data_dir, SERIALISED_STATE_SUBDIR,
-                                                   f"{self.trajectory.ep_id}_step{(elapsed_after_step):04d}.pkl"))
 
             done = dones['__all__']
 
