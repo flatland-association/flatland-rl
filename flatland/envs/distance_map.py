@@ -1,3 +1,4 @@
+import base64
 from collections import deque
 from typing import List, Optional
 
@@ -160,3 +161,25 @@ class DistanceMap:
                         self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation] = new_distance
 
         return neighbors
+
+    def __getstate__(self):
+        return {
+            "env_height": self.env_height,
+            "env_width": self.env_width,
+            "distance_map": base64.b64encode(self.distance_map.astype(np.uint16)).decode("utf-8"),
+            "agents_previous_computation": [a.__getstate__() for a in self.agents_previous_computation],
+            "reset_was_called": self.reset_was_called,
+            "agents": [a.__getstate__() for a in self.agents],
+            "rail": self.rail.__getstate__()
+        }
+
+    def __setstate__(self, state):
+        self.env_height = state["env_height"]
+        self.env_width = state["env_width"]
+        self.agents = [EnvAgent(None, None, None, None).__setstate__(s) for s in state["agents"]]
+        self.distance_map = (np.frombuffer(base64.b64decode(state["distance_map"].encode("utf-8")), dtype=np.uint16)
+                             .reshape((len(self.agents), self.env_height, self.env_width, 4)))
+        self.agents_previous_computation = [EnvAgent(None, None, None, None).__setstate__(s) for s in state["agents_previous_computation"]]
+        self.reset_was_called = state["reset_was_called"]
+        self.rail = GridTransitionMap(0, 0)
+        self.rail.__setstate__(state["rail"])
