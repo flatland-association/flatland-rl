@@ -1,4 +1,3 @@
-
 def get_number_of_steps_to_break(malfunction_generator, np_random):
     if hasattr(malfunction_generator, "generate"):
         malfunction = malfunction_generator.generate(np_random)
@@ -7,19 +6,20 @@ def get_number_of_steps_to_break(malfunction_generator, np_random):
 
     return malfunction.num_broken_steps
 
+
 class MalfunctionHandler:
-    def __init__(self):
-        self._malfunction_down_counter = 0
-        self.num_malfunctions = 0
+    def __init__(self, malfunction_down_counter: int = 0, num_malfunctions: int = 0):
+        self._malfunction_down_counter = malfunction_down_counter
+        self.num_malfunctions = num_malfunctions
 
     def reset(self):
         self._malfunction_down_counter = 0
         self.num_malfunctions = 0
-    
+
     @property
     def in_malfunction(self):
         return self._malfunction_down_counter > 0
-    
+
     @property
     def malfunction_counter_complete(self):
         return self._malfunction_down_counter == 0
@@ -50,23 +50,21 @@ class MalfunctionHandler:
             self._malfunction_down_counter -= 1
 
     def __repr__(self):
-        return f"malfunction_down_counter: {self._malfunction_down_counter} \
-                in_malfunction: {self.in_malfunction} \
-                num_malfunctions: {self.num_malfunctions}"
+        return (
+            f"MalfunctionHandler(\n"
+            f"\tmalfunction_down_counter={self._malfunction_down_counter},\n"
+            f"\tnum_malfunctions={self.num_malfunctions},\n"
+            f")"
+        )
 
     def to_dict(self):
         return {"malfunction_down_counter": self._malfunction_down_counter,
                 "num_malfunctions": self.num_malfunctions}
-    
+
     def from_dict(self, load_dict):
         self._malfunction_down_counter = load_dict['malfunction_down_counter']
         self.num_malfunctions = load_dict['num_malfunctions']
 
     def __eq__(self, other):
         return self._malfunction_down_counter == other._malfunction_down_counter and \
-               self.num_malfunctions == other.num_malfunctions
-
-    
-
-    
-
+            self.num_malfunctions == other.num_malfunctions
