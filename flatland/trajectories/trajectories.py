@@ -213,7 +213,8 @@ class Trajectory:
         obs_builder: Optional[ObservationBuilder] = None,
         snapshot_interval: int = 1,
         ep_id: str = None,
-        callbacks: FlatlandCallbacks = None
+        callbacks: FlatlandCallbacks = None,
+        tqdm_kwargs: dict = None,
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -258,6 +259,8 @@ class Trajectory:
             episode ID to store data under. If not provided, generate one.
         callbacks: FlatlandCallbacks
             callbacks to run during trajectory creation
+        tqdm_kwargs: dict
+            additional kwargs for tqdm
 
         Returns
         -------
@@ -281,6 +284,8 @@ class Trajectory:
                 speed_ratios=speed_ratios,
                 seed=seed,
                 obs_builder_object=obs_builder)
+        if tqdm_kwargs is None:
+            tqdm_kwargs = {}
         if ep_id is not None:
             trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
         else:
@@ -307,7 +312,7 @@ class Trajectory:
         assert len(env.agents) == n_agents
         env_time = 0
 
-        for env_time in tqdm.tqdm(range(env._max_episode_steps)):
+        for env_time in tqdm.tqdm(range(env._max_episode_steps), **tqdm_kwargs):
 
             action_dict = policy.act_many(env.get_agent_handles(), observations)
             for handle, action in action_dict.items():
