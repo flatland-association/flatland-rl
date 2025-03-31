@@ -13,14 +13,14 @@ from flatland.core.grid.grid4_utils import direction_to_point
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D, \
     Vec2dOperations
 from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import persistence
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes, align_cell_to_city
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
-RailGeneratorProduct = Tuple[GridTransitionMap, Optional[Dict]]
+RailGeneratorProduct = Tuple[RailGridTransitionMap, Optional[Dict]]
 """ A rail generator returns a RailGenerator Product, which is just
-    a GridTransitionMap followed by an (optional) dict/
+    a RailGridTransitionMap followed by an (optional) dict/
 """
 
 RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
@@ -57,7 +57,7 @@ class EmptyRailGen(RailGen):
 
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0, np_random: RandomState = None) -> RailGenerator:
         rail_trans = RailEnvTransitions()
-        grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
+        grid_map = RailGridTransitionMap(width=width, height=height, transitions=rail_trans)
         rail_array = grid_map.grid
         rail_array.fill(0)
 
@@ -75,7 +75,7 @@ def rail_from_file(filename, load_from_package=None) -> RailGenerator:
     Returns
     -------
     function
-        Generator function that always returns a GridTransitionMap object with
+        Generator function that always returns a RailGridTransitionMap object with
         the matrix of correct 16-bit bitmaps for each rail_spec_of_cell.
     """
 
@@ -85,7 +85,7 @@ def rail_from_file(filename, load_from_package=None) -> RailGenerator:
         rail_env_transitions = RailEnvTransitions()
 
         grid = np.array(env_dict["grid"])
-        rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
+        rail = RailGridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
         rail.grid = grid
         if "distance_map" in env_dict:
             distance_map = env_dict["distance_map"]
@@ -177,7 +177,7 @@ class SparseRailGen(RailGen):
             np_random = RandomState(np.random.randint(2 ** 32))
 
         rail_trans = RailEnvTransitions()
-        grid_map = GridTransitionMap(width=width, height=height, transitions=rail_trans)
+        grid_map = RailGridTransitionMap(width=width, height=height, transitions=rail_trans)
 
         # NEW : SCHED CONST (Pairs of rails (1,2,3 pairs))
         min_nr_rail_pairs_in_city = 1  # (min pair must be 1)
@@ -579,7 +579,7 @@ class SparseRailGen(RailGen):
     def _build_inner_cities(self, city_positions: IntVector2DArray,
                             inner_connection_points: List[List[List[IntVector2D]]],
                             outer_connection_points: List[List[List[IntVector2D]]], rail_trans: RailEnvTransitions,
-                            grid_map: GridTransitionMap) -> Tuple[
+                            grid_map: RailGridTransitionMap) -> Tuple[
         List[IntVector2DArray], List[List[List[IntVector2D]]]]:
         """
         Set the parallel tracks within the city. The center track of the city is of the length of the city, the lenght
@@ -678,7 +678,7 @@ class SparseRailGen(RailGen):
         return train_stations
 
     def _fix_transitions(self, city_cells: set, inter_city_lines: List[IntVector2DArray],
-                         grid_map: GridTransitionMap, vector_field):
+                         grid_map: RailGridTransitionMap, vector_field):
         """
         Check and fix transitions of all the cells that were modified. This is necessary because we ignore validity
         while drawing the rails.
@@ -841,7 +841,7 @@ class FileRailFromGridGen(RailGen):
     @staticmethod
     def from_dict(dict):
         grid = np.array(dict["grid"], dtype=RailEnvTransitions().get_type())
-        rail = GridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=RailEnvTransitions(), grid=grid)
+        rail = RailGridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=RailEnvTransitions(), grid=grid)
 
         return rail, dict["hints"]
 

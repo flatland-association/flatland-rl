@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from benchmarks.benchmark_episodes import run_episode, DOWNLOAD_INSTRUCTIONS
+from flatland.trajectories.trajectories import EVENT_LOGS_SUBDIR, OUTPUTS_SUBDIR
 
 
 # run a subset of episodes for regression
@@ -36,8 +37,12 @@ def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool):
     with tempfile.TemporaryDirectory() as tmpdirname:
         shutil.copytree(data_dir, tmpdirname, dirs_exist_ok=True)
 
-        # run with snapshots
-        run_episode(data_dir, ep_id, snapshot_interval=1 if run_from_intermediate else 0)
+        # run with snapshots to outputs/serialised_state directory
+        run_episode(Path(tmpdirname), ep_id, snapshot_interval=1 if run_from_intermediate else 0)
+
         if run_from_intermediate:
+            # copy actions etc. to outputs subfolder, so outputs subfolder becomes a proper trajectory data dir.
+            shutil.copytree(os.path.join(data_dir, EVENT_LOGS_SUBDIR), os.path.join(tmpdirname, OUTPUTS_SUBDIR, EVENT_LOGS_SUBDIR), dirs_exist_ok=True)
+
             # start episode from a snapshot to ensure snapshot contains full state!
-            run_episode(data_dir, ep_id, start_step=np.random.randint(0, 50))
+            run_episode(Path(tmpdirname) / OUTPUTS_SUBDIR, ep_id, start_step=np.random.randint(0, 50))
