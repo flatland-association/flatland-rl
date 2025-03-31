@@ -4,9 +4,9 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 
 
-def test_rail_env_effects_generator_post_reset():
+def test_rail_env_effects_generator_on_episode_start():
     class TestMalfunctionEffectsGenerator(EffectsGenerator[RailEnv]):
-        def post_reset(self, env: RailEnv, *args, **kwargs) -> RailEnv:
+        def on_episode_start(self, env: RailEnv, *args, **kwargs) -> RailEnv:
             env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
 
     env, _, _ = env_generator(effects_generator=TestMalfunctionEffectsGenerator())
@@ -15,9 +15,9 @@ def test_rail_env_effects_generator_post_reset():
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 999998
 
 
-def test_rail_env_effects_generator_pre_step():
+def test_rail_env_effects_generator_on_episode_step_start():
     class TestMalfunctionEffectsGenerator(EffectsGenerator[RailEnv]):
-        def pre_step(self, env: RailEnv, *args, **kwargs) -> RailEnv:
+        def on_episode_step_start(self, env: RailEnv, *args, **kwargs) -> RailEnv:
             env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
 
     env, _, _ = env_generator(effects_generator=TestMalfunctionEffectsGenerator())
@@ -26,9 +26,9 @@ def test_rail_env_effects_generator_pre_step():
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 999998
 
 
-def test_rail_env_effects_generator_post_step():
+def test_rail_env_effects_generator_on_episode_step_end():
     class TestMalfunctionEffectsGenerator(EffectsGenerator[RailEnv]):
-        def post_step(self, env: RailEnv, *args, **kwargs) -> RailEnv:
+        def on_episode_step_end(self, env: RailEnv, *args, **kwargs) -> RailEnv:
             env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
 
     env, _, _ = env_generator(effects_generator=TestMalfunctionEffectsGenerator())

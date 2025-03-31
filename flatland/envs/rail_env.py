@@ -345,7 +345,7 @@ class RailEnv(Environment):
         self._update_agent_positions_map(ignore_old_positions=False)
 
         if self.effects_generator is not None:
-            self.effects_generator.post_reset(self)
+            self.effects_generator.on_episode_start(self)
 
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
 
@@ -488,7 +488,7 @@ class RailEnv(Environment):
         self.motionCheck = ac.MotionCheck()  # reset the motion check
 
         if self.effects_generator is not None:
-            self.effects_generator.pre_step(self)
+            self.effects_generator.on_episode_step_start(self)
 
         temp_transition_data = {}
         for agent in self.agents:
@@ -657,7 +657,7 @@ class RailEnv(Environment):
             self.record_timestep(action_dict)
 
         if self.effects_generator is not None:
-            self.effects_generator.post_step(self)
+            self.effects_generator.on_episode_step_end(self)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 

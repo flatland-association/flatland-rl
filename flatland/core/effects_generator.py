@@ -13,21 +13,23 @@ class EffectsGenerator(Generic[EnvironmentType]):
     """
 
     def __init__(
-        self,
-        post_reset: Callable[[EnvironmentType], EnvironmentType] = None,
-        pre_step: Callable[[EnvironmentType], EnvironmentType] = None,
-        post_step: Callable[[EnvironmentType], EnvironmentType] = None,
+            self,
+            post_reset: Callable[[EnvironmentType], EnvironmentType] = None,
+            pre_step: Callable[[EnvironmentType], EnvironmentType] = None,
+            post_step: Callable[[EnvironmentType], EnvironmentType] = None,
     ):
         self._post_reset = post_reset
         self._pre_step = pre_step
         self._pre_step = pre_step
         self._post_step = post_step
 
-    def post_reset(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+    def on_episode_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
         """
         Called by env at the end of reset before computing observations and infos.
 
         In the future, will receive immutable state instead of full env.
+
+        Naming similar to https://docs.ray.io/en/latest/rllib/package_ref/doc/ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_start.html#ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_start, but modifying.
 
         Parameters
         ----------
@@ -43,11 +45,13 @@ class EffectsGenerator(Generic[EnvironmentType]):
             return env
         return self._post_reset(*args, **kwargs)
 
-    def pre_step(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+    def on_episode_step_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
         """
         Called by env at the beginning of step before evaluating the agent's actions.
 
         In the future, will receive immutable state instead of full env.
+
+        No naming similar to RLlib equivalent, see https://docs.ray.io/en/latest/rllib/rllib-callback.html
 
         Parameters
         ----------
@@ -63,11 +67,13 @@ class EffectsGenerator(Generic[EnvironmentType]):
             return env
         return self._pre_step(*args, **kwargs)
 
-    def post_step(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+    def on_episode_step_end(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
         """
         Called by env at the end of step before computing observations and infos.
 
         In the future, will receive immutable state instead of full env.
+
+        Naming similar to  to https://docs.ray.io/en/latest/rllib/package_ref/doc/ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step.html#ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step, but modifying.
 
         Parameters
         ----------
@@ -86,19 +92,19 @@ class EffectsGenerator(Generic[EnvironmentType]):
 
 def effects_generator_wrapper(*effects_generators: EffectsGenerator[EnvironmentType]) -> EffectsGenerator[EnvironmentType]:
     class _EffectsGeneratorWrapped(EffectsGenerator[EnvironmentType]):
-        def post_reset(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+        def on_episode_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
             for eff in effects_generators:
-                env = eff.post_reset(env)
+                env = eff.on_episode_start(env)
             return env
 
-        def pre_step(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+        def on_episode_step_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
             for eff in effects_generators:
-                env = eff.pre_step(env)
+                env = eff.on_episode_step_start(env)
             return env
 
-        def post_step(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+        def on_episode_step_end(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
             for eff in effects_generators:
-                env = eff.pre_step(env)
+                env = eff.on_episode_step_start(env)
             return env
 
     return _EffectsGeneratorWrapped()
