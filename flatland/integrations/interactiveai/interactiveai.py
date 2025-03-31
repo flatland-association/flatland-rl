@@ -19,6 +19,7 @@ import requests
 
 from flatland.callbacks.callbacks import FlatlandCallbacks
 from flatland.envs.rail_env import RailEnv
+from flatland.integrations.interactiveai import event_api, context_api, historic_api
 from flatland.integrations.interactiveai.context_api import ContextApiApi, ContextIn
 from flatland.integrations.interactiveai.event_api import EventApiApi
 from flatland.integrations.interactiveai.event_api import EventIn
@@ -34,9 +35,12 @@ class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
                  username: str = "admin",
                  password: str = "test",
                  token_url: str = "http://frontend/auth/token",
+                 event_api_host="http://localhost:5001",
+                 context_api_host="http://localhost:5100",
+                 history_api_host="http://localhost:5200",
                  step_to_millis: int = 1000,
                  collect_only: bool = False,
-                 now: datetime.datetime = None
+                 now: datetime.datetime = None,
                  ):
         """
 
@@ -52,6 +56,13 @@ class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
             InteractiveAI password
         token_url : str
             InteractiveAI token_url
+         event_api_host: str
+            Defaults to http://localhost:5001",
+         context_api_host : str
+            Defaults to "http://localhost:5100",
+         history_api_host : str
+            Defaults to "http://localhost:5200",
+
         step_to_millis : int
             how many millis delay till next `env.step()`
         collect_only : bool
@@ -65,6 +76,9 @@ class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
         self.username = username
         self.password = password
         self.access_token = None
+        self.event_api_host = event_api_host
+        self.context_api_host = context_api_host
+        self.history_api_host = history_api_host
         self.context_api: ContextApiApi = None
         self.historic_api: HistoricApiApi = None
         self.events_api: EventApiApi = None
@@ -82,11 +96,13 @@ class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
         access_token = self._get_access_token_password_grant(token_url=self.token_url, client_id=self.client_id, username=self.username, password=self.password)
         print(access_token)
 
-        self.events_api = EventApiApi()
+        self.events_api = EventApiApi(event_api.ApiClient(event_api.Configuration(host=self.event_api_host)))
         self.events_api.api_client.set_default_header("Authorization", f"Bearer {access_token}")
-        self.context_api = ContextApiApi()
+
+        self.context_api = ContextApiApi(context_api.ApiClient(context_api.Configuration(host=self.context_api_host)))
         self.context_api.api_client.set_default_header("Authorization", f"Bearer {access_token}")
-        self.historic_api = HistoricApiApi()
+
+        self.historic_api = HistoricApiApi(historic_api.ApiClient(historic_api.Configuration(host=self.history_api_host)))
         self.historic_api.api_client.set_default_header("Authorization", f"Bearer {access_token}")
         self.access_token = access_token
 
@@ -119,15 +135,6 @@ class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
         """
         if self.access_token is None and not self.collect_only:
             self.connect()
-        if env._elapsed_steps == 1 and not self.collect_only:
-            # self.events_api.api_v1_delete_
-            # self.historic_api.api_v1_delete_all_data_delete()
-            # self.context_api.api_v1_delete_all_data_delete()
-            for event in self.events_api.api_v1_events_get():
-                self.events_api.api_v1_event_event_id_delete(event_id=event.id_event)
-            print(self.events_api.api_v1_events_get())
-            print(self.historic_api.api_v1_traces_get())
-            print(self.context_api.api_v1_contexts_get())
 
         for agent in env.agents:
             prev = self.in_malfunction.get(agent.handle, False)
