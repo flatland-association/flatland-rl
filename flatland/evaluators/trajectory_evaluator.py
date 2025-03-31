@@ -40,7 +40,7 @@ class TrajectoryEvaluator:
             render while evaluating
         snapshot_interval : int
             interval to write pkl snapshots to outputs/serialised_state subdirectory (not serialised_state subdirectory directly). 1 means at every step. 0 means never.
-        tqdm_args: dict
+        tqdm_kwargs: dict
             additional kwargs for tqdm
         """
 
