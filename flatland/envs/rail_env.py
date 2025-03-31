@@ -137,7 +137,7 @@ class RailEnv(Environment):
         rewards : Rewards
             The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
         effects_generator : Optional[EffectsGenerator["RailEnv"]]
-            The effects generator that can modify the env at the beginning of the env step and at the end of the env step.
+            The effects generator that can modify the env at the env of env reset, at the beginning of the env step and at the end of the env step.
         """
         super().__init__()
 
