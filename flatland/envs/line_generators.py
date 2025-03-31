@@ -7,12 +7,12 @@ from numpy.random.mtrand import RandomState
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid_utils import IntVector2DArray
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import persistence
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.timetable_utils import Line
 
 AgentPosition = Tuple[int, int]
-LineGenerator = Callable[[GridTransitionMap, int, Optional[Any], Optional[int], Optional[RandomState]], Line]
+LineGenerator = Callable[[RailGridTransitionMap, int, Optional[Any], Optional[int], Optional[RandomState]], Line]
 
 
 def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, float] = None, np_random: RandomState = None) -> List[float]:
@@ -46,7 +46,7 @@ class BaseLineGen(object):
         self.seed = seed
         self.line_length = line_length
 
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
+    def generate(self, rail: RailGridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
         pass
 
     def __call__(self, *args, **kwargs):
@@ -88,7 +88,7 @@ class SparseLineGen(BaseLineGen):
         else:
             return 0
 
-    def _assign_station_in_start_and_target_city(self, hints: dict, rail: GridTransitionMap, city_start: int, city_target: int,
+    def _assign_station_in_start_and_target_city(self, hints: dict, rail: RailGridTransitionMap, city_start: int, city_target: int,
                                                  np_random: RandomState):
         train_stations = hints['train_stations']
         city_orientation = hints['city_orientations']
@@ -109,13 +109,13 @@ class SparseLineGen(BaseLineGen):
 
         return agent_start, agent_orientation, agent_target
 
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
+    def generate(self, rail: RailGridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
         """
         Assigns tasks to all the agents.
 
         Parameters
         ----------
-        rail : GridTransitionMap
+        rail : RailGridTransitionMap
             Rail infrastructure given by the rail_generator
         num_agents : int
             Number of agents to include in the line
@@ -183,7 +183,7 @@ def line_from_file(filename, load_from_package: str = None) -> LineGenerator:
         initial positions, directions, targets speeds
     """
 
-    def generator(rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
+    def generator(rail: RailGridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0,
                   np_random: RandomState = None) -> Line:
         env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
 
@@ -205,7 +205,7 @@ class FileLineGenerator(BaseLineGen):
     def __init__(self, filename: Path):
         self.filename = filename
 
-    def generate(self, rail: GridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
+    def generate(self, rail: RailGridTransitionMap, num_agents: int, hints: Any = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
         with open(self.filename, "rb") as file_in:
             return pickle.loads(file_in.read())
 

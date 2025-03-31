@@ -10,7 +10,6 @@ from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.rail_env_shortest_paths import get_shortest_paths
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.states import TrainState
@@ -154,7 +153,7 @@ def test_shortest_path_predictor(rendering=False):
     distance_on_map = distance_map[0, agent.initial_position[0], agent.initial_position[1], agent.direction]
     assert distance_on_map == 5.0, "found {} instead of {}".format(distance_on_map, 5.0)
 
-    paths = get_shortest_paths(env.distance_map)[0]
+    paths = env.distance_map.get_shortest_paths()[0]
     assert paths == [
         Waypoint((5, 6), 0),
         Waypoint((4, 6), 0),
