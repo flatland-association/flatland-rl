@@ -493,6 +493,9 @@ class RailEnv(Environment):
 
         self.motionCheck = ac.MotionCheck()  # reset the motion check
 
+        if self.effects_generator is not None:
+            self.effects_generator.pre_step(self)
+
         temp_transition_data = {}
         for agent in self.agents:
             i_agent = agent.handle
@@ -500,8 +503,6 @@ class RailEnv(Environment):
             agent.old_position = agent.position
             agent.old_direction = agent.direction
 
-            if self.effects_generator is not None:
-                self.effects_generator.pre_step(self)
             # Generate malfunction
             agent.malfunction_handler.generate_malfunction(self.malfunction_generator, self.np_random)
 
