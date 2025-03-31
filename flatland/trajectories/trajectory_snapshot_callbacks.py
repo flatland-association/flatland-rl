@@ -9,6 +9,19 @@ from flatland.trajectories.trajectories import Trajectory
 
 
 class TrajectorySnapshotCallbacks(FlatlandCallbacks):
+    """
+    FlatlandCallbacks to write env snapshots at the configured interval.
+
+    Parameters
+    ----------
+    trajectory: Trajectory
+        the trajectory
+    data_dir_override : Path
+        use this override instead of the `data_dir` passed in the callback.
+    snapshot_interval : int
+        interval to write pkl snapshots to serialised_state subdirectory of the data_dir or data_dir_override. 1 means at every step. 0 means never.
+    """
+
     def __init__(self, trajectory: Trajectory, data_dir_override: Path = None, snapshot_interval: int = None):
         self.trajectory = trajectory
         self.snapshot_interval = snapshot_interval
