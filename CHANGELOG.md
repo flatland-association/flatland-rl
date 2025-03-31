@@ -5,6 +5,23 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[4.1.0](https://github.com/flatland-association/flatland-rl/compare/v4.0.6...v4.1.0)] - 2025-03-31
+
+### Added
+
+* 134 Add Effects Generator. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/156
+* 158 Trajectory cli (runner, evaluator) improvements. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/193
+* Add configuration option for non-default URL for InteractiveAI events, context and historic API. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/191
+
+### Fixed
+
+* Add graph_to_digraph.drawio.png required by graph demo notebook. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/189
+
+### Changed
+
+* 179 Simplify step function by @chenkins in https://github.com/flatland-association/flatland-rl/pull/182
+
 ## [[4.0.6](https://github.com/flatland-association/flatland-rl/compare/v4.0.5...v4.0.6)] - 2025-03-21
 
 ### Added
