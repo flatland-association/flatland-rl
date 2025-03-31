@@ -14,14 +14,14 @@ class EffectsGenerator(Generic[EnvironmentType]):
 
     def __init__(
             self,
-            post_reset: Callable[[EnvironmentType], EnvironmentType] = None,
-            pre_step: Callable[[EnvironmentType], EnvironmentType] = None,
-            post_step: Callable[[EnvironmentType], EnvironmentType] = None,
+            on_episode_start: Callable[[EnvironmentType], EnvironmentType] = None,
+            on_episode_step_start: Callable[[EnvironmentType], EnvironmentType] = None,
+            on_episode_step_end: Callable[[EnvironmentType], EnvironmentType] = None,
     ):
-        self._post_reset = post_reset
-        self._pre_step = pre_step
-        self._pre_step = pre_step
-        self._post_step = post_step
+        self._on_episode_start = on_episode_start
+        self._on_episode_step_start = on_episode_step_start
+        self._on_episode_step_start = on_episode_step_start
+        self._on_episode_step_end = on_episode_step_end
 
     def on_episode_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
         """
@@ -41,9 +41,9 @@ class EffectsGenerator(Generic[EnvironmentType]):
         -------
 
         """
-        if self._post_reset is None:
+        if self._on_episode_start is None:
             return env
-        return self._post_reset(*args, **kwargs)
+        return self._on_episode_start(*args, **kwargs)
 
     def on_episode_step_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
         """
@@ -63,9 +63,9 @@ class EffectsGenerator(Generic[EnvironmentType]):
         -------
 
         """
-        if self._pre_step is None:
+        if self._on_episode_step_start is None:
             return env
-        return self._pre_step(*args, **kwargs)
+        return self._on_episode_step_start(*args, **kwargs)
 
     def on_episode_step_end(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
         """
@@ -85,9 +85,9 @@ class EffectsGenerator(Generic[EnvironmentType]):
         -------
 
         """
-        if self._post_step is None:
+        if self._on_episode_step_end is None:
             return env
-        return self._post_step(*args, **kwargs)
+        return self._on_episode_step_end(*args, **kwargs)
 
 
 def effects_generator_wrapper(*effects_generators: EffectsGenerator[EnvironmentType]) -> EffectsGenerator[EnvironmentType]:
