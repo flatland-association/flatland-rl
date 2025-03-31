@@ -20,7 +20,6 @@ class EffectsGenerator(Generic[EnvironmentType]):
     ):
         self._on_episode_start = on_episode_start
         self._on_episode_step_start = on_episode_step_start
-        self._on_episode_step_start = on_episode_step_start
         self._on_episode_step_end = on_episode_step_end
 
     def on_episode_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
