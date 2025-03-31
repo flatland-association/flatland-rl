@@ -54,17 +54,6 @@ def ray_env_generator(render_mode: Optional[str] = None, **kwargs) -> MultiAgent
 
 
 def ray_policy_wrapper(rl_module: RLModule) -> Policy:
-    class _RayPolicy(Policy):
-
-        def act_many(self, handles: List[int], observations: List[Any], **kwargs):
-            action_dict = rl_module.forward_inference({"obs": np.expand_dims(observations, 0)})
-            action_dict = {h: a[0] for h, a in action_dict['actions'].items()}
-            return action_dict
-
-    return _RayPolicy()
-
-
-def ray_checkpoint_policy_wrapper(rl_module: RLModule) -> Policy:
     class _RayCheckpointPolicy(Policy):
 
         def act_many(self, handles: List[int], observations: List[Any], **kwargs):
@@ -72,7 +61,10 @@ def ray_checkpoint_policy_wrapper(rl_module: RLModule) -> Policy:
 
             actions = rl_module.forward_inference({"obs": torch.from_numpy(obss).unsqueeze(0).float()})
             if Columns.ACTIONS in actions:
-                action_dict = dict(zip(handles, convert_to_numpy(actions[Columns.ACTIONS][0])))
+                if isinstance(actions[Columns.ACTIONS], dict):
+                    action_dict = {h: a[0] for h, a in actions[Columns.ACTIONS].items()}
+                else:
+                    action_dict = dict(zip(handles, convert_to_numpy(actions[Columns.ACTIONS][0])))
             else:
                 logits = convert_to_numpy(actions[Columns.ACTION_DIST_INPUTS])
                 action_dict = {str(h): np.random.choice(len(RailEnvActions), p=softmax(l)) for h, l in enumerate(logits[0])}

@@ -17,7 +17,7 @@ from ray.rllib.examples.rl_modules.classes.random_rlm import RandomRLModule
 from ray.tune.registry import registry_get_input
 
 from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
-from flatland.ml.ray.wrappers import ray_env_generator, ray_policy_wrapper, ray_checkpoint_policy_wrapper
+from flatland.ml.ray.wrappers import ray_env_generator, ray_policy_wrapper
 
 
 def add_flatland_inference_with_random_policy_args():
@@ -69,7 +69,7 @@ def rollout(args: Namespace):
             args.policy_id,
         )
         rl_module = RLModule.from_checkpoint(cp)
-        policy = ray_checkpoint_policy_wrapper(rl_module)
+        policy = ray_policy_wrapper(rl_module)
     else:
         rl_module = RandomRLModule(action_space=env.action_space)
         policy = ray_policy_wrapper(rl_module)
