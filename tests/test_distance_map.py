@@ -22,21 +22,21 @@ def test_walker():
 
     rail_map = np.array(
         [[dead_end_from_east] + [horizontal_straight] + [dead_end_from_west]], dtype=np.uint16)
-    rail = RailGridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+    rail = RailGridTransitionMap(width=rail_map.shape[1], height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
 
-    city_positions = [(0,2), (0, 1)]
+    city_positions = [(0, 2), (0, 1)]
     train_stations = [
         [((0, 1), 0)],
-                      [( (0, 2), 0 ) ],
-                     ]
+        [((0, 2), 0)],
+    ]
     city_orientations = [1, 0]
-    agents_hints = {'num_agents': 1,
-                   'city_positions': city_positions,
-                   'train_stations': train_stations,
-                   'city_orientations': city_orientations
-                  }
+    agents_hints = {
+        'num_agents': 1,
+        'city_positions': city_positions,
+        'train_stations': train_stations,
+        'city_orientations': city_orientations
+    }
     optionals = {'agents_hints': agents_hints}
 
     env = RailEnv(width=rail_map.shape[1],
