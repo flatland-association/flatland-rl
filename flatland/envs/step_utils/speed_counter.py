@@ -99,7 +99,7 @@ class SpeedCounter:
         else:
             self._distance = load_dict['distance']
         if "is_cell_entry" in load_dict:
-            self._is_cell_entry = load_dict['distance']
+            self._is_cell_entry = load_dict['is_cell_entry']
         if "max_speed" in load_dict:
             self._max_speed = load_dict["max_speed"]
         else:
