@@ -11,38 +11,30 @@ class Rewards:
     Reward Function:
 
     It costs each agent a step_penalty for every time-step taken in the environment. Independent of the movement
-    of the agent. Currently all other penalties such as penalty for stopping, starting and invalid actions are set to 0.
+    of the agent.
 
-    alpha = 0
-    beta = 0
-    Reward function parameters:
-
-    - invalid_action_penalty = 0
-    - step_penalty = -alpha
-    - global_reward = beta
-    - epsilon = avoid rounding errors
-    - stop_penalty = 0  # penalty for stopping a moving agent
-    - start_penalty = 0  # penalty for starting a stopped agent
-    - intermediate_not_served_penalty = -1
-    - intermediate_late_arrival_penalty_factor = 0.2
-    - intermediate_early_departure_penalty_factor = 0.5
+    Parameters
+    ----------
+    epsilon : float
+        avoid rounding errors, defaults to 0.01
+    cancellation_factor : float
+        $\phi$. defaults to  1
+    cancellation_time_buffer : float
+        $\pi$. Defaults to 0
+    intermediate_not_served_penalty : float
+       $?$. Defaults to -1
+    intermediate_late_arrival_penalty_factor : float
+        $?$. Defaults to 0.2.
+    intermediate_early_departure_penalty_factor : float
+        $?$. Defaults to 0.5
     """
-    # Epsilon to avoid rounding errors
     epsilon = 0.01
-    # NEW : REW: Sparse Reward
-    alpha = 0
-    beta = 0
-    step_penalty = -1 * alpha
-    global_reward = 1 * beta
-    invalid_action_penalty = 0  # previously -2; GIACOMO: we decided that invalid actions will carry no penalty
-    stop_penalty = 0  # penalty for stopping a moving agent
-    start_penalty = 0  # penalty for starting a stopped agent
     cancellation_factor = 1
     cancellation_time_buffer = 0
     intermediate_not_served_penalty = -1
     intermediate_late_arrival_penalty_factor = 0.2
     intermediate_early_departure_penalty_factor = 0.5
-    crash_penalty_factor = 0.0  # penalty for stopping train in conflict
+    crash_penalty_factor = 0.0  # \alpha penalty for stopping train in conflict
 
     def __init__(self):
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
@@ -83,12 +75,14 @@ class Rewards:
         if agent.state == TrainState.DONE:
             # if agent arrived earlier or on time = 0
             # if agent arrived later = -ve reward based on how late
+            # $p_j$?
             reward = min(agent.latest_arrival - agent.arrival_time, 0)
 
         # Agents not done (arrival_time is None)
         else:
             # CANCELLED check (never departed)
             if (agent.state.is_off_map_state()):
+                # $?$
                 reward = -1 * self.cancellation_factor * \
                          (agent.get_travel_time_on_shortest_path(distance_map) + self.cancellation_time_buffer)
 
@@ -98,8 +92,10 @@ class Rewards:
 
         for et, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
             if et not in self.arrivals[agent.handle]:
+                # $?$
                 reward += self.intermediate_not_served_penalty
             else:
+                # $?$
                 reward += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][et], 0)
                 # if arrival but not departure, handled by above by departed but never reached.
                 if et in self.departures[agent.handle]:
