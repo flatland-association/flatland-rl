@@ -399,24 +399,18 @@ class RailEnv(Environment):
 
         return reward
 
-    def preprocess_action(self, action, agent):
+    @lru_cache(100000)
+    def preprocess_action(self, action, current_position, current_direction):
         """
         Preprocess the provided action
             * Change to DO_NOTHING if illegal action (not one of the defined action)
             * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
             * Change to STOP_MOVING if the movement is not possible in the grid (e.g. if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element or leads outside of bounds).
         """
-        action = RailEnvActions(action)
         action = RailEnv._process_illegal_action(action)
-
-        # Try moving actions on current position
-        current_position, current_direction = agent.position, agent.direction
-        if current_position is None:  # Agent not added on map yet
-            current_position, current_direction = agent.initial_position, agent.initial_direction
 
         # TODO revise design: should we stop the agent instead and penalize it?
         action = self.rail.preprocess_left_right_action(action, current_position, current_direction)
-
         # TODO https://github.com/flatland-association/flatland-rl/issues/185 Streamline flatland.envs.step_utils.transition_utils and flatland.envs.step_utils.action_preprocessing
         if ((action.is_moving_action() or action == RailEnvActions.DO_NOTHING)
             and
@@ -502,7 +496,11 @@ class RailEnv(Environment):
 
             # Get action for the agent
             raw_action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
-            preprocessed_action = self.preprocess_action(raw_action, agent)
+            # Try moving actions on current position
+            current_position, current_direction = agent.position, agent.direction
+            if current_position is None:  # Agent not added on map yet
+                current_position, current_direction = agent.initial_position, agent.initial_direction
+            preprocessed_action = self.preprocess_action(raw_action, current_position, current_direction)
 
             # get desired new_position and new_direction
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
