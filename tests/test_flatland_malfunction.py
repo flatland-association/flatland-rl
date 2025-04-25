@@ -159,7 +159,7 @@ def test_malfunction_process_statistically():
         action_dict: Dict[int, RailEnvActions] = {}
         for agent_idx in range(env.get_num_agents()):
             # We randomly select an action
-            action_dict[agent_idx] = RailEnvActions(np.random.randint(4))
+            action_dict[agent_idx] = RailEnvActions.from_value(np.random.randint(4))
             # For generating tests only:
             # agent_malfunction_list[agent_idx].append(
             # env.agents[agent_idx].malfunction_handler.malfunction_down_counter)
@@ -560,7 +560,7 @@ def tests_random_interference_from_outside():
         action_dict: Dict[int, RailEnvActions] = {}
         for agent in env.agents:
             # We randomly select an action
-            action_dict[agent.handle] = RailEnvActions(2)
+            action_dict[agent.handle] = RailEnvActions.MOVE_FORWARD
 
         _, reward, dones, _ = env.step(action_dict)
         # Append the rewards of the first trial
@@ -586,7 +586,7 @@ def tests_random_interference_from_outside():
         action_dict: Dict[int, RailEnvActions] = {}
         for agent in env.agents:
             # We randomly select an action
-            action_dict[agent.handle] = RailEnvActions(2)
+            action_dict[agent.handle] = RailEnvActions.MOVE_FORWARD
 
             # Do dummy random number generations
             random.shuffle(dummy_list)

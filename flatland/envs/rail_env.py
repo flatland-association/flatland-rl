@@ -412,7 +412,7 @@ class RailEnv(Environment):
         # TODO revise design: should we stop the agent instead and penalize it?
         action = self.rail.preprocess_left_right_action(action, current_position, current_direction)
         # TODO https://github.com/flatland-association/flatland-rl/issues/185 Streamline flatland.envs.step_utils.transition_utils and flatland.envs.step_utils.action_preprocessing
-        if ((action.is_moving_action() or action == RailEnvActions.DO_NOTHING)
+        if ((RailEnvActions.is_moving_action(action) or action == RailEnvActions.DO_NOTHING)
             and
             not self.rail.check_valid_action(action, current_position, current_direction)):
             # TODO revise design: should we add penalty if the action cannot be executed?
@@ -505,24 +505,23 @@ class RailEnv(Environment):
             # get desired new_position and new_direction
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
-            movement_action_given = preprocessed_action.is_moving_action()
+            movement_action_given = RailEnvActions.is_moving_action(preprocessed_action)
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
-
             new_speed = agent.speed_counter.speed
             state = agent.state
+            agent_max_speed = agent.speed_counter.max_speed
             # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING?
             if (preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD) or (
-                (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and preprocessed_action.is_moving_action()):
+                (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and RailEnvActions.is_moving_action(preprocessed_action)):
                 new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
                 new_speed += self.braking_delta
-            new_speed = max(0.0, min(agent.speed_counter.max_speed, new_speed))
-
+            new_speed = max(0.0, min(agent_max_speed, new_speed))
             if state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
-                preprocessed_action.is_moving_action() or preprocessed_action == RailEnvActions.STOP_MOVING):
+                RailEnvActions.is_moving_action(preprocessed_action) or preprocessed_action == RailEnvActions.STOP_MOVING):
                 # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
@@ -567,7 +566,7 @@ class RailEnv(Environment):
                 # Stop action given
                 stop_action_given=(preprocessed_action == RailEnvActions.STOP_MOVING),
                 # Movement action given
-                movement_action_given=preprocessed_action.is_moving_action(),
+                movement_action_given=RailEnvActions.is_moving_action(preprocessed_action),
                 # Target reached - we only know after state and positions update - see handle_done_state below
                 target_reached=None,  # we only know after motion check
                 # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
@@ -851,4 +850,4 @@ class RailEnv(Environment):
         if not RailEnvActions.is_action_valid(action):
             return RailEnvActions.DO_NOTHING
         else:
-            return RailEnvActions(action)
+            return RailEnvActions.from_value(action)
