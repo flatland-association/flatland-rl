@@ -1,12 +1,12 @@
 import numpy as np
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
-from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
 
 def test_walker():
@@ -22,21 +22,21 @@ def test_walker():
 
     rail_map = np.array(
         [[dead_end_from_east] + [horizontal_straight] + [dead_end_from_west]], dtype=np.uint16)
-    rail = GridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+    rail = RailGridTransitionMap(width=rail_map.shape[1], height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
 
-    city_positions = [(0,2), (0, 1)]
+    city_positions = [(0, 2), (0, 1)]
     train_stations = [
-                      [( (0, 1), 0 ) ], 
-                      [( (0, 2), 0 ) ],
-                     ]
+        [((0, 1), 0)],
+        [((0, 2), 0)],
+    ]
     city_orientations = [1, 0]
-    agents_hints = {'num_agents': 1,
-                   'city_positions': city_positions,
-                   'train_stations': train_stations,
-                   'city_orientations': city_orientations
-                  }
+    agents_hints = {
+        'num_agents': 1,
+        'city_positions': city_positions,
+        'train_stations': train_stations,
+        'city_orientations': city_orientations
+    }
     optionals = {'agents_hints': agents_hints}
 
     env = RailEnv(width=rail_map.shape[1],

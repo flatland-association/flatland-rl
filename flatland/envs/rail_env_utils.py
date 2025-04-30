@@ -1,15 +1,15 @@
 from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.envs.line_generators import line_from_file
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_file
-from flatland.envs.line_generators import line_from_file
 
 
 def load_flatland_environment_from_file(file_name: str,
                                         load_from_package: str = None,
                                         obs_builder_object: ObservationBuilder = None,
-                                        record_steps = False,
+                                        record_steps=False,
                                         ) -> RailEnv:
     """
     Parameters

@@ -14,10 +14,12 @@ classifiers = [
     'Development Status :: 4 - Beta',
     'Intended Audience :: Developers',
     'Natural Language :: English',
-    'Programming Language :: Python :: 3.10 - 3.12',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
 ]
 dependencies = [
-    "attr",
+    "attrs",
     "boto3",
     "click",
     "crowdai_api",
@@ -36,19 +38,21 @@ dependencies = [
     "pandas",
     "Pillow",
     "pyglet",
+    "pydantic",
     "PyYAML",
     "recordtype",
     "redis",
     "seaborn",
+    # https://docs.python.org/3/whatsnew/3.12.html: Python 3.12 has removed pkg_resources from the standard library (moved to setuptools):
+    "setuptools",
+    "tqdm",
     "svgutils",
     "timeout_decorator",
-
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-    "benchmarker",
     "coverage",
     "flake8",
     "flake8-eradicate",
@@ -62,19 +66,21 @@ dev = [
     "numpydoc",
     "pip-tools",
     "pytest",
-    "sphinx",
-    "sphinx-rtd-theme",
+    "pytest-retry",
+    "snakeviz",
     "tox",
     "twine",
     "twine",
 ]
-# TODO https://github.com/flatland-association/flatland-rl/issues/73 merge whole of flatland/contrib into flatland/ml and add all dependencies from flatland/contrib/requirements_training.txt here
 ml = [
-    "ray[default]",
+    "ray[default,rllib]",
     "wandb",
-    #    "supersuit",
-    #    "pettingzoo",
-    #    "stable_baselines3",
+    "torch",
+    # pin dm-tree, 0.1.9 has import errors under MacOS M1 at least.
+    "dm-tree<0.1.9",
+    "supersuit",
+    "pettingzoo",
+    "stable_baselines3",
 ]
 
 [project.urls]
@@ -84,9 +90,18 @@ ml = [
 
 [project.scripts]
 flatland-demo = "flatland.cli:demo"
+# deprecated, use flatland- prefix for all scripts
 evaluator = "flatland.cli:evaluator"
+flatland-evaluator = "flatland.cli:evaluator"
+flatland-trajectory-generate-from-policy = "flatland.trajectories.trajectories:generate_trajectory_from_policy"
+flatland-trajectory-evaluate = "flatland.evaluators.trajectory_evaluator:evaluate_trajectory"
 
 [tool.setuptools.packages]
 find = { }
 
 [tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
