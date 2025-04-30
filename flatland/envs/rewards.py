@@ -8,35 +8,50 @@ from flatland.envs.step_utils.states import TrainState
 
 class Rewards:
     """
-    Reward Function:
+    Reward Function.
 
-    It costs each agent a step_penalty for every time-step taken in the environment. Independent of the movement
-    of the agent.
+    This scoring function is designed to capture key operational metrics such as punctuality, efficiency in responding to disruptions, and safety.
 
-    Parameters
-    ----------
-    epsilon : float
-        avoid rounding errors, defaults to 0.01
-    cancellation_factor : float
-        Cancellation factor $\phi$. defaults to  1.
-    cancellation_time_buffer : float
-        Cancellation time buffer $\pi$. Defaults to 0.
-    intermediate_not_served_penalty : float
-       Intermediate stop not served penalty $\mu$. Defaults to -1.
-    intermediate_late_arrival_penalty_factor : float
-        Intermediate late arrival penalty factor $\alpha$. Defaults to 0.2.
-    intermediate_early_departure_penalty_factor : float
-        Intermeidate early departure penalty factor $\delta$. Defaults to 0.5.
+    Punctuality and schedule adherence are rewarded based on the difference between actual and target arrival and departure times at each stop respectively,
+    as well as penalties for intermediate stops not served or even journeys not started.
+
+    Safety measures are implemented as penalties for collisions which are directly proportional to the train’s speed at impact, ensuring that high-speed operations are managed with extra caution.
     """
-    epsilon = 0.01
-    cancellation_factor = 1
-    cancellation_time_buffer = 0
-    intermediate_not_served_penalty = -1
-    intermediate_late_arrival_penalty_factor = 0.2
-    intermediate_early_departure_penalty_factor = 0.5
-    crash_penalty_factor = 0.0  # \alpha penalty for stopping train in conflict
 
-    def __init__(self):
+    def __init__(self,
+                 epsilon: float = 0.01,
+                 cancellation_factor: float = 1,
+                 cancellation_time_buffer: float = 0,
+                 intermediate_not_served_penalty: float = -1,
+                 intermediate_late_arrival_penalty_factor: float = 0.2,
+                 intermediate_early_departure_penalty_factor: float = 0.5,
+                 crash_penalty_factor: float = 0.0
+                 ):
+        """
+        Parameters
+        ----------
+        epsilon : float
+            avoid rounding errors, defaults to 0.01.
+        cancellation_factor : float
+            Cancellation factor $\phi$. defaults to  1.
+        cancellation_time_buffer : float
+            Cancellation time buffer $\pi$. Defaults to 0.
+        intermediate_not_served_penalty : float
+           Intermediate stop not served penalty $\mu$. Defaults to -1.
+        intermediate_late_arrival_penalty_factor : float
+            Intermediate late arrival penalty factor $\alpha$. Defaults to 0.2.
+        intermediate_early_departure_penalty_factor : float
+            Intermediate early departure penalty factor $\delta$. Defaults to 0.5.
+        crash_penalty_factor : float
+            Crash penalty factor $\kappa$. Defaults to 0.0.
+        """
+        self.crash_penalty_factor = crash_penalty_factor
+        self.intermediate_early_departure_penalty_factor = intermediate_early_departure_penalty_factor
+        self.intermediate_late_arrival_penalty_factor = intermediate_late_arrival_penalty_factor
+        self.intermediate_not_served_penalty = intermediate_not_served_penalty
+        self.cancellation_time_buffer = cancellation_time_buffer
+        self.cancellation_factor = cancellation_factor
+        self.epsilon = epsilon
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals = defaultdict(defaultdict)
         self.departures = defaultdict(defaultdict)
