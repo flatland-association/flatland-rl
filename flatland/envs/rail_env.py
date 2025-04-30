@@ -209,6 +209,8 @@ class RailEnv(Environment):
 
         self.effects_generator = effects_generator
 
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
+
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
         random.seed(seed)
@@ -355,6 +357,8 @@ class RailEnv(Environment):
         # Empty the episode store of agent positions
         self.cur_episode = []
 
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
+
         info_dict = self.get_info_dict()
         # Return the new observation vectors for each agent
         observation_dict: Dict = self._get_observations()
@@ -484,7 +488,6 @@ class RailEnv(Environment):
         if self.effects_generator is not None:
             self.effects_generator.on_episode_step_start(self)
 
-        temp_transition_data = {}
         for agent in self.agents:
             i_agent = agent.handle
 
@@ -575,19 +578,14 @@ class RailEnv(Environment):
                 new_speed=new_speed
             )
 
-            agent_transition_data = env_utils.AgentTransitionData(
-                speed=agent.speed_counter.speed,
-                agent_position_level_free=agent_position_level_free,
-
-                new_position=new_position,
-                new_direction=new_direction,
-                new_speed=new_speed,
-                new_position_level_free=new_position_level_free,
-
-                preprocessed_action=preprocessed_action,
-                state_transition_signal=state_transition_signals
-            )
-            temp_transition_data[i_agent] = agent_transition_data
+            self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
+            self.temp_transition_data[i_agent].agent_position_level_free = agent_position_level_free
+            self.temp_transition_data[i_agent].new_position = new_position
+            self.temp_transition_data[i_agent].new_direction = new_direction
+            self.temp_transition_data[i_agent].new_speed = new_speed
+            self.temp_transition_data[i_agent].new_position_level_free = new_position_level_free
+            self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
+            self.temp_transition_data[i_agent].state_transition_signal = state_transition_signals
 
             self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
 
@@ -599,7 +597,7 @@ class RailEnv(Environment):
             i_agent = agent.handle
 
             # Fetch the saved transition data
-            agent_transition_data = temp_transition_data[i_agent]
+            agent_transition_data = self.temp_transition_data[i_agent]
 
             # motion_check is False if agent wants to stay in the cell
             motion_check = self.motionCheck.check_motion(i_agent, agent_transition_data.agent_position_level_free)
