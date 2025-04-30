@@ -3,7 +3,6 @@ Definition of the RailEnv environment.
 """
 import random
 import warnings
-from collections import defaultdict
 from functools import lru_cache
 from typing import List, Optional, Dict, Tuple, Set, Any
 
@@ -646,7 +645,7 @@ class RailEnv(Environment):
 
         self._update_agent_positions_map()
 
-        self._verify_mutually_exclusive_cell_occupation()
+        self._verify_mutually_exclusive_resource_allocation()
 
         if self.record_steps:
             self.record_timestep(action_dict)
@@ -656,21 +655,16 @@ class RailEnv(Environment):
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
-    def _verify_mutually_exclusive_cell_occupation(self):
-        agent_positions_same_level = []
-        agent_positions_level_free = defaultdict(lambda: [])
-        for agent in self.agents:
-            if agent.position is not None:
-                if agent.position in self.level_free_positions:
-                    agent_positions_level_free[agent.position].append(agent.direction)
-                else:
-                    agent_positions_same_level.append(agent.position)
-        msgs = f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}\n"
-        msgs += f"- motion check: {list(self.motionCheck.G.edges)}"
-        if len(agent_positions_same_level) != len(set(agent_positions_same_level)):
+    def _verify_mutually_exclusive_resource_allocation(self):
+        resources = [agent.position if agent.position not in self.level_free_positions else (*agent.position, agent.direction % 2) for agent in self.agents if
+                     agent.position is not None]
+        if len(resources) != len(set(resources)):
+            msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
+            msgs += f"- motion check: {list(self.motionCheck.G.edges)}"
             warnings.warn(msgs)
-            counts = {pos: agent_positions_same_level.count(pos) for pos in set(agent_positions_same_level)}
+            counts = {resource: resources.count(resource) for resource in set(resources)}
             dup_positions = [pos for pos, count in counts.items() if count > 1]
+            print(dup_positions)
             for dup in dup_positions:
                 for agent in self.agents:
                     if agent.position == dup:
@@ -683,18 +677,7 @@ class RailEnv(Environment):
                                f"- agents:\t{self.agents}")
                         warnings.warn(msg)
                         msgs += msg
-        assert len(agent_positions_same_level) == len(set(agent_positions_same_level)), msgs
-
-        for position, directions in agent_positions_level_free.items():
-            if len(directions) >= 2:
-                warnings.warn(f"Found more than two agents occupying same level-free cell in step {self._elapsed_steps}: {agent_positions_level_free}")
-            assert len(directions) <= 2
-            if len(directions) == 2:
-                conflict = directions[0] % 2 == directions[1] % 2
-                if conflict:
-                    warnings.warn(
-                        f"Found two agents occupying same level-free cell along the same axis in step {self._elapsed_steps}: {agent_positions_level_free}")
-                assert not conflict
+            assert len(resources) == len(set(resources)), msgs
 
     # TODO extract to callbacks instead!
     def record_timestep(self, dActions):
