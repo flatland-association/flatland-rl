@@ -3,10 +3,11 @@ from typing import Tuple, List
 import networkx as nx
 from matplotlib import pyplot as plt
 
-from flatland.envs.agent_chains import MotionCheck, MotionCheck2
+from flatland.envs.agent_chains import MotionCheckLegacy, MotionCheck
+
 
 def test_add_agent_waiting():
-    mc = MotionCheck()
+    mc = MotionCheckLegacy()
 
     # two agents desiring to enter the same cell from off the map at the same time step
     mc.addAgent(0, None, (0, 0))
@@ -19,7 +20,7 @@ def test_add_agent_waiting():
 
 
 def test_add_agent_waiting_blocked():
-    mc = MotionCheck()
+    mc = MotionCheckLegacy()
 
     # first agent already on the cell
     mc.addAgent(0, (0, 0), (0, 0))
@@ -32,8 +33,9 @@ def test_add_agent_waiting_blocked():
     assert not mc.check_motion(0, (0, 0))  # current behaviour is motion check false if staying
     assert not mc.check_motion(1, None)
 
+
 # TODO unused - dump?
-def create_test_agents(omc: MotionCheck):
+def create_test_agents(omc: MotionCheckLegacy):
     # blocked chain
     omc.addAgent(1, (1, 2), (1, 3))
     omc.addAgent(2, (1, 3), (1, 4))
@@ -67,7 +69,7 @@ class ChainTestEnv(object):
     """ Just for testing agent chains
     """
 
-    def __init__(self, omc: MotionCheck):
+    def __init__(self, omc: MotionCheckLegacy):
         self.iAgNext = 0
         self.iRowNext = 1
         self.omc = omc
@@ -105,7 +107,7 @@ class ChainTestEnv(object):
         self.iRowNext += 1
 
 
-def create_test_agents2(omc: MotionCheck):
+def create_test_agents2(omc: MotionCheckLegacy):
     # blocked chain
     cte = ChainTestEnv(omc)
     cte.create_test_chain(4, liStopped=[3], xlabel="stopped\nchain")
@@ -242,7 +244,7 @@ def test_agent_unordered_close_following(show=False):
         (19, 2): "red"
     }
 
-    omc = MotionCheck()
+    omc = MotionCheckLegacy()
     create_test_agents2(omc)
     omc.find_conflicts()
     actual = {i: n['color'] for i, n in omc.G.nodes.data() if 'color' in n}
@@ -405,7 +407,7 @@ def test_agent_chains_new():
                 40: True, 41: False, 42: True, 43: True, 44: True, 45: False, 46: False, 47: False, 48: True, 49: True, 50: False, 51: False, 52: False,
                 53: True}
 
-    mc = MotionCheck2()
+    mc = MotionCheck()
     for i, (a, b) in agents.items():
         mc.addAgent(i, a, b)
     mc.find_conflicts()
@@ -414,3 +416,14 @@ def test_agent_chains_new():
         if i not in agents:
             continue
         assert mc.check_motion(i, None) == b, i
+
+
+def test_edge_case():
+    agents = {0: ((10, 20), (11, 20)), 1: ((24, 22), (25, 22)), 2: ((17, 17), (17, 16)), 3: ((17, 16), (16, 16)), 4: ((25, 12), (24, 12)),
+              5: ((16, 16), (17, 16)), 6: ((17, 15), (17, 16))}
+    mc = MotionCheck()
+    for i, (r1, r2) in agents.items():
+        mc.addAgent(i, r1, r2)
+    mc.find_conflicts()
+    assert mc.stopped == {2, 3, 5, 6}
+    assert mc.deadlocked == {3, 5}

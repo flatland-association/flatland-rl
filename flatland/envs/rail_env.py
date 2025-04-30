@@ -674,7 +674,7 @@ class RailEnv(Environment):
                 else:
                     agent_positions_same_level.append(agent.position)
         msgs = f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}\n"
-        msgs += f"- motion check: {list(self.motionCheck.G.edges)}"
+        # msgs += f"- motion check: {list(self.motionCheck.G.edges)}"
         if len(agent_positions_same_level) != len(set(agent_positions_same_level)):
             warnings.warn(msgs)
             counts = {pos: agent_positions_same_level.count(pos) for pos in set(agent_positions_same_level)}
@@ -687,7 +687,7 @@ class RailEnv(Environment):
                                f"- state_machine:\t{agent.state_machine}\n"
                                f"- speed_counter:\t{agent.speed_counter}\n"
                                f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n"
-                               f"- motion check:\t{list(self.motionCheck.G.edges)}\n\n\n"
+                               f"- motion check:\t{list(self.motionCheck.stopped)}\n\n\n"
                                f"- agents:\t{self.agents}")
                         warnings.warn(msg)
                         msgs += msg
@@ -723,7 +723,7 @@ class RailEnv(Environment):
                 *pos, int(agent.direction),
                 agent.malfunction_handler.malfunction_down_counter,
                 agent.state.value,
-                int(agent.position in self.motionCheck.svDeadlocked),
+                int(agent.position in self.motionCheck.deadlocked),
             ])
 
         self.cur_episode.append(list_agents_state)
