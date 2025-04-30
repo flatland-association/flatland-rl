@@ -674,7 +674,7 @@ class RailEnv(Environment):
                 else:
                     agent_positions_same_level.append(agent.position)
         msgs = f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}\n"
-        # msgs += f"- motion check: {list(self.motionCheck.G.edges)}"
+        msgs += f"- motion check: {list(self.motionCheck.stopped)}"
         if len(agent_positions_same_level) != len(set(agent_positions_same_level)):
             warnings.warn(msgs)
             counts = {pos: agent_positions_same_level.count(pos) for pos in set(agent_positions_same_level)}
