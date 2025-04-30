@@ -18,15 +18,15 @@ class Rewards:
     epsilon : float
         avoid rounding errors, defaults to 0.01
     cancellation_factor : float
-        $\phi$. defaults to  1
+        Cancellation factor $\phi$. defaults to  1.
     cancellation_time_buffer : float
-        $\pi$. Defaults to 0
+        Cancellation time buffer $\pi$. Defaults to 0.
     intermediate_not_served_penalty : float
-       $?$. Defaults to -1
+       Intermediate stop not served penalty $\mu$. Defaults to -1.
     intermediate_late_arrival_penalty_factor : float
-        $?$. Defaults to 0.2.
+        Intermediate late arrival penalty factor $\alpha$. Defaults to 0.2.
     intermediate_early_departure_penalty_factor : float
-        $?$. Defaults to 0.5
+        Intermeidate early departure penalty factor $\delta$. Defaults to 0.5.
     """
     epsilon = 0.01
     cancellation_factor = 1
@@ -71,33 +71,31 @@ class Rewards:
         elapsed_steps: int
         """
         reward = None
-        # agent done? (arrival_time is not None)
+
         if agent.state == TrainState.DONE:
+            # delay at target
             # if agent arrived earlier or on time = 0
             # if agent arrived later = -ve reward based on how late
-            # $p_j$?
             reward = min(agent.latest_arrival - agent.arrival_time, 0)
-
-        # Agents not done (arrival_time is None)
         else:
-            # CANCELLED check (never departed)
-            if (agent.state.is_off_map_state()):
-                # $?$
+            if agent.state.is_off_map_state():
+                # journey not started
                 reward = -1 * self.cancellation_factor * \
                          (agent.get_travel_time_on_shortest_path(distance_map) + self.cancellation_time_buffer)
 
-            # Departed but never reached
-            if (agent.state.is_on_map_state()):
+            # target not reached
+            if agent.state.is_on_map_state():
                 reward = agent.get_current_delay(elapsed_steps, distance_map)
 
         for et, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
             if et not in self.arrivals[agent.handle]:
-                # $?$
+                # stop not served
                 reward += self.intermediate_not_served_penalty
             else:
-                # $?$
+                # late arrival
                 reward += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][et], 0)
-                # if arrival but not departure, handled by above by departed but never reached.
+                # early departure
+                # N.B. if arrival but not departure, handled by above by departed but never reached.
                 if et in self.departures[agent.handle]:
                     reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][et] - ed, 0)
         return reward
