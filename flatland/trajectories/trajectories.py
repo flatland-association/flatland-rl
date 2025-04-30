@@ -168,8 +168,8 @@ class Trajectory:
             (actions_df['episode_id'] == self.ep_id)
             ]['action'].to_numpy()
         if len(action) == 0:
-            return RailEnvActions(2)
-        return RailEnvActions(action[0])
+            return RailEnvActions.MOVE_FORWARD
+        return RailEnvActions.from_value(action[0])
 
     def trains_arrived_lookup(self, movements_df: pd.DataFrame) -> pd.Series:
         """Method used to retrieve the trains arrived for the episode.

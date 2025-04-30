@@ -24,6 +24,7 @@ dependencies = [
     "click",
     "crowdai_api",
     "dataclasses",
+    "fastenum",
     "graphviz",
     "importlib_resources<2.0.0",
     "ipycanvas",

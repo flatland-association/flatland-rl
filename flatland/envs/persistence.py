@@ -8,6 +8,7 @@ import numpy as np
 msgpack_numpy.patch()
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs import rail_env
+from flatland.envs.step_utils import env_utils
 from flatland.utils.seeding import random_state_to_hashablestate
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.agent_utils import EnvAgent, load_env_agent
@@ -241,6 +242,8 @@ class RailEnvPersister(object):
             env.malfunction_generator._cached_rand = malfunction_cached_rand
         if malfunction_rand_idx is not None:
             env.malfunction_generator._rand_idx = malfunction_rand_idx
+
+        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(env.get_num_agents())}
 
     @classmethod
     def get_full_state(cls, env):

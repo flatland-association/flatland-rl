@@ -105,6 +105,8 @@ exceptiongroup==1.2.2
     #   pytest
 executing==2.2.0
     # via stack-data
+fastenum==1.1.2
+    # via flatland-rl (pyproject.toml)
 fastjsonschema==2.21.1
     # via nbformat
 filelock==3.17.0

@@ -59,8 +59,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
                 action_done = False
                 # if we're at the target, stop moving...
                 if agent.position == agent.target:
-                    prediction[index] = [index, *agent.target, agent.direction, RailEnvActions.STOP_MOVING]
-
+                    prediction[index] = [index, *agent.target, agent.direction, RailEnvActions.STOP_MOVING.value]
                     continue
                 for action in action_priorities:
                     new_cell_isValid, new_direction, new_position, transition_isValid = \
@@ -70,7 +69,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
                         # performed
                         agent.position = new_position
                         agent.direction = new_direction
-                        prediction[index] = [index, *new_position, new_direction, action]
+                        prediction[index] = [index, *new_position, new_direction, action.value]
                         action_done = True
                         break
                 if not action_done:
@@ -158,7 +157,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
             for index in range(1, self.max_depth + 1):
                 # if we're at the target, stop moving until max_depth is reached
                 if new_position == agent.target or not shortest_path:
-                    prediction[index] = [index, *new_position, new_direction, RailEnvActions.STOP_MOVING]
+                    prediction[index] = [index, *new_position, new_direction, RailEnvActions.STOP_MOVING.value]
                     visited.add((*new_position, agent.direction))
                     continue
 

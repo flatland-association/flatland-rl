@@ -79,6 +79,8 @@ exceptiongroup==1.2.2
     # via ipython
 executing==2.2.0
     # via stack-data
+fastenum==1.1.2
+    # via flatland-rl (pyproject.toml)
 farama-notifications==0.0.4
     # via gymnasium
 filelock==3.17.0

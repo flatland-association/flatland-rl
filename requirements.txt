@@ -38,6 +38,8 @@ exceptiongroup==1.2.2
     # via ipython
 executing==2.2.0
     # via stack-data
+fastenum==1.1.2
+    # via flatland-rl (pyproject.toml)
 fonttools==4.56.0
     # via matplotlib
 graphviz==0.20.3

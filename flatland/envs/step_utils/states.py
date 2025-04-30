@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
+from functools import lru_cache
 
 
 class TrainState(IntEnum):
@@ -15,12 +16,15 @@ class TrainState(IntEnum):
     def check_valid_state(cls, state):
         return state in cls._value2member_map_
 
+    @lru_cache
     def is_malfunction_state(self):
         return self.value in [self.MALFUNCTION, self.MALFUNCTION_OFF_MAP]
 
+    @lru_cache
     def is_off_map_state(self):
         return self.value in [self.WAITING, self.READY_TO_DEPART, self.MALFUNCTION_OFF_MAP]
 
+    @lru_cache
     def is_on_map_state(self):
         return self.value in [self.MOVING, self.STOPPED, self.MALFUNCTION]
 
