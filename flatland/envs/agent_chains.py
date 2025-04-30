@@ -26,17 +26,13 @@ We then use some NetworkX algorithms (https://github.com/networkx/networkx):
     * `selfloop_edges` to find the stopped agents
     * `dfs_postorder_nodes` to traverse a chain
 """
-from typing import Tuple, Set, Dict, Any
-
-import networkx as nx
+from typing import Tuple, Dict, Any
 
 AgentHandle = int
 Cell = Tuple[int, int]
-from typing import List, Tuple, Set, Union
+from typing import Set
 
-import graphviz as gv
 import networkx as nx
-import numpy as np
 
 
 class MotionCheck(object):
