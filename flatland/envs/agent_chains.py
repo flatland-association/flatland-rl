@@ -26,7 +26,7 @@ We then use some NetworkX algorithms (https://github.com/networkx/networkx):
     * `selfloop_edges` to find the stopped agents
     * `dfs_postorder_nodes` to traverse a chain
 """
-from typing import Tuple, Set, Dict
+from typing import Tuple, Set, Dict, Any
 
 import networkx as nx
 
@@ -245,3 +245,130 @@ class MotionCheck(object):
             return False
         # The agent wanted to move, and it can
         return True
+
+
+class MotionCheck2(object):
+    """
+    Agent-Close Following is an edge cose in mutual exclusive resource allocation, i.e. the same resource can be hold by at most one agent at the same time.
+    In Flatland, grid cell is a resource, and only one agent can be in a grid cell.
+    The only exception are level-free crossings, where there is horizontal and a vertical resource at the same grid cell.
+
+    The naive solution to this problem is to iterate among all agents, verify that their targeted resource is not occupied, if so allow the movement, else stop the agent.
+    However, when agents follow each other in chain of cells, different agent orderings lead to different decisions under this algorithm.
+
+    MotionCheck ensures
+    - no swaps (i.e. collisions)
+    - no two agents must be allowed to move to the same target cell
+    - if all agents in the chain run at the same speeed, all can run (behaviour not depending on agent indices)
+
+    Implementation based on Bochatay (2024), Speeding up Railway Generation and Train Simulation for the Flatland Challenge.
+
+    An alternative would be to introduce > 0 release times and then reject
+
+    Release times reflect physical or IT constraints for the system to be ready again, or buffer times ensuring safety constraints.
+
+    Release times known also in Job Shop Scheduling Problems in the Operations Research literature, see e.g. Bürgy (2014), Complex Job Shop Scheduling: A General Model and Method (https://reinhardbuergy.ch/research/pdf/buergy14_phd-Thesis.pdf)
+    """
+
+    def __init__(self):
+        # TODO init with size to avoid
+        # Agent -> (Resource,Resource)
+        self.agents = {}
+        # Resource -> List[Agent]
+        self.reverse_target = {}
+        # List[Tuple[Agent,Agent]] # a1 < a2
+        self.conflicts = []
+        # Set[Agent]
+        self.stopped = set()
+
+        # TODO we do not need to process deadlocked any more!
+        self.deadlocked = set()
+
+    def addAgent(self, iAg: int, rc1: Any, rc2: Any):
+        """ add an agent and its motion as row,col tuples of current and next position.
+            The agent's current position is given an "agent" attribute recording the agent index.
+            If an agent does not want to move this round (rc1 == rc2) then a self-loop edge is created.
+            xlabel is used for test cases to give a label (see graphviz)
+        """
+        if rc1 is None:
+            rc1 = (None, iAg)
+        if rc2 is None:
+            rc2 = (None, iAg)
+        self.agents[iAg] = (rc1, rc2)
+        if rc2 not in self.reverse_target:
+            self.reverse_target[rc2] = [iAg]
+        else:
+            self.reverse_target[rc2].append(iAg)
+
+    # TODO refactor
+    def find_conflicts(self):
+        # TODO can we prune more? are edges sets or tuples?
+
+        # construct_graph
+        for iAg, (pos, target) in self.agents.items():
+            conflict_list = []
+            # TODO simplify, do not add swaps
+            if pos in self.reverse_target:
+                conflict_list += self.reverse_target[pos]
+            if target in self.reverse_target:
+                conflict_list += self.reverse_target[target]
+            for a2 in conflict_list:
+                if iAg >= a2:
+                    continue
+                a2pos, a2_target = self.agents[a2]
+                # same target
+                if a2_target == target:
+                    self.conflicts.append((iAg, a2))
+                # swap/collision
+                elif pos == a2_target and target == a2pos:
+                    self.stopped.add(iAg)
+                    self.stopped.add(a2)
+                    self.deadlocked.add(iAg)
+                    self.deadlocked.add(a2)
+                    # TODO these should be marked deadlocked
+
+            if pos == target:
+                self.stopped.add(iAg)
+        for a in self.deadlocked:
+            self.agents[a] = (self.agents[a][0], self.agents[a][0])
+
+        # fix_conflicts:
+        while len(self.conflicts) > 0:
+            u, v = self.conflicts[0]
+            u_pos, u_target = self.agents[u]
+            v_pos, v_target = self.agents[v]
+
+            if v_pos == v_target:
+                # if v is stopped or does not want to move, stop u
+                self.agents[u] = (u_pos, u_pos)
+                self.stopped.add(u)
+
+                # update_graph and reverse_target
+                if u_pos in self.reverse_target:
+                    self.conflicts += [(u, other) if u < other else (other, u) for other in self.reverse_target[u_pos] if other != u]
+                    self.reverse_target[u_pos].append(u)
+                else:
+                    self.reverse_target[u_pos] = [u]
+                self.reverse_target[u_target].remove(u)
+            else:
+                # stop v, which has larger index
+                self.agents[v] = (v_pos, v_pos)
+                self.stopped.add(v)
+
+                # update_graph and reverse_target
+                if v_pos in self.reverse_target:
+                    self.conflicts += [(v, other) if v < other else (other, v) for other in self.reverse_target[v_pos] if other != v]
+                    self.reverse_target[v_pos].append(v)
+                else:
+                    self.reverse_target[v_pos] = [v]
+                self.reverse_target[v_target].remove(v)
+            self.conflicts = self.conflicts[1:]
+
+    def check_motion(self, iAgent: int, rcPos: Any) -> bool:
+        """ Returns tuple of boolean can the agent move, and the cell it will move into.
+            If agent position is None, we use a dummy position of (-1, iAgent)
+        """
+        return iAgent not in self.stopped
+
+# Moving in a chain would be non-intelligible to ML agents as depending on the order of processing. Reject would not help!
+# Remaining only conflict is now if two agents into same cell, here choose by agent index (we could also reject).
