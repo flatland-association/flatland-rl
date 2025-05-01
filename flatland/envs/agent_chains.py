@@ -308,72 +308,63 @@ class MotionCheck(object):
 
         """
         target_conflicts = self._construct_graph()
-
+        # no need to process deadlocked agents further (avoid ConcurrentModificationException)
+        for a in self.deadlocked:
+            a_pos, a_target = self.agents[a]
+            self.agents[a] = (a_pos, a_pos)
+            target_conflicts = self._stop_and_update_target_conflicts(target_conflicts, a, a_pos, a_target)
         self._fix_conflicts(target_conflicts)
 
     def _construct_graph(self):
         target_conflicts: List[Tuple[AgentHandle, AgentHandle]] = []  # a1 < a2
         for iAg, (pos, target) in self.agents.items():
-            conflict_list = []
+            # find deadlocks aka. swaps aka. head-on collisions
             if pos in self.reverse_target:
-                conflict_list += self.reverse_target[pos]
-            if target in self.reverse_target:
-                conflict_list += self.reverse_target[target]
+                conflict_list = self.reverse_target[pos]
+                for a2 in conflict_list:
+                    if iAg >= a2:
+                        continue
+                    a2pos, a2_target = self.agents[a2]
+                    if pos == a2_target and target == a2pos:
+                        self.stopped.add(iAg)
+                        self.stopped.add(a2)
+                        self.deadlocked.add(iAg)
+                        self.deadlocked.add(a2)
+            # find target conflicts
+            conflict_list = self.reverse_target[target]
             for a2 in conflict_list:
                 if iAg >= a2:
                     continue
-                a2pos, a2_target = self.agents[a2]
-                # same target
-                if a2_target == target:
-                    target_conflicts.append((iAg, a2))
-                # swap/collision
-                elif pos == a2_target and target == a2pos:
-                    self.stopped.add(iAg)
-                    self.stopped.add(a2)
-                    self.deadlocked.add(iAg)
-                    self.deadlocked.add(a2)
+                target_conflicts.append((iAg, a2))
             if pos == target:
                 self.stopped.add(iAg)
-        # no need to process deadlocked agents further (avoid ConcurrentModificationException)
-        for a in self.deadlocked:
-            self.agents[a] = (self.agents[a][0], self.agents[a][0])
         return target_conflicts
 
     def _fix_conflicts(self, target_conflicts):
         while len(target_conflicts) > 0:
             u, v = target_conflicts[0]
-
             u_pos, u_target = self.agents[u]
             v_pos, v_target = self.agents[v]
-            if u in self.stopped and v in self.stopped:
-                target_conflicts = target_conflicts[1:]
-                continue
-
             if v_pos == v_target:
-                # if v is stopped or does not want to move, stop u
-                self.agents[u] = (u_pos, u_pos)
-                self.stopped.add(u)
-
-                # update_graph and update reverse_target
-                if u_pos in self.reverse_target:
-                    target_conflicts += [(u, other) if u < other else (other, u) for other in self.reverse_target[u_pos] if other != u]
-                    self.reverse_target[u_pos].append(u)
-                else:
-                    self.reverse_target[u_pos] = [u]
-                self.reverse_target[u_target].remove(u)
-            else:
-                # stop v, which has larger index
-                self.agents[v] = (v_pos, v_pos)
-                self.stopped.add(v)
-
-                # update_graph and update reverse_target
-                if v_pos in self.reverse_target:
-                    target_conflicts += [(v, other) if v < other else (other, v) for other in self.reverse_target[v_pos] if other != v]
-                    self.reverse_target[v_pos].append(v)
-                else:
-                    self.reverse_target[v_pos] = [v]
-                self.reverse_target[v_target].remove(v)
+                # if v is already stopped/does not want to move, also stop u as it is blocked
+                target_conflicts = self._stop_and_update_target_conflicts(target_conflicts, u, u_pos, u_target)
+            elif u_target == v_target:
+                # v wants to move and they have same target, then stop v, which has larger index (lower index wins)
+                target_conflicts = self._stop_and_update_target_conflicts(target_conflicts, v, v_pos, v_target)
+            # else: no conflict any more, forget
             target_conflicts = target_conflicts[1:]
+
+    def _stop_and_update_target_conflicts(self, target_conflicts, v, v_pos, v_target):
+        self.agents[v] = (v_pos, v_pos)
+        self.stopped.add(v)
+        # update target_conflicts and reverse_target
+        if v_pos in self.reverse_target:
+            target_conflicts += [(v, other) if v < other else (other, v) for other in self.reverse_target[v_pos] if other != v]
+            self.reverse_target[v_pos].append(v)
+        else:
+            self.reverse_target[v_pos] = [v]
+        self.reverse_target[v_target].remove(v)
+        return target_conflicts
 
     def check_motion(self, i: int, r: Resource) -> bool:
         """
