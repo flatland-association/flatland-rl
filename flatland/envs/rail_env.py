@@ -198,7 +198,7 @@ class RailEnv(Environment):
         self.cur_episode = []
         self.list_actions = []  # save actions in here
 
-        self.motionCheck = ac.MotionCheck()
+        self.motion_check = ac.MotionCheck()
 
         self.level_free_positions: Set[Vector2D] = set()
 
@@ -488,7 +488,7 @@ class RailEnv(Environment):
 
         self.clear_rewards_dict()
 
-        self.motionCheck = ac.MotionCheck()  # reset the motion check
+        self.motion_check = ac.MotionCheck()  # reset the motion check
 
         if self.effects_generator is not None:
             self.effects_generator.on_episode_step_start(self)
@@ -595,10 +595,10 @@ class RailEnv(Environment):
             )
             temp_transition_data[i_agent] = agent_transition_data
 
-            self.motionCheck.add_agent(i_agent, agent_position_level_free, new_position_level_free)
+            self.motion_check.add_agent(i_agent, agent_position_level_free, new_position_level_free)
 
         # Find conflicts between trains trying to occupy same cell
-        self.motionCheck.find_conflicts()
+        self.motion_check.find_conflicts()
 
         have_all_agents_ended = True
         for agent in self.agents:
@@ -608,7 +608,7 @@ class RailEnv(Environment):
             agent_transition_data = temp_transition_data[i_agent]
 
             # motion_check is False if agent wants to stay in the cell
-            motion_check = self.motionCheck.check_motion(i_agent, agent_transition_data.agent_position_level_free)
+            motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.agent_position_level_free)
             # Movement allowed if inside cell or at end of cell and no conflict with other trains
             movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or motion_check
 
@@ -674,7 +674,7 @@ class RailEnv(Environment):
                 else:
                     agent_positions_same_level.append(agent.position)
         msgs = f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}\n"
-        msgs += f"- motion check: {list(self.motionCheck.stopped)}"
+        msgs += f"- motion check: {list(self.motion_check.stopped)}"
         if len(agent_positions_same_level) != len(set(agent_positions_same_level)):
             warnings.warn(msgs)
             counts = {pos: agent_positions_same_level.count(pos) for pos in set(agent_positions_same_level)}
@@ -687,7 +687,7 @@ class RailEnv(Environment):
                                f"- state_machine:\t{agent.state_machine}\n"
                                f"- speed_counter:\t{agent.speed_counter}\n"
                                f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n"
-                               f"- motion check:\t{list(self.motionCheck.stopped)}\n\n\n"
+                               f"- motion check:\t{list(self.motion_check.stopped)}\n\n\n"
                                f"- agents:\t{self.agents}")
                         warnings.warn(msg)
                         msgs += msg
@@ -723,7 +723,7 @@ class RailEnv(Environment):
                 *pos, int(agent.direction),
                 agent.malfunction_handler.malfunction_down_counter,
                 agent.state.value,
-                int(agent.position in self.motionCheck.deadlocked),
+                int(agent.position in self.motion_check.deadlocked),
             ])
 
         self.cur_episode.append(list_agents_state)
