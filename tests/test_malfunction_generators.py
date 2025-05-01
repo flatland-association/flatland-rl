@@ -1,11 +1,13 @@
+import pytest
+
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import malfunction_from_params, malfunction_from_file, \
     single_malfunction_generator, MalfunctionParameters
+from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
-from flatland.envs.line_generators import sparse_line_generator
 from flatland.utils.simple_rail import make_simple_rail2
-from flatland.envs.persistence import RailEnvPersister
-import pytest
+
 
 def test_malfanction_from_params():
     """
@@ -102,7 +104,7 @@ def test_single_malfunction_generator():
         for i in range(10):
             for agent in env.agents:
                 # Go forward all the time
-                action_dict[agent.handle] = RailEnvActions(2)
+                action_dict[agent.handle] = RailEnvActions.MOVE_FORWARD
 
             _, _, dones, _ = env.step(action_dict)
             if dones['__all__']:

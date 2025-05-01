@@ -3,7 +3,6 @@ Definition of the RailEnv environment.
 """
 import random
 import warnings
-from collections import defaultdict
 from functools import lru_cache
 from typing import List, Optional, Dict, Tuple, Set, Any
 
@@ -212,6 +211,8 @@ class RailEnv(Environment):
 
         self.effects_generator = effects_generator
 
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
+
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
         random.seed(seed)
@@ -358,6 +359,8 @@ class RailEnv(Environment):
         # Empty the episode store of agent positions
         self.cur_episode = []
 
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
+
         info_dict = self.get_info_dict()
         # Return the new observation vectors for each agent
         observation_dict: Dict = self._get_observations()
@@ -402,26 +405,20 @@ class RailEnv(Environment):
 
         return reward
 
-    def preprocess_action(self, action, agent):
+    @lru_cache(100000)
+    def preprocess_action(self, action, current_position, current_direction):
         """
         Preprocess the provided action
             * Change to DO_NOTHING if illegal action (not one of the defined action)
             * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
             * Change to STOP_MOVING if the movement is not possible in the grid (e.g. if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element or leads outside of bounds).
         """
-        action = RailEnvActions(action)
         action = RailEnv._process_illegal_action(action)
-
-        # Try moving actions on current position
-        current_position, current_direction = agent.position, agent.direction
-        if current_position is None:  # Agent not added on map yet
-            current_position, current_direction = agent.initial_position, agent.initial_direction
 
         # TODO revise design: should we stop the agent instead and penalize it?
         action = self.rail.preprocess_left_right_action(action, current_position, current_direction)
-
         # TODO https://github.com/flatland-association/flatland-rl/issues/185 Streamline flatland.envs.step_utils.transition_utils and flatland.envs.step_utils.action_preprocessing
-        if ((action.is_moving_action() or action == RailEnvActions.DO_NOTHING)
+        if ((RailEnvActions.is_moving_action(action) or action == RailEnvActions.DO_NOTHING)
             and
             not self.rail.check_valid_action(action, current_position, current_direction)):
             # TODO revise design: should we add penalty if the action cannot be executed?
@@ -493,7 +490,6 @@ class RailEnv(Environment):
         if self.effects_generator is not None:
             self.effects_generator.on_episode_step_start(self)
 
-        temp_transition_data = {}
         for agent in self.agents:
             i_agent = agent.handle
 
@@ -505,29 +501,32 @@ class RailEnv(Environment):
 
             # Get action for the agent
             raw_action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
-            preprocessed_action = self.preprocess_action(raw_action, agent)
+            # Try moving actions on current position
+            current_position, current_direction = agent.position, agent.direction
+            if current_position is None:  # Agent not added on map yet
+                current_position, current_direction = agent.initial_position, agent.initial_direction
+            preprocessed_action = self.preprocess_action(raw_action, current_position, current_direction)
 
             # get desired new_position and new_direction
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
-            movement_action_given = preprocessed_action.is_moving_action()
+            movement_action_given = RailEnvActions.is_moving_action(preprocessed_action)
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
-
             new_speed = agent.speed_counter.speed
             state = agent.state
+            agent_max_speed = agent.speed_counter.max_speed
             # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING?
             if (preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD) or (
-                (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and preprocessed_action.is_moving_action()):
+                (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and RailEnvActions.is_moving_action(preprocessed_action)):
                 new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.STOP_MOVING:
                 new_speed += self.braking_delta
-            new_speed = max(0.0, min(agent.speed_counter.max_speed, new_speed))
-
+            new_speed = max(0.0, min(agent_max_speed, new_speed))
             if state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
-                preprocessed_action.is_moving_action() or preprocessed_action == RailEnvActions.STOP_MOVING):
+                RailEnvActions.is_moving_action(preprocessed_action) or preprocessed_action == RailEnvActions.STOP_MOVING):
                 # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
@@ -572,7 +571,7 @@ class RailEnv(Environment):
                 # Stop action given
                 stop_action_given=(preprocessed_action == RailEnvActions.STOP_MOVING),
                 # Movement action given
-                movement_action_given=preprocessed_action.is_moving_action(),
+                movement_action_given=RailEnvActions.is_moving_action(preprocessed_action),
                 # Target reached - we only know after state and positions update - see handle_done_state below
                 target_reached=None,  # we only know after motion check
                 # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
@@ -581,19 +580,14 @@ class RailEnv(Environment):
                 new_speed=new_speed
             )
 
-            agent_transition_data = env_utils.AgentTransitionData(
-                speed=agent.speed_counter.speed,
-                agent_position_level_free=agent_position_level_free,
-
-                new_position=new_position,
-                new_direction=new_direction,
-                new_speed=new_speed,
-                new_position_level_free=new_position_level_free,
-
-                preprocessed_action=preprocessed_action,
-                state_transition_signal=state_transition_signals
-            )
-            temp_transition_data[i_agent] = agent_transition_data
+            self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
+            self.temp_transition_data[i_agent].agent_position_level_free = agent_position_level_free
+            self.temp_transition_data[i_agent].new_position = new_position
+            self.temp_transition_data[i_agent].new_direction = new_direction
+            self.temp_transition_data[i_agent].new_speed = new_speed
+            self.temp_transition_data[i_agent].new_position_level_free = new_position_level_free
+            self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
+            self.temp_transition_data[i_agent].state_transition_signal = state_transition_signals
 
             self.motion_check.add_agent(i_agent, agent_position_level_free, new_position_level_free)
 
@@ -605,7 +599,7 @@ class RailEnv(Environment):
             i_agent = agent.handle
 
             # Fetch the saved transition data
-            agent_transition_data = temp_transition_data[i_agent]
+            agent_transition_data = self.temp_transition_data[i_agent]
 
             # motion_check is False if agent wants to stay in the cell
             motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.agent_position_level_free)
@@ -654,7 +648,7 @@ class RailEnv(Environment):
 
         self._update_agent_positions_map()
 
-        self._verify_mutually_exclusive_cell_occupation()
+        self._verify_mutually_exclusive_resource_allocation()
 
         if self.record_steps:
             self.record_timestep(action_dict)
@@ -664,21 +658,16 @@ class RailEnv(Environment):
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
-    def _verify_mutually_exclusive_cell_occupation(self):
-        agent_positions_same_level = []
-        agent_positions_level_free = defaultdict(lambda: [])
-        for agent in self.agents:
-            if agent.position is not None:
-                if agent.position in self.level_free_positions:
-                    agent_positions_level_free[agent.position].append(agent.direction)
-                else:
-                    agent_positions_same_level.append(agent.position)
-        msgs = f"Found two agents occupying same cell in step {self._elapsed_steps}: {agent_positions_same_level}\n"
-        msgs += f"- motion check: {list(self.motion_check.stopped)}"
-        if len(agent_positions_same_level) != len(set(agent_positions_same_level)):
+    def _verify_mutually_exclusive_resource_allocation(self):
+        resources = [agent.position if agent.position not in self.level_free_positions else (*agent.position, agent.direction % 2) for agent in self.agents if
+                     agent.position is not None]
+        if len(resources) != len(set(resources)):
+            msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
+            msgs += f"- motion check: {list(self.motion_check.stopped)}"
             warnings.warn(msgs)
-            counts = {pos: agent_positions_same_level.count(pos) for pos in set(agent_positions_same_level)}
+            counts = {resource: resources.count(resource) for resource in set(resources)}
             dup_positions = [pos for pos, count in counts.items() if count > 1]
+            print(dup_positions)
             for dup in dup_positions:
                 for agent in self.agents:
                     if agent.position == dup:
@@ -691,18 +680,7 @@ class RailEnv(Environment):
                                f"- agents:\t{self.agents}")
                         warnings.warn(msg)
                         msgs += msg
-        assert len(agent_positions_same_level) == len(set(agent_positions_same_level)), msgs
-
-        for position, directions in agent_positions_level_free.items():
-            if len(directions) >= 2:
-                warnings.warn(f"Found more than two agents occupying same level-free cell in step {self._elapsed_steps}: {agent_positions_level_free}")
-            assert len(directions) <= 2
-            if len(directions) == 2:
-                conflict = directions[0] % 2 == directions[1] % 2
-                if conflict:
-                    warnings.warn(
-                        f"Found two agents occupying same level-free cell along the same axis in step {self._elapsed_steps}: {agent_positions_level_free}")
-                assert not conflict
+            assert len(resources) == len(set(resources)), msgs
 
     # TODO extract to callbacks instead!
     def record_timestep(self, dActions):
@@ -856,4 +834,4 @@ class RailEnv(Environment):
         if not RailEnvActions.is_action_valid(action):
             return RailEnvActions.DO_NOTHING
         else:
-            return RailEnvActions(action)
+            return RailEnvActions.from_value(action)

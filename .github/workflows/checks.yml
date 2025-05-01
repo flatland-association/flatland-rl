@@ -158,6 +158,25 @@ jobs:
                     name: upload-profiling-results
                     path: .tox/profiling/log
                     if-no-files-found: error
+            -   name: Install notebook
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install notebook snakeviz -r requirements.txt
+            -   name: Run performance notebook
+                run: NUM_RUNS=5 PYTHONPATH=$PWD python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --execute --to notebook --inplace benchmarks/flatland_performance_profiling.ipynb
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-performance-profiling-results
+                    path: |
+                        benchmarks/*.prof
+                        benchmarks/*.png
+                    if-no-files-found: error
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-performance_overall
+                    path: |
+                        benchmarks/performance_overall.png
+                    if-no-files-found: error
 
     benchmarks:
         if: ${{ github.event.inputs.run_benchmarks }}
@@ -180,3 +199,5 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e benchmarks
+
+

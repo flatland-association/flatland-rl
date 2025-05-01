@@ -1,20 +1,30 @@
-from enum import IntEnum
 from functools import lru_cache
 from typing import NamedTuple
+
+import fastenum
+
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 
 
-@lru_cache()
-def _is_moving_action(value):
-    return value in [RailEnvActions.MOVE_RIGHT, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD]
-
-
-class RailEnvActions(IntEnum):
+class RailEnvActions(fastenum.Enum):
     DO_NOTHING = 0  # implies change of direction in a dead-end!
     MOVE_LEFT = 1
     MOVE_FORWARD = 2
     MOVE_RIGHT = 3
     STOP_MOVING = 4
+
+    @staticmethod
+    @lru_cache
+    def from_value(value: int) -> "RailEnvActions":
+        if isinstance(value, RailEnvActions):
+            return value
+        return {
+            0: RailEnvActions.DO_NOTHING,
+            1: RailEnvActions.MOVE_LEFT,
+            2: RailEnvActions.MOVE_FORWARD,
+            3: RailEnvActions.MOVE_RIGHT,
+            4: RailEnvActions.STOP_MOVING,
+        }[value]
 
     @staticmethod
     def to_char(a: int):
@@ -26,12 +36,17 @@ class RailEnvActions(IntEnum):
             4: 'S',
         }[a]
 
-    @classmethod
-    def is_action_valid(cls, action):
-        return action in cls._value2member_map_
+    @staticmethod
+    @lru_cache()
+    def is_action_valid(action):
+        if isinstance(action, RailEnvActions):
+            return True
+        return isinstance(action, int) and 0 <= action <= 4
 
-    def is_moving_action(self):
-        return _is_moving_action(self.value)
+    @staticmethod
+    @lru_cache()
+    def is_moving_action(value: "RailEnvActions") -> bool:
+        return value in [RailEnvActions.MOVE_RIGHT, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD]
 
 
 RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])
