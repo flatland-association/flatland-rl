@@ -1,30 +1,15 @@
 """
-Agent Chains: Unordered Close Following Agents
+Agent-Close Following is an edge cose in mutual exclusive resource allocation, i.e. the same resource can be hold by at most one agent at the same time.
+In Flatland, grid cell is a resource, and only one agent can be in a grid cell.
+The only exception are level-free crossings, where there is horizontal and a vertical resource at the same grid cell.
 
-Think of a chain of agents, in random order, moving in the same direction.
-For any adjacent pair of agents, there's a 0.5 chance that it is in index order, ie index(A) < index(B) where A is in front of B.
-So roughly half the adjacent pairs will need to leave a gap and half won't, and the chain of agents will typically be one-third empty space.
-By removing the restriction, we can keep the agents close together and
-so move up to 50% more agents through a junction or segment of rail in the same number of steps.
+The naive solution to this problem is to iterate among all agents, verify that their targeted resource is not occupied, if so allow the movement, else stop the agent.
+However, when agents follow each other in chain of cells, different agent orderings lead to different decisions under this algorithm.
 
-We are still using index order to resolve conflicts between two agents trying to move into the same spot, for example, head-on collisions, or agents "merging" at junctions.
-
-Implementation: We did it by storing an agent's position as a graph node, and a movement as a directed edge, using the NetworkX graph library.
-We create an empty graph for each step, and add the agents into the graph in order,
-using their (row, column) location for the node. In this way, agents staying in the same cell (stop action or not at cell exit yet) get a self-loop.
-Agents in an adjacent chain naturally get "connected up".
-
-Pseudocode:
-* purple = deadlocked if in deadlock or predecessor of deadlocked (`mark_preds(find_swaps(), 'purple')`)
-* red = blocked, i.e. wanting to move, but blocked by an agent ahead not wanting to move or blocked itself (`mark_preds(find_stopped_agents(), 'red')`)
-* blue = no agent and >1 wanting to enter, blocking after conflict resolution (`mark_preds(losers, 'red')`)
-* magenta: agent (able to move) and >1 wanting to enter, blocking after conflict resolution (`mark_preds(losers, 'red')`)
-
-
-We then use some NetworkX algorithms (https://github.com/networkx/networkx):
-    * `weakly_connected_components` to find the chains.
-    * `selfloop_edges` to find the stopped agents
-    * `dfs_postorder_nodes` to traverse a chain
+MotionCheck ensures:
+- no swaps (i.e. collisions)
+- no two agents must be allowed to move to the same target cell (resource)
+- if all agents in the chain run at the same speeed, all can run (behaviour not depending on agent indices)
 """
 from typing import Tuple, Dict, Optional, List
 
@@ -36,9 +21,39 @@ import networkx as nx
 
 
 class MotionCheckLegacy(object):
-    """ Class to find chains of agents which are "colliding" with a stopped agent.
-        This is to allow close-packed chains of agents, ie a train of agents travelling
-        at the same speed with no gaps between them,
+    """
+    Class to find chains of agents which are "colliding" with a stopped agent.
+    This is to allow close-packed chains of agents, ie a train of agents travelling
+    at the same speed with no gaps between them,
+
+    Agent Chains: Unordered Close Following Agents
+
+    Think of a chain of agents, in random order, moving in the same direction.
+    For any adjacent pair of agents, there's a 0.5 chance that it is in index order, ie index(A) < index(B) where A is in front of B.
+    So roughly half the adjacent pairs will need to leave a gap and half won't, and the chain of agents will typically be one-third empty space.
+    By removing the restriction, we can keep the agents close together and
+    so move up to 50% more agents through a junction or segment of rail in the same number of steps.
+
+    We are still using index order to resolve conflicts between two agents trying to move into the same spot, for example, head-on collisions, or agents "merging" at junctions.
+
+    Implementation: We did it by storing an agent's position as a graph node, and a movement as a directed edge, using the NetworkX graph library.
+    We create an empty graph for each step, and add the agents into the graph in order,
+    using their (row, column) location for the node. In this way, agents staying in the same cell (stop action or not at cell exit yet) get a self-loop.
+    Agents in an adjacent chain naturally get "connected up".
+
+    Pseudocode:
+    * purple = deadlocked if in deadlock or predecessor of deadlocked (`mark_preds(find_swaps(), 'purple')`)
+    * red = blocked, i.e. wanting to move, but blocked by an agent ahead not wanting to move or blocked itself (`mark_preds(find_stopped_agents(), 'red')`)
+    * blue = no agent and >1 wanting to enter, blocking after conflict resolution (`mark_preds(losers, 'red')`)
+    * magenta: agent (able to move) and >1 wanting to enter, blocking after conflict resolution (`mark_preds(losers, 'red')`)
+
+
+    We then use some NetworkX algorithms (https://github.com/networkx/networkx):
+        * `weakly_connected_components` to find the chains.
+        * `selfloop_edges` to find the stopped agents
+        * `dfs_postorder_nodes` to traverse a chain
+
+
     """
 
     def __init__(self):
@@ -51,7 +66,7 @@ class MotionCheckLegacy(object):
     def get_G_reversed(self):
         return self.Grev
 
-    def addAgent(self, iAg: AgentHandle, rc1: Resource, rc2: Resource, xlabel=None):
+    def add_agent(self, iAg: AgentHandle, rc1: Resource, rc2: Resource, xlabel=None):
         """ add an agent and its motion as row,col tuples of current and next position.
             The agent's current position is given an "agent" attribute recording the agent index.
             If an agent does not want to move this round (rc1 == rc2) then a self-loop edge is created.
@@ -250,17 +265,7 @@ class MotionCheckLegacy(object):
 
 class MotionCheck(object):
     """
-    Agent-Close Following is an edge cose in mutual exclusive resource allocation, i.e. the same resource can be hold by at most one agent at the same time.
-    In Flatland, grid cell is a resource, and only one agent can be in a grid cell.
-    The only exception are level-free crossings, where there is horizontal and a vertical resource at the same grid cell.
 
-    The naive solution to this problem is to iterate among all agents, verify that their targeted resource is not occupied, if so allow the movement, else stop the agent.
-    However, when agents follow each other in chain of cells, different agent orderings lead to different decisions under this algorithm.
-
-    MotionCheck ensures
-    - no swaps (i.e. collisions)
-    - no two agents must be allowed to move to the same target cell
-    - if all agents in the chain run at the same speeed, all can run (behaviour not depending on agent indices)
 
     Implementation based on Bochatay (2024), Speeding up Railway Generation and Train Simulation for the Flatland Challenge.
 
@@ -280,7 +285,7 @@ class MotionCheck(object):
         self.stopped: Set[AgentHandle] = set()
         self.deadlocked: Set[AgentHandle] = set()
 
-    def addAgent(self, i: int, r1: Optional[Resource], r2: Optional[Resource]):
+    def add_agent(self, i: int, r1: Optional[Resource], r2: Optional[Resource]):
         """
         Add agent holding resource r1 and trying to acquire r2 (or not release r1 if r1==r2).
         """

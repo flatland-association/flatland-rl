@@ -595,7 +595,7 @@ class RailEnv(Environment):
             )
             temp_transition_data[i_agent] = agent_transition_data
 
-            self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
+            self.motionCheck.add_agent(i_agent, agent_position_level_free, new_position_level_free)
 
         # Find conflicts between trains trying to occupy same cell
         self.motionCheck.find_conflicts()

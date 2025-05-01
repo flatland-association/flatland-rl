@@ -10,8 +10,8 @@ def test_add_agent_waiting():
     mc = MotionCheckLegacy()
 
     # two agents desiring to enter the same cell from off the map at the same time step
-    mc.addAgent(0, None, (0, 0))
-    mc.addAgent(1, None, (0, 0))
+    mc.add_agent(0, None, (0, 0))
+    mc.add_agent(1, None, (0, 0))
 
     mc.find_conflicts()
 
@@ -23,10 +23,10 @@ def test_add_agent_waiting_blocked():
     mc = MotionCheckLegacy()
 
     # first agent already on the cell
-    mc.addAgent(0, (0, 0), (0, 0))
+    mc.add_agent(0, (0, 0), (0, 0))
 
     # second agent from off the map desiring to enter the same cell
-    mc.addAgent(1, None, (0, 0))
+    mc.add_agent(1, None, (0, 0))
 
     mc.find_conflicts()
 
@@ -37,32 +37,32 @@ def test_add_agent_waiting_blocked():
 # TODO unused - dump?
 def create_test_agents(omc: MotionCheckLegacy):
     # blocked chain
-    omc.addAgent(1, (1, 2), (1, 3))
-    omc.addAgent(2, (1, 3), (1, 4))
-    omc.addAgent(3, (1, 4), (1, 5))
-    omc.addAgent(31, (1, 5), (1, 5))
+    omc.add_agent(1, (1, 2), (1, 3))
+    omc.add_agent(2, (1, 3), (1, 4))
+    omc.add_agent(3, (1, 4), (1, 5))
+    omc.add_agent(31, (1, 5), (1, 5))
 
     # unblocked chain
-    omc.addAgent(4, (2, 1), (2, 2))
-    omc.addAgent(5, (2, 2), (2, 3))
+    omc.add_agent(4, (2, 1), (2, 2))
+    omc.add_agent(5, (2, 2), (2, 3))
 
     # blocked short chain
-    omc.addAgent(6, (3, 1), (3, 2))
-    omc.addAgent(7, (3, 2), (3, 2))
+    omc.add_agent(6, (3, 1), (3, 2))
+    omc.add_agent(7, (3, 2), (3, 2))
 
     # solitary agent
-    omc.addAgent(8, (4, 1), (4, 2))
+    omc.add_agent(8, (4, 1), (4, 2))
 
     # solitary stopped agent
-    omc.addAgent(9, (5, 1), (5, 1))
+    omc.add_agent(9, (5, 1), (5, 1))
 
     # blocked short chain (opposite direction)
-    omc.addAgent(10, (6, 4), (6, 3))
-    omc.addAgent(11, (6, 3), (6, 3))
+    omc.add_agent(10, (6, 4), (6, 3))
+    omc.add_agent(11, (6, 3), (6, 3))
 
     # swap conflict
-    omc.addAgent(12, (7, 1), (7, 2))
-    omc.addAgent(13, (7, 2), (7, 1))
+    omc.add_agent(12, (7, 1), (7, 2))
+    omc.add_agent(13, (7, 2), (7, 1))
 
 
 class ChainTestEnv(object):
@@ -75,7 +75,7 @@ class ChainTestEnv(object):
         self.omc = omc
 
     def addAgent(self, rc1, rc2, xlabel=None):
-        self.omc.addAgent(self.iAgNext, rc1, rc2, xlabel=xlabel)
+        self.omc.add_agent(self.iAgNext, rc1, rc2, xlabel=xlabel)
         self.iAgNext += 1
 
     def addAgentToRow(self, c1, c2, xlabel=None):
@@ -95,7 +95,7 @@ class ChainTestEnv(object):
                 rcVel1 = (0, 0)
             else:
                 rcVel1 = rcVel
-            self.omc.addAgent(iAg + self.iAgNext, rcPos, (rcPos[0] + rcVel1[0], rcPos[1] + rcVel1[1]))
+            self.omc.add_agent(iAg + self.iAgNext, rcPos, (rcPos[0] + rcVel1[0], rcPos[1] + rcVel1[1]))
 
         if xlabel:
             self.omc.G.nodes[lrcAgPos[0]]["xlabel"] = xlabel
@@ -409,7 +409,7 @@ def test_agent_chains_new():
 
     mc = MotionCheck()
     for i, (a, b) in agents.items():
-        mc.addAgent(i, a, b)
+        mc.add_agent(i, a, b)
     mc.find_conflicts()
 
     for i, b in expected.items():
@@ -423,7 +423,7 @@ def test_edge_case():
               5: ((16, 16), (17, 16)), 6: ((17, 15), (17, 16))}
     mc = MotionCheck()
     for i, (r1, r2) in agents.items():
-        mc.addAgent(i, r1, r2)
+        mc.add_agent(i, r1, r2)
     mc.find_conflicts()
     assert mc.stopped == {2, 3, 5, 6}
     assert mc.deadlocked == {3, 5}
