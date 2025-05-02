@@ -224,7 +224,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                   rewards=Rewards()
                   )
     env.reset()
-    CRASH_PENALTY = -5
+    CRASH_PENALTY = 5
     env.rewards.crash_penalty_factor = CRASH_PENALTY
 
     test_configs = [

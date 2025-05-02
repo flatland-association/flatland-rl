@@ -22,7 +22,7 @@ class Rewards:
                  epsilon: float = 0.01,
                  cancellation_factor: float = 1,
                  cancellation_time_buffer: float = 0,
-                 intermediate_not_served_penalty: float = -1,
+                 intermediate_not_served_penalty: float = 1,
                  intermediate_late_arrival_penalty_factor: float = 0.2,
                  intermediate_early_departure_penalty_factor: float = 0.5,
                  crash_penalty_factor: float = 0.0
