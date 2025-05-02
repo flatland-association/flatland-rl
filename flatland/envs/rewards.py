@@ -33,17 +33,17 @@ class Rewards:
         epsilon : float
             avoid rounding errors, defaults to 0.01.
         cancellation_factor : float
-            Cancellation factor $\phi$. defaults to  1.
+            Cancellation factor $\phi \geq 0$. defaults to  1.
         cancellation_time_buffer : float
-            Cancellation time buffer $\pi$. Defaults to 0.
+            Cancellation time buffer $\pi \geq 0$. Defaults to 0.
         intermediate_not_served_penalty : float
-           Intermediate stop not served penalty $\mu$. Defaults to -1.
+           Intermediate stop not served penalty $\mu \geq 0$. Defaults to 1.
         intermediate_late_arrival_penalty_factor : float
-            Intermediate late arrival penalty factor $\alpha$. Defaults to 0.2.
+            Intermediate late arrival penalty factor $\alpha \geq 0$. Defaults to 0.2.
         intermediate_early_departure_penalty_factor : float
-            Intermediate early departure penalty factor $\delta$. Defaults to 0.5.
+            Intermediate early departure penalty factor $\delta \geq 0$. Defaults to 0.5.
         crash_penalty_factor : float
-            Crash penalty factor $\kappa$. Defaults to 0.0.
+            Crash penalty factor $\kappa \geq 0$. Defaults to 0.0.
         """
         self.crash_penalty_factor = crash_penalty_factor
         self.intermediate_early_departure_penalty_factor = intermediate_early_departure_penalty_factor
@@ -51,7 +51,12 @@ class Rewards:
         self.intermediate_not_served_penalty = intermediate_not_served_penalty
         self.cancellation_time_buffer = cancellation_time_buffer
         self.cancellation_factor = cancellation_factor
-        self.epsilon = epsilon
+        assert self.crash_penalty_factor >= 0
+        assert self.intermediate_early_departure_penalty_factor >= 0
+        assert self.intermediate_late_arrival_penalty_factor >= 0
+        assert self.intermediate_not_served_penalty >= 0
+        assert self.cancellation_time_buffer >= 0
+        assert self.cancellation_factor >= 0
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals = defaultdict(defaultdict)
         self.departures = defaultdict(defaultdict)
@@ -72,7 +77,7 @@ class Rewards:
             self.arrivals[agent.handle][agent.position] = elapsed_steps
             self.departures[agent.handle][agent.old_position] = elapsed_steps
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED and not agent_transition_data.state_transition_signal.stop_action_given:
-            reward += agent_transition_data.speed * self.crash_penalty_factor
+            reward += -1 * agent_transition_data.speed * self.crash_penalty_factor
         return reward
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> int:
@@ -105,7 +110,7 @@ class Rewards:
         for et, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
             if et not in self.arrivals[agent.handle]:
                 # stop not served
-                reward += self.intermediate_not_served_penalty
+                reward += -1 * self.intermediate_not_served_penalty
             else:
                 # late arrival
                 reward += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][et], 0)
