@@ -178,6 +178,11 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e benchmarks
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-benchmarks-results
+                    path: benchmarks.hprof
+                    if-no-files-found: error
 
     regression:
         runs-on: ubuntu-22.04
