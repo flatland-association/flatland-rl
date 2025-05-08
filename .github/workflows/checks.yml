@@ -180,6 +180,11 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e benchmarks
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-profiling-results
+                    path: .tox/benchmarks/profile
+                    if-no-files-found: error
 
     regression:
         if: ${{ github.event.inputs.run_benchmarks }}
