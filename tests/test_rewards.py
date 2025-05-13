@@ -39,7 +39,7 @@ def test_rewards_early_arrival():
 
 def test_rewards_intermediate_not_served_penalty():
     rewards = Rewards()
-    rewards.intermediate_not_served_penalty = -33
+    rewards.intermediate_not_served_penalty = 33
     agent = EnvAgent(initial_position=(0, 0),
                      initial_direction=5,
                      target=(3, 3),
