@@ -667,7 +667,6 @@ class RailEnv(Environment):
             warnings.warn(msgs)
             counts = {resource: resources.count(resource) for resource in set(resources)}
             dup_positions = [pos for pos, count in counts.items() if count > 1]
-            print(dup_positions)
             for dup in dup_positions:
                 for agent in self.agents:
                     if agent.position == dup:

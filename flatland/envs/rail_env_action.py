@@ -2,6 +2,7 @@ from functools import lru_cache
 from typing import NamedTuple
 
 import fastenum
+import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 
@@ -41,7 +42,8 @@ class RailEnvActions(fastenum.Enum):
     def is_action_valid(action):
         if isinstance(action, RailEnvActions):
             return True
-        return isinstance(action, int) and 0 <= action <= 4
+        # https://stackoverflow.com/questions/40429917/in-python-how-would-you-check-if-a-number-is-one-of-the-integer-types
+        return isinstance(action, (int, np.integer)) and 0 <= action <= 4
 
     @staticmethod
     @lru_cache()
