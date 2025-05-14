@@ -597,7 +597,8 @@ class RailEnv(Environment):
             agent.malfunction_handler.update_counter()
 
             # Off map or on map state and position should match
-            agent.state_machine.state_position_sync_check(agent.position, agent.handle, self.remove_agents_at_target)
+            if not self._fast_state_position_sync_check(agent.state, agent.position, self.remove_agents_at_target):
+                agent.state_machine.state_position_sync_check(agent.position, agent.handle, self.remove_agents_at_target)
 
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
@@ -613,6 +614,17 @@ class RailEnv(Environment):
             self.effects_generator.on_episode_step_end(self)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
+
+    @lru_cache()
+    def _fast_state_position_sync_check(self, state, position, remove_agents_at_target):
+        """ Check for whether on map and off map states are matching with position being None """
+        if TrainState.is_on_map_state(state) and position is None:
+            return False
+        elif TrainState.is_off_map_state(state) and position is not None:
+            return False
+        elif state == TrainState.DONE and remove_agents_at_target and position is not None:
+            return False
+        return True
 
     def _verify_mutually_exclusive_resource_allocation(self):
         resources = [agent.position if agent.position not in self.level_free_positions else (*agent.position, agent.direction % 2) for agent in self.agents if
