@@ -173,12 +173,7 @@ jobs:
                         benchmarks/*.prof
                         benchmarks/*.png
                     if-no-files-found: error
-            -   uses: actions/upload-artifact@v4
-                with:
-                    name: upload-performance_overall
-                    path: |
-                        benchmarks/performance_overall.png
-                    if-no-files-found: error
+
     benchmarks:
         runs-on: ubuntu-22.04
         steps:
