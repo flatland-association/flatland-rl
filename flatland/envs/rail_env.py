@@ -532,8 +532,8 @@ class RailEnv(Environment):
                 target_reached=None,  # we only know after motion check
                 # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
                 movement_allowed=None,  # we only know after motion check
-                # New desired speed if movement allowed
-                new_speed=new_speed
+                # New desired speed zero?
+                new_speed_zero=new_speed == 0.0
             )
 
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
