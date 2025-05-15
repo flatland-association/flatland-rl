@@ -212,6 +212,8 @@ class RailEnv(Environment):
         self.effects_generator = effects_generator
 
         self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
+        for i_agent in range(self.get_num_agents()):
+            self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
@@ -360,6 +362,8 @@ class RailEnv(Environment):
         self.cur_episode = []
 
         self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
+        for i_agent in range(self.get_num_agents()):
+            self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
         info_dict = self.get_info_dict()
         # Return the new observation vectors for each agent
@@ -519,22 +523,20 @@ class RailEnv(Environment):
             if agent.position in self.level_free_positions:
                 agent_position_level_free = (agent.position, agent.direction % 2)
 
-            state_transition_signals = StateTransitionSignals(
-                # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
-                in_malfunction=agent.malfunction_handler.in_malfunction,
-                # Earliest departure reached - Train is allowed to move now
-                earliest_departure_reached=self._elapsed_steps >= agent.earliest_departure,
-                # Stop action given
-                stop_action_given=stop_action_given,
-                # Movement action given
-                movement_action_given=movement_action_given,
-                # Target reached - we only know after state and positions update - see handle_done_state below
-                target_reached=None,  # we only know after motion check
-                # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
-                movement_allowed=None,  # we only know after motion check
-                # New desired speed zero?
-                new_speed_zero=new_speed == 0.0
-            )
+            # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
+            self.temp_transition_data[i_agent].state_transition_signal.in_malfunction = agent.malfunction_handler.in_malfunction
+            # Earliest departure reached - Train is allowed to move now
+            self.temp_transition_data[i_agent].state_transition_signal.earliest_departure_reached = self._elapsed_steps >= agent.earliest_departure
+            # Stop action given
+            self.temp_transition_data[i_agent].state_transition_signal.stop_action_given = stop_action_given
+            # Movement action given
+            self.temp_transition_data[i_agent].state_transition_signal.movement_action_given = movement_action_given
+            # Target reached - we only know after state and positions update - see handle_done_state below
+            self.temp_transition_data[i_agent].state_transition_signal.target_reached = None  # we only know after motion check
+            # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
+            self.temp_transition_data[i_agent].state_transition_signal.movement_allowed = None  # we only know after motion check
+            # New desired speed zero?
+            self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = new_speed == 0.0
 
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
             self.temp_transition_data[i_agent].agent_position_level_free = agent_position_level_free
@@ -543,7 +545,7 @@ class RailEnv(Environment):
             self.temp_transition_data[i_agent].new_speed = new_speed
             self.temp_transition_data[i_agent].new_position_level_free = new_position_level_free
             self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
-            self.temp_transition_data[i_agent].state_transition_signal = state_transition_signals
+            # self.temp_transition_data[i_agent].state_transition_signal = state_transition_signals
 
             self.motion_check.add_agent(i_agent, agent_position_level_free, new_position_level_free)
 
