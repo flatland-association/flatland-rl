@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import NamedTuple
+from typing import NamedTuple, Union
 
 import fastenum
 import numpy as np
@@ -16,9 +16,11 @@ class RailEnvActions(fastenum.Enum):
 
     @staticmethod
     @lru_cache
-    def from_value(value: int) -> "RailEnvActions":
+    def from_value(value: Union["RailEnvActions", int, str]) -> "RailEnvActions":
         if isinstance(value, RailEnvActions):
             return value
+        if isinstance(value, str):
+            value = int(value)
         return {
             0: RailEnvActions.DO_NOTHING,
             1: RailEnvActions.MOVE_LEFT,

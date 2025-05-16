@@ -377,34 +377,6 @@ class RailEnv(Environment):
                 if agent.old_position is not None:
                     self.agent_positions[agent.old_position] = -1
 
-    def _handle_end_reward(self, agent: EnvAgent) -> int:
-        '''
-        Handles end-of-episode reward for a particular agent.
-
-        Parameters
-        ----------
-        agent : EnvAgent
-        '''
-        reward = None
-        # agent done? (arrival_time is not None)
-        if agent.state == TrainState.DONE:
-            # if agent arrived earlier or on time = 0
-            # if agent arrived later = -ve reward based on how late
-            reward = min(agent.latest_arrival - agent.arrival_time, 0)
-
-        # Agents not done (arrival_time is None)
-        else:
-            # CANCELLED check (never departed)
-            if (agent.state.is_off_map_state()):
-                reward = -1 * self.cancellation_factor * \
-                         (agent.get_travel_time_on_shortest_path(self.distance_map) + self.cancellation_time_buffer)
-
-            # Departed but never reached
-            if (agent.state.is_on_map_state()):
-                reward = agent.get_current_delay(self._elapsed_steps, self.distance_map)
-
-        return reward
-
     @lru_cache(100000)
     def preprocess_action(self, action, current_position, current_direction):
         """
