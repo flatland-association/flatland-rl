@@ -53,9 +53,12 @@ class RailEnv(Environment):
     Moving forward in a dead-end cell makes the agent turn 180 degrees and step
     to the cell it came from.
 
+    In order for agents to be able to "understand" the simulation behaviour from the observations,
+    the execution order of actions should not matter (i.e. not depend on the agent handle).
+    However, the agent ordering is still used to resolve conflicts between two agents trying to move into the same cell,
+    for example, head-on collisions, or agents "merging" at junctions.
+    See `MotionCheck` for more details.
 
-    The actions of the agents are executed in order of their handle to prevent
-    deadlocks and to allow them to learn relative priorities.
 
 
 
@@ -194,7 +197,7 @@ class RailEnv(Environment):
         self.cur_episode = []
         self.list_actions = []  # save actions in here
 
-        self.motionCheck = ac.MotionCheck()
+        self.motion_check = ac.MotionCheck()
 
         self.level_free_positions: Set[Vector2D] = set()
 
@@ -454,7 +457,7 @@ class RailEnv(Environment):
 
         self.clear_rewards_dict()
 
-        self.motionCheck = ac.MotionCheck()  # reset the motion check
+        self.motion_check = ac.MotionCheck()  # reset the motion check
 
         if self.effects_generator is not None:
             self.effects_generator.on_episode_step_start(self)
@@ -558,10 +561,10 @@ class RailEnv(Environment):
             self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
             self.temp_transition_data[i_agent].state_transition_signal = state_transition_signals
 
-            self.motionCheck.addAgent(i_agent, agent_position_level_free, new_position_level_free)
+            self.motion_check.add_agent(i_agent, agent_position_level_free, new_position_level_free)
 
         # Find conflicts between trains trying to occupy same cell
-        self.motionCheck.find_conflicts()
+        self.motion_check.find_conflicts()
 
         have_all_agents_ended = True
         for agent in self.agents:
@@ -571,7 +574,7 @@ class RailEnv(Environment):
             agent_transition_data = self.temp_transition_data[i_agent]
 
             # motion_check is False if agent wants to stay in the cell
-            motion_check = self.motionCheck.check_motion(i_agent, agent_transition_data.agent_position_level_free)
+            motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.agent_position_level_free)
             # Movement allowed if inside cell or at end of cell and no conflict with other trains
             movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or motion_check
 
@@ -632,7 +635,7 @@ class RailEnv(Environment):
                      agent.position is not None]
         if len(resources) != len(set(resources)):
             msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
-            msgs += f"- motion check: {list(self.motionCheck.G.edges)}"
+            msgs += f"- motion check: {list(self.motion_check.stopped)}"
             warnings.warn(msgs)
             counts = {resource: resources.count(resource) for resource in set(resources)}
             dup_positions = [pos for pos, count in counts.items() if count > 1]
@@ -644,7 +647,7 @@ class RailEnv(Environment):
                                f"- state_machine:\t{agent.state_machine}\n"
                                f"- speed_counter:\t{agent.speed_counter}\n"
                                f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n"
-                               f"- motion check:\t{list(self.motionCheck.G.edges)}\n\n\n"
+                               f"- motion check:\t{list(self.motion_check.stopped)}\n\n\n"
                                f"- agents:\t{self.agents}")
                         warnings.warn(msg)
                         msgs += msg
@@ -669,7 +672,7 @@ class RailEnv(Environment):
                 *pos, int(agent.direction),
                 agent.malfunction_handler.malfunction_down_counter,
                 agent.state.value,
-                int(agent.position in self.motionCheck.svDeadlocked),
+                int(agent.position in self.motion_check.deadlocked),
             ])
 
         self.cur_episode.append(list_agents_state)
