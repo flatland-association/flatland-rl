@@ -5,6 +5,24 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[4.1.1](https://github.com/flatland-association/flatland-rl/compare/v4.1.0...v4.1.1)] - 2025-05-16
+
+### Added
+
+* Add tqdm_kwargs to create_from_policy as well. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/198
+* Add regression DLA against saved trajectories. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/208
+
+### Fixed
+
+* Fix is_cell_entry of SpeedCounter.__setstate__ by @castagna-a in https://github.com/flatland-association/flatland-rl/pull/199
+
+### Changed
+
+* Remove obsolete parameters in rewards function. Add math references. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/201
+* Improved offset for agent debug. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/209
+* 196-performance-step-function by @chenkins in https://github.com/flatland-association/flatland-rl/pull/203
+* 86 Performance Speed-Up MotionCheck and Code/Documentation Cleanup. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/87
+
 ## [[4.1.0](https://github.com/flatland-association/flatland-rl/compare/v4.0.6...v4.1.0)] - 2025-03-31
 
 ### Added
