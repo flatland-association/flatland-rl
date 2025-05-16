@@ -33,7 +33,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   name: Check disk space
                 run: df . -h
@@ -210,7 +210,7 @@ jobs:
             -   name: Set up Python
                 uses: actions/setup-python@v5
                 with:
-                    python-version: "3.10"
+                    python-version: "3.13"
             -   name: Download episodes
                 run: |
                     wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
