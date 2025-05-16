@@ -1,9 +1,13 @@
-def get_number_of_steps_to_break(malfunction_generator, np_random):
+from numpy.random import RandomState
+
+
+def get_number_of_steps_to_break(malfunction_generator: "ParamMalfunctionGen", np_random: RandomState):
     if hasattr(malfunction_generator, "generate"):
         malfunction = malfunction_generator.generate(np_random)
     else:
         malfunction = malfunction_generator(np_random)
-
+    if malfunction is None:
+        return 0
     return malfunction.num_broken_steps
 
 
@@ -43,7 +47,8 @@ class MalfunctionHandler:
 
     def generate_malfunction(self, malfunction_generator, np_random):
         num_broken_steps = get_number_of_steps_to_break(malfunction_generator, np_random)
-        self._set_malfunction_down_counter(num_broken_steps)
+        if num_broken_steps > 0:
+            self._set_malfunction_down_counter(num_broken_steps)
 
     def update_counter(self):
         if self._malfunction_down_counter > 0:
