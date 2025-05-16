@@ -20,7 +20,7 @@ jobs:
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
                 with:
-                    python-version: "3.10"
+                    python-version: "3.13"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -33,7 +33,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   name: Check disk space
                 run: df . -h
@@ -61,7 +61,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   name: Check disk space
                 run: df . -h
@@ -89,7 +89,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   uses: actions/checkout@v4
             -   name: Install ffmpeg
@@ -115,7 +115,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   uses: actions/checkout@v4
             -   name: Set up Python ${{ matrix.python-version }}
@@ -141,7 +141,7 @@ jobs:
             -   name: Set up Python
                 uses: actions/setup-python@v5
                 with:
-                    python-version: "3.10"
+                    python-version: "3.13"
             -   name: Download Olten scenario
                 run: |
                     wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/scenario-olten-fix/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v1.zip" -O OLTEN_PARTIALLY_CLOSED_v1.zip
@@ -186,7 +186,7 @@ jobs:
             -   name: Set up Python
                 uses: actions/setup-python@v5
                 with:
-                    python-version: "3.10"
+                    python-version: "3.13"
             -   name: Download episodes
                 run: |
                     wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
@@ -213,7 +213,7 @@ jobs:
             -   name: Set up Python
                 uses: actions/setup-python@v5
                 with:
-                    python-version: "3.10"
+                    python-version: "3.13"
             -   name: Download episodes
                 run: |
                     wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
