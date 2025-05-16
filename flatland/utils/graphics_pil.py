@@ -648,7 +648,7 @@ class PILSVG(PILGL):
 
                 self.text_rowcol((row + dr, col + dc,), str(agent_idx), layer=PILGL.SELECTED_AGENT_LAYER)
             else:
-                self.text_rowcol((row + 0.2, col + 0.2,), str(agent_idx))
+                self.text_rowcol((row + 0.7, col + 0.2,), str(agent_idx))
         if malfunction:
             self.draw_malfunction(agent_idx, (row, col))
 
