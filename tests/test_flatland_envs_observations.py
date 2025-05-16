@@ -342,7 +342,7 @@ def test_reward_function_waiting(rendering=False):
 def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape: Callable):
     expected_agent_ids = [0, 1, 2, 3, 4, 5, 6]
 
-    env = env_generator(obs_builder_object=obs_builder)
+    env, _, _ = env_generator(obs_builder_object=obs_builder)
     obs, _ = env.reset()
     assert list(obs.keys()) == expected_agent_ids
     for i in range(7):

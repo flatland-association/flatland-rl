@@ -6,17 +6,18 @@ import msgpack_numpy
 import numpy as np
 
 msgpack_numpy.patch()
-
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs import rail_env
-
+from flatland.envs.step_utils import env_utils
+from flatland.utils.seeding import random_state_to_hashablestate
 from flatland.core.env_observation_builder import DummyObservationBuilder
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent, load_env_agent
 
 # cannot import objects / classes directly because of circular import
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
+from flatland.envs import timetable_generators as tt_gen
 
 
 class RailEnvPersister(object):
@@ -108,19 +109,20 @@ class RailEnvPersister(object):
         width = len(llGrid[0])
 
         # TODO: inefficient - each one of these generators loads the complete env file.
-        env = rail_env.RailEnv(  # width=1, height=1,
+        env = rail_env.RailEnv(
             width=width, height=height,
             rail_generator=rail_gen.rail_from_file(filename,
                                                    load_from_package=load_from_package),
             line_generator=line_gen.line_from_file(filename,
                                                    load_from_package=load_from_package),
+            timetable_generator=tt_gen.timetable_from_file(filename, load_from_package=load_from_package),
             # malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
             #    load_from_package=load_from_package),
             malfunction_generator=mal_gen.FileMalfunctionGen(env_dict),
             obs_builder_object=DummyObservationBuilder(),
             record_steps=True)
 
-        env.rail = GridTransitionMap(1, 1)  # dummy
+        env.rail = RailGridTransitionMap(1, 1)  # dummy
 
         # TODO bad code smell - agent_position initialized in reset() only.
         env.agent_positions = np.zeros((env.height, env.width), dtype=int) - 1
@@ -187,7 +189,7 @@ class RailEnvPersister(object):
         -------
         env_dict: dict
         """
-        env.rail.grid = np.array(env_dict["grid"])
+        grid = np.array(env_dict["grid"])
 
         # Initialise the env with the frozen agents in the file
         env.agents = env_dict.get("agents", [])
@@ -195,19 +197,53 @@ class RailEnvPersister(object):
         # For consistency, set number_of_agents, which is the number which will be generated on reset
         env.number_of_agents = env.get_num_agents()
 
-        env.height, env.width = env.rail.grid.shape
-        env.rail.height = env.height
-        env.rail.width = env.width
+        env.height, env.width = grid.shape
+
+        # use new rail object instance for lru cache scoping and garbage collection to work properly
+        env.rail = RailGridTransitionMap(height=env.height, width=env.width)
+        env.rail.grid = grid
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
 
-        # TODO merge with https://github.com/flatland-association/flatland-rl/pull/97/files
         max_episode_steps = env_dict.get('max_episode_steps', None)
         if max_episode_steps is not None:
             env._max_episode_steps = max_episode_steps
+        _elapsed_steps = env_dict.get("elapsed_steps", None)
+        if _elapsed_steps is not None:
+            env._elapsed_steps = _elapsed_steps
 
         env.distance_map.distance_map = env_dict.get('distance_map', None)
         env.distance_map.reset(env.agents, env.rail)
         env.distance_map._compute(env.agents, env.rail)
+
+        random_seed = env.random_seed = env_dict.get("random_seed", None)
+        if random_seed is not None:
+            env.random_seed = random_seed
+
+        seed_history = env_dict.get("seed_history", None)
+        if seed_history is not None:
+            env.seed_history = seed_history
+
+        # it's not sufficient to store random_seed, as seeding from random_seed is done
+        # at start of reset (before rail/line/timetable (re-)generation,
+        # hence np_random depends on rail/line/timetable generation
+        np_random_state = env_dict.get("np_random_state", None)
+        if np_random_state is not None:
+            env.np_random.set_state(np_random_state)
+        dev_pred_dict_ = env_dict.get("dev_pred_dict", None)
+        if dev_pred_dict_ is not None:
+            env.dev_pred_dict = dev_pred_dict_
+        dev_obs_dict_ = env_dict.get("dev_obs_dict", None)
+        if dev_pred_dict_ is not None:
+            env.dev_obs_dict = dev_obs_dict_
+
+        malfunction_cached_rand = env_dict.get("malfunction_cached_rand", None)
+        malfunction_rand_idx = env_dict.get("malfunction_rand_idx", None)
+        if malfunction_cached_rand is not None:
+            env.malfunction_generator._cached_rand = malfunction_cached_rand
+        if malfunction_rand_idx is not None:
+            env.malfunction_generator._rand_idx = malfunction_rand_idx
+
+        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(env.get_num_agents())}
 
     @classmethod
     def get_full_state(cls, env):
@@ -219,14 +255,21 @@ class RailEnvPersister(object):
 
         # msgpack cannot persist EnvAgent so use the Agent namedtuple.
         agent_data = [agent.to_agent() for agent in env.agents]
-        # print("get_full_state - agent_data:", agent_data)
         malfunction_data: mal_gen.MalfunctionProcessData = env.malfunction_process_data
 
         msg_data_dict = {
             "grid": grid_data,
             "agents": agent_data,
             "malfunction": malfunction_data,
+            "malfunction_cached_rand": env.malfunction_generator._cached_rand if hasattr(env.malfunction_generator, '_cached_rand') else None,
+            "malfunction_rand_idx": env.malfunction_generator._rand_idx if hasattr(env.malfunction_generator, '_rand_idx') else None,
             "max_episode_steps": env._max_episode_steps,
+            "elapsed_steps": env._elapsed_steps,
+            "random_seed": env.random_seed,
+            "seed_history": env.seed_history,
+            "np_random_state": random_state_to_hashablestate(env.np_random),
+            "dev_pred_dict": env.dev_pred_dict,
+            "dev_obs_dict": env.dev_obs_dict,
         }
         return msg_data_dict
 

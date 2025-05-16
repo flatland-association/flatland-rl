@@ -1,11 +1,14 @@
 name: Checks
 
 on:
+    workflow_dispatch:
+        inputs:
+            run_benchmarks:
+                type: boolean
     pull_request:
-        branches: [ "main" ]
 
 concurrency:
-    group: ${{ github.head_ref }}
+    group: ${{ github.head_ref || github.ref }}
     cancel-in-progress: true
 
 jobs:
@@ -25,7 +28,89 @@ jobs:
             -   name: Run lint checks
                 run: tox run -e flake8
 
+    testml:
+        runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        steps:
+            -   name: Check disk space
+                run: df . -h
+            -   uses: actions/checkout@v4
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v5
+                with:
+                    python-version: ${{ matrix.python-version }}
+            -   name: Download episodes
+                run: |
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    mkdir -p episodes
+                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run tests
+                run: tox
+            -   name: Check disk space
+                run: df . -h
+
     test:
+        runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        steps:
+            -   name: Check disk space
+                run: df . -h
+            -   uses: actions/checkout@v4
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v5
+                with:
+                    python-version: ${{ matrix.python-version }}
+            -   name: Download episodes
+                run: |
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    mkdir -p episodes
+                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run tests
+                run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
+            -   name: Check disk space
+                run: df . -h
+
+    notebooks:
+        runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        steps:
+            -   uses: actions/checkout@v4
+            -   name: Install ffmpeg
+                run: sudo apt-get install ffmpeg
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v5
+                with:
+                    python-version: ${{ matrix.python-version }}
+            -   name: Start Redis
+                uses: supercharge/redis-github-action@1.7.0
+                with:
+                    redis-version: 7.4.2
+                    redis-port: 6379
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run notebooks
+                run: tox run -e py${{ matrix.python-version }}-notebooks
+
+    examples:
         runs-on: ubuntu-22.04
         strategy:
             fail-fast: false
@@ -37,50 +122,110 @@ jobs:
                 uses: actions/setup-python@v5
                 with:
                     python-version: ${{ matrix.python-version }}
-            -   name: Download episodes
+            -   name: Download Olten scenario
                 run: |
-                    wget "https://data.flatland.cloud/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
-                    mkdir -p episodes
-                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
-            -   name: Run tests
-                run: tox
-
-    notebooks:
-        runs-on: ubuntu-22.04
-        steps:
-            -   uses: actions/checkout@v4
-            -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
-                with:
-                    python-version: "3.13"
-            -   name: Start Redis
-                uses: supercharge/redis-github-action@1.7.0
-                with:
-                    redis-version: 7.4.2
-                    redis-port: 6379
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
-            -   name: Run notebooks
-                run: tox run -e notebooks
-
-    examples:
-        runs-on: ubuntu-22.04
-        steps:
-            -   uses: actions/checkout@v4
-            -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
-                with:
-                    python-version: "3.13"
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/scenario-olten-fix/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v1.zip" -O OLTEN_PARTIALLY_CLOSED_v1.zip
+                    mkdir -p scenarios/scenario_olten/data
+                    unzip OLTEN_PARTIALLY_CLOSED_v1 -d scenarios/scenario_olten/data
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run examples
-                run: tox run -e examples
+                run: tox run -e py${{ matrix.python-version }}-examples
 
+    profiling:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v4
+            -   name: Set up Python
+                uses: actions/setup-python@v5
+                with:
+                    python-version: "3.10"
+            -   name: Download Olten scenario
+                run: |
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/scenario-olten-fix/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v1.zip" -O OLTEN_PARTIALLY_CLOSED_v1.zip
+                    mkdir -p scenarios/scenario_olten/data
+                    unzip OLTEN_PARTIALLY_CLOSED_v1 -d scenarios/scenario_olten/data
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run profiling
+                run: tox run -e profiling
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-profiling-results
+                    path: .tox/profiling/log
+                    if-no-files-found: error
+            -   name: Install notebook
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install notebook snakeviz -r requirements.txt
+            -   name: Run performance notebook
+                run: NUM_RUNS=5 PYTHONPATH=$PWD python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --execute --to notebook --inplace benchmarks/flatland_performance_profiling.ipynb
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-performance-profiling-results
+                    path: |
+                        benchmarks/*.prof
+                        benchmarks/*.png
+                    if-no-files-found: error
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-performance_overall
+                    path: |
+                        benchmarks/performance_overall.png
+                    if-no-files-found: error
+
+    benchmarks:
+        if: ${{ github.event.inputs.run_benchmarks }}
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v4
+            -   name: Set up Python
+                uses: actions/setup-python@v5
+                with:
+                    python-version: "3.10"
+            -   name: Download episodes
+                run: |
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    mkdir -p episodes
+                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+                working-directory: ${{ github.workspace }}
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run benchmarks
+                run: tox run -e benchmarks
+            -   uses: actions/upload-artifact@v4
+                with:
+                    name: upload-benchmarks-results
+                    path: benchmarks.hprof
+                    if-no-files-found: error
+
+    regression:
+        if: ${{ github.event.inputs.run_benchmarks }}
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v4
+            -   name: Set up Python
+                uses: actions/setup-python@v5
+                with:
+                    python-version: "3.10"
+            -   name: Download episodes
+                run: |
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    mkdir -p episodes
+                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+                working-directory: ${{ github.workspace }}
+            -   name: Clone flatland-baselines
+                run: |
+                    git clone https://github.com/flatland-association/flatland-baselines.git
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Run benchmarks
+                run: tox run -e regression

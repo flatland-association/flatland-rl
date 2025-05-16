@@ -22,95 +22,91 @@ def test_initial_status():
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
     for _ in range(max([agent.earliest_departure for agent in env.agents])):
-        env.step({}) # DO_NOTHING for all agents
+        env.step({})  # DO_NOTHING for all agents
 
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
-            Replay(
+            Replay(  # 0
                 position=None,  # not entered grid yet
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.READY_TO_DEPART,
-                action=RailEnvActions.DO_NOTHING,
-                reward=env.step_penalty * 0.5,
 
+                action=RailEnvActions.DO_NOTHING,
             ),
-            Replay(
+            Replay(  # 1
                 position=None,  # not entered grid yet before step
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.READY_TO_DEPART,
-                action=RailEnvActions.MOVE_LEFT,
-                reward=env.step_penalty * 0.5,  # auto-correction left to forward without penalty!
-            ),
-            Replay(
-                position=(3, 9),
-                direction=Grid4TransitionsEnum.EAST,
-                state=TrainState.MOVING,
-                action=RailEnvActions.MOVE_LEFT,
-                reward=env.start_penalty + env.step_penalty * 0.5,  # running at speed 0.5
-            ),
-            Replay(
-                position=(3, 9),
-                direction=Grid4TransitionsEnum.EAST,
-                state=TrainState.MOVING,
-                action=None,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
-            ),
-            Replay(
-                position=(3, 8),
-                direction=Grid4TransitionsEnum.WEST,
-                state=TrainState.MOVING,
-                action=RailEnvActions.MOVE_FORWARD,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
-            ),
-            Replay(
-                position=(3, 8),
-                direction=Grid4TransitionsEnum.WEST,
-                state=TrainState.MOVING,
-                action=None,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
 
+                action=RailEnvActions.MOVE_LEFT,
+            ),
+            Replay(  # 2
+                position=(3, 9),
+                direction=Grid4TransitionsEnum.EAST,
+                distance=0.0,
+                state=TrainState.MOVING,
+
+                action=RailEnvActions.MOVE_LEFT,
+            ),
+            Replay(  # 3
+                position=(3, 9),
+                direction=Grid4TransitionsEnum.EAST,
+                distance=0.5,
+                state=TrainState.MOVING,
+
+                action=RailEnvActions.MOVE_FORWARD,
+            ),
+            Replay(  # 4
+                position=(3, 8),
+                direction=Grid4TransitionsEnum.WEST,
+                distance=0.0,
+                state=TrainState.MOVING,
+
+                action=RailEnvActions.MOVE_FORWARD,
+            ),
+            Replay(
+                position=(3, 8),
+                direction=Grid4TransitionsEnum.WEST,
+                state=TrainState.MOVING,
+                action=None,
             ),
             Replay(
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_FORWARD,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
                 state=TrainState.MOVING
             ),
             Replay(
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
-                reward=env.step_penalty * 0.5,  # wrong action is corrected to forward without penalty!
                 state=TrainState.MOVING
             ),
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_RIGHT,
-                reward=env.step_penalty * 0.5,  #
                 state=TrainState.MOVING
             ),
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
-                reward=env.global_reward,  #
                 state=TrainState.MOVING
             ),
             # Replay(
             #     position=(3, 5),
             #     direction=Grid4TransitionsEnum.WEST,
             #     action=None,
-            #     reward=env.global_reward,  # already done
+            #     reward=env.rewards.global_reward,  # already done
             #     status=RailAgentStatus.DONE
             # ),
             # Replay(
             #     position=(3, 5),
             #     direction=Grid4TransitionsEnum.WEST,
             #     action=None,
-            #     reward=env.global_reward,  # already done
+            #     reward=env.rewards.global_reward,  # already done
             #     status=RailAgentStatus.DONE
             # )
 
@@ -121,8 +117,9 @@ def test_initial_status():
         speed=0.5
     )
 
-    run_replay_config(env, [test_config], activate_agents=False, skip_reward_check=True,
+    run_replay_config(env, [test_config], activate_agents=False, skip_reward_check=True, skip_action_required_check=True,
                       set_ready_to_depart=True)
+
     assert env.agents[0].state == TrainState.DONE
 
 
@@ -137,97 +134,87 @@ def test_status_done_remove():
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
     for _ in range(max([agent.earliest_departure for agent in env.agents])):
-        env.step({}) # DO_NOTHING for all agents
+        env.step({})  # DO_NOTHING for all agents
 
     env._max_episode_steps = 1000
 
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
         replay=[
-            Replay(
+            Replay(  # 0
                 position=None,  # not entered grid yet
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.READY_TO_DEPART,
                 action=RailEnvActions.DO_NOTHING,
-                reward=env.step_penalty * 0.5,
 
             ),
-            Replay(
+            Replay(  # 1
                 position=None,  # not entered grid yet before step
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.READY_TO_DEPART,
                 action=RailEnvActions.MOVE_LEFT,
-                reward=env.step_penalty * 0.5,  # auto-correction left to forward without penalty!
             ),
-            Replay(
+            Replay(  # 2
                 position=(3, 9),
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.MOVING,
                 action=RailEnvActions.MOVE_FORWARD,
-                reward=env.start_penalty + env.step_penalty * 0.5,  # running at speed 0.5
             ),
-            Replay(
+            Replay(  # 3
                 position=(3, 9),
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.MOVING,
                 action=None,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
             ),
-            Replay(
+            Replay(  # 4
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
                 action=RailEnvActions.MOVE_FORWARD,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
             ),
-            Replay(
+            Replay(  # 5
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
                 action=None,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
 
             ),
-            Replay(
+            Replay(  # 6
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_RIGHT,
-                reward=env.step_penalty * 0.5,  # running at speed 0.5
                 state=TrainState.MOVING
             ),
-            Replay(
+            Replay(  # 7
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
-                reward=env.step_penalty * 0.5,  # wrong action is corrected to forward without penalty!
                 state=TrainState.MOVING
             ),
-            Replay(
+            Replay(  # 8
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=RailEnvActions.MOVE_FORWARD,
-                reward=env.step_penalty * 0.5,  # done
                 state=TrainState.MOVING
             ),
             Replay(
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 action=None,
-                reward=env.global_reward,  # already done
                 state=TrainState.MOVING
             ),
             # Replay(
             #     position=None,
             #     direction=Grid4TransitionsEnum.WEST,
             #     action=None,
-            #     reward=env.global_reward,  # already done
+            #     reward=env.rewards.global_reward,  # already done
             #     status=RailAgentStatus.DONE_REMOVED
             # ),
             # Replay(
             #     position=None,
             #     direction=Grid4TransitionsEnum.WEST,
             #     action=None,
-            #     reward=env.global_reward,  # already done
+            #     reward=env.rewards.global_reward,  # already done
             #     status=RailAgentStatus.DONE_REMOVED
             # )
 
@@ -238,6 +225,6 @@ def test_status_done_remove():
         speed=0.5
     )
 
-    run_replay_config(env, [test_config], activate_agents=False, skip_reward_check=True,
+    run_replay_config(env, [test_config], activate_agents=False, skip_reward_check=True, skip_action_required_check=True,
                       set_ready_to_depart=True)
     assert env.agents[0].state == TrainState.DONE

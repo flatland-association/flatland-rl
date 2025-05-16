@@ -5,7 +5,77 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [[4.0.4](https://github.com/flatland-association/flatland-rl/milestone/1)]
+## [[4.1.0](https://github.com/flatland-association/flatland-rl/compare/v4.0.6...v4.1.0)] - 2025-03-31
+
+### Added
+
+* 134 Add Effects Generator. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/156
+* 158 Trajectory cli (runner, evaluator) improvements. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/193
+* Add configuration option for non-default URL for InteractiveAI events, context and historic API. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/191
+
+### Fixed
+
+* Add graph_to_digraph.drawio.png required by graph demo notebook. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/189
+
+### Changed
+
+* 179 Simplify step function by @chenkins in https://github.com/flatland-association/flatland-rl/pull/182
+
+## [[4.0.6](https://github.com/flatland-association/flatland-rl/compare/v4.0.5...v4.0.6)] - 2025-03-21
+
+### Added
+
+* Update CHANGELOG.md by @chenkins in https://github.com/flatland-association/flatland-rl/pull/159
+* 125/96 Episodes with malfunction for benchmarking and regression tests. 8 Policy abstraction. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/131
+* 135 Add Flatland callbacks. Refactor trajectories. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/157
+* 73 Get Pettingzoo example to work again. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/102
+* Bump jinja2 from 3.1.5 to 3.1.6 by @dependabot in https://github.com/flatland-association/flatland-rl/pull/155
+* 172 Add check mutually exclusive cell occupation and fix step function edge cases malfunction by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/171
+* 148 Simplify action preprocessing. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/163
+* 148 Fix action preprocessing. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/183
+* 140 Rail, Line and Timetable from File Generators. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/141
+* 111 Variable Speed Profiles. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/136
+* InteractiveAI Integration. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/152
+
+### Fixed
+
+* fix: Add tox benchmark environment again. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/167
+* Fix benchmarks. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/169
+* Fix graph demo visualization. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/170
+* 161 Split unit tests and slow ml tests in tox for transparency and parallelism. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/164
+* Fix tox gh actions. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/165
+* Fix main gh wf. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/187
+
+### Changed
+
+* Move graph image to subfolder. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/186
+* Enable checks workflow on all prs. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/160
+
+## [[4.0.5](https://github.com/flatland-association/flatland-rl/compare/v4.0.4...v4.0.5)] - 2025-03-10
+
+### Added
+
+* 78 Extract performance profiling cli. by @chenkins in [pr[#88](https://github.com/flatland-association/flatland-rl/pull/88)]
+* 110 Over- and underpasses (aka. level-free diamond crossings). by @chenkins in [pr[#120](https://github.com/flatland-association/flatland-rl/pull/120)]
+* 109 Multi-stop Schedules (w/o alternatives/routing flexibility). by @chenkins in [pr[#124](https://github.com/flatland-association/flatland-rl/pull/124)]
+
+### Fixed
+
+* fix: from attr import attr, attrs, attrib, Factory ImportError: cannot import name 'attrs' from 'attr' by @chenkins
+  in [pr[#127](https://github.com/flatland-association/flatland-rl/pull/127)]
+* Fix grammar and spelling in comments rail_env py by @SergeCroise in [pr[#130](https://github.com/flatland-association/flatland-rl/pull/130)]
+* 118 Add test_lru_cache_problem.py. by @chenkins in [pr[#119](https://github.com/flatland-association/flatland-rl/pull/119)]
+
+### Changed
+
+* 143 Retry for ml tests. by @chenkins in [pr[#146](https://github.com/flatland-association/flatland-rl/pull/146)]
+* Enable running notebooks in main workflow by @chenkins in [pr[#144](https://github.com/flatland-association/flatland-rl/pull/144)]
+* Use flatland-scenarios instead of data.flatland.cloud for trajectories. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/153
+
+## [[4.0.4](https://github.com/flatland-association/flatland-rl/compare/v4.0.2...v4.0.4)] - 2025-02-18
 
 ### Added
 

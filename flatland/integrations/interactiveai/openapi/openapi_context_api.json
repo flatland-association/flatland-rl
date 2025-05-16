@@ -1,0 +1,406 @@
+{
+  "components": {
+    "schemas": {
+      "ContextIn": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MetadataSchemaRailway"
+          },
+          "date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "use_case": {
+            "enum": [
+              "PowerGrid",
+              "Railway",
+              "ATM"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "use_case"
+        ],
+        "type": "object"
+      },
+      "ContextOut": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MetadataSchemaRailway"
+          },
+          "date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id_context": {
+            "type": "string"
+          },
+          "use_case": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HTTPError": {
+        "properties": {
+          "detail": {
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MetadataSchemaRailway": {
+        "properties": {
+          "direction_agents": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "list_of_target": {
+            "type": "object"
+          },
+          "position_agents": {
+            "type": "object"
+          },
+          "trains": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "UseCaseIn": {
+        "properties": {
+          "context_manager_class": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "metadata_schema_class": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "UseCaseOut": {
+        "properties": {
+          "context_manager_class": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "metadata_schema_class": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "detail": {
+            "properties": {
+              "<location>": {
+                "properties": {
+                  "<field_name>": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "APIFlask",
+    "version": "0.1.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/v1/context/{date}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextOut"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "Get a context",
+        "tags": [
+          "Context-Api"
+        ]
+      }
+    },
+    "/api/v1/contexts": {
+      "get": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ContextOut"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful response"
+          }
+        },
+        "summary": "Get all contexts",
+        "tags": [
+          "Context-Api"
+        ]
+      },
+      "post": {
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextOut"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Add an context",
+        "tags": [
+          "Context-Api"
+        ]
+      }
+    },
+    "/api/v1/delete_all_data": {
+      "delete": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful response"
+          }
+        },
+        "summary": "Delete DeleteDataService",
+        "tags": [
+          "Context-Api"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful response"
+          }
+        },
+        "summary": "Get HealthCheck",
+        "tags": [
+          "Context-Api"
+        ]
+      }
+    },
+    "/api/v1/usecase/{use_case_id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "use_case_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "Delete an event by ID",
+        "tags": [
+          "Context-Api"
+        ]
+      }
+    },
+    "/api/v1/usecases": {
+      "get": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UseCaseOut"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful response"
+          }
+        },
+        "summary": "Get all events",
+        "tags": [
+          "Context-Api"
+        ]
+      },
+      "post": {
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UseCaseIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UseCaseOut"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Add an event",
+        "tags": [
+          "Context-Api"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5100/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Context-Api"
+    }
+  ]
+}

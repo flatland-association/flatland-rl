@@ -7,10 +7,8 @@ import numpy as np
 from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.rail_env_shortest_paths import get_shortest_paths
-from flatland.utils.ordered_set import OrderedSet
 from flatland.envs.step_utils.states import TrainState
-from flatland.envs.step_utils import transition_utils
+from flatland.utils.ordered_set import OrderedSet
 
 
 class DummyPredictorForRailEnv(PredictionBuilder):
@@ -61,18 +59,17 @@ class DummyPredictorForRailEnv(PredictionBuilder):
                 action_done = False
                 # if we're at the target, stop moving...
                 if agent.position == agent.target:
-                    prediction[index] = [index, *agent.target, agent.direction, RailEnvActions.STOP_MOVING]
-
+                    prediction[index] = [index, *agent.target, agent.direction, RailEnvActions.STOP_MOVING.value]
                     continue
                 for action in action_priorities:
                     new_cell_isValid, new_direction, new_position, transition_isValid = \
-                        transition_utils.check_action_on_agent(action, self.env.rail, agent.position, agent.direction)
+                        self.env.rail.check_action_on_agent(action, agent.position, agent.direction)
                     if all([new_cell_isValid, transition_isValid]):
                         # move and change direction to face the new_direction that was
                         # performed
                         agent.position = new_position
                         agent.direction = new_direction
-                        prediction[index] = [index, *new_position, new_direction, action]
+                        prediction[index] = [index, *new_position, new_direction, action.value]
                         action_done = True
                         break
                 if not action_done:
@@ -123,7 +120,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
             agents = [self.env.agents[handle]]
         distance_map: DistanceMap = self.env.distance_map
 
-        shortest_paths = get_shortest_paths(distance_map, max_depth=self.max_depth)
+        shortest_paths = distance_map.get_shortest_paths(max_depth=self.max_depth)
 
         prediction_dict = {}
         for agent in agents:
@@ -142,7 +139,8 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
                 continue
 
             agent_virtual_direction = agent.direction
-            agent_speed = agent.speed_counter.speed
+            # assume constant max_speed
+            agent_speed = agent.speed_counter.max_speed
             times_per_cell = int(np.reciprocal(agent_speed))
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
             prediction[0] = [0, *agent_virtual_position, agent_virtual_direction, 0]
@@ -159,7 +157,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
             for index in range(1, self.max_depth + 1):
                 # if we're at the target, stop moving until max_depth is reached
                 if new_position == agent.target or not shortest_path:
-                    prediction[index] = [index, *new_position, new_direction, RailEnvActions.STOP_MOVING]
+                    prediction[index] = [index, *new_position, new_direction, RailEnvActions.STOP_MOVING.value]
                     visited.add((*new_position, agent.direction))
                     continue
 

@@ -368,6 +368,8 @@ def test_rail_env_reset():
     for agent_initial, agent_loaded in zip(agents_initial, agents_loaded):
         agent_loaded.earliest_departure = agent_initial.earliest_departure
         agent_loaded.latest_arrival = agent_initial.latest_arrival
+        agent_loaded.waypoints_earliest_departure = [agent_initial.earliest_departure, None]
+        agent_loaded.waypoints_latest_arrival = [None, agent_initial.latest_arrival]
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
@@ -382,15 +384,17 @@ def test_rail_env_reset():
     for agent_initial, agent_loaded in zip(agents_initial, agents_loaded):
         agent_loaded.earliest_departure = agent_initial.earliest_departure
         agent_loaded.latest_arrival = agent_initial.latest_arrival
+        agent_loaded.waypoints_earliest_departure = [agent_initial.earliest_departure, None]
+        agent_loaded.waypoints_latest_arrival = [None, agent_initial.latest_arrival]
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
 
 
-def main():
-    # test_rail_environment_single_agent(show=True)
-    test_rail_env_reset()
-
-
-if __name__ == "__main__":
-    main()
+def test_process_illegal_action():
+    assert RailEnv._process_illegal_action(None) == RailEnvActions.DO_NOTHING
+    assert RailEnv._process_illegal_action(0) == RailEnvActions.DO_NOTHING
+    assert RailEnv._process_illegal_action(RailEnvActions.DO_NOTHING) == RailEnvActions.DO_NOTHING
+    assert RailEnv._process_illegal_action("Alice") == RailEnvActions.DO_NOTHING
+    assert RailEnv._process_illegal_action("MOVE_LEFT") == RailEnvActions.DO_NOTHING
+    assert RailEnv._process_illegal_action(1) == RailEnvActions.MOVE_LEFT

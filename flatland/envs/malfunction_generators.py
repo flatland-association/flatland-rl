@@ -5,9 +5,9 @@ from typing import Callable, NamedTuple, Optional, Tuple
 import numpy as np
 from numpy.random.mtrand import RandomState
 
+from flatland.envs import persistence
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
-from flatland.envs import persistence
 
 # why do we have both MalfunctionParameters and MalfunctionProcessData - they are both the same!
 MalfunctionParameters = NamedTuple('MalfunctionParameters',
@@ -52,24 +52,28 @@ class ParamMalfunctionGen(object):
         # self.min_number_of_steps_broken = parameters.min_duration
         # self.max_number_of_steps_broken = parameters.max_duration
         self.MFP = parameters
+        self._malfunction_prob = _malfunction_prob(self.MFP.malfunction_rate)
 
         self._cached_rand = None
+        self._cached_broken = None
         self._rand_idx = 0
 
     def generate_rand_numbers(self, np_random: RandomState):
-        if self._cached_rand is None:
-            self._cached_rand = np_random.rand(NBR_CHACHED_RAND)
-        self._rand_idx += 1
-        rnd = self._cached_rand[self._rand_idx % NBR_CHACHED_RAND]
-        return rnd
+        self._cached_rand = np_random.rand(NBR_CHACHED_RAND)
 
-    def generate(self, np_random: RandomState) -> Malfunction:
-        if self.generate_rand_numbers(np_random) < _malfunction_prob(self.MFP.malfunction_rate):
+    def generate(self, np_random: RandomState) -> Optional[Malfunction]:
+        if self._cached_rand is None:
+            self.generate_rand_numbers(np_random)
+        if self._cached_broken is None:
+            self._cached_broken = self._cached_rand < self._malfunction_prob
+        self._rand_idx += 1
+        if self._rand_idx >= NBR_CHACHED_RAND:
+            self._rand_idx = self._rand_idx % NBR_CHACHED_RAND
+        if self._cached_broken[self._rand_idx]:
             num_broken_steps = np_random.randint(self.MFP.min_duration,
                                                  self.MFP.max_duration + 1) + 1
-        else:
-            num_broken_steps = 0
-        return _make_Malfunction_object(num_broken_steps)
+            return _make_Malfunction_object(num_broken_steps)
+        return None
 
     def get_process_data(self):
         return MalfunctionProcessData(*self.MFP)
@@ -86,8 +90,8 @@ class FileMalfunctionGen(ParamMalfunctionGen):
         """
         if env_dict is None:
             env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
-
-        if env_dict.get('malfunction') is not None:
+        if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
+            env_dict.get('malfunction').min_duration, int) and isinstance(env_dict.get('malfunction').max_duration, int):
             oMFP = MalfunctionParameters(*env_dict["malfunction"])
         else:
             oMFP = MalfunctionParameters(0, 0, 0)  # no malfunctions

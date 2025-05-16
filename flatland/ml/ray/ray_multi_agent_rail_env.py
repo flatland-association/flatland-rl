@@ -1,3 +1,6 @@
+"""
+Flatland wrapper for ray RLlib multi-agent environment (https://docs.ray.io/en/latest/rllib/multi-agent-envs.html).
+"""
 import copy
 from typing import Tuple, Set, Optional
 
@@ -56,7 +59,7 @@ class RayMultiAgentWrapper(MultiAgentEnv):
 
         prev_dones = copy.deepcopy(self.wrap.dones)
 
-        action_dict = {k: RailEnvActions(v) for k, v in action_dict.items()}
+        action_dict = {k: RailEnvActions.from_value(v) for k, v in action_dict.items()}
         obs, rewards, terminateds, infos = self.wrap.step(action_dict=action_dict)
         infos = {
             str(i):
