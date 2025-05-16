@@ -37,4 +37,4 @@ class StateTransitionSignals:
     movement_action_given: bool = False
     target_reached: bool = False
     movement_allowed: bool = False
-    new_speed: float = 0.0
+    new_speed_zero: bool = False
