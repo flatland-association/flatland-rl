@@ -74,9 +74,6 @@ class RailGridTransitionMap(GridTransitionMap):
                     valid_actions.append(RailEnvNextAction(action, new_position, new_direction))
         return valid_actions
 
-
-
-
     def check_bounds(self, position):
         return position[0] >= 0 and position[1] >= 0 and position[0] < self.height and position[1] < self.width
 
@@ -107,12 +104,15 @@ class RailGridTransitionMap(GridTransitionMap):
             # new_direction will be the only valid transition
             # - take only available transition
             new_direction = fast_argmax(possible_transitions)
-            # TODO generalize / should not be necessary.
             if action == RailEnvActions.MOVE_LEFT and new_direction != (direction - 1) % 4:
                 action = RailEnvActions.MOVE_FORWARD
+                return new_direction, False, action
 
             elif action == RailEnvActions.MOVE_RIGHT and new_direction != (direction + 1) % 4:
                 action = RailEnvActions.MOVE_FORWARD
+                return new_direction, False, action
+
+            # straight or dead-end
             return new_direction, True, action
 
         if action == RailEnvActions.MOVE_LEFT:
@@ -120,14 +120,14 @@ class RailGridTransitionMap(GridTransitionMap):
             if possible_transitions[new_direction]:
                 return new_direction, True, RailEnvActions.MOVE_LEFT
             elif possible_transitions[direction]:
-                return direction, True, RailEnvActions.MOVE_FORWARD
+                return direction, False, RailEnvActions.MOVE_FORWARD
 
         elif action == RailEnvActions.MOVE_RIGHT:
             new_direction = (direction + 1) % 4
             if possible_transitions[new_direction]:
                 return new_direction, True, RailEnvActions.MOVE_RIGHT
             elif possible_transitions[direction]:
-                return direction, True, RailEnvActions.MOVE_FORWARD
+                return direction, False, RailEnvActions.MOVE_FORWARD
 
         elif possible_transitions[direction]:
             return direction, True, action
@@ -161,8 +161,14 @@ class RailGridTransitionMap(GridTransitionMap):
                 In other words, can the action be applied directly? False if
                 - MOVE_FORWARD/DO_NOTHING when entering symmetric switch
                 - MOVE_LEFT/MOVE_RIGHT corrected to MOVE_FORWARD in switches and dead-ends
+                However, transition_valid for dead-ends and turns either with the correct MOVE_RIGHT/MOVE_LEFT or MOVE_FORWARD/DO_NOTHING.
             preprocessed_action: RailEnvActions
                 Corrected action if not transition_valid.
+
+                The preprocessed action has the following semantics:
+                - MOVE_LEFT/MOVE_RIGHT: turn left/right without acceleration
+                - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
+                - DO_NOTHING: move forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
         """
         new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)

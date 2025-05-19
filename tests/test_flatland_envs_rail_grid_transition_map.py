@@ -10,51 +10,58 @@ from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
     "elem, direction, expected_left, expected_forward,expected_right,expected_do_nothing",
     [pytest.param(*v, id=f"{v[0].name}")
      for v in [
-         # switch left
+         # switch left facing
          (RailEnvTransitionsEnum.simple_switch_east_left, Grid4TransitionsEnum.EAST,
           (False, Grid4TransitionsEnum.NORTH, (-1, 0), True, RailEnvActions.MOVE_LEFT),
           (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.EAST, (0, 1), False, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.DO_NOTHING),
           ),
-
+         # switch left non-facing
          (RailEnvTransitionsEnum.simple_switch_east_left, Grid4TransitionsEnum.WEST,
+          (False, Grid4TransitionsEnum.WEST, (0, -1), False, RailEnvActions.MOVE_FORWARD),
           (False, Grid4TransitionsEnum.WEST, (0, -1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.WEST, (0, -1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.WEST, (0, -1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.WEST, (0, -1), True, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.WEST, (0, -1), False, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.WEST, (0, -1), True, RailEnvActions.DO_NOTHING),
           ),
          # dead-end
          (RailEnvTransitionsEnum.dead_end_from_east, Grid4TransitionsEnum.WEST,
+          (False, Grid4TransitionsEnum.EAST, (0, 1), False, RailEnvActions.MOVE_FORWARD),
           (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.EAST, (0, 1), False, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.DO_NOTHING),
           ),
          # straight
          (RailEnvTransitionsEnum.horizontal_straight, Grid4TransitionsEnum.EAST,
+          (False, Grid4TransitionsEnum.EAST, (0, 1), False, RailEnvActions.MOVE_FORWARD),
           (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.MOVE_FORWARD),
-          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.DO_NOTHING),  # do not accelerate!
+          (False, Grid4TransitionsEnum.EAST, (0, 1), False, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.EAST, (0, 1), True, RailEnvActions.DO_NOTHING),
           ),
-         # symmetric
+         # symmetric switch facing
          (RailEnvTransitionsEnum.symmetric_switch_from_west, Grid4TransitionsEnum.EAST,
-          (False, Grid4TransitionsEnum.NORTH, (-1, 0), True, RailEnvActions.MOVE_LEFT),  # TODO cell check valid?
+          (False, Grid4TransitionsEnum.NORTH, (-1, 0), True, RailEnvActions.MOVE_LEFT),
           (False, Grid4TransitionsEnum.EAST, (0, 1), False, RailEnvActions.STOP_MOVING),
           (False, Grid4TransitionsEnum.SOUTH, (1, 0), True, RailEnvActions.MOVE_RIGHT),
           (False, Grid4TransitionsEnum.EAST, (0, 1), False, RailEnvActions.STOP_MOVING),
           ),
-         # symmetric switch
+         # symmetric switch non-facing (same as right-turn)
+         (RailEnvTransitionsEnum.symmetric_switch_from_west, Grid4TransitionsEnum.SOUTH,
+          (False, Grid4TransitionsEnum.WEST, (0, -1), False, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.WEST, (0, -1), True, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.WEST, (0, -1), True, RailEnvActions.MOVE_RIGHT),
+          (False, Grid4TransitionsEnum.WEST, (0, -1), True, RailEnvActions.DO_NOTHING),
+          ),
+         # right turn (both forward and right are valid transitions)
          (RailEnvTransitionsEnum.right_turn_from_west, Grid4TransitionsEnum.EAST,
-          (False, Grid4TransitionsEnum.SOUTH, (1, 0), True, RailEnvActions.MOVE_FORWARD),  # TODO cell check valid? MOVE_FORWARD?
-          (False, Grid4TransitionsEnum.SOUTH, (1, 0), True, RailEnvActions.MOVE_FORWARD),  # TODO cell check valid? MOVE_FORWARD?
+          (False, Grid4TransitionsEnum.SOUTH, (1, 0), False, RailEnvActions.MOVE_FORWARD),
+          (False, Grid4TransitionsEnum.SOUTH, (1, 0), True, RailEnvActions.MOVE_FORWARD),
           (False, Grid4TransitionsEnum.SOUTH, (1, 0), True, RailEnvActions.MOVE_RIGHT),
-          (False, Grid4TransitionsEnum.EAST, (0, 1), False, RailEnvActions.DO_NOTHING),  # TODO cell check valid? DO_NOTHING?
+          (False, Grid4TransitionsEnum.SOUTH, (1, 0), True, RailEnvActions.DO_NOTHING),
           ),
      ]]
 )
-def test_apply_action_independent(elem, direction, expected_left, expected_forward, expected_right, expected_do_nothing):
+def test_check_action_on_agent(elem, direction, expected_left, expected_forward, expected_right, expected_do_nothing):
     rail = RailGridTransitionMap(1, 1, RailEnvTransitions())
     rail.set_transitions((0, 0), elem)
 
@@ -62,6 +69,7 @@ def test_apply_action_independent(elem, direction, expected_left, expected_forwa
     assert rail.check_action_on_agent(RailEnvActions.MOVE_LEFT, (0, 0), direction) == expected_left
     assert rail.check_action_on_agent(RailEnvActions.MOVE_FORWARD, (0, 0), direction) == expected_forward
     assert rail.check_action_on_agent(RailEnvActions.MOVE_RIGHT, (0, 0), direction) == expected_right
+    assert rail.check_action_on_agent(RailEnvActions.DO_NOTHING, (0, 0), direction) == expected_do_nothing
 
 
 def test_check_action_on_agent_horizontal_straight():
@@ -81,8 +89,7 @@ def test_check_action_on_agent_horizontal_straight():
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.EAST
     assert new_position == (1, 2)
-    # TODO should this be valid?
-    assert transition_valid
+    assert not transition_valid
 
 
 def test_check_action_on_agent_symmetric_switch_from_west():
