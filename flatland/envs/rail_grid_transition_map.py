@@ -96,58 +96,21 @@ class RailGridTransitionMap(GridTransitionMap):
             whether the transition from old to new position and direction is defined in the grid
 
         """
-        possible_transitions = self.get_transitions(*position, direction)
-        num_transitions = fast_count_nonzero(possible_transitions)
-
-        new_direction = direction
-
-        # simple and symmetric switches, slips, ...
-        if action == RailEnvActions.MOVE_LEFT:
-            new_direction = direction - 1
-
-        elif action == RailEnvActions.MOVE_RIGHT:
-            new_direction = direction + 1
-
-        new_direction %= 4
-
-        # dead-end, straight line or curved line: take only available transition
-        if (action == RailEnvActions.MOVE_FORWARD or action == RailEnvActions.DO_NOTHING) and num_transitions == 1:
-            new_direction = fast_argmax(possible_transitions)
-
+        new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
-
         new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
-        transition_valid = self.get_transition((*position, direction), new_direction)
-
         return new_cell_valid, new_direction, new_position, transition_valid
 
     def check_bounds(self, position):
         return position[0] >= 0 and position[1] >= 0 and position[0] < self.height and position[1] < self.width
 
-    @lru_cache()
-    def check_valid_action(self, action: RailEnvActions, position: Tuple[int, int], direction: Grid4TransitionsEnum):
-        """
-        Checks whether action at position and direction leads to a valid new position in the grid.
-
-        Fails if the grid is not valid or if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element.
-
-        Parameters
-        ----------
-        action : RailEnvActions
-        position : Tuple[int, int]
-        direction: Grid4TransitionsEnum
-
-        Returns
-        -------
-        bool
-        """
-        new_cell_valid, _, _, transition_valid = self.check_action_on_agent(action, position, direction)
-        return new_cell_valid and transition_valid
-
     @lru_cache(maxsize=1_000_000)
     def _check_action_new(self, action: RailEnvActions, position: IntVector2D, direction: int):
         """
-        Returns
+        Checks whether action at position and direction leads to a valid new position in the grid.
+
+        Sets action to MOVE_FORWARD if MOVE_LEFT/MOVE_RIGHT is provided but transition is not possible.
+        Sets action to STOPPED if MOVE_FORWARD or DO_NOTING is provided but going into symmetric switch (facing the switch).
 
         Parameters
         ----------
@@ -214,17 +177,11 @@ class RailGridTransitionMap(GridTransitionMap):
                 New position after applying the action
             new_direction
                 New direction after applying the action
+            valid: bool
+                TODO semantics
+            preprocessed_action: RailEnvActions
+
         """
         new_direction, valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
         return new_position, new_direction, valid, preprocessed_action
-
-    @lru_cache()
-    def preprocess_left_right_action(self, action: RailEnvActions, position: Tuple[int, int], direction: Grid4TransitionsEnum):
-        """
-        LEFT/RIGHT is converted to FORWARD if left/right is not available.
-        """
-        if action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT] and not self.check_valid_action(action, position, direction):
-            # TODO revise design: this may accelerate!
-            action = RailEnvActions.MOVE_FORWARD
-        return action

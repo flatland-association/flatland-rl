@@ -12,8 +12,8 @@ import flatland.envs.timetable_generators as ttg
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.grid.grid4 import Grid4Transitions, Grid4TransitionsEnum
-from flatland.core.grid.grid_utils import Vector2D, IntVector2D
+from flatland.core.grid.grid4 import Grid4Transitions
+from flatland.core.grid.grid_utils import Vector2D
 from flatland.core.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
@@ -377,26 +377,6 @@ class RailEnv(Environment):
                 if agent.old_position is not None:
                     self.agent_positions[agent.old_position] = -1
 
-    @lru_cache(100000)
-    def preprocess_action(self, action: RailEnvActions, current_position: Optional[IntVector2D], current_direction: Optional[Grid4TransitionsEnum]):
-        """
-        Preprocess the provided action
-            * Change to DO_NOTHING if illegal action (not one of the defined action)
-            * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
-            * Change to STOP_MOVING if the movement is not possible in the grid (e.g. if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element or leads outside of bounds).
-        """
-        action = RailEnvActions.from_value(action)
-
-        # TODO revise design: should we stop the agent instead and penalize it?
-        action = self.rail.preprocess_left_right_action(action, current_position, current_direction)
-        # TODO https://github.com/flatland-association/flatland-rl/issues/185 Streamline flatland.envs.step_utils.transition_utils and flatland.envs.step_utils.action_preprocessing
-        if ((RailEnvActions.is_moving_action(action) or action == RailEnvActions.DO_NOTHING)
-            and
-            not self.rail.check_valid_action(action, current_position, current_direction)):
-            # TODO revise design: should we add penalty if the action cannot be executed?
-            action = RailEnvActions.STOP_MOVING
-        return action
-
     def clear_rewards_dict(self):
         """ Reset the rewards dictionary """
         self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))}
@@ -475,21 +455,15 @@ class RailEnv(Environment):
             raw_action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
             # Try moving actions on current position
             current_position, current_direction = agent.position, agent.direction
-
             if current_position is None:  # Agent not added on map yet
                 current_position, current_direction = agent.initial_position, agent.initial_direction
-            if False:
-                preprocessed_action = self.preprocess_action(raw_action, current_position, current_direction)
-
-            preprocessed_action2 = RailEnvActions.from_value(raw_action)
-            new_position2, new_direction2, valid_position_direction, preprocessed_action2 = self.rail.apply_action_independent(
-                preprocessed_action2,
+            preprocessed_action = RailEnvActions.from_value(raw_action)
+            # TODO unify with check_action_on_agent?
+            new_position_independent, new_direction_independent, _, preprocessed_action = self.rail.apply_action_independent(
+                preprocessed_action,
                 current_position,
                 current_direction
             )
-            if False:
-                assert preprocessed_action2 == preprocessed_action
-            preprocessed_action = preprocessed_action2
 
             # get desired new_position and new_direction
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
@@ -525,11 +499,7 @@ class RailEnv(Environment):
                     and
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
                 ):
-                    new_position, new_direction, _, _ = self.rail.apply_action_independent(
-                        preprocessed_action,
-                        agent.position,
-                        agent.direction
-                    )
+                    new_position, new_direction = new_position_independent, new_direction_independent
                 assert agent.position is not None
             else:
                 assert state.is_off_map_state() or state == TrainState.DONE
