@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import NamedTuple, Union
+from typing import NamedTuple, Union, Any
 
 import fastenum
 import numpy as np
@@ -16,18 +16,24 @@ class RailEnvActions(fastenum.Enum):
 
     @staticmethod
     @lru_cache
-    def from_value(value: Union["RailEnvActions", int, str]) -> "RailEnvActions":
+    def from_value(value: Any) -> "RailEnvActions":
+        """
+        Returns the action if valid (either int value or in RailEnvActions), returns RailEnvActions.DO_NOTHING otherwise.
+        """
         if isinstance(value, RailEnvActions):
             return value
-        if isinstance(value, str):
-            value = int(value)
-        return {
-            0: RailEnvActions.DO_NOTHING,
-            1: RailEnvActions.MOVE_LEFT,
-            2: RailEnvActions.MOVE_FORWARD,
-            3: RailEnvActions.MOVE_RIGHT,
-            4: RailEnvActions.STOP_MOVING,
-        }[value]
+        try:
+            if isinstance(value, str):
+                value = int(value)
+            return {
+                0: RailEnvActions.DO_NOTHING,
+                1: RailEnvActions.MOVE_LEFT,
+                2: RailEnvActions.MOVE_FORWARD,
+                3: RailEnvActions.MOVE_RIGHT,
+                4: RailEnvActions.STOP_MOVING,
+            }[value]
+        except:
+            return RailEnvActions.DO_NOTHING
 
     @staticmethod
     def to_char(a: int):

@@ -4,7 +4,7 @@ Definition of the RailEnv environment.
 import random
 import warnings
 from functools import lru_cache
-from typing import List, Optional, Dict, Tuple, Set, Any
+from typing import List, Optional, Dict, Tuple, Set
 
 import numpy as np
 
@@ -12,8 +12,8 @@ import flatland.envs.timetable_generators as ttg
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.grid.grid4 import Grid4Transitions
-from flatland.core.grid.grid_utils import Vector2D
+from flatland.core.grid.grid4 import Grid4Transitions, Grid4TransitionsEnum
+from flatland.core.grid.grid_utils import Vector2D, IntVector2D
 from flatland.core.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
@@ -378,14 +378,14 @@ class RailEnv(Environment):
                     self.agent_positions[agent.old_position] = -1
 
     @lru_cache(100000)
-    def preprocess_action(self, action, current_position, current_direction):
+    def preprocess_action(self, action: RailEnvActions, current_position: Optional[IntVector2D], current_direction: Optional[Grid4TransitionsEnum]):
         """
         Preprocess the provided action
             * Change to DO_NOTHING if illegal action (not one of the defined action)
             * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
             * Change to STOP_MOVING if the movement is not possible in the grid (e.g. if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element or leads outside of bounds).
         """
-        action = RailEnv._process_illegal_action(action)
+        action = RailEnvActions.from_value(action)
 
         # TODO revise design: should we stop the agent instead and penalize it?
         action = self.rail.preprocess_left_right_action(action, current_position, current_direction)
@@ -795,14 +795,3 @@ class RailEnv(Environment):
             except Exception as e:
                 print("Could Not close window due to:", e)
             self.renderer = None
-
-    @staticmethod
-    @lru_cache()
-    def _process_illegal_action(action: Any) -> RailEnvActions:
-        """
-        Returns the action if valid (either int value or in RailEnvActions), returns RailEnvActions.DO_NOTHING otherwise.
-        """
-        if not RailEnvActions.is_action_valid(action):
-            return RailEnvActions.DO_NOTHING
-        else:
-            return RailEnvActions.from_value(action)
