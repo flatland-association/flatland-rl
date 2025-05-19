@@ -74,32 +74,8 @@ class RailGridTransitionMap(GridTransitionMap):
                     valid_actions.append(RailEnvNextAction(action, new_position, new_direction))
         return valid_actions
 
-    @lru_cache(maxsize=1_000_000)
-    def check_action_on_agent(self, action: RailEnvActions, position: Tuple[int, int], direction: Grid4TransitionsEnum) -> Tuple[
-        bool, int, Tuple[int, int], bool]:
-        """
-        Gets new position and direction for the action.
 
-        Parameters
-        ----------
-        action : RailEnvActions
-        position: Tuple[int,int]
-        direction : Grid4TransitionsEnum
 
-        Returns
-        -------
-        new_cell_valid : bool
-            whether the new position and new direction are valid in the grid
-        new_direction : int
-        new_position : Tuple[int,int]
-        transition_valid : bool
-            whether the transition from old to new position and direction is defined in the grid
-
-        """
-        new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
-        new_position = get_new_position(position, new_direction)
-        new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
-        return new_cell_valid, new_direction, new_position, transition_valid
 
     def check_bounds(self, position):
         return position[0] >= 0 and position[1] >= 0 and position[0] < self.height and position[1] < self.width
@@ -134,6 +110,7 @@ class RailGridTransitionMap(GridTransitionMap):
             # TODO generalize / should not be necessary.
             if action == RailEnvActions.MOVE_LEFT and new_direction != (direction - 1) % 4:
                 action = RailEnvActions.MOVE_FORWARD
+
             elif action == RailEnvActions.MOVE_RIGHT and new_direction != (direction + 1) % 4:
                 action = RailEnvActions.MOVE_FORWARD
             return new_direction, True, action
@@ -158,7 +135,7 @@ class RailGridTransitionMap(GridTransitionMap):
         return direction, False, RailEnvActions.STOP_MOVING
 
     @lru_cache(maxsize=1_000_000)
-    def apply_action_independent(self, action: RailEnvActions, position: IntVector2D, direction: Grid4TransitionsEnum):
+    def check_action_on_agent(self, action: RailEnvActions, position: IntVector2D, direction: Grid4TransitionsEnum):
         """ Apply the action on the train regardless of locations of other trains.
             Checks for valid cells to move and valid rail transitions.
 
@@ -168,20 +145,26 @@ class RailGridTransitionMap(GridTransitionMap):
                 Action to execute
             position : IntVector2D
                 current position of the train
-            direction : int
+            direction : Grid4TransitionsEnum
                 current direction of the train
 
             Returns
             -------
+            new_cell_valid: bool
+                is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
             new_position
                 New position after applying the action
             new_direction
                 New direction after applying the action
-            valid: bool
-                TODO semantics
+            transition_valid: bool
+                Whether the transition from old and direction is defined in the grid.
+                In other words, can the action be applied directly? False if
+                - MOVE_FORWARD/DO_NOTHING when entering symmetric switch
+                - MOVE_LEFT/MOVE_RIGHT corrected to MOVE_FORWARD in switches and dead-ends
             preprocessed_action: RailEnvActions
-
+                Corrected action if not transition_valid.
         """
-        new_direction, valid, preprocessed_action = self._check_action_new(action, position, direction)
+        new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
-        return new_position, new_direction, valid, preprocessed_action
+        new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
+        return new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action

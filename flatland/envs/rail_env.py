@@ -458,8 +458,7 @@ class RailEnv(Environment):
             if current_position is None:  # Agent not added on map yet
                 current_position, current_direction = agent.initial_position, agent.initial_direction
             preprocessed_action = RailEnvActions.from_value(raw_action)
-            # TODO unify with check_action_on_agent?
-            new_position_independent, new_direction_independent, _, preprocessed_action = self.rail.apply_action_independent(
+            _, new_direction_independent, new_position_independent, _, preprocessed_action = self.rail.check_action_on_agent(
                 preprocessed_action,
                 current_position,
                 current_direction
