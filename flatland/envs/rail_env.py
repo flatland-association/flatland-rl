@@ -475,9 +475,21 @@ class RailEnv(Environment):
             raw_action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
             # Try moving actions on current position
             current_position, current_direction = agent.position, agent.direction
+
             if current_position is None:  # Agent not added on map yet
                 current_position, current_direction = agent.initial_position, agent.initial_direction
-            preprocessed_action = self.preprocess_action(raw_action, current_position, current_direction)
+            if False:
+                preprocessed_action = self.preprocess_action(raw_action, current_position, current_direction)
+
+            preprocessed_action2 = RailEnvActions.from_value(raw_action)
+            new_position2, new_direction2, valid_position_direction, preprocessed_action2 = self.rail.apply_action_independent(
+                preprocessed_action2,
+                current_position,
+                current_direction
+            )
+            if False:
+                assert preprocessed_action2 == preprocessed_action
+            preprocessed_action = preprocessed_action2
 
             # get desired new_position and new_direction
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
@@ -513,7 +525,7 @@ class RailEnv(Environment):
                     and
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
                 ):
-                    new_position, new_direction = self.rail.apply_action_independent(
+                    new_position, new_direction, _, _ = self.rail.apply_action_independent(
                         preprocessed_action,
                         agent.position,
                         agent.direction

@@ -144,14 +144,16 @@ class RailGridTransitionMap(GridTransitionMap):
         new_cell_valid, _, _, transition_valid = self.check_action_on_agent(action, position, direction)
         return new_cell_valid and transition_valid
 
+    @lru_cache(maxsize=1_000_000)
     def _check_action_new(self, action: RailEnvActions, position: IntVector2D, direction: int):
         """
         Returns
 
         Parameters
         ----------
-        agent : EnvAgent
         action : RailEnvActions
+        position: IntVector2D
+        direction: int
 
         Returns
         -------
@@ -166,20 +168,31 @@ class RailGridTransitionMap(GridTransitionMap):
             # new_direction will be the only valid transition
             # - take only available transition
             new_direction = fast_argmax(possible_transitions)
-            transition_valid = True
-            return new_direction, transition_valid
+            # TODO generalize / should not be necessary.
+            if action == RailEnvActions.MOVE_LEFT and new_direction != (direction - 1) % 4:
+                action = RailEnvActions.MOVE_FORWARD
+            elif action == RailEnvActions.MOVE_RIGHT and new_direction != (direction + 1) % 4:
+                action = RailEnvActions.MOVE_FORWARD
+            return new_direction, True, action
 
         if action == RailEnvActions.MOVE_LEFT:
             new_direction = (direction - 1) % 4
             if possible_transitions[new_direction]:
-                return new_direction, True
+                return new_direction, True, RailEnvActions.MOVE_LEFT
+            elif possible_transitions[direction]:
+                return direction, True, RailEnvActions.MOVE_FORWARD
 
         elif action == RailEnvActions.MOVE_RIGHT:
             new_direction = (direction + 1) % 4
             if possible_transitions[new_direction]:
-                return new_direction, True
+                return new_direction, True, RailEnvActions.MOVE_RIGHT
+            elif possible_transitions[direction]:
+                return direction, True, RailEnvActions.MOVE_FORWARD
 
-        return direction, False
+        elif possible_transitions[direction]:
+            return direction, True, action
+
+        return direction, False, RailEnvActions.STOP_MOVING
 
     @lru_cache(maxsize=1_000_000)
     def apply_action_independent(self, action: RailEnvActions, position: IntVector2D, direction: Grid4TransitionsEnum):
@@ -202,9 +215,9 @@ class RailGridTransitionMap(GridTransitionMap):
             new_direction
                 New direction after applying the action
         """
-        new_direction, _ = self._check_action_new(action, position, direction)
+        new_direction, valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
-        return new_position, new_direction
+        return new_position, new_direction, valid, preprocessed_action
 
     @lru_cache()
     def preprocess_left_right_action(self, action: RailEnvActions, position: Tuple[int, int], direction: Grid4TransitionsEnum):

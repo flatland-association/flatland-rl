@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import NamedTuple, Union, Any
+from typing import NamedTuple, Any
 
 import fastenum
 import numpy as np
@@ -57,6 +57,11 @@ class RailEnvActions(fastenum.Enum):
     @lru_cache()
     def is_moving_action(value: "RailEnvActions") -> bool:
         return value in [RailEnvActions.MOVE_RIGHT, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD]
+
+    @staticmethod
+    @lru_cache()
+    def is_left_right_action(value: "RailEnvActions") -> bool:
+        return value in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]
 
 
 RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])

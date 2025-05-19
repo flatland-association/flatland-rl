@@ -11,24 +11,28 @@ from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
     [pytest.param(*v, id=f"{v[0].name}")
      for v in [
          (RailEnvTransitionsEnum.simple_switch_east_left, Grid4TransitionsEnum.EAST,
-          ((-1, 0), Grid4TransitionsEnum.NORTH),
-          ((0, 1), Grid4TransitionsEnum.EAST),
-          ((0, 1), Grid4TransitionsEnum.EAST),  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
-          ((0, 1), Grid4TransitionsEnum.EAST),
+          ((-1, 0), Grid4TransitionsEnum.NORTH, True, RailEnvActions.MOVE_LEFT),
+          ((0, 1), Grid4TransitionsEnum.EAST, True, RailEnvActions.MOVE_FORWARD),
+          ((0, 1), Grid4TransitionsEnum.EAST, True, RailEnvActions.MOVE_FORWARD),
+          # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
+          ((0, 1), Grid4TransitionsEnum.EAST, True, RailEnvActions.MOVE_FORWARD),
           ),
 
          (RailEnvTransitionsEnum.simple_switch_east_left, Grid4TransitionsEnum.WEST,
-          ((0, -1), Grid4TransitionsEnum.WEST),  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
-          ((0, -1), Grid4TransitionsEnum.WEST),
-          ((0, -1), Grid4TransitionsEnum.WEST),
-          ((0, -1), Grid4TransitionsEnum.WEST),
+          ((0, -1), Grid4TransitionsEnum.WEST, True, RailEnvActions.MOVE_FORWARD),
+          # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
+          ((0, -1), Grid4TransitionsEnum.WEST, True, RailEnvActions.MOVE_FORWARD),
+          ((0, -1), Grid4TransitionsEnum.WEST, True, RailEnvActions.MOVE_FORWARD),
+          ((0, -1), Grid4TransitionsEnum.WEST, True, RailEnvActions.MOVE_FORWARD),
           ),
 
          (RailEnvTransitionsEnum.dead_end_from_east, Grid4TransitionsEnum.WEST,
-          ((0, 1), Grid4TransitionsEnum.EAST),  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
-          ((0, 1), Grid4TransitionsEnum.EAST),
-          ((0, 1), Grid4TransitionsEnum.EAST),  # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
-          ((0, 1), Grid4TransitionsEnum.EAST),
+          ((0, 1), Grid4TransitionsEnum.EAST, True, RailEnvActions.MOVE_FORWARD),
+          # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
+          ((0, 1), Grid4TransitionsEnum.EAST, True, RailEnvActions.MOVE_FORWARD),
+          ((0, 1), Grid4TransitionsEnum.EAST, True, RailEnvActions.MOVE_FORWARD),
+          # TODO https://github.com/flatland-association/flatland-rl/issues/185 streamline?
+          ((0, 1), Grid4TransitionsEnum.EAST, True, RailEnvActions.MOVE_FORWARD),
           ),
      ]]
 )
