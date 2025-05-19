@@ -488,17 +488,21 @@ class RailEnv(Environment):
             state = agent.state
             agent_max_speed = agent.speed_counter.max_speed
             # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING?
-            if (preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD) or (
-                (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and RailEnvActions.is_moving_action(preprocessed_action)):
+            if (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
+                # start moving
                 new_speed += self.acceleration_delta
-            elif preprocessed_action == RailEnvActions.STOP_MOVING:
+            elif preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD:
+                # accelerate, but not if left/right corrected to forward
+                new_speed += self.acceleration_delta
+            elif stop_action_given:
+                # decelerate
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent_max_speed, new_speed))
             if state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
-                RailEnvActions.is_moving_action(preprocessed_action) or preprocessed_action == RailEnvActions.STOP_MOVING):
+                movement_action_given or stop_action_given):
                 # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
@@ -541,9 +545,9 @@ class RailEnv(Environment):
                 # Earliest departure reached - Train is allowed to move now
                 earliest_departure_reached=self._elapsed_steps >= agent.earliest_departure,
                 # Stop action given
-                stop_action_given=(preprocessed_action == RailEnvActions.STOP_MOVING),
+                stop_action_given=stop_action_given,
                 # Movement action given
-                movement_action_given=RailEnvActions.is_moving_action(preprocessed_action),
+                movement_action_given=movement_action_given,
                 # Target reached - we only know after state and positions update - see handle_done_state below
                 target_reached=None,  # we only know after motion check
                 # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
