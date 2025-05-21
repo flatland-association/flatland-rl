@@ -81,7 +81,7 @@ ml = [
     "torch",
     # pin dm-tree, 0.1.9 has import errors under MacOS M1 at least.
     "dm-tree<0.1.9",
-    "supersuit",
+    "supersuit<3.10.0", # pin because of bug: https://github.com/Farama-Foundation/SuperSuit/pull/258
     "pettingzoo",
     "stable_baselines3",
 ]
