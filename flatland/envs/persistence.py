@@ -1,5 +1,5 @@
 import pickle
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 
 import msgpack
 import msgpack_numpy
@@ -11,7 +11,7 @@ from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs import rail_env
 from flatland.envs.step_utils import env_utils
 from flatland.utils.seeding import random_state_to_hashablestate
-from flatland.core.env_observation_builder import DummyObservationBuilder
+from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder
 from flatland.envs.agent_utils import EnvAgent, load_env_agent
 
 # cannot import objects / classes directly because of circular import
@@ -101,7 +101,7 @@ class RailEnvPersister(object):
         cls.set_full_state(env, env_dict)
 
     @classmethod
-    def load_new(cls, filename, load_from_package=None) -> Tuple["RailEnv", Dict]:
+    def load_new(cls, filename, load_from_package=None, obs_builder_object: Optional[ObservationBuilder[rail_env.RailEnv]] = None) -> Tuple["RailEnv", Dict]:
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
@@ -109,6 +109,8 @@ class RailEnvPersister(object):
         height = len(llGrid)
         width = len(llGrid[0])
 
+        if obs_builder_object is None:
+            obs_builder_object = DummyObservationBuilder()
         # TODO: inefficient - each one of these generators loads the complete env file.
         env = rail_env.RailEnv(
             width=width, height=height,
@@ -120,7 +122,7 @@ class RailEnvPersister(object):
             # malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
             #    load_from_package=load_from_package),
             malfunction_generator=mal_gen.FileMalfunctionGen(env_dict),
-            obs_builder_object=DummyObservationBuilder(),
+            obs_builder_object=obs_builder_object,
             record_steps=True)
 
         env.rail = RailGridTransitionMap(1, 1)  # dummy
