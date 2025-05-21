@@ -160,7 +160,7 @@ jobs:
             -   uses: actions/upload-artifact@v4
                 with:
                     name: upload-profiling-results-${{ matrix.python-version }}
-                    path: .tox/profiling/log
+                    path: .tox/py${{ matrix.python-version }}-profiling/log
                     if-no-files-found: error
             -   name: Install notebook
                 run: |
