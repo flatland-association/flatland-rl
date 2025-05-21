@@ -10,9 +10,9 @@ asttokens==3.0.0
     # via stack-data
 attrs==25.3.0
     # via flatland-rl (pyproject.toml)
-boto3==1.38.17
+boto3==1.38.20
     # via flatland-rl (pyproject.toml)
-botocore==1.38.17
+botocore==1.38.20
     # via
     #   boto3
     #   s3transfer
@@ -20,7 +20,7 @@ certifi==2025.4.26
     # via requests
 charset-normalizer==3.4.2
     # via requests
-click==8.2.0
+click==8.2.1
     # via flatland-rl (pyproject.toml)
 comm==0.2.2
     # via ipywidgets
@@ -50,12 +50,10 @@ ipycanvas==0.13.3
     # via flatland-rl (pyproject.toml)
 ipyevents==2.0.2
     # via flatland-rl (pyproject.toml)
-ipython==9.2.0
+ipython==8.36.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipywidgets
-ipython-pygments-lexers==1.1.1
-    # via ipython
 ipywidgets==8.1.7
     # via
     #   flatland-rl (pyproject.toml)
@@ -124,9 +122,7 @@ pydantic-core==2.33.2
 pyglet==2.1.6
     # via flatland-rl (pyproject.toml)
 pygments==2.19.1
-    # via
-    #   ipython
-    #   ipython-pygments-lexers
+    # via ipython
 pyparsing==3.2.3
     # via matplotlib
 python-dateutil==2.9.0.post0

@@ -30,7 +30,7 @@ dependencies = [
     "importlib_resources",
     "ipycanvas",
     "ipyevents",
-    "ipython",
+    "ipython<9.0.0", # pin as long as we support python 3.10. ERROR: Ignored the following versions that require a different python version: 0.7 Requires-Python >=3.6, <3.7; 0.8 Requires-Python >=3.6, <3.7; 9.0.0 Requires-Python >=3.11; 9.0.0b1 Requires-Python >=3.11; 9.0.0b2 Requires-Python >=3.11; 9.0.1 Requires-Python >=3.11; 9.0.2 Requires-Python >=3.11; 9.1.0 Requires-Python >=3.11; 9.2.0 Requires-Python >=3.11
     "ipywidgets",
     "matplotlib",
     "msgpack_numpy",
@@ -70,6 +70,7 @@ dev = [
     "pytest",
     "pytest-retry",
     "snakeviz",
+    "sphinx<8.2.0", # pin as long as we support python 3.10. ERROR: Ignored the following versions that require a different python version: 0.7 Requires-Python >=3.6, <3.7; 0.8 Requires-Python >=3.6, <3.7; 3.5rc0 Requires-Python >=3.11; 8.2.0 Requires-Python >=3.11; 8.2.0rc1 Requires-Python >=3.11; 8.2.0rc2 Requires-Python >=3.11; 8.2.1 Requires-Python >=3.11; 8.2.2 Requires-Python >=3.11; 8.2.3 Requires-Python >=3.11; 8.3.0 Requires-Python >=3.11; 9.0.0 Requires-Python >=3.11; 9.0.0b1 Requires-Python >=3.11; 9.0.0b2 Requires-Python >=3.11; 9.0.1 Requires-Python >=3.11; 9.0.2 Requires-Python >=3.11; 9.1.0 Requires-Python >=3.11; 9.2.0 Requires-Python >=3.11
     "tox",
     "twine",
     "twine",
