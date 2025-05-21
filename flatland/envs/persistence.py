@@ -101,7 +101,7 @@ class RailEnvPersister(object):
         cls.set_full_state(env, env_dict)
 
     @classmethod
-    def load_new(cls, filename, load_from_package=None, obs_builder_object: Optional[ObservationBuilder[rail_env.RailEnv]] = None) -> Tuple["RailEnv", Dict]:
+    def load_new(cls, filename, load_from_package=None, obs_builder_object: Optional[ObservationBuilder["RailEnv"]] = None) -> Tuple["RailEnv", Dict]:
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
