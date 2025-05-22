@@ -17,6 +17,7 @@ def run_all_examples():
                   and str(entry).endswith(".py")
                   and '__init__' not in str(entry)
                   and 'DELETE' not in str(entry)
+                  and 'flatland_performance_profiling' not in str(entry)
                   ]:
         with path('examples', entry.name) as file_in:
             print("")
@@ -46,6 +47,7 @@ def run_all_examples():
         print("*****************************************************************")
         print(error_log_examples)
         print("*****************************************************************")
+        raise Exception("Some examples failed.")
     else:
         print("*****************************************************************")
         print("All examples executed - no error.")

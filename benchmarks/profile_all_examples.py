@@ -44,6 +44,7 @@ def profile_all_examples():
                   and str(entry).endswith(".py")
                   and '__init__' not in str(entry)
                   and 'DELETE' not in str(entry)
+                  and 'flatland_performance_profiling' not in str(entry)
                   ]:
         profile('examples', entry.name)
 
