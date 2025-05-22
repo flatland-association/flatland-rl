@@ -3,9 +3,8 @@ import sys
 from subprocess import Popen, PIPE
 
 import importlib_resources
-import pkg_resources
-from importlib_resources import path
 import importlib_resources as ir
+from importlib_resources import path
 from ipython_genutils.py3compat import string_types, bytes_to_str
 
 
@@ -40,22 +39,21 @@ def run_python(parameters, ignore_return_code=False, stdin=None):
 
 
 def main():
-
     # If the file notebooks-list exists, use it as a definitive list of notebooks to run
     # This in effect ignores any local notebooks you might be working on, so you can run tox
     # without them causing the notebooks task / testenv to fail.
     if importlib_resources.is_resource("notebooks", "notebook-list"):
         print("Using the notebooks-list file to designate which notebooks to run")
         lsNB = [
-            sLine for sLine in ir.read_text("notebooks", "notebook-list").split("\n") 
+            sLine for sLine in ir.read_text("notebooks", "notebook-list").split("\n")
             if len(sLine) > 3 and not sLine.startswith("#")
-            ]
+        ]
     else:
         lsNB = [
-            entry for entry in importlib_resources.contents('notebooks') if
-                not pkg_resources.resource_isdir('notebooks', entry)
-                and entry.endswith(".ipynb")
-                ]
+            entry for entry in importlib_resources.files('notebooks').iterdir() if
+            not importlib_resources.files('notebooks').joinpath(str(entry)).is_dir()
+            and str(entry).endswith(".ipynb")
+        ]
 
     print("Running notebooks:", " ".join(lsNB))
 
@@ -65,12 +63,13 @@ def main():
         print("*****************************************************************")
 
         with path('notebooks', entry) as file_in:
-            out, err = run_python(" -m jupyter nbconvert --ExecutePreprocessor.timeout=120 " + 
-                "--execute --to notebook --inplace " + str(file_in))
+            out, err = run_python(" -m jupyter nbconvert --ExecutePreprocessor.timeout=120 " +
+                                  "--execute --to notebook --inplace " + str(file_in))
             sys.stderr.write(err)
             sys.stderr.flush()
             sys.stdout.write(out)
             sys.stdout.flush()
+
 
 if __name__ == "__main__":
     main()

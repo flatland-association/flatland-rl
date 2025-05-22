@@ -4,7 +4,6 @@ import traceback
 from io import StringIO
 
 import importlib_resources
-import pkg_resources
 from importlib_resources import path
 
 from benchmarks.benchmark_utils import swap_attr
@@ -13,13 +12,13 @@ from benchmarks.benchmark_utils import swap_attr
 def run_all_examples():
     print("run_all_examples.py")
     error_log_examples = {}
-    for entry in [entry for entry in importlib_resources.contents('examples') if
-                  not pkg_resources.resource_isdir('examples', entry)
-                  and entry.endswith(".py")
-                  and '__init__' not in entry
-                  and 'DELETE' not in entry
+    for entry in [entry for entry in importlib_resources.files('examples').iterdir() if
+                  not importlib_resources.files('examples').joinpath(str(entry)).is_dir()
+                  and str(entry).endswith(".py")
+                  and '__init__' not in str(entry)
+                  and 'DELETE' not in str(entry)
                   ]:
-        with path('examples', entry) as file_in:
+        with path('examples', entry.name) as file_in:
             print("")
             print("")
 
