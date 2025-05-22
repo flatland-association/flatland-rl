@@ -318,7 +318,7 @@ class Trajectory:
             for handle, action in action_dict.items():
                 trajectory.action_collect(actions, env_time=env_time, agent_id=handle, action=action)
 
-            _, _, dones, _ = env.step(action_dict)
+            observations, _, dones, _ = env.step(action_dict)
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
