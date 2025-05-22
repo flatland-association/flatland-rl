@@ -8,15 +8,15 @@ import numpy as np
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.utils.misc import str2bool
 from flatland.utils.rendertools import RenderTool
 
 
-def custom_rail_map() -> Tuple[GridTransitionMap, np.array]:
+def custom_rail_map() -> Tuple[RailGridTransitionMap, np.array]:
     # We instantiate a very simple rail network on a 7x10 grid:
     #  0 1 2 3 4 5 6 7 8 9  10
     # 0        /-------------\
@@ -54,8 +54,8 @@ def custom_rail_map() -> Tuple[GridTransitionMap, np.array]:
         [[empty] * 6 + [simple_switch_north_right] + [horizontal_straight] * 2 + [right_turn_from_north]] +
         [[empty] * 6 + [vertical_straight] + [empty] * 3] +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
-    rail = GridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+    rail = RailGridTransitionMap(width=rail_map.shape[1],
+                                 height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
     train_stations = [
