@@ -5,7 +5,8 @@ import numpy as np
 import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
-from flatland.trajectories.trajectories import Trajectory
+from flatland.envs.rail_env import RailEnv
+from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
 
 
 class TrajectoryEvaluator:
@@ -16,20 +17,8 @@ class TrajectoryEvaluator:
     def __call__(self, *args, **kwargs):
         self.evaluate()
 
-    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0, tqdm_kwargs: dict = None):
+    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0, tqdm_kwargs: dict = None) -> RailEnv:
         """
-        The data is structured as follows:
-            -30x30 map
-                Contains the data to replay the episodes.
-                - <n>_trains                                 -- for n in 10,15,20,50
-                    - event_logs
-                        ActionEvents.discrete_action 		 -- holds set of action to be replayed for the related episodes.
-                        TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episodes.
-                        TrainMovementEvents.trains_positions -- holds the positions for the related episodes.
-                    - serialised_state
-                        <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
-
-        All these episodes are with constant speed of 1 and malfunctions free.
          Parameters
         ----------
         start_step : int
@@ -52,6 +41,8 @@ class TrajectoryEvaluator:
             tqdm_kwargs = {}
 
         env = self.trajectory.restore_episode(start_step)
+        if env is None:
+            raise FileNotFoundError(self.trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{self.trajectory.ep_id}.pkl")
         self.trajectory.outputs_dir.mkdir(exist_ok=True)
 
         if snapshot_interval > 0:
@@ -100,13 +91,14 @@ class TrajectoryEvaluator:
         if self.callbacks is not None:
             self.callbacks.on_episode_end(env=env, data_dir=self.trajectory.outputs_dir)
 
-        trains_arrived_episode = self.trajectory.trains_arrived_lookup(trains_arrived)
-        expected_success_rate = trains_arrived_episode['success_rate']
-        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
-
         if start_step is None and end_step is None:
+            trains_arrived_episode = self.trajectory.trains_arrived_lookup(trains_arrived)
+            expected_success_rate = trains_arrived_episode['success_rate']
+            actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
+            print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
+
             assert np.isclose(expected_success_rate, actual_success_rate)
+        return env
 
 
 @click.command()
