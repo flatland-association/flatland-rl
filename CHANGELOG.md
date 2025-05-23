@@ -5,6 +5,24 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[4.1.2](https://github.com/flatland-association/flatland-rl/compare/v4.1.1...v4.1.2)] - 2025-05-23
+
+### Added
+
+* Add 4.1.1 to list of versions to be profiled. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/212
+* 116 Add support for py 3.13 by @chenkins in https://github.com/flatland-association/flatland-rl/pull/121
+
+### Fixed
+
+* Fix passing observation builder to RailEnv in FlatlandRemoteClient. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/215
+
+### Changed
+
+* Refactor action preprocessing. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/214
+* Performance Tuning step function part III: TrainState/StateTransitionSignals data types and object lifecycle. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/210
+* Drop pkg_resources as it is deprecated and removed in Python 3.12. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/221
+
 ## [[4.1.1](https://github.com/flatland-association/flatland-rl/compare/v4.1.0...v4.1.1)] - 2025-05-16
 
 ### Added
