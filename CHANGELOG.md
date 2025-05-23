@@ -5,6 +5,18 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[4.1.2](https://github.com/flatland-association/flatland-rl/compare/v4.1.1...v4.1.2)] - 2025-05-23
+
+### Added
+
+* Add 4.1.1 to list of versions to be profiled. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/212
+
+### Fixed
+
+### Changed
+
+* Refactor action preprocessing. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/214
+
 ## [[4.1.1](https://github.com/flatland-association/flatland-rl/compare/v4.1.0...v4.1.1)] - 2025-05-16
 
 ### Added
