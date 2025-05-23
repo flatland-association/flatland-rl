@@ -1,5 +1,6 @@
 import pickle
-from typing import Tuple, Dict, Optional
+from pathlib import Path
+from typing import Tuple, Dict, Optional, Union
 
 import msgpack
 import msgpack_numpy
@@ -24,7 +25,7 @@ from flatland.envs import timetable_generators as tt_gen
 class RailEnvPersister(object):
 
     @classmethod
-    def save(cls, env, filename, save_distance_maps=False):
+    def save(cls, env, filename: Union[str, Path], save_distance_maps=False):
         """
         Saves environment and distance map information in a file
 
@@ -35,6 +36,9 @@ class RailEnvPersister(object):
         """
 
         env_dict = cls.get_full_state(env)
+
+        if isinstance(filename, Path):
+            filename = str(filename)
 
         # We have an unresolved problem with msgpack loading the list of agents
         # see also 20 lines below.

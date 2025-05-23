@@ -47,30 +47,62 @@ class Trajectory:
         TrainMovementEvents.trains_positions -- holds the positions for the related episodes.
     - serialised_state
         <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
+
+    Indexing:
+        - actions for step i are index i-1 (i.e. starting at 0)
+        - positions before step i are indexed i-1 (i.e. starting at 0)
+        - positions after step are indexed i (i.e. starting at 1)
     """
     data_dir = attrib(type=Path)
     ep_id = attrib(type=str, factory=_uuid_str)
 
-    def read_actions(self):
-        """Returns pd df with all actions for all episodes."""
+    def read_actions(self, episode_only: bool = False):
+        """Returns pd df with all actions for all episodes.
+
+        Parameters
+        ----------
+        episode_only : bool
+            Filter df to contain only this episode.
+        """
         f = os.path.join(self.data_dir, DISCRETE_ACTION_FNAME)
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'action'])
-        return pd.read_csv(f, sep='\t')
+        df = pd.read_csv(f, sep='\t')
+        if episode_only:
+            return df[df['episode_id'] == self.ep_id]
+        return df
 
-    def read_trains_arrived(self):
-        """Returns pd df with success rate for all episodes."""
+    def read_trains_arrived(self, episode_only: bool = False):
+        """Returns pd df with success rate for all episodes.
+
+            Parameters
+            ----------
+            episode_only : bool
+                Filter df to contain only this episode.
+        """
         f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'success_rate'])
-        return pd.read_csv(f, sep='\t')
+        df = pd.read_csv(f, sep='\t')
+        if episode_only:
+            return df[df['episode_id'] == self.ep_id]
+        return df
 
-    def read_trains_positions(self) -> pd.DataFrame:
-        """Returns pd df with all trains' positions for all episodes."""
+    def read_trains_positions(self, episode_only: bool = False) -> pd.DataFrame:
+        """Returns pd df with all trains' positions for all episodes.
+
+        Parameters
+        ----------
+        episode_only : bool
+            Filter df to contain only this episode.
+        """
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'position'])
-        return pd.read_csv(f, sep='\t')
+        df = pd.read_csv(f, sep='\t')
+        if episode_only:
+            return df[df['episode_id'] == self.ep_id]
+        return df
 
     def write_trains_positions(self, df: pd.DataFrame):
         """Store pd df with all trains' positions for all episodes."""
@@ -91,7 +123,7 @@ class Trajectory:
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def restore_episode(self, start_step: int = None) -> RailEnv:
+    def restore_episode(self, start_step: int = None) -> Optional[RailEnv]:
         """Restore an episode.
 
         Parameters
@@ -101,14 +133,17 @@ class Trajectory:
         Returns
         -------
         RailEnv
-            the episode
+            the rail env or None if the snapshot at the step does not exist
         """
         if start_step is None:
             f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
             env, _ = RailEnvPersister.load_new(f)
             return env
         else:
-            env, _ = RailEnvPersister.load_new(os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{start_step:04d}.pkl"))
+            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{start_step:04d}.pkl")
+            if not os.path.isfile(f):
+                return None
+            env, _ = RailEnvPersister.load_new(f)
             return env
 
     def position_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
@@ -188,17 +223,22 @@ class Trajectory:
 
         if len(movement) == 1:
             return movement.iloc[0]
-        raise
+        raise Exception(f"No entry for {self.ep_id} found in data frame.")
 
     @property
     def outputs_dir(self) -> Path:
         return self.data_dir / OUTPUTS_SUBDIR
+
+    # TODO tests:
+    #  - start with only env pkl at intermediate step (without tsv), write tsv from there
+    #  - start with trajectory at any intermediate step (not backed by snapshot): find latest snapshot and run environment to that step
 
     @staticmethod
     def create_from_policy(
         policy: Policy,
         data_dir: Path,
         env: RailEnv = None,
+        # TODO extract to envgenerationconfig?
         n_agents=7,
         x_dim=30,
         y_dim=30,
@@ -216,9 +256,15 @@ class Trajectory:
         ep_id: str = None,
         callbacks: FlatlandCallbacks = None,
         tqdm_kwargs: dict = None,
+        start_step: int = 0,
+        end_step: int = None,
+        fork_from_trajectory: "Trajectory" = None,
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
+
+        Always backs up the actions and positions for steps executed in the tsvs.
+        Can start from existing trajectory.
 
         Parameters
         ----------
@@ -262,14 +308,64 @@ class Trajectory:
             callbacks to run during trajectory creation
         tqdm_kwargs: dict
             additional kwargs for tqdm
-
+        start_step : int
+            start evaluation from intermediate step incl. (requires snapshot to be present)
+        end_step : int
+            stop evaluation at intermediate step excl. Capped by env's max_episode_steps
         Returns
         -------
         Trajectory
 
         """
-        if env is not None:
-            observations, _ = env.reset()
+        if ep_id is not None:
+            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
+        else:
+            trajectory = Trajectory(data_dir=data_dir)
+
+        trains_positions = trajectory.read_trains_positions()
+        actions = trajectory.read_actions()
+        trains_arrived = trajectory.read_trains_arrived()
+
+        # ensure to start with new empty df to avoid inconsistencies:
+        assert len(trains_positions) == 0
+        assert len(actions) == 0
+        assert len(trains_arrived) == 0
+
+        if fork_from_trajectory is not None:
+            env = fork_from_trajectory.restore_episode(start_step=start_step)
+            actions = fork_from_trajectory.read_actions(episode_only=True)
+            trains_positions = fork_from_trajectory.read_trains_positions(episode_only=True)
+            trains_arrived = fork_from_trajectory.read_trains_arrived(episode_only=True)
+
+            actions = actions[actions["env_time"] <= start_step]
+            trains_positions = trains_positions[trains_positions["env_time"] <= start_step]
+            trains_arrived = trains_arrived[trains_arrived["env_time"] <= start_step]
+            actions["episode_id"] = trajectory.ep_id
+            trains_positions["episode_id"] = trajectory.ep_id
+            trains_arrived["episode_id"] = trajectory.ep_id
+
+            trajectory.write_actions(actions)
+            trajectory.write_trains_positions(trains_positions)
+            trajectory.write_trains_arrived(trains_arrived)
+
+            if env is None:
+                env = fork_from_trajectory.restore_episode()
+                # TODO use evalautaor?
+                from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
+                # TODO we could enhance by loading the latest snapshot and running from there instead...
+                (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
+                env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
+                actions = trajectory.read_actions()
+                trains_positions = trajectory.read_trains_positions()
+                trains_arrived = trajectory.read_trains_arrived()
+                observations = env._get_observations()
+
+
+        elif env is not None:
+            # TODO call reset if the env is not ready?
+            # TODO double-check tests deterministic - maybe  check on seed as well?
+            observations = env._get_observations()
         else:
             env, observations, _ = env_generator(
                 n_agents=n_agents,
@@ -285,12 +381,12 @@ class Trajectory:
                 speed_ratios=speed_ratios,
                 seed=seed,
                 obs_builder_object=obs_builder)
+
+        assert start_step == env._elapsed_steps
+
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
-        if ep_id is not None:
-            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
-        else:
-            trajectory = Trajectory(data_dir=data_dir)
+
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
         RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
 
@@ -302,18 +398,21 @@ class Trajectory:
                 callbacks = make_multi_callbacks(callbacks,
                                                  TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir))
 
-        trains_positions = trajectory.read_trains_positions()
-        actions = trajectory.read_actions()
-        trains_arrived = trajectory.read_trains_arrived()
-
         trajectory.outputs_dir.mkdir(exist_ok=True)
-        if callbacks is not None:
-            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
+
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
-        env_time = 0
 
-        for env_time in tqdm.tqdm(range(env._max_episode_steps), **tqdm_kwargs):
+        env_time = start_step
+        if end_step is None:
+            end_step = env._max_episode_steps
+        env_time_range = range(start_step, end_step)
+
+        if callbacks is not None and start_step == 0:
+            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
+
+        for env_time in tqdm.tqdm(env_time_range, **tqdm_kwargs):
+            assert env_time == env._elapsed_steps
 
             action_dict = policy.act_many(env.get_agent_handles(), observations)
             for handle, action in action_dict.items():
@@ -331,9 +430,9 @@ class Trajectory:
                 callbacks.on_episode_step(env=env, data_dir=trajectory.outputs_dir)
 
             if done:
+                if callbacks is not None:
+                    callbacks.on_episode_end(env=env, data_dir=trajectory.outputs_dir)
                 break
-        if callbacks is not None:
-            callbacks.on_episode_end(env=env, data_dir=trajectory.outputs_dir)
 
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
@@ -446,6 +545,26 @@ class Trajectory:
               help="Path to existing RailEnv to start trajectory from",
               required=False
               )
+@click.option('--start-step',
+              type=int,
+              help="Path to existing RailEnv to start trajectory from",
+              required=False, default=0
+              )
+@click.option('--end-step',
+              type=int,
+              help="Path to existing RailEnv to start trajectory from",
+              required=False, default=None
+              )
+@click.option('--fork-data-dir',
+              type=click.Path(exists=True),
+              help="Path to existing RailEnv to start trajectory from",
+              required=False, default=None
+              )
+@click.option('--fork-ep-id',
+              type=int,
+              help="Path to existing RailEnv to start trajectory from",
+              required=False, default=None
+              )
 def generate_trajectory_from_policy(
     data_dir: Path,
     policy_pkg: str, policy_cls: str,
@@ -464,7 +583,11 @@ def generate_trajectory_from_policy(
     seed: int = 42,
     snapshot_interval: int = 1,
     ep_id: str = None,
-    env_path: Path = None
+    env_path: Path = None,
+    start_step: int = 0,
+    end_step: int = None,
+    fork_data_dir: Path = None,
+    fork_ep_id: str = None,
 ):
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
@@ -477,6 +600,9 @@ def generate_trajectory_from_policy(
     env = None
     if env_path is not None:
         env, _ = RailEnvPersister.load_new(str(env_path))
+    fork_from_trajectory = None
+    if fork_data_dir is not None and fork_ep_id is not None:
+        fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
     Trajectory.create_from_policy(
         policy=policy_cls(),
         data_dir=data_dir,
@@ -495,10 +621,14 @@ def generate_trajectory_from_policy(
         obs_builder=obs_builder,
         snapshot_interval=snapshot_interval,
         ep_id=ep_id,
-        env=env
+        env=env,
+        start_step=start_step,
+        end_step=end_step,
+        fork_from_trajectory=fork_from_trajectory,
     )
 
 
+# TODO cli? enable test.
 def generate_trajectories_from_metadata(
     metadata_csv: Path,
     data_dir: Path,
@@ -535,6 +665,7 @@ def generate_trajectories_from_metadata(
             assert exc.code == 0
 
 
+# TODO run in regression
 if __name__ == '__main__':
     metadata_csv = Path("../../episodes/malfunction_deadlock_avoidance_heuristics/metadata.csv")
     data_dir = Path("../../episodes/malfunction_deadlock_avoidance_heuristics")

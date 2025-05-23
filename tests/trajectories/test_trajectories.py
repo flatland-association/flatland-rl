@@ -182,3 +182,23 @@ def test_evaluation_snapshots():
         TrajectoryEvaluator(trajectory).evaluate(snapshot_interval=1)
         print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
         assert len(list((trajectory.data_dir / "outputs" / "serialised_state").rglob("**/*step*.pkl"))) == 472
+
+
+def test_fork_and_run_from_intermediate_step():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory = Trajectory.create_from_policy(policy=RandomPolicy(), data_dir=data_dir / "trajectory", snapshot_interval=0)
+        print(trajectory.read_actions())
+        print(trajectory.read_trains_arrived())
+        print(trajectory.read_trains_positions())
+        fork = Trajectory.create_from_policy(
+            data_dir=data_dir/"fork",
+            policy=RandomPolicy(),
+            start_step=7,
+            end_step=17,
+            fork_from_trajectory=trajectory
+        )
+
+        print(fork.read_actions())
+        print(fork.read_trains_arrived())
+        print(fork.read_trains_positions())
