@@ -22,18 +22,16 @@ class RailEnvActions(fastenum.Enum):
         """
         if isinstance(value, RailEnvActions):
             return value
-        try:
-            if isinstance(value, str):
-                value = int(value)
-            return {
-                0: RailEnvActions.DO_NOTHING,
-                1: RailEnvActions.MOVE_LEFT,
-                2: RailEnvActions.MOVE_FORWARD,
-                3: RailEnvActions.MOVE_RIGHT,
-                4: RailEnvActions.STOP_MOVING,
-            }[value]
-        except:
-            return RailEnvActions.DO_NOTHING
+
+        if isinstance(value, str) and value.isdigit():
+            value = int(value)
+        return {
+            0: RailEnvActions.DO_NOTHING,
+            1: RailEnvActions.MOVE_LEFT,
+            2: RailEnvActions.MOVE_FORWARD,
+            3: RailEnvActions.MOVE_RIGHT,
+            4: RailEnvActions.STOP_MOVING,
+        }.get(value, RailEnvActions.DO_NOTHING)
 
     @staticmethod
     def to_char(a: int):
