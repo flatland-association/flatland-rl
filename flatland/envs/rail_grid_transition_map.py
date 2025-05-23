@@ -168,7 +168,7 @@ class RailGridTransitionMap(GridTransitionMap):
                 The preprocessed action has the following semantics:
                 - MOVE_LEFT/MOVE_RIGHT: turn left/right without acceleration
                 - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
-                - DO_NOTHING: move forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
+                - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
         """
         new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
