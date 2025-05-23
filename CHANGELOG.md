@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * Refactor action preprocessing. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/214
 * Performance Tuning step function part III: TrainState/StateTransitionSignals data types and object lifecycle. by @chenkins
   in https://github.com/flatland-association/flatland-rl/pull/210
+* Drop pkg_resources as it is deprecated and removed in Python 3.12. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/221
 
 ## [[4.1.1](https://github.com/flatland-association/flatland-rl/compare/v4.1.0...v4.1.1)] - 2025-05-16
 
