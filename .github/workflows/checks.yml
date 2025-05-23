@@ -20,7 +20,7 @@ jobs:
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
                 with:
-                    python-version: "3.10"
+                    python-version: "3.13"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -33,7 +33,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   name: Check disk space
                 run: df . -h
@@ -52,7 +52,7 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run tests
-                run: tox
+                run: tox run -e py${{ matrix.python-version }}-ml
             -   name: Check disk space
                 run: df . -h
 
@@ -61,7 +61,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   name: Check disk space
                 run: df . -h
@@ -89,7 +89,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   uses: actions/checkout@v4
             -   name: Install ffmpeg
@@ -117,7 +117,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   uses: actions/checkout@v4
             -   name: Set up Python ${{ matrix.python-version }}
@@ -138,12 +138,16 @@ jobs:
 
     profiling:
         runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   uses: actions/checkout@v4
-            -   name: Set up Python
+            -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
                 with:
-                    python-version: "3.10"
+                    python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
                 run: |
                     wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/scenario-olten-fix/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v1.zip" -O OLTEN_PARTIALLY_CLOSED_v1.zip
@@ -154,11 +158,11 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run profiling
-                run: tox run -e profiling
+                run: tox run -e py${{ matrix.python-version }}-profiling
             -   uses: actions/upload-artifact@v4
                 with:
-                    name: upload-profiling-results
-                    path: .tox/profiling/log
+                    name: upload-profiling-results-${{ matrix.python-version }}
+                    path: .tox/py${{ matrix.python-version }}-profiling/log
                     if-no-files-found: error
             -   name: Install notebook
                 run: |
@@ -168,7 +172,7 @@ jobs:
                 run: NUM_RUNS=5 PYTHONPATH=$PWD python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --execute --to notebook --inplace benchmarks/flatland_performance_profiling.ipynb
             -   uses: actions/upload-artifact@v4
                 with:
-                    name: upload-performance-profiling-results
+                    name: upload-performance-profiling-results-${{ matrix.python-version }}
                     path: |
                         benchmarks/*.prof
                         benchmarks/*.png
@@ -177,12 +181,16 @@ jobs:
     benchmarks:
         if: ${{ github.event.inputs.run_benchmarks }}
         runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   uses: actions/checkout@v4
-            -   name: Set up Python
+            -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
                 with:
-                    python-version: "3.10"
+                    python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
                     wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
@@ -194,22 +202,26 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run benchmarks
-                run: tox run -e benchmarks
+                run: tox run -e py${{ matrix.python-version }}-benchmarks
             -   uses: actions/upload-artifact@v4
                 with:
-                    name: upload-benchmarks-results
+                    name: upload-benchmarks-results-${{ matrix.python-version }}
                     path: benchmarks.hprof
                     if-no-files-found: error
 
     regression:
         if: ${{ github.event.inputs.run_benchmarks }}
         runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
             -   uses: actions/checkout@v4
-            -   name: Set up Python
+            -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
                 with:
-                    python-version: "3.10"
+                    python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
                     wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
@@ -224,4 +236,4 @@ jobs:
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
             -   name: Run benchmarks
-                run: tox run -e regression
+                run: tox run -e py${{ matrix.python-version }}-regression
