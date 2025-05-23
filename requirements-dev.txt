@@ -568,7 +568,7 @@ tomli==2.2.1
     #   pytest
     #   sphinx
     #   tox
-tornado==6.4.2
+tornado==6.5.1
     # via
     #   ipykernel
     #   jupyter-client
