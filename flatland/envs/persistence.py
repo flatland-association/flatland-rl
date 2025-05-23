@@ -6,6 +6,7 @@ import msgpack_numpy
 import numpy as np
 
 msgpack_numpy.patch()
+from flatland.envs.step_utils.states import StateTransitionSignals
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs import rail_env
 from flatland.envs.step_utils import env_utils
@@ -244,6 +245,8 @@ class RailEnvPersister(object):
             env.malfunction_generator._rand_idx = malfunction_rand_idx
 
         env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(env.get_num_agents())}
+        for i_agent in range(env.get_num_agents()):
+            env.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
     @classmethod
     def get_full_state(cls, env):

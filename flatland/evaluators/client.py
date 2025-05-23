@@ -5,6 +5,7 @@ import os
 import pickle
 import random
 import time
+from typing import Dict, Union
 
 import msgpack
 import msgpack_numpy as m
@@ -14,6 +15,7 @@ import redis
 import flatland
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.envs.persistence import RailEnvPersister
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators import messages
 
 logger = logging.getLogger(__name__)
@@ -281,10 +283,14 @@ class FlatlandRemoteClient(object):
         self.last_env_step_time = time.time()
         return local_observation, info
 
-    def env_step(self, action, render=False):
+    def env_step(self, action: Dict[int, Union[RailEnvActions, int]], render=False):
         """
             Respond with [observation, reward, done, info]
         """
+        # TODO workaround to avoid failing fastenum serializing with msgpack find better solution
+        if action is not None:
+            action = {k: v.value if isinstance(v, RailEnvActions) else v for k, v in action.items()}
+
         # We use the last_env_step_time as an approximate measure of the inference time
         approximate_inference_time = time.time() - self.last_env_step_time
         self.update_running_stats("inference_time(approx)", approximate_inference_time)

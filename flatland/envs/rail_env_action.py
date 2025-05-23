@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import NamedTuple, Union
+from typing import NamedTuple, Any
 
 import fastenum
 import numpy as np
@@ -16,10 +16,14 @@ class RailEnvActions(fastenum.Enum):
 
     @staticmethod
     @lru_cache
-    def from_value(value: Union["RailEnvActions", int, str]) -> "RailEnvActions":
+    def from_value(value: Any) -> "RailEnvActions":
+        """
+        Returns the action if valid (either int value or in RailEnvActions), returns RailEnvActions.DO_NOTHING otherwise.
+        """
         if isinstance(value, RailEnvActions):
             return value
-        if isinstance(value, str):
+
+        if isinstance(value, str) and value.isdigit():
             value = int(value)
         return {
             0: RailEnvActions.DO_NOTHING,
@@ -27,7 +31,7 @@ class RailEnvActions(fastenum.Enum):
             2: RailEnvActions.MOVE_FORWARD,
             3: RailEnvActions.MOVE_RIGHT,
             4: RailEnvActions.STOP_MOVING,
-        }[value]
+        }.get(value, RailEnvActions.DO_NOTHING)
 
     @staticmethod
     def to_char(a: int):
@@ -51,6 +55,11 @@ class RailEnvActions(fastenum.Enum):
     @lru_cache()
     def is_moving_action(value: "RailEnvActions") -> bool:
         return value in [RailEnvActions.MOVE_RIGHT, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD]
+
+    @staticmethod
+    @lru_cache()
+    def is_left_right_action(value: "RailEnvActions") -> bool:
+        return value in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]
 
 
 RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])
