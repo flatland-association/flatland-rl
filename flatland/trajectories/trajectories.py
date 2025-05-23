@@ -107,6 +107,7 @@ class Trajectory:
             env, _ = RailEnvPersister.load_new(f)
             return env
         else:
+            # TODO step if necessary
             env, _ = RailEnvPersister.load_new(os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{start_step:04d}.pkl"))
             return env
 
@@ -193,11 +194,16 @@ class Trajectory:
     def outputs_dir(self) -> Path:
         return self.data_dir / OUTPUTS_SUBDIR
 
+    # TODO tests:
+    #  - start with only env pkl at intermediate step (without tsv), write tsv from there
+    #  - start with trajectory at any intermediate step (not backed by snapshot): find latest snapshot and run environment to that step
+
     @staticmethod
     def create_from_policy(
         policy: Policy,
         data_dir: Path,
         env: RailEnv = None,
+        # TODO extract to envgenerationconfig?
         n_agents=7,
         x_dim=30,
         y_dim=30,
@@ -215,9 +221,22 @@ class Trajectory:
         ep_id: str = None,
         callbacks: FlatlandCallbacks = None,
         tqdm_kwargs: dict = None,
+        start_step: int = 0,
+        end_step: int = None,
+        fork_from_trajectory: "Trajectory" = None,
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
+
+        Always backs up the actions and positions for steps executed in the tsvs.
+        Can start from existing trajectory, ch
+
+
+        Indexing:
+        - actions for step i are index i-1 (starting at 0)
+        - positions before step i are indexed i-1
+        - positions after step are indexed i
+
 
         Parameters
         ----------
@@ -261,14 +280,23 @@ class Trajectory:
             callbacks to run during trajectory creation
         tqdm_kwargs: dict
             additional kwargs for tqdm
-
+        start_step : int
+            start evaluation from intermediate step incl. (requires snapshot to be present)
+        end_step : int
+            stop evaluation at intermediate step excl. Capped by env's max_episode_steps
         Returns
         -------
         Trajectory
 
         """
-        if env is not None:
-            observations, _ = env.reset()
+
+        if fork_from_trajectory is not None:
+            env = fork_from_trajectory.restore_episode(start_step=start_step)
+            # TODO copy everything, possibly stepping from latest snapshot to start_step
+            pass
+        elif env is not None:
+            # TODO call reset if the env is not ready?
+            observations, _ = env._get_observations()
         else:
             env, observations, _ = env_generator(
                 n_agents=n_agents,
@@ -284,12 +312,16 @@ class Trajectory:
                 speed_ratios=speed_ratios,
                 seed=seed,
                 obs_builder_object=obs_builder)
+
+        assert start_step == env._elapsed_steps
+
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
         if ep_id is not None:
             trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
         else:
             trajectory = Trajectory(data_dir=data_dir)
+
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
         RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
 
@@ -301,18 +333,26 @@ class Trajectory:
                 callbacks = make_multi_callbacks(callbacks,
                                                  TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir))
 
+        # TODO assert empty for this ep_id
         trains_positions = trajectory.read_trains_positions()
         actions = trajectory.read_actions()
         trains_arrived = trajectory.read_trains_arrived()
 
         trajectory.outputs_dir.mkdir(exist_ok=True)
-        if callbacks is not None:
-            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
+
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
-        env_time = 0
 
-        for env_time in tqdm.tqdm(range(env._max_episode_steps), **tqdm_kwargs):
+        env_time = start_step
+        if end_step is None:
+            end_step = env._max_episode_steps
+        env_time_range = range(start_step, end_step)
+
+        if callbacks is not None and start_step == 0:
+            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
+
+        for env_time in tqdm.tqdm(env_time_range, **tqdm_kwargs):
+            assert env_time == env._elapsed_steps
 
             action_dict = policy.act_many(env.get_agent_handles(), observations)
             for handle, action in action_dict.items():
@@ -330,9 +370,9 @@ class Trajectory:
                 callbacks.on_episode_step(env=env, data_dir=trajectory.outputs_dir)
 
             if done:
+                if callbacks is not None:
+                    callbacks.on_episode_end(env=env, data_dir=trajectory.outputs_dir)
                 break
-        if callbacks is not None:
-            callbacks.on_episode_end(env=env, data_dir=trajectory.outputs_dir)
 
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
