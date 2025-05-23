@@ -52,10 +52,10 @@ This is the preferred method to install Flatland, as it will always install the 
 👥 Credits
 ---
 
-This library was developed
+This library was initially developed
 by [SBB](https://www.sbb.ch/en/), [Deutsche Bahn](https://www.deutschebahn.com/), [SNCF](https://www.sncf.com/en),
-[AIcrowd](https://www.aicrowd.com/) and [numerous contributors](http://flatland.aicrowd.com/misc/credits.html) from the
-flatland community.
+[AIcrowd](https://www.aicrowd.com/) and [numerous contributors](https://flatland-association.github.io/flatland-book/misc/credits.html) from the
+flatland community. It is now developed by the [Flatland Association](https://flatland-association.org) and the [Flatland Community](https://flatland.cloud).
 
 ➕ Contributions
 ---
