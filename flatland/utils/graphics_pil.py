@@ -1,16 +1,16 @@
 import io
-import os
 import time
-#import tkinter as tk
 
+import importlib_resources
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from numpy import array
-from pkg_resources import resource_string as resource_bytes
-
-from flatland.utils.graphics_layer import GraphicsLayer
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
+from flatland.utils.graphics_layer import GraphicsLayer
+
+
+# import tkinter as tk
 
 
 class PILGL(GraphicsLayer):
@@ -184,7 +184,7 @@ class PILGL(GraphicsLayer):
         self.create_layer(iLayer=PILGL.PREDICTION_PATH_LAYER, clear=True)
 
     def show(self, block=False):
-        #print("show() - ", self.__class__)
+        # print("show() - ", self.__class__)
         pass
 
     def pause(self, seconds=0.00001):
@@ -257,6 +257,7 @@ class PILSVG(PILGL):
     but for backward compatibility, and to not introduce any breaking changes at this point
     we are sticking to the legacy name of PILSVG (when in practice we are not using SVG anymore)
     """
+
     def __init__(self, width, height, jupyter=False, screen_width=800, screen_height=600):
         oSuper = super()
         oSuper.__init__(width, height, jupyter, screen_width, screen_height)
@@ -283,7 +284,7 @@ class PILSVG(PILGL):
         self.agents_prev = []
 
     def pil_from_png_file(self, package, resource):
-        bytestring = resource_bytes(package, resource)
+        bytestring = importlib_resources.files(package).joinpath(resource).read_bytes()
         with io.BytesIO(bytestring) as fIn:
             pil_img = Image.open(fIn)
             pil_img.load()
