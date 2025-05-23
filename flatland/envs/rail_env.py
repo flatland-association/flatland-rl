@@ -4,7 +4,7 @@ Definition of the RailEnv environment.
 import random
 import warnings
 from functools import lru_cache
-from typing import List, Optional, Dict, Tuple, Set, Any
+from typing import List, Optional, Dict, Tuple, Set
 
 import numpy as np
 
@@ -377,26 +377,6 @@ class RailEnv(Environment):
                 if agent.old_position is not None:
                     self.agent_positions[agent.old_position] = -1
 
-    @lru_cache(100000)
-    def preprocess_action(self, action, current_position, current_direction):
-        """
-        Preprocess the provided action
-            * Change to DO_NOTHING if illegal action (not one of the defined action)
-            * Check MOVE_LEFT/MOVE_RIGHT actions on current position else try MOVE_FORWARD
-            * Change to STOP_MOVING if the movement is not possible in the grid (e.g. if MOVE_FORWARD in a symmetric switch or MOVE_LEFT in straight element or leads outside of bounds).
-        """
-        action = RailEnv._process_illegal_action(action)
-
-        # TODO revise design: should we stop the agent instead and penalize it?
-        action = self.rail.preprocess_left_right_action(action, current_position, current_direction)
-        # TODO https://github.com/flatland-association/flatland-rl/issues/185 Streamline flatland.envs.step_utils.transition_utils and flatland.envs.step_utils.action_preprocessing
-        if ((RailEnvActions.is_moving_action(action) or action == RailEnvActions.DO_NOTHING)
-            and
-            not self.rail.check_valid_action(action, current_position, current_direction)):
-            # TODO revise design: should we add penalty if the action cannot be executed?
-            action = RailEnvActions.STOP_MOVING
-        return action
-
     def clear_rewards_dict(self):
         """ Reset the rewards dictionary """
         self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))}
@@ -477,7 +457,11 @@ class RailEnv(Environment):
             current_position, current_direction = agent.position, agent.direction
             if current_position is None:  # Agent not added on map yet
                 current_position, current_direction = agent.initial_position, agent.initial_direction
-            preprocessed_action = self.preprocess_action(raw_action, current_position, current_direction)
+            _, new_direction_independent, new_position_independent, _, preprocessed_action = self.rail.check_action_on_agent(
+                RailEnvActions.from_value(raw_action),
+                current_position,
+                current_direction
+            )
 
             # get desired new_position and new_direction
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
@@ -487,18 +471,22 @@ class RailEnv(Environment):
             new_speed = agent.speed_counter.speed
             state = agent.state
             agent_max_speed = agent.speed_counter.max_speed
-            # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING?
-            if (preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD) or (
-                (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and RailEnvActions.is_moving_action(preprocessed_action)):
+            # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING. Caveat: DO_NOTHING would be undefined for symmetric switches!
+            if (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
+                # start moving
                 new_speed += self.acceleration_delta
-            elif preprocessed_action == RailEnvActions.STOP_MOVING:
+            elif preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD:
+                # accelerate, but not if left/right corrected to forward
+                new_speed += self.acceleration_delta
+            elif stop_action_given:
+                # decelerate
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent_max_speed, new_speed))
             if state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
-                RailEnvActions.is_moving_action(preprocessed_action) or preprocessed_action == RailEnvActions.STOP_MOVING):
+                movement_action_given or stop_action_given):
                 # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
@@ -509,11 +497,7 @@ class RailEnv(Environment):
                     and
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
                 ):
-                    new_position, new_direction = self.rail.apply_action_independent(
-                        preprocessed_action,
-                        agent.position,
-                        agent.direction
-                    )
+                    new_position, new_direction = new_position_independent, new_direction_independent
                 assert agent.position is not None
             else:
                 assert state.is_off_map_state() or state == TrainState.DONE
@@ -541,9 +525,9 @@ class RailEnv(Environment):
                 # Earliest departure reached - Train is allowed to move now
                 earliest_departure_reached=self._elapsed_steps >= agent.earliest_departure,
                 # Stop action given
-                stop_action_given=(preprocessed_action == RailEnvActions.STOP_MOVING),
+                stop_action_given=stop_action_given,
                 # Movement action given
-                movement_action_given=RailEnvActions.is_moving_action(preprocessed_action),
+                movement_action_given=movement_action_given,
                 # Target reached - we only know after state and positions update - see handle_done_state below
                 target_reached=None,  # we only know after motion check
                 # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
@@ -795,14 +779,3 @@ class RailEnv(Environment):
             except Exception as e:
                 print("Could Not close window due to:", e)
             self.renderer = None
-
-    @staticmethod
-    @lru_cache()
-    def _process_illegal_action(action: Any) -> RailEnvActions:
-        """
-        Returns the action if valid (either int value or in RailEnvActions), returns RailEnvActions.DO_NOTHING otherwise.
-        """
-        if not RailEnvActions.is_action_valid(action):
-            return RailEnvActions.DO_NOTHING
-        else:
-            return RailEnvActions.from_value(action)
