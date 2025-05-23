@@ -471,7 +471,7 @@ class RailEnv(Environment):
             new_speed = agent.speed_counter.speed
             state = agent.state
             agent_max_speed = agent.speed_counter.max_speed
-            # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING?
+            # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING. Caveat: DO_NOTHING would be undefined for symmetric switches!
             if (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
                 # start moving
                 new_speed += self.acceleration_delta
