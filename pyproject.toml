@@ -26,7 +26,6 @@ dependencies = [
     "crowdai_api",
     "dataclasses",
     "fastenum",
-    "graphviz",
     "importlib_resources",
     "ipycanvas",
     "ipyevents",
