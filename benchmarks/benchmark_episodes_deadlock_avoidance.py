@@ -5,6 +5,7 @@ import pytest
 
 from benchmarks.benchmark_episodes import DOWNLOAD_INSTRUCTIONS
 from flatland.envs.persistence import RailEnvPersister
+from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.trajectories.trajectories import Trajectory
 from flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy import DeadLockAvoidancePolicy
 
@@ -88,7 +89,7 @@ def re_run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval
     env_pkl = str((data_dir / "serialised_state" / f"{ep_id}.pkl").resolve())
 
     env, _ = RailEnvPersister.load_new(env_pkl)
-    recreated_trajectory = Trajectory.create_from_policy(
+    recreated_trajectory = PolicyRunner.create_from_policy(
         policy=DeadLockAvoidancePolicy(env=env),
         data_dir=Path(data_dir),
         env=env,
