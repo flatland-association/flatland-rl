@@ -24,7 +24,6 @@ dependencies = [
     "boto3",
     "click",
     "crowdai_api",
-    "dataclasses",
     "fastenum",
     "importlib_resources",
     "ipycanvas",
