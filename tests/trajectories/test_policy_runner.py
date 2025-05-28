@@ -1,5 +1,3 @@
-import importlib
-import os
 import re
 import tempfile
 from pathlib import Path
@@ -10,14 +8,11 @@ import pytest
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
-from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
-from flatland.trajectories.policy_grid_runner import generate_trajectories_from_metadata
-from flatland.trajectories.policy_runner import generate_trajectory_from_policy, PolicyRunner
+from flatland.trajectories.policy_runner import PolicyRunner, generate_trajectory_from_policy
 from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR
-from flatland.utils.seeding import np_random
+from flatland.utils.seeding import random_state_to_hashablestate, np_random
 
 
 class RandomPolicy(Policy):
@@ -27,7 +22,7 @@ class RandomPolicy(Policy):
         self.np_random, _ = np_random(seed=seed)
 
     def act(self, handle: int, observation: Any, **kwargs):
-        return RailEnvActions(self.np_random.choice(self.action_size))
+        return self.np_random.choice(self.action_size)
 
 
 def test_from_episode():
@@ -85,7 +80,8 @@ def test_cli_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         with pytest.raises(SystemExit) as e_info:
-            generate_trajectory_from_policy(["--data-dir", data_dir, "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy"])
+            generate_trajectory_from_policy(
+                ["--data-dir", data_dir, "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy"])
         assert e_info.value.code == 0
 
         ep_id = re.sub(r"_step.*", "", str(next((data_dir / SERIALISED_STATE_SUBDIR).glob("*step*.pkl")).name))
@@ -109,68 +105,32 @@ def test_cli_from_submission():
         assert e_info.value.code == 0
 
 
-@pytest.mark.skip  # TODO https://github.com/flatland-association/flatland-rl/issues/101 import heuristic baseline as example
-def test_gen_trajectories_from_metadata():
-    metadata_csv_path = importlib.resources.files("env_data.tests.service_test").joinpath("metadata.csv")
+def test_fork_and_run_from_intermediate_step():
     with tempfile.TemporaryDirectory() as tmpdirname:
-        with importlib.resources.as_file(metadata_csv_path) as metadata_csv:
-            tmpdir = Path(tmpdirname)
-            generate_trajectories_from_metadata(
-                metadata_csv=metadata_csv,
-                data_dir=tmpdir,
-                # TODO https://github.com/flatland-association/flatland-rl/issues/101 import heuristic baseline as example
-                policy_pkg="src.policy.deadlock_avoidance_policy",
-                policy_cls="DeadLockAvoidancePolicy",
-                obs_builder_pkg="src.observation.full_state_observation",
-                obs_builder_cls="FullStateObservationBuilder"
-            )
-            metadata = pd.read_csv(metadata_csv)
-            for sr, t, (k, v) in zip([0.8571428571428571, 1.0, 0.8571428571428571, 1.0], [391, 165, 391, 165], metadata.iterrows()):
-                df = pd.read_csv(tmpdir / v["test_id"] / v["env_id"] / TRAINS_ARRIVED_FNAME, sep="\t")
-                assert df["success_rate"].to_list() == [sr]
-                assert df["env_time"].to_list() == [t]
+        data_dir = Path(tmpdirname)
+        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir / "trajectory", snapshot_interval=0)
+        print(trajectory.read_actions())
+        print(trajectory.read_trains_arrived())
+        print(trajectory.read_trains_positions())
+        fork = PolicyRunner.create_from_policy(
+            data_dir=data_dir / "fork",
+            policy=RandomPolicy(),
+            start_step=7,
+            end_step=17,
+            fork_from_trajectory=trajectory
+        )
+
+        print(fork.read_actions())
+        print(fork.read_trains_arrived())
+        print(fork.read_trains_positions())
 
 
-from flatland.utils.seeding import random_state_to_hashablestate
-
-
-@pytest.mark.parametrize(
-    'seed',
-    [43, 44, 1001, 249385789, 289435789]
-)
-def test_persistence_reset(seed):
-    rail_env, _, _ = env_generator(seed=seed, x_dim=40, y_dim=57, )
-    np_random_generated = random_state_to_hashablestate(rail_env.np_random)
-    dict_generated = RailEnvPersister.get_full_state(rail_env)
-
+def test_evaluation_snapshots():
     with tempfile.TemporaryDirectory() as tmpdirname:
-        RailEnvPersister.save(rail_env, os.path.join(tmpdirname, "env.pkl"))
-        reloaded, _ = RailEnvPersister.load_new(os.path.join(tmpdirname, "env.pkl"))
-    np_random_reloaded = random_state_to_hashablestate(reloaded.np_random)
-    dict_reloaded = RailEnvPersister.get_full_state(reloaded)
-
-    assert np_random_generated == np_random_reloaded
-    assert dict_generated == dict_reloaded
-
-    rail_env.reset(regenerate_rail=True, regenerate_schedule=True, random_seed=seed)
-    np_random_reset = random_state_to_hashablestate(rail_env.np_random)
-    dict_reset = RailEnvPersister.get_full_state(rail_env)
-
-    assert np_random_generated == np_random_reset
-    assert dict_generated == dict_reset
-
-    # CAVEAT: if we pass the seed but do not regenerate, this results in a different state!
-    rail_env.reset(regenerate_rail=False, regenerate_schedule=False, random_seed=seed)
-    np_random_reset_no_regenerate_same_seed = random_state_to_hashablestate(rail_env.np_random)
-    dict_reset_no_regenerate_same_seed = RailEnvPersister.get_full_state(rail_env)
-
-    assert np_random_generated != np_random_reset_no_regenerate_same_seed
-    assert dict_generated != dict_reset_no_regenerate_same_seed
-
-    # however, if we do not regenerate and pass no seed, this results in the same state.
-    rail_env.reset(regenerate_rail=False, regenerate_schedule=False)
-    np_random_reset_no_regenerate_no_seed = random_state_to_hashablestate(rail_env.np_random)
-    dict_reset_no_regenerate_no_seed = RailEnvPersister.get_full_state(rail_env)
-
-    assert np_random_generated != np_random_reset_no_regenerate_no_seed
-    assert dict_generated != dict_reset_no_regenerate_no_seed
+        data_dir = Path(tmpdirname)
+        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
+        print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
+        assert len(list(trajectory.data_dir.rglob("**/*step*.pkl"))) == 0
+        TrajectoryEvaluator(trajectory).evaluate(snapshot_interval=1)
+        print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
+        assert len(list((trajectory.data_dir / "outputs" / "serialised_state").rglob("**/*step*.pkl"))) == 472
