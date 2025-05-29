@@ -221,12 +221,3 @@ class Trajectory:
     @property
     def outputs_dir(self) -> Path:
         return self.data_dir / OUTPUTS_SUBDIR
-
-    # TODO tests:
-    #  - start with only env pkl at intermediate step (without tsv), write tsv from there
-    #  - start with trajectory at any intermediate step (not backed by snapshot): find latest snapshot and run environment to that step
-
-
-
-
-

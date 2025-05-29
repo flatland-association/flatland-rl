@@ -105,7 +105,8 @@ class RailEnvPersister(object):
         cls.set_full_state(env, env_dict)
 
     @classmethod
-    def load_new(cls, filename, load_from_package=None, obs_builder_object: Optional[ObservationBuilder["RailEnv"]] = None) -> Tuple["RailEnv", Dict]:
+    def load_new(cls, filename: Union[str, Path], load_from_package=None, obs_builder_object: Optional[ObservationBuilder["RailEnv"]] = None) -> Tuple[
+        "RailEnv", Dict]:
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
@@ -138,8 +139,9 @@ class RailEnvPersister(object):
         return env, env_dict
 
     @classmethod
-    def load_env_dict(cls, filename, load_from_package=None):
-
+    def load_env_dict(cls, filename: Union[str, Path], load_from_package=None):
+        if isinstance(filename, Path):
+            filename = str(filename)
         if load_from_package is not None:
             from importlib_resources import read_binary
             load_data = read_binary(load_from_package, filename)

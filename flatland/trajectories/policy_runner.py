@@ -133,7 +133,6 @@ class PolicyRunner:
 
             if env is None:
                 env = fork_from_trajectory.restore_episode()
-                # TODO use evalautaor?
                 # TODO we could enhance by loading the latest snapshot and running from there instead...
                 (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
                 RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
@@ -141,12 +140,10 @@ class PolicyRunner:
                 actions = trajectory.read_actions()
                 trains_positions = trajectory.read_trains_positions()
                 trains_arrived = trajectory.read_trains_arrived()
+                # TODO bad code smell - private method - check num resets?
                 observations = env._get_observations()
-
-
         elif env is not None:
-            # TODO call reset if the env is not ready?
-            # TODO double-check tests deterministic - maybe  check on seed as well?
+            # TODO bad code smell - private method - check num resets?
             observations = env._get_observations()
         else:
             env, observations, _ = env_generator(

@@ -8,6 +8,7 @@ import pytest
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
+from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
 from flatland.trajectories.policy_runner import PolicyRunner, generate_trajectory_from_policy
@@ -115,11 +116,32 @@ def test_fork_and_run_from_intermediate_step():
         fork = PolicyRunner.create_from_policy(
             data_dir=data_dir / "fork",
             policy=RandomPolicy(),
+            # no snapshot here, PolicyRunner needs to start from a previous snapshot and run forward to starting step:
             start_step=7,
             end_step=17,
             fork_from_trajectory=trajectory
         )
+        # TODO compare
+        print(fork.read_actions())
+        print(fork.read_trains_arrived())
+        print(fork.read_trains_positions())
 
+
+def test_run_from_intermediate_step_pkl():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir / "trajectory", snapshot_interval=1)
+        print(trajectory.read_actions())
+        print(trajectory.read_trains_arrived())
+        print(trajectory.read_trains_positions())
+        fork = PolicyRunner.create_from_policy(
+            data_dir=data_dir / "other",
+            policy=RandomPolicy(),
+            start_step=7,
+            end_step=17,
+            env=RailEnvPersister.load_new(data_dir / "trajectory" / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step0007.pkl")[0]
+        )
+        # TODO compare
         print(fork.read_actions())
         print(fork.read_trains_arrived())
         print(fork.read_trains_positions())
