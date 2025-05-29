@@ -33,7 +33,7 @@ dependencies = [
     "matplotlib",
     "msgpack_numpy",
     "msgpack",
-    "networkx",
+    "networkx<3.5", # pin as 3.5 has dropped support for 3.10 https://networkx.org/documentation/stable/release/release_3.5.html
     "numpy<2",
     "pandas",
     "Pillow",

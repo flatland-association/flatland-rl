@@ -34,9 +34,9 @@ beautifulsoup4==4.13.4
     # via nbconvert
 bleach[css]==6.2.0
     # via nbconvert
-boto3==1.38.25
+boto3==1.38.26
     # via flatland-rl (pyproject.toml)
-botocore==1.38.25
+botocore==1.38.26
     # via
     #   boto3
     #   s3transfer
@@ -272,7 +272,7 @@ nbmake==1.5.5
     # via flatland-rl (pyproject.toml)
 nest-asyncio==1.6.0
     # via ipykernel
-networkx==3.5
+networkx==3.4.2
     # via flatland-rl (pyproject.toml)
 notebook==7.4.3
     # via jupyter
