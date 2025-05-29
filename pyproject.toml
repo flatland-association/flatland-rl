@@ -54,15 +54,17 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
+    "cachetools<6", # pin because of dependency conflict tox and ray dependencies
     "coverage",
+    "opencv-python",
+    "deptry",
+    "folium",
     "flake8",
     "flake8-eradicate",
+    "ipyplot",
     "ipycytoscape",
     "jupyter",
-    "jupyter-contrib-nbextensions",
-    "jupyter-core",
     "nbmake",
-    "notebook",
     "pip-tools",
     "pytest",
     "pytest-retry",
@@ -71,13 +73,13 @@ dev = [
     "tox",
 ]
 ml = [
-    "ray[default,rllib]",
-    "wandb",
-    "torch",
     "dm-tree<0.1.9", # pin dm-tree, 0.1.9 has import errors under MacOS M1 at least.
-    "supersuit<3.10.0", # pin because of bug: https://github.com/Farama-Foundation/SuperSuit/pull/258
     "pettingzoo",
+    "ray[default,rllib]",
     "stable_baselines3",
+    "supersuit<3.10.0", # pin because of bug: https://github.com/Farama-Foundation/SuperSuit/pull/258
+    "torch",
+    "wandb",
 ]
 
 [project.urls]

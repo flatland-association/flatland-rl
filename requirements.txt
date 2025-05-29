@@ -10,9 +10,9 @@ asttokens==3.0.0
     # via stack-data
 attrs==25.3.0
     # via flatland-rl (pyproject.toml)
-boto3==1.38.20
+boto3==1.38.25
     # via flatland-rl (pyproject.toml)
-botocore==1.38.20
+botocore==1.38.25
     # via
     #   boto3
     #   s3transfer
@@ -30,18 +30,14 @@ crowdai-api==0.1.22
     # via flatland-rl (pyproject.toml)
 cycler==0.12.1
     # via matplotlib
-dataclasses==0.6
-    # via flatland-rl (pyproject.toml)
 decorator==5.2.1
     # via ipython
 executing==2.2.0
     # via stack-data
 fastenum==1.1.2
     # via flatland-rl (pyproject.toml)
-fonttools==4.58.0
+fonttools==4.58.1
     # via matplotlib
-graphviz==0.20.3
-    # via flatland-rl (pyproject.toml)
 idna==3.10
     # via requests
 importlib-resources==6.5.2
@@ -72,9 +68,7 @@ kiwisolver==1.4.8
 lxml==5.4.0
     # via svgutils
 matplotlib==3.10.3
-    # via
-    #   flatland-rl (pyproject.toml)
-    #   seaborn
+    # via flatland-rl (pyproject.toml)
 matplotlib-inline==0.1.7
     # via ipython
 msgpack==1.1.0
@@ -83,7 +77,7 @@ msgpack==1.1.0
     #   msgpack-numpy
 msgpack-numpy==0.4.8
     # via flatland-rl (pyproject.toml)
-networkx==3.4.2
+networkx==3.5
     # via flatland-rl (pyproject.toml)
 numpy==1.26.4
     # via
@@ -93,13 +87,10 @@ numpy==1.26.4
     #   matplotlib
     #   msgpack-numpy
     #   pandas
-    #   seaborn
 packaging==25.0
     # via matplotlib
 pandas==2.2.3
-    # via
-    #   flatland-rl (pyproject.toml)
-    #   seaborn
+    # via flatland-rl (pyproject.toml)
 parso==0.8.4
     # via jedi
 pexpect==4.9.0
@@ -115,7 +106,7 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pydantic==2.11.4
+pydantic==2.11.5
     # via flatland-rl (pyproject.toml)
 pydantic-core==2.33.2
     # via pydantic
@@ -128,6 +119,7 @@ pyparsing==3.2.3
 python-dateutil==2.9.0.post0
     # via
     #   botocore
+    #   flatland-rl (pyproject.toml)
     #   matplotlib
     #   pandas
 python-gitlab==5.6.0
@@ -138,21 +130,20 @@ pyyaml==6.0.2
     # via flatland-rl (pyproject.toml)
 recordtype==1.4
     # via flatland-rl (pyproject.toml)
-redis==6.1.0
+redis==6.2.0
     # via
     #   crowdai-api
     #   flatland-rl (pyproject.toml)
 requests==2.32.3
     # via
     #   crowdai-api
+    #   flatland-rl (pyproject.toml)
     #   python-gitlab
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via python-gitlab
-s3transfer==0.12.0
+s3transfer==0.13.0
     # via boto3
-seaborn==0.13.2
-    # via flatland-rl (pyproject.toml)
 six==1.17.0
     # via
     #   python-dateutil
@@ -173,21 +164,20 @@ traitlets==5.14.3
     #   matplotlib-inline
 typing-extensions==4.13.2
     # via
+    #   flatland-rl (pyproject.toml)
     #   pydantic
     #   pydantic-core
     #   typing-inspection
-typing-inspection==0.4.0
+typing-inspection==0.4.1
     # via pydantic
 tzdata==2025.2
     # via pandas
 urllib3==2.4.0
     # via
     #   botocore
+    #   flatland-rl (pyproject.toml)
     #   requests
 wcwidth==0.2.13
     # via prompt-toolkit
 widgetsnbextension==4.0.14
     # via ipywidgets
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
