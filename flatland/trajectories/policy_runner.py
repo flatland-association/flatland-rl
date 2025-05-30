@@ -92,7 +92,7 @@ class PolicyRunner:
         tqdm_kwargs: dict
             additional kwargs for tqdm
         start_step : int
-            start evaluation from intermediate step incl. (requires snapshot to be present)
+            start evaluation from intermediate step incl. (requires snapshot to be present); take actions from start_step and first step executed is start_step + 1. Defaults to 0 with first elapsed step 1.
         end_step : int
             stop evaluation at intermediate step excl. Capped by env's max_episode_steps
         Returns
@@ -120,7 +120,8 @@ class PolicyRunner:
             trains_positions = fork_from_trajectory.read_trains_positions(episode_only=True)
             trains_arrived = fork_from_trajectory.read_trains_arrived(episode_only=True)
 
-            actions = actions[actions["env_time"] <= start_step]
+            # will run action start_step into step start_step+1
+            actions = actions[actions["env_time"] < start_step]
             trains_positions = trains_positions[trains_positions["env_time"] <= start_step]
             trains_arrived = trains_arrived[trains_arrived["env_time"] <= start_step]
             actions["episode_id"] = trajectory.ep_id
@@ -161,7 +162,7 @@ class PolicyRunner:
                 seed=seed,
                 obs_builder_object=obs_builder)
 
-        assert start_step == env._elapsed_steps
+        assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
 
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
@@ -214,10 +215,12 @@ class PolicyRunner:
                 break
 
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
+        # TODO write dones in every step along with rewards
+        if done:
+            trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
+            trajectory.write_trains_arrived(trains_arrived)
         trajectory.write_trains_positions(trains_positions)
         trajectory.write_actions(actions)
-        trajectory.write_trains_arrived(trains_arrived)
         return trajectory
 
 

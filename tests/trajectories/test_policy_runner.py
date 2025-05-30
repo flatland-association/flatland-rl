@@ -6,6 +6,7 @@ from typing import Optional, Any
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
+from flatland.core.env_observation_builder import ObservationBuilder, AgentHandle, ObservationType
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
@@ -17,13 +18,37 @@ from flatland.utils.seeding import random_state_to_hashablestate, np_random
 
 
 class RandomPolicy(Policy):
-    def __init__(self, action_size: int = 5, seed=42):
+    """
+    Random action with reset of random sequence to allow synchronization with partial trajectory.
+    """
+
+    def __init__(self, action_size: int = 5, seed=42, reset_at: int = None):
+        """
+
+        Parameters
+        ----------
+        reset_at : Optional[int] actions applied in env step reset_at+1 (e.g. reset at 7 to start at step 8)
+        """
         super(RandomPolicy, self).__init__()
         self.action_size = action_size
-        self.np_random, _ = np_random(seed=seed)
+        self._seed = seed
+        self.reset_at = reset_at
+        self.np_random, _ = np_random(seed=self._seed)
 
     def act(self, handle: int, observation: Any, **kwargs):
+        if handle == 0 and self.reset_at is not None and observation == self.reset_at:
+            self.np_random, _ = np_random(seed=self._seed)
         return self.np_random.choice(self.action_size)
+
+
+class EnvStepObservationBuilder(ObservationBuilder[int]):
+    """Returns elapsed steps as observation."""
+
+    def get(self, handle: AgentHandle = 0) -> ObservationType:
+        return self.env._elapsed_steps
+
+    def reset(self):
+        pass
 
 
 def test_from_episode():
@@ -106,45 +131,104 @@ def test_cli_from_submission():
         assert e_info.value.code == 0
 
 
-def test_fork_and_run_from_intermediate_step():
+def test_fork_and_run_from_intermediate_step(verbose: bool = False):
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir / "trajectory", snapshot_interval=0)
-        print(trajectory.read_actions())
-        print(trajectory.read_trains_arrived())
-        print(trajectory.read_trains_positions())
+        trajectory = PolicyRunner.create_from_policy(
+            policy=RandomPolicy(reset_at=7),
+            obs_builder=EnvStepObservationBuilder(),
+            data_dir=data_dir / "trajectory",
+            snapshot_interval=0)
+        if verbose:
+            import pandas as pd
+            pd.set_option('display.max_rows', None)
+            pd.set_option('display.max_columns', None)
+            print(trajectory.read_actions())
+            print(trajectory.read_trains_arrived())
+            print(trajectory.read_trains_positions())
+
         fork = PolicyRunner.create_from_policy(
             data_dir=data_dir / "fork",
             policy=RandomPolicy(),
+            obs_builder=EnvStepObservationBuilder(),
             # no snapshot here, PolicyRunner needs to start from a previous snapshot and run forward to starting step:
             start_step=7,
             end_step=17,
             fork_from_trajectory=trajectory
         )
-        # TODO compare
-        print(fork.read_actions())
-        print(fork.read_trains_arrived())
-        print(fork.read_trains_positions())
+        if verbose:
+            print(fork.read_actions())
+            print(fork.read_trains_arrived())
+            print(fork.read_trains_positions())
+        actions_diff = trajectory.compare_actions(other=fork, start_step=7, end_step=17)
+        positions_diff = trajectory.compare_positions(other=fork, start_step=8, end_step=17)
+        arrived_diff = trajectory.compare_arrived(other=fork, start_step=8, end_step=17)
+        if verbose:
+            print(actions_diff)
+            print(positions_diff)
+            print(arrived_diff)
+        assert len(actions_diff) == 0
+        assert len(positions_diff) == 0
+        assert len(arrived_diff) == 0
 
 
-def test_run_from_intermediate_step_pkl():
+def test_run_from_intermediate_step_pkl(verbose: bool = False):
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir / "trajectory", snapshot_interval=1)
-        print(trajectory.read_actions())
-        print(trajectory.read_trains_arrived())
-        print(trajectory.read_trains_positions())
-        fork = PolicyRunner.create_from_policy(
+        trajectory = PolicyRunner.create_from_policy(
+            policy=RandomPolicy(reset_at=7),
+            obs_builder=EnvStepObservationBuilder(),
+            data_dir=data_dir / "trajectory",
+            snapshot_interval=1
+        )
+        if verbose:
+            import pandas as pd
+            pd.set_option('display.max_rows', None)
+            pd.set_option('display.max_columns', None)
+            print(trajectory.read_actions())
+            print(trajectory.read_trains_arrived())
+            print(trajectory.read_trains_positions())
+        other = PolicyRunner.create_from_policy(
             data_dir=data_dir / "other",
             policy=RandomPolicy(),
             start_step=7,
             end_step=17,
             env=RailEnvPersister.load_new(data_dir / "trajectory" / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step0007.pkl")[0]
         )
-        # TODO compare
-        print(fork.read_actions())
-        print(fork.read_trains_arrived())
-        print(fork.read_trains_positions())
+        if verbose:
+            print(other.read_actions())
+            print(other.read_trains_arrived())
+            print(other.read_trains_positions())
+        actions_diff = trajectory.compare_actions(other=other, start_step=7, end_step=17)
+        positions_diff = trajectory.compare_positions(other=other, start_step=8, end_step=17)
+        arrived_diff = trajectory.compare_arrived(other=other, start_step=8, end_step=17)
+        if verbose:
+            print(actions_diff)
+            print(positions_diff)
+            print(arrived_diff)
+        assert len(actions_diff) == 0
+        assert len(positions_diff) == 0
+        assert len(arrived_diff) == 0
+
+
+def test_failing_from_wrong_intermediate_step():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+    trajectory = PolicyRunner.create_from_policy(
+        policy=RandomPolicy(reset_at=7),
+        obs_builder=EnvStepObservationBuilder(),
+        data_dir=data_dir / "trajectory",
+        snapshot_interval=1
+    )
+    with pytest.raises(AssertionError) as e_info:
+        PolicyRunner.create_from_policy(
+            data_dir=data_dir / "other",
+            policy=RandomPolicy(),
+            start_step=8,
+            end_step=17,
+            env=RailEnvPersister.load_new(data_dir / "trajectory" / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step0007.pkl")[0]
+        )
+    assert str(e_info.value) == 'Expected env at 8, found 7.'
 
 
 def test_evaluation_snapshots():
