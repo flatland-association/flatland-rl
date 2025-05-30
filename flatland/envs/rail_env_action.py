@@ -1,3 +1,4 @@
+from ast import literal_eval
 from functools import lru_cache
 from typing import NamedTuple, Any
 
@@ -24,13 +25,23 @@ class RailEnvActions(fastenum.Enum):
             return value
 
         if isinstance(value, str) and value.isdigit():
-            value = int(value)
+            value = literal_eval(value)
         return {
             0: RailEnvActions.DO_NOTHING,
+            "DO_NOTHING": RailEnvActions.DO_NOTHING,
+            "RailEnvActions.DO_NOTHING": RailEnvActions.DO_NOTHING,
             1: RailEnvActions.MOVE_LEFT,
+            "MOVE_LEFT": RailEnvActions.MOVE_LEFT,
+            "RailEnvActions.MOVE_LEFT": RailEnvActions.MOVE_LEFT,
             2: RailEnvActions.MOVE_FORWARD,
+            "MOVE_FORWARD": RailEnvActions.MOVE_FORWARD,
+            "RailEnvActions.MOVE_FORWARD": RailEnvActions.MOVE_FORWARD,
             3: RailEnvActions.MOVE_RIGHT,
+            "MOVE_RIGHT": RailEnvActions.MOVE_RIGHT,
+            "RailEnvActions.MOVE_RIGHT": RailEnvActions.MOVE_RIGHT,
             4: RailEnvActions.STOP_MOVING,
+            "STOP_MOVING": RailEnvActions.STOP_MOVING,
+            "RailEnvActions.STOP_MOVING": RailEnvActions.STOP_MOVING,
         }.get(value, RailEnvActions.DO_NOTHING)
 
     @staticmethod
