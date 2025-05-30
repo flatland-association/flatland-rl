@@ -163,6 +163,7 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
         actions_diff = trajectory.compare_actions(other=fork, start_step=7, end_step=17)
         positions_diff = trajectory.compare_positions(other=fork, start_step=8, end_step=17)
         arrived_diff = trajectory.compare_arrived(other=fork, start_step=8, end_step=17)
+        rewards_dones_infos_diff = trajectory.compare_rewards_dones_infos(other=fork, start_step=8, end_step=17)
         if verbose:
             print(actions_diff)
             print(positions_diff)
@@ -170,6 +171,7 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
         assert len(actions_diff) == 0
         assert len(positions_diff) == 0
         assert len(arrived_diff) == 0
+        assert len(rewards_dones_infos_diff) == 0
 
 
 def test_run_from_intermediate_step_pkl(verbose: bool = False):
@@ -202,6 +204,7 @@ def test_run_from_intermediate_step_pkl(verbose: bool = False):
         actions_diff = trajectory.compare_actions(other=other, start_step=7, end_step=17)
         positions_diff = trajectory.compare_positions(other=other, start_step=8, end_step=17)
         arrived_diff = trajectory.compare_arrived(other=other, start_step=8, end_step=17)
+        rewards_dones_infos_diff = trajectory.compare_rewards_dones_infos(other=other, start_step=8, end_step=17)
         if verbose:
             print(actions_diff)
             print(positions_diff)
@@ -209,6 +212,7 @@ def test_run_from_intermediate_step_pkl(verbose: bool = False):
         assert len(actions_diff) == 0
         assert len(positions_diff) == 0
         assert len(arrived_diff) == 0
+        assert len(rewards_dones_infos_diff) == 0
 
 
 def test_failing_from_wrong_intermediate_step():

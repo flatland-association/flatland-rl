@@ -292,6 +292,11 @@ class Trajectory:
         other_df = other.read_trains_arrived(episode_only=True)
         return self._compare(df, other_df, end_step, start_step)
 
+    def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+        df = self.read_trains_rewards_dones_infos(episode_only=True)
+        other_df = other.read_trains_rewards_dones_infos(episode_only=True)
+        return self._compare(df, other_df, end_step, start_step)
+
     def _compare(self, df, other_df, end_step, start_step):
         if start_step is not None:
             df = df[df["env_time"] >= start_step]
