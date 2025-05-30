@@ -12,6 +12,7 @@ from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
 from flatland.trajectories.trajectories import Policy
 from flatland.trajectories.trajectories import Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
@@ -26,7 +27,7 @@ class RandomPolicy(Policy):
         self.np_random, _ = np_random(seed=seed)
 
     def act(self, handle: int, observation: Any, **kwargs):
-        return self.np_random.choice(self.action_size)
+        return RailEnvActions(self.np_random.choice(self.action_size))
 
 
 def test_from_episode():
