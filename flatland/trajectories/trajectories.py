@@ -49,7 +49,7 @@ class Trajectory:
     data_dir = attrib(type=Path)
     ep_id = attrib(type=str, factory=_uuid_str)
 
-    def read_actions(self, episode_only: bool = False):
+    def read_actions(self, episode_only: bool = False) -> pd.DataFrame:
         """Returns pd df with all actions for all episodes.
 
         Parameters
@@ -65,7 +65,7 @@ class Trajectory:
             return df[df['episode_id'] == self.ep_id]
         return df
 
-    def read_trains_arrived(self, episode_only: bool = False):
+    def read_trains_arrived(self, episode_only: bool = False) -> pd.DataFrame:
         """Returns pd df with success rate for all episodes.
 
             Parameters
@@ -221,3 +221,32 @@ class Trajectory:
     @property
     def outputs_dir(self) -> Path:
         return self.data_dir / OUTPUTS_SUBDIR
+
+    def compare_actions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+        df = self.read_actions(episode_only=True)
+        other_df = other.read_actions(episode_only=True)
+        return self._compare(df, other_df, end_step, start_step)
+
+    def compare_positions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+        df = self.read_trains_positions(episode_only=True)
+        other_df = other.read_trains_positions(episode_only=True)
+        return self._compare(df, other_df, end_step, start_step)
+
+    def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+        df = self.read_trains_arrived(episode_only=True)
+        other_df = other.read_trains_arrived(episode_only=True)
+        return self._compare(df, other_df, end_step, start_step)
+
+    def _compare(self, df, other_df, end_step, start_step):
+        if start_step is not None:
+            df = df[df["env_time"] >= start_step]
+            other_df = other_df[other_df["env_time"] >= start_step]
+        if end_step is not None:
+            df = df[df["env_time"] < end_step]
+            other_df = other_df[other_df["env_time"] < end_step]
+        df.reset_index(drop=True, inplace=True)
+        other_df.reset_index(drop=True, inplace=True)
+        df.drop(columns="episode_id", inplace=True)
+        other_df.drop(columns="episode_id", inplace=True)
+        diff = df.compare(other_df)
+        return diff
