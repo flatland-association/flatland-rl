@@ -165,4 +165,8 @@ def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0,
     snapshot_interval : int
         interval to write pkl snapshots. 1 means at every step. 0 means never.
     """
-    TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id)).evaluate(start_step=start_step, snapshot_interval=snapshot_interval)
+    TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id)).evaluate(
+        start_step=start_step,
+        snapshot_interval=snapshot_interval,
+        # TODO regenerate scenarios with additional data and remove this option
+        skip_rewards_dones_infos=True)
