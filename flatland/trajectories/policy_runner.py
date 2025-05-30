@@ -105,9 +105,9 @@ class PolicyRunner:
         else:
             trajectory = Trajectory(data_dir=data_dir)
 
-        trains_positions = trajectory.read_trains_positions()
-        actions = trajectory.read_actions()
-        trains_arrived = trajectory.read_trains_arrived()
+        trains_positions = trajectory.read_trains_positions(episode_only=True)
+        actions = trajectory.read_actions(episode_only=True)
+        trains_arrived = trajectory.read_trains_arrived(episode_only=True)
 
         # ensure to start with new empty df to avoid inconsistencies:
         assert len(trains_positions) == 0

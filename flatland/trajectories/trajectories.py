@@ -62,7 +62,8 @@ class Trajectory:
             return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'action'])
         df = pd.read_csv(f, sep='\t')
         if episode_only:
-            return df[df['episode_id'] == self.ep_id]
+            df = df[df['episode_id'] == self.ep_id]
+        df["action"] = df["action"].map(RailEnvActions.from_value)
         return df
 
     def read_trains_arrived(self, episode_only: bool = False) -> pd.DataFrame:
