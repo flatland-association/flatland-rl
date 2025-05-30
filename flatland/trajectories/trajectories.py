@@ -2,7 +2,7 @@ import ast
 import os
 import uuid
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any, Dict
 
 import pandas as pd
 from attr import attrs, attrib
@@ -10,11 +10,13 @@ from attr import attrs, attrib
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.step_utils.states import TrainState
 
 EVENT_LOGS_SUBDIR = 'event_logs'
 DISCRETE_ACTION_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "ActionEvents.discrete_action.tsv")
 TRAINS_ARRIVED_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_arrived.tsv")
 TRAINS_POSITIONS_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_positions.tsv")
+trains_rewards_dones_infos_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_rewards_dones_infos.tsv")
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 OUTPUTS_SUBDIR = 'outputs'
 
@@ -38,6 +40,7 @@ class Trajectory:
         ActionEvents.discrete_action 		 -- holds set of action to be replayed for the related episodes.
         TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episodes.
         TrainMovementEvents.trains_positions -- holds the positions for the related episodes.
+        TrainMovementEvents.trains_rewards_dones_infos   -- holds the rewards for the related episodes.
     - serialised_state
         <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
 
@@ -98,6 +101,27 @@ class Trajectory:
             return df[df['episode_id'] == self.ep_id]
         return df
 
+    def read_trains_rewards_dones_infos(self, episode_only: bool = False) -> pd.DataFrame:
+        """Returns pd df with all trains' rewards, dones, infos for all episodes.
+
+        Parameters
+        ----------
+        episode_only : bool
+            Filter df to contain only this episode.
+        """
+        f = os.path.join(self.data_dir, trains_rewards_dones_infos_FNAME)
+        if not os.path.exists(f):
+            return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'reward', 'info', 'done'])
+        df = pd.read_csv(f, sep='\t')
+        if episode_only:
+            df = df[df['episode_id'] == self.ep_id]
+        df["info"] = df["info"].map(lambda s: s.replace("<TrainState.WAITING: 0>", "0").replace("<TrainState.READY_TO_DEPART: 1>", "1").replace(
+            "<TrainState.MALFUNCTION_OFF_MAP: 2>", "2").replace("<TrainState.MOVING: 3>", "3").replace("<TrainState.STOPPED: 4>", "4").replace(
+            "<TrainState.MALFUNCTION: 5>", "5").replace("<TrainState.DONE: 6>", "6"))
+        df["info"] = df["info"].map(ast.literal_eval)
+        df["info"] = df["info"].map(lambda d: {k: (v if k != "state" else TrainState(v)) for k, v in d.items()})
+        return df
+
     def write_trains_positions(self, df: pd.DataFrame):
         """Store pd df with all trains' positions for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
@@ -114,6 +138,12 @@ class Trajectory:
     def write_trains_arrived(self, df: pd.DataFrame):
         """Store pd df with all trains' success rates for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
+        Path(f).parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(f, sep='\t', index=False)
+
+    def write_trains_rewards_dones_infos(self, df: pd.DataFrame):
+        """Store pd df with all trains' rewards for all episodes."""
+        f = os.path.join(self.data_dir, trains_rewards_dones_infos_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
@@ -148,6 +178,9 @@ class Trajectory:
 
     def arrived_collect(self, df: pd.DataFrame, env_time: int, success_rate: float):
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate}
+
+    def rewards_dones_infos_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, reward: float, info: Any, done: bool):
+        df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'reward': reward, 'info': info, 'done': done}
 
     def position_lookup(self, df: pd.DataFrame, env_time: int, agent_id: int) -> Tuple[Tuple[int, int], int]:
         """Method used to retrieve the stored position (if available).
@@ -218,6 +251,27 @@ class Trajectory:
         if len(movement) == 1:
             return movement.iloc[0]
         raise Exception(f"No entry for {self.ep_id} found in data frame.")
+
+    def trains_rewards_dones_infos_lookup(self, rewards_df: pd.DataFrame, env_time: int, agent_id: int) -> Tuple[float, bool, Dict]:
+        """Method used to retrieve the rewards for the episode.
+
+        Parameters
+        ----------
+        rewards_df: pd.DataFrame
+            Data frame from event_logs/TrainMovementEvents.trains_rewards_dones_infos.tsv
+        env_time: int
+            action going into step env_time
+        agent_id: int
+            agent ID
+        Returns
+        -------
+        pd.DataFrame
+            The trains arrived data.
+        """
+        data = rewards_df.loc[(rewards_df['env_time'] == env_time) & (rewards_df['agent_id'] == agent_id) & (rewards_df['episode_id'] == self.ep_id)]
+        assert len(data) == 1
+        data = data.iloc[0]
+        return data["reward"], data["done"], data["info"]
 
     @property
     def outputs_dir(self) -> Path:

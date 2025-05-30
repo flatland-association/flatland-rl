@@ -17,7 +17,8 @@ class TrajectoryEvaluator:
     def __call__(self, *args, **kwargs):
         self.evaluate()
 
-    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0, tqdm_kwargs: dict = None) -> RailEnv:
+    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0, tqdm_kwargs: dict = None,
+                 skip_rewards_dones_infos: bool = False) -> RailEnv:
         """
          Parameters
         ----------
@@ -36,6 +37,7 @@ class TrajectoryEvaluator:
         trains_positions = self.trajectory.read_trains_positions()
         actions = self.trajectory.read_actions()
         trains_arrived = self.trajectory.read_trains_arrived()
+        trains_rewards_dones_infos = self.trajectory.read_trains_rewards_dones_infos()
 
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
@@ -64,7 +66,7 @@ class TrajectoryEvaluator:
             end_step = env._max_episode_steps
         for elapsed_before_step in tqdm.tqdm(range(start_step, end_step), **tqdm_kwargs):
             action = {agent_id: self.trajectory.action_lookup(actions, env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
-            _, _, dones, _ = env.step(action)
+            _, rewards, dones, infos = env.step(action)
             if self.callbacks is not None:
                 self.callbacks.on_episode_step(env=env, data_dir=self.trajectory.outputs_dir)
 
@@ -85,6 +87,16 @@ class TrajectoryEvaluator:
                                                              f"- breakpoint:\tself._elapsed_steps == {elapsed_after_step} and agent.handle == {agent.handle}\n" \
                                                              f"- motion check:\t{list(env.motion_check.stopped)}\n\n\n" \
                                                              f"- agents:\t{env.agents}"
+                if not skip_rewards_dones_infos:
+                    actual_reward = rewards[agent_id]
+                    actual_done = dones[agent_id]
+                    actual_info = {k: v[agent_id] for k, v in infos.items()}
+                    expected_reward, expected_done, expected_info = self.trajectory.trains_rewards_dones_infos_lookup(trains_rewards_dones_infos,
+                                                                                                                      env_time=elapsed_after_step,
+                                                                                                                      agent_id=agent_id)
+                    assert actual_reward == expected_reward
+                    assert actual_done == expected_done
+                    assert actual_info == expected_info
 
             if done:
                 break
