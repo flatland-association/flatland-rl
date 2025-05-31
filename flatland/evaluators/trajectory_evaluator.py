@@ -33,11 +33,7 @@ class TrajectoryEvaluator:
         tqdm_kwargs: dict
             additional kwargs for tqdm
         """
-
-        trains_positions = self.trajectory.read_trains_positions()
-        actions = self.trajectory.read_actions()
-        trains_arrived = self.trajectory.read_trains_arrived()
-        trains_rewards_dones_infos = self.trajectory.read_trains_rewards_dones_infos()
+        self.trajectory.load()
 
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
@@ -65,7 +61,7 @@ class TrajectoryEvaluator:
         if end_step is None:
             end_step = env._max_episode_steps
         for elapsed_before_step in tqdm.tqdm(range(start_step, end_step), **tqdm_kwargs):
-            action = {agent_id: self.trajectory.action_lookup(actions, env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
+            action = {agent_id: self.trajectory.action_lookup(env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
             _, rewards, dones, infos = env.step(action)
             if self.callbacks is not None:
                 self.callbacks.on_episode_step(env=env, data_dir=self.trajectory.outputs_dir)
@@ -76,7 +72,7 @@ class TrajectoryEvaluator:
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
-                expected_position = self.trajectory.position_lookup(trains_positions, env_time=elapsed_after_step, agent_id=agent_id)
+                expected_position = self.trajectory.position_lookup(env_time=elapsed_after_step, agent_id=agent_id)
                 actual_position = (agent.position, agent.direction)
                 assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
                                                              f"- actual_position:\t{actual_position}\n" \
@@ -91,8 +87,7 @@ class TrajectoryEvaluator:
                     actual_reward = rewards[agent_id]
                     actual_done = dones[agent_id]
                     actual_info = {k: v[agent_id] for k, v in infos.items()}
-                    expected_reward, expected_done, expected_info = self.trajectory.trains_rewards_dones_infos_lookup(trains_rewards_dones_infos,
-                                                                                                                      env_time=elapsed_after_step,
+                    expected_reward, expected_done, expected_info = self.trajectory.trains_rewards_dones_infos_lookup(env_time=elapsed_after_step,
                                                                                                                       agent_id=agent_id)
                     assert actual_reward == expected_reward
                     assert actual_done == expected_done
@@ -104,7 +99,7 @@ class TrajectoryEvaluator:
             self.callbacks.on_episode_end(env=env, data_dir=self.trajectory.outputs_dir)
 
         if start_step is None and end_step is None:
-            trains_arrived_episode = self.trajectory.trains_arrived_lookup(trains_arrived)
+            trains_arrived_episode = self.trajectory.trains_arrived_lookup()
             expected_success_rate = trains_arrived_episode['success_rate']
             actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
             print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")

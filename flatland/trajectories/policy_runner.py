@@ -105,38 +105,30 @@ class PolicyRunner:
         else:
             trajectory = Trajectory(data_dir=data_dir)
 
-        trains_positions = trajectory.read_trains_positions(episode_only=True)
-        actions = trajectory.read_actions(episode_only=True)
-        trains_arrived = trajectory.read_trains_arrived(episode_only=True)
-        trains_rewards_dones_infos = trajectory.read_trains_rewards_dones_infos(episode_only=True)
+        trajectory.load()
 
         # ensure to start with new empty df to avoid inconsistencies:
-        assert len(trains_positions) == 0
-        assert len(actions) == 0
-        assert len(trains_arrived) == 0
-        assert len(trains_rewards_dones_infos) == 0
+        assert len(trajectory.trains_positions) == 0
+        assert len(trajectory.actions) == 0
+        assert len(trajectory.trains_arrived) == 0
+        assert len(trajectory.trains_rewards_dones_infos) == 0
 
         if fork_from_trajectory is not None:
             env = fork_from_trajectory.restore_episode(start_step=start_step)
-            actions = fork_from_trajectory.read_actions(episode_only=True)
-            trains_positions = fork_from_trajectory.read_trains_positions(episode_only=True)
-            trains_arrived = fork_from_trajectory.read_trains_arrived(episode_only=True)
-            trains_rewards_dones_infos = fork_from_trajectory.read_trains_rewards_dones_infos(episode_only=True)
+            fork_from_trajectory.load(episode_only=True)
 
             # will run action start_step into step start_step+1
-            actions = actions[actions["env_time"] < start_step]
-            trains_positions = trains_positions[trains_positions["env_time"] <= start_step]
-            trains_arrived = trains_arrived[trains_arrived["env_time"] <= start_step]
-            trains_rewards_dones_infos = trains_rewards_dones_infos[trains_rewards_dones_infos["env_time"] <= start_step]
-            actions["episode_id"] = trajectory.ep_id
-            trains_positions["episode_id"] = trajectory.ep_id
-            trains_arrived["episode_id"] = trajectory.ep_id
-            trains_rewards_dones_infos["episode_id"] = trajectory.ep_id
+            trajectory.actions = fork_from_trajectory.actions[fork_from_trajectory.actions["env_time"] < start_step]
+            trajectory.trains_positions = fork_from_trajectory.trains_positions[fork_from_trajectory.trains_positions["env_time"] <= start_step]
+            trajectory.trains_arrived = fork_from_trajectory.trains_arrived[fork_from_trajectory.trains_arrived["env_time"] <= start_step]
+            trajectory.trains_rewards_dones_infos = fork_from_trajectory.trains_rewards_dones_infos[
+                fork_from_trajectory.trains_rewards_dones_infos["env_time"] <= start_step]
+            trajectory.actions["episode_id"] = trajectory.ep_id
+            trajectory.trains_positions["episode_id"] = trajectory.ep_id
+            trajectory.trains_arrived["episode_id"] = trajectory.ep_id
+            trajectory.trains_rewards_dones_infos["episode_id"] = trajectory.ep_id
 
-            trajectory.write_actions(actions)
-            trajectory.write_trains_positions(trains_positions)
-            trajectory.write_trains_arrived(trains_arrived)
-            trajectory.write_trains_rewards_dones_infos(trains_rewards_dones_infos)
+            trajectory.persist()
 
             if env is None:
                 env = fork_from_trajectory.restore_episode()
@@ -144,9 +136,7 @@ class PolicyRunner:
                 (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
                 RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
                 env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
-                actions = trajectory.read_actions()
-                trains_positions = trajectory.read_trains_positions()
-                trains_arrived = trajectory.read_trains_arrived()
+                trajectory.load()
                 # TODO bad code smell - private method - check num resets?
                 observations = env._get_observations()
         elif env is not None:
@@ -202,15 +192,15 @@ class PolicyRunner:
 
             action_dict = policy.act_many(env.get_agent_handles(), observations)
             for handle, action in action_dict.items():
-                trajectory.action_collect(actions, env_time=env_time, agent_id=handle, action=action)
+                trajectory.action_collect(env_time=env_time, agent_id=handle, action=action)
 
             observations, rewards, dones, infos = env.step(action_dict)
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
                 actual_position = (agent.position, agent.direction)
-                trajectory.position_collect(trains_positions, env_time=env_time + 1, agent_id=agent_id, position=actual_position)
-                trajectory.rewards_dones_infos_collect(trains_rewards_dones_infos, env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
+                trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=actual_position)
+                trajectory.rewards_dones_infos_collect(env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
                                                        info={k: v[agent_id] for k, v in infos.items()},
                                                        done=dones[agent_id])
 
@@ -225,11 +215,8 @@ class PolicyRunner:
                 break
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         if done:
-            trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
-            trajectory.write_trains_arrived(trains_arrived)
-        trajectory.write_trains_positions(trains_positions)
-        trajectory.write_actions(actions)
-        trajectory.write_trains_rewards_dones_infos(trains_rewards_dones_infos)
+            trajectory.arrived_collect(env_time, actual_success_rate)
+        trajectory.persist()
         return trajectory
 
 
