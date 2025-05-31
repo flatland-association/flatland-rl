@@ -143,9 +143,10 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
             import pandas as pd
             pd.set_option('display.max_rows', None)
             pd.set_option('display.max_columns', None)
-            print(trajectory.read_actions())
-            print(trajectory.read_trains_arrived())
-            print(trajectory.read_trains_positions())
+            print(trajectory.actions)
+            print(trajectory.trains_arrived)
+            print(trajectory.trains_positions)
+            print(trajectory.trains_rewards_dones_infos)
 
         fork = PolicyRunner.create_from_policy(
             data_dir=data_dir / "fork",
@@ -157,9 +158,10 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
             fork_from_trajectory=trajectory
         )
         if verbose:
-            print(fork.read_actions())
-            print(fork.read_trains_arrived())
-            print(fork.read_trains_positions())
+            print(fork.actions)
+            print(fork.trains_arrived)
+            print(fork.trains_positions)
+            print(fork.trains_rewards_dones_infos)
         actions_diff = trajectory.compare_actions(other=fork, start_step=7, end_step=17)
         positions_diff = trajectory.compare_positions(other=fork, start_step=8, end_step=17)
         arrived_diff = trajectory.compare_arrived(other=fork, start_step=8, end_step=17)
@@ -187,9 +189,10 @@ def test_run_from_intermediate_step_pkl(verbose: bool = False):
             import pandas as pd
             pd.set_option('display.max_rows', None)
             pd.set_option('display.max_columns', None)
-            print(trajectory.read_actions())
-            print(trajectory.read_trains_arrived())
-            print(trajectory.read_trains_positions())
+            print(trajectory.actions)
+            print(trajectory.trains_arrived)
+            print(trajectory.trains_positions)
+            print(trajectory.trains_rewards_dones_infos)
         other = PolicyRunner.create_from_policy(
             data_dir=data_dir / "other",
             policy=RandomPolicy(),
@@ -198,9 +201,10 @@ def test_run_from_intermediate_step_pkl(verbose: bool = False):
             env=RailEnvPersister.load_new(data_dir / "trajectory" / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step0007.pkl")[0]
         )
         if verbose:
-            print(other.read_actions())
-            print(other.read_trains_arrived())
-            print(other.read_trains_positions())
+            print(other.actions)
+            print(other.trains_arrived)
+            print(other.trains_positions)
+            print(other.trains_rewards_dones_infos)
         actions_diff = trajectory.compare_actions(other=other, start_step=7, end_step=17)
         positions_diff = trajectory.compare_positions(other=other, start_step=8, end_step=17)
         arrived_diff = trajectory.compare_arrived(other=other, start_step=8, end_step=17)

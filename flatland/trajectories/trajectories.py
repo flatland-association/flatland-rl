@@ -51,8 +51,24 @@ class Trajectory:
     """
     data_dir = attrib(type=Path)
     ep_id = attrib(type=str, factory=_uuid_str)
+    trains_positions = attrib(type=pd.DataFrame, default=None)
+    actions = attrib(type=pd.DataFrame, default=None)
+    trains_arrived = attrib(type=pd.DataFrame, default=None)
+    trains_rewards_dones_infos = attrib(type=pd.DataFrame, default=None)
 
-    def read_actions(self, episode_only: bool = False) -> pd.DataFrame:
+    def load(self, episode_only: bool = False):
+        self.trains_positions = self._read_trains_positions(episode_only=episode_only)
+        self.actions = self._read_actions(episode_only=episode_only)
+        self.trains_arrived = self._read_trains_arrived(episode_only=episode_only)
+        self.trains_rewards_dones_infos = self._read_trains_rewards_dones_infos(episode_only=episode_only)
+
+    def persist(self):
+        self._write_actions(self.actions)
+        self._write_trains_positions(self.trains_positions)
+        self._write_trains_arrived(self.trains_arrived)
+        self._write_trains_rewards_dones_infos(self.trains_rewards_dones_infos)
+
+    def _read_actions(self, episode_only: bool = False) -> pd.DataFrame:
         """Returns pd df with all actions for all episodes.
 
         Parameters
@@ -69,7 +85,7 @@ class Trajectory:
         df["action"] = df["action"].map(RailEnvActions.from_value)
         return df
 
-    def read_trains_arrived(self, episode_only: bool = False) -> pd.DataFrame:
+    def _read_trains_arrived(self, episode_only: bool = False) -> pd.DataFrame:
         """Returns pd df with success rate for all episodes.
 
             Parameters
@@ -85,7 +101,7 @@ class Trajectory:
             return df[df['episode_id'] == self.ep_id]
         return df
 
-    def read_trains_positions(self, episode_only: bool = False) -> pd.DataFrame:
+    def _read_trains_positions(self, episode_only: bool = False) -> pd.DataFrame:
         """Returns pd df with all trains' positions for all episodes.
 
         Parameters
@@ -101,7 +117,7 @@ class Trajectory:
             return df[df['episode_id'] == self.ep_id]
         return df
 
-    def read_trains_rewards_dones_infos(self, episode_only: bool = False) -> pd.DataFrame:
+    def _read_trains_rewards_dones_infos(self, episode_only: bool = False) -> pd.DataFrame:
         """Returns pd df with all trains' rewards, dones, infos for all episodes.
 
         Parameters
@@ -122,26 +138,26 @@ class Trajectory:
         df["info"] = df["info"].map(lambda d: {k: (v if k != "state" else TrainState(v)) for k, v in d.items()})
         return df
 
-    def write_trains_positions(self, df: pd.DataFrame):
+    def _write_trains_positions(self, df: pd.DataFrame):
         """Store pd df with all trains' positions for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def write_actions(self, df: pd.DataFrame):
+    def _write_actions(self, df: pd.DataFrame):
         """Store pd df with all trains' actions for all episodes."""
         f = os.path.join(self.data_dir, DISCRETE_ACTION_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df["action"] = df["action"].map(lambda a: a.value if isinstance(a, RailEnvActions) else a)
         df.to_csv(f, sep='\t', index=False)
 
-    def write_trains_arrived(self, df: pd.DataFrame):
+    def _write_trains_arrived(self, df: pd.DataFrame):
         """Store pd df with all trains' success rates for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def write_trains_rewards_dones_infos(self, df: pd.DataFrame):
+    def _write_trains_rewards_dones_infos(self, df: pd.DataFrame):
         """Store pd df with all trains' rewards for all episodes."""
         f = os.path.join(self.data_dir, trains_rewards_dones_infos_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
@@ -170,25 +186,27 @@ class Trajectory:
             env, _ = RailEnvPersister.load_new(f)
             return env
 
-    def position_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
+    def position_collect(self, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
+        df = self.trains_positions
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position}
 
-    def action_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, action: RailEnvActions):
+    def action_collect(self, env_time: int, agent_id: int, action: RailEnvActions):
+        df = self.actions
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'action': action}
 
-    def arrived_collect(self, df: pd.DataFrame, env_time: int, success_rate: float):
+    def arrived_collect(self, env_time: int, success_rate: float):
+        df = self.trains_arrived
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate}
 
-    def rewards_dones_infos_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, reward: float, info: Any, done: bool):
+    def rewards_dones_infos_collect(self, env_time: int, agent_id: int, reward: float, info: Any, done: bool):
+        df = self.trains_rewards_dones_infos
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'reward': reward, 'info': info, 'done': done}
 
-    def position_lookup(self, df: pd.DataFrame, env_time: int, agent_id: int) -> Tuple[Tuple[int, int], int]:
+    def position_lookup(self, env_time: int, agent_id: int) -> Tuple[Tuple[int, int], int]:
         """Method used to retrieve the stored position (if available).
 
         Parameters
         ----------
-        df: pd.DataFrame
-            Data frame from ActionEvents.discrete_action.tsv
         env_time: int
             position before (!) step env_time
         agent_id: int
@@ -198,6 +216,7 @@ class Trajectory:
         Tuple[Tuple[int, int], int]
             The position in the format ((row, column), direction).
         """
+        df = self.trains_positions
         pos = df.loc[(df['env_time'] == env_time) & (df['agent_id'] == agent_id) & (df['episode_id'] == self.ep_id)]['position']
         if len(pos) != 1:
             print(f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}")
@@ -209,13 +228,11 @@ class Trajectory:
             "<Grid4TransitionsEnum.WEST: 3>", "3")
         return ast.literal_eval(iloc_)
 
-    def action_lookup(self, actions_df: pd.DataFrame, env_time: int, agent_id: int) -> RailEnvActions:
+    def action_lookup(self, env_time: int, agent_id: int) -> RailEnvActions:
         """Method used to retrieve the stored action (if available). Defaults to 2 = MOVE_FORWARD.
 
         Parameters
         ----------
-        actions_df: pd.DataFrame
-            Data frame from ActionEvents.discrete_action.tsv
         env_time: int
             action going into step env_time
         agent_id: int
@@ -225,6 +242,7 @@ class Trajectory:
         RailEnvActions
             The action to step the env.
         """
+        actions_df = self.actions
         action = actions_df.loc[
             (actions_df['env_time'] == env_time) &
             (actions_df['agent_id'] == agent_id) &
@@ -234,7 +252,7 @@ class Trajectory:
             return RailEnvActions.MOVE_FORWARD
         return RailEnvActions.from_value(action[0])
 
-    def trains_arrived_lookup(self, movements_df: pd.DataFrame) -> pd.Series:
+    def trains_arrived_lookup(self) -> pd.Series:
         """Method used to retrieve the trains arrived for the episode.
 
         Parameters
@@ -246,19 +264,18 @@ class Trajectory:
         pd.Series
             The trains arrived data.
         """
+        movements_df = self.trains_arrived
         movement = movements_df.loc[(movements_df['episode_id'] == self.ep_id)]
 
         if len(movement) == 1:
             return movement.iloc[0]
         raise Exception(f"No entry for {self.ep_id} found in data frame.")
 
-    def trains_rewards_dones_infos_lookup(self, rewards_df: pd.DataFrame, env_time: int, agent_id: int) -> Tuple[float, bool, Dict]:
+    def trains_rewards_dones_infos_lookup(self, env_time: int, agent_id: int) -> Tuple[float, bool, Dict]:
         """Method used to retrieve the rewards for the episode.
 
         Parameters
         ----------
-        rewards_df: pd.DataFrame
-            Data frame from event_logs/TrainMovementEvents.trains_rewards_dones_infos.tsv
         env_time: int
             action going into step env_time
         agent_id: int
@@ -268,6 +285,7 @@ class Trajectory:
         pd.DataFrame
             The trains arrived data.
         """
+        rewards_df = self.trains_rewards_dones_infos
         data = rewards_df.loc[(rewards_df['env_time'] == env_time) & (rewards_df['agent_id'] == agent_id) & (rewards_df['episode_id'] == self.ep_id)]
         assert len(data) == 1
         data = data.iloc[0]
@@ -278,23 +296,23 @@ class Trajectory:
         return self.data_dir / OUTPUTS_SUBDIR
 
     def compare_actions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
-        df = self.read_actions(episode_only=True)
-        other_df = other.read_actions(episode_only=True)
+        df = self._read_actions(episode_only=True)
+        other_df = other._read_actions(episode_only=True)
         return self._compare(df, other_df, end_step, start_step)
 
     def compare_positions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
-        df = self.read_trains_positions(episode_only=True)
-        other_df = other.read_trains_positions(episode_only=True)
+        df = self._read_trains_positions(episode_only=True)
+        other_df = other._read_trains_positions(episode_only=True)
         return self._compare(df, other_df, end_step, start_step)
 
     def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
-        df = self.read_trains_arrived(episode_only=True)
-        other_df = other.read_trains_arrived(episode_only=True)
+        df = self._read_trains_arrived(episode_only=True)
+        other_df = other._read_trains_arrived(episode_only=True)
         return self._compare(df, other_df, end_step, start_step)
 
     def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
-        df = self.read_trains_rewards_dones_infos(episode_only=True)
-        other_df = other.read_trains_rewards_dones_infos(episode_only=True)
+        df = self._read_trains_rewards_dones_infos(episode_only=True)
+        other_df = other._read_trains_rewards_dones_infos(episode_only=True)
         return self._compare(df, other_df, end_step, start_step)
 
     def _compare(self, df, other_df, end_step, start_step):
