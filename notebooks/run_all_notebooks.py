@@ -5,7 +5,6 @@ from subprocess import Popen, PIPE
 import importlib_resources
 import importlib_resources as ir
 from importlib_resources import path
-from ipython_genutils.py3compat import string_types, bytes_to_str
 
 
 # taken from https://github.com/jupyter/nbconvert/blob/master/nbconvert/tests/base.py
@@ -23,18 +22,18 @@ def run_python(parameters, ignore_return_code=False, stdin=None):
     """
     cmd = [sys.executable]
     if sys.platform == 'win32':
-        if isinstance(parameters, string_types):
+        if isinstance(parameters, str):
             cmd = ' '.join(cmd) + ' ' + parameters
         else:
             cmd = ' '.join(cmd + parameters)
     else:
-        if isinstance(parameters, string_types):
+        if isinstance(parameters, str):
             parameters = shlex.split(parameters)
         cmd += parameters
     p = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
     stdout, stderr = p.communicate(input=stdin)
     if not (p.returncode == 0 or ignore_return_code):
-        raise OSError(bytes_to_str(stderr))
+        raise OSError(str(stderr))
     return stdout.decode('utf8', 'replace'), stderr.decode('utf8', 'replace')
 
 

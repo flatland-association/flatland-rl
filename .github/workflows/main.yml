@@ -24,9 +24,29 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
+                    python -m pip install tox tox-gh-actions
             -   name: Run lint checks
                 run: tox run -e flake8
+
+    deptry:
+        runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        steps:
+
+            -   uses: actions/checkout@v4
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v5
+                with:
+                    python-version: ${{ matrix.python-version }}
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    python -m pip install tox tox-gh-actions
+            -   name: Run deptry
+                run: tox -e py${{ matrix.python-version }}-verify-requirements
 
     testml:
         runs-on: ubuntu-22.04
@@ -50,7 +70,7 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
+                    python -m pip install tox tox-gh-actions
             -   name: Run tests
                 run: tox run -e py${{ matrix.python-version }}-ml
             -   name: Check disk space
@@ -78,7 +98,7 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
+                    python -m pip install tox tox-gh-actions
             -   name: Run tests
                 run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
             -   name: Check disk space
@@ -106,7 +126,7 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
+                    python -m pip install tox tox-gh-actions
             -   name: Run notebooks
                 run: |
                     tox run -e py${{ matrix.python-version }}-notebooks
@@ -132,7 +152,7 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
+                    python -m pip install tox tox-gh-actions
             -   name: Run examples
                 run: tox run -e py${{ matrix.python-version }}-examples
 
@@ -156,7 +176,7 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
+                    python -m pip install tox tox-gh-actions
             -   name: Run profiling
                 run: tox run -e py${{ matrix.python-version }}-profiling
             -   uses: actions/upload-artifact@v4
@@ -164,12 +184,6 @@ jobs:
                     name: upload-profiling-results-${{ matrix.python-version }}
                     path: .tox/py${{ matrix.python-version }}-profiling/log
                     if-no-files-found: error
-            -   name: Install notebook
-                run: |
-                    python -m pip install --upgrade pip
-                    pip install notebook snakeviz -r requirements.txt
-            -   name: Run performance notebook
-                run: NUM_RUNS=5 PYTHONPATH=$PWD python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --execute --to notebook --inplace benchmarks/flatland_performance_profiling.ipynb
             -   uses: actions/upload-artifact@v4
                 with:
                     name: upload-performance-profiling-results-${{ matrix.python-version }}
@@ -199,7 +213,7 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
+                    python -m pip install tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e py${{ matrix.python-version }}-benchmarks
             -   uses: actions/upload-artifact@v4
@@ -232,7 +246,7 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
+                    python -m pip install tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e py${{ matrix.python-version }}-regression
 
@@ -251,7 +265,7 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    pip install tox tox-gh-actions
+                    python -m pip install tox tox-gh-actions
             -   name: Build new package
                 run: tox run -e build
             -   name: Publish distribution to PyPI
