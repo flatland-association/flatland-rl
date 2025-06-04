@@ -13,7 +13,7 @@ import tqdm
 
 from flatland.envs.persistence import RailEnvPersister
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
-from flatland.trajectories.trajectories import Trajectory
+from flatland.trajectories.policy_runner import PolicyRunner
 from flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy import DeadLockAvoidancePolicy
 
 
@@ -44,7 +44,7 @@ def regen_trajectories(data_dir, ep_id, output_dir):
     output_dir.mkdir(exist_ok=True)
     shutil.rmtree(output_dir / "event_logs", ignore_errors=True)
     env, _ = RailEnvPersister.load_new(str(data_dir))
-    return Trajectory.create_from_policy(
+    return PolicyRunner.create_from_policy(
         policy=DeadLockAvoidancePolicy(),
         data_dir=output_dir,
         env=env,
