@@ -341,7 +341,7 @@ timeout-decorator==0.5.0
     # via flatland-rl (pyproject.toml)
 tinyscaler==1.2.8
     # via supersuit
-torch==2.7.0
+torch==2.7.1
     # via
     #   flatland-rl (pyproject.toml)
     #   stable-baselines3
