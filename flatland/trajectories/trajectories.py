@@ -82,6 +82,7 @@ class Trajectory:
         """Store pd df with all trains' actions for all episodes."""
         f = os.path.join(self.data_dir, DISCRETE_ACTION_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
+        df["action"] = df["action"].map(lambda a: a.value if isinstance(a, RailEnvActions) else a)
         df.to_csv(f, sep='\t', index=False)
 
     def write_trains_arrived(self, df: pd.DataFrame):
