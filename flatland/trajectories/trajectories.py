@@ -345,7 +345,7 @@ class Trajectory:
 
 @click.command()
 @click.option('--data-dir',
-              type=click.Path(exists=True),
+              type=click.Path(exists=True, path_type=Path),
               help="Path to folder containing Flatland episode",
               required=True
               )
