@@ -1,9 +1,8 @@
-import numpy as np
-
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes
+from flatland.envs.rail_generators import SparseRailGen
 
 
 def test_build_railway_infrastructure():
@@ -18,8 +17,8 @@ def test_build_railway_infrastructure():
                                               flip_end_node_trans=True, respect_transition_validity=True,
                                               forbidden_cells=None)
     connection_001_start = (2,2)
-    connection_001_end = (8, 8)                               
-    connection_001_expected = (13, connection_001_start,connection_001_end) 
+    connection_001_end = (8, 8)
+    connection_001_expected = (13, connection_001_start, connection_001_end)
     print(connection_001)
     # Make connection with dead-ends on both sides
     start_point = (1, 3)
@@ -29,7 +28,7 @@ def test_build_railway_infrastructure():
                                               forbidden_cells=None)
     connection_002_start = (1,3)
     connection_002_end = (1, 7)
-    connection_002_expected = (5, connection_002_start,connection_002_end) 
+    connection_002_expected = (5, connection_002_start, connection_002_end)
 
     # Make connection with dead-ends on both sides
     start_point = (6, 1)
@@ -65,7 +64,7 @@ def test_build_railway_infrastructure():
             "map {}. actual end={}, expected end={}".format(k+1, connection[len(connection)-1], connection_expected[2])
 
     #Testing the number of occuppied cells in the Grid
-    
+
     #number of shared cell on the path
     s1= set(connection_001)
     s2 = set(connection_002)
@@ -125,7 +124,7 @@ def test_fix_inner_nodes():
     # Fix all the different transitions to legal elements
     for c in range(grid_map.grid.shape[1]):
         for r in range(grid_map.grid.shape[0]):
-            grid_map.fix_transitions((r, c), orienation((r, c)))
+            SparseRailGen.fix_transitions(grid_map, (r, c), orienation((r, c)))
             # Print for assertion tests
             # print("assert grid_map.grid[{}] == {}".format((r,c),grid_map.grid[(r,c)]))
 
