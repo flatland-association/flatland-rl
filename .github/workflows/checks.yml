@@ -113,7 +113,9 @@ jobs:
         steps:
             -   uses: actions/checkout@v4
             -   name: Install ffmpeg
-                run: sudo apt-get install ffmpeg
+                run: |
+                    sudo apt-get update
+                    sudo apt-get -y install ffmpeg
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
                 with:
