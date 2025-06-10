@@ -6,8 +6,8 @@ from typing import Any
 from flatland.core.policy import Policy
 from flatland.evaluators.evaluator_callback import FlatlandEvaluatorCallbacks
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
-from flatland.trajectories.trajectories import Trajectory
-from tests.trajectories.test_trajectories import RandomPolicy
+from flatland.trajectories.policy_runner import PolicyRunner
+from tests.trajectories.test_policy_runner import RandomPolicy
 
 
 class DelayPolicy(Policy):
@@ -29,7 +29,7 @@ class DelayPolicy(Policy):
 def test_evaluator_callbacks():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = Trajectory.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, tqdm_kwargs={"disable": True})
+        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, tqdm_kwargs={"disable": True})
         cb = FlatlandEvaluatorCallbacks()
         TrajectoryEvaluator(trajectory, cb).evaluate(tqdm_kwargs={"disable": True})
         assert cb.get_evaluation() == {'normalized_reward': -0.5417045799211404,
