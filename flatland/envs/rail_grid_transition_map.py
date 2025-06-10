@@ -17,8 +17,8 @@ from flatland.envs.rail_env_action import RailEnvNextAction
 
 class RailGridTransitionMap(GridTransitionMap):
 
-    def __init__(self, width, height, transitions: Transitions = RailEnvTransitions(), random_seed=None, grid: np.ndarray = None):
-        super().__init__(width, height, transitions, random_seed, grid)
+    def __init__(self, width, height, transitions: Transitions = RailEnvTransitions(), grid: np.ndarray = None):
+        super().__init__(width=width, height=height, transitions=transitions, grid=grid)
 
     @lru_cache
     def get_valid_move_actions_(self, agent_direction: Grid4TransitionsEnum, agent_position: Tuple[int, int]) -> Set[RailEnvNextAction]:

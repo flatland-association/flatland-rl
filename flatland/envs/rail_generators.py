@@ -6,13 +6,15 @@ from pathlib import Path
 from typing import Callable, Tuple, Optional, Dict, List, Union
 
 import numpy as np
+from numpy import array
 from numpy.random.mtrand import RandomState
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.grid4_utils import direction_to_point
+from flatland.core.grid.grid4_utils import direction_to_point, mirror
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D, \
     Vec2dOperations
 from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
+from flatland.core.transition_map import GridTransitionMap
 from flatland.envs import persistence
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes, align_cell_to_city
@@ -23,7 +25,7 @@ RailGeneratorProduct = Tuple[RailGridTransitionMap, Optional[Dict]]
     a RailGridTransitionMap followed by an (optional) dict/
 """
 
-RailGenerator = Callable[[int, int, int, int], RailGeneratorProduct]
+RailGenerator = Callable[[int, int, int, int, RandomState], RailGeneratorProduct]
 
 
 class RailGen(object):
@@ -125,7 +127,7 @@ def sparse_rail_generator(*args: object, **kwargs: object) -> RailGenerator:
 class SparseRailGen(RailGen):
 
     def __init__(self, max_num_cities: int = 2, grid_mode: bool = False, max_rails_between_cities: int = 2,
-                 max_rail_pairs_in_city: int = 2, seed=None, p_level_free: float = 0) -> RailGenerator:
+                 max_rail_pairs_in_city: int = 2, seed: int = None, p_level_free: float = 0) -> RailGenerator:
         """
         Generates railway networks with cities and inner city rails
 
@@ -156,11 +158,13 @@ class SparseRailGen(RailGen):
         self.seed = seed
         self.p_level_free = p_level_free
 
+    # TODO bad code smell
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0, np_random: RandomState = None) -> RailGeneratorProduct:
         """
 
         Parameters
         ----------
+
         width: int
             Width of the environment
         height: int
@@ -169,6 +173,7 @@ class SparseRailGen(RailGen):
             Number of agents to be placed within the environment
         num_resets: int
             Count for how often the environment has been reset
+        np_random: RandomState
 
         Returns
         -------
@@ -187,6 +192,8 @@ class SparseRailGen(RailGen):
 
         rail_trans = RailEnvTransitions()
         grid_map = RailGridTransitionMap(width=width, height=height, transitions=rail_trans)
+        # backwards compatibility:
+        np_random_fix_transition = RandomState(12)
 
         # NEW : SCHED CONST (Pairs of rails (1,2,3 pairs))
         min_nr_rail_pairs_in_city = 1  # (min pair must be 1)
@@ -247,7 +254,7 @@ class SparseRailGen(RailGen):
         train_stations = self._set_trainstation_positions(city_positions, city_radius, free_rails)
 
         # Fix all transition elements
-        self._fix_transitions(city_cells, inter_city_lines, grid_map, vector_field)
+        self._fix_transitions(city_cells, inter_city_lines, grid_map, vector_field, np_random_fix_transition)
 
         # choose p_level_free percentage of diamond crossings to be level-free
         num_diamond_crossings = np.count_nonzero(grid_map.grid[grid_map.grid == RailEnvTransitionsEnum.diamond_crossing])
@@ -687,7 +694,7 @@ class SparseRailGen(RailGen):
         return train_stations
 
     def _fix_transitions(self, city_cells: set, inter_city_lines: List[IntVector2DArray],
-                         grid_map: RailGridTransitionMap, vector_field):
+                         grid_map: RailGridTransitionMap, vector_field, np_random: RandomState):
         """
         Check and fix transitions of all the cells that were modified. This is necessary because we ignore validity
         while drawing the rails.
@@ -720,7 +727,90 @@ class SparseRailGen(RailGen):
                 rails_to_fix_cnt += 1
         # Fix all other cells
         for cell in range(rails_to_fix_cnt):
-            grid_map.fix_transitions((rails_to_fix[3 * cell], rails_to_fix[3 * cell + 1]), rails_to_fix[3 * cell + 2])
+            SparseRailGen.fix_transitions(grid_map, (rails_to_fix[3 * cell], rails_to_fix[3 * cell + 1]), rails_to_fix[3 * cell + 2], np_random)
+
+    @staticmethod
+    def fix_transitions(grid_transition_map: GridTransitionMap, rcPos: IntVector2DArray, direction: IntVector2D = -1,
+                        random_generator: np.random.RandomState = None):
+        """
+        Fixes broken transitions
+        """
+        grid_transition_map._reset_cache()
+        gDir2dRC = grid_transition_map.transitions.gDir2dRC  # [[-1,0] = N, [0,1]=E, etc]
+        grcPos = array(rcPos)
+        grcMax = grid_transition_map.grid.shape
+        # Transition elements
+        transitions = RailEnvTransitions()
+        cells = transitions.transition_list
+        simple_switch_east_south = transitions.rotate_transition(cells[10], 90)
+        simple_switch_west_south = transitions.rotate_transition(cells[2], 270)
+        symmetrical = cells[6]
+        double_slip = cells[5]
+        three_way_transitions = [simple_switch_east_south, simple_switch_west_south]
+        # loop over available outbound directions (indices) for rcPos
+
+        incoming_connections = np.zeros(4)
+        for iDirOut in np.arange(4):
+            gdRC = gDir2dRC[iDirOut]  # row,col increment
+            gPos2 = grcPos + gdRC  # next cell in that direction
+
+            # Check the adjacent cell is within bounds
+            # if not, then ignore it for the count of incoming connections
+            if np.any(gPos2 < 0):
+                continue
+            if np.any(gPos2 >= grcMax):
+                continue
+
+            # Get the transitions out of gPos2, using iDirOut as the inbound direction
+            # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
+            connected = 0
+            for orientation in range(4):
+                connected += grid_transition_map.get_transition((gPos2[0], gPos2[1], orientation), mirror(iDirOut))
+            if connected > 0:
+                incoming_connections[iDirOut] = 1
+
+        number_of_incoming = np.sum(incoming_connections)
+        # Only one incoming direction --> Straight line set deadend
+        if number_of_incoming == 1:
+            if grid_transition_map.get_full_transitions(*rcPos) == 0:
+                grid_transition_map.set_transitions(rcPos, 0)
+            else:
+                grid_transition_map.set_transitions(rcPos, 0)
+
+                for direction in range(4):
+                    if incoming_connections[direction] > 0:
+                        grid_transition_map.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
+        # Connect all incoming connections
+        if number_of_incoming == 2:
+            grid_transition_map.set_transitions(rcPos, 0)
+
+            connect_directions = np.argwhere(incoming_connections > 0)
+            grid_transition_map.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0][0])), connect_directions[1][0], 1)
+            grid_transition_map.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1][0])), connect_directions[0][0], 1)
+
+        # Find feasible connection for three entries
+        if number_of_incoming == 3:
+            grid_transition_map.set_transitions(rcPos, 0)
+            hole = np.argwhere(incoming_connections < 1)[0][0]
+            if direction >= 0:
+                switch_type_idx = (direction - hole + 3) % 4
+                if switch_type_idx == 0:
+                    transition = simple_switch_west_south
+                elif switch_type_idx == 2:
+                    transition = simple_switch_east_south
+                else:
+                    transition = random_generator.choice(three_way_transitions, 1)[0]
+            else:
+                transition = random_generator.choice(three_way_transitions, 1)[0]
+            transition = transitions.rotate_transition(transition, int(hole * 90))
+            grid_transition_map.set_transitions((rcPos[0], rcPos[1]), transition)
+
+        # Make a double slip switch
+        if number_of_incoming == 4:
+            rotation = random_generator.randint(2)
+            transition = transitions.rotate_transition(double_slip, int(rotation * 90))
+            grid_transition_map.set_transitions((rcPos[0], rcPos[1]), transition)
+        return True
 
     def _closest_neighbour_in_grid4_directions(self, current_city_idx: int, city_positions: IntVector2DArray) -> List[
         int]:
