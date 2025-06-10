@@ -14,7 +14,6 @@ from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid4_utils import get_new_position, get_direction
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transitions import Transitions
 from flatland.utils.ordered_set import OrderedSet
 
@@ -117,14 +116,10 @@ class TransitionMap:
 class GridTransitionMap(TransitionMap):
     """
     Implements a TransitionMap over a 2D grid.
-
-    GridTransitionMap implements utility functions.
     """
 
-    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), random_seed=None, grid: np.ndarray = None):
+    def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), grid: np.ndarray = None):
         """
-        Builder for GridTransitionMap object.
-
         Parameters
         ----------
         width : int
@@ -139,11 +134,7 @@ class GridTransitionMap(TransitionMap):
         self.width = width
         self.height = height
         self.transitions = transitions
-        self.random_generator = np.random.RandomState()
-        if random_seed is None:
-            self.random_generator.seed(12)
-        else:
-            self.random_generator.seed(random_seed)
+
         if grid is None:
             self.grid = np.zeros((height, width), dtype=self.transitions.get_type())
         else:
@@ -558,87 +549,6 @@ class GridTransitionMap(TransitionMap):
                 self.set_transition((gPos2[0], gPos2[1], iDirOut), mirror(iDirOut), 1)
                 return False
 
-        return True
-
-    def fix_transitions(self, rcPos: IntVector2DArray, direction: IntVector2D = -1):
-        """
-        Fixes broken transitions
-        """
-        self._reset_cache()
-        gDir2dRC = self.transitions.gDir2dRC  # [[-1,0] = N, [0,1]=E, etc]
-        grcPos = array(rcPos)
-        grcMax = self.grid.shape
-        # Transition elements
-        transitions = RailEnvTransitions()
-        cells = transitions.transition_list
-        simple_switch_east_south = transitions.rotate_transition(cells[10], 90)
-        simple_switch_west_south = transitions.rotate_transition(cells[2], 270)
-        symmetrical = cells[6]
-        double_slip = cells[5]
-        three_way_transitions = [simple_switch_east_south, simple_switch_west_south]
-        # loop over available outbound directions (indices) for rcPos
-
-        incoming_connections = np.zeros(4)
-        for iDirOut in np.arange(4):
-            gdRC = gDir2dRC[iDirOut]  # row,col increment
-            gPos2 = grcPos + gdRC  # next cell in that direction
-
-            # Check the adjacent cell is within bounds
-            # if not, then ignore it for the count of incoming connections
-            if np.any(gPos2 < 0):
-                continue
-            if np.any(gPos2 >= grcMax):
-                continue
-
-            # Get the transitions out of gPos2, using iDirOut as the inbound direction
-            # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
-            connected = 0
-            for orientation in range(4):
-                connected += self.get_transition((gPos2[0], gPos2[1], orientation), mirror(iDirOut))
-            if connected > 0:
-                incoming_connections[iDirOut] = 1
-
-        number_of_incoming = np.sum(incoming_connections)
-        # Only one incoming direction --> Straight line set deadend
-        if number_of_incoming == 1:
-            if self.get_full_transitions(*rcPos) == 0:
-                self.set_transitions(rcPos, 0)
-            else:
-                self.set_transitions(rcPos, 0)
-
-                for direction in range(4):
-                    if incoming_connections[direction] > 0:
-                        self.set_transition((rcPos[0], rcPos[1], mirror(direction)), direction, 1)
-        # Connect all incoming connections
-        if number_of_incoming == 2:
-            self.set_transitions(rcPos, 0)
-
-            connect_directions = np.argwhere(incoming_connections > 0)
-            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[0][0])), connect_directions[1][0], 1)
-            self.set_transition((rcPos[0], rcPos[1], mirror(connect_directions[1][0])), connect_directions[0][0], 1)
-
-        # Find feasible connection for three entries
-        if number_of_incoming == 3:
-            self.set_transitions(rcPos, 0)
-            hole = np.argwhere(incoming_connections < 1)[0][0]
-            if direction >= 0:
-                switch_type_idx = (direction - hole + 3) % 4
-                if switch_type_idx == 0:
-                    transition = simple_switch_west_south
-                elif switch_type_idx == 2:
-                    transition = simple_switch_east_south
-                else:
-                    transition = self.random_generator.choice(three_way_transitions, 1)[0]
-            else:
-                transition = self.random_generator.choice(three_way_transitions, 1)[0]
-            transition = transitions.rotate_transition(transition, int(hole * 90))
-            self.set_transitions((rcPos[0], rcPos[1]), transition)
-
-        # Make a double slip switch
-        if number_of_incoming == 4:
-            rotation = self.random_generator.randint(2)
-            transition = transitions.rotate_transition(double_slip, int(rotation * 90))
-            self.set_transitions((rcPos[0], rcPos[1]), transition)
         return True
 
     @lru_cache(maxsize=1_000_000)
