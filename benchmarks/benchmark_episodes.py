@@ -137,7 +137,7 @@ def test_episode(data_sub_dir: str, ep_id: str):
     run_episode(data_dir, ep_id)
 
 
-def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None):
+def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None, skip_rewards_dones_infos: bool = False):
     """
     The data is structured as follows:
         -30x30 map
@@ -164,8 +164,10 @@ def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0,
         render while evaluating
     snapshot_interval : int
         interval to write pkl snapshots. 1 means at every step. 0 means never.
+    skip_rewards_dones_infos : bool
+            skip verification of rewards/dones/infos
     """
     TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id)).evaluate(
         start_step=start_step,
         snapshot_interval=snapshot_interval,
-        skip_rewards_dones_infos=True)
+        skip_rewards_dones_infos=skip_rewards_dones_infos)

@@ -32,6 +32,8 @@ class TrajectoryEvaluator:
             interval to write pkl snapshots to outputs/serialised_state subdirectory (not serialised_state subdirectory directly). 1 means at every step. 0 means never.
         tqdm_kwargs: dict
             additional kwargs for tqdm
+        skip_rewards_dones_infos : bool
+            skip verification of rewards/dones/infos
         """
         self.trajectory.load()
 
@@ -62,6 +64,7 @@ class TrajectoryEvaluator:
             end_step = env._max_episode_steps
         for elapsed_before_step in tqdm.tqdm(range(start_step, end_step), **tqdm_kwargs):
             action = {agent_id: self.trajectory.action_lookup(env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
+            assert env._elapsed_steps == elapsed_before_step
             _, rewards, dones, infos = env.step(action)
             if self.callbacks is not None:
                 self.callbacks.on_episode_step(env=env, data_dir=self.trajectory.outputs_dir)
@@ -89,9 +92,9 @@ class TrajectoryEvaluator:
                     actual_info = {k: v[agent_id] for k, v in infos.items()}
                     expected_reward, expected_done, expected_info = self.trajectory.trains_rewards_dones_infos_lookup(env_time=elapsed_after_step,
                                                                                                                       agent_id=agent_id)
-                    assert actual_reward == expected_reward
-                    assert actual_done == expected_done
-                    assert actual_info == expected_info
+                    assert actual_reward == expected_reward, (elapsed_after_step, agent_id, actual_reward, expected_reward)
+                    assert actual_done == expected_done, (elapsed_after_step, agent_id, actual_done, expected_done)
+                    assert actual_info == expected_info, (elapsed_after_step, agent_id, actual_info, expected_info)
 
             if done:
                 break
