@@ -113,6 +113,7 @@ class Trajectory:
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'position'])
         df = pd.read_csv(f, sep='\t')
+        df["position"] = df["position"].map(ast.literal_eval).map(lambda p: (p[0], int(p[1])))
         if episode_only:
             return df[df['episode_id'] == self.ep_id]
         return df
@@ -223,11 +224,9 @@ class Trajectory:
             print(f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}")
             print(df[(df['agent_id'] == agent_id) & (df['episode_id'] == self.ep_id)]["env_time"])
         assert len(pos) == 1, f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}"
-        iloc_ = pos.iloc[0]
-        iloc_ = iloc_.replace("<Grid4TransitionsEnum.NORTH: 0>", "0").replace("<Grid4TransitionsEnum.EAST: 1>", "1").replace("<Grid4TransitionsEnum.SOUTH: 2>",
-                                                                                                                             "2").replace(
-            "<Grid4TransitionsEnum.WEST: 3>", "3")
-        return ast.literal_eval(iloc_)
+        # fail fast
+        p, d = pos.iloc[0]
+        return (p, d)
 
     def action_lookup(self, env_time: int, agent_id: int) -> RailEnvActions:
         """Method used to retrieve the stored action (if available). Defaults to 2 = MOVE_FORWARD.
