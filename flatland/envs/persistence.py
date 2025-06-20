@@ -1,5 +1,6 @@
 import pickle
-from typing import Tuple, Dict, Optional
+from pathlib import Path
+from typing import Tuple, Dict, Optional, Union
 
 import msgpack
 import msgpack_numpy
@@ -24,7 +25,7 @@ from flatland.envs import timetable_generators as tt_gen
 class RailEnvPersister(object):
 
     @classmethod
-    def save(cls, env, filename, save_distance_maps=False):
+    def save(cls, env, filename: Union[str, Path], save_distance_maps=False):
         """
         Saves environment and distance map information in a file
 
@@ -35,6 +36,9 @@ class RailEnvPersister(object):
         """
 
         env_dict = cls.get_full_state(env)
+
+        if isinstance(filename, Path):
+            filename = str(filename)
 
         # We have an unresolved problem with msgpack loading the list of agents
         # see also 20 lines below.
@@ -101,7 +105,8 @@ class RailEnvPersister(object):
         cls.set_full_state(env, env_dict)
 
     @classmethod
-    def load_new(cls, filename, load_from_package=None, obs_builder_object: Optional[ObservationBuilder["RailEnv"]] = None) -> Tuple["RailEnv", Dict]:
+    def load_new(cls, filename: Union[str, Path], load_from_package=None, obs_builder_object: Optional[ObservationBuilder["RailEnv"]] = None) -> Tuple[
+        "RailEnv", Dict]:
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
@@ -134,8 +139,9 @@ class RailEnvPersister(object):
         return env, env_dict
 
     @classmethod
-    def load_env_dict(cls, filename, load_from_package=None):
-
+    def load_env_dict(cls, filename: Union[str, Path], load_from_package=None):
+        if isinstance(filename, Path):
+            filename = str(filename)
         if load_from_package is not None:
             from importlib_resources import read_binary
             load_data = read_binary(load_from_package, filename)
@@ -250,6 +256,10 @@ class RailEnvPersister(object):
         for i_agent in range(env.get_num_agents()):
             env.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
+        dones = env_dict.get("dones", None)
+        if dones is not None:
+            env.dones = dones
+
     @classmethod
     def get_full_state(cls, env):
         """
@@ -275,6 +285,7 @@ class RailEnvPersister(object):
             "np_random_state": random_state_to_hashablestate(env.np_random),
             "dev_pred_dict": env.dev_pred_dict,
             "dev_obs_dict": env.dev_obs_dict,
+            "dones": env.dones
         }
         return msg_data_dict
 

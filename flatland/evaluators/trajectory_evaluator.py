@@ -5,7 +5,8 @@ import numpy as np
 import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
-from flatland.trajectories.trajectories import Trajectory
+from flatland.envs.rail_env import RailEnv
+from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
 
 
 class TrajectoryEvaluator:
@@ -16,20 +17,9 @@ class TrajectoryEvaluator:
     def __call__(self, *args, **kwargs):
         self.evaluate()
 
-    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0, tqdm_kwargs: dict = None):
+    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0, tqdm_kwargs: dict = None,
+                 skip_rewards_dones_infos: bool = False) -> RailEnv:
         """
-        The data is structured as follows:
-            -30x30 map
-                Contains the data to replay the episodes.
-                - <n>_trains                                 -- for n in 10,15,20,50
-                    - event_logs
-                        ActionEvents.discrete_action 		 -- holds set of action to be replayed for the related episodes.
-                        TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episodes.
-                        TrainMovementEvents.trains_positions -- holds the positions for the related episodes.
-                    - serialised_state
-                        <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
-
-        All these episodes are with constant speed of 1 and malfunctions free.
          Parameters
         ----------
         start_step : int
@@ -42,16 +32,17 @@ class TrajectoryEvaluator:
             interval to write pkl snapshots to outputs/serialised_state subdirectory (not serialised_state subdirectory directly). 1 means at every step. 0 means never.
         tqdm_kwargs: dict
             additional kwargs for tqdm
+        skip_rewards_dones_infos : bool
+            skip verification of rewards/dones/infos
         """
-
-        trains_positions = self.trajectory.read_trains_positions()
-        actions = self.trajectory.read_actions()
-        trains_arrived = self.trajectory.read_trains_arrived()
+        self.trajectory.load()
 
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
 
         env = self.trajectory.restore_episode(start_step)
+        if env is None:
+            raise FileNotFoundError(self.trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{self.trajectory.ep_id}.pkl")
         self.trajectory.outputs_dir.mkdir(exist_ok=True)
 
         if snapshot_interval > 0:
@@ -72,8 +63,9 @@ class TrajectoryEvaluator:
         if end_step is None:
             end_step = env._max_episode_steps
         for elapsed_before_step in tqdm.tqdm(range(start_step, end_step), **tqdm_kwargs):
-            action = {agent_id: self.trajectory.action_lookup(actions, env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
-            _, _, dones, _ = env.step(action)
+            action = {agent_id: self.trajectory.action_lookup(env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
+            assert env._elapsed_steps == elapsed_before_step
+            _, rewards, dones, infos = env.step(action)
             if self.callbacks is not None:
                 self.callbacks.on_episode_step(env=env, data_dir=self.trajectory.outputs_dir)
 
@@ -83,7 +75,7 @@ class TrajectoryEvaluator:
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
-                expected_position = self.trajectory.position_lookup(trains_positions, env_time=elapsed_after_step, agent_id=agent_id)
+                expected_position = self.trajectory.position_lookup(env_time=elapsed_after_step, agent_id=agent_id)
                 actual_position = (agent.position, agent.direction)
                 assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
                                                              f"- actual_position:\t{actual_position}\n" \
@@ -94,19 +86,29 @@ class TrajectoryEvaluator:
                                                              f"- breakpoint:\tself._elapsed_steps == {elapsed_after_step} and agent.handle == {agent.handle}\n" \
                                                              f"- motion check:\t{list(env.motion_check.stopped)}\n\n\n" \
                                                              f"- agents:\t{env.agents}"
+                if not skip_rewards_dones_infos:
+                    actual_reward = rewards[agent_id]
+                    actual_done = dones[agent_id]
+                    actual_info = {k: v[agent_id] for k, v in infos.items()}
+                    expected_reward, expected_done, expected_info = self.trajectory.trains_rewards_dones_infos_lookup(env_time=elapsed_after_step,
+                                                                                                                      agent_id=agent_id)
+                    assert actual_reward == expected_reward, (elapsed_after_step, agent_id, actual_reward, expected_reward)
+                    assert actual_done == expected_done, (elapsed_after_step, agent_id, actual_done, expected_done)
+                    assert actual_info == expected_info, (elapsed_after_step, agent_id, actual_info, expected_info)
 
             if done:
                 break
         if self.callbacks is not None:
             self.callbacks.on_episode_end(env=env, data_dir=self.trajectory.outputs_dir)
 
-        trains_arrived_episode = self.trajectory.trains_arrived_lookup(trains_arrived)
-        expected_success_rate = trains_arrived_episode['success_rate']
-        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
-
         if start_step is None and end_step is None:
+            trains_arrived_episode = self.trajectory.trains_arrived_lookup()
+            expected_success_rate = trains_arrived_episode['success_rate']
+            actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
+            print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
+
             assert np.isclose(expected_success_rate, actual_success_rate)
+        return env
 
 
 @click.command()

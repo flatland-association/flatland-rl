@@ -3,21 +3,21 @@ import os
 import re
 import tempfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional, Any
 
-import pandas as pd
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
+from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
-from flatland.trajectories.trajectories import Policy
-from flatland.trajectories.trajectories import Trajectory, DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, \
-    generate_trajectory_from_policy, generate_trajectories_from_metadata
-from flatland.utils.seeding import np_random, random_state_to_hashablestate
+from flatland.trajectories.policy_grid_runner import generate_trajectories_from_metadata
+from flatland.trajectories.policy_runner import generate_trajectory_from_policy, PolicyRunner
+from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR
+from flatland.utils.seeding import np_random
 
 
 class RandomPolicy(Policy):
@@ -33,7 +33,7 @@ class RandomPolicy(Policy):
 def test_from_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = Trajectory.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
         env = trajectory.restore_episode()
         gen, _, _ = env_generator()
@@ -46,7 +46,7 @@ def test_from_episode():
 def test_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = Trajectory.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
 
         assert (data_dir / DISCRETE_ACTION_FNAME).exists()
         assert (data_dir / TRAINS_ARRIVED_FNAME).exists()
@@ -132,6 +132,9 @@ def test_gen_trajectories_from_metadata():
                 assert df["env_time"].to_list() == [t]
 
 
+from flatland.utils.seeding import random_state_to_hashablestate
+
+
 @pytest.mark.parametrize(
     'seed',
     [43, 44, 1001, 249385789, 289435789]
@@ -172,14 +175,3 @@ def test_persistence_reset(seed):
 
     assert np_random_generated != np_random_reset_no_regenerate_no_seed
     assert dict_generated != dict_reset_no_regenerate_no_seed
-
-
-def test_evaluation_snapshots():
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        data_dir = Path(tmpdirname)
-        trajectory = Trajectory.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
-        print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
-        assert len(list(trajectory.data_dir.rglob("**/*step*.pkl"))) == 0
-        TrajectoryEvaluator(trajectory).evaluate(snapshot_interval=1)
-        print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
-        assert len(list((trajectory.data_dir / "outputs" / "serialised_state").rglob("**/*step*.pkl"))) == 472

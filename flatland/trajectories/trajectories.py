@@ -1,27 +1,22 @@
 import ast
-import importlib
 import os
 import uuid
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any, Dict
 
-import click
 import pandas as pd
-import tqdm
 from attr import attrs, attrib
 
-from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
-from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.policy import Policy
-from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.step_utils.states import TrainState
 
 EVENT_LOGS_SUBDIR = 'event_logs'
 DISCRETE_ACTION_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "ActionEvents.discrete_action.tsv")
 TRAINS_ARRIVED_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_arrived.tsv")
 TRAINS_POSITIONS_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_positions.tsv")
+trains_rewards_dones_infos_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_rewards_dones_infos.tsv")
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 OUTPUTS_SUBDIR = 'outputs'
 
@@ -45,53 +40,132 @@ class Trajectory:
         ActionEvents.discrete_action 		 -- holds set of action to be replayed for the related episodes.
         TrainMovementEvents.trains_arrived 	 -- holds success rate for the related episodes.
         TrainMovementEvents.trains_positions -- holds the positions for the related episodes.
+        TrainMovementEvents.trains_rewards_dones_infos   -- holds the rewards for the related episodes.
     - serialised_state
         <ep_id>.pkl                          -- Holds the pickled environment version for the episode.
+
+    Indexing:
+        - actions for step i are index i-1 (i.e. starting at 0)
+        - positions before step i are indexed i-1 (i.e. starting at 0)
+        - positions after step are indexed i (i.e. starting at 1)
     """
     data_dir = attrib(type=Path)
     ep_id = attrib(type=str, factory=_uuid_str)
+    trains_positions = attrib(type=pd.DataFrame, default=None)
+    actions = attrib(type=pd.DataFrame, default=None)
+    trains_arrived = attrib(type=pd.DataFrame, default=None)
+    trains_rewards_dones_infos = attrib(type=pd.DataFrame, default=None)
 
-    def read_actions(self):
-        """Returns pd df with all actions for all episodes."""
+    def load(self, episode_only: bool = False):
+        self.trains_positions = self._read_trains_positions(episode_only=episode_only)
+        self.actions = self._read_actions(episode_only=episode_only)
+        self.trains_arrived = self._read_trains_arrived(episode_only=episode_only)
+        self.trains_rewards_dones_infos = self._read_trains_rewards_dones_infos(episode_only=episode_only)
+
+    def persist(self):
+        self._write_actions(self.actions)
+        self._write_trains_positions(self.trains_positions)
+        self._write_trains_arrived(self.trains_arrived)
+        self._write_trains_rewards_dones_infos(self.trains_rewards_dones_infos)
+
+    def _read_actions(self, episode_only: bool = False) -> pd.DataFrame:
+        """Returns pd df with all actions for all episodes.
+
+        Parameters
+        ----------
+        episode_only : bool
+            Filter df to contain only this episode.
+        """
         f = os.path.join(self.data_dir, DISCRETE_ACTION_FNAME)
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'action'])
-        return pd.read_csv(f, sep='\t')
+        df = pd.read_csv(f, sep='\t')
+        if episode_only:
+            df = df[df['episode_id'] == self.ep_id]
+        df["action"] = df["action"].map(RailEnvActions.from_value)
+        return df
 
-    def read_trains_arrived(self):
-        """Returns pd df with success rate for all episodes."""
+    def _read_trains_arrived(self, episode_only: bool = False) -> pd.DataFrame:
+        """Returns pd df with success rate for all episodes.
+
+            Parameters
+            ----------
+            episode_only : bool
+                Filter df to contain only this episode.
+        """
         f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'success_rate'])
-        return pd.read_csv(f, sep='\t')
+        df = pd.read_csv(f, sep='\t')
+        if episode_only:
+            return df[df['episode_id'] == self.ep_id]
+        return df
 
-    def read_trains_positions(self) -> pd.DataFrame:
-        """Returns pd df with all trains' positions for all episodes."""
+    def _read_trains_positions(self, episode_only: bool = False) -> pd.DataFrame:
+        """Returns pd df with all trains' positions for all episodes.
+
+        Parameters
+        ----------
+        episode_only : bool
+            Filter df to contain only this episode.
+        """
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'position'])
-        return pd.read_csv(f, sep='\t')
+        df = pd.read_csv(f, sep='\t')
+        df["position"] = df["position"].map(ast.literal_eval).map(lambda p: (p[0], int(p[1])))
+        if episode_only:
+            return df[df['episode_id'] == self.ep_id]
+        return df
 
-    def write_trains_positions(self, df: pd.DataFrame):
+    def _read_trains_rewards_dones_infos(self, episode_only: bool = False) -> pd.DataFrame:
+        """Returns pd df with all trains' rewards, dones, infos for all episodes.
+
+        Parameters
+        ----------
+        episode_only : bool
+            Filter df to contain only this episode.
+        """
+        f = os.path.join(self.data_dir, trains_rewards_dones_infos_FNAME)
+        if not os.path.exists(f):
+            return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'reward', 'info', 'done'])
+        df = pd.read_csv(f, sep='\t')
+        if episode_only:
+            df = df[df['episode_id'] == self.ep_id]
+        df["info"] = df["info"].map(lambda s: s.replace("<TrainState.WAITING: 0>", "0").replace("<TrainState.READY_TO_DEPART: 1>", "1").replace(
+            "<TrainState.MALFUNCTION_OFF_MAP: 2>", "2").replace("<TrainState.MOVING: 3>", "3").replace("<TrainState.STOPPED: 4>", "4").replace(
+            "<TrainState.MALFUNCTION: 5>", "5").replace("<TrainState.DONE: 6>", "6"))
+        df["info"] = df["info"].map(ast.literal_eval)
+        df["info"] = df["info"].map(lambda d: {k: (v if k != "state" else TrainState(v)) for k, v in d.items()})
+        return df
+
+    def _write_trains_positions(self, df: pd.DataFrame):
         """Store pd df with all trains' positions for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
+        df["position"] = df["position"].map(lambda p: (p[0], int(p[1])))
         df.to_csv(f, sep='\t', index=False)
 
-    def write_actions(self, df: pd.DataFrame):
+    def _write_actions(self, df: pd.DataFrame):
         """Store pd df with all trains' actions for all episodes."""
         f = os.path.join(self.data_dir, DISCRETE_ACTION_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df["action"] = df["action"].map(lambda a: a.value if isinstance(a, RailEnvActions) else a)
         df.to_csv(f, sep='\t', index=False)
 
-    def write_trains_arrived(self, df: pd.DataFrame):
+    def _write_trains_arrived(self, df: pd.DataFrame):
         """Store pd df with all trains' success rates for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def restore_episode(self, start_step: int = None) -> RailEnv:
+    def _write_trains_rewards_dones_infos(self, df: pd.DataFrame):
+        """Store pd df with all trains' rewards for all episodes."""
+        f = os.path.join(self.data_dir, trains_rewards_dones_infos_FNAME)
+        Path(f).parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(f, sep='\t', index=False)
+
+    def restore_episode(self, start_step: int = None) -> Optional[RailEnv]:
         """Restore an episode.
 
         Parameters
@@ -101,32 +175,40 @@ class Trajectory:
         Returns
         -------
         RailEnv
-            the episode
+            the rail env or None if the snapshot at the step does not exist
         """
         if start_step is None:
             f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
             env, _ = RailEnvPersister.load_new(f)
             return env
         else:
-            env, _ = RailEnvPersister.load_new(os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{start_step:04d}.pkl"))
+            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{start_step:04d}.pkl")
+            if not os.path.isfile(f):
+                return None
+            env, _ = RailEnvPersister.load_new(f)
             return env
 
-    def position_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
+    def position_collect(self, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
+        df = self.trains_positions
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position}
 
-    def action_collect(self, df: pd.DataFrame, env_time: int, agent_id: int, action: RailEnvActions):
+    def action_collect(self, env_time: int, agent_id: int, action: RailEnvActions):
+        df = self.actions
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'action': action}
 
-    def arrived_collect(self, df: pd.DataFrame, env_time: int, success_rate: float):
+    def arrived_collect(self, env_time: int, success_rate: float):
+        df = self.trains_arrived
         df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate}
 
-    def position_lookup(self, df: pd.DataFrame, env_time: int, agent_id: int) -> Tuple[Tuple[int, int], int]:
+    def rewards_dones_infos_collect(self, env_time: int, agent_id: int, reward: float, info: Any, done: bool):
+        df = self.trains_rewards_dones_infos
+        df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'reward': reward, 'info': info, 'done': done}
+
+    def position_lookup(self, env_time: int, agent_id: int) -> Tuple[Tuple[int, int], int]:
         """Method used to retrieve the stored position (if available).
 
         Parameters
         ----------
-        df: pd.DataFrame
-            Data frame from ActionEvents.discrete_action.tsv
         env_time: int
             position before (!) step env_time
         agent_id: int
@@ -136,24 +218,21 @@ class Trajectory:
         Tuple[Tuple[int, int], int]
             The position in the format ((row, column), direction).
         """
+        df = self.trains_positions
         pos = df.loc[(df['env_time'] == env_time) & (df['agent_id'] == agent_id) & (df['episode_id'] == self.ep_id)]['position']
         if len(pos) != 1:
             print(f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}")
             print(df[(df['agent_id'] == agent_id) & (df['episode_id'] == self.ep_id)]["env_time"])
         assert len(pos) == 1, f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}"
-        iloc_ = pos.iloc[0]
-        iloc_ = iloc_.replace("<Grid4TransitionsEnum.NORTH: 0>", "0").replace("<Grid4TransitionsEnum.EAST: 1>", "1").replace("<Grid4TransitionsEnum.SOUTH: 2>",
-                                                                                                                             "2").replace(
-            "<Grid4TransitionsEnum.WEST: 3>", "3")
-        return ast.literal_eval(iloc_)
+        # fail fast
+        p, d = pos.iloc[0]
+        return (p, d)
 
-    def action_lookup(self, actions_df: pd.DataFrame, env_time: int, agent_id: int) -> RailEnvActions:
+    def action_lookup(self, env_time: int, agent_id: int) -> RailEnvActions:
         """Method used to retrieve the stored action (if available). Defaults to 2 = MOVE_FORWARD.
 
         Parameters
         ----------
-        actions_df: pd.DataFrame
-            Data frame from ActionEvents.discrete_action.tsv
         env_time: int
             action going into step env_time
         agent_id: int
@@ -163,6 +242,7 @@ class Trajectory:
         RailEnvActions
             The action to step the env.
         """
+        actions_df = self.actions
         action = actions_df.loc[
             (actions_df['env_time'] == env_time) &
             (actions_df['agent_id'] == agent_id) &
@@ -172,7 +252,7 @@ class Trajectory:
             return RailEnvActions.MOVE_FORWARD
         return RailEnvActions.from_value(action[0])
 
-    def trains_arrived_lookup(self, movements_df: pd.DataFrame) -> pd.Series:
+    def trains_arrived_lookup(self) -> pd.Series:
         """Method used to retrieve the trains arrived for the episode.
 
         Parameters
@@ -184,366 +264,67 @@ class Trajectory:
         pd.Series
             The trains arrived data.
         """
+        movements_df = self.trains_arrived
         movement = movements_df.loc[(movements_df['episode_id'] == self.ep_id)]
 
         if len(movement) == 1:
             return movement.iloc[0]
-        raise
+        raise Exception(f"No entry for {self.ep_id} found in data frame.")
+
+    def trains_rewards_dones_infos_lookup(self, env_time: int, agent_id: int) -> Tuple[float, bool, Dict]:
+        """Method used to retrieve the rewards for the episode.
+
+        Parameters
+        ----------
+        env_time: int
+            action going into step env_time
+        agent_id: int
+            agent ID
+        Returns
+        -------
+        pd.DataFrame
+            The trains arrived data.
+        """
+        rewards_df = self.trains_rewards_dones_infos
+        data = rewards_df.loc[(rewards_df['env_time'] == env_time) & (rewards_df['agent_id'] == agent_id) & (rewards_df['episode_id'] == self.ep_id)]
+        assert len(data) == 1
+        data = data.iloc[0]
+        return data["reward"], data["done"], data["info"]
 
     @property
     def outputs_dir(self) -> Path:
         return self.data_dir / OUTPUTS_SUBDIR
 
-    @staticmethod
-    def create_from_policy(
-        policy: Policy,
-        data_dir: Path,
-        env: RailEnv = None,
-        n_agents=7,
-        x_dim=30,
-        y_dim=30,
-        n_cities=2,
-        max_rail_pairs_in_city=4,
-        grid_mode=False,
-        max_rails_between_cities=2,
-        malfunction_duration_min=20,
-        malfunction_duration_max=50,
-        malfunction_interval=540,
-        speed_ratios=None,
-        seed=42,
-        obs_builder: Optional[ObservationBuilder] = None,
-        snapshot_interval: int = 1,
-        ep_id: str = None,
-        callbacks: FlatlandCallbacks = None,
-        tqdm_kwargs: dict = None,
-    ) -> "Trajectory":
-        """
-        Creates trajectory by running submission (policy and obs builder).
+    def compare_actions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+        df = self._read_actions(episode_only=True)
+        other_df = other._read_actions(episode_only=True)
+        return self._compare(df, other_df, end_step, start_step)
 
-        Parameters
-        ----------
-        policy : Policy
-            the submission's policy
-        data_dir : Path
-            the path to write the trajectory to
-        env: RailEnv
-            directly inject env, skip env generation
-        n_agents: int
-            number of agents
-        x_dim: int
-            number of columns
-        y_dim: int
-            number of rows
-        n_cities: int
-           Max number of cities to build. The generator tries to achieve this numbers given all the parameters. Goes into `sparse_rail_generator`.
-        max_rail_pairs_in_city: int
-            Number of parallel tracks in the city. This represents the number of tracks in the train stations. Goes into `sparse_rail_generator`.
-        grid_mode: bool
-            How to distribute the cities in the path, either equally in a grid or random. Goes into `sparse_rail_generator`.
-        max_rails_between_cities: int
-            Max number of rails connecting to a city. This is only the number of connection points at city boarder.
-        malfunction_duration_min: int
-            Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.
-        malfunction_duration_max: int
-            Max duration of malfunction. Goes into `ParamMalfunctionGen`.
-        malfunction_interval: int
-            Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.
-        speed_ratios: Dict[float, float]
-            Speed ratios of all agents. They are probabilities of all different speeds and have to add up to 1. Goes into `sparse_line_generator`. Defaults to `{1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}`.
-        seed: int
-             Initiate random seed generators. Goes into `reset`.
-        obs_builder: Optional[ObservationBuilder]
-            Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
-        snapshot_interval : int
-            interval to write pkl snapshots
-        ep_id: str
-            episode ID to store data under. If not provided, generate one.
-        callbacks: FlatlandCallbacks
-            callbacks to run during trajectory creation
-        tqdm_kwargs: dict
-            additional kwargs for tqdm
+    def compare_positions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+        df = self._read_trains_positions(episode_only=True)
+        other_df = other._read_trains_positions(episode_only=True)
+        return self._compare(df, other_df, end_step, start_step)
 
-        Returns
-        -------
-        Trajectory
+    def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+        df = self._read_trains_arrived(episode_only=True)
+        other_df = other._read_trains_arrived(episode_only=True)
+        return self._compare(df, other_df, end_step, start_step)
 
-        """
-        if env is not None:
-            observations, _ = env.reset()
-        else:
-            env, observations, _ = env_generator(
-                n_agents=n_agents,
-                x_dim=x_dim,
-                y_dim=y_dim,
-                n_cities=n_cities,
-                max_rail_pairs_in_city=max_rail_pairs_in_city,
-                grid_mode=grid_mode,
-                max_rails_between_cities=max_rails_between_cities,
-                malfunction_duration_min=malfunction_duration_min,
-                malfunction_duration_max=malfunction_duration_max,
-                malfunction_interval=malfunction_interval,
-                speed_ratios=speed_ratios,
-                seed=seed,
-                obs_builder_object=obs_builder)
-        if tqdm_kwargs is None:
-            tqdm_kwargs = {}
-        if ep_id is not None:
-            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
-        else:
-            trajectory = Trajectory(data_dir=data_dir)
-        (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
-        RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
+    def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+        df = self._read_trains_rewards_dones_infos(episode_only=True)
+        other_df = other._read_trains_rewards_dones_infos(episode_only=True)
+        return self._compare(df, other_df, end_step, start_step)
 
-        if snapshot_interval > 0:
-            from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
-            if callbacks is None:
-                callbacks = TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir)
-            else:
-                callbacks = make_multi_callbacks(callbacks,
-                                                 TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir))
-
-        trains_positions = trajectory.read_trains_positions()
-        actions = trajectory.read_actions()
-        trains_arrived = trajectory.read_trains_arrived()
-
-        trajectory.outputs_dir.mkdir(exist_ok=True)
-        if callbacks is not None:
-            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
-        n_agents = env.get_num_agents()
-        assert len(env.agents) == n_agents
-        env_time = 0
-
-        for env_time in tqdm.tqdm(range(env._max_episode_steps), **tqdm_kwargs):
-
-            action_dict = policy.act_many(env.get_agent_handles(), observations)
-            for handle, action in action_dict.items():
-                trajectory.action_collect(actions, env_time=env_time, agent_id=handle, action=action)
-
-            observations, _, dones, _ = env.step(action_dict)
-
-            for agent_id in range(n_agents):
-                agent = env.agents[agent_id]
-                actual_position = (agent.position, agent.direction)
-                trajectory.position_collect(trains_positions, env_time=env_time + 1, agent_id=agent_id, position=actual_position)
-            done = dones['__all__']
-
-            if callbacks is not None:
-                callbacks.on_episode_step(env=env, data_dir=trajectory.outputs_dir)
-
-            if done:
-                break
-        if callbacks is not None:
-            callbacks.on_episode_end(env=env, data_dir=trajectory.outputs_dir)
-
-        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        trajectory.arrived_collect(trains_arrived, env_time, actual_success_rate)
-        trajectory.write_trains_positions(trains_positions)
-        trajectory.write_actions(actions)
-        trajectory.write_trains_arrived(trains_arrived)
-        return trajectory
-
-
-@click.command()
-@click.option('--data-dir',
-              type=click.Path(exists=True, path_type=Path),
-              help="Path to folder containing Flatland episode",
-              required=True
-              )
-@click.option('--policy-pkg',
-              type=str,
-              help="Policy's fully qualified package name.",
-              required=True
-              )
-@click.option('--policy-cls',
-              type=str,
-              help="Policy class name.",
-              required=True
-              )
-@click.option('--obs-builder-pkg',
-              type=str,
-              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
-              required=False,
-              default=None
-              )
-@click.option('--obs-builder-cls',
-              type=str,
-              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
-              required=False,
-              default=None
-              )
-@click.option('--n_agents',
-              type=int,
-              help="Number of agents.",
-              required=False,
-              default=7)
-@click.option('--x_dim',
-              type=int,
-              help="Number of columns.",
-              required=False,
-              default=30)
-@click.option('--y_dim',
-              type=int,
-              help="Number of rows.",
-              required=False,
-              default=30)
-@click.option('--n_cities',
-              type=int,
-              help="Max number of cities to build. The generator tries to achieve this numbers given all the parameters. Goes into `sparse_rail_generator`. ",
-              required=False,
-              default=2)
-@click.option('--max_rail_pairs_in_city',
-              type=int,
-              help="Number of parallel tracks in the city. This represents the number of tracks in the train stations. Goes into `sparse_rail_generator`.",
-              required=False,
-              default=4)
-@click.option('--grid_mode',
-              type=bool,
-              help="How to distribute the cities in the path, either equally in a grid or random. Goes into `sparse_rail_generator`.",
-              required=False,
-              default=False)
-@click.option('--max_rails_between_cities',
-              type=int,
-              help="Max number of rails connecting to a city. This is only the number of connection points at city boarder.",
-              required=False,
-              default=2)
-@click.option('--malfunction_duration_min',
-              type=int,
-              help="Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.",
-              required=False,
-              default=20)
-@click.option('--malfunction_duration_max',
-              type=int,
-              help="Max duration of malfunction. Goes into `ParamMalfunctionGen`.",
-              required=False,
-              default=50)
-@click.option('--malfunction_interval',
-              type=int,
-              help="Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.",
-              required=False,
-              default=540)
-@click.option('--speed_ratios',
-              multiple=True,
-              nargs=2,
-              type=click.Tuple(types=[float, float]),
-              help="Speed ratios of all agents. They are probabilities of all different speeds and have to add up to 1. Goes into `sparse_line_generator`. Defaults to `{1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}`.",
-              required=False,
-              default=None)
-@click.option('--seed',
-              type=int,
-              help="Initiate random seed generators. Goes into `reset`.",
-              required=False, default=42)
-@click.option('--snapshot-interval',
-              type=int,
-              help="Interval to right snapshots. Use 0 to switch off, 1 for every step, ....",
-              required=False,
-              default=1)
-@click.option('--ep-id',
-              type=str,
-              help="Set the episode ID used - if not set, a UUID will be sampled.",
-              required=False)
-@click.option('--env-path',
-              type=click.Path(exists=True),
-              help="Path to existing RailEnv to start trajectory from",
-              required=False
-              )
-def generate_trajectory_from_policy(
-    data_dir: Path,
-    policy_pkg: str, policy_cls: str,
-    obs_builder_pkg: str, obs_builder_cls: str,
-    n_agents=7,
-    x_dim=30,
-    y_dim=30,
-    n_cities=2,
-    max_rail_pairs_in_city=4,
-    grid_mode=False,
-    max_rails_between_cities=2,
-    malfunction_duration_min=20,
-    malfunction_duration_max=50,
-    malfunction_interval=540,
-    speed_ratios=None,
-    seed: int = 42,
-    snapshot_interval: int = 1,
-    ep_id: str = None,
-    env_path: Path = None
-):
-    module = importlib.import_module(policy_pkg)
-    policy_cls = getattr(module, policy_cls)
-
-    obs_builder = None
-    if obs_builder_pkg is not None and obs_builder_cls is not None:
-        module = importlib.import_module(obs_builder_pkg)
-        obs_builder_cls = getattr(module, obs_builder_cls)
-        obs_builder = obs_builder_cls()
-    env = None
-    if env_path is not None:
-        env, _ = RailEnvPersister.load_new(str(env_path))
-    Trajectory.create_from_policy(
-        policy=policy_cls(),
-        data_dir=data_dir,
-        n_agents=n_agents,
-        x_dim=x_dim,
-        y_dim=y_dim,
-        n_cities=n_cities,
-        max_rail_pairs_in_city=max_rail_pairs_in_city,
-        grid_mode=grid_mode,
-        max_rails_between_cities=max_rails_between_cities,
-        malfunction_duration_min=malfunction_duration_min,
-        malfunction_duration_max=malfunction_duration_max,
-        malfunction_interval=malfunction_interval,
-        speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
-        seed=seed,
-        obs_builder=obs_builder,
-        snapshot_interval=snapshot_interval,
-        ep_id=ep_id,
-        env=env
-    )
-
-
-def generate_trajectories_from_metadata(
-    metadata_csv: Path,
-    data_dir: Path,
-    policy_pkg: str, policy_cls: str,
-    obs_builder_pkg: str, obs_builder_cls: str):
-    metadata = pd.read_csv(metadata_csv)
-    for k, v in metadata.iterrows():
-        try:
-            test_folder = data_dir / v["test_id"] / v["env_id"]
-            test_folder.mkdir(parents=True, exist_ok=True)
-            generate_trajectory_from_policy(
-                ["--data-dir", test_folder,
-                 "--policy-pkg", policy_pkg, "--policy-cls", policy_cls,
-                 "--obs-builder-pkg", obs_builder_pkg, "--obs-builder-cls", obs_builder_cls,
-                 "--n_agents", v["n_agents"],
-                 "--x_dim", v["x_dim"],
-                 "--y_dim", v["y_dim"],
-                 "--n_cities", v["n_cities"],
-                 "--max_rail_pairs_in_city", v["max_rail_pairs_in_city"],
-                 "--grid_mode", v["grid_mode"],
-                 "--max_rails_between_cities", v["max_rails_between_cities"],
-                 "--malfunction_duration_min", v["malfunction_duration_min"],
-                 "--malfunction_duration_max", v["malfunction_duration_max"],
-                 "--malfunction_interval", v["malfunction_interval"],
-                 "--speed_ratios", "1.0", "0.25",
-                 "--speed_ratios", "0.5", "0.25",
-                 "--speed_ratios", "0.33", "0.25",
-                 "--speed_ratios", "0.25", "0.25",
-                 "--seed", v["seed"],
-                 "--snapshot-interval", 0,
-                 "--ep-id", v["test_id"] + "_" + v["env_id"]
-                 ])
-        except SystemExit as exc:
-            assert exc.code == 0
-
-
-if __name__ == '__main__':
-    metadata_csv = Path("../../episodes/malfunction_deadlock_avoidance_heuristics/metadata.csv")
-    data_dir = Path("../../episodes/malfunction_deadlock_avoidance_heuristics")
-    generate_trajectories_from_metadata(
-        metadata_csv=metadata_csv,
-        data_dir=data_dir,
-        # TODO https://github.com/flatland-association/flatland-rl/issues/101 import heuristic baseline as example
-        policy_pkg="src.policy.deadlock_avoidance_policy",
-        policy_cls="DeadLockAvoidancePolicy",
-        obs_builder_pkg="src.observation.full_state_observation",
-        obs_builder_cls="FullStateObservationBuilder"
-    )
+    def _compare(self, df, other_df, end_step, start_step):
+        if start_step is not None:
+            df = df[df["env_time"] >= start_step]
+            other_df = other_df[other_df["env_time"] >= start_step]
+        if end_step is not None:
+            df = df[df["env_time"] < end_step]
+            other_df = other_df[other_df["env_time"] < end_step]
+        df.reset_index(drop=True, inplace=True)
+        other_df.reset_index(drop=True, inplace=True)
+        df.drop(columns="episode_id", inplace=True)
+        other_df.drop(columns="episode_id", inplace=True)
+        diff = df.compare(other_df)
+        return diff

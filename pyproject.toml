@@ -92,7 +92,7 @@ flatland-demo = "flatland.cli:demo"
 # deprecated, use flatland- prefix for all scripts
 evaluator = "flatland.cli:evaluator"
 flatland-evaluator = "flatland.cli:evaluator"
-flatland-trajectory-generate-from-policy = "flatland.trajectories.trajectories:generate_trajectory_from_policy"
+flatland-trajectory-generate-from-policy = "flatland.trajectories.policy_runner:generate_trajectory_from_policy"
 flatland-trajectory-evaluate = "flatland.evaluators.trajectory_evaluator:evaluate_trajectory"
 
 [tool.setuptools.packages]
