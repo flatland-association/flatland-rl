@@ -18,30 +18,30 @@ from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBD
 class PolicyRunner:
     @staticmethod
     def create_from_policy(
-        policy: Policy,
-        data_dir: Path,
-        env: RailEnv = None,
-        # TODO extract to envgenerationconfig?
-        n_agents=7,
-        x_dim=30,
-        y_dim=30,
-        n_cities=2,
-        max_rail_pairs_in_city=4,
-        grid_mode=False,
-        max_rails_between_cities=2,
-        malfunction_duration_min=20,
-        malfunction_duration_max=50,
-        malfunction_interval=540,
-        speed_ratios=None,
-        seed=42,
-        obs_builder: Optional[ObservationBuilder] = None,
-        snapshot_interval: int = 1,
-        ep_id: str = None,
-        callbacks: FlatlandCallbacks = None,
-        tqdm_kwargs: dict = None,
-        start_step: int = 0,
-        end_step: int = None,
-        fork_from_trajectory: "Trajectory" = None,
+            policy: Policy,
+            data_dir: Path,
+            env: RailEnv = None,
+            # TODO extract to envgenerationconfig?
+            n_agents=7,
+            x_dim=30,
+            y_dim=30,
+            n_cities=2,
+            max_rail_pairs_in_city=4,
+            grid_mode=False,
+            max_rails_between_cities=2,
+            malfunction_duration_min=20,
+            malfunction_duration_max=50,
+            malfunction_interval=540,
+            speed_ratios=None,
+            seed=42,
+            obs_builder: Optional[ObservationBuilder] = None,
+            snapshot_interval: int = 1,
+            ep_id: str = None,
+            callbacks: FlatlandCallbacks = None,
+            tqdm_kwargs: dict = None,
+            start_step: int = 0,
+            end_step: int = None,
+            fork_from_trajectory: "Trajectory" = None,
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -224,7 +224,7 @@ class PolicyRunner:
 
 @click.command()
 @click.option('--data-dir',
-              type=click.Path(exists=True),
+              type=click.Path(exists=True, path_type=Path),
               help="Path to folder containing Flatland episode",
               required=True
               )
@@ -321,7 +321,7 @@ class PolicyRunner:
               help="Set the episode ID used - if not set, a UUID will be sampled.",
               required=False)
 @click.option('--env-path',
-              type=click.Path(exists=True),
+              type=click.Path(exists=True, path_type=Path),
               help="Path to existing RailEnv to start trajectory from",
               required=False
               )
@@ -336,7 +336,7 @@ class PolicyRunner:
               required=False, default=None
               )
 @click.option('--fork-data-dir',
-              type=click.Path(exists=True),
+              type=click.Path(exists=True, path_type=Path),
               help="Path to existing RailEnv to start trajectory from",
               required=False, default=None
               )
@@ -346,28 +346,28 @@ class PolicyRunner:
               required=False, default=None
               )
 def generate_trajectory_from_policy(
-    data_dir: Path,
-    policy_pkg: str, policy_cls: str,
-    obs_builder_pkg: str, obs_builder_cls: str,
-    n_agents=7,
-    x_dim=30,
-    y_dim=30,
-    n_cities=2,
-    max_rail_pairs_in_city=4,
-    grid_mode=False,
-    max_rails_between_cities=2,
-    malfunction_duration_min=20,
-    malfunction_duration_max=50,
-    malfunction_interval=540,
-    speed_ratios=None,
-    seed: int = 42,
-    snapshot_interval: int = 1,
-    ep_id: str = None,
-    env_path: Path = None,
-    start_step: int = 0,
-    end_step: int = None,
-    fork_data_dir: Path = None,
-    fork_ep_id: str = None,
+        data_dir: Path,
+        policy_pkg: str, policy_cls: str,
+        obs_builder_pkg: str, obs_builder_cls: str,
+        n_agents=7,
+        x_dim=30,
+        y_dim=30,
+        n_cities=2,
+        max_rail_pairs_in_city=4,
+        grid_mode=False,
+        max_rails_between_cities=2,
+        malfunction_duration_min=20,
+        malfunction_duration_max=50,
+        malfunction_interval=540,
+        speed_ratios=None,
+        seed: int = 42,
+        snapshot_interval: int = 1,
+        ep_id: str = None,
+        env_path: Path = None,
+        start_step: int = 0,
+        end_step: int = None,
+        fork_data_dir: Path = None,
+        fork_ep_id: str = None,
 ):
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
