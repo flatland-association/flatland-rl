@@ -95,6 +95,8 @@ class PolicyRunner:
             start evaluation from intermediate step incl. (requires snapshot to be present); take actions from start_step and first step executed is start_step + 1. Defaults to 0 with first elapsed step 1.
         end_step : int
             stop evaluation at intermediate step excl. Capped by env's max_episode_steps
+        fork_from_trajectory : Trajectory
+            copy data from this trajectory up to start step and run policy from there on
         Returns
         -------
         Trajectory
