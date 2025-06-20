@@ -5,8 +5,8 @@ import pytest
 
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 
-DOWNLOAD_INSTRUCTIONS = "Download from https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
-# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip 30x30\ map -x "*.DS_Store"; zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip malfunction_deadlock_avoidance_heuristics -x "*.DS_Store"
+DOWNLOAD_INSTRUCTIONS = "Download from https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
+# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip 30x30\ map -x "*.DS_Store"; zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip malfunction_deadlock_avoidance_heuristics -x "*.DS_Store"
 from flatland.trajectories.trajectories import Trajectory
 
 

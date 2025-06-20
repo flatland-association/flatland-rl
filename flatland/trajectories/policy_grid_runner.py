@@ -42,8 +42,8 @@ def generate_trajectories_from_metadata(
 
 
 if __name__ == '__main__':
-    metadata_csv = Path("../../episodes/malfunction_deadlock_avoidance_heuristics/metadata.csv")
-    data_dir = Path("../../episodes/malfunction_deadlock_avoidance_heuristics")
+    metadata_csv = Path("./episodes/trajectories/malfunction_deadlock_avoidance_heuristics/metadata.csv").resolve()
+    data_dir = Path("./episodes/trajectories/malfunction_deadlock_avoidance_heuristics").resolve()
     generate_trajectories_from_metadata(
         metadata_csv=metadata_csv,
         data_dir=data_dir,

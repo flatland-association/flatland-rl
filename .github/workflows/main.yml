@@ -64,7 +64,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Install tox
@@ -92,7 +92,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Install tox
@@ -208,7 +208,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}
@@ -238,7 +238,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v3.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}
