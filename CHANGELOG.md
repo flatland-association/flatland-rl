@@ -5,6 +5,22 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[4.1.3](https://github.com/flatland-association/flatland-rl/compare/v4.1.2...v4.1.3)] - 2025-06-20
+
+### Added
+
+* Enhance Trajectory Runner API: clone/fork trajectory and run policy from intermediate step. Add rewards and dones to Trajectory API and regression tests, add
+  callback for observation and info_dict snapshoting. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/222
+* Add retries to tox notebooks env. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/227
+* 142 verify required and missing requirements. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/225
+* Bump torch from 2.7.0 to 2.7.1 by @dependabot in https://github.com/flatland-association/flatland-rl/pull/229
+* Bump requests from 2.32.3 to 2.32.4 by @dependabot in https://github.com/flatland-association/flatland-rl/pull/231
+
+### Fixed
+
+* Bugfix action serialization in Trajectory API. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/226
+* Fix path type conversion trajectory API cli. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/228
+
 ## [[4.1.2](https://github.com/flatland-association/flatland-rl/compare/v4.1.1...v4.1.2)] - 2025-05-23
 
 ### Added
