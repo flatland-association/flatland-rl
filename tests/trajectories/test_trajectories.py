@@ -85,7 +85,8 @@ def test_cli_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         with pytest.raises(SystemExit) as e_info:
-            generate_trajectory_from_policy(["--data-dir", data_dir, "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy"])
+            generate_trajectory_from_policy(
+                ["--data-dir", str(data_dir), "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy"])
         assert e_info.value.code == 0
 
         ep_id = re.sub(r"_step.*", "", str(next((data_dir / SERIALISED_STATE_SUBDIR).glob("*step*.pkl")).name))
@@ -105,7 +106,7 @@ def test_cli_from_submission():
         assert "episode_id	env_time	agent_id	position" in (data_dir / TRAINS_POSITIONS_FNAME).read_text()
 
         with pytest.raises(SystemExit) as e_info:
-            evaluate_trajectory(["--data-dir", data_dir, "--ep-id", ep_id])
+            evaluate_trajectory(["--data-dir", str(data_dir), "--ep-id", ep_id])
         assert e_info.value.code == 0
 
 
