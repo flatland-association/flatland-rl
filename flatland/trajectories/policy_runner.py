@@ -21,7 +21,6 @@ class PolicyRunner:
             policy: Policy,
             data_dir: Path,
             env: RailEnv = None,
-            # TODO extract to envgenerationconfig?
             n_agents=7,
             x_dim=30,
             y_dim=30,
@@ -134,7 +133,6 @@ class PolicyRunner:
 
             if env is None:
                 env = fork_from_trajectory.restore_episode()
-                # TODO we could enhance by loading the latest snapshot and running from there instead...
                 (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
                 RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
                 env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
