@@ -256,6 +256,10 @@ class RailEnvPersister(object):
         for i_agent in range(env.get_num_agents()):
             env.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
+        dones = env_dict.get("dones", None)
+        if dones is not None:
+            env.dones = dones
+
     @classmethod
     def get_full_state(cls, env):
         """
@@ -281,6 +285,7 @@ class RailEnvPersister(object):
             "np_random_state": random_state_to_hashablestate(env.np_random),
             "dev_pred_dict": env.dev_pred_dict,
             "dev_obs_dict": env.dev_obs_dict,
+            "dones": env.dones
         }
         return msg_data_dict
 
