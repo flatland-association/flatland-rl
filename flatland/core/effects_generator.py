@@ -103,7 +103,7 @@ def effects_generator_wrapper(*effects_generators: EffectsGenerator[EnvironmentT
 
         def on_episode_step_end(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
             for eff in effects_generators:
-                env = eff.on_episode_step_start(env)
+                env = eff.on_episode_step_end(env)
             return env
 
     return _EffectsGeneratorWrapped()
