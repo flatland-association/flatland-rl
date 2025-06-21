@@ -89,7 +89,7 @@ class EffectsGenerator(Generic[EnvironmentType]):
         return self._on_episode_step_end(*args, **kwargs)
 
 
-def effects_generator_wrapper(*effects_generators: EffectsGenerator[EnvironmentType]) -> EffectsGenerator[EnvironmentType]:
+def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvironmentType]) -> EffectsGenerator[EnvironmentType]:
     class _EffectsGeneratorWrapped(EffectsGenerator[EnvironmentType]):
         def on_episode_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
             for eff in effects_generators:
