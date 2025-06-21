@@ -164,7 +164,6 @@ class SparseRailGen(RailGen):
 
         Parameters
         ----------
-
         width: int
             Width of the environment
         height: int
