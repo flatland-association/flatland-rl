@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Tuple, Set, Any
 import numpy as np
 
 import flatland.envs.timetable_generators as ttg
-from flatland.core.effects_generator import EffectsGenerator, effects_generator_wrapper
+from flatland.core.effects_generator import EffectsGenerator, make_multi_effects_generator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
@@ -215,7 +215,7 @@ class RailEnv(Environment):
         if effects_generator is None:
             self.effects_generator = mf
         else:
-            self.effects_generator = effects_generator_wrapper(effects_generator, mf)
+            self.effects_generator = make_multi_effects_generator(effects_generator, mf)
 
         self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
         for i_agent in range(self.get_num_agents()):
