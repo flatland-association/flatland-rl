@@ -158,7 +158,6 @@ class SparseRailGen(RailGen):
         self.seed = seed
         self.p_level_free = p_level_free
 
-    # TODO bad code smell
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0, np_random: RandomState = None) -> RailGeneratorProduct:
         """
 
