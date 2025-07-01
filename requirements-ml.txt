@@ -207,7 +207,7 @@ pettingzoo==1.24.3
     # via flatland-rl (pyproject.toml)
 pexpect==4.9.0
     # via ipython
-pillow==11.2.1
+pillow==11.3.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
