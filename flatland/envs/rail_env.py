@@ -1,6 +1,7 @@
 """
 Definition of the RailEnv environment.
 """
+import pickle
 import random
 import warnings
 from functools import lru_cache
@@ -793,3 +794,8 @@ class RailEnv(Environment):
             except Exception as e:
                 print("Could Not close window due to:", e)
             self.renderer = None
+
+    def clone_from(self, env: 'RailEnv'):
+        from flatland.envs.persistence import RailEnvPersister
+        env_dict = pickle.loads(pickle.dumps(RailEnvPersister.get_full_state(env)))
+        RailEnvPersister.set_full_state(self, env_dict)

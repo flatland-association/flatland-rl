@@ -8,6 +8,7 @@ import pytest
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
@@ -389,3 +390,18 @@ def test_rail_env_reset():
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
+
+
+def test_clone_from():
+    env, _, _ = env_generator()
+    env.reset(random_seed=42)
+    clone = RailEnv(30, 30)
+    clone.reset(random_seed=43)
+    clone.clone_from(env)
+    assert all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])
+    env.reset(True, True, random_seed=55)
+    clone.reset(True, True, random_seed=53)
+    assert not all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])
+    env.reset(True, True, random_seed=56)
+    clone.reset(True, True, random_seed=56)
+    assert all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])

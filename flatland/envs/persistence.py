@@ -93,13 +93,16 @@ class RailEnvPersister(object):
                 pickle.dump(dict_env, file_out)
 
     @classmethod
-    def load(cls, env, filename, load_from_package=None):
+    def load(cls, env: "RailEnv", filename: Union[str, Path], load_from_package: Optional[str] = None):
         """
-        Load environment with distance map from a file
+        Load environment with distance map from a file into existing env.
 
         Parameters:
         -------
-        filename: string
+        env: RailEnv
+        filename: Union[str, Path]
+        load_from_package: Optional[str]
+            defaults to `None`.
         """
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
         cls.set_full_state(env, env_dict)
@@ -107,6 +110,16 @@ class RailEnvPersister(object):
     @classmethod
     def load_new(cls, filename: Union[str, Path], load_from_package=None, obs_builder_object: Optional[ObservationBuilder["RailEnv"]] = None) -> Tuple[
         "RailEnv", Dict]:
+        """
+        Load environment with distance map from a file into new env.
+
+        Parameters:
+        -------
+        env: RailEnv
+        filename: Union[str, Path]
+        load_from_package: Optional[str]
+            defaults to `None`.
+        """
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
 
