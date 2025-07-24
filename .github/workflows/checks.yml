@@ -245,8 +245,9 @@ jobs:
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}
             -   name: Clone flatland-baselines
+                # TODO temporary workaround till https://github.com/flatland-association/flatland-baselines/pull/13
                 run: |
-                    git clone https://github.com/flatland-association/flatland-baselines.git
+                    git clone https://github.com/flatland-association/flatland-baselines.git@244-policy-act-no-handle
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
