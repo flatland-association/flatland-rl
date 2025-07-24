@@ -26,7 +26,7 @@ class RandomPolicy(Policy):
         self.action_size = action_size
         self.np_random, _ = np_random(seed=seed)
 
-    def act(self, handle: int, observation: Any, **kwargs):
+    def act(self, observation: Any, **kwargs):
         return RailEnvActions(self.np_random.choice(self.action_size))
 
 
