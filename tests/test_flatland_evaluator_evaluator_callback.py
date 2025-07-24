@@ -1,29 +1,32 @@
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Dict
 
-from flatland.core.policy import Policy
+from flatland.envs.RailEnvPolicy import RailEnvPolicy
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.evaluator_callback import FlatlandEvaluatorCallbacks
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.trajectories.policy_runner import PolicyRunner
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 
-class DelayPolicy(Policy):
+class DelayPolicy(RailEnvPolicy):
     def __init__(self, initial_planning_delay: int = None, per_step_delay: int = None):
         self._elapsed_steps = -1
         self._initial_planning_delay = initial_planning_delay
         self._per_step_delay = per_step_delay
 
-    def act(self, handle: int, observation: Any, **kwargs) -> Any:
-        if handle == 0:
-            self._elapsed_steps += 1
-            if self._elapsed_steps == 0 and self._initial_planning_delay is not None:
-                time.sleep(self._initial_planning_delay)
-            elif self._per_step_delay is not None:
-                time.sleep(self._per_step_delay)
-        return {}
+    def act_many(self, handles: List[int], observations: List[Any], **kwargs) -> Dict[int, RailEnvActions]:
+        self._elapsed_steps += 1
+        if self._elapsed_steps == 0 and self._initial_planning_delay is not None:
+            time.sleep(self._initial_planning_delay)
+        elif self._per_step_delay is not None:
+            time.sleep(self._per_step_delay)
+        return super().act_many(handles, observations)
+
+    def act(self, observation: Any, **kwargs) -> RailEnvActions:
+        return RailEnvActions.DO_NOTHING
 
 
 def test_evaluator_callbacks():
