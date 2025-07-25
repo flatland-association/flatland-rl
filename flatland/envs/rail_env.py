@@ -795,8 +795,8 @@ class RailEnv(Environment):
                 print("Could Not close window due to:", e)
             self.renderer = None
 
-    def clone_from(self, env: 'RailEnv'):
+    def clone_from(self, env: 'RailEnv', obs_builder: Optional[ObservationBuilder["RailEnv"]] = None):
         from flatland.envs.persistence import RailEnvPersister
         # avoid in-memory references
         env_dict = pickle.loads(pickle.dumps(RailEnvPersister.get_full_state(env)))
-        RailEnvPersister.load(self, env_dict=env_dict)
+        RailEnvPersister.load(self, env_dict=env_dict, obs_builder=obs_builder)

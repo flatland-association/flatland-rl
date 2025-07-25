@@ -94,7 +94,7 @@ class RailEnvPersister(object):
         load_from_package: Optional[str]
             defaults to `None`.
         obs_builder : ObservationBuilder[RailEnv]
-            defaults to `None`.
+            defaults to `None`. If `None`, then a `DummyObservationBuilder` is installed.
         """
         if env_dict is None:
             env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)

@@ -92,7 +92,7 @@ class Environment:
         """
         raise NotImplementedError()
 
-    def clone_from(self, env: 'Environment') -> None:
+    def clone_from(self, env: 'Environment', **kwargs) -> None:
         """
         Clone an environment by resetting the simulation to its current state.
         See https://github.com/enlite-ai/maze/blob/94e9125020cd3cd87200c689128fcca4cf9c9569/maze/core/env/simulated_env_mixin.py#L7
