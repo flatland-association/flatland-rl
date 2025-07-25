@@ -797,5 +797,6 @@ class RailEnv(Environment):
 
     def clone_from(self, env: 'RailEnv'):
         from flatland.envs.persistence import RailEnvPersister
+        # avoid in-memory references
         env_dict = pickle.loads(pickle.dumps(RailEnvPersister.get_full_state(env)))
-        RailEnvPersister.set_full_state(self, env_dict)
+        RailEnvPersister.load(self, env_dict=env_dict)

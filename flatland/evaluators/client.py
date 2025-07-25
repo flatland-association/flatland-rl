@@ -266,7 +266,7 @@ class FlatlandRemoteClient(object):
         if self.verbose:
             print("Current env path : ", test_env_file_path)
         self.current_env_path = test_env_file_path
-        self.env, _ = RailEnvPersister.load_new(test_env_file_path, obs_builder_object=obs_builder_object)
+        self.env, _ = RailEnvPersister.load_new(test_env_file_path, obs_builder=obs_builder_object)
 
         time_start = time.time()
         # Use the local observation

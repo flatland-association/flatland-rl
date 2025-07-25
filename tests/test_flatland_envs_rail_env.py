@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+import tempfile
 import time
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -17,8 +19,10 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
+from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
+from tests.trajectories.test_policy_runner import RandomPolicy
 
 """Tests for `flatland` package."""
 
@@ -392,7 +396,7 @@ def test_rail_env_reset():
     assert agents_initial == agents_loaded
 
 
-def test_clone_from():
+def test_clone_from_random_states_independent():
     env, _, _ = env_generator()
     env.reset(random_seed=42)
     clone = RailEnv(30, 30)
@@ -405,3 +409,21 @@ def test_clone_from():
     env.reset(True, True, random_seed=56)
     clone.reset(True, True, random_seed=56)
     assert all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])
+
+
+def test_clone_from_with_random_policy():
+    env, _, _ = env_generator()
+
+    clone = RailEnv(30, 30)
+    clone.clone_from(env)
+
+    # use Trajectory API for comparison
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory = PolicyRunner.create_from_policy(env=env, policy=RandomPolicy(), data_dir=data_dir / "one")
+        other = PolicyRunner.create_from_policy(env=clone, policy=RandomPolicy(), data_dir=data_dir / "two")
+
+        assert len(trajectory.compare_arrived(other)) == 0
+        assert len(trajectory.compare_actions(other)) == 0
+        assert len(trajectory.compare_positions(other)) == 0
+        assert len(trajectory.compare_rewards_dones_infos(other)) == 0

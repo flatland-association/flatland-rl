@@ -40,12 +40,6 @@ class RailEnvPersister(object):
         if isinstance(filename, Path):
             filename = str(filename)
 
-        # We have an unresolved problem with msgpack loading the list of agents
-        # see also 20 lines below.
-        # print(f"env save - agents: {env_dict['agents'][0]}")
-        # a0 = env_dict["agents"][0]
-        # print("agent type:", type(a0))
-
         if save_distance_maps is True:
             oDistMap = env.distance_map.get()
             if oDistMap is not None:
@@ -68,14 +62,6 @@ class RailEnvPersister(object):
 
             file_out.write(data)
 
-        # We have an unresovled problem with msgpack loading the list of Agents
-        # with open(filename, "rb") as file_in:
-        # if filename.endswith("mpk"):
-        # bytes_in = file_in.read()
-        # dIn = msgpack.unpackb(data, encoding="utf-8")
-        # print(f"msgpack check - {dIn.keys()}")
-        # print(f"msgpack check - {dIn['agents'][0]}")
-
     @classmethod
     def save_episode(cls, env, filename):
         dict_env = cls.get_full_state(env)
@@ -93,7 +79,11 @@ class RailEnvPersister(object):
                 pickle.dump(dict_env, file_out)
 
     @classmethod
-    def load(cls, env: "RailEnv", filename: Union[str, Path], load_from_package: Optional[str] = None):
+    def load(cls, env: "RailEnv",
+             filename: Union[str, Path] = None,
+             env_dict=None,
+             load_from_package: Optional[str] = None,
+             obs_builder: Optional[ObservationBuilder["RailEnv"]] = None):
         """
         Load environment with distance map from a file into existing env.
 
@@ -103,21 +93,38 @@ class RailEnvPersister(object):
         filename: Union[str, Path]
         load_from_package: Optional[str]
             defaults to `None`.
+        obs_builder : ObservationBuilder[RailEnv]
+            defaults to `None`.
         """
-        env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
+        if env_dict is None:
+            env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
         cls.set_full_state(env, env_dict)
 
+        if obs_builder is None:
+            obs_builder = DummyObservationBuilder()
+        env.obs_builder = obs_builder
+        env.obs_builder.set_env(env)
+        env.obs_builder.reset()
+        env.rail_generator = rail_gen.rail_from_file(env_dict=env_dict)
+        env.line_generator = line_gen.line_from_file(env_dict=env_dict)
+        env.timetable_generator = tt_gen.timetable_from_file(env_dict=env_dict)
+        env.malfunction_generator = mal_gen.FileMalfunctionGen(env_dict=env_dict)
+
     @classmethod
-    def load_new(cls, filename: Union[str, Path], load_from_package=None, obs_builder_object: Optional[ObservationBuilder["RailEnv"]] = None) -> Tuple[
-        "RailEnv", Dict]:
+    def load_new(cls,
+                 filename: Union[str, Path],
+                 load_from_package=None,
+                 obs_builder: Optional[ObservationBuilder["RailEnv"]] = None
+                 ) -> Tuple["RailEnv", Dict]:
         """
         Load environment with distance map from a file into new env.
 
         Parameters:
         -------
-        env: RailEnv
         filename: Union[str, Path]
         load_from_package: Optional[str]
+            defaults to `None`.
+        obs_builder : ObservationBuilder[RailEnv]
             defaults to `None`.
         """
 
@@ -127,32 +134,22 @@ class RailEnvPersister(object):
         height = len(llGrid)
         width = len(llGrid[0])
 
-        if obs_builder_object is None:
-            obs_builder_object = DummyObservationBuilder()
-        # TODO: inefficient - each one of these generators loads the complete env file.
+        if obs_builder is None:
+            obs_builder = DummyObservationBuilder()
         env = rail_env.RailEnv(
             width=width, height=height,
-            rail_generator=rail_gen.rail_from_file(filename,
-                                                   load_from_package=load_from_package),
-            line_generator=line_gen.line_from_file(filename,
-                                                   load_from_package=load_from_package),
-            timetable_generator=tt_gen.timetable_from_file(filename, load_from_package=load_from_package),
-            # malfunction_generator_and_process_data=mal_gen.malfunction_from_file(filename,
-            #    load_from_package=load_from_package),
-            malfunction_generator=mal_gen.FileMalfunctionGen(env_dict),
-            obs_builder_object=obs_builder_object,
+            rail_generator=rail_gen.rail_from_file(env_dict=env_dict),
+            line_generator=line_gen.line_from_file(env_dict=env_dict),
+            timetable_generator=tt_gen.timetable_from_file(env_dict=env_dict),
+            malfunction_generator=mal_gen.FileMalfunctionGen(env_dict=env_dict),
+            obs_builder_object=obs_builder,
             record_steps=True)
-
-        env.rail = RailGridTransitionMap(1, 1)  # dummy
-
-        # TODO bad code smell - agent_position initialized in reset() only.
-        env.agent_positions = np.zeros((env.height, env.width), dtype=int) - 1
 
         cls.set_full_state(env, env_dict)
         return env, env_dict
 
     @classmethod
-    def load_env_dict(cls, filename: Union[str, Path], load_from_package=None):
+    def load_env_dict(cls, filename: Union[str, Path], load_from_package=None) -> Dict:
         if isinstance(filename, Path):
             filename = str(filename)
         if load_from_package is not None:
@@ -174,15 +171,6 @@ class RailEnvPersister(object):
             print(f"filename {filename} must end with either pkl or mpk")
             env_dict = {}
 
-        # Replace the agents tuple with EnvAgent objects
-        if "agents_static" in env_dict:
-            env_dict["agents"] = EnvAgent.load_legacy_static_agent(env_dict["agents_static"])
-            # remove the legacy key
-            del env_dict["agents_static"]
-        elif "agents" in env_dict:
-            # env_dict["agents"] = [EnvAgent(*d[0:len(d)]) for d in env_dict["agents"]]
-            env_dict["agents"] = [load_env_agent(d) for d in env_dict["agents"]]
-
         return env_dict
 
     @classmethod
@@ -190,16 +178,6 @@ class RailEnvPersister(object):
         """
         Load environment (with distance map?) from a binary
         """
-        # from importlib_resources import read_binary
-        # load_data = read_binary(package, resource)
-
-        # if resource.endswith("pkl"):
-        #    env_dict = pickle.loads(load_data)
-        # elif resource.endswith("mpk"):
-        #    env_dict = msgpack.unpackb(load_data, encoding="utf-8")
-
-        # cls.set_full_state(env, env_dict)
-
         return cls.load_new(resource, load_from_package=package)
 
     @classmethod
@@ -211,7 +189,16 @@ class RailEnvPersister(object):
         -------
         env_dict: dict
         """
+        env.rail = RailGridTransitionMap(1, 1)  # dummy
         grid = np.array(env_dict["grid"])
+
+        # Replace the agents tuple with EnvAgent objects
+        if "agents_static" in env_dict:
+            env_dict["agents"] = EnvAgent.load_legacy_static_agent(env_dict["agents_static"])
+            # remove the legacy key
+            del env_dict["agents_static"]
+        elif "agents" in env_dict:
+            env_dict["agents"] = [load_env_agent(d) for d in env_dict["agents"]]
 
         # Initialise the env with the frozen agents in the file
         env.agents = env_dict.get("agents", [])
@@ -272,6 +259,9 @@ class RailEnvPersister(object):
         dones = env_dict.get("dones", None)
         if dones is not None:
             env.dones = dones
+
+        # TODO bad code smell - agent_position initialized in reset() only.
+        env.agent_positions = np.zeros((env.height, env.width), dtype=int) - 1
 
     @classmethod
     def get_full_state(cls, env):

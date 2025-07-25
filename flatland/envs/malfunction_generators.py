@@ -1,6 +1,7 @@
 """Malfunction generators for rail systems"""
 from functools import lru_cache
-from typing import Callable, NamedTuple, Optional, Tuple
+from pathlib import Path
+from typing import Callable, NamedTuple, Optional, Tuple, Union
 
 import numpy as np
 from numpy.random.mtrand import RandomState
@@ -85,8 +86,18 @@ class NoMalfunctionGen(ParamMalfunctionGen):
 
 
 class FileMalfunctionGen(ParamMalfunctionGen):
-    def __init__(self, env_dict=None, filename=None, load_from_package=None):
-        """ uses env_dict if populated, otherwise tries to load from file / package.
+    def __init__(self, filename: Union[str, Path] = None, load_from_package=None, env_dict=None):
+        """
+        Utility to load malfunction generator from persisted env - uses env_dict if populated, otherwise tries to load from file / package.
+
+        Parameters
+        ----------
+        filename : Union[str, Path]
+            pickle file with persisted env, defaults to `None`.
+        load_from_package : str
+            package, defaults to `None`.
+        env_dict: dict
+            env_dict, defaults to `None`.
         """
         if env_dict is None:
             env_dict = persistence.RailEnvPersister.load_env_dict(filename, load_from_package=load_from_package)
