@@ -67,6 +67,8 @@ class EmptyRailGen(RailGen):
 def rail_from_file(filename: Union[str, Path] = None, load_from_package=None, env_dict=None) -> RailGenerator:
     """
     Utility to load rail generator from persisted env - uses env_dict if populated, otherwise tries to load from file / package.
+    Beware: it only allows to re-generate the same rail again. A call to reset with a new seed will not generate a new rail.
+    TODO https://github.com/flatland-association/flatland-rl/issues/242 implement registry for all generators (rail, line, timetable, malfunction) similar to ray.tune.registry
 
     Parameters
     ----------

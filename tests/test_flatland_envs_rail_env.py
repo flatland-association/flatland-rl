@@ -396,19 +396,34 @@ def test_rail_env_reset():
     assert agents_initial == agents_loaded
 
 
-def test_clone_from_random_states_independent():
+def test_load_new_random_states():
     env, _, _ = env_generator()
-    env.reset(random_seed=42)
+
+    # env loaded has random state of env AFTER reset since generator use the same
+    # TODO https://github.com/flatland-association/flatland-rl/issues/242 revise design - keep random state in generators separate (malfunction, rail etc. have their own)
+    RailEnvPersister.save(env, "blup.pkl")
+    loaded, _ = RailEnvPersister.load_new("blup.pkl", obs_builder=TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
+    assert all(env.np_random.get_state()[1] == loaded.np_random.get_state()[1])
+
+    # a reset on the original and the loaded env is different as the loaded env's rail generator only stores the rail of the saved env.
+    env.reset(True, True, random_seed=42)
+    loaded.reset(True, True, random_seed=42)
+    assert not all(env.np_random.get_state()[1] == loaded.np_random.get_state()[1])
+
+
+def test_clone_from_random_states():
+    env, _, _ = env_generator()
+
+    # env loaded has random state of env AFTER reset since generator use the same
+    # TODO https://github.com/flatland-association/flatland-rl/issues/242 revise design - keep random state in generators separate (malfunction, rail etc. have their own)
     clone = RailEnv(30, 30)
-    clone.reset(random_seed=43)
-    clone.clone_from(env)
+    clone.clone_from(env, obs_builder=TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
     assert all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])
+
+    # a reset on the original and the cloned env is different as the clone's rail generator only stores the rail of the saved env.
     env.reset(True, True, random_seed=55)
     clone.reset(True, True, random_seed=53)
     assert not all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])
-    env.reset(True, True, random_seed=56)
-    clone.reset(True, True, random_seed=56)
-    assert all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])
 
 
 def test_clone_from_with_random_policy():
