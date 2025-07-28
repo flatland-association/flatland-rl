@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+import tempfile
 import time
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
@@ -16,8 +19,10 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
+from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
+from tests.trajectories.test_policy_runner import RandomPolicy
 
 """Tests for `flatland` package."""
 
@@ -389,3 +394,51 @@ def test_rail_env_reset():
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
+
+
+def test_load_new_random_states():
+    env, _, _ = env_generator()
+
+    # env loaded has random state of env AFTER reset since generator use the same
+    # TODO https://github.com/flatland-association/flatland-rl/issues/242 revise design - keep random state in generators separate (malfunction, rail etc. have their own)
+    RailEnvPersister.save(env, "blup.pkl")
+    loaded, _ = RailEnvPersister.load_new("blup.pkl", obs_builder=TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
+    assert all(env.np_random.get_state()[1] == loaded.np_random.get_state()[1])
+
+    # a reset on the original and the loaded env is different as the loaded env's rail generator only stores the rail of the saved env.
+    env.reset(True, True, random_seed=42)
+    loaded.reset(True, True, random_seed=42)
+    assert not all(env.np_random.get_state()[1] == loaded.np_random.get_state()[1])
+
+
+def test_clone_from_random_states():
+    env, _, _ = env_generator()
+
+    # env loaded has random state of env AFTER reset since generator use the same
+    # TODO https://github.com/flatland-association/flatland-rl/issues/242 revise design - keep random state in generators separate (malfunction, rail etc. have their own)
+    clone = RailEnv(30, 30)
+    clone.clone_from(env, obs_builder=TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
+    assert all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])
+
+    # a reset on the original and the cloned env is different as the clone's rail generator only stores the rail of the saved env.
+    env.reset(True, True, random_seed=55)
+    clone.reset(True, True, random_seed=53)
+    assert not all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])
+
+
+def test_clone_from_with_random_policy():
+    env, _, _ = env_generator()
+
+    clone = RailEnv(30, 30)
+    clone.clone_from(env)
+
+    # use Trajectory API for comparison
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory = PolicyRunner.create_from_policy(env=env, policy=RandomPolicy(), data_dir=data_dir / "one")
+        other = PolicyRunner.create_from_policy(env=clone, policy=RandomPolicy(), data_dir=data_dir / "two")
+
+        assert len(trajectory.compare_arrived(other)) == 0
+        assert len(trajectory.compare_actions(other)) == 0
+        assert len(trajectory.compare_positions(other)) == 0
+        assert len(trajectory.compare_rewards_dones_infos(other)) == 0
