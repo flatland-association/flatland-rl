@@ -245,7 +245,7 @@ class Trajectory:
         assert len(pos) == 1, f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}"
         # fail fast
         p, d = pos.iloc[0]
-        return (p, d)
+        return p, d
 
     def action_lookup(self, env_time: int, agent_id: int) -> RailEnvActions:
         """Method used to retrieve the stored action (if available). Defaults to 2 = MOVE_FORWARD.
@@ -274,10 +274,6 @@ class Trajectory:
     def trains_arrived_lookup(self) -> pd.Series:
         """Method used to retrieve the trains arrived for the episode.
 
-        Parameters
-        ----------
-        movements_df: pd.DataFrame
-            Data frame from event_logs/TrainMovementEvents.trains_arrived.tsv
         Returns
         -------
         pd.Series
