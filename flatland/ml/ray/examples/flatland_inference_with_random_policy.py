@@ -8,7 +8,9 @@ See there how to load checkpoint into RlModule.
 Take this as starting point to build your own inference (cli) script.
 """
 import argparse
+import tempfile
 from argparse import Namespace
+from pathlib import Path
 
 from ray.rllib.core import DEFAULT_MODULE_ID
 from ray.rllib.examples.rl_modules.classes.random_rlm import RandomRLModule
@@ -16,6 +18,7 @@ from ray.tune.registry import registry_get_input
 
 from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
 from flatland.ml.ray.wrappers import ray_env_generator, ray_policy_wrapper, ray_policy_wrapper_from_rllib_checkpoint
+from flatland.trajectories.policy_runner import PolicyRunner
 
 
 def add_flatland_inference_with_random_policy_args():
@@ -33,7 +36,7 @@ def add_flatland_inference_with_random_policy_args():
     parser.add_argument(
         "--num-episodes-during-inference",
         type=int,
-        default=10,
+        default=2,
         help="Number of episodes to do inference over (after restoring from a checkpoint).",
     )
     parser.add_argument(
@@ -56,7 +59,6 @@ def rollout(args: Namespace):
     obs, _ = env.reset()
 
     num_episodes = 0
-    episode_return = 0.0
 
     checkpoint_path = args.cp
     if checkpoint_path is not None:
@@ -66,18 +68,11 @@ def rollout(args: Namespace):
         rl_module = RandomRLModule(action_space=env.action_space)
         policy = ray_policy_wrapper(rl_module)
 
-    while num_episodes < args.num_episodes_during_inference:
-        action_dict = policy.act_many(env.get_agent_ids(), observations=list(obs.values()))
-
-        obs, rewards, terminateds, truncateds, _ = env.step(action_dict)
-        for _, v in rewards.items():
-            episode_return += v
-        # Is the episode `done`? -> Reset.
-        if terminateds["__all__"] or truncateds["__all__"]:
-            print(f"Episode done: Total reward = {episode_return}")
-            env.reset()
-            num_episodes += 1
-            episode_return = 0.0
+    for _ in range(args.num_episodes_during_inference):
+        env.reset()
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            data_dir = Path(tmpdirname)
+            PolicyRunner.create_from_policy(env=env.wrap, policy=policy, data_dir=data_dir)
     print(f"Done performing action inference through {num_episodes} Episodes")
 
 

@@ -85,5 +85,4 @@ def ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path: str, policy_id: st
         policy_id,
     )
     rl_module = RLModule.from_checkpoint(cp)
-    policy = ray_policy_wrapper(rl_module)
-    return policy
+    return ray_policy_wrapper(rl_module)
