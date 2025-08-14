@@ -18,29 +18,29 @@ from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBD
 class PolicyRunner:
     @staticmethod
     def create_from_policy(
-            policy: Policy,
-            data_dir: Path,
-            env: RailEnv = None,
-            n_agents=7,
-            x_dim=30,
-            y_dim=30,
-            n_cities=2,
-            max_rail_pairs_in_city=4,
-            grid_mode=False,
-            max_rails_between_cities=2,
-            malfunction_duration_min=20,
-            malfunction_duration_max=50,
-            malfunction_interval=540,
-            speed_ratios=None,
-            seed=42,
-            obs_builder: Optional[ObservationBuilder] = None,
-            snapshot_interval: int = 1,
-            ep_id: str = None,
-            callbacks: FlatlandCallbacks = None,
-            tqdm_kwargs: dict = None,
-            start_step: int = 0,
-            end_step: int = None,
-            fork_from_trajectory: "Trajectory" = None,
+        policy: Policy,
+        data_dir: Path,
+        env: RailEnv = None,
+        n_agents=7,
+        x_dim=30,
+        y_dim=30,
+        n_cities=2,
+        max_rail_pairs_in_city=4,
+        grid_mode=False,
+        max_rails_between_cities=2,
+        malfunction_duration_min=20,
+        malfunction_duration_max=50,
+        malfunction_interval=540,
+        speed_ratios=None,
+        seed=42,
+        obs_builder: Optional[ObservationBuilder] = None,
+        snapshot_interval: int = 1,
+        ep_id: str = None,
+        callbacks: FlatlandCallbacks = None,
+        tqdm_kwargs: dict = None,
+        start_step: int = 0,
+        end_step: int = None,
+        fork_from_trajectory: "Trajectory" = None,
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -115,7 +115,7 @@ class PolicyRunner:
         assert len(trajectory.trains_rewards_dones_infos) == 0
 
         if fork_from_trajectory is not None:
-            env = fork_from_trajectory.restore_episode(start_step=start_step)
+            env = fork_from_trajectory.restore_episode(start_step=start_step, inexact=True)
             fork_from_trajectory.load(episode_only=True)
 
             # will run action start_step into step start_step+1
@@ -131,11 +131,18 @@ class PolicyRunner:
 
             trajectory.persist()
 
-            if env is None:
-                env = fork_from_trajectory.restore_episode()
+            if env is None or env._elapsed_steps < start_step:
                 (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
-                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
-                env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
+                if env is None:
+                    # copy initial env
+                    RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
+                    # rewind the trajectory to the start_step with the latest snapshot
+                    env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
+                else:
+                    # copy latest snapshot
+                    RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+                    # rewind the trajectory to the start_step with the latest snapshot
+                    env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
                 trajectory.load()
                 # TODO bad code smell - private method - check num resets?
                 observations = env._get_observations()
@@ -344,28 +351,28 @@ class PolicyRunner:
               required=False, default=None
               )
 def generate_trajectory_from_policy(
-        data_dir: Path,
-        policy_pkg: str, policy_cls: str,
-        obs_builder_pkg: str, obs_builder_cls: str,
-        n_agents=7,
-        x_dim=30,
-        y_dim=30,
-        n_cities=2,
-        max_rail_pairs_in_city=4,
-        grid_mode=False,
-        max_rails_between_cities=2,
-        malfunction_duration_min=20,
-        malfunction_duration_max=50,
-        malfunction_interval=540,
-        speed_ratios=None,
-        seed: int = 42,
-        snapshot_interval: int = 1,
-        ep_id: str = None,
-        env_path: Path = None,
-        start_step: int = 0,
-        end_step: int = None,
-        fork_data_dir: Path = None,
-        fork_ep_id: str = None,
+    data_dir: Path,
+    policy_pkg: str, policy_cls: str,
+    obs_builder_pkg: str, obs_builder_cls: str,
+    n_agents=7,
+    x_dim=30,
+    y_dim=30,
+    n_cities=2,
+    max_rail_pairs_in_city=4,
+    grid_mode=False,
+    max_rails_between_cities=2,
+    malfunction_duration_min=20,
+    malfunction_duration_max=50,
+    malfunction_interval=540,
+    speed_ratios=None,
+    seed: int = 42,
+    snapshot_interval: int = 1,
+    ep_id: str = None,
+    env_path: Path = None,
+    start_step: int = 0,
+    end_step: int = None,
+    fork_data_dir: Path = None,
+    fork_ep_id: str = None,
 ):
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
