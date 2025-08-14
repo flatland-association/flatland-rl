@@ -13,10 +13,11 @@ from ray.rllib.utils.typing import MultiAgentDict, AgentID
 from flatland.core.env import Environment
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.ml.wrapped_rail_env import WrappedRailEnv
 from flatland.utils.rendertools import RenderTool
 
 
-class RayMultiAgentWrapper(MultiAgentEnv):
+class RayMultiAgentWrapper(MultiAgentEnv, WrappedRailEnv):
     """
     Agents are identified by AgentIDs (string).
     See `ray.rllib.MultiAgentEnv`.
@@ -25,7 +26,7 @@ class RayMultiAgentWrapper(MultiAgentEnv):
 
     def __init__(self, wrap: RailEnv, render_mode: Optional[str] = None):
         assert hasattr(wrap.obs_builder, "get_observation_space"), f"{type(wrap.obs_builder)} is not gym-compatible, missing get_observation_space"
-        self.wrap: RailEnv = wrap
+        self._wrap: RailEnv = wrap
         self.render_mode = render_mode
         self.env_renderer = None
         if render_mode is not None:
@@ -33,12 +34,12 @@ class RayMultiAgentWrapper(MultiAgentEnv):
 
         self.action_space: gym.spaces.Dict = spaces.Dict({
             str(i): gym.spaces.Discrete(wrap.action_space[0])
-            for i in range(self.wrap.number_of_agents)
+            for i in range(self._wrap.number_of_agents)
         })
 
         self.observation_space: gym.spaces.Dict = gym.spaces.Dict({
-            str(handle): self.wrap.obs_builder.get_observation_space(handle)
-            for handle in self.wrap.get_agent_handles()
+            str(handle): self._wrap.obs_builder.get_observation_space(handle)
+            for handle in self._wrap.get_agent_handles()
         })
 
         # Provide full (preferred format) observation- and action-spaces as Dicts
@@ -48,7 +49,7 @@ class RayMultiAgentWrapper(MultiAgentEnv):
 
         super().__init__()
 
-        self.agents = [str(i) for i in self.wrap.get_agent_handles()]
+        self.agents = [str(i) for i in self._wrap.get_agent_handles()]
 
     @override(Environment)
     def step(
@@ -57,10 +58,10 @@ class RayMultiAgentWrapper(MultiAgentEnv):
         MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict
     ]:
 
-        prev_dones = copy.deepcopy(self.wrap.dones)
+        prev_dones = copy.deepcopy(self._wrap.dones)
 
         action_dict = {k: RailEnvActions.from_value(v) for k, v in action_dict.items()}
-        obs, rewards, terminateds, infos = self.wrap.step(action_dict=action_dict)
+        obs, rewards, terminateds, infos = self._wrap.step(action_dict=action_dict)
         infos = {
             str(i):
                 {
@@ -68,19 +69,19 @@ class RayMultiAgentWrapper(MultiAgentEnv):
                     'malfunction': infos['malfunction'][i],
                     'speed': infos['speed'][i],
                     'state': infos['state'][i]
-                } for i in self.wrap.get_agent_handles()
+                } for i in self._wrap.get_agent_handles()
         }
-        rewards = {str(i): rewards[i] for i in self.wrap.get_agent_handles()}
+        rewards = {str(i): rewards[i] for i in self._wrap.get_agent_handles()}
 
         # convert np.ndarray to MultiAgentDict
-        obs = {str(i): obs[i] for i in self.wrap.get_agent_handles()}
+        obs = {str(i): obs[i] for i in self._wrap.get_agent_handles()}
 
         # report obs/done/info only once per agent per episode,
         # see https://github.com/ray-project/ray/issues/10761
         terminateds = copy.deepcopy(terminateds)
-        terminateds = {str(i): terminateds[i] for i in self.wrap.get_agent_handles()}
+        terminateds = {str(i): terminateds[i] for i in self._wrap.get_agent_handles()}
         terminateds["__all__"] = all(terminateds.values())
-        for i in self.wrap.get_agent_handles():
+        for i in self._wrap.get_agent_handles():
             if prev_dones[i] is True:
                 del obs[str(i)]
                 del terminateds[str(i)]
@@ -101,10 +102,10 @@ class RayMultiAgentWrapper(MultiAgentEnv):
     ) -> Tuple[MultiAgentDict, MultiAgentDict]:
         if options is None:
             options = {}
-        obs, infos = self.wrap.reset(random_seed=seed, **options)
+        obs, infos = self._wrap.reset(random_seed=seed, **options)
 
         # convert np.ndarray to MultiAgentDict
-        obs = {str(i): obs[i] for i in self.wrap.get_agent_handles()}
+        obs = {str(i): obs[i] for i in self._wrap.get_agent_handles()}
 
         infos = {
             str(i):
@@ -113,10 +114,13 @@ class RayMultiAgentWrapper(MultiAgentEnv):
                     'malfunction': infos['malfunction'][i],
                     'speed': infos['speed'][i],
                     'state': infos['state'][i]
-                } for i in self.wrap.get_agent_handles()
+                } for i in self._wrap.get_agent_handles()
         }
         return obs, infos
 
     @override(MultiAgentEnv)
     def get_agent_ids(self) -> Set[AgentID]:
-        return set({str(i) for i in self.wrap.get_agent_handles()})
+        return set({str(i) for i in self._wrap.get_agent_handles()})
+
+    def wrap(self) -> RailEnv:
+        return self._wrap

@@ -14,25 +14,26 @@ from pettingzoo import ParallelEnv
 from pettingzoo.utils.env import AgentID, ObsType, ActionType
 
 from flatland.envs.rail_env import RailEnv
+from flatland.ml.wrapped_rail_env import WrappedRailEnv
 
 
-class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env):
+class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env, WrappedRailEnv):
     metadata = {'render.modes': ['human', "rgb_array"], 'name': "flatland_pettingzoo",
                 'video.frames_per_second': 10,
                 'semantics.autoreset': False}
 
     def __init__(self, wrap: RailEnv, render_mode: Optional[str] = None):
         assert hasattr(wrap.obs_builder, "get_observation_space"), f"{type(wrap.obs_builder)} is not gym-compatible, missing get_observation_space"
-        self.wrap = wrap
-        self.agents: list[AgentID] = self.wrap.get_agent_handles()
-        self.possible_agents: list[AgentID] = self.wrap.get_agent_handles()
+        self._wrap = wrap
+        self.agents: list[AgentID] = self._wrap.get_agent_handles()
+        self.possible_agents: list[AgentID] = self._wrap.get_agent_handles()
         self.observation_spaces: dict[AgentID, gym.spaces.Space] = {
-            handle: self.wrap.obs_builder.get_observation_space(handle)
-            for handle in self.wrap.get_agent_handles()
+            handle: self._wrap.obs_builder.get_observation_space(handle)
+            for handle in self._wrap.get_agent_handles()
         }
         self.action_spaces: dict[AgentID, gym.spaces.Space] = {
             i: gym.spaces.Discrete(5)
-            for i in range(self.wrap.number_of_agents)
+            for i in range(self._wrap.number_of_agents)
         }
         self.render_mode = render_mode
 
@@ -48,7 +49,7 @@ class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env):
         if options is None:
             options = {}
 
-        observations, infos = self.wrap.reset(random_seed=seed, **options)
+        observations, infos = self._wrap.reset(random_seed=seed, **options)
         infos = {
             i:
                 {
@@ -56,7 +57,7 @@ class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env):
                     'malfunction': infos['malfunction'][i],
                     'speed': infos['speed'][i],
                     'state': infos['state'][i]
-                } for i in self.wrap.get_agent_handles()
+                } for i in self._wrap.get_agent_handles()
         }
         return observations, infos
 
@@ -68,8 +69,8 @@ class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env):
         Returns the observation dictionary, reward dictionary, terminated dictionary, truncated dictionary
         and info dictionary, where each dictionary is keyed by the agent.
         """
-        observations, rewards, terminations, infos = self.wrap.step(action_dict=actions)
-        truncations = {i: False for i in self.wrap.get_agent_handles()}
+        observations, rewards, terminations, infos = self._wrap.step(action_dict=actions)
+        truncations = {i: False for i in self._wrap.get_agent_handles()}
         terminations = copy.deepcopy(terminations)
         del terminations["__all__"]
         infos = {
@@ -79,7 +80,7 @@ class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env):
                     'malfunction': infos['malfunction'][i],
                     'speed': infos['speed'][i],
                     'state': infos['state'][i]
-                } for i in self.wrap.get_agent_handles()
+                } for i in self._wrap.get_agent_handles()
         }
         return observations, rewards, terminations, truncations, infos
 
@@ -91,7 +92,7 @@ class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env):
         of classic, and `'ansi'` which returns the strings printed
         (specific to classic environments).
         """
-        return self.wrap.render()
+        return self._wrap.render()
 
     def close(self):
         """Closes the rendering window."""
@@ -122,3 +123,6 @@ class PettingZooParallelEnvWrapper(ParallelEnv, gym.Env):
         MUST return the same value for the same agent name
         """
         return self.action_spaces[agent]
+
+    def wrap(self) -> RailEnv:
+        return self._wrap

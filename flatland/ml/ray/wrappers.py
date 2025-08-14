@@ -3,7 +3,6 @@ from typing import Optional, Any, List
 
 import numpy as np
 import torch
-from ray.rllib import MultiAgentEnv
 from ray.rllib.core import Columns
 from ray.rllib.core.rl_module import RLModule
 from ray.rllib.utils.numpy import convert_to_numpy, softmax
@@ -16,7 +15,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.ml.ray.ray_multi_agent_rail_env import RayMultiAgentWrapper
 
 
-def ray_multi_agent_env_wrapper(wrap: RailEnv, render_mode: Optional[str] = None) -> MultiAgentEnv:
+def ray_multi_agent_env_wrapper(wrap: RailEnv, render_mode: Optional[str] = None) -> RayMultiAgentWrapper:
     """
     Wrap `RailEnv` as `ray.rllib.MultiAgentEnv`. Make sure the observation builds are
 
@@ -34,7 +33,7 @@ def ray_multi_agent_env_wrapper(wrap: RailEnv, render_mode: Optional[str] = None
     return RayMultiAgentWrapper(wrap, render_mode)
 
 
-def ray_env_generator(render_mode: Optional[str] = None, **kwargs) -> MultiAgentEnv:
+def ray_env_generator(render_mode: Optional[str] = None, **kwargs) -> RayMultiAgentWrapper:
     """
     Create and reset `RailEnv` wrapped as `ray.rllib.MultiAgentEnv`.
 

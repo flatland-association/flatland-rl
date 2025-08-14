@@ -72,7 +72,7 @@ def rollout(args: Namespace):
         env.reset()
         with tempfile.TemporaryDirectory() as tmpdirname:
             data_dir = Path(tmpdirname)
-            PolicyRunner.create_from_policy(env=env.wrap, policy=policy, data_dir=data_dir)
+            PolicyRunner.create_from_policy(env=env.wrap(), policy=policy, data_dir=data_dir)
     print(f"Done performing action inference through {num_episodes} Episodes")
 
 
