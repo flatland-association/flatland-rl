@@ -8,16 +8,14 @@ See there how to load checkpoint into RlModule.
 Take this as starting point to build your own inference (cli) script.
 """
 import argparse
-import os
 from argparse import Namespace
 
 from ray.rllib.core import DEFAULT_MODULE_ID
-from ray.rllib.core.rl_module import RLModule
 from ray.rllib.examples.rl_modules.classes.random_rlm import RandomRLModule
 from ray.tune.registry import registry_get_input
 
 from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
-from flatland.ml.ray.wrappers import ray_env_generator, ray_policy_wrapper
+from flatland.ml.ray.wrappers import ray_env_generator, ray_policy_wrapper, ray_policy_wrapper_from_rllib_checkpoint
 
 
 def add_flatland_inference_with_random_policy_args():
@@ -60,16 +58,10 @@ def rollout(args: Namespace):
     num_episodes = 0
     episode_return = 0.0
 
-    if args.cp is not None:
-        cp = os.path.join(
-            args.cp,
-            "learner_group",
-            "learner",
-            "rl_module",
-            args.policy_id,
-        )
-        rl_module = RLModule.from_checkpoint(cp)
-        policy = ray_policy_wrapper(rl_module)
+    checkpoint_path = args.cp
+    if checkpoint_path is not None:
+        policy_id = args.policy_id
+        policy = ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path, policy_id)
     else:
         rl_module = RandomRLModule(action_space=env.action_space)
         policy = ray_policy_wrapper(rl_module)

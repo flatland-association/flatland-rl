@@ -1,3 +1,4 @@
+import os
 from typing import Optional, Any, List
 
 import numpy as np
@@ -73,3 +74,16 @@ def ray_policy_wrapper(rl_module: RLModule) -> Policy:
             return action_dict
 
     return _RayCheckpointPolicy()
+
+
+def ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path: str, policy_id: str):
+    cp = os.path.join(
+        checkpoint_path,
+        "learner_group",
+        "learner",
+        "rl_module",
+        policy_id,
+    )
+    rl_module = RLModule.from_checkpoint(cp)
+    policy = ray_policy_wrapper(rl_module)
+    return policy
