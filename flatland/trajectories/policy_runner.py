@@ -136,12 +136,12 @@ class PolicyRunner:
                 if env is None:
                     # copy initial env
                     RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
-                    # rewind the trajectory to the start_step with the latest snapshot
+                    # replay the trajectory to the start_step from the latest snapshot
                     env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
                 else:
                     # copy latest snapshot
                     RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
-                    # rewind the trajectory to the start_step with the latest snapshot
+                    # replay the trajectory to the start_step from the latest snapshot
                     env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
                 trajectory.load()
                 # TODO bad code smell - private method - check num resets?
