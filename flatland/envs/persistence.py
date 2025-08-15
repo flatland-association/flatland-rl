@@ -6,6 +6,8 @@ import msgpack
 import msgpack_numpy
 import numpy as np
 
+from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
+
 msgpack_numpy.patch()
 from flatland.envs.step_utils.states import StateTransitionSignals
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
@@ -109,6 +111,8 @@ class RailEnvPersister(object):
         env.line_generator = line_gen.line_from_file(env_dict=env_dict)
         env.timetable_generator = tt_gen.timetable_from_file(env_dict=env_dict)
         env.malfunction_generator = mal_gen.FileMalfunctionGen(env_dict=env_dict)
+        # TODO generic effects generator serialization
+        env.effects_generator = MalfunctionEffectsGenerator(env.malfunction_generator)
 
     @classmethod
     def load_new(cls,
