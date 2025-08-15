@@ -5,6 +5,7 @@ from typing import Tuple, Dict, Optional, Union
 import msgpack
 import msgpack_numpy
 import numpy as np
+from numpy.random import RandomState
 
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 
@@ -251,10 +252,17 @@ class RailEnvPersister(object):
 
         malfunction_cached_rand = env_dict.get("malfunction_cached_rand", None)
         malfunction_rand_idx = env_dict.get("malfunction_rand_idx", None)
+        # backwards compatibility
         if malfunction_cached_rand is not None:
             env.malfunction_generator._cached_rand = malfunction_cached_rand
         if malfunction_rand_idx is not None:
             env.malfunction_generator._rand_idx = malfunction_rand_idx
+        malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
+        if malfunction_cached_random_state is not None:
+            env.malfunction_generator._cached_random_state = malfunction_cached_random_state
+            np_random = RandomState()
+            np_random.set_state(malfunction_cached_random_state)
+            env.malfunction_generator.generate_rand_numbers(np_random)
 
         env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(env.get_num_agents())}
         for i_agent in range(env.get_num_agents()):
@@ -283,7 +291,8 @@ class RailEnvPersister(object):
             "grid": grid_data,
             "agents": agent_data,
             "malfunction": malfunction_data,
-            "malfunction_cached_rand": env.malfunction_generator._cached_rand if hasattr(env.malfunction_generator, '_cached_rand') else None,
+            "malfunction_cached_random_state": env.malfunction_generator._cached_random_state if hasattr(env.malfunction_generator,
+                                                                                                         '_cached_random_state') else None,
             "malfunction_rand_idx": env.malfunction_generator._rand_idx if hasattr(env.malfunction_generator, '_rand_idx') else None,
             "max_episode_steps": env._max_episode_steps,
             "elapsed_steps": env._elapsed_steps,
