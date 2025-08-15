@@ -43,6 +43,23 @@ def test_from_episode():
         assert random_state_to_hashablestate(env.np_random) == random_state_to_hashablestate(gen.np_random)
 
 
+def test_restore_episode():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        assert trajectory._find_closest_snapshot(5) == 5
+        assert trajectory._find_closest_snapshot(7) == 5
+
+        env = trajectory.restore_episode(7, inexact=True)
+
+        env_5, _ = RailEnvPersister.load_new(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{5:04d}.pkl")
+        env_10, _ = RailEnvPersister.load_new(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{10:04d}.pkl")
+
+        # TODO poor man's state comparison for now
+        assert [a.position for a in env_5.agents] == [a.position for a in env.agents]
+        assert [a.position for a in env_10.agents] != [a.position for a in env.agents]
+
+
 def test_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)

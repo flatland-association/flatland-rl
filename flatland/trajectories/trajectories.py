@@ -165,13 +165,16 @@ class Trajectory:
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def restore_episode(self, start_step: int = None) -> Optional[RailEnv]:
+    def restore_episode(self, start_step: int = None, inexact: bool = False) -> Optional[RailEnv]:
         """Restore an episode.
 
         Parameters
         ----------
+
         start_step : Optional[int]
             start from snapshot (if it exists)
+        inexact : bool
+            allows returning the last snapshot before start_step
         Returns
         -------
         RailEnv
@@ -182,11 +185,27 @@ class Trajectory:
             env, _ = RailEnvPersister.load_new(f)
             return env
         else:
-            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{start_step:04d}.pkl")
-            if not os.path.isfile(f):
-                return None
+            closest = start_step
+            if inexact:
+                closest = self._find_closest_snapshot(start_step)
+                if closest is None:
+                    f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
+                    env, _ = RailEnvPersister.load_new(f)
+                    return env
+            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
             env, _ = RailEnvPersister.load_new(f)
             return env
+
+    def _find_closest_snapshot(self, start_step):
+        closest = None
+        for p in (Path(self.data_dir) / SERIALISED_STATE_SUBDIR).iterdir():
+            p: Path = p
+            if not (p.name.startswith(f"{self.ep_id}_step") and p.name.endswith(".pkl")):
+                continue
+            step = int(p.name.replace(f"{self.ep_id}_step", "").replace(".pkl", ""))
+            if step <= start_step and (closest is None or (step > closest)):
+                closest = step
+        return closest
 
     def position_collect(self, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
         df = self.trains_positions
@@ -226,7 +245,7 @@ class Trajectory:
         assert len(pos) == 1, f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}"
         # fail fast
         p, d = pos.iloc[0]
-        return (p, d)
+        return p, d
 
     def action_lookup(self, env_time: int, agent_id: int) -> RailEnvActions:
         """Method used to retrieve the stored action (if available). Defaults to 2 = MOVE_FORWARD.
@@ -255,10 +274,6 @@ class Trajectory:
     def trains_arrived_lookup(self) -> pd.Series:
         """Method used to retrieve the trains arrived for the episode.
 
-        Parameters
-        ----------
-        movements_df: pd.DataFrame
-            Data frame from event_logs/TrainMovementEvents.trains_arrived.tsv
         Returns
         -------
         pd.Series
