@@ -72,7 +72,7 @@ class EffectsGenerator(Generic[EnvironmentType]):
 
         In the future, will receive immutable state instead of full env.
 
-        Naming similar to  to https://docs.ray.io/en/latest/rllib/package_ref/doc/ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step.html#ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step, but modifying.
+        Naming similar to https://docs.ray.io/en/latest/rllib/package_ref/doc/ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step.html#ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step, but modifying.
 
         Parameters
         ----------
