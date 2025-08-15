@@ -57,9 +57,11 @@ class ParamMalfunctionGen(object):
 
         self._cached_rand = None
         self._cached_broken = None
+        self._cached_random_state = None
         self._rand_idx = 0
 
     def generate_rand_numbers(self, np_random: RandomState):
+        self._cached_random_state = np_random.get_state()
         self._cached_rand = np_random.rand(NBR_CHACHED_RAND)
 
     def generate(self, np_random: RandomState) -> Optional[Malfunction]:
