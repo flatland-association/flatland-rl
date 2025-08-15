@@ -75,7 +75,23 @@ def ray_policy_wrapper(rl_module: RLModule) -> Policy:
     return _RayCheckpointPolicy()
 
 
-def ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path: str, policy_id: str):
+def ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path: str, policy_id: str) -> Policy:
+    """
+    Load RLlib checkpoint into Flatland RailEnvPolicy.
+
+    https://docs.ray.io/en/latest/rllib/checkpoints.html
+
+    Parameters
+    ----------
+    checkpoint_path : str
+        path to the rllib checkpoint
+    policy_id : str
+        policy ID to be found under <checkpoint_path>/learner_group/learner/rl_module/<policy_id>
+
+    Returns
+    -------
+
+    """
     cp = os.path.join(
         checkpoint_path,
         "learner_group",
