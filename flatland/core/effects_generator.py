@@ -72,7 +72,7 @@ class EffectsGenerator(Generic[EnvironmentType]):
 
         In the future, will receive immutable state instead of full env.
 
-        Naming similar to  to https://docs.ray.io/en/latest/rllib/package_ref/doc/ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step.html#ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step, but modifying.
+        Naming similar to https://docs.ray.io/en/latest/rllib/package_ref/doc/ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step.html#ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_step, but modifying.
 
         Parameters
         ----------
@@ -89,7 +89,7 @@ class EffectsGenerator(Generic[EnvironmentType]):
         return self._on_episode_step_end(*args, **kwargs)
 
 
-def effects_generator_wrapper(*effects_generators: EffectsGenerator[EnvironmentType]) -> EffectsGenerator[EnvironmentType]:
+def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvironmentType]) -> EffectsGenerator[EnvironmentType]:
     class _EffectsGeneratorWrapped(EffectsGenerator[EnvironmentType]):
         def on_episode_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
             for eff in effects_generators:
@@ -103,7 +103,7 @@ def effects_generator_wrapper(*effects_generators: EffectsGenerator[EnvironmentT
 
         def on_episode_step_end(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
             for eff in effects_generators:
-                env = eff.on_episode_step_start(env)
+                env = eff.on_episode_step_end(env)
             return env
 
     return _EffectsGeneratorWrapped()

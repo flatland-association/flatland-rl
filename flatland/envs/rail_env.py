@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Tuple, Set, Any
 import numpy as np
 
 import flatland.envs.timetable_generators as ttg
-from flatland.core.effects_generator import EffectsGenerator
+from flatland.core.effects_generator import EffectsGenerator, make_multi_effects_generator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
@@ -23,6 +23,7 @@ from flatland.envs import persistence
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
@@ -210,7 +211,11 @@ class RailEnv(Environment):
         self.acceleration_delta = acceleration_delta
         self.braking_delta = braking_delta
 
-        self.effects_generator = effects_generator
+        mf = MalfunctionEffectsGenerator(self.malfunction_generator)
+        if effects_generator is None:
+            self.effects_generator = mf
+        else:
+            self.effects_generator = make_multi_effects_generator(effects_generator, mf)
 
         self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
         for i_agent in range(self.get_num_agents()):
@@ -351,8 +356,7 @@ class RailEnv(Environment):
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
         self._update_agent_positions_map(ignore_old_positions=False)
 
-        if self.effects_generator is not None:
-            self.effects_generator.on_episode_start(self)
+        self.effects_generator.on_episode_start(self)
 
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
 
@@ -444,17 +448,13 @@ class RailEnv(Environment):
 
         self.motion_check = ac.MotionCheck()  # reset the motion check
 
-        if self.effects_generator is not None:
-            self.effects_generator.on_episode_step_start(self)
+        self.effects_generator.on_episode_step_start(self)
 
         for agent in self.agents:
             i_agent = agent.handle
 
             agent.old_position = agent.position
             agent.old_direction = agent.direction
-
-            # Generate malfunction
-            agent.malfunction_handler.generate_malfunction(self.malfunction_generator, self.np_random)
 
             # Get action for the agent
             raw_action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
@@ -613,8 +613,7 @@ class RailEnv(Environment):
         if self.record_steps:
             self.record_timestep(action_dict)
 
-        if self.effects_generator is not None:
-            self.effects_generator.on_episode_step_end(self)
+        self.effects_generator.on_episode_step_end(self)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
