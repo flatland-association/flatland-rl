@@ -1,23 +1,24 @@
 import re
 import tempfile
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict
 
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.env_observation_builder import ObservationBuilder, AgentHandle, ObservationType
-from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
+from flatland.envs.RailEnvPolicy import RailEnvPolicy
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
 from flatland.trajectories.policy_runner import PolicyRunner, generate_trajectory_from_policy
 from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR
 from flatland.utils.seeding import random_state_to_hashablestate, np_random
 
 
-class RandomPolicy(Policy):
+class RandomPolicy(RailEnvPolicy):
     """
     Random action with reset of random sequence to allow synchronization with partial trajectory.
     """
@@ -35,9 +36,12 @@ class RandomPolicy(Policy):
         self.reset_at = reset_at
         self.np_random, _ = np_random(seed=self._seed)
 
-    def act(self, handle: int, observation: Any, **kwargs):
-        if handle == 0 and self.reset_at is not None and observation == self.reset_at:
+    def act_many(self, handles: List[int], observations: List[Any], **kwargs) -> Dict[int, RailEnvActions]:
+        if self.reset_at is not None and observations[0] == self.reset_at:
             self.np_random, _ = np_random(seed=self._seed)
+        return super().act_many(handles, observations)
+
+    def act(self, observation: Any, **kwargs) -> RailEnvActions:
         return self.np_random.choice(self.action_size)
 
 

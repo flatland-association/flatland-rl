@@ -9,6 +9,7 @@ from ray.rllib.utils.numpy import convert_to_numpy, softmax
 
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
+from flatland.envs.RailEnvPolicy import RailEnvPolicy
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.ml.ray.ray_multi_agent_rail_env import RayMultiAgentWrapper
@@ -54,7 +55,7 @@ def ray_env_generator(render_mode: Optional[str] = None, **kwargs) -> MultiAgent
 
 
 def ray_policy_wrapper(rl_module: RLModule) -> Policy:
-    class _RayCheckpointPolicy(Policy):
+    class _RayCheckpointPolicy(RailEnvPolicy):
 
         def act_many(self, handles: List[int], observations: List[Any], **kwargs):
             obss = np.stack(observations)
