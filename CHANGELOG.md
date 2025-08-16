@@ -5,6 +5,25 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[4.1.4]](https://github.com/flatland-association/flatland-rl/compare/v4.1.3...v4.1.4) - 2025-08-16
+
+### Added
+
+* feature: add clone_from other env. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/249
+* feature: Trajectory rollout with rllib checkpoint. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/253
+* feature: Improve Trajectory API fork: load the latest snapshot and run from there instead of from beginning. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/254
+
+### Changed
+
+* Bump urllib3 from 2.4.0 to 2.5.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/233
+* Bump pillow from 11.2.1 to 11.3.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/246
+* refactor: malfunction generation as effects generator. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/232
+  and https://github.com/flatland-association/flatland-rl/pull/258
+* refactor: `Policy.act` should not require handle. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/250
+* Cache random state to generate cached random values instead of random values themselves. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/256
+
 ## [[4.1.3](https://github.com/flatland-association/flatland-rl/compare/v4.1.2...v4.1.3)] - 2025-06-20
 
 ### Added
