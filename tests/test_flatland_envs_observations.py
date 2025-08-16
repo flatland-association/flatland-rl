@@ -4,8 +4,9 @@ from typing import Callable
 
 import numpy as np
 import pytest
+from numpy.random import RandomState
 
-from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder
+from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder, gauss_perturbation_observation_builder_wrapper
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.env_generation.env_generator import env_generator
@@ -351,3 +352,27 @@ def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape: Callab
     assert list(obs.keys()) == expected_agent_ids
     for i in range(7):
         assert expected_shape(obs[i])
+
+
+def test_gauss_perturbation_observation_builder_wrapper():
+    class ZeroArrayObservationBuilder(ObservationBuilder[np.ndarray]):
+        def __init__(self, shape: tuple):
+            super().__init__()
+            self._shape = shape
+
+        def reset(self):
+            pass
+
+        def get(self, handle: int = 0) -> np.ndarray:
+            return np.zeros(self._shape)
+
+    obs_builder = ZeroArrayObservationBuilder((2, 3, 5))
+    plain = obs_builder.get()
+    assert np.array_equal(plain, np.zeros((2, 3, 5)))
+
+    perturbed_obs_builder = gauss_perturbation_observation_builder_wrapper(obs_builder, RandomState())
+    perturbed = perturbed_obs_builder.get()
+    assert not np.array_equal(perturbed, np.zeros((2, 3, 5)))
+    perturbed_many = perturbed_obs_builder.get_many([0, 5])
+    assert not np.array_equal(perturbed_many[0], np.zeros((2, 3, 5)))
+    assert not np.array_equal(perturbed_many[5], np.zeros((2, 3, 5)))
