@@ -197,7 +197,7 @@ class PolicyRunner:
         for env_time in tqdm.tqdm(env_time_range, **tqdm_kwargs):
             assert env_time == env._elapsed_steps
 
-            action_dict = policy.act_many(env.get_agent_handles(), observations)
+            action_dict = policy.act_many(env.get_agent_handles(), observations=list(observations.values()))
             for handle, action in action_dict.items():
                 trajectory.action_collect(env_time=env_time, agent_id=handle, action=action)
 

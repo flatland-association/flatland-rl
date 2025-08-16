@@ -1,8 +1,8 @@
+import os
 from typing import Optional, Any, List
 
 import numpy as np
 import torch
-from ray.rllib import MultiAgentEnv
 from ray.rllib.core import Columns
 from ray.rllib.core.rl_module import RLModule
 from ray.rllib.utils.numpy import convert_to_numpy, softmax
@@ -15,7 +15,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.ml.ray.ray_multi_agent_rail_env import RayMultiAgentWrapper
 
 
-def ray_multi_agent_env_wrapper(wrap: RailEnv, render_mode: Optional[str] = None) -> MultiAgentEnv:
+def ray_multi_agent_env_wrapper(wrap: RailEnv, render_mode: Optional[str] = None) -> RayMultiAgentWrapper:
     """
     Wrap `RailEnv` as `ray.rllib.MultiAgentEnv`. Make sure the observation builds are
 
@@ -33,7 +33,7 @@ def ray_multi_agent_env_wrapper(wrap: RailEnv, render_mode: Optional[str] = None
     return RayMultiAgentWrapper(wrap, render_mode)
 
 
-def ray_env_generator(render_mode: Optional[str] = None, **kwargs) -> MultiAgentEnv:
+def ray_env_generator(render_mode: Optional[str] = None, **kwargs) -> RayMultiAgentWrapper:
     """
     Create and reset `RailEnv` wrapped as `ray.rllib.MultiAgentEnv`.
 
@@ -73,3 +73,31 @@ def ray_policy_wrapper(rl_module: RLModule) -> Policy:
             return action_dict
 
     return _RayCheckpointPolicy()
+
+
+def ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path: str, policy_id: str) -> Policy:
+    """
+    Load RLlib checkpoint into Flatland RailEnvPolicy.
+
+    https://docs.ray.io/en/latest/rllib/checkpoints.html
+
+    Parameters
+    ----------
+    checkpoint_path : str
+        path to the rllib checkpoint
+    policy_id : str
+        policy ID to be found under <checkpoint_path>/learner_group/learner/rl_module/<policy_id>
+
+    Returns
+    -------
+
+    """
+    cp = os.path.join(
+        checkpoint_path,
+        "learner_group",
+        "learner",
+        "rl_module",
+        policy_id,
+    )
+    rl_module = RLModule.from_checkpoint(cp)
+    return ray_policy_wrapper(rl_module)

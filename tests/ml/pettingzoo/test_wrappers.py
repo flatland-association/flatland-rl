@@ -23,7 +23,7 @@ def test_parallel_pettingzoo():
     for h in range(7):
         assert observations[h].shape == (1020,)
         assert isinstance(infos[h], dict)
-    observations, rewards, terminations, truncations, infos = env.step({h: RailEnvActions.MOVE_FORWARD for h in env.wrap.get_agent_handles()})
+    observations, rewards, terminations, truncations, infos = env.step({h: RailEnvActions.MOVE_FORWARD for h in env.wrap().get_agent_handles()})
     assert len(observations) == 7
     assert len(rewards) == 7
     assert len(terminations) == 7
