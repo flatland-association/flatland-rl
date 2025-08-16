@@ -22,9 +22,11 @@ from collections import defaultdict
 
 import networkx as nx
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 
 
 class GraphTransitionMap:
@@ -106,3 +108,56 @@ class GraphTransitionMap:
             The graph transition map.
         """
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
+
+    # TODO extract interface
+    def check_action_on_agent(self, action: RailEnvActions, position, direction: Grid4TransitionsEnum):
+        new_position = None
+        new_direction, transition_valid, preprocessed_action = direction, True, action
+        new_cell_valid = True
+
+        n = (*position, direction)
+        succs = list(self.g.successors(n))
+        assert 1 <= len(succs) <= 2
+
+        if len(succs) == 1:
+            succ = list(succs)[0]
+            r, c, d = succ
+            new_position = r, c
+            new_direction = d
+        else:
+            if action == RailEnvActions.MOVE_LEFT:
+                # find
+                new_direction = (direction - 1) % 4
+                for r, c, d in succs:
+                    if d == new_direction:
+                        new_position = r, c
+                        break
+
+            elif action == RailEnvActions.MOVE_RIGHT:
+                # find
+                new_direction = (direction + 1) % 4
+                for r, c, d in succs:
+                    if d == new_direction:
+                        new_position = r, c
+                        break
+            if new_position is None:
+                new_direction = direction
+                for r, c, d in succs:
+                    if d == new_direction:
+                        new_position = r, c
+                        break
+        assert new_position is not None
+        transition_valid = True
+        if action == RailEnvActions.MOVE_LEFT and new_direction != ((direction - 1) % 4):
+            transition_valid = False
+            preprocessed_action = RailEnvActions.MOVE_FORWARD
+        elif action == RailEnvActions.MOVE_RIGHT and new_direction != ((direction + 1) % 4):
+            transition_valid = False
+            preprocessed_action = RailEnvActions.MOVE_FORWARD
+
+        new_cell_valid = (*new_position, new_direction) in self.g.nodes
+        return new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action
+
+    # TODO extract interface and implement
+    def get_transitions(self, row: int, column: int, orientation: int):
+        return [True]
