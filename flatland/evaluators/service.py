@@ -11,6 +11,7 @@ import re
 import shutil
 import time
 import traceback
+from typing import List
 
 import crowdai_api
 import msgpack
@@ -20,6 +21,7 @@ import pandas as pd
 import redis
 import timeout_decorator
 import yaml
+from versions import parse_version, parse_version_set
 
 import flatland
 from flatland.envs.persistence import RailEnvPersister
@@ -83,9 +85,21 @@ DEFAULT_COMMAND_TIMEOUT = int(os.getenv(
 
 RANDOM_SEED = int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
 
+# disjunctive
 SUPPORTED_CLIENT_VERSIONS = os.getenv("SUPPORTED_CLIENT_VERSIONS", "").split(",") + [flatland.__version__]
+# conjunctive
+SUPPORTED_CLIENT_VERSION_RANGE = os.getenv("SUPPORTED_CLIENT_VERSION_RANGE", "")
 
 TEST_ID_FILTER = os.getenv("TEST_ID_FILTER", None)
+
+
+def version_check(client_version: str, SUPPORTED_CLIENT_VERSIONS: List[str], SUPPORTED_CLIENT_VERSION_RANGE: str = ""):
+    vs = None
+    if SUPPORTED_CLIENT_VERSION_RANGE != "":
+        vs = parse_version_set(SUPPORTED_CLIENT_VERSION_RANGE)
+    v = parse_version(client_version)
+    return client_version in SUPPORTED_CLIENT_VERSIONS or (vs is not None and v.matches(vs))
+
 
 class FlatlandRemoteEvaluationService:
     """
@@ -378,7 +392,6 @@ class FlatlandRemoteEvaluationService:
                         break
             env_paths = filtered_env_paths
 
-
         return env_paths
 
     def get_env_test_and_level(self, filename):
@@ -665,7 +678,7 @@ class FlatlandRemoteEvaluationService:
         _command_response = {}
         _command_response['type'] = messages.FLATLAND_RL.PONG
         _command_response['payload'] = {}
-        if client_version not in SUPPORTED_CLIENT_VERSIONS:
+        if not version_check(client_version, SUPPORTED_CLIENT_VERSIONS, SUPPORTED_CLIENT_VERSION_RANGE):
             _command_response['type'] = messages.FLATLAND_RL.ERROR
             _command_response['payload']['message'] = \
                 "Client-Server Version Mismatch => " + \
