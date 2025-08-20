@@ -47,7 +47,8 @@ jobs:
                     python -m pip install tox tox-gh-actions
             -   name: Run deptry
                 run: tox -e py${{ matrix.python-version }}-verify-requirements
-
+            -   name: Run build and install
+                run: tox -e py${{ matrix.python-version }}-build-and-install
     testml:
         runs-on: ubuntu-22.04
         strategy:
