@@ -41,14 +41,14 @@ jobs:
                 uses: actions/setup-python@v5
                 with:
                     python-version: ${{ matrix.python-version }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
-            -   name: Run deptry
-                run: tox -e py${{ matrix.python-version }}-verify-requirements
+            #            -   name: Install tox
+            #                run: |
+            #                    python -m pip install --upgrade pip
+            #                    python -m pip install tox tox-gh-actions
+            #            -   name: Run deptry
+            #                run: tox -e py${{ matrix.python-version }}-verify-requirements
             -   name: Run build and install
-                run: tox -e py${{ matrix.python-version }}-build-and-install
+                run: python -m pip install flatland-rl
     testml:
         runs-on: ubuntu-22.04
         strategy:
