@@ -11,7 +11,8 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv, Node, perturbation_tree_observation_builder_wrapper
+from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv, Node
+from flatland.envs.observations_perturbed import perturbation_tree_observation_builder_wrapper
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
