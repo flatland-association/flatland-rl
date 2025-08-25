@@ -11,7 +11,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv, Node
+from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv, Node, perturbation_tree_observation_builder_wrapper
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
@@ -376,3 +376,45 @@ def test_gauss_perturbation_observation_builder_wrapper():
     perturbed_many = perturbed_obs_builder.get_many([0, 5])
     assert not np.array_equal(perturbed_many[0], np.zeros((2, 3, 5)))
     assert not np.array_equal(perturbed_many[5], np.zeros((2, 3, 5)))
+
+
+def test_neutral_perturbation_tree_observation_builder_wrapper():
+    obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
+    env, _, _ = env_generator(obs_builder_object=obs_builder)
+    obs, _ = env.reset()
+
+    for _ in range(25):
+        env.step({h: RailEnvActions.MOVE_FORWARD for h in range(7)})
+    expected = obs_builder.get_many(env.get_agent_handles())
+
+    raw_obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
+    # malfunction_rate 0
+    perturbed_obs_builder = perturbation_tree_observation_builder_wrapper(raw_obs_builder, RandomState())
+    env, _, _ = env_generator(obs_builder_object=perturbed_obs_builder)
+    obs, _ = env.reset()
+
+    for _ in range(25):
+        env.step({h: RailEnvActions.MOVE_FORWARD for h in range(7)})
+
+    actual = perturbed_obs_builder.get_many(env.get_agent_handles())
+
+    assert expected == actual
+    # sanity check the tree obs is not empty
+    for h in range(7):
+        assert expected[h].dist_min_to_target != np.inf
+
+
+def test_full_perturbation_tree_observation_builder_wrapper():
+    raw_obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
+    perturbed_obs_builder = perturbation_tree_observation_builder_wrapper(raw_obs_builder, RandomState(), perturbation_rate=1, min_duration=9999999,
+                                                                          max_duration=9999999)
+    env, _, _ = env_generator(obs_builder_object=perturbed_obs_builder)
+    obs, _ = env.reset()
+
+    for _ in range(25):
+        env.step({h: RailEnvActions.MOVE_FORWARD for h in range(7)})
+    actual = perturbed_obs_builder.get_many(env.get_agent_handles())
+
+    for h in range(7):
+        assert perturbed_obs_builder._malfunction_handlers[h].in_malfunction
+        assert actual[h].dist_min_to_target == -np.inf
