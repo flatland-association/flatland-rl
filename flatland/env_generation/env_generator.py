@@ -22,6 +22,7 @@ def env_generator(n_agents=7,
                   malfunction_duration_max=50,
                   malfunction_interval=540,
                   speed_ratios=None,
+                  line_length=2,
                   seed=42,
                   obs_builder_object=None,
                   acceleration_delta=1.0,
@@ -58,6 +59,8 @@ def env_generator(n_agents=7,
         Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.
     speed_ratios: Dict[float, float]
         Speed ratios of all agents. They are probabilities of all different speeds and have to add up to 1. Goes into `sparse_line_generator`. Defaults to `{1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}`.
+    line_length : int
+            The length of the lines. Goes into `sparse_line_generator`. Defaults to `2`.
     seed: int
          Initiate random seed generators. Goes into `reset`.
     obs_builder_object: Optional[ObservationBuilder]
@@ -89,7 +92,7 @@ def env_generator(n_agents=7,
         ),
         malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(
             min_duration=malfunction_duration_min, max_duration=malfunction_duration_max, malfunction_rate=1.0 / malfunction_interval)),
-        line_generator=sparse_line_generator(speed_ratio_map=speed_ratios, seed=seed),
+        line_generator=sparse_line_generator(speed_ratio_map=speed_ratios, seed=seed, line_length=line_length),
         number_of_agents=n_agents,
         obs_builder_object=obs_builder_object,
         record_steps=True,
