@@ -1,6 +1,6 @@
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, condition_stopped_cells_and_range, \
-    condition_stopped_intermediate_and_range
+    condition_stopped_intermediate_and_range, make_multi_malfunction_condition
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.envs.step_utils.states import TrainState
@@ -101,3 +101,31 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
     assert len(in_malfunction) == len(intermediate_waypoints)
     for _, agents in in_malfunction.items():
         assert agent.malfunction_handler.malfunction_down_counter > 700
+
+
+def test_make_multi_malfunction_condition():
+    env, _, _ = env_generator(
+        line_length=3,
+        n_cities=3,
+        n_agents=3,
+        effects_generator=ConditionalMalfunctionEffectsGenerator(
+            malfunction_rate=1,
+            min_duration=888,
+            max_duration=888,
+            condition=condition_stopped_intermediate_and_range(0, 9999999),
+        ))
+
+    cond = make_multi_malfunction_condition(
+        [condition_stopped_intermediate_and_range(44, 99), condition_stopped_cells_and_range(44, 99, [env.agents[0].initial_position])])
+
+    env.agents[0].state_machine.set_state(TrainState.STOPPED)
+    env.agents[0].position = env.agents[0].initial_position
+    assert cond(env.agents[0], 55)
+    assert not cond(env.agents[0], 33)
+    assert not cond(env.agents[0], 100)
+
+    env.agents[0].state_machine.set_state(TrainState.STOPPED)
+    env.agents[0].position = env.agents[0].waypoints[1].position
+    assert cond(env.agents[0], 55)
+    assert not cond(env.agents[0], 33)
+    assert not cond(env.agents[0], 100)
