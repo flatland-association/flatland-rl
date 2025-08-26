@@ -4,13 +4,15 @@ from typing import Callable
 
 import numpy as np
 import pytest
+from numpy.random import RandomState
 
-from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder
+from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder, gauss_perturbation_observation_builder_wrapper
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv, Node
+from flatland.envs.observations_perturbed import perturbation_tree_observation_builder_wrapper
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
@@ -351,3 +353,69 @@ def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape: Callab
     assert list(obs.keys()) == expected_agent_ids
     for i in range(7):
         assert expected_shape(obs[i])
+
+
+def test_gauss_perturbation_observation_builder_wrapper():
+    class ZeroArrayObservationBuilder(ObservationBuilder[np.ndarray]):
+        def __init__(self, shape: tuple):
+            super().__init__()
+            self._shape = shape
+
+        def reset(self):
+            pass
+
+        def get(self, handle: int = 0) -> np.ndarray:
+            return np.zeros(self._shape)
+
+    obs_builder = ZeroArrayObservationBuilder((2, 3, 5))
+    plain = obs_builder.get()
+    assert np.array_equal(plain, np.zeros((2, 3, 5)))
+
+    perturbed_obs_builder = gauss_perturbation_observation_builder_wrapper(obs_builder, RandomState())
+    perturbed = perturbed_obs_builder.get()
+    assert not np.array_equal(perturbed, np.zeros((2, 3, 5)))
+    perturbed_many = perturbed_obs_builder.get_many([0, 5])
+    assert not np.array_equal(perturbed_many[0], np.zeros((2, 3, 5)))
+    assert not np.array_equal(perturbed_many[5], np.zeros((2, 3, 5)))
+
+
+def test_neutral_perturbation_tree_observation_builder_wrapper():
+    obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
+    env, _, _ = env_generator(obs_builder_object=obs_builder)
+    obs, _ = env.reset()
+
+    for _ in range(25):
+        env.step({h: RailEnvActions.MOVE_FORWARD for h in range(7)})
+    expected = obs_builder.get_many(env.get_agent_handles())
+
+    raw_obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
+    # malfunction_rate 0
+    perturbed_obs_builder = perturbation_tree_observation_builder_wrapper(raw_obs_builder, RandomState())
+    env, _, _ = env_generator(obs_builder_object=perturbed_obs_builder)
+    obs, _ = env.reset()
+
+    for _ in range(25):
+        env.step({h: RailEnvActions.MOVE_FORWARD for h in range(7)})
+
+    actual = perturbed_obs_builder.get_many(env.get_agent_handles())
+
+    assert expected == actual
+    # sanity check the tree obs is not empty
+    for h in range(7):
+        assert expected[h].dist_min_to_target != np.inf
+
+
+def test_full_perturbation_tree_observation_builder_wrapper():
+    raw_obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
+    perturbed_obs_builder = perturbation_tree_observation_builder_wrapper(raw_obs_builder, RandomState(), perturbation_rate=1, min_duration=9999999,
+                                                                          max_duration=9999999)
+    env, _, _ = env_generator(obs_builder_object=perturbed_obs_builder)
+    obs, _ = env.reset()
+
+    for _ in range(25):
+        env.step({h: RailEnvActions.MOVE_FORWARD for h in range(7)})
+    actual = perturbed_obs_builder.get_many(env.get_agent_handles())
+
+    for h in range(7):
+        assert perturbed_obs_builder._malfunction_handlers[h].in_malfunction
+        assert actual[h].dist_min_to_target == -np.inf

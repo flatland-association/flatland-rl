@@ -11,6 +11,7 @@ multi-agent environments.
 from typing import Optional, List, Dict, Generic, TypeVar
 
 import numpy as np
+from numpy.random import RandomState
 
 from flatland.core.env import Environment
 
@@ -96,3 +97,45 @@ class DummyObservationBuilder(ObservationBuilder[bool]):
 
     def get(self, handle: AgentHandle = 0) -> bool:
         return True
+
+
+def gauss_perturbation_observation_builder_wrapper(
+    builder: ObservationBuilder[np.ndarray], np_random: RandomState, mu: np.ndarray = None, sigma: np.ndarray = None
+) -> ObservationBuilder[np.ndarray]:
+    """
+    Perturb a numpy array based observation with Gaussian noise.
+
+    Parameters
+    ----------
+    builder : ObservationBuilder[np.ndarray]
+    np_random : RandomState
+    mu : np.ndarray
+        mean of appropriate size, defaults to 0
+    sigma : np.ndarray
+        sigma of appropriate size, defaults to 1
+
+
+    Returns
+    -------
+    observation with Gaussian noise added
+    """
+
+    class _GaussPeturbationObservationBuilder(ObservationBuilder[np.ndarray]):
+        def __init__(self, builder: ObservationBuilder[np.ndarray], mu: np.ndarray = None, sigma: np.ndarray = None):
+            super().__init__()
+            self._mu = mu if mu is not None else 0
+            self._sigma = sigma if sigma is not None else 1
+            self._builder = builder
+            self._np_random = np_random
+
+        def set_env(self, env: Environment):
+            builder.set_env(env)
+
+        def reset(self):
+            builder.reset()
+
+        def get(self, handle: AgentHandle = 0) -> ObservationBuilder[np.ndarray]:
+            obs: np.ndarray = self._builder.get(handle)
+            return obs + self._np_random.normal(self._mu, self._sigma, obs.shape)
+
+    return _GaussPeturbationObservationBuilder(builder)
