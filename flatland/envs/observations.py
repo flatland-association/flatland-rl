@@ -737,3 +737,22 @@ class LocalObsForRailEnv(ObservationBuilder):
             return temp_visible_data
         else:
             return visible, rel_coords
+
+
+class FullEnvObservation(ObservationBuilder["RailEnv"]):
+    """
+    Returns full env as observation.
+    """
+
+    def __init__(self):
+        pass
+
+    def get(self, handle: AgentHandle = 0) -> "RailEnv":
+        return self.env
+
+    def reset(self):
+        pass
+
+    def set_env(self, env):
+        print("set_env")
+        self.env = env
