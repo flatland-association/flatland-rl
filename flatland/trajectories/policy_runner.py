@@ -32,6 +32,7 @@ class PolicyRunner:
         malfunction_duration_max=50,
         malfunction_interval=540,
         speed_ratios=None,
+        line_length=2,
         seed=42,
         obs_builder: Optional[ObservationBuilder] = None,
         snapshot_interval: int = 1,
@@ -78,6 +79,8 @@ class PolicyRunner:
             Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.
         speed_ratios: Dict[float, float]
             Speed ratios of all agents. They are probabilities of all different speeds and have to add up to 1. Goes into `sparse_line_generator`. Defaults to `{1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}`.
+        line_length : int
+            The length of the lines. Goes into `sparse_line_generator`. Defaults to `2`.
         seed: int
              Initiate random seed generators. Goes into `reset`.
         obs_builder: Optional[ObservationBuilder]
@@ -162,6 +165,7 @@ class PolicyRunner:
                 malfunction_duration_max=malfunction_duration_max,
                 malfunction_interval=malfunction_interval,
                 speed_ratios=speed_ratios,
+                line_length=line_length,
                 seed=seed,
                 obs_builder_object=obs_builder)
 
