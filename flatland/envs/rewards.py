@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Generic, TypeVar
+from typing import List, Generic, TypeVar, Tuple
 
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
@@ -54,8 +54,14 @@ class Rewards(Generic[RewardType]):
         """
         raise NotImplementedError()
 
+    def empty(self, ) -> RewardType:
+        """
+        Return empty initial value neutral for the cumulation.
+        """
+        raise NotImplementedError()
 
-class DefaultRewards(Rewards[int]):
+
+class DefaultRewards(Rewards[float]):
     """
     Reward Function.
 
@@ -110,7 +116,7 @@ class DefaultRewards(Rewards[int]):
         self.arrivals = defaultdict(defaultdict)
         self.departures = defaultdict(defaultdict)
 
-    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> RewardType:
+    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> float:
         reward = 0
         if agent.position not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][agent.position] = elapsed_steps
@@ -119,7 +125,7 @@ class DefaultRewards(Rewards[int]):
             reward += -1 * agent_transition_data.speed * self.crash_penalty_factor
         return reward
 
-    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> RewardType:
+    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> float:
         reward = None
 
         if agent.state == TrainState.DONE:
@@ -150,5 +156,22 @@ class DefaultRewards(Rewards[int]):
                     reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][et] - ed, 0)
         return reward
 
-    def cumulate(self, rewards: List[RewardType]) -> RewardType:
+    def cumulate(self, rewards: List[int]) -> RewardType:
         return sum(rewards)
+
+    def empty(self, ) -> float:
+        return 0
+
+
+class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float]]):
+    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> List[float]:
+        return [super().step_reward(agent=agent, agent_transition_data=agent_transition_data, distance_map=distance_map, elapsed_steps=elapsed_steps)]
+
+    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> List[float]:
+        return [super().end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=elapsed_steps)]
+
+    def cumulate(self, rewards: List[List[float]]) -> List[float]:
+        return [super().cumulate([r[0] for r in rewards])]
+
+    def empty(self, ) -> List[float]:
+        return [0]
