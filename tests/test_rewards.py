@@ -2,13 +2,13 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
-from flatland.envs.rewards import Rewards
+from flatland.envs.rewards import DefaultRewards
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
 
 
 def test_rewards_late_arrival():
-    rewards = Rewards()
+    rewards = DefaultRewards()
     agent = EnvAgent(initial_position=(0, 0),
                      initial_direction=5,
                      target=(3, 3),
@@ -23,7 +23,7 @@ def test_rewards_late_arrival():
 
 
 def test_rewards_early_arrival():
-    rewards = Rewards()
+    rewards = DefaultRewards()
     agent = EnvAgent(initial_position=(0, 0),
                      initial_direction=5,
                      target=(3, 3),
@@ -38,7 +38,7 @@ def test_rewards_early_arrival():
 
 
 def test_rewards_intermediate_not_served_penalty():
-    rewards = Rewards()
+    rewards = DefaultRewards()
     rewards.intermediate_not_served_penalty = 33
     agent = EnvAgent(initial_position=(0, 0),
                      initial_direction=5,
@@ -57,7 +57,7 @@ def test_rewards_intermediate_not_served_penalty():
 
 
 def test_rewards_intermediate_intermediate_early_departure_penalty():
-    rewards = Rewards()
+    rewards = DefaultRewards()
     rewards.intermediate_early_departure_penalty_factor = 33
     agent = EnvAgent(initial_position=(0, 0),
                      initial_direction=5,
@@ -82,7 +82,7 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
 
 
 def test_rewards_intermediate_intermediate_late_arrival_penalty():
-    rewards = Rewards()
+    rewards = DefaultRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(initial_position=(0, 0),
                      initial_direction=5,
@@ -107,7 +107,7 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
 
 
 def test_rewards_departed_but_never_arrived():
-    rewards = Rewards()
+    rewards = DefaultRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(initial_position=(0, 0),
                      initial_direction=5,
