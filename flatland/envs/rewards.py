@@ -1,12 +1,61 @@
 from collections import defaultdict
+from typing import List, Generic, TypeVar
 
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.states import TrainState
 
+RewardType = TypeVar('RewardType')
 
-class Rewards:
+
+class Rewards(Generic[RewardType]):
+    """
+    Reward Function Interface.
+    """
+
+    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> RewardType:
+        """
+        Handles end-of-step-reward for a particular agent.
+
+        Parameters
+        ----------
+        agent: EnvAgent
+        agent_transition_data: AgentTransitionData
+        distance_map: DistanceMap
+        elapsed_steps: int
+        """
+        raise NotImplementedError()
+
+    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> RewardType:
+        """
+        Handles end-of-episode reward for a particular agent.
+
+        Parameters
+        ----------
+        agent: EnvAgent
+        distance_map: DistanceMap
+        elapsed_steps: int
+        """
+        raise NotImplementedError()
+
+    def cumulate(self, rewards: List[RewardType]) -> RewardType:
+        """
+        Cumulate multiple rewards to one.
+
+        Parameters
+        ----------
+        rewards
+
+        Returns
+        -------
+        Cumulative rewards
+
+        """
+        raise NotImplementedError()
+
+
+class DefaultRewards(Rewards[int]):
     """
     Reward Function.
 
@@ -61,17 +110,7 @@ class Rewards:
         self.arrivals = defaultdict(defaultdict)
         self.departures = defaultdict(defaultdict)
 
-    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int):
-        """
-        Handles end-of-step-reward for a particular agent.
-
-        Parameters
-        ----------
-        agent: EnvAgent
-        agent_transition_data: AgentTransitionData
-        distance_map: DistanceMap
-        elapsed_steps: int
-        """
+    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> RewardType:
         reward = 0
         if agent.position not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][agent.position] = elapsed_steps
@@ -80,16 +119,7 @@ class Rewards:
             reward += -1 * agent_transition_data.speed * self.crash_penalty_factor
         return reward
 
-    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> int:
-        """
-        Handles end-of-episode reward for a particular agent.
-
-        Parameters
-        ----------
-        agent: EnvAgent
-        distance_map: DistanceMap
-        elapsed_steps: int
-        """
+    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> RewardType:
         reward = None
 
         if agent.state == TrainState.DONE:
@@ -119,3 +149,6 @@ class Rewards:
                 if et in self.departures[agent.handle]:
                     reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][et] - ed, 0)
         return reward
+
+    def cumulate(self, rewards: List[RewardType]) -> RewardType:
+        return sum(rewards)
