@@ -309,7 +309,7 @@ def test_get_entry_directions():
     env.reset()
 
     def _assert(position, expected):
-        actual = env.get_valid_directions_on_grid(*position)
+        actual = env.rail.get_valid_directions_on_grid(*position)
         assert actual == expected, "[{},{}] actual={}, expected={}".format(*position, actual, expected)
 
     # north dead end

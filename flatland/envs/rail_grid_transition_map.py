@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Set
+from typing import Set, List
 from typing import Tuple
 
 import numpy as np
@@ -41,7 +41,7 @@ class RailGridTransitionMap(GridTransitionMap):
             It is not checked that the next cell is free.
         """
         valid_actions: Set[RailEnvNextAction] = []
-        possible_transitions = self.get_transitions(*agent_position, agent_direction)
+        possible_transitions = self.get_transitions((agent_position, agent_direction))
         num_transitions = fast_count_nonzero(possible_transitions)
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right], relative to the current orientation
@@ -96,7 +96,7 @@ class RailGridTransitionMap(GridTransitionMap):
         Tuple[Grid4TransitionsEnum, bool]
             the new direction and whether the the action was valid
         """
-        possible_transitions = self.get_transitions(*position, direction)
+        possible_transitions = self.get_transitions((position, direction))
         num_transitions = fast_count_nonzero(possible_transitions)
 
         if num_transitions == 1:
@@ -174,3 +174,9 @@ class RailGridTransitionMap(GridTransitionMap):
         new_position = get_new_position(position, new_direction)
         new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
         return new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action
+
+    def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
+        """
+        Returns directions in which the agent can move
+        """
+        return self.transitions.get_entry_directions(self.get_full_transitions(row, col))

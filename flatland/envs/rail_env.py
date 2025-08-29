@@ -13,7 +13,6 @@ import flatland.envs.timetable_generators as ttg
 from flatland.core.effects_generator import EffectsGenerator, make_multi_effects_generator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid_utils import Vector2D
 from flatland.core.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs import agent_chains as ac
@@ -510,7 +509,7 @@ class RailEnv(Environment):
                 new_direction = None
 
             if new_position is not None:
-                valid_position_direction = any(self.rail.get_transitions(*new_position, new_direction))
+                valid_position_direction = any(self.rail.get_transitions((new_position, new_direction)))
                 if not valid_position_direction:
                     warnings.warn(f"{(new_position, new_direction)} not valid on the grid."
                                   f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
@@ -684,11 +683,6 @@ class RailEnv(Environment):
         self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
         return self.obs_dict
 
-    def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
-        """
-        Returns directions in which the agent can move
-        """
-        return Grid4Transitions.get_entry_directions(self.rail.get_full_transitions(row, col))
 
     def _exp_distirbution_synced(self, rate: float) -> float:
         """
