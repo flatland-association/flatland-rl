@@ -163,15 +163,41 @@ class DefaultRewards(Rewards[float]):
         return 0
 
 
-class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float]]):
+class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, float]]):
+    """
+    Basic MORL (Multi-Objective Reinforcement Learning) Rewards: with 3 items
+     - default score
+     - energy efficiency: - square of (speed/max_speed).
+     - smoothness: - square of speed differences
+    For illustration purposes.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._previous_speeds = {}
+
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> List[float]:
-        return [super().step_reward(agent=agent, agent_transition_data=agent_transition_data, distance_map=distance_map, elapsed_steps=elapsed_steps)]
+        default_reward = super().step_reward(agent=agent, agent_transition_data=agent_transition_data, distance_map=distance_map, elapsed_steps=elapsed_steps)
+
+        # TODO revise design: speed_counter currently is not set to 0 during malfunctions.
+        # N.B. enforces penalization before/after malfunction
+        current_speed = agent.speed_counter.speed if agent.state == TrainState.MOVING else 0
+
+        energy_efficiency = -(current_speed / agent.speed_counter.max_speed) ** 2
+        smoothness = 0
+        if agent.handle in self._previous_speeds:
+            smoothness = -(current_speed - self._previous_speeds[agent.handle]) ** 2
+        self._previous_speeds[agent.handle] = current_speed
+        return [default_reward, energy_efficiency, smoothness]
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> List[float]:
-        return [super().end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=elapsed_steps)]
+        default_reward = super().end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=elapsed_steps)
+        energy_efficency = 0
+        smoothness = 0
+        return [default_reward, energy_efficency, smoothness]
 
     def cumulate(self, *rewards: List[float]) -> List[float]:
-        return [super().cumulate(*[r[0] for r in rewards])]
+        return [sum([r[i] for r in rewards]) for i in range(3)]
 
     def empty(self) -> List[float]:
-        return [0]
+        return [0] * 3
