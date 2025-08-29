@@ -5,6 +5,14 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[4.2.0]](https://github.com/flatland-association/flatland-rl/compare/v4.1.4...v4.2.0) 2025-08-29
+
+### Added
+
+* feature: Support version ranges in evaluator service. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/261
+* feature: Add observation perturbations. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/255
+* feature: Minor disruptions with faster recovery times at train stations. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/263
+
 ## [[4.1.4]](https://github.com/flatland-association/flatland-rl/compare/v4.1.3...v4.1.4) - 2025-08-16
 
 ### Added
