@@ -86,7 +86,7 @@ class GraphTransitionMap:
         for r in range(transition_map.height):
             for c in range(transition_map.width):
                 for d in range(4):
-                    possible_transitions = transition_map.get_transitions(r, c, d)
+                    possible_transitions = transition_map.get_transitions(((r, c), d))
                     for new_direction in range(4):
                         if possible_transitions[new_direction]:
                             new_position = get_new_position((r, c), new_direction)
@@ -159,5 +159,5 @@ class GraphTransitionMap:
         return new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action
 
     # TODO extract interface and implement
-    def get_transitions(self, row: int, column: int, orientation: int):
+    def get_transitions(self, cell_id):
         return [True]

@@ -510,7 +510,7 @@ class RailEnv(Environment):
                 new_direction = None
 
             if new_position is not None:
-                valid_position_direction = any(self.rail.get_transitions(*new_position, new_direction))
+                valid_position_direction = any(self.rail.get_transitions((new_position, new_direction)))
                 if not valid_position_direction:
                     warnings.warn(f"{(new_position, new_direction)} not valid on the grid."
                                   f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")

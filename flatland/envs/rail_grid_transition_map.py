@@ -41,7 +41,7 @@ class RailGridTransitionMap(GridTransitionMap):
             It is not checked that the next cell is free.
         """
         valid_actions: Set[RailEnvNextAction] = []
-        possible_transitions = self.get_transitions(*agent_position, agent_direction)
+        possible_transitions = self.get_transitions((agent_position, agent_direction))
         num_transitions = fast_count_nonzero(possible_transitions)
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right], relative to the current orientation
@@ -96,7 +96,7 @@ class RailGridTransitionMap(GridTransitionMap):
         Tuple[Grid4TransitionsEnum, bool]
             the new direction and whether the the action was valid
         """
-        possible_transitions = self.get_transitions(*position, direction)
+        possible_transitions = self.get_transitions((position, direction))
         num_transitions = fast_count_nonzero(possible_transitions)
 
         if num_transitions == 1:

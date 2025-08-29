@@ -22,8 +22,8 @@ def test_graph_transition_map_from_with_random_policy():
     for r in range(env.height):
         for c in range(env.width):
             for d in range(4):
-                assert (sum(env.rail.get_transitions(r, c, d)) > 0) == ((r, c, d) in clone.rail.g.nodes)
-                if sum(env.rail.get_transitions(r, c, d)) == 0:
+                assert (sum(env.rail.get_transitions(((r, c), d))) > 0) == ((r, c, d) in clone.rail.g.nodes)
+                if sum(env.rail.get_transitions(((r, c), d))) == 0:
                     continue
                 for a in range(5):
                     assert clone.rail.check_action_on_agent(RailEnvActions.from_value(a), (r, c), d) == env.rail.check_action_on_agent(

@@ -65,7 +65,7 @@ def test_check_action_on_agent(elem, direction, expected_left, expected_forward,
     rail = RailGridTransitionMap(1, 1, RailEnvTransitions())
     rail.set_transitions((0, 0), elem)
 
-    print(rail.get_transitions(0, 0, direction))
+    print(rail.get_transitions(((0, 0), direction)))
     assert rail.check_action_on_agent(RailEnvActions.MOVE_LEFT, (0, 0), direction) == expected_left
     assert rail.check_action_on_agent(RailEnvActions.MOVE_FORWARD, (0, 0), direction) == expected_forward
     assert rail.check_action_on_agent(RailEnvActions.MOVE_RIGHT, (0, 0), direction) == expected_right
