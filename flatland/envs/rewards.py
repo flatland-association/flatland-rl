@@ -39,7 +39,7 @@ class Rewards(Generic[RewardType]):
         """
         raise NotImplementedError()
 
-    def cumulate(self, rewards: List[RewardType]) -> RewardType:
+    def cumulate(self, *rewards: RewardType) -> RewardType:
         """
         Cumulate multiple rewards to one.
 
@@ -54,7 +54,7 @@ class Rewards(Generic[RewardType]):
         """
         raise NotImplementedError()
 
-    def empty(self, ) -> RewardType:
+    def empty(self) -> RewardType:
         """
         Return empty initial value neutral for the cumulation.
         """
@@ -156,10 +156,10 @@ class DefaultRewards(Rewards[float]):
                     reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][et] - ed, 0)
         return reward
 
-    def cumulate(self, rewards: List[int]) -> RewardType:
+    def cumulate(self, *rewards: int) -> RewardType:
         return sum(rewards)
 
-    def empty(self, ) -> float:
+    def empty(self) -> float:
         return 0
 
 
@@ -170,8 +170,8 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float]]):
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> List[float]:
         return [super().end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=elapsed_steps)]
 
-    def cumulate(self, rewards: List[List[float]]) -> List[float]:
-        return [super().cumulate([r[0] for r in rewards])]
+    def cumulate(self, *rewards: List[float]) -> List[float]:
+        return [super().cumulate(*[r[0] for r in rewards])]
 
-    def empty(self, ) -> List[float]:
+    def empty(self) -> List[float]:
         return [0]

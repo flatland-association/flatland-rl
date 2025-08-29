@@ -419,9 +419,9 @@ class RailEnv(Environment):
             ((self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps)):
 
             for i_agent, agent in enumerate(self.agents):
-                self.rewards_dict[i_agent] = self.rewards.cumulate([
+                self.rewards_dict[i_agent] = self.rewards.cumulate(
                     self.rewards_dict[i_agent], self.rewards.end_of_episode_reward(agent, self.distance_map, self._elapsed_steps)
-                ])
+                )
 
                 self.dones[i_agent] = True
 
@@ -595,7 +595,7 @@ class RailEnv(Environment):
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
             ## Update rewards
-            self.rewards_dict[i_agent] = self.rewards.cumulate([
+            self.rewards_dict[i_agent] = self.rewards.cumulate(
                 self.rewards_dict[i_agent],
                 self.rewards.step_reward(
                     agent=agent,
@@ -603,7 +603,7 @@ class RailEnv(Environment):
                     distance_map=self.distance_map,
                     elapsed_steps=self._elapsed_steps
                 )
-            ])
+            )
 
             # update malfunction counter
             agent.malfunction_handler.update_counter()
