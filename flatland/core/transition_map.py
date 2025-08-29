@@ -5,6 +5,7 @@ import traceback
 import uuid
 import warnings
 from functools import lru_cache
+from typing import Tuple
 
 import numpy as np
 from importlib_resources import path
@@ -27,7 +28,7 @@ class TransitionMap:
     cells.
     """
 
-    def get_transitions(self, row, column, orientation):
+    def get_transitions(self, cell_id):
         """
         Return a tuple of transitions available in a cell specified by
         `cell_id` (e.g., a tuple of size of the maximum number of transitions,
@@ -173,7 +174,7 @@ class GridTransitionMap(TransitionMap):
         return self.grid[(row, column)]
 
     @lru_cache(maxsize=4_000_000)
-    def get_transitions(self, row: int, column: int, orientation: int):
+    def get_transitions(self, cell_id: Tuple[Tuple[int, int], int]):
         """
         Return a tuple of transitions available in a cell specified by
         `cell_id` (e.g., a tuple of size of the maximum number of transitions,
@@ -183,7 +184,7 @@ class GridTransitionMap(TransitionMap):
         Parameters
         ----------
         cell_id : tuple
-            The cell_id indices a cell as (column, row, orientation),
+            The cell_id indices a cell as ((column, row), orientation),
             where orientation is the direction an agent is facing within a cell.
             Alternatively, it can be accessed as (column, row) to return the
             full cell content.
@@ -194,7 +195,7 @@ class GridTransitionMap(TransitionMap):
             List of the validity of transitions in the cell as given by the maps transitions.
 
         """
-        return self.transitions.get_transitions(self.grid[(row, column)], orientation)
+        return self.transitions.get_transitions(self.grid[cell_id[0]], cell_id[1])
 
     def set_transitions(self, cell_id: IntVector2D, new_transitions: Transitions):
         """
@@ -416,7 +417,7 @@ class GridTransitionMap(TransitionMap):
             if node not in visited:
                 visited.add(node)
 
-                moves = self.get_transitions(node_position[0], node_position[1], node_direction)
+                moves = self.get_transitions((node_position, node_direction))
                 for move_index in range(4):
                     if moves[move_index]:
                         stack.append((get_new_position(node_position, move_index),
@@ -468,7 +469,7 @@ class GridTransitionMap(TransitionMap):
 
             # Get the transitions out of gPos2, using iDirOut as the inbound direction
             # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
-            t4Trans2 = self.get_transitions(*gPos2, iDirOut)
+            t4Trans2 = self.get_transitions(((gPos2[0], gPos2[1]), iDirOut))
             if any(t4Trans2):
                 continue
             else:
@@ -542,7 +543,7 @@ class GridTransitionMap(TransitionMap):
 
             # Get the transitions out of gPos2, using iDirOut as the inbound direction
             # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
-            t4Trans2 = self.get_transitions(*gPos2, iDirOut)
+            t4Trans2 = self.get_transitions((gPos2, iDirOut))
             if any(t4Trans2):
                 continue
             else:

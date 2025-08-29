@@ -205,7 +205,7 @@ class TreeObsForRailEnv(ObservationBuilder[Node]):
         else:
             return None
 
-        possible_transitions = self.env.rail.get_transitions(*agent_virtual_position, agent.direction)
+        possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent.direction))
         num_transitions = fast_count_nonzero(possible_transitions)
 
         # Here information about the agent itself is stored
@@ -319,7 +319,7 @@ class TreeObsForRailEnv(ObservationBuilder[Node]):
                     other_agent_opposite_direction += self.location_has_agent[position]
 
                 # Check number of possible transitions for agent and total number of transitions in cell (type)
-            cell_transitions = self.env.rail.get_transitions(*position, direction)
+            cell_transitions = self.env.rail.get_transitions((position, direction))
             transition_bit = bin(self.env.rail.get_full_transitions(*position))
             total_transitions = transition_bit.count("1")
             crossing_found = False
@@ -459,7 +459,7 @@ class TreeObsForRailEnv(ObservationBuilder[Node]):
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # Get the possible transitions
-        possible_transitions = self.env.rail.get_transitions(*position, direction)
+        possible_transitions = self.env.rail.get_transitions((position, direction))
         for i, branch_direction in enumerate([(direction + 4 + i) % 4 for i in range(-1, 3)]):
             if last_is_dead_end and self.env.rail.get_transition((*position, direction),
                                                                  (branch_direction + 2) % 4):
