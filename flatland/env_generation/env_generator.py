@@ -65,7 +65,14 @@ def env_generator(n_agents=7,
          Initiate random seed generators. Goes into `reset`.
     obs_builder_object: Optional[ObservationBuilder]
         Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
-
+    acceleration_delta : float
+        Defaults to `1.0`
+    braking_delta : float
+        Defaults to `-1.0`
+    rewards : Rewards
+        Rewards function. Defaults to `DefaultRewards`.
+    effects_generator : EffectsGenerator[RailEnv]
+        Effects generator. Defaults to `None`.
     Returns
     -------
     RailEnv
