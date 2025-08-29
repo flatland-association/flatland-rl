@@ -1,10 +1,15 @@
+import tempfile
+from pathlib import Path
+
 from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
-from flatland.envs.rewards import DefaultRewards
+from flatland.envs.rewards import DefaultRewards, BasicMultiObjectiveRewards
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
+from flatland.trajectories.policy_runner import PolicyRunner
+from tests.trajectories.test_policy_runner import RandomPolicy
 
 
 def test_rewards_late_arrival():
@@ -21,6 +26,9 @@ def test_rewards_late_arrival():
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -2
 
+    rewards = BasicMultiObjectiveRewards()
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == [-2]
+
 
 def test_rewards_early_arrival():
     rewards = DefaultRewards()
@@ -35,6 +43,9 @@ def test_rewards_early_arrival():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == 0
+
+    rewards = BasicMultiObjectiveRewards()
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == [0]
 
 
 def test_rewards_intermediate_not_served_penalty():
@@ -54,6 +65,10 @@ def test_rewards_intermediate_not_served_penalty():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -33
+
+    rewards = BasicMultiObjectiveRewards()
+    rewards.intermediate_not_served_penalty = 33
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == [-33]
 
 
 def test_rewards_intermediate_intermediate_early_departure_penalty():
@@ -126,3 +141,15 @@ def test_rewards_departed_but_never_arrived():
     agent.position = (2, 2)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -99 - 15
+
+
+def test_multi_objective_rewards():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory_morl = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir / "morl", snapshot_interval=5,
+                                                          rewards=BasicMultiObjectiveRewards())
+        assert trajectory_morl.trains_rewards_dones_infos["reward"].map(lambda r: r[0]).sum() == -1786.0
+
+        trajectory_default_rewards = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir / "default", snapshot_interval=5,
+                                                                     rewards=DefaultRewards())
+        assert trajectory_default_rewards.trains_rewards_dones_infos["reward"].sum() == -1786.0
