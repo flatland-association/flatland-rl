@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Set
+from typing import Set, List
 from typing import Tuple
 
 import numpy as np
@@ -174,3 +174,9 @@ class RailGridTransitionMap(GridTransitionMap):
         new_position = get_new_position(position, new_direction)
         new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
         return new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action
+
+    def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
+        """
+        Returns directions in which the agent can move
+        """
+        return self.transitions.get_entry_directions(self.get_full_transitions(row, col))
