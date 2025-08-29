@@ -754,5 +754,4 @@ class FullEnvObservation(ObservationBuilder["RailEnv"]):
         pass
 
     def set_env(self, env):
-        print("set_env")
         self.env = env
