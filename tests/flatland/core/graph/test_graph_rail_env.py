@@ -26,8 +26,8 @@ def test_graph_transition_map_from_with_random_policy():
                 if sum(env.rail.get_transitions(((r, c), d))) == 0:
                     continue
                 for a in range(5):
-                    assert clone.rail.check_action_on_agent(RailEnvActions.from_value(a), (r, c), d) == env.rail.check_action_on_agent(
-                        RailEnvActions.from_value(a), (r, c), d)
+                    assert (clone.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d)) ==
+                            env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d)))
 
     # use Trajectory API for comparison
     with tempfile.TemporaryDirectory() as tmpdirname:

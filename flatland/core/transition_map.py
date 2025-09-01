@@ -111,6 +111,42 @@ class TransitionMap(Generic[NodeType]):
         """
         raise NotImplementedError()
 
+    def check_action_on_agent(self, action: "RailEnvActions", cell_id: NodeType):
+        """
+        Apply the action on the train regardless of locations of other trains.
+        Checks for valid cells to move and valid rail transitions.
+
+        Parameters
+        ----------
+        action : RailEnvActions
+            Action to execute
+        cell_id : NodeType
+            position and orientation
+
+        Returns
+        -------
+        new_cell_valid: bool
+            is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
+        new_position
+            New position after applying the action
+        new_direction
+            New direction after applying the action
+        transition_valid: bool
+            Whether the transition from old and direction is defined in the grid.
+            In other words, can the action be applied directly? False if
+            - MOVE_FORWARD/DO_NOTHING when entering symmetric switch
+            - MOVE_LEFT/MOVE_RIGHT corrected to MOVE_FORWARD in switches and dead-ends
+            However, transition_valid for dead-ends and turns either with the correct MOVE_RIGHT/MOVE_LEFT or MOVE_FORWARD/DO_NOTHING.
+        preprocessed_action: RailEnvActions
+            Corrected action if not transition_valid.
+
+            The preprocessed action has the following semantics:
+            - MOVE_LEFT/MOVE_RIGHT: turn left/right without acceleration
+            - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
+            - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
+        """
+        raise NotImplementedError()
+
 
 class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int]]):
     """
@@ -152,6 +188,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int]]):
     def __hash__(self):
         return self.uuid
 
+    # TODO return type hint
     @lru_cache(maxsize=1_000_000)
     def get_full_transitions(self, row, column):
         """

@@ -23,7 +23,6 @@ from typing import Tuple
 
 import networkx as nx
 
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs.rail_env import RailEnv
@@ -110,11 +109,10 @@ class GraphTransitionMap(TransitionMap[Tuple[Tuple[int, int], int]]):
         """
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
-    # TODO extract interface
-    def check_action_on_agent(self, action: RailEnvActions, position, direction: Grid4TransitionsEnum):
+    def check_action_on_agent(self, action: RailEnvActions, cell_id: Tuple[Tuple[int, int], int]):
+        position, direction = cell_id
         new_position = None
         new_direction, transition_valid, preprocessed_action = direction, True, action
-        new_cell_valid = True
 
         n = (*position, direction)
         succs = list(self.g.successors(n))
