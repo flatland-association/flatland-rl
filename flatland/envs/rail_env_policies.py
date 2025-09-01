@@ -35,7 +35,7 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
             return RailEnvActions.DO_NOTHING
 
         for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
-            new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action = env.rail.check_action_on_agent(
+            new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action = env.rail.check_action_on_agent(
                 RailEnvActions.from_value(a), (agent.position, agent.direction)
             )
             if new_cell_valid and transition_valid and (

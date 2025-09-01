@@ -15,7 +15,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_action import RailEnvNextAction
 
 
-class RailGridTransitionMap(GridTransitionMap):
+class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
 
     def __init__(self, width, height, transitions: Transitions = RailEnvTransitions(), grid: np.ndarray = None):
         super().__init__(width=width, height=height, transitions=transitions, grid=grid)
@@ -140,7 +140,7 @@ class RailGridTransitionMap(GridTransitionMap):
         new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
         new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
-        return new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action
+        return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action
 
     def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
         """
