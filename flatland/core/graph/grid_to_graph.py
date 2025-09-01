@@ -30,7 +30,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 
 
 # TODO implement set_transitions?
-class GraphTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], None, bool, Tuple[bool], RailEnvActions]):
+class GraphTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], None, bool, RailEnvActions]):
     """
     Flatland 3 Transition map represented by a directed graph.
 
