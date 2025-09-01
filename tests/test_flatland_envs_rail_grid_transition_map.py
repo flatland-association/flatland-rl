@@ -65,11 +65,11 @@ def test_check_action_on_agent(elem, direction, expected_left, expected_forward,
     rail = RailGridTransitionMap(1, 1, RailEnvTransitions())
     rail.set_transitions((0, 0), elem)
 
-    print(rail.get_transitions(((0, 0), direction)))
-    assert rail.check_action_on_agent(RailEnvActions.MOVE_LEFT, (0, 0), direction) == expected_left
-    assert rail.check_action_on_agent(RailEnvActions.MOVE_FORWARD, (0, 0), direction) == expected_forward
-    assert rail.check_action_on_agent(RailEnvActions.MOVE_RIGHT, (0, 0), direction) == expected_right
-    assert rail.check_action_on_agent(RailEnvActions.DO_NOTHING, (0, 0), direction) == expected_do_nothing
+    print(rail.get_transitions((((0, 0), direction))))
+    assert rail.check_action_on_agent(RailEnvActions.MOVE_LEFT, ((0, 0), direction)) == expected_left
+    assert rail.check_action_on_agent(RailEnvActions.MOVE_FORWARD, ((0, 0), direction)) == expected_forward
+    assert rail.check_action_on_agent(RailEnvActions.MOVE_RIGHT, ((0, 0), direction)) == expected_right
+    assert rail.check_action_on_agent(RailEnvActions.DO_NOTHING, ((0, 0), direction)) == expected_do_nothing
 
 
 def test_check_action_on_agent_horizontal_straight():
@@ -78,14 +78,15 @@ def test_check_action_on_agent_horizontal_straight():
     rail.set_transitions((1, 2), RailEnvTransitionsEnum.horizontal_straight)
     rail.set_transitions((0, 1), RailEnvTransitionsEnum.vertical_straight)
 
-    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(RailEnvActions.MOVE_FORWARD, (1, 1),
-                                                                                                  Grid4TransitionsEnum.EAST)
+    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(
+        RailEnvActions.MOVE_FORWARD, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.EAST
     assert new_position == (1, 2)
     assert transition_valid
 
-    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(RailEnvActions.MOVE_LEFT, (1, 1), Grid4TransitionsEnum.EAST)
+    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(
+        RailEnvActions.MOVE_LEFT, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.EAST
     assert new_position == (1, 2)
@@ -99,26 +100,29 @@ def test_check_action_on_agent_symmetric_switch_from_west():
     rail.set_transitions((1, 2), RailEnvTransitionsEnum.horizontal_straight)
     rail.set_transitions((2, 1), RailEnvTransitionsEnum.vertical_straight)
 
-    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(RailEnvActions.MOVE_RIGHT, (1, 1), Grid4TransitionsEnum.EAST)
+    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(
+        RailEnvActions.MOVE_RIGHT, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.SOUTH
     assert new_position == (2, 1)
     assert transition_valid
 
-    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(RailEnvActions.MOVE_FORWARD, (1, 1),
-                                                                                                  Grid4TransitionsEnum.EAST)
+    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(
+        RailEnvActions.MOVE_FORWARD, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.EAST
     assert new_position == (1, 2)
     assert not transition_valid
 
-    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(RailEnvActions.MOVE_LEFT, (1, 1), Grid4TransitionsEnum.EAST)
+    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(
+        RailEnvActions.MOVE_LEFT, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.NORTH
     assert new_position == (0, 1)
     assert transition_valid
 
-    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(RailEnvActions.DO_NOTHING, (1, 1), Grid4TransitionsEnum.EAST)
+    new_cell_valid, new_direction, new_position, transition_valid, _ = rail.check_action_on_agent(
+        RailEnvActions.DO_NOTHING, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.EAST
     assert new_position == (1, 2)

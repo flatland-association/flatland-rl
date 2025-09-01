@@ -463,9 +463,7 @@ class RailEnv(Environment):
             if current_position is None:  # Agent not added on map yet
                 current_position, current_direction = agent.initial_position, agent.initial_direction
             _, new_direction_independent, new_position_independent, _, preprocessed_action = self.rail.check_action_on_agent(
-                RailEnvActions.from_value(raw_action),
-                current_position,
-                current_direction
+                RailEnvActions.from_value(raw_action), (current_position, current_direction)
             )
 
             # get desired new_position and new_direction
@@ -691,7 +689,6 @@ class RailEnv(Environment):
         # print(f"_get_obs - num agents: {self.get_num_agents()} {list(range(self.get_num_agents()))}")
         self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
         return self.obs_dict
-
 
     def _exp_distirbution_synced(self, rate: float) -> float:
         """
