@@ -19,17 +19,18 @@ References:
 - Nygren, E., Eichenberger, Ch., Frejinger, E. Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
 """
 from collections import defaultdict
+from typing import Tuple
 
 import networkx as nx
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.transition_map import GridTransitionMap
+from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 
 
-class GraphTransitionMap:
+class GraphTransitionMap(TransitionMap[Tuple[Tuple[int, int], int]]):
     """
     Flatland 3 Transition map represented by a directed graph.
 
@@ -158,6 +159,6 @@ class GraphTransitionMap:
         new_cell_valid = (*new_position, new_direction) in self.g.nodes
         return new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action
 
-    # TODO extract interface and implement
-    def get_transitions(self, cell_id):
+    def get_transitions(self, cell_id: Tuple[Tuple[int, int], int]):
+        # TODO get neighbors instead
         return [True]

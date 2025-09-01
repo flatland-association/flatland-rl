@@ -5,7 +5,7 @@ import traceback
 import uuid
 import warnings
 from functools import lru_cache
-from typing import Tuple
+from typing import Tuple, Generic, TypeVar
 
 import numpy as np
 from importlib_resources import path
@@ -18,17 +18,17 @@ from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transitions import Transitions
 from flatland.utils.ordered_set import OrderedSet
 
+NodeType = TypeVar('NodeType')
 
-# TODO are these general classes or for grid4 only?
-class TransitionMap:
+
+class TransitionMap(Generic[NodeType]):
     """
     Base TransitionMap class.
 
-    Generic class that implements a collection of transitions over a set of
-    cells.
+    Generic class that implements a collection of transitions over a set of cells.
     """
 
-    def get_transitions(self, cell_id):
+    def get_transitions(self, cell_id: NodeType):
         """
         Return a tuple of transitions available in a cell specified by
         `cell_id` (e.g., a tuple of size of the maximum number of transitions,
@@ -37,9 +37,7 @@ class TransitionMap:
 
         Parameters
         ----------
-        row : int
-        column : int
-        orientation : int
+        cell_id
 
         Returns
         -------
@@ -49,7 +47,7 @@ class TransitionMap:
         """
         raise NotImplementedError()
 
-    def set_transitions(self, cell_id, new_transitions):
+    def set_transitions(self, cell_id: NodeType, new_transitions):
         """
         Replaces the available transitions in cell `cell_id` with the tuple
         `new_transitions'. `new_transitions` must have
@@ -66,7 +64,7 @@ class TransitionMap:
         """
         raise NotImplementedError()
 
-    def get_transition(self, cell_id, transition_index):
+    def get_transition(self, cell_id: NodeType, transition_index):
         """
         Return the status of whether an agent in cell `cell_id` can perform a
         movement along transition `transition_index` (e.g., the NESW direction
@@ -91,7 +89,7 @@ class TransitionMap:
         """
         raise NotImplementedError()
 
-    def set_transition(self, cell_id, transition_index, new_transition):
+    def set_transition(self, cell_id: NodeType, transition_index, new_transition):
         """
         Replaces the validity of transition to `transition_index` in cell
         `cell_id' with the new `new_transition`.
@@ -114,7 +112,7 @@ class TransitionMap:
         raise NotImplementedError()
 
 
-class GridTransitionMap(TransitionMap):
+class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int]]):
     """
     Implements a TransitionMap over a 2D grid.
     """
@@ -225,7 +223,7 @@ class GridTransitionMap(TransitionMap):
             self.grid[cell_id] = new_transitions
 
     @lru_cache(maxsize=4_000_000)
-    def get_transition(self, cell_id, transition_index):
+    def get_transition(self, cell_id: NodeType, transition_index):
         """
         Return the status of whether an agent in cell `cell_id` can perform a
         movement along transition `transition_index` (e.g., the NESW direction
