@@ -170,7 +170,7 @@ def test_energy_efficiency_smoothniss_in_morl():
 
     agent.speed_counter.step(0.6)
     agent.state_machine.set_state(TrainState.MALFUNCTION)
-    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), [0, -0, -0.36])
+    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), [0, 0, -0.36])
 
     agent.speed_counter.step(0.3)
     agent.state_machine.set_state(TrainState.MOVING)
