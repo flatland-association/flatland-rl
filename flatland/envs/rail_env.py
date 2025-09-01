@@ -27,7 +27,7 @@ from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGener
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
-from flatland.envs.rewards import Rewards
+from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
@@ -136,7 +136,7 @@ class RailEnv(Environment):
         braking_delta : float
             Determines how much speed is decreased by STOP_MOVING action.
             As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
-        rewards : Rewards
+        rewards : DefaultRewards
             The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
         effects_generator : Optional[EffectsGenerator["RailEnv"]]
             The effects generator that can modify the env at the env of env reset, at the beginning of the env step and at the end of the env step.
@@ -204,7 +204,7 @@ class RailEnv(Environment):
         self.level_free_positions: Set[Vector2D] = set()
 
         if rewards is None:
-            self.rewards = Rewards()
+            self.rewards = DefaultRewards()
         else:
             self.rewards = rewards
 
@@ -388,7 +388,7 @@ class RailEnv(Environment):
 
     def clear_rewards_dict(self):
         """ Reset the rewards dictionary """
-        self.rewards_dict = {i_agent: 0 for i_agent in range(len(self.agents))}
+        self.rewards_dict = {i_agent: self.rewards.empty() for i_agent in range(len(self.agents))}
 
     def get_info_dict(self):
         """
@@ -419,8 +419,9 @@ class RailEnv(Environment):
             ((self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps)):
 
             for i_agent, agent in enumerate(self.agents):
-                reward = self.rewards.end_of_episode_reward(agent, self.distance_map, self._elapsed_steps)
-                self.rewards_dict[i_agent] += reward
+                self.rewards_dict[i_agent] = self.rewards.cumulate(
+                    self.rewards_dict[i_agent], self.rewards.end_of_episode_reward(agent, self.distance_map, self._elapsed_steps)
+                )
 
                 self.dones[i_agent] = True
 
@@ -594,7 +595,15 @@ class RailEnv(Environment):
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
             ## Update rewards
-            self.rewards_dict[i_agent] += self.rewards.step_reward(agent, agent_transition_data, self.distance_map, self._elapsed_steps)
+            self.rewards_dict[i_agent] = self.rewards.cumulate(
+                self.rewards_dict[i_agent],
+                self.rewards.step_reward(
+                    agent=agent,
+                    agent_transition_data=agent_transition_data,
+                    distance_map=self.distance_map,
+                    elapsed_steps=self._elapsed_steps
+                )
+            )
 
             # update malfunction counter
             agent.malfunction_handler.update_counter()

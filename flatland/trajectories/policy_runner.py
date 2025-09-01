@@ -11,6 +11,7 @@ from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rewards import Rewards
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
 
@@ -35,6 +36,7 @@ class PolicyRunner:
         line_length=2,
         seed=42,
         obs_builder: Optional[ObservationBuilder] = None,
+        rewards: Rewards = None,
         snapshot_interval: int = 1,
         ep_id: str = None,
         callbacks: FlatlandCallbacks = None,
@@ -85,6 +87,8 @@ class PolicyRunner:
              Initiate random seed generators. Goes into `reset`.
         obs_builder: Optional[ObservationBuilder]
             Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
+        rewards : Rewards
+            Rewards function. Defaults to `DefaultRewards`.
         snapshot_interval : int
             interval to write pkl snapshots
         ep_id: str
@@ -167,7 +171,9 @@ class PolicyRunner:
                 speed_ratios=speed_ratios,
                 line_length=line_length,
                 seed=seed,
-                obs_builder_object=obs_builder)
+                obs_builder_object=obs_builder,
+                rewards=rewards,
+            )
 
         assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
 

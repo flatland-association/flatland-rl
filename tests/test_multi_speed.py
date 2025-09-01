@@ -6,7 +6,7 @@ from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_grid_transition_map
-from flatland.envs.rewards import Rewards
+from flatland.envs.rewards import DefaultRewards
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
@@ -221,7 +221,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   random_seed=1,
-                  rewards=Rewards()
+                  rewards=DefaultRewards()
                   )
     env.reset()
     CRASH_PENALTY = 5
