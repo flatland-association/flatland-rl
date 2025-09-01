@@ -4,9 +4,14 @@ derived GridTransitions class, which allows for the specification of
 possible transitions over a 2D grid.
 """
 from enum import IntEnum
+from typing import TypeVar, Generic, Tuple
+
+TransitionsDataType = TypeVar('TransitionsDataType')
+TransitionsOrientationType = TypeVar('TransitionsOrientationType')
+TransitionsValidityType = TypeVar('TransitionsValidityType')
 
 
-class Transitions:
+class Transitions(Generic[TransitionsDataType, TransitionsOrientationType, TransitionsValidityType]):
     """
     Base Transitions class.
 
@@ -18,7 +23,7 @@ class Transitions:
     def get_type(self):
         raise NotImplementedError()
 
-    def get_transitions(self, cell_transition, orientation):
+    def get_transitions(self, cell_transition: TransitionsDataType, orientation: TransitionsOrientationType) -> Tuple[TransitionsValidityType]:
         """
         Return a tuple of transitions available in a cell specified by
         `cell_transition' for an agent facing direction `orientation`
@@ -43,7 +48,7 @@ class Transitions:
         """
         raise NotImplementedError()
 
-    def set_transitions(self, cell_transition, orientation, new_transitions):
+    def set_transitions(self, cell_transition: TransitionsDataType, orientation: TransitionsOrientationType, new_transitions: Tuple[TransitionsValidityType]):
         """
         Return a `cell_transition` specification where the transitions
         available for an agent facing direction `orientation` are replaced
@@ -71,7 +76,7 @@ class Transitions:
         """
         raise NotImplementedError()
 
-    def get_transition(self, cell_transition, orientation, direction):
+    def get_transition(self, cell_transition: TransitionsDataType, orientation: TransitionsOrientationType, direction: TransitionsOrientationType):
         """
         Return the status of whether an agent oriented in directions
         `orientation' and inside a cell with transitions `cell_transition`
@@ -98,8 +103,8 @@ class Transitions:
         """
         raise NotImplementedError()
 
-    def set_transition(self, cell_transition, orientation, direction,
-                       new_transition):
+    def set_transition(self, cell_transition: TransitionsDataType, orientation: TransitionsOrientationType, direction: TransitionsOrientationType,
+                       new_transition: TransitionsValidityType):
         """
         Return a `cell_transition` specification where the status of
         whether an agent oriented in direction `orientation` and inside
