@@ -15,7 +15,7 @@ class Policy(ABC, Generic[T_env, T_obs, T_act]):
     Loosely corresponding to https://github.com/ray-project/ray/blob/master/rllib/core/rl_module/rl_module.py, but much simpler.
     """
 
-    def act(self, observation: List[T_obs], **kwargs) -> T_act:
+    def act(self, observation: T_obs, **kwargs) -> T_act:
         """
         Get action for agent. Called by `act_many()` for each agent.
 
