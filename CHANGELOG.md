@@ -5,6 +5,13 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[4.2.1]](https://github.com/flatland-association/flatland-rl/compare/v4.2.0...v4.2.1) 2025-09-03
+
+### Added
+
+* feature: Shortest Path Policy. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/268
+* feature: basic support for Multi-Objective Reinforcement Learning (MORL). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/269
+
 ## [[4.2.0]](https://github.com/flatland-association/flatland-rl/compare/v4.1.4...v4.2.0) 2025-08-29
 
 ### Added
