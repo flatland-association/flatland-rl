@@ -163,7 +163,9 @@ class SparseLineGen(BaseLineGen):
             agent_speeds = speed_initialization_helper(num_agents, self.speed_ratio_map, np_random=np_random)
         else:
             agent_speeds = [1.0] * len(agent_positions)
-
+        # N.B. Line generator currently has no routing flexibility!
+        agent_positions = [[[p] for p in pa] for pa in agent_positions]
+        agents_directions = [[[d] for d in da] for da in agents_directions]
         return Line(agent_positions=agent_positions, agent_directions=agents_directions, agent_targets=agent_targets, agent_speeds=agent_speeds)
 
 
@@ -195,8 +197,9 @@ def line_from_file(filename: Union[str, Path] = None, load_from_package=None, en
         agents = _env_dict["agents"]
 
         # setup with loaded data
-        agents_position = [[a.initial_position] for a in agents]
-        agents_direction = [[a.initial_direction] for a in agents]
+        # N.B. Line generator currently has no routing flexibility!
+        agents_position = [[[a.initial_position]] for a in agents]
+        agents_direction = [[[a.initial_direction]] for a in agents]
         agents_target = [a.target for a in agents]
         agents_speed = [a.speed_counter.speed for a in agents]
 

@@ -33,7 +33,7 @@ class Agent(NamedTuple):
     action_saver: ActionSaver
     state_machine: TrainStateMachine
     malfunction_handler: MalfunctionHandler
-    waypoints: List[Waypoint] = None
+    waypoints: List[List[Waypoint]] = None
     waypoints_earliest_departure: List[int] = None
     waypoints_latest_arrival: List[int] = None
 
@@ -78,11 +78,11 @@ class EnvAgent:
     earliest_departure = attrib(default=0, type=int)
     latest_arrival = attrib(default=sys.maxsize, type=int)
 
-    # including initial and target
-    waypoints = attrib(type=List[Waypoint], default=Factory(lambda: []))
-    # None at target
+    # including initial and target, routing flexibility
+    waypoints = attrib(type=List[List[Waypoint]], default=Factory(lambda: [[]]))
+    # None at target, same for all in routing flexibility
     waypoints_earliest_departure = attrib(type=List[int], default=Factory(lambda: []))
-    # None at initial
+    # None at initial, same for all in routing flexibility
     waypoints_latest_arrival = attrib(type=List[int], default=Factory(lambda: []))
 
     handle = attrib(default=None)
@@ -177,12 +177,15 @@ class EnvAgent:
         for i_agent in range(num_agents):
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
 
-            agent = EnvAgent(initial_position=line.agent_positions[i_agent][0],
-                             initial_direction=line.agent_directions[i_agent][0],
-                             direction=line.agent_directions[i_agent][0],
+            waypoints: List[List[Waypoint]] = []
+            for flex_pos, flex_dir in zip(line.agent_positions[i_agent], line.agent_directions[i_agent]):
+                waypoints.append([Waypoint((r, c), d) for ((r, c), d) in zip(flex_pos, flex_dir)])
+            waypoints.append([Waypoint(line.agent_targets[i_agent], None)])
+            agent = EnvAgent(initial_position=line.agent_positions[i_agent][0][0],
+                             initial_direction=line.agent_directions[i_agent][0][0],
+                             direction=line.agent_directions[i_agent][0][0],
                              target=line.agent_targets[i_agent],
-                             waypoints=[Waypoint((r, c), d) for ((r, c), d) in zip(line.agent_positions[i_agent], line.agent_directions[i_agent])] + [
-                                 Waypoint(line.agent_targets[i_agent], None)],
+                             waypoints=waypoints,
                              moving=False,
                              earliest_departure=None,
                              latest_arrival=None,

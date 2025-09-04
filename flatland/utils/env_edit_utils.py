@@ -19,8 +19,8 @@ class SchedGen2(BaseLineGen):
 
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = None,
                  np_random: RandomState = None) -> Line:
-        return Line(agent_positions=[[self.rcStart]] * num_agents,
-                    agent_directions=[self.iDir] * num_agents,
+        return Line(agent_positions=[[[self.rcStart]]] * num_agents,
+                    agent_directions=[[self.iDir]] * num_agents,
                     agent_targets=[self.rcEnd] * num_agents,
                     agent_speeds=[1.0] * num_agents)
 
@@ -34,8 +34,8 @@ class SchedGen3(BaseLineGen):
 
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = None,
                  np_random: RandomState = None) -> Line:
-        return Line(agent_positions=[[self.lrcStarts[i % len(self.lrcStarts)]] for i in range(num_agents)],
-                    agent_directions=[[self.liDirs[i % len(self.liDirs)]] for i in range(num_agents)],
+        return Line(agent_positions=[[[self.lrcStarts[i % len(self.lrcStarts)]]] for i in range(num_agents)],
+                    agent_directions=[[[self.liDirs[i % len(self.liDirs)]]] for i in range(num_agents)],
                     agent_targets=[self.lrcTargs[i % len(self.lrcTargs)] for i in range(num_agents)],
                     agent_speeds=[1.0] * num_agents)
 

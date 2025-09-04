@@ -6,8 +6,12 @@ import numpy as np
 Vector2D: Type = Tuple[float, float]
 IntVector2D: Type = Tuple[int, int]
 
+# one cell for each agent or one position for each cell in a path
 IntVector2DArray: Type = List[IntVector2D]
+# one cell for each agent and each position for each cell in a path
 IntVector2DArrayArray: Type = List[List[IntVector2D]]
+# n cells (routing flexibility) for each agent and each position for each cell in a path
+IntVector2DArrayArrayArray: Type = List[List[List[IntVector2D]]]
 
 Vector2DArray: Type = List[Vector2D]
 Vector2DArrayArray: Type = List[List[Vector2D]]

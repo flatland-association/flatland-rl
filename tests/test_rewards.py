@@ -83,7 +83,7 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=11,
-                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
                      waypoints_earliest_departure=[3, 7, None],
                      waypoints_latest_arrival=[None, 11, 11],
                      arrival_time=10)
@@ -108,7 +108,7 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
                      waypoints_earliest_departure=[3, 5, None],
                      waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
@@ -133,7 +133,7 @@ def test_rewards_departed_but_never_arrived():
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
                      waypoints_earliest_departure=[3, 5, None],
                      waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)

@@ -1,12 +1,12 @@
 from typing import List, NamedTuple
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2DArrayArray
+from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2DArrayArrayArray
 
 Line = NamedTuple('Line', [
-    # positions and directions without target (which has no direction)
-    ('agent_positions', IntVector2DArrayArray),
-    ('agent_directions', List[List[Grid4TransitionsEnum]]),
+    # positions and directions with flexibility, apart from target (which has no direction) and initial (which has exactly one position and one direction)
+    ('agent_positions', IntVector2DArrayArrayArray),
+    ('agent_directions', List[List[List[Grid4TransitionsEnum]]]),
     ('agent_targets', IntVector2DArray),
     ('agent_speeds', List[float]),
 ])
