@@ -101,7 +101,7 @@ class TrajectoryEvaluator:
         if self.callbacks is not None:
             self.callbacks.on_episode_end(env=env, data_dir=self.trajectory.outputs_dir)
 
-        if start_step is None and end_step is None:
+        if start_step == 0 and done:
             trains_arrived_episode = self.trajectory.trains_arrived_lookup()
             expected_success_rate = trains_arrived_episode['success_rate']
             actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents

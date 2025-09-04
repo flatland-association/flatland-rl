@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from flatland.evaluators.trajectory_grid_evaluator import evaluate_trajectories_from_metadata
 from flatland.trajectories.policy_grid_runner import generate_trajectories_from_metadata
 from flatland.trajectories.trajectories import TRAINS_ARRIVED_FNAME
 
@@ -29,3 +30,10 @@ def test_gen_trajectories_from_metadata():
                 df = pd.read_csv(tmpdir / v["test_id"] / v["env_id"] / TRAINS_ARRIVED_FNAME, sep="\t")
                 assert df["success_rate"].to_list() == [sr]
                 assert df["env_time"].to_list() == [t]
+
+            with pytest.raises(SystemExit) as e_info:
+                evaluate_trajectories_from_metadata([
+                    "--metadata-csv", metadata_csv_path,
+                    "--data-dir", tmpdir,
+                ])
+            assert e_info.value.code == 0
