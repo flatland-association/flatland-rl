@@ -143,11 +143,14 @@ class DefaultRewards(Rewards[float]):
             if agent.state.is_on_map_state():
                 reward = agent.get_current_delay(elapsed_steps, distance_map)
 
-        for et, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
-            if et not in self.arrivals[agent.handle]:
+        for ets, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
+            agent_arrivals = set(self.arrivals[agent.handle])
+            ets__intersection = set(ets).intersection(agent_arrivals)
+            if len(ets__intersection) == 0:
                 # stop not served
                 reward += -1 * self.intermediate_not_served_penalty
             else:
+                et = list(ets__intersection)[0]
                 # late arrival
                 reward += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][et], 0)
                 # early departure

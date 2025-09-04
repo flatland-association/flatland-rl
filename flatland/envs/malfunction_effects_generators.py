@@ -103,7 +103,7 @@ def condition_stopped_intermediate_and_range(start_step_incl: int, end_step_excl
     """
 
     def _condition(agent: "EnvAgent", elapsed_steps: int):
-        return ((agent.position in {w.position for w in agent.waypoints[1:-1]})
+        return ((agent.position in {w.position for ws in agent.waypoints[1:-1] for w in ws})
                 and agent.state_machine.state == TrainState.STOPPED and elapsed_steps >= start_step_incl and elapsed_steps < end_step_excl)
 
     return _condition

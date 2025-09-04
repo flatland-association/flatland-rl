@@ -314,6 +314,9 @@ def test_timetable_generator_intermediate():
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
     ]
     for a in env_agents:
+        # routing flexibility
+        a.waypoints = [[wp] for wp in a.waypoints]
+    for a in env_agents:
         print(
             f"EnvAgent(handle={a.handle}, initial_position={a.initial_position}, initial_direction={a.initial_direction}, target={a.target}, direction={a.direction}, waypoints={a.waypoints}, waypoints_latest_arrival=None, waypoints_earliest_departure=None),")
     agents_hints = {
