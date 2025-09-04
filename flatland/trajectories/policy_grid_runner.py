@@ -1,10 +1,44 @@
 from pathlib import Path
 
+import click
 import pandas as pd
 
 from flatland.trajectories.policy_runner import generate_trajectory_from_policy
 
 
+@click.command()
+@click.option('--metadata-csv',
+              type=click.Path(exists=True, path_type=Path, dir_okay=False),
+              help="Path to metadata.csv",
+              required=True
+              )
+@click.option('--data-dir',
+              type=click.Path(exists=True, path_type=Path, file_okay=False),
+              help="Path to folder containing Flatland episode",
+              required=True
+              )
+@click.option('--policy-pkg',
+              type=str,
+              help="Policy's fully qualified package name.",
+              required=True
+              )
+@click.option('--policy-cls',
+              type=str,
+              help="Policy class name.",
+              required=True
+              )
+@click.option('--obs-builder-pkg',
+              type=str,
+              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              required=False,
+              default=None
+              )
+@click.option('--obs-builder-cls',
+              type=str,
+              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              required=False,
+              default=None
+              )
 def generate_trajectories_from_metadata(
     metadata_csv: Path,
     data_dir: Path,
@@ -44,11 +78,11 @@ def generate_trajectories_from_metadata(
 if __name__ == '__main__':
     metadata_csv = Path("./episodes/trajectories/malfunction_deadlock_avoidance_heuristics/metadata.csv").resolve()
     data_dir = Path("./episodes/trajectories/malfunction_deadlock_avoidance_heuristics").resolve()
-    generate_trajectories_from_metadata(
-        metadata_csv=metadata_csv,
-        data_dir=data_dir,
-        policy_pkg="flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy",
-        policy_cls="DeadLockAvoidancePolicy",
-        obs_builder_pkg="flatland_baselines.deadlock_avoidance_heuristic.observation.full_env_observation",
-        obs_builder_cls="FullEnvObservation"
-    )
+    generate_trajectories_from_metadata([
+        "--metadata-csv", metadata_csv,
+        "--data-dir", data_dir,
+        "--policy-pkg", "flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy",
+        "--policy-cls", "DeadLockAvoidancePolicy",
+        "--obs-builder-pkg", "flatland_baselines.deadlock_avoidance_heuristic.observation.full_env_observation",
+        "--obs-builder-cls", "FullEnvObservation"
+    ])
