@@ -61,6 +61,9 @@ class Rewards(Generic[RewardType]):
         raise NotImplementedError()
 
 
+def defaultdict_set():
+    return defaultdict(lambda: set())
+
 class DefaultRewards(Rewards[float]):
     """
     Reward Function.
@@ -92,7 +95,7 @@ class DefaultRewards(Rewards[float]):
         cancellation_time_buffer : float
             Cancellation time buffer $\pi \geq 0$. Defaults to 0.
         intermediate_not_served_penalty : float
-           Intermediate stop not served penalty $\mu \geq 0$. Defaults to 1.
+           Intermediate stop not served penalty $\mu \geq 0$. Applied if one of the intermediates is not served or only run through without stopping. Defaults to 1.
         intermediate_late_arrival_penalty_factor : float
             Intermediate late arrival penalty factor $\alpha \geq 0$. Defaults to 0.2.
         intermediate_early_departure_penalty_factor : float
@@ -115,9 +118,12 @@ class DefaultRewards(Rewards[float]):
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals = defaultdict(defaultdict)
         self.departures = defaultdict(defaultdict)
+        self.states = defaultdict(defaultdict_set)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> float:
         reward = 0
+        if agent.position is not None:
+            self.states[agent.handle][agent.position].add(agent.state)
         if agent.position not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][agent.position] = elapsed_steps
             self.departures[agent.handle][agent.old_position] = elapsed_steps
@@ -146,8 +152,8 @@ class DefaultRewards(Rewards[float]):
         for ets, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
             agent_arrivals = set(self.arrivals[agent.handle])
             ets__intersection = set(ets).intersection(agent_arrivals)
-            if len(ets__intersection) == 0:
-                # stop not served
+            if len(ets__intersection) == 0 or TrainState.STOPPED not in self.states[agent.handle][list(ets__intersection)[0]]:
+                # stop not served or served but not stopped
                 reward += -1 * self.intermediate_not_served_penalty
             else:
                 et = list(ets__intersection)[0]
