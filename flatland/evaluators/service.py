@@ -683,7 +683,9 @@ class FlatlandRemoteEvaluationService:
             _command_response['payload']['message'] = \
                 "Client-Server Version Mismatch => " + \
                 "[ Client Version : {} ] ".format(client_version) + \
-                "[ Server Version : {} ] ".format(service_version)
+                "[ Server Version : {} ] ".format(service_version) + \
+                "[ Supported Client Versions : {} ] ".format(SUPPORTED_CLIENT_VERSIONS) + \
+                "[ Supported Client Version Range : {} ] ".format(SUPPORTED_CLIENT_VERSION_RANGE)
             self.send_response(_command_response, command)
             raise Exception(_command_response['payload']['message'])
 
