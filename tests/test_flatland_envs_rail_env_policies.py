@@ -39,5 +39,5 @@ def test_shortest_path_policy_with_intermediate_targets():
             positions = set(trajectory.trains_positions[trajectory.trains_positions["agent_id"] == agent.handle]["position"].tolist())
             assert (agent.initial_position, agent.direction) in positions
             # N.B. the agent is immediately removed when reaching target (multiple agents can reach the same target in the same time step!)
-            for wp in agent.waypoints[:1]:
-                assert (wp.position, wp.direction) in positions
+            for wps in agent.waypoints[:1]:
+                assert (wps[0].position, wps[0].direction) in positions

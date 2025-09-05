@@ -74,10 +74,10 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
         for agent in env.agents:
             if agent.position is None:
                 actions[agent.handle] = RailEnvActions.MOVE_FORWARD
-            elif agent.position == agent.waypoints[1].position:
+            elif agent.position == agent.waypoints[1][0].position:
                 actions[agent.handle] = RailEnvActions.STOP_MOVING
             else:
-                p = get_k_shortest_paths(env, agent.position, agent.direction, agent.waypoints[1].position)
+                p = get_k_shortest_paths(env, agent.position, agent.direction, agent.waypoints[1][0].position)
                 shortest_path = p[0]
                 for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
                     new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action = env.rail.check_action_on_agent(
@@ -90,7 +90,7 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
                         break
         env.step(actions)
 
-    intermediate_waypoints = {w.position for agent in env.agents for w in agent.waypoints[1:-1]}
+    intermediate_waypoints = {w.position for agent in env.agents for ws in agent.waypoints[1:-1] for w in ws}
     in_malfunction = dict()
     for agent in env.agents:
         if agent.malfunction_handler.in_malfunction:
@@ -125,7 +125,7 @@ def test_make_multi_malfunction_condition():
     assert not cond(env.agents[0], 100)
 
     env.agents[0].state_machine.set_state(TrainState.STOPPED)
-    env.agents[0].position = env.agents[0].waypoints[1].position
+    env.agents[0].position = env.agents[0].waypoints[1][0].position
     assert cond(env.agents[0], 55)
     assert not cond(env.agents[0], 33)
     assert not cond(env.agents[0], 100)

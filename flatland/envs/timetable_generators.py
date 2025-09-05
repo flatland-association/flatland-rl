@@ -66,11 +66,12 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
 
                 fake_agents.append(EnvAgent(
                     handle=i * num_agents + a.handle,
-                    initial_position=waypoints[i].position,
-                    initial_direction=waypoints[i].direction,
-                    position=waypoints[i].position,
-                    direction=waypoints[i].direction,
-                    target=waypoints[i + 1].position,
+                    initial_position=waypoints[i][0].position,
+                    initial_direction=waypoints[i][0].direction,
+                    # N.B. routing flexibility is ignored by this timetable generator
+                    position=waypoints[i][0].position,
+                    direction=waypoints[i][0].direction,
+                    target=waypoints[i + 1][0].position,
                 ))
         distance_map_with_intermediates = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
         distance_map_with_intermediates.reset(fake_agents, distance_map.rail)

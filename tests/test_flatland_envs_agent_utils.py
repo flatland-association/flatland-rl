@@ -86,10 +86,11 @@ def test_travel_time_on_shortest_paths():
 
 
 def test_from_line():
-    line = Line(agent_positions=[[(11, 40)], [(38, 8)], [(17, 5)], [(41, 22)], [(11, 40)], [(38, 8)], [(38, 8)], [(31, 26)], [(41, 22)], [(9, 27)]],
-                agent_directions=[[Grid4TransitionsEnum(3)], [Grid4TransitionsEnum(1)], [Grid4TransitionsEnum(3)], [Grid4TransitionsEnum(3)],
-                                  [Grid4TransitionsEnum(1)], [Grid4TransitionsEnum(3)], [Grid4TransitionsEnum(1)], [Grid4TransitionsEnum(0)],
-                                  [Grid4TransitionsEnum(1)], [Grid4TransitionsEnum(3)]],
+    line = Line(
+        agent_positions=[[[(11, 40)]], [[(38, 8)]], [[(17, 5)]], [[(41, 22)]], [[(11, 40)]], [[(38, 8)]], [[(38, 8)]], [[(31, 26)]], [[(41, 22)]], [[(9, 27)]]],
+        agent_directions=[[[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(3)]],
+                          [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(0)]],
+                          [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]]],
                 agent_targets=[(39, 8), (10, 40), (42, 22), (18, 5), (39, 8), (12, 40), (31, 27), (39, 8), (8, 27), (44, 22)],
                 agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     env_agents = EnvAgent.from_line(line)
