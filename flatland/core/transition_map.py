@@ -5,6 +5,7 @@ import traceback
 import uuid
 import warnings
 from functools import lru_cache
+from typing import Tuple, Generic, TypeVar, Any
 
 import numpy as np
 from importlib_resources import path
@@ -17,17 +18,21 @@ from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transitions import Transitions
 from flatland.utils.ordered_set import OrderedSet
 
+NodeType = TypeVar('NodeType')
+UnderlyingTransitionsType = TypeVar('UnderlyingTransitionsType')
+UnderlyingTransitionsValidityType = TypeVar('UnderlyingTransitionsValidityType')
+ActionsType = TypeVar('ActionsType')
 
-# TODO are these general classes or for grid4 only?
-class TransitionMap:
+
+# TODO implement set_transition
+class TransitionMap(Generic[NodeType, UnderlyingTransitionsType, UnderlyingTransitionsValidityType, ActionsType]):
     """
     Base TransitionMap class.
 
-    Generic class that implements a collection of transitions over a set of
-    cells.
+    Generic class that implements a collection of transitions over a set of cells.
     """
 
-    def get_transitions(self, row, column, orientation):
+    def get_transitions(self, cell_id: NodeType) -> Tuple[UnderlyingTransitionsValidityType]:
         """
         Return a tuple of transitions available in a cell specified by
         `cell_id` (e.g., a tuple of size of the maximum number of transitions,
@@ -36,9 +41,7 @@ class TransitionMap:
 
         Parameters
         ----------
-        row : int
-        column : int
-        orientation : int
+        cell_id
 
         Returns
         -------
@@ -48,7 +51,7 @@ class TransitionMap:
         """
         raise NotImplementedError()
 
-    def set_transitions(self, cell_id, new_transitions):
+    def set_transitions(self, cell_id: NodeType, new_transitions: UnderlyingTransitionsType):
         """
         Replaces the available transitions in cell `cell_id` with the tuple
         `new_transitions'. `new_transitions` must have
@@ -56,16 +59,16 @@ class TransitionMap:
 
         Parameters
         ----------
-        cell_id : [cell identifier]
+        cell_id : [NodeType]
             The cell_id object depends on the specific implementation.
             It generally is an int (e.g., an index) or a tuple of indices.
-        new_transitions : tuple
+        new_transitions : [TransitionsType]
             Tuple of new transitions validitiy for the cell.
 
         """
         raise NotImplementedError()
 
-    def get_transition(self, cell_id, transition_index):
+    def get_transition(self, cell_id: NodeType, transition_index: int) -> UnderlyingTransitionsValidityType:
         """
         Return the status of whether an agent in cell `cell_id` can perform a
         movement along transition `transition_index` (e.g., the NESW direction
@@ -90,7 +93,7 @@ class TransitionMap:
         """
         raise NotImplementedError()
 
-    def set_transition(self, cell_id, transition_index, new_transition):
+    def set_transition(self, cell_id: NodeType, transition_index, new_transition):
         """
         Replaces the validity of transition to `transition_index` in cell
         `cell_id' with the new `new_transition`.
@@ -112,8 +115,44 @@ class TransitionMap:
         """
         raise NotImplementedError()
 
+    def check_action_on_agent(self, action: ActionsType, cell_id: NodeType) -> Tuple[bool, NodeType, bool, ActionsType]:
+        """
+        Apply the action on the train regardless of locations of other trains.
+        Checks for valid cells to move and valid rail transitions.
 
-class GridTransitionMap(TransitionMap):
+        Parameters
+        ----------
+        action : RailEnvActions
+            Action to execute
+        cell_id : NodeType
+            position and orientation
+
+        Returns
+        -------
+        new_cell_valid: bool
+            is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
+        new_position
+            New position after applying the action
+        new_direction
+            New direction after applying the action
+        transition_valid: bool
+            Whether the transition from old and directidon is defined in the grid.
+            In other words, can the action be applied directly? False if
+            - MOVE_FORWARD/DO_NOTHING when entering symmetric switch
+            - MOVE_LEFT/MOVE_RIGHT corrected to MOVE_FORWARD in switches and dead-ends
+            However, transition_valid for dead-ends and turns either with the correct MOVE_RIGHT/MOVE_LEFT or MOVE_FORWARD/DO_NOTHING.
+        preprocessed_action: RailEnvActions
+            Corrected action if not transition_valid.
+
+            The preprocessed action has the following semantics:
+            - MOVE_LEFT/MOVE_RIGHT: turn left/right without acceleration
+            - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
+            - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
+        """
+        raise NotImplementedError()
+
+
+class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transitions, Tuple[bool], Any], Generic[ActionsType]):
     """
     Implements a TransitionMap over a 2D grid.
     """
@@ -126,7 +165,7 @@ class GridTransitionMap(TransitionMap):
             Width of the grid.
         height : int
             Height of the grid.
-        transitions : Transitions object
+        transitions : Transitions
             The Transitions object to use to encode/decode transitions over the
             grid.
 
@@ -153,8 +192,9 @@ class GridTransitionMap(TransitionMap):
     def __hash__(self):
         return self.uuid
 
+    # TODO return type hint
     @lru_cache(maxsize=1_000_000)
-    def get_full_transitions(self, row, column):
+    def get_full_transitions(self, row, column) -> UnderlyingTransitionsType:
         """
         Returns the full transitions for the cell at (row, column) in the format transition_map's transitions.
 
@@ -173,7 +213,7 @@ class GridTransitionMap(TransitionMap):
         return self.grid[(row, column)]
 
     @lru_cache(maxsize=4_000_000)
-    def get_transitions(self, row: int, column: int, orientation: int):
+    def get_transitions(self, cell_id: Tuple[Tuple[int, int], int]):
         """
         Return a tuple of transitions available in a cell specified by
         `cell_id` (e.g., a tuple of size of the maximum number of transitions,
@@ -183,7 +223,7 @@ class GridTransitionMap(TransitionMap):
         Parameters
         ----------
         cell_id : tuple
-            The cell_id indices a cell as (column, row, orientation),
+            The cell_id indices a cell as ((column, row), orientation),
             where orientation is the direction an agent is facing within a cell.
             Alternatively, it can be accessed as (column, row) to return the
             full cell content.
@@ -194,7 +234,7 @@ class GridTransitionMap(TransitionMap):
             List of the validity of transitions in the cell as given by the maps transitions.
 
         """
-        return self.transitions.get_transitions(self.grid[(row, column)], orientation)
+        return self.transitions.get_transitions(self.grid[cell_id[0]], cell_id[1])
 
     def set_transitions(self, cell_id: IntVector2D, new_transitions: Transitions):
         """
@@ -224,31 +264,7 @@ class GridTransitionMap(TransitionMap):
             self.grid[cell_id] = new_transitions
 
     @lru_cache(maxsize=4_000_000)
-    def get_transition(self, cell_id, transition_index):
-        """
-        Return the status of whether an agent in cell `cell_id` can perform a
-        movement along transition `transition_index` (e.g., the NESW direction
-        of movement, for agents on a grid).
-
-        Parameters
-        ----------
-        cell_id : tuple
-            The cell_id indices a cell as (column, row, orientation),
-            where orientation is the direction an agent is facing within a cell.
-        transition_index : int
-            Index of the transition to probe, as index in the tuple returned by
-            get_transitions(). e.g., the NESW direction of movement, for agents
-            on a grid.
-
-        Returns
-        -------
-        int or float (depending on Transitions used in the )
-            Validity of the requested transition (e.g.,
-            0/1 allowed/not allowed, a probability in [0,1], etc...)
-
-        """
-        # assert len(cell_id) == 3, \
-        #    'GridTransitionMap.get_transition() ERROR: cell_id tuple must have length 2 or 3.'
+    def get_transition(self, cell_id: NodeType, transition_index):
         return self.transitions.get_transition(self.grid[cell_id[0:2]], cell_id[2], transition_index)
 
     def set_transition(self, cell_id, transition_index, new_transition, remove_deadends=False):
@@ -416,7 +432,7 @@ class GridTransitionMap(TransitionMap):
             if node not in visited:
                 visited.add(node)
 
-                moves = self.get_transitions(node_position[0], node_position[1], node_direction)
+                moves = self.get_transitions((node_position, node_direction))
                 for move_index in range(4):
                     if moves[move_index]:
                         stack.append((get_new_position(node_position, move_index),
@@ -468,7 +484,7 @@ class GridTransitionMap(TransitionMap):
 
             # Get the transitions out of gPos2, using iDirOut as the inbound direction
             # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
-            t4Trans2 = self.get_transitions(*gPos2, iDirOut)
+            t4Trans2 = self.get_transitions(((gPos2[0], gPos2[1]), iDirOut))
             if any(t4Trans2):
                 continue
             else:
@@ -542,7 +558,7 @@ class GridTransitionMap(TransitionMap):
 
             # Get the transitions out of gPos2, using iDirOut as the inbound direction
             # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
-            t4Trans2 = self.get_transitions(*gPos2, iDirOut)
+            t4Trans2 = self.get_transitions((gPos2, iDirOut))
             if any(t4Trans2):
                 continue
             else:
@@ -600,6 +616,9 @@ class GridTransitionMap(TransitionMap):
 
         # is transition is valid?
         return self.transitions.is_valid(new_trans)
+
+    def check_action_on_agent(self, action: ActionsType, cell_id: NodeType) -> Tuple[bool, NodeType, bool, ActionsType]:
+        raise NotImplementedError()
 
 
 def mirror(dir):

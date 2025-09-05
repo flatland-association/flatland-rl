@@ -1,6 +1,6 @@
 from enum import IntEnum
 from functools import lru_cache
-from typing import Type, List
+from typing import Type, List, Tuple
 
 import numpy as np
 
@@ -78,7 +78,7 @@ class Grid4TransitionsEnum(IntEnum):
                 3: 'W'}[int]
 
 
-class Grid4Transitions(Transitions):
+class Grid4Transitions(Transitions[np.uint16, int, bool]):
     """
     Grid4Transitions class derived from Transitions.
 
@@ -124,7 +124,7 @@ class Grid4Transitions(Transitions):
     def get_type(self):
         return np.uint16
 
-    def get_transitions(self, cell_transition, orientation):
+    def get_transitions(self, cell_transition, orientation) -> Tuple[int, int, int, int]:
         """
         Get the 4 possible transitions ((N,E,S,W), 4 elements tuple
         if no diagonal transitions allowed) available for an agent oriented

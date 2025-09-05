@@ -62,8 +62,8 @@ class DummyPredictorForRailEnv(PredictionBuilder):
                     prediction[index] = [index, *agent.target, agent.direction, RailEnvActions.STOP_MOVING.value]
                     continue
                 for action in action_priorities:
-                    new_cell_is_valid, new_direction, new_position, transition_is_valid, _ = \
-                        self.env.rail.check_action_on_agent(action, agent.position, agent.direction)
+                    new_cell_is_valid, (new_position, new_direction), transition_is_valid, _ = \
+                        self.env.rail.check_action_on_agent(action, (agent.position, agent.direction))
                     if all([new_cell_is_valid, transition_is_valid]):
                         # move and change direction to face the new_direction that was
                         # performed

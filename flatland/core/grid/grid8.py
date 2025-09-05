@@ -16,7 +16,7 @@ class Grid8TransitionsEnum(IntEnum):
     NORTH_WEST = 7
 
 
-class Grid8Transitions(Transitions):
+class Grid8Transitions(Transitions[np.uint64, int, bool]):
     """
     Grid8Transitions class derived from Transitions.
 
