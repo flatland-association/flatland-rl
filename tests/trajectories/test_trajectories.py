@@ -1,4 +1,3 @@
-import importlib
 import os
 import re
 import tempfile
@@ -14,10 +13,10 @@ from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
-from flatland.trajectories.policy_grid_runner import generate_trajectories_from_metadata
 from flatland.trajectories.policy_runner import generate_trajectory_from_policy, PolicyRunner
 from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR
 from flatland.utils.seeding import np_random
+from flatland.utils.seeding import random_state_to_hashablestate
 
 
 class RandomPolicy(Policy):
@@ -125,31 +124,6 @@ def test_cli_from_submission():
         with pytest.raises(SystemExit) as e_info:
             evaluate_trajectory(["--data-dir", str(data_dir), "--ep-id", ep_id])
         assert e_info.value.code == 0
-
-
-@pytest.mark.skip  # TODO https://github.com/flatland-association/flatland-rl/issues/101 import heuristic baseline as example
-def test_gen_trajectories_from_metadata():
-    metadata_csv_path = importlib.resources.files("env_data.tests.service_test").joinpath("metadata.csv")
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        with importlib.resources.as_file(metadata_csv_path) as metadata_csv:
-            tmpdir = Path(tmpdirname)
-            generate_trajectories_from_metadata(
-                metadata_csv=metadata_csv,
-                data_dir=tmpdir,
-                # TODO https://github.com/flatland-association/flatland-rl/issues/101 import heuristic baseline as example
-                policy_pkg="src.policy.deadlock_avoidance_policy",
-                policy_cls="DeadLockAvoidancePolicy",
-                obs_builder_pkg="src.observation.full_state_observation",
-                obs_builder_cls="FullStateObservationBuilder"
-            )
-            metadata = pd.read_csv(metadata_csv)
-            for sr, t, (k, v) in zip([0.8571428571428571, 1.0, 0.8571428571428571, 1.0], [391, 165, 391, 165], metadata.iterrows()):
-                df = pd.read_csv(tmpdir / v["test_id"] / v["env_id"] / TRAINS_ARRIVED_FNAME, sep="\t")
-                assert df["success_rate"].to_list() == [sr]
-                assert df["env_time"].to_list() == [t]
-
-
-from flatland.utils.seeding import random_state_to_hashablestate
 
 
 @pytest.mark.parametrize(

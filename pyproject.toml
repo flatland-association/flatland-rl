@@ -96,6 +96,7 @@ flatland-demo = "flatland.cli:demo"
 evaluator = "flatland.cli:evaluator"
 flatland-evaluator = "flatland.cli:evaluator"
 flatland-trajectory-generate-from-policy = "flatland.trajectories.policy_runner:generate_trajectory_from_policy"
+flatland-trajectory-generate-from-metadata = "flatland.trajectories.policy_grid_runner:generate_trajectories_from_metadata"
 flatland-trajectory-evaluate = "flatland.evaluators.trajectory_evaluator:evaluate_trajectory"
 
 [tool.setuptools.packages]
