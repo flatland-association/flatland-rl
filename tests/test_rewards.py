@@ -7,7 +7,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
-from flatland.envs.rewards import DefaultRewards, BasicMultiObjectiveRewards
+from flatland.envs.rewards import DefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
@@ -189,3 +189,99 @@ def test_multi_objective_rewards():
         trajectory_default_rewards = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir / "default", snapshot_interval=5,
                                                                      rewards=DefaultRewards())
         assert trajectory_default_rewards.trains_rewards_dones_infos["reward"].sum() == -1786.0
+
+
+def test_punctuality_rewards_initial():
+    rewards = PunctualityRewards()
+    rewards.intermediate_late_arrival_penalty_factor = 33
+    agent = EnvAgent(initial_position=(0, 0),
+                     initial_direction=5,
+                     target=(3, 3),
+                     direction=3,
+                     state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+                     earliest_departure=3,
+                     latest_arrival=10,
+                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints_earliest_departure=[3, 5, None],
+                     waypoints_latest_arrival=[None, 2, 10],
+                     arrival_time=10)
+
+    collect = []
+    collect.append(rewards.empty())
+
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    agent.old_position = (0, 0)
+    agent.position = (2, 2)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5))
+    collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
+
+    # on time only at initial
+    assert rewards.cumulate(*collect) == (1, 3)
+
+
+def test_punctuality_rewards_intermediate():
+    rewards = PunctualityRewards()
+    rewards.intermediate_late_arrival_penalty_factor = 33
+    agent = EnvAgent(initial_position=(0, 0),
+                     initial_direction=5,
+                     target=(3, 3),
+                     direction=3,
+                     state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+                     earliest_departure=3,
+                     latest_arrival=10,
+                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints_earliest_departure=[3, 5, None],
+                     waypoints_latest_arrival=[None, 2, 10],
+                     arrival_time=10)
+
+    collect = []
+    collect.append(rewards.empty())
+
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    agent.old_position = (0, 0)
+    agent.position = (2, 2)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2))
+    agent.old_position = (2, 2)
+    agent.position = (4, 4)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5))
+    collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
+
+    # on time only at intermediate
+    assert rewards.cumulate(*collect) == (1, 3)
+
+
+def test_punctuality_rewards_target():
+    rewards = PunctualityRewards()
+    rewards.intermediate_late_arrival_penalty_factor = 33
+    agent = EnvAgent(initial_position=(0, 0),
+                     initial_direction=5,
+                     target=(3, 3),
+                     direction=3,
+                     state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+                     earliest_departure=3,
+                     latest_arrival=10,
+                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints_earliest_departure=[3, 5, None],
+                     waypoints_latest_arrival=[None, 2, 10],
+                     arrival_time=10)
+
+    collect = []
+    collect.append(rewards.empty())
+
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    agent.old_position = (0, 0)
+    agent.position = (2, 2)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2))
+    agent.old_position = (2, 2)
+    agent.position = (4, 4)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=4))
+    agent.old_position = (4, 4)
+    agent.position = (3, 3)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10))
+    collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
+
+    # on time only at target
+    assert rewards.cumulate(*collect) == (1, 3)
