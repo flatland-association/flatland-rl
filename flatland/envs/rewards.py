@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Generic, TypeVar, Tuple
+from typing import Generic, TypeVar, Tuple
 
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
@@ -176,7 +176,8 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
         super().__init__()
         self._previous_speeds = {}
 
-    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> List[float]:
+    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[
+        float, float, float]:
         default_reward = super().step_reward(agent=agent, agent_transition_data=agent_transition_data, distance_map=distance_map, elapsed_steps=elapsed_steps)
 
         # TODO revise design: speed_counter currently is not set to 0 during malfunctions.
@@ -188,24 +189,26 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
         if agent.handle in self._previous_speeds:
             smoothness = -(current_speed - self._previous_speeds[agent.handle]) ** 2
         self._previous_speeds[agent.handle] = current_speed
-        return [default_reward, energy_efficiency, smoothness]
+        return default_reward, energy_efficiency, smoothness
 
-    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> List[float]:
+    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[float, float, float]:
         default_reward = super().end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=elapsed_steps)
         energy_efficency = 0
         smoothness = 0
-        return [default_reward, energy_efficency, smoothness]
+        return default_reward, energy_efficency, smoothness
 
-    def cumulate(self, *rewards: List[float]) -> List[float]:
-        return [sum([r[i] for r in rewards]) for i in range(3)]
+    def cumulate(self, *rewards: Tuple[float, float, float]) -> Tuple[float, float, float]:
+        return tuple([sum([r[i] for r in rewards]) for i in range(3)])
 
-    def empty(self) -> List[float]:
-        return [0] * 3
+    def empty(self) -> Tuple[float, float, float]:
+        return 0, 0, 0
 
 
 class PunctualityRewards(Rewards[Tuple[int, int]]):
     """
     Punctuality: n_stops_on_time / n_stops
+
+    The implementation returns the tuple `(n_stops_on_time, n_stops)`.
     """
 
     def __init__(self):
@@ -245,7 +248,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         n_stops = len(agent.waypoints)
         return n_stops_on_time, n_stops
 
-    def cumulate(self, *rewards: List[Tuple[int, int]]) -> Tuple[int, int]:
+    def cumulate(self, *rewards: Tuple[int, int]) -> Tuple[int, int]:
         return sum([r[0] for r in rewards]), sum([r[1] for r in rewards])
 
     def empty(self) -> Tuple[int, int]:

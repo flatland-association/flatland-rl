@@ -29,7 +29,7 @@ def test_rewards_late_arrival():
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -2
 
     rewards = BasicMultiObjectiveRewards()
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == [-2, 0, 0]
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (-2, 0, 0)
 
 
 def test_rewards_early_arrival():
@@ -47,7 +47,7 @@ def test_rewards_early_arrival():
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == 0
 
     rewards = BasicMultiObjectiveRewards()
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == [0, 0, 0]
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (0, 0, 0)
 
 
 def test_rewards_intermediate_not_served_penalty():
@@ -70,7 +70,7 @@ def test_rewards_intermediate_not_served_penalty():
 
     rewards = BasicMultiObjectiveRewards()
     rewards.intermediate_not_served_penalty = 33
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == [-33, 0, 0]
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (-33, 0, 0)
 
 
 def test_rewards_intermediate_intermediate_early_departure_penalty():
@@ -158,23 +158,23 @@ def test_energy_efficiency_smoothniss_in_morl():
 
     agent.speed_counter.step(0)
     agent.state_machine.set_state(TrainState.WAITING)
-    assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None) == [0, 0, 0]
+    assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None) == (0, 0, 0)
 
     agent.speed_counter.step(1)
     agent.state_machine.set_state(TrainState.MOVING)
-    assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None) == [0, -1, -1]
+    assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None) == (0, -1, -1)
 
     agent.speed_counter.step(0.6)
     agent.state_machine.set_state(TrainState.MOVING)
-    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), [0, -0.36, -0.16])
+    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), (0, -0.36, -0.16))
 
     agent.speed_counter.step(0.6)
     agent.state_machine.set_state(TrainState.MALFUNCTION)
-    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), [0, 0, -0.36])
+    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), (0, 0, -0.36))
 
     agent.speed_counter.step(0.3)
     agent.state_machine.set_state(TrainState.MOVING)
-    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), [0, -0.09, -0.09])
+    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), (0, -0.09, -0.09))
 
 
 def test_multi_objective_rewards():
