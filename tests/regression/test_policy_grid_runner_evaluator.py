@@ -10,7 +10,12 @@ from flatland.trajectories.policy_grid_runner import generate_trajectories_from_
 from flatland.trajectories.trajectories import TRAINS_ARRIVED_FNAME
 
 
-def test_gen_trajectories_from_metadata():
+def _dummy_reporter(aggregated_scores):
+    report = f"Aggregated scores: {aggregated_scores}"
+    print(report)
+
+
+def test_gen_trajectories_from_metadata(capsys):
     metadata_csv_path = importlib.resources.files("env_data.tests.service_test").joinpath("metadata.csv")
     with tempfile.TemporaryDirectory() as tmpdirname:
         with importlib.resources.as_file(metadata_csv_path) as metadata_csv:
@@ -38,5 +43,9 @@ def test_gen_trajectories_from_metadata():
                     "--data-dir", tmpdir,
                     "--rewards-pkg", "flatland.envs.rewards",
                     "--rewards-cls", "PunctualityRewards",
+                    "--report-pkg", "tests.regression.test_policy_grid_runner_evaluator",
+                    "--report-cls", "_dummy_reporter",
                 ])
             assert e_info.value.code == 0
+            captured = capsys.readouterr()
+            assert "Aggregated scores: 56" in captured.out
