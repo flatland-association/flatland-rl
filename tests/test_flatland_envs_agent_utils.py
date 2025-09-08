@@ -3,6 +3,7 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.timetable_utils import Line
 from flatland.utils.simple_rail import make_oval_rail
 
@@ -86,13 +87,15 @@ def test_travel_time_on_shortest_paths():
 
 
 def test_from_line():
-    line = Line(
-        agent_positions=[[[(11, 40)]], [[(38, 8)]], [[(17, 5)]], [[(41, 22)]], [[(11, 40)]], [[(38, 8)]], [[(38, 8)]], [[(31, 26)]], [[(41, 22)]], [[(9, 27)]]],
-        agent_directions=[[[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(3)]],
-                          [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(0)]],
-                          [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]]],
-                agent_targets=[(39, 8), (10, 40), (42, 22), (18, 5), (39, 8), (12, 40), (31, 27), (39, 8), (8, 27), (44, 22)],
-                agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    agent_positions = [[[(11, 40)]], [[(38, 8)]], [[(17, 5)]], [[(41, 22)]], [[(11, 40)]], [[(38, 8)]], [[(38, 8)]], [[(31, 26)]], [[(41, 22)]], [[(9, 27)]]]
+    agent_directions = [[[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(3)]],
+                        [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(0)]],
+                        [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]]]
+    agent_targets = [(39, 8), (10, 40), (42, 22), (18, 5), (39, 8), (12, 40), (31, 27), (39, 8), (8, 27), (44, 22)]
+    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(t, None)]] for i, (pas, das, t) in
+                       enumerate(zip(agent_positions, agent_directions, agent_targets))}
+    line = Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+
     env_agents = EnvAgent.from_line(line)
     assert env_agents[0].initial_position == (11, 40)
     assert env_agents[0].initial_direction == 3

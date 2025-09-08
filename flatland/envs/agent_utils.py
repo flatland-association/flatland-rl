@@ -171,21 +171,17 @@ class EnvAgent:
     def from_line(cls, line: Line):
         """ Create a list of EnvAgent from lists of positions, directions and targets
         """
-        num_agents = len(line.agent_positions)
+        num_agents = len(line.agent_waypoints)
 
         agent_list = []
         for i_agent in range(num_agents):
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
 
-            waypoints: List[List[Waypoint]] = []
-            for flex_pos, flex_dir in zip(line.agent_positions[i_agent], line.agent_directions[i_agent]):
-                waypoints.append([Waypoint((r, c), d) for ((r, c), d) in zip(flex_pos, flex_dir)])
-            waypoints.append([Waypoint(line.agent_targets[i_agent], None)])
-            agent = EnvAgent(initial_position=line.agent_positions[i_agent][0][0],
-                             initial_direction=line.agent_directions[i_agent][0][0],
-                             direction=line.agent_directions[i_agent][0][0],
-                             target=line.agent_targets[i_agent],
-                             waypoints=waypoints,
+            agent = EnvAgent(initial_position=line.agent_waypoints[i_agent][0][0].position,
+                             initial_direction=line.agent_waypoints[i_agent][0][0].direction,
+                             direction=line.agent_waypoints[i_agent][0][0].direction,
+                             target=line.agent_waypoints[i_agent][-1][0].position,
+                             waypoints=line.agent_waypoints[i_agent],
                              moving=False,
                              earliest_departure=None,
                              latest_arrival=None,

@@ -6,6 +6,7 @@ import flatland.envs.timetable_generators as ttg
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.line_generators import BaseLineGen
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.timetable_utils import Line
 from flatland.utils import editor
 
@@ -19,9 +20,7 @@ class SchedGen2(BaseLineGen):
 
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = None,
                  np_random: RandomState = None) -> Line:
-        return Line(agent_positions=[[[self.rcStart]]] * num_agents,
-                    agent_directions=[[self.iDir]] * num_agents,
-                    agent_targets=[self.rcEnd] * num_agents,
+        return Line(agent_waypoints={i: [[Waypoint(self.rcStart, self.iDir)], [Waypoint(self.rcEnd, None)]] for i in range(num_agents)},
                     agent_speeds=[1.0] * num_agents)
 
 
@@ -34,9 +33,8 @@ class SchedGen3(BaseLineGen):
 
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = None,
                  np_random: RandomState = None) -> Line:
-        return Line(agent_positions=[[[self.lrcStarts[i % len(self.lrcStarts)]]] for i in range(num_agents)],
-                    agent_directions=[[[self.liDirs[i % len(self.liDirs)]]] for i in range(num_agents)],
-                    agent_targets=[self.lrcTargs[i % len(self.lrcTargs)] for i in range(num_agents)],
+        return Line(agent_waypoints={i: [[Waypoint(self.lrcStarts[i % len(self.lrcStarts)], self.liDirs[i % len(self.liDirs)])],
+                                         [Waypoint(self.lrcTargs[i % len(self.lrcTargs)], None)]] for i in range(num_agents)},
                     agent_speeds=[1.0] * num_agents)
 
 
@@ -84,16 +82,16 @@ ddEnvSpecs = {
         "liDirs": [1, 3]
     },
 
-        # opposing stations with single alternative path
-        "alternative_needs_pause":{
-            "llrcPaths":  [
-                [(1,0), (1,18), (7,18)],  # across the top
-                [(1,2), (1,4), (3,4), (3, 8), (1,8), (1,12)], # alternative loop below
-                ],
-            "lrcStarts": [ (1,2), (6,18) ],
-            "lrcTargs" : [(6,18), (1,2)],
-            "liDirs" : [1,0]
-            },
+    # opposing stations with single alternative path
+    "alternative_needs_pause": {
+        "llrcPaths": [
+            [(1, 0), (1, 18), (7, 18)],  # across the top
+            [(1, 2), (1, 4), (3, 4), (3, 8), (1, 8), (1, 12)],  # alternative loop below
+        ],
+        "lrcStarts": [(1, 2), (6, 18)],
+        "lrcTargs": [(6, 18), (1, 2)],
+        "liDirs": [1, 0]
+    },
     # single spur so one agent needs to wait
     "single_spur": {
         "llrcPaths": [
