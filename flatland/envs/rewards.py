@@ -149,20 +149,20 @@ class DefaultRewards(Rewards[float]):
             if agent.state.is_on_map_state():
                 reward = agent.get_current_delay(elapsed_steps, distance_map)
 
-        for ets, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
+        for wps, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
             agent_arrivals = set(self.arrivals[agent.handle])
-            ets_intersection = set(ets).intersection(agent_arrivals)
-            if len(ets_intersection) == 0 or TrainState.STOPPED not in self.states[agent.handle][list(ets_intersection)[0]]:
+            wps_intersection = set(wps).intersection(agent_arrivals)
+            if len(wps_intersection) == 0 or TrainState.STOPPED not in self.states[agent.handle][list(wps_intersection)[0]]:
                 # stop not served or served but not stopped
                 reward += -1 * self.intermediate_not_served_penalty
             else:
-                et = list(ets_intersection)[0]
+                wp = list(wps_intersection)[0]
                 # late arrival
-                reward += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][et], 0)
+                reward += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][wp], 0)
                 # early departure
                 # N.B. if arrival but not departure, handled by above by departed but never reached.
-                if et in self.departures[agent.handle]:
-                    reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][et] - ed, 0)
+                if wp in self.departures[agent.handle]:
+                    reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][wp] - ed, 0)
         return reward
 
     def cumulate(self, *rewards: int) -> RewardType:
@@ -234,25 +234,27 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
         n_stops_on_time = 0
-        initial_wp = agent.waypoints[0]
+        initial_wp = agent.waypoints[0][0]
         if initial_wp in self.departures[agent.handle] and self.departures[agent.handle][initial_wp] >= agent.waypoints_earliest_departure[0]:
             n_stops_on_time += 1
-        for i, (wp, la, ed) in enumerate(zip(
+        for i, (wps, la, ed) in enumerate(zip(
             agent.waypoints[1:-1],
             agent.waypoints_latest_arrival[1:-1],
             agent.waypoints_earliest_departure[1:-1]
         )):
-            if wp not in self.arrivals[agent.handle] or wp not in self.departures[agent.handle]:
-                # intermediate stop not served
-                continue
-            if self.arrivals[agent.handle][wp] > agent.waypoints_latest_arrival[i + 1]:
-                # intermediate late arrival
-                continue
-            if self.departures[agent.handle][wp] < agent.waypoints_earliest_departure[i + 1]:
-                # intermediate early departure
-                continue
-            n_stops_on_time += 1
-        target_wp = agent.waypoints[-1]
+            for wp in wps:
+                if wp not in self.arrivals[agent.handle] or wp not in self.departures[agent.handle]:
+                    # intermediate stop not served
+                    continue
+                if self.arrivals[agent.handle][wp] > agent.waypoints_latest_arrival[i + 1]:
+                    # intermediate late arrival
+                    continue
+                if self.departures[agent.handle][wp] < agent.waypoints_earliest_departure[i + 1]:
+                    # intermediate early departure
+                    continue
+                n_stops_on_time += 1
+                break
+        target_wp = agent.waypoints[-1][0]
         if target_wp in self.arrivals[agent.handle] and self.arrivals[agent.handle][target_wp] <= agent.waypoints_latest_arrival[-1]:
             n_stops_on_time += 1
         n_stops = len(agent.waypoints)

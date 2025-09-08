@@ -48,7 +48,7 @@ def test_rewards_early_arrival():
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == 0
 
     rewards = BasicMultiObjectiveRewards()
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (0, 0, 0)
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (0.0, 0, 0)
 
 
 def test_rewards_intermediate_served_and_stopped_penalty():
@@ -80,7 +80,7 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent, None, distance_map, 5)
     agent.state = TrainState.DONE
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == [0, 0, 0]
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (0, 0, 0)
 
 
 def test_rewards_intermediate_served_but_not_stopped_penalty():
@@ -110,7 +110,7 @@ def test_rewards_intermediate_served_but_not_stopped_penalty():
     agent.state = TrainState.MOVING
     rewards.step_reward(agent, None, distance_map, 5)
     agent.state = TrainState.DONE
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == [-33, 0, 0]
+    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (-33, 0, 0)
 
 
 def test_rewards_intermediate_not_served_penalty():
@@ -271,7 +271,7 @@ def test_punctuality_rewards_initial():
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
                      waypoints_earliest_departure=[3, 5, None],
                      waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
@@ -300,7 +300,7 @@ def test_punctuality_rewards_intermediate():
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
                      waypoints_earliest_departure=[3, 5, None],
                      waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
@@ -332,7 +332,7 @@ def test_punctuality_rewards_target():
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[(0, 0), (2, 2), (3, 3)],
+                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
                      waypoints_earliest_departure=[3, 5, None],
                      waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
