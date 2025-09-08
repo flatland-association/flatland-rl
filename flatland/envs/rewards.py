@@ -207,6 +207,7 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
 class PunctualityRewards(Rewards[Tuple[int, int]]):
     """
     Punctuality: n_stops_on_time / n_stops
+    An agent is deemed not punctual at a stop if it arrives to late, departs to early or does not serve the stop at all. If an agent is punctual at a stop, n_stops_on_time is increased by 1.
 
     The implementation returns the tuple `(n_stops_on_time, n_stops)`.
     """
