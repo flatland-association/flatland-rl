@@ -1,13 +1,12 @@
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Dict
 
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2DArrayArray
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 Line = NamedTuple('Line', [
-    # positions and directions without target (which has no direction)
-    ('agent_positions', IntVector2DArrayArray),
-    ('agent_directions', List[List[Grid4TransitionsEnum]]),
-    ('agent_targets', IntVector2DArray),
+    # positions and directions with flexibility, apart from
+    # - initial (which has exactly one waypoint)
+    # - target (which has exactly one waypoint with no direction (=`None`))
+    ('agent_waypoints', Dict[int, List[List[Waypoint]]]),
     ('agent_speeds', List[float]),
 ])
 

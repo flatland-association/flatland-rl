@@ -9,6 +9,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid_utils import IntVector2DArray
 from flatland.envs import persistence
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.timetable_utils import Line
 
 AgentPosition = Tuple[int, int]
@@ -137,7 +138,7 @@ class SparseLineGen(BaseLineGen):
         # Place agents and targets within available train stations
         agent_positions = []
         agent_targets = []
-        agents_directions = []
+        agent_directions = []
 
         for agent_idx in range(num_agents):
             if agent_idx % 2 == 0:
@@ -157,14 +158,19 @@ class SparseLineGen(BaseLineGen):
                 cur_agent_orientations.append(Grid4TransitionsEnum(cur_agent_orientation))
             agent_positions.append(cur_agent_positions)
             agent_targets.append((cur_agent_target[0][0], cur_agent_target[0][1]))
-            agents_directions.append(cur_agent_orientations)
+            agent_directions.append(cur_agent_orientations)
 
         if self.speed_ratio_map:
             agent_speeds = speed_initialization_helper(num_agents, self.speed_ratio_map, np_random=np_random)
         else:
             agent_speeds = [1.0] * len(agent_positions)
-
-        return Line(agent_positions=agent_positions, agent_directions=agents_directions, agent_targets=agent_targets, agent_speeds=agent_speeds)
+        # N.B. Line generator currently has no routing flexibility!
+        agent_positions = [[[p] for p in pa] for pa in agent_positions]
+        agent_directions = [[[d] for d in da] for da in agent_directions]
+        agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, None)]] for
+                           i, (pas, das, target)
+                           in enumerate(zip(agent_positions, agent_directions, agent_targets))}
+        return Line(agent_waypoints=agent_waypoints, agent_speeds=agent_speeds)
 
 
 def line_from_file(filename: Union[str, Path] = None, load_from_package=None, env_dict: dict = None) -> LineGenerator:
@@ -195,13 +201,11 @@ def line_from_file(filename: Union[str, Path] = None, load_from_package=None, en
         agents = _env_dict["agents"]
 
         # setup with loaded data
-        agents_position = [[a.initial_position] for a in agents]
-        agents_direction = [[a.initial_direction] for a in agents]
-        agents_target = [a.target for a in agents]
+        # N.B. Line generator currently has no routing flexibility!
+        agent_waypoints = {i: [[Waypoint(a.initial_position, a.initial_direction)], [Waypoint(a.target, None)]] for i, a in enumerate(agents)}
         agents_speed = [a.speed_counter.speed for a in agents]
 
-        return Line(agent_positions=agents_position, agent_directions=agents_direction,
-                    agent_targets=agents_target, agent_speeds=agents_speed)
+        return Line(agent_waypoints=agent_waypoints, agent_speeds=agents_speed)
 
     return generator
 

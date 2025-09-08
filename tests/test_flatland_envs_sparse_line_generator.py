@@ -6,6 +6,7 @@ from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.line_generators import LineGenerator, sparse_line_generator
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.timetable_utils import Line
 
 
@@ -210,12 +211,14 @@ def test_sparse_line_generator():
                               1, 1]
     }
     line = line_gen(rail, 10, agents_hints, 0, np_random)
-    assert line == Line(agent_positions=[[(11, 40)], [(38, 8)], [(17, 5)], [(41, 22)], [(11, 40)], [(38, 8)], [(38, 8)], [(31, 26)], [(41, 22)], [(9, 27)]],
-                        agent_directions=[[Grid4TransitionsEnum.WEST], [Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST], [Grid4TransitionsEnum.WEST],
-                                          [Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST], [Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH],
-                                          [Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]],
-                        agent_targets=[(39, 8), (10, 40), (42, 22), (18, 5), (39, 8), (12, 40), (31, 27), (39, 8), (8, 27), (44, 22)],
-                        agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    agent_positions = [[[(11, 40)]], [[(38, 8)]], [[(17, 5)]], [[(41, 22)]], [[(11, 40)]], [[(38, 8)]], [[(38, 8)]], [[(31, 26)]], [[(41, 22)]], [[(9, 27)]]]
+    agent_directions = [[[Grid4TransitionsEnum.WEST]], [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.WEST]], [[Grid4TransitionsEnum.WEST]],
+                        [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.WEST]], [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.NORTH]],
+                        [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.WEST]]]
+    agent_targets = [(39, 8), (10, 40), (42, 22), (18, 5), (39, 8), (12, 40), (31, 27), (39, 8), (8, 27), (44, 22)]
+    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, None)]] for i, (pas, das, target)
+                       in enumerate(zip(agent_positions, agent_directions, agent_targets))}
+    assert line == Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
 
 def test_sparse_line_generator_with_intermediate_stops():
@@ -419,16 +422,20 @@ def test_sparse_line_generator_with_intermediate_stops():
                               1, 1]
     }
     line = line_gen(rail, 10, agents_hints, 0, np_random)
-    assert line == Line(
-        agent_positions=[[(11, 40), (38, 8)], [(27, 40), (38, 8)], [(20, 26), (9, 27)], [(11, 40), (9, 27)], [(38, 8), (31, 26)], [(44, 34), (31, 26)],
-                         [(17, 5), (41, 22)], [(9, 40), (41, 22)], [(38, 8), (41, 22)], [(20, 24), (41, 22)]],
-        agent_directions=[[Grid4TransitionsEnum.WEST, Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH, Grid4TransitionsEnum.WEST],
-                          [Grid4TransitionsEnum.SOUTH, Grid4TransitionsEnum.WEST], [Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.WEST],
-                          [Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.NORTH],
-                          [Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.WEST], [Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.WEST],
-                          [Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH, Grid4TransitionsEnum.WEST]],
-        agent_targets=[(27, 41), (12, 40), (10, 40), (20, 27), (45, 34), (39, 8), (12, 40), (18, 5), (20, 25), (39, 8)],
-        agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+
+    agent_positions = [[[(11, 40)], [(38, 8)]], [[(27, 40)], [(38, 8)]], [[(20, 26)], [(9, 27)]], [[(11, 40)], [(9, 27)]], [[(38, 8)], [(31, 26)]],
+                       [[(44, 34)], [(31, 26)]],
+                       [[(17, 5)], [(41, 22)]], [[(9, 40)], [(41, 22)]], [[(38, 8)], [(41, 22)]], [[(20, 24)], [(41, 22)]]]
+    agent_directions = [[[Grid4TransitionsEnum.WEST], [Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.WEST]],
+                        [[Grid4TransitionsEnum.SOUTH], [Grid4TransitionsEnum.WEST]], [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]],
+                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH]], [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH]],
+                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]], [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]],
+                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.WEST]]]
+    agent_targets = [(27, 41), (12, 40), (10, 40), (20, 27), (45, 34), (39, 8), (12, 40), (18, 5), (20, 25), (39, 8)]
+    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, None)]] for i, (pas, das, target)
+                       in enumerate(zip(agent_positions, agent_directions, agent_targets))}
+
+    assert line == Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     for a in EnvAgent.from_line(line):
         print(
-            f"EnvAgent(handle={a.handle}, initial_position={a.initial_position}, initial_direction={a.initial_direction}, target={a.target}, direction={a.direction.value}, waypoints={a.waypoints}, waypoints_latest_arrival={a.waypoints_earliest_departure}, waypoints_earliest_departure={a.waypoints_latest_arrival}),")
+            f"EnvAgent(handle={a.handle}, initial_position={a.initial_position}, initial_direction={a.initial_direction}, target={a.target}, direction={a.direction}, waypoints={a.waypoints}, waypoints_latest_arrival={a.waypoints_earliest_departure}, waypoints_earliest_departure={a.waypoints_latest_arrival}),")
