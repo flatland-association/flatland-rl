@@ -22,7 +22,9 @@ def test_gen_trajectories_from_metadata():
                     "--policy-pkg", "flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy",
                     "--policy-cls", "DeadLockAvoidancePolicy",
                     "--obs-builder-pkg", "flatland_baselines.deadlock_avoidance_heuristic.observation.full_env_observation",
-                    "--obs-builder-cls", "FullEnvObservation"
+                    "--obs-builder-cls", "FullEnvObservation",
+                    "--rewards-pkg", "flatland.envs.rewards",
+                    "--rewards-cls", "PunctualityRewards",
                 ])
             assert e_info.value.code == 0
             metadata = pd.read_csv(metadata_csv)
@@ -30,10 +32,11 @@ def test_gen_trajectories_from_metadata():
                 df = pd.read_csv(tmpdir / v["test_id"] / v["env_id"] / TRAINS_ARRIVED_FNAME, sep="\t")
                 assert df["success_rate"].to_list() == [sr]
                 assert df["env_time"].to_list() == [t]
-
             with pytest.raises(SystemExit) as e_info:
                 evaluate_trajectories_from_metadata([
                     "--metadata-csv", metadata_csv_path,
                     "--data-dir", tmpdir,
+                    "--rewards-pkg", "flatland.envs.rewards",
+                    "--rewards-cls", "PunctualityRewards",
                 ])
             assert e_info.value.code == 0
