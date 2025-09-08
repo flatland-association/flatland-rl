@@ -6,6 +6,7 @@ import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rewards import Rewards
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
 
 
@@ -17,8 +18,14 @@ class TrajectoryEvaluator:
     def __call__(self, *args, **kwargs):
         self.evaluate()
 
-    def evaluate(self, start_step: int = None, end_step: int = None, snapshot_interval=0, tqdm_kwargs: dict = None,
-                 skip_rewards_dones_infos: bool = False) -> RailEnv:
+    def evaluate(
+        self,
+        start_step: int = None,
+        end_step: int = None,
+        snapshot_interval=0, tqdm_kwargs: dict = None,
+        skip_rewards_dones_infos: bool = False,
+        rewards: Rewards = None
+    ) -> RailEnv:
         """
          Parameters
         ----------
@@ -34,6 +41,8 @@ class TrajectoryEvaluator:
             additional kwargs for tqdm
         skip_rewards_dones_infos : bool
             skip verification of rewards/dones/infos
+        rewards : Rewards
+            Rewards used for evaluation. Defaults to `None`.
         """
         self.trajectory.load()
 
@@ -44,6 +53,9 @@ class TrajectoryEvaluator:
         if env is None:
             raise FileNotFoundError(self.trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{self.trajectory.ep_id}.pkl")
         self.trajectory.outputs_dir.mkdir(exist_ok=True)
+
+        if rewards is not None:
+            env.rewards = rewards
 
         if snapshot_interval > 0:
             from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
@@ -101,7 +113,7 @@ class TrajectoryEvaluator:
         if self.callbacks is not None:
             self.callbacks.on_episode_end(env=env, data_dir=self.trajectory.outputs_dir)
 
-        if start_step is None and end_step is None:
+        if start_step == 0 and done:
             trains_arrived_episode = self.trajectory.trains_arrived_lookup()
             expected_success_rate = trains_arrived_episode['success_rate']
             actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents

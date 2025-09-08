@@ -137,6 +137,8 @@ class Trajectory:
             "<TrainState.MALFUNCTION: 5>", "5").replace("<TrainState.DONE: 6>", "6"))
         df["info"] = df["info"].map(ast.literal_eval)
         df["info"] = df["info"].map(lambda d: {k: (v if k != "state" else TrainState(v)) for k, v in d.items()})
+        if df.dtypes["reward"] == object:
+            df["reward"] = df["reward"].map(ast.literal_eval)
         return df
 
     def _write_trains_positions(self, df: pd.DataFrame):
