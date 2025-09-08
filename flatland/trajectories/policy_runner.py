@@ -265,6 +265,18 @@ class PolicyRunner:
               required=False,
               default=None
               )
+@click.option('--rewards-pkg',
+              type=str,
+              help="Defaults to `flatland.envs.rewards.DefaultRewards`",
+              required=False,
+              default="flatland.envs.rewards"
+              )
+@click.option('--rewards-cls',
+              type=str,
+              help="Defaults to `flatland.envs.rewards.DefaultRewards`",
+              required=False,
+              default="DefaultRewards"
+              )
 @click.option('--n_agents',
               type=int,
               help="Number of agents.",
@@ -364,6 +376,8 @@ def generate_trajectory_from_policy(
     data_dir: Path,
     policy_pkg: str, policy_cls: str,
     obs_builder_pkg: str, obs_builder_cls: str,
+    rewards_pkg: str = "flatland.envs.rewards",
+    rewards_cls: str = "DefaultRewards",
     n_agents=7,
     x_dim=30,
     y_dim=30,
@@ -398,6 +412,13 @@ def generate_trajectory_from_policy(
     fork_from_trajectory = None
     if fork_data_dir is not None and fork_ep_id is not None:
         fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
+
+    rewards = None
+    if rewards_pkg is not None and rewards_cls is not None:
+        module = importlib.import_module(rewards_pkg)
+        rewards = getattr(module, rewards_cls)
+        rewards: Rewards = rewards()
+
     PolicyRunner.create_from_policy(
         policy=policy_cls(),
         data_dir=data_dir,
@@ -414,6 +435,7 @@ def generate_trajectory_from_policy(
         speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
         seed=seed,
         obs_builder=obs_builder,
+        rewards=rewards,
         snapshot_interval=snapshot_interval,
         ep_id=ep_id,
         env=env,
