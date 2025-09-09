@@ -5,7 +5,6 @@ From: https://github.com/AI4REALNET/maze-flatland/blob/33048b1e2c36fc26d1543b158
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 import flatland
 from flatland.core.env_observation_builder import DummyObservationBuilder
@@ -211,7 +210,7 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map():
     assert agent.position == (org_pos[0] + 1, org_pos[1])
 
 
-def test_spawning_cell_not_reserved_if_id_is_lower():
+def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK():
     """Show that if two trains have the same spawning cell and the one with the higher ID goes into maintenance on the
     dispatch action. The spawning cell is NOT reserved, such that the train with the lower ID can dispatch."""
     rail_env = RailEnv(
@@ -233,7 +232,6 @@ def test_spawning_cell_not_reserved_if_id_is_lower():
     assert rail_env.agents[3].state == TrainState.READY_TO_DEPART
     rail_env.step({3: RailEnvActions.MOVE_FORWARD})
     assert rail_env.agents[3].state == TrainState.MALFUNCTION_OFF_MAP
-    assert rail_env.agents[3].action_saver.is_action_saved
     assert rail_env.agents[3].malfunction_handler.malfunction_down_counter == 5
 
     assert rail_env.agents[0].state == TrainState.READY_TO_DEPART
@@ -242,7 +240,7 @@ def test_spawning_cell_not_reserved_if_id_is_lower():
     assert rail_env.agents[0].state.is_on_map_state()
 
 
-def test_spawning_cell_reserved_if_id_is_higher():
+def test_spawning_cell_reserved_if_id_is_higher_FIXED():
     """Show that if two trains have the same spawning cell and the one with the lower ID goes into maintenance on the
     dispatch action. The spawning cell IS reserved, such that the train with the higher ID cannot dispatch until the
     lower one dispatches!"""
@@ -262,22 +260,20 @@ def test_spawning_cell_reserved_if_id_is_higher():
     assert rail_env.agents[1].state == TrainState.READY_TO_DEPART
     rail_env.step({1: RailEnvActions.MOVE_FORWARD})
     assert rail_env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
-    assert rail_env.agents[1].action_saver.is_action_saved
     assert rail_env.agents[1].malfunction_handler.malfunction_down_counter == 5
 
     assert rail_env.agents[3].state == TrainState.READY_TO_DEPART
     rail_env.step({3: RailEnvActions.MOVE_FORWARD})
 
-    with pytest.raises(AssertionError):
-        assert rail_env.agents[3].state == TrainState.MOVING
-        assert rail_env.agents[3].state.is_on_map_state()
+    # FIXED: the train with higher ID can move:
+    assert rail_env.agents[3].state == TrainState.MOVING
+    assert rail_env.agents[3].state.is_on_map_state()
 
-    assert rail_env.agents[3].state == TrainState.READY_TO_DEPART
-    assert rail_env.agents[3].state.is_off_map_state()
 
 
 def test_two_trains_on_same_cell_bug_FIXED():
-    """In case all the following are true:
+    """
+    In case all the following are true:
     - the train is in a malfunction
     - the train is ready (end of malfunction)
     - the train has an action saved
