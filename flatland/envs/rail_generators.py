@@ -258,13 +258,15 @@ class SparseRailGen(RailGen):
         num_diamond_crossings = np.count_nonzero(grid_map.grid[grid_map.grid == RailEnvTransitionsEnum.diamond_crossing])
         num_level_free_diamond_crossings = math.floor(self.p_level_free * num_diamond_crossings)
         # ceil with probability p_ceil
-        p_ceil = (self.p_level_free * num_diamond_crossings) % 1.0
-        num_level_free_diamond_crossings += np_random.choice([1, 0], p=(p_ceil, 1 - p_ceil))
         level_free_positions = set()
-        if num_level_free_diamond_crossings > 0:
-            choice = np_random.choice(num_diamond_crossings, size=num_level_free_diamond_crossings, replace=False)
-            positions_diamond_crossings = (grid_map.grid == RailEnvTransitionsEnum.diamond_crossing).nonzero()
-            level_free_positions = {tuple(positions_diamond_crossings[choice[i]]) for i in range(len(choice))}
+        if self.p_level_free > 0:
+            p_ceil = (self.p_level_free * num_diamond_crossings) % 1.0
+            num_level_free_diamond_crossings += np_random.choice([1, 0], p=(p_ceil, 1 - p_ceil))
+
+            if num_level_free_diamond_crossings > 0:
+                choice = np_random.choice(num_diamond_crossings, size=num_level_free_diamond_crossings, replace=False)
+                positions_diamond_crossings = (grid_map.grid == RailEnvTransitionsEnum.diamond_crossing).nonzero()
+                level_free_positions = {tuple(positions_diamond_crossings[choice[i]]) for i in range(len(choice))}
 
         return grid_map, {
             'agents_hints':
