@@ -606,6 +606,7 @@ class RailEnv(Environment):
             )
 
             # update malfunction counter
+            # TODO revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
             agent.malfunction_handler.update_counter()
 
             # Off map or on map state and position should match

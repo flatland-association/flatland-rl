@@ -135,8 +135,11 @@ def test_earliest_departure_zero_bug_BYDESIGN() -> None:
     # Thus we showed that train 0 could be dispatched at it's earliest departure and train 1 could not
 
 
-def test_train_can_move_when_malfunction_counter_is_0_off_map():
-    """When a train goes into a malfunction off-map then in the last ts of the malfunction the agent can actually
+def test_train_can_move_when_malfunction_counter_is_0_off_map_BYDESIGN():
+    """
+    TODO revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
+
+    When a train goes into a malfunction off-map then in the last ts of the malfunction the agent can actually
     take an action and move (in the next ts). The malfunction_handler specifies that the agent is not in a malfunction
     but the state is still saying the agent is in a malfunction."""
     rail_env = RailEnv(
@@ -174,8 +177,11 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map():
     assert agent.position is not None
 
 
-def test_train_can_move_when_malfunction_counter_is_0_on_map():
-    """When a train goes into a malfunction on-map then in the last ts of the malfunction the agent can actually
+def test_train_can_move_when_malfunction_counter_is_0_on_map_BYDESIGN():
+    """
+    TODO revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
+
+    When a train goes into a malfunction on-map then in the last ts of the malfunction the agent can actually
     take an action and move (in the next ts). The malfunction_handler specifies that the agent is not in a malfunction
     but the state is still saying the agent is in a malfunction."""
     rail_env = RailEnv(
