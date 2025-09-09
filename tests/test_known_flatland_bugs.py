@@ -34,8 +34,11 @@ def init_test_rail_env(speed: float) -> RailEnv:
     return rail_env
 
 
-def test_min_distance_for_off_map_trains_speed_of_1() -> None:
-    """The minimum distance for an off-map train is calculated from the initial position to the target. However, in
+def test_min_distance_for_off_map_trains_speed_of_1_REVISEDESIGN() -> None:
+    """
+    TODO revise design: we could add +1 to "geometric" distance for off map states.
+
+    The minimum distance for an off-map train is calculated from the initial position to the target. However, in
     order for the agent to spawn or be placed on map on the initial position one action is needed.
     As such the minimum distance can be viewed as being 1-off for off-map trains when it comes to the number of steps
     needed to reach the target and especially when reasoning on whether the train can reach its target in time.
@@ -62,8 +65,11 @@ def test_min_distance_for_off_map_trains_speed_of_1() -> None:
     assert min_distance_off_map == min_distance_on_map
 
 
-def test_min_distance_for_off_map_trains_speed_of_half() -> None:
-    """The minimum distance for an off-map train is calculated from the initial position to the target. However, in
+def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN() -> None:
+    """
+    TODO revise design: we could add +1 to "geometric" distance for off map states.
+
+    The minimum distance for an off-map train is calculated from the initial position to the target. However, in
     order for the agent to spawn or be placed on map on the initial position one action is needed.
     As such the minimum distance can be viewed as being 1-off for off-map trains when it comes to the number of steps
     needed to reach the target and especially when reasoning on whether the train can reach its target in time.
@@ -95,7 +101,8 @@ def test_min_distance_for_off_map_trains_speed_of_half() -> None:
 def test_earliest_departure_zero_bug_BYDESIGN() -> None:
     """
     TODO revise design: by design of https://flatland-association.github.io/flatland-book/environment/environment/agent.html#state-machine,
-         an agent can go from WAITING to READY_TO_DEPART only after the first step transition. However, the design may be questioned.
+         an agent can go from WAITING to READY_TO_DEPART only after the first step transition. However, the design may be questioned:
+         we could drop ready_to_depart by adding condition earliest_departure_reached to transition from WAITING to MOVING.
 
     Trains that have the earliest departure at ts 0 cannot be dispatched at ts 0 but only at ts 1. It seems like
     every train starts with train state Waiting no matter the earliest departure.
