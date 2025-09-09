@@ -276,7 +276,7 @@ def test_spawning_cell_reserved_if_id_is_higher():
     assert rail_env.agents[3].state.is_off_map_state()
 
 
-def test_two_trains_on_same_cell_bug():
+def test_two_trains_on_same_cell_bug_FIXED():
     """In case all the following are true:
     - the train is in a malfunction
     - the train is ready (end of malfunction)
@@ -983,10 +983,10 @@ def test_two_trains_on_same_cell_bug():
     for action in actions:
         rail_env.step(action)
 
-    # Check that both train 4 and 13 are on the same cell!
+    # FIXED: Check that both train 4 and 13 are not on the same cell!
     agent_4 = rail_env.agents[4]
     agent_13 = rail_env.agents[13]
 
-    assert agent_4.state.is_on_map_state()
+    assert agent_4.state.is_off_map_state()
     assert agent_13.state.is_on_map_state()
-    assert agent_4.position == agent_13.position
+    assert agent_4.position != agent_13.position
