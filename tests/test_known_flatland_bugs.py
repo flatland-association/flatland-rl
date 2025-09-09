@@ -92,8 +92,12 @@ def test_min_distance_for_off_map_trains_speed_of_half() -> None:
 
 
 # pylint: disable=protected-access
-def test_earliest_departure_zero_bug() -> None:
-    """Trains that have the earliest departure at ts 0 cannot be dispatched at ts 0 but only at ts 1. It seems like
+def test_earliest_departure_zero_bug_BYDESIGN() -> None:
+    """
+    TODO revise design: by design of https://flatland-association.github.io/flatland-book/environment/environment/agent.html#state-machine,
+         an agent can go from WAITING to READY_TO_DEPART only after the first step transition. However, the design may be questioned.
+
+    Trains that have the earliest departure at ts 0 cannot be dispatched at ts 0 but only at ts 1. It seems like
     every train starts with train state Waiting no matter the earliest departure.
     """
 
