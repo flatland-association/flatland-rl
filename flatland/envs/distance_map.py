@@ -11,6 +11,7 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.states import TrainState
 
 
+# TODO generic?
 class DistanceMap:
     def __init__(self, agents: List[EnvAgent], env_height: int, env_width: int):
         self.env_height = env_height
@@ -19,6 +20,7 @@ class DistanceMap:
         self.agents_previous_computation = None
         self.reset_was_called = False
         self.agents: List[EnvAgent] = agents
+        # TODO
         self.rail: Optional[RailGridTransitionMap] = None
 
     def set(self, distance_map: np.ndarray):
