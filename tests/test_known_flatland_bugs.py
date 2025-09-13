@@ -13,6 +13,7 @@ from flatland.envs.line_generators import SparseLineGen
 from flatland.envs.malfunction_generators import MalfunctionParameters, NoMalfunctionGen, ParamMalfunctionGen
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.step_utils.states import TrainState
 
 
@@ -27,6 +28,7 @@ def init_test_rail_env(speed: float) -> RailEnv:
         height=30,
         number_of_agents=2,
         malfunction_generator=NoMalfunctionGen(),
+        rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=1234,
         **args,
     )
@@ -155,6 +157,7 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_BYDESIGN():
         number_of_agents=1,
         obs_builder_object=DummyObservationBuilder(),
         malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(0.1, 5, 5)),
+        rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=1234,
     )
     _ = rail_env.reset(random_seed=1234)
@@ -197,6 +200,7 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_BYDESIGN():
         number_of_agents=1,
         obs_builder_object=DummyObservationBuilder(),
         malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(0.1, 5, 5)),
+        rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=1234,
     )
     _ = rail_env.reset(random_seed=1234)
@@ -236,6 +240,7 @@ def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK():
         number_of_agents=4,
         obs_builder_object=DummyObservationBuilder(),
         malfunction_generator=malfunction_generators.ParamMalfunctionGen(MalfunctionParameters(0.1, 5, 5)),
+        rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=321,
     )
     _ = rail_env.reset(random_seed=321)
@@ -267,6 +272,7 @@ def test_spawning_cell_reserved_if_id_is_higher_FIXED():
         number_of_agents=4,
         obs_builder_object=DummyObservationBuilder(),
         malfunction_generator=malfunction_generators.ParamMalfunctionGen(MalfunctionParameters(0.1, 5, 5)),
+        rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=2334,
     )
     _ = rail_env.reset(random_seed=2334)
@@ -305,6 +311,7 @@ def test_two_trains_on_same_cell_bug_FIXED():
         number_of_agents=20,
         obs_builder_object=DummyObservationBuilder(),
         malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(0.1, 5, 5)),
+        rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=seed,
     )
     _ = rail_env.reset(random_seed=seed)

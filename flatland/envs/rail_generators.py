@@ -127,7 +127,7 @@ def sparse_rail_generator(*args: object, **kwargs: object) -> RailGenerator:
 class SparseRailGen(RailGen):
 
     def __init__(self, max_num_cities: int = 2, grid_mode: bool = False, max_rails_between_cities: int = 2,
-                 max_rail_pairs_in_city: int = 2, seed: int = None, p_level_free: float = 0) -> RailGenerator:
+                 max_rail_pairs_in_city: int = 2, seed: int = None, p_level_free: float = 0, backwards_compatibility_mode: bool = False) -> RailGenerator:
         """
         Generates railway networks with cities and inner city rails
 
@@ -146,6 +146,12 @@ class SparseRailGen(RailGen):
             Initiate the seed
         p_level_free : float
             Percentage of diamond-crossings which are level-free.
+        backwards_compatibility_mode: bool
+            pr 110 Over- and underpasses (aka. level-free diamond crossings) introduced regression in rail_generator.
+            Even if `p_level_free==0`, additional random numbers are drawn for the number of level-free crossings;
+            Setting `p_level_free=0` and `backwards_compatibility_mode=True` restores the previous behaviour for tests depending on the old behaviour.
+            Defaults to `False` (new behaviour).
+
 
         Returns
         -------
@@ -157,6 +163,7 @@ class SparseRailGen(RailGen):
         self.max_rail_pairs_in_city = max_rail_pairs_in_city
         self.seed = seed
         self.p_level_free = p_level_free
+        self.backwards_compatibility_mode = backwards_compatibility_mode
 
     def generate(self, width: int, height: int, num_agents: int, num_resets: int = 0, np_random: RandomState = None) -> RailGeneratorProduct:
         """
@@ -259,7 +266,7 @@ class SparseRailGen(RailGen):
         num_level_free_diamond_crossings = math.floor(self.p_level_free * num_diamond_crossings)
         # ceil with probability p_ceil
         level_free_positions = set()
-        if self.p_level_free > 0:
+        if self.p_level_free > 0 or (self.p_level_free == 0 and not self.backwards_compatibility_mode):
             p_ceil = (self.p_level_free * num_diamond_crossings) % 1.0
             num_level_free_diamond_crossings += np_random.choice([1, 0], p=(p_ceil, 1 - p_ceil))
 
