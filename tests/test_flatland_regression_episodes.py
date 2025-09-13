@@ -56,7 +56,11 @@ def test_restore_episode():
 
     See <a href="https://github.com/flatland-association/flatland-scenarios/tree/main?tab=readme-ov-file#changelog-2">changelog</a>.
     """
-    metadata_csv = Path("./episodes/trajectories/malfunction_deadlock_avoidance_heuristics/metadata.csv").resolve()
+    _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
+    assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
+    assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
+
+    metadata_csv = Path(f"{_dir}/malfunction_deadlock_avoidance_heuristics/metadata.csv").resolve()
     metadata = pd.read_csv(metadata_csv)
     for i, (k, v) in enumerate(metadata.iterrows()):
         ep_id = f'{v["test_id"]}_{v["env_id"]}'
@@ -80,11 +84,6 @@ def test_restore_episode():
                           0.25: 0.25},
             seed=v["seed"],
         )
-
-        # load metadata, re-gen and compare env after reset
-        _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
-        assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
-        assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
 
         data_sub_dir = f'malfunction_deadlock_avoidance_heuristics/{v["test_id"]}/{v["env_id"]}'
 
