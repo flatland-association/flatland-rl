@@ -4,10 +4,12 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from benchmarks.benchmark_episodes import run_episode, DOWNLOAD_INSTRUCTIONS
-from flatland.trajectories.trajectories import EVENT_LOGS_SUBDIR, OUTPUTS_SUBDIR
+from flatland.env_generation.env_generator import env_generator
+from flatland.trajectories.trajectories import EVENT_LOGS_SUBDIR, OUTPUTS_SUBDIR, Trajectory
 
 
 # run a subset of episodes for regression
@@ -46,3 +48,53 @@ def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool, ski
 
             # start episode from a snapshot to ensure snapshot contains full state!
             run_episode(Path(tmpdirname) / OUTPUTS_SUBDIR, ep_id, start_step=np.random.randint(0, 50), skip_rewards_dones_infos=skip_rewards_dones_infos)
+
+
+def test_restore_episode():
+    """
+    Test that refactorings in env generation does not introduce changes in behaviour with the default parameters.
+
+    See <a href="https://github.com/flatland-association/flatland-scenarios/tree/main?tab=readme-ov-file#changelog-2">changelog</a>.
+    """
+    metadata_csv = Path("./episodes/trajectories/malfunction_deadlock_avoidance_heuristics/metadata.csv").resolve()
+    metadata = pd.read_csv(metadata_csv)
+    for i, (k, v) in enumerate(metadata.iterrows()):
+        ep_id = f'{v["test_id"]}_{v["env_id"]}'
+        print(ep_id)
+        if i >= 40:
+            break
+        env_regen, _, _ = env_generator(
+            n_agents=v["n_agents"],
+            x_dim=v["x_dim"],
+            y_dim=v["y_dim"],
+            n_cities=v["n_cities"],
+            max_rail_pairs_in_city=v["max_rail_pairs_in_city"],
+            grid_mode=v["grid_mode"],
+            max_rails_between_cities=v["max_rails_between_cities"],
+            malfunction_duration_min=v["malfunction_duration_min"],
+            malfunction_duration_max=v["malfunction_duration_max"],
+            malfunction_interval=v["malfunction_interval"],
+            speed_ratios={1.0: 0.25,
+                          0.5: 0.25,
+                          0.33: 0.25,
+                          0.25: 0.25},
+            seed=v["seed"],
+        )
+
+        # load metadata, re-gen and compare env after reset
+        _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
+        assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
+        assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
+
+        data_sub_dir = f'malfunction_deadlock_avoidance_heuristics/{v["test_id"]}/{v["env_id"]}'
+
+        data_dir = Path(os.path.join(_dir, data_sub_dir))
+
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            shutil.copytree(data_dir, tmpdirname, dirs_exist_ok=True)
+
+            t = Trajectory(data_dir=Path(tmpdirname), ep_id=ep_id)
+            env_restored = t.restore_episode()
+
+            # TODO poor man's state comparison for now
+            assert [a.position for a in env_regen.agents] == [a.position for a in env_restored.agents]
