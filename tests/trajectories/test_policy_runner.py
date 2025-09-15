@@ -87,7 +87,7 @@ def test_from_submission():
         assert "episode_id	env_time	success_rate" in (data_dir / TRAINS_ARRIVED_FNAME).read_text()
         assert "episode_id	env_time	agent_id	position" in (data_dir / TRAINS_POSITIONS_FNAME).read_text()
 
-        class DummyCallbacks(FlatlandCallbacks):
+        class DummyCallbacks(FlatlandCallbacks[RailEnv]):
             def on_episode_step(
                 self,
                 *,

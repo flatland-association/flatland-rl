@@ -8,7 +8,7 @@ from flatland.trajectories.trajectories import SERIALISED_STATE_SUBDIR
 from flatland.trajectories.trajectories import Trajectory
 
 
-class TrajectorySnapshotCallbacks(FlatlandCallbacks):
+class TrajectorySnapshotCallbacks(FlatlandCallbacks[RailEnv]):
     """
     FlatlandCallbacks to write env snapshots at the configured interval.
 

@@ -1,10 +1,12 @@
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, TypeVar, Generic
 
 from flatland.core.env import Environment
 
+EnvironmentType = TypeVar('EnvironmentType', bound=Environment, covariant=True)
 
-class FlatlandCallbacks:
+
+class FlatlandCallbacks(Generic[EnvironmentType]):
     """
     Abstract base class for Flatland callbacks similar to rllib, see https://github.com/ray-project/ray/blob/master/rllib/callbacks/callbacks.py.
 
@@ -16,7 +18,7 @@ class FlatlandCallbacks:
     def on_episode_start(
         self,
         *,
-        env: Optional[Environment] = None,
+        env: Optional[EnvironmentType] = None,
         data_dir: Path = None,
         **kwargs,
     ) -> None:
@@ -38,7 +40,7 @@ class FlatlandCallbacks:
     def on_episode_step(
         self,
         *,
-        env: Optional[Environment] = None,
+        env: Optional[EnvironmentType] = None,
         data_dir: Path = None,
         **kwargs,
     ) -> None:
@@ -66,7 +68,7 @@ class FlatlandCallbacks:
     def on_episode_end(
         self,
         *,
-        env: Optional[Environment] = None,
+        env: Optional[EnvironmentType] = None,
         data_dir: Path = None,
         **kwargs,
     ) -> None:
@@ -87,11 +89,11 @@ class FlatlandCallbacks:
 
 
 # https://github.com/ray-project/ray/blob/3b94e5ff0038798a6955cde37459a0d30aa718c4/rllib/callbacks/utils.py#L41
-def make_multi_callbacks(*_callback_list: FlatlandCallbacks):
-    class _MultiFlatlandCallbacks(FlatlandCallbacks):
+def make_multi_callbacks(*_callback_list: FlatlandCallbacks[EnvironmentType]):
+    class _MultiFlatlandCallbacks(FlatlandCallbacks[EnvironmentType]):
         IS_CALLBACK_CONTAINER = True
 
-        def __init__(self, callback_list: List[FlatlandCallbacks]):
+        def __init__(self, *callback_list: FlatlandCallbacks):
             self._callback_list = callback_list
 
         def on_episode_start(self, **kwargs) -> None:
@@ -106,4 +108,4 @@ def make_multi_callbacks(*_callback_list: FlatlandCallbacks):
             for callback in self._callback_list:
                 callback.on_episode_end(**kwargs)
 
-    return _MultiFlatlandCallbacks(_callback_list)
+    return _MultiFlatlandCallbacks(*_callback_list)

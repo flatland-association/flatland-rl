@@ -12,7 +12,7 @@ from flatland.evaluators import aicrowd_helpers
 from flatland.utils.rendertools import RenderTool
 
 
-class GenerateMovieCallbacks(FlatlandCallbacks):
+class GenerateMovieCallbacks(FlatlandCallbacks[RailEnv]):
     def __init__(self):
         self.renderer: RenderTool = None
 
