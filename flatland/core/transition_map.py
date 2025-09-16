@@ -122,7 +122,7 @@ class TransitionMap(Generic[NodeType, UnderlyingTransitionsType, UnderlyingTrans
 
         Parameters
         ----------
-        action : RailEnvActions
+        action : [ActionsType]
             Action to execute
         cell_id : NodeType
             position and orientation
@@ -131,23 +131,12 @@ class TransitionMap(Generic[NodeType, UnderlyingTransitionsType, UnderlyingTrans
         -------
         new_cell_valid: bool
             is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
-        new_position
+        new_position: [NodeType]
             New position after applying the action
-        new_direction
-            New direction after applying the action
         transition_valid: bool
-            Whether the transition from old and directidon is defined in the grid.
-            In other words, can the action be applied directly? False if
-            - MOVE_FORWARD/DO_NOTHING when entering symmetric switch
-            - MOVE_LEFT/MOVE_RIGHT corrected to MOVE_FORWARD in switches and dead-ends
-            However, transition_valid for dead-ends and turns either with the correct MOVE_RIGHT/MOVE_LEFT or MOVE_FORWARD/DO_NOTHING.
-        preprocessed_action: RailEnvActions
+            Whether the transition from old and direction is defined in the grid.
+        preprocessed_action: [ActionType]
             Corrected action if not transition_valid.
-
-            The preprocessed action has the following semantics:
-            - MOVE_LEFT/MOVE_RIGHT: turn left/right without acceleration
-            - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
-            - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
         """
         raise NotImplementedError()
 
@@ -616,9 +605,6 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
 
         # is transition is valid?
         return self.transitions.is_valid(new_trans)
-
-    def check_action_on_agent(self, action: ActionsType, cell_id: NodeType) -> Tuple[bool, NodeType, bool, ActionsType]:
-        raise NotImplementedError()
 
 
 def mirror(dir):

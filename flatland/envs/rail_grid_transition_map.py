@@ -135,7 +135,30 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         return direction, False, RailEnvActions.STOP_MOVING
 
     @lru_cache(maxsize=1_000_000)
-    def check_action_on_agent(self, action: RailEnvActions, cell_id: Tuple[Tuple[int, int], int]):
+    def check_action_on_agent(self, action: RailEnvActions, cell_id: Tuple[Tuple[int, int], int]) -> Tuple[
+        bool, Tuple[Tuple[int, int], int], bool, RailEnvActions]:
+        """
+
+        Returns
+        -------
+        new_cell_valid: bool
+            is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
+        new_position: [NodeType]
+            New position after applying the action
+        transition_valid: bool
+            Whether the transition from old and direction is defined in the grid.
+            In other words, can the action be applied directly? False if
+            - MOVE_FORWARD/DO_NOTHING when entering symmetric switch
+            - MOVE_LEFT/MOVE_RIGHT corrected to MOVE_FORWARD in switches and dead-ends
+            However, transition_valid for dead-ends and turns either with the correct MOVE_RIGHT/MOVE_LEFT or MOVE_FORWARD/DO_NOTHING.
+        preprocessed_action: [ActionType]
+            Corrected action if not transition_valid.
+
+            The preprocessed action has the following semantics:
+            - MOVE_LEFT/MOVE_RIGHT: turn left/right without acceleration
+            - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
+            - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
+        """
         position, direction = cell_id
         new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
