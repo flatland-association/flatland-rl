@@ -28,9 +28,11 @@ from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 
+GridNode = Tuple[Tuple[int, int], int]
+GridEdge = Tuple[GridNode, GridNode]
 
-# TODO implement set_transitions?
-class GraphTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], None, bool, RailEnvActions]):
+
+class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]):
     """
     Flatland 3 Transition map represented by a directed graph.
 
@@ -110,8 +112,8 @@ class GraphTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], None, bool, 
         """
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
-    def check_action_on_agent(self, action: RailEnvActions, cell_id: Tuple[Tuple[int, int], int]) -> Tuple[
-        bool, Tuple[Tuple[int, int], int], bool, RailEnvActions]:
+    def check_action_on_agent(self, action: RailEnvActions, cell_id: GridNode) -> Tuple[
+        bool, GridNode, bool, RailEnvActions]:
         position, direction = cell_id
         new_position = None
         new_direction, transition_valid, preprocessed_action = direction, True, action
@@ -159,5 +161,5 @@ class GraphTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], None, bool, 
         new_cell_valid = (*new_position, new_direction) in self.g.nodes
         return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action
 
-    def get_transitions(self, cell_id: Tuple[Tuple[int, int], int]) -> Tuple[bool]:
+    def get_transitions(self, cell_id: GridNode) -> Tuple[bool]:
         return True,
