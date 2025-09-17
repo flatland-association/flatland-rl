@@ -2,7 +2,7 @@ from typing import Tuple, Dict, Any
 
 import numpy as np
 
-from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
 

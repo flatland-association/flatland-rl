@@ -2,9 +2,9 @@ import numpy as np
 from numpy.random import RandomState
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.line_generators import LineGenerator, sparse_line_generator
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.timetable_utils import Line

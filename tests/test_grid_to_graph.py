@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from flatland.core.graph.grid_to_graph import GraphTransitionMap
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.graph.grid_to_graph import GraphTransitionMap
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 
 # rows are top to bottom!
 _EAST_OWN = (1, 1, Grid4TransitionsEnum.EAST)  # at "W" side, heading "E"

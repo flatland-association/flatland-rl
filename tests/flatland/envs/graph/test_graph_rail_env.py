@@ -1,8 +1,8 @@
 import tempfile
 from pathlib import Path
 
-from flatland.core.graph.grid_to_graph import GraphTransitionMap
 from flatland.env_generation.env_generator import env_generator
+from flatland.envs.graph.grid_to_graph import GraphTransitionMap
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.trajectories.policy_runner import PolicyRunner

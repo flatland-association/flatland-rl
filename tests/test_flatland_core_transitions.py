@@ -4,8 +4,8 @@
 """Tests for `flatland` package."""
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid8 import Grid8Transitions
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 
 
 # remove whitespace in string; keep whitespace below for easier reading

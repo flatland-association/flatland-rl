@@ -3,7 +3,7 @@ import re
 
 import svgutils
 
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 
 
 class SVG(object):
@@ -140,7 +140,7 @@ class Track(object):
         for sTrans, sFile in dFiles.items():
             svg = SVG("./svg/" + sFile)
 
-            # Translate the ascii transition descption in the format  "NE WS" to the 
+            # Translate the ascii transition descption in the format  "NE WS" to the
             # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
             lTrans16 = ["0"] * 16
             for sTran in sTrans.split(" "):

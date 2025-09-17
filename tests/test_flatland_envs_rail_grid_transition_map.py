@@ -1,7 +1,7 @@
 import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.rail_env_grid import RailEnvTransitionsEnum, RailEnvTransitions
+from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum, RailEnvTransitions
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 

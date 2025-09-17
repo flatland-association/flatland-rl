@@ -14,7 +14,6 @@ from flatland.core.effects_generator import EffectsGenerator, make_multi_effects
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_utils import Vector2D
-from flatland.core.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_generators as mal_gen
@@ -22,6 +21,7 @@ from flatland.envs import persistence
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions

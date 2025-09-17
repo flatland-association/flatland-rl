@@ -1,5 +1,5 @@
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes
 from flatland.envs.rail_generators import SparseRailGen

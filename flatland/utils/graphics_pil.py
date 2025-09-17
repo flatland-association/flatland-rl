@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from numpy import array
 
-from flatland.core.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
 from flatland.utils.graphics_layer import GraphicsLayer
 
 

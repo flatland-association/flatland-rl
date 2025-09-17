@@ -31,7 +31,6 @@ from flatland.envs.rail_env_action import RailEnvActions
 GridNode = Tuple[Tuple[int, int], int]
 GridEdge = Tuple[GridNode, GridNode]
 
-
 class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]):
     """
     Flatland 3 Transition map represented by a directed graph.

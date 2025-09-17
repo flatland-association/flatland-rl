@@ -7,10 +7,10 @@ import numpy as np
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import IntVector2D
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.core.transitions import Transitions
 from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_action import RailEnvNextAction
 
