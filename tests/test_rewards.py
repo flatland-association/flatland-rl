@@ -2,7 +2,6 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
 
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
