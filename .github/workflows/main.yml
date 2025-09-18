@@ -1,5 +1,10 @@
 name: Main
 
+env:
+    # DEPENDENCY SWITCH:
+    # TODO https://github.com/flatland-association/flatland-rl/issues/243 update dependency after merge
+    flatland-baselines-ref: feature/graph-env-first-steps
+
 on:
     workflow_dispatch:
     schedule:
@@ -70,7 +75,7 @@ jobs:
             -   name: Clone flatland-baselines
                 run: |
                     set -euxo pipefail
-                    git clone https://github.com/flatland-association/flatland-baselines.git@${{ env.flatland-baselines-ref }}
+                    git clone -b ${{ env.flatland-baselines-ref }} https://github.com/flatland-association/flatland-baselines.git
                     cd flatland-baselines
                     git remote show origin
                     git status
@@ -252,7 +257,12 @@ jobs:
                 working-directory: ${{ github.workspace }}
             -   name: Clone flatland-baselines
                 run: |
-                    git clone https://github.com/flatland-association/flatland-baselines.git@feature/graph-env-first-steps
+                    set -euxo pipefail
+                    git clone -b ${{ env.flatland-baselines-ref }} https://github.com/flatland-association/flatland-baselines.git
+                    cd flatland-baselines
+                    git remote show origin
+                    git status
+                    git branch
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
