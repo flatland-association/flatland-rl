@@ -117,7 +117,7 @@ class TransitionMap(Generic[NodeType, UnderlyingTransitionsType, UnderlyingTrans
 
     def check_action_on_agent(self, action: ActionsType, cell_id: NodeType) -> Tuple[bool, NodeType, bool, ActionsType]:
         """
-        Apply the action on the train regardless of locations of other trains.
+        Apply the action on the train regardless of locations of other agents.
         Checks for valid cells to move and valid rail transitions.
 
         Parameters
