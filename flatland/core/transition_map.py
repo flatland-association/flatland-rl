@@ -181,7 +181,6 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
     def __hash__(self):
         return self.uuid
 
-    # TODO return type hint
     @lru_cache(maxsize=1_000_000)
     def get_full_transitions(self, row, column) -> UnderlyingTransitionsType:
         """
