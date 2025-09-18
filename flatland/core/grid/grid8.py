@@ -1,4 +1,5 @@
 from enum import IntEnum
+from typing import Tuple
 
 import numpy as np
 
@@ -35,7 +36,7 @@ class Grid8Transitions(Transitions[np.uint64, int, bool]):
     def get_type(self):
         return np.uint64
 
-    def get_transitions(self, cell_transition, orientation):
+    def get_transitions(self, cell_transition, orientation) -> Tuple[np.uint64]:
         """
         Get the 8 possible transitions.
 

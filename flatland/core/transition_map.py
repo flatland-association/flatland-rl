@@ -201,7 +201,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         return self.grid[(row, column)]
 
     @lru_cache(maxsize=4_000_000)
-    def get_transitions(self, cell_id: Tuple[Tuple[int, int], int]):
+    def get_transitions(self, cell_id: Tuple[Tuple[int, int], int]) -> Tuple[Grid4Transitions]:
         """
         Return a tuple of transitions available in a cell specified by
         `cell_id` (e.g., a tuple of size of the maximum number of transitions,
