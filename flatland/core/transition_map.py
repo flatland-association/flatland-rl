@@ -563,11 +563,20 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         Utility function to test that a path drawn by a-start algorithm uses valid transition objects.
         We us this to quide a-star as there are many transition elements that are not allowed in RailEnv
 
-        :param prev_pos: The previous position we were checking
-        :param current_pos: The current position we are checking
-        :param new_pos: Possible child position we move into
-        :param end_pos: End cell of path we are drawing
-        :return: True if the transition is valid, False if transition element is illegal
+        Parameters
+        ----------
+        prev_pos : IntVector2D
+            The previous position we were checking
+        current_pos : IntVector2D
+            The current position we are checking
+        new_pos : IntVector2D
+            Possible child position we move into
+        end_pos : IntVector2D
+            End cell of path we are drawing
+
+        Returns
+        ----------
+        True if the transition is valid, False if transition element is illegal
         """
         # start by getting direction used to get to current node
         # and direction from current node to possible child node
