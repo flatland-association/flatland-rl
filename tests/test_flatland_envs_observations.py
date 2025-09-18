@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from numpy.random import RandomState
 
+from flatland.core.env import Environment
 from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder, gauss_perturbation_observation_builder_wrapper
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
@@ -356,7 +357,7 @@ def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape: Callab
 
 
 def test_gauss_perturbation_observation_builder_wrapper():
-    class ZeroArrayObservationBuilder(ObservationBuilder[np.ndarray]):
+    class ZeroArrayObservationBuilder(ObservationBuilder[Environment, np.ndarray]):
         def __init__(self, shape: tuple):
             super().__init__()
             self._shape = shape

@@ -45,7 +45,7 @@ class RandomPolicy(RailEnvPolicy):
         return self.np_random.choice(self.action_size)
 
 
-class EnvStepObservationBuilder(ObservationBuilder[int]):
+class EnvStepObservationBuilder(ObservationBuilder[RailEnv, int]):
     """Returns elapsed steps as observation."""
 
     def get(self, handle: AgentHandle = 0) -> ObservationType:

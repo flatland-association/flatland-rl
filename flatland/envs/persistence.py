@@ -1,6 +1,6 @@
 import pickle
 from pathlib import Path
-from typing import Tuple, Dict, Optional, Union
+from typing import Tuple, Dict, Optional, Union, Any
 
 import msgpack
 import msgpack_numpy
@@ -86,7 +86,7 @@ class RailEnvPersister(object):
              filename: Union[str, Path] = None,
              env_dict=None,
              load_from_package: Optional[str] = None,
-             obs_builder: Optional[ObservationBuilder["RailEnv"]] = None):
+             obs_builder: Optional[ObservationBuilder["RailEnv", "RailEnv"]] = None):
         """
         Load environment with distance map from a file into existing env.
 
@@ -119,7 +119,7 @@ class RailEnvPersister(object):
     def load_new(cls,
                  filename: Union[str, Path],
                  load_from_package=None,
-                 obs_builder: Optional[ObservationBuilder["RailEnv"]] = None
+                 obs_builder: Optional[ObservationBuilder[Any, "RailEnv"]] = None
                  ) -> Tuple["RailEnv", Dict]:
         """
         Load environment with distance map from a file into new env.

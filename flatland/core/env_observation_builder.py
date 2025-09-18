@@ -15,20 +15,21 @@ from numpy.random import RandomState
 
 from flatland.core.env import Environment
 
+EnvType = TypeVar('EnvType')
 ObservationType = TypeVar('ObservationType')
 AgentHandle = int
 
 
-class ObservationBuilder(Generic[ObservationType]):
+class ObservationBuilder(Generic[EnvType, ObservationType]):
     """
     ObservationBuilder base class.
     """
 
     def __init__(self):
-        self.env: Optional[Environment] = None
+        self.env: Optional[EnvType] = None
 
-    def set_env(self, env: Environment):
-        self.env: Environment = env
+    def set_env(self, env: EnvType):
+        self.env: EnvType = env
 
     def reset(self):
         """
@@ -77,13 +78,13 @@ class ObservationBuilder(Generic[ObservationType]):
         raise NotImplementedError()
 
     def _get_one_hot_for_agent_direction(self, agent) -> np.ndarray:
-        """Retuns the agent's direction to one-hot encoding."""
+        """Returns the agent's direction to one-hot encoding."""
         direction = np.zeros(4)
         direction[agent.direction] = 1
         return direction
 
 
-class DummyObservationBuilder(ObservationBuilder[bool]):
+class DummyObservationBuilder(ObservationBuilder[Environment, bool]):
     """
     DummyObservationBuilder class which returns dummy observations
     This is used in the evaluation service
@@ -100,8 +101,8 @@ class DummyObservationBuilder(ObservationBuilder[bool]):
 
 
 def gauss_perturbation_observation_builder_wrapper(
-    builder: ObservationBuilder[np.ndarray], np_random: RandomState, mu: np.ndarray = None, sigma: np.ndarray = None
-) -> ObservationBuilder[np.ndarray]:
+    builder: ObservationBuilder[Environment, np.ndarray], np_random: RandomState, mu: np.ndarray = None, sigma: np.ndarray = None
+) -> ObservationBuilder[Environment, np.ndarray]:
     """
     Perturb a numpy array based observation with Gaussian noise.
 
@@ -120,8 +121,8 @@ def gauss_perturbation_observation_builder_wrapper(
     observation with Gaussian noise added
     """
 
-    class _GaussPeturbationObservationBuilder(ObservationBuilder[np.ndarray]):
-        def __init__(self, builder: ObservationBuilder[np.ndarray], mu: np.ndarray = None, sigma: np.ndarray = None):
+    class _GaussPerturbationObservationBuilder(ObservationBuilder[Environment, np.ndarray]):
+        def __init__(self, builder: ObservationBuilder[Environment, np.ndarray], mu: np.ndarray = None, sigma: np.ndarray = None):
             super().__init__()
             self._mu = mu if mu is not None else 0
             self._sigma = sigma if sigma is not None else 1
@@ -134,8 +135,8 @@ def gauss_perturbation_observation_builder_wrapper(
         def reset(self):
             builder.reset()
 
-        def get(self, handle: AgentHandle = 0) -> ObservationBuilder[np.ndarray]:
+        def get(self, handle: AgentHandle = 0) -> ObservationBuilder[Environment, np.ndarray]:
             obs: np.ndarray = self._builder.get(handle)
             return obs + self._np_random.normal(self._mu, self._sigma, obs.shape)
 
-    return _GaussPeturbationObservationBuilder(builder)
+    return _GaussPerturbationObservationBuilder(builder)

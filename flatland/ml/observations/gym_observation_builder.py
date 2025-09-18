@@ -5,14 +5,13 @@ import gymnasium as gym
 import numpy as np
 from ray.rllib.utils.typing import MultiAgentDict
 
-from flatland.core.env import Environment
-from flatland.core.env_observation_builder import DummyObservationBuilder, AgentHandle, ObservationType
+from flatland.core.env_observation_builder import DummyObservationBuilder, AgentHandle, ObservationType, EnvType
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 
 
-class GymObservationBuilder(Generic[ObservationType], ObservationBuilder[ObservationType]):
+class GymObservationBuilder(Generic[EnvType, ObservationType], ObservationBuilder[EnvType, ObservationType]):
     """
     Adds `observation_space` method to `ObservationBuilder`.
     """
@@ -25,7 +24,7 @@ class GymObservationBuilder(Generic[ObservationType], ObservationBuilder[Observa
         raise NotImplementedError()
 
 
-class GymObservationBuilderWrapper(GymObservationBuilder):
+class GymObservationBuilderWrapper(GymObservationBuilder[EnvType, ObservationType]):
     """
     Wraps an existing `ObservationBuilder` into a `GymObservationBuilder`.
     """
@@ -35,7 +34,7 @@ class GymObservationBuilderWrapper(GymObservationBuilder):
         self.wrap = wrap
         self.observation_space = observation_space
 
-    def set_env(self, env: Environment):
+    def set_env(self, env: EnvType):
         self.wrap.set_env(env)
 
     def reset(self):

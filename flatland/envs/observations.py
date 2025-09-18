@@ -31,7 +31,7 @@ Node = collections.namedtuple('Node', 'dist_own_target_encountered '
                                       'childs')
 
 
-class TreeObsForRailEnv(ObservationBuilder[Node]):
+class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
     """
     TreeObsForRailEnv object.
 
@@ -531,7 +531,7 @@ class TreeObsForRailEnv(ObservationBuilder[Node]):
         return int((direction + 2) % 4)
 
 
-class GlobalObsForRailEnv(ObservationBuilder[Tuple[np.ndarray, np.ndarray, np.ndarray]]):
+class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.ndarray, np.ndarray]]):
     """
     Gives a global observation of the entire rail environment.
     The observation is composed of the following elements:
@@ -739,7 +739,7 @@ class LocalObsForRailEnv(ObservationBuilder):
             return visible, rel_coords
 
 
-class FullEnvObservation(ObservationBuilder["RailEnv"]):
+class FullEnvObservation(ObservationBuilder["RailEnv", "RailEnv"]):
     """
     Returns full env as observation.
     """
