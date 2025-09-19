@@ -408,7 +408,7 @@ def generate_trajectory_from_policy(
         obs_builder = obs_builder_cls()
     env = None
     if env_path is not None:
-        env, _ = RailEnvPersister.load_new(str(env_path))
+        env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder)
     fork_from_trajectory = None
     if fork_data_dir is not None and fork_ep_id is not None:
         fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
