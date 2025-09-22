@@ -9,7 +9,6 @@ from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
-from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rewards import Rewards
@@ -120,7 +119,6 @@ class PolicyRunner:
             env.obs_builder.set_env(env)
         # TODO bad code smell - private method - check num resets?
         observations = env._get_observations()
-
 
         assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
 
@@ -285,18 +283,25 @@ class PolicyRunner:
               type=int,
               help="Initiate random seed generators. Goes into `reset`.",
               required=False, default=42)
-@click.option('--malfunction-generator-pkg',
+@click.option('--effects-generator-pkg',
               type=str,
               help="Use to override options for `ParamMalfunctionGen`. Defaults to `None`.",
               required=False,
               default=None
               )
-@click.option('--malfunction-generator-cls',
+@click.option('--effects-generator-cls',
               type=str,
               help="Use to override options for `ParamMalfunctionGen`. Defaults to `None`.",
               required=False,
               default=None
               )
+@click.option('--effects-generator-kwargs',
+              multiple=True,
+              nargs=2,
+              type=click.Tuple(types=[str, str]),
+              help="Keyworard args passed to effects generator.",
+              required=False,
+              default=None)
 @click.option('--snapshot-interval',
               type=int,
               help="Interval to right snapshots. Use 0 to switch off, 1 for every step, ....",
@@ -349,8 +354,9 @@ def generate_trajectory_from_policy(
     malfunction_interval=540,
     speed_ratios=None,
     seed: int = 42,
-    malfunction_generator_pkg: str = None,
-    malfunction_generator_cls: str = None,
+    effects_generator_pkg: str = None,
+    effects_generator_cls: str = None,
+    effects_generator_kwargs: str = None,
     snapshot_interval: int = 1,
     ep_id: str = None,
     env_path: Path = None,
@@ -374,12 +380,12 @@ def generate_trajectory_from_policy(
         rewards_cls = getattr(module, rewards_cls)
         rewards = rewards_cls()
 
-    malfunction_generator = None
-    if malfunction_generator_pkg is not None and malfunction_generator_cls is not None:
-        module = importlib.import_module(malfunction_generator_pkg)
-        malfunction_generator_cls = getattr(module, malfunction_generator_cls)
-        malfunction_generator = malfunction_generator_cls()
-
+    effects_generator = None
+    if effects_generator_pkg is not None and effects_generator_cls is not None:
+        module = importlib.import_module(effects_generator_pkg)
+        effects_generator_cls = getattr(module, effects_generator_cls)
+        effects_generator_kwargs = dict(effects_generator_kwargs) if len(effects_generator_kwargs) > 0 else {}
+        effects_generator = effects_generator_cls(**effects_generator_kwargs)
 
     if env_path is not None:
         env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder)
@@ -395,6 +401,7 @@ def generate_trajectory_from_policy(
             malfunction_duration_min=malfunction_duration_min,
             malfunction_duration_max=malfunction_duration_max,
             malfunction_interval=malfunction_interval,
+            effects_generator=effects_generator,
             speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
             seed=seed,
             obs_builder_object=obs_builder,
@@ -403,9 +410,6 @@ def generate_trajectory_from_policy(
     fork_from_trajectory = None
     if fork_data_dir is not None and fork_ep_id is not None:
         fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
-
-    if malfunction_generator is not None:
-        env.effects_generator = MalfunctionEffectsGenerator(malfunction_generator)
 
     PolicyRunner.create_from_policy(
         policy=policy_cls(),

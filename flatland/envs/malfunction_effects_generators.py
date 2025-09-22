@@ -35,7 +35,7 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
 
         Parameters
         ----------
-        malfunction_rate : int
+        malfunction_rate : float
             Poisson process with given rate.
         min_duration : int
             If malfunction, duration uniformly in [min_duration,max_duration].
@@ -50,15 +50,15 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         """
         super().__init__()
 
-        self._malfunction_rate = malfunction_rate if malfunction_rate is not None else 0
-        self._min_duration = min_duration if min_duration is not None else 1
-        self._max_duration = max_duration if max_duration is not None else 1
+        self._malfunction_rate = float(malfunction_rate)
+        self._min_duration = int(min_duration)
+        self._max_duration = int(max_duration)
 
         self._malfunction_generator = mal_gen.ParamMalfunctionGen(
             mal_gen.MalfunctionParameters(malfunction_rate=self._malfunction_rate, min_duration=self._min_duration, max_duration=self._max_duration)
         )
-        self._earliest_condition = earliest_malfunction
-        self._max_num_malfunctions = max_num_malfunctions
+        self._earliest_condition = int(earliest_malfunction) if earliest_malfunction is not None else None
+        self._max_num_malfunctions = int(max_num_malfunctions) if max_num_malfunctions is not None else None
         self._num_malfunctions = 0
         self._condition = condition
 
