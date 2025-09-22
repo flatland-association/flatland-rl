@@ -58,7 +58,7 @@ class EnvStepObservationBuilder(ObservationBuilder[int]):
 def test_from_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
         env = trajectory.restore_episode()
         gen, _, _ = env_generator()
@@ -71,7 +71,7 @@ def test_from_episode():
 def test_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
 
         assert (data_dir / DISCRETE_ACTION_FNAME).exists()
         assert (data_dir / TRAINS_ARRIVED_FNAME).exists()
@@ -139,6 +139,7 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(
+            env=env_generator()[0],
             policy=RandomPolicy(reset_at=7),
             obs_builder=EnvStepObservationBuilder(),
             data_dir=data_dir / "trajectory",
@@ -153,6 +154,7 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
             print(trajectory.trains_rewards_dones_infos)
 
         fork = PolicyRunner.create_from_policy(
+            env=env_generator()[0],
             data_dir=data_dir / "fork",
             policy=RandomPolicy(),
             obs_builder=EnvStepObservationBuilder(),
@@ -184,6 +186,7 @@ def test_run_from_intermediate_step_pkl(verbose: bool = False):
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(
+            env=env_generator()[0],
             policy=RandomPolicy(reset_at=7),
             obs_builder=EnvStepObservationBuilder(),
             data_dir=data_dir / "trajectory",
@@ -227,6 +230,7 @@ def test_failing_from_wrong_intermediate_step():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
     trajectory = PolicyRunner.create_from_policy(
+        env=env_generator()[0],
         policy=RandomPolicy(reset_at=7),
         obs_builder=EnvStepObservationBuilder(),
         data_dir=data_dir / "trajectory",
@@ -246,7 +250,7 @@ def test_failing_from_wrong_intermediate_step():
 def test_evaluation_snapshots():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
         print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
         assert len(list(trajectory.data_dir.rglob("**/*step*.pkl"))) == 0
         TrajectoryEvaluator(trajectory).evaluate(snapshot_interval=1)

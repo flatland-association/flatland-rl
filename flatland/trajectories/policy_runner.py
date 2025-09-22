@@ -21,20 +21,7 @@ class PolicyRunner:
     def create_from_policy(
         policy: Policy,
         data_dir: Path,
-        env: RailEnv = None,
-        n_agents=7,
-        x_dim=30,
-        y_dim=30,
-        n_cities=2,
-        max_rail_pairs_in_city=4,
-        grid_mode=False,
-        max_rails_between_cities=2,
-        malfunction_duration_min=20,
-        malfunction_duration_max=50,
-        malfunction_interval=540,
-        speed_ratios=None,
-        line_length=2,
-        seed=42,
+        env: RailEnv,
         obs_builder: Optional[ObservationBuilder] = None,
         rewards: Rewards = None,
         snapshot_interval: int = 1,
@@ -59,36 +46,10 @@ class PolicyRunner:
             the path to write the trajectory to
         env: RailEnv
             directly inject env, skip env generation
-        n_agents: int
-            number of agents
-        x_dim: int
-            number of columns
-        y_dim: int
-            number of rows
-        n_cities: int
-           Max number of cities to build. The generator tries to achieve this numbers given all the parameters. Goes into `sparse_rail_generator`.
-        max_rail_pairs_in_city: int
-            Number of parallel tracks in the city. This represents the number of tracks in the train stations. Goes into `sparse_rail_generator`.
-        grid_mode: bool
-            How to distribute the cities in the path, either equally in a grid or random. Goes into `sparse_rail_generator`.
-        max_rails_between_cities: int
-            Max number of rails connecting to a city. This is only the number of connection points at city boarder.
-        malfunction_duration_min: int
-            Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.
-        malfunction_duration_max: int
-            Max duration of malfunction. Goes into `ParamMalfunctionGen`.
-        malfunction_interval: int
-            Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.
-        speed_ratios: Dict[float, float]
-            Speed ratios of all agents. They are probabilities of all different speeds and have to add up to 1. Goes into `sparse_line_generator`. Defaults to `{1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}`.
-        line_length : int
-            The length of the lines. Goes into `sparse_line_generator`. Defaults to `2`.
-        seed: int
-             Initiate random seed generators. Goes into `reset`.
         obs_builder: Optional[ObservationBuilder]
-            Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
+            Defaults to `env.obs_builder` already present in `env` passed.
         rewards : Rewards
-            Rewards function. Defaults to `DefaultRewards`.
+            Rewards function. Defaults to `env.rewards` already present in `env` passed.
         snapshot_interval : int
             interval to write pkl snapshots
         ep_id: str
@@ -151,29 +112,14 @@ class PolicyRunner:
                     # replay the trajectory to the start_step from the latest snapshot
                     env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
                 trajectory.load()
-                # TODO bad code smell - private method - check num resets?
-                observations = env._get_observations()
-        elif env is not None:
-            # TODO bad code smell - private method - check num resets?
-            observations = env._get_observations()
-        else:
-            env, observations, _ = env_generator(
-                n_agents=n_agents,
-                x_dim=x_dim,
-                y_dim=y_dim,
-                n_cities=n_cities,
-                max_rail_pairs_in_city=max_rail_pairs_in_city,
-                grid_mode=grid_mode,
-                max_rails_between_cities=max_rails_between_cities,
-                malfunction_duration_min=malfunction_duration_min,
-                malfunction_duration_max=malfunction_duration_max,
-                malfunction_interval=malfunction_interval,
-                speed_ratios=speed_ratios,
-                line_length=line_length,
-                seed=seed,
-                obs_builder_object=obs_builder,
-                rewards=rewards,
-            )
+        if rewards is not None:
+            env.rewards = rewards
+        if obs_builder is not None:
+            env.obs_builder = obs_builder
+            env.obs_builder.set_env(env)
+        # TODO bad code smell - private method - check num resets?
+        observations = env._get_observations()
+
 
         assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
 
@@ -406,36 +352,39 @@ def generate_trajectory_from_policy(
         module = importlib.import_module(obs_builder_pkg)
         obs_builder_cls = getattr(module, obs_builder_cls)
         obs_builder = obs_builder_cls()
-    env = None
-    if env_path is not None:
-        env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder)
-    fork_from_trajectory = None
-    if fork_data_dir is not None and fork_ep_id is not None:
-        fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
 
     rewards = None
     if rewards_pkg is not None and rewards_cls is not None:
         module = importlib.import_module(rewards_pkg)
-        rewards = getattr(module, rewards_cls)
-        rewards: Rewards = rewards()
+        rewards_cls = getattr(module, rewards_cls)
+        rewards = rewards_cls()
+
+    if env_path is not None:
+        env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder)
+    else:
+        env, _, _ = env_generator(
+            n_agents=n_agents,
+            x_dim=x_dim,
+            y_dim=y_dim,
+            n_cities=n_cities,
+            max_rail_pairs_in_city=max_rail_pairs_in_city,
+            grid_mode=grid_mode,
+            max_rails_between_cities=max_rails_between_cities,
+            malfunction_duration_min=malfunction_duration_min,
+            malfunction_duration_max=malfunction_duration_max,
+            malfunction_interval=malfunction_interval,
+            speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
+            seed=seed,
+            obs_builder_object=obs_builder,
+            rewards=rewards,
+        )
+    fork_from_trajectory = None
+    if fork_data_dir is not None and fork_ep_id is not None:
+        fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
 
     PolicyRunner.create_from_policy(
         policy=policy_cls(),
         data_dir=data_dir,
-        n_agents=n_agents,
-        x_dim=x_dim,
-        y_dim=y_dim,
-        n_cities=n_cities,
-        max_rail_pairs_in_city=max_rail_pairs_in_city,
-        grid_mode=grid_mode,
-        max_rails_between_cities=max_rails_between_cities,
-        malfunction_duration_min=malfunction_duration_min,
-        malfunction_duration_max=malfunction_duration_max,
-        malfunction_interval=malfunction_interval,
-        speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
-        seed=seed,
-        obs_builder=obs_builder,
-        rewards=rewards,
         snapshot_interval=snapshot_interval,
         ep_id=ep_id,
         env=env,

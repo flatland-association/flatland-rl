@@ -1,6 +1,7 @@
 import tempfile
 from pathlib import Path
 
+from flatland.env_generation.env_generator import env_generator
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.trajectories.trajectory_observation_callbacks import TrajectoryObservationCallbacks
@@ -10,7 +11,7 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 def test_observation_callbacks():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
         assert len(list(trajectory.data_dir.rglob("**/*step*.pkl"))) == 0
         assert len(list(trajectory.data_dir.rglob("**/*obs*.pkl"))) == 0
 
