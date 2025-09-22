@@ -26,6 +26,8 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
                  malfunction_rate: float = None,
                  min_duration: float = None,
                  max_duration: float = None,
+                 earliest_malfunction: int = None,
+                 max_num_malfunctions: int = None,
                  condition: MalfunctionCondition = None,
                  ):
         """
@@ -39,6 +41,12 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
             If malfunction, duration uniformly in [min_duration,max_duration].
         max_duration : int
             If malfunction, duration uniformly in [min_duration,max_duration].
+        earliest_malfunction : int
+            Defaults to `None`.
+        max_num_malfunctions : int
+            Defaults to `None`.
+        condition : MalfunctionCondition
+            Additional condition. Defaults to None.
         """
         super().__init__()
 
@@ -49,14 +57,25 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         self._malfunction_generator = mal_gen.ParamMalfunctionGen(
             mal_gen.MalfunctionParameters(malfunction_rate=self._malfunction_rate, min_duration=self._min_duration, max_duration=self._max_duration)
         )
+        self._earliest_condition = earliest_malfunction
+        self._max_num_malfunctions = max_num_malfunctions
+        self._num_malfunctions = 0
         self._condition = condition
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
-        if self._condition is None:
+        if self._earliest_condition is not None and env._elapsed_steps < self._earliest_condition:
+            return env
+        if self._max_num_malfunctions is not None and self._num_malfunctions >= self._max_num_malfunctions:
             return env
         for agent in env.agents:
-            if self._condition(agent, env._elapsed_steps):
+            if self._condition is None or self._condition(agent, env._elapsed_steps):
+                in_malfunction_before = agent.malfunction_handler.in_malfunction
                 agent.malfunction_handler.generate_malfunction(self._malfunction_generator, env.np_random)
+                in_malfunction_after = agent.malfunction_handler.in_malfunction
+                if in_malfunction_after and not in_malfunction_before:
+                    self._num_malfunctions += 1
+                    if self._max_num_malfunctions is not None and self._num_malfunctions >= self._max_num_malfunctions:
+                        return env
         return env
 
 
