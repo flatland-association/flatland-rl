@@ -14,7 +14,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
 from flatland.trajectories.policy_runner import PolicyRunner, generate_trajectory_from_policy
-from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR
+from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, Trajectory
 from flatland.utils.seeding import random_state_to_hashablestate, np_random
 
 
@@ -256,3 +256,31 @@ def test_evaluation_snapshots():
         TrajectoryEvaluator(trajectory).evaluate(snapshot_interval=1)
         print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
         assert len(list((trajectory.data_dir / "outputs" / "serialised_state").rglob("**/*step*.pkl"))) == 472
+
+
+def test_malfunction_override():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectory_from_policy(
+                ["--data-dir", data_dir, "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy", "--ep-id", "banana"])
+        assert e_info.value.code == 0
+
+        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
+        trajectory.load()
+        assert sum([info["malfunction"] for info in trajectory.trains_rewards_dones_infos["info"]]) > 0
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectory_from_policy([
+                "--data-dir", data_dir,
+                "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
+                "--ep-id", "banana",
+                "--malfunction-generator-pkg", "flatland.envs.malfunction_generators", "--malfunction-generator-cls", "NoMalfunctionGen"
+            ])
+        assert e_info.value.code == 0
+
+        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
+        trajectory.load()
+        assert sum([info["malfunction"] for info in trajectory.trains_rewards_dones_infos["info"]]) == 0
