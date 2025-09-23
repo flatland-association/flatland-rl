@@ -377,7 +377,9 @@ def generate_trajectory_from_policy(
 
     if env_path is not None:
         env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
-
+        # TODO https://github.com/flatland-association/flatland-rl/issues/278 a bit hacky for now, clean up later...
+        if malfunction_interval == -1 and effects_generator is not None:
+            env.effects_generator = effects_generator
     else:
         env, _, _ = env_generator(
             n_agents=n_agents,

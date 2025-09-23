@@ -263,7 +263,22 @@ def test_effects_generator():
                 "--data-dir", data_dir,
                 "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
                 "--ep-id", "banana",
-                "--malfunction_interval", "9999999999999"
+                "--malfunction_interval", "1"
+            ])
+        assert e_info.value.code == 0
+
+        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
+        trajectory.load()
+        assert sum([info["malfunction"] for info in trajectory.trains_rewards_dones_infos["info"]]) > 0
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectory_from_policy([
+                "--data-dir", data_dir,
+                "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
+                "--ep-id", "banana",
+                "--malfunction_interval", "-1"
             ])
         assert e_info.value.code == 0
 
@@ -278,9 +293,7 @@ def test_effects_generator():
                 "--data-dir", data_dir,
                 "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
                 "--ep-id", "banana",
-                "--malfunction_duration_min", "0",
-                "--malfunction_duration_max", "0",
-                "--malfunction_interval", "9999999999999",
+                "--malfunction_interval", "-1",
                 "--effects-generator-pkg", "flatland.envs.malfunction_effects_generators", "--effects-generator-cls", "ConditionalMalfunctionEffectsGenerator",
                 "--effects-generator-kwargs", "max_num_malfunctions", "1",
                 "--effects-generator-kwargs", "min_duration", "25",
