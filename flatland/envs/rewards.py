@@ -9,7 +9,6 @@ from flatland.envs.step_utils.states import TrainState
 RewardType = TypeVar('RewardType')
 
 
-# TODO extract to core?
 class Rewards(Generic[RewardType]):
     """
     Reward Function Interface.

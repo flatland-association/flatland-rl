@@ -253,19 +253,18 @@ def test_multi_objective_rewards():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         trajectory_morl = PolicyRunner.create_from_policy(
-            env=env_generator()[0],
+            env=env_generator(rewards=BasicMultiObjectiveRewards())[0],
             policy=RandomPolicy(), data_dir=data_dir / "morl",
             snapshot_interval=5,
-            rewards=BasicMultiObjectiveRewards())
+        )
         assert trajectory_morl.trains_rewards_dones_infos["reward"].map(lambda r: r[0]).sum() == -1786.0
         assert trajectory_morl.trains_rewards_dones_infos["reward"].map(lambda r: r[1]).sum() == -914.0
         assert trajectory_morl.trains_rewards_dones_infos["reward"].map(lambda r: r[2]).sum() == -138.5625
 
         trajectory_default_rewards = PolicyRunner.create_from_policy(
-            env=env_generator()[0], policy=RandomPolicy(),
+            env=env_generator(rewards=DefaultRewards())[0], policy=RandomPolicy(),
             data_dir=data_dir / "default",
             snapshot_interval=5,
-            rewards=DefaultRewards()
         )
         assert trajectory_default_rewards.trains_rewards_dones_infos["reward"].sum() == -1786.0
 

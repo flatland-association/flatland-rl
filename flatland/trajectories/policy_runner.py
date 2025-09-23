@@ -1,17 +1,14 @@
 import importlib
 from pathlib import Path
-from typing import Optional
 
 import click
 import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
-from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rewards import Rewards
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
 
@@ -22,14 +19,13 @@ class PolicyRunner:
         policy: Policy,
         data_dir: Path,
         env: RailEnv,
-        obs_builder: Optional[ObservationBuilder] = None,
-        rewards: Rewards = None,
         snapshot_interval: int = 1,
         ep_id: str = None,
         callbacks: FlatlandCallbacks = None,
         tqdm_kwargs: dict = None,
         start_step: int = 0,
         end_step: int = None,
+
         fork_from_trajectory: "Trajectory" = None,
     ) -> "Trajectory":
         """
@@ -46,10 +42,6 @@ class PolicyRunner:
             the path to write the trajectory to
         env: RailEnv
             directly inject env, skip env generation
-        obs_builder: Optional[ObservationBuilder]
-            Defaults to `env.obs_builder` already present in `env` passed.
-        rewards : Rewards
-            Rewards function. Defaults to `env.rewards` already present in `env` passed.
         snapshot_interval : int
             interval to write pkl snapshots
         ep_id: str
@@ -112,11 +104,7 @@ class PolicyRunner:
                     # replay the trajectory to the start_step from the latest snapshot
                     env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
                 trajectory.load()
-        if rewards is not None:
-            env.rewards = rewards
-        if obs_builder is not None:
-            env.obs_builder = obs_builder
-            env.obs_builder.set_env(env)
+
         # TODO bad code smell - private method - check num resets?
         observations = env._get_observations()
 
@@ -388,7 +376,8 @@ def generate_trajectory_from_policy(
         effects_generator = effects_generator_cls(**effects_generator_kwargs)
 
     if env_path is not None:
-        env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder)
+        env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+
     else:
         env, _, _ = env_generator(
             n_agents=n_agents,
@@ -410,7 +399,6 @@ def generate_trajectory_from_policy(
     fork_from_trajectory = None
     if fork_data_dir is not None and fork_ep_id is not None:
         fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
-
     PolicyRunner.create_from_policy(
         policy=policy_cls(),
         data_dir=data_dir,

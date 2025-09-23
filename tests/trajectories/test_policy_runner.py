@@ -139,9 +139,8 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(
-            env=env_generator()[0],
+            env=env_generator(obs_builder_object=EnvStepObservationBuilder(), )[0],
             policy=RandomPolicy(reset_at=7),
-            obs_builder=EnvStepObservationBuilder(),
             data_dir=data_dir / "trajectory",
             snapshot_interval=0)
         if verbose:
@@ -154,10 +153,9 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
             print(trajectory.trains_rewards_dones_infos)
 
         fork = PolicyRunner.create_from_policy(
-            env=env_generator()[0],
+            env=env_generator(obs_builder_object=EnvStepObservationBuilder(), )[0],
             data_dir=data_dir / "fork",
             policy=RandomPolicy(),
-            obs_builder=EnvStepObservationBuilder(),
             # no snapshot here, PolicyRunner needs to start from a previous snapshot and run forward to starting step:
             start_step=7,
             end_step=17,
@@ -186,9 +184,9 @@ def test_run_from_intermediate_step_pkl(verbose: bool = False):
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(
-            env=env_generator()[0],
+            env=env_generator(obs_builder_object=EnvStepObservationBuilder(), )[0],
             policy=RandomPolicy(reset_at=7),
-            obs_builder=EnvStepObservationBuilder(),
+
             data_dir=data_dir / "trajectory",
             snapshot_interval=1
         )
@@ -230,9 +228,8 @@ def test_failing_from_wrong_intermediate_step():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
     trajectory = PolicyRunner.create_from_policy(
-        env=env_generator()[0],
+        env=env_generator(obs_builder_object=EnvStepObservationBuilder(), )[0],
         policy=RandomPolicy(reset_at=7),
-        obs_builder=EnvStepObservationBuilder(),
         data_dir=data_dir / "trajectory",
         snapshot_interval=1
     )
