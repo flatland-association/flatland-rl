@@ -9,6 +9,7 @@ from flatland.envs.step_utils.states import TrainState
 RewardType = TypeVar('RewardType')
 
 
+# TODO extract to core?
 class Rewards(Generic[RewardType]):
     """
     Reward Function Interface.
@@ -227,15 +228,19 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         self.departures = defaultdict(defaultdict)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
-        if agent.position not in self.arrivals[agent.handle]:
+        if agent.position is None and agent.state_machine.state == TrainState.DONE and agent.target not in self.arrivals[agent.handle]:
+            self.arrivals[agent.handle][agent.target] = elapsed_steps
+
+        if agent.position is not None and agent.position not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][agent.position] = elapsed_steps
             self.departures[agent.handle][agent.old_position] = elapsed_steps
+
         return 0, 0
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
         n_stops_on_time = 0
         initial_wp = agent.waypoints[0][0]
-        if initial_wp in self.departures[agent.handle] and self.departures[agent.handle][initial_wp] >= agent.waypoints_earliest_departure[0]:
+        if initial_wp.position in self.departures[agent.handle] and self.departures[agent.handle][initial_wp.position] >= agent.waypoints_earliest_departure[0]:
             n_stops_on_time += 1
         for i, (wps, la, ed) in enumerate(zip(
             agent.waypoints[1:-1],
@@ -243,19 +248,19 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
             agent.waypoints_earliest_departure[1:-1]
         )):
             for wp in wps:
-                if wp not in self.arrivals[agent.handle] or wp not in self.departures[agent.handle]:
+                if wp.position not in self.arrivals[agent.handle] or wp.position not in self.departures[agent.handle]:
                     # intermediate stop not served
                     continue
-                if self.arrivals[agent.handle][wp] > agent.waypoints_latest_arrival[i + 1]:
+                if self.arrivals[agent.handle][wp.position] > agent.waypoints_latest_arrival[i + 1]:
                     # intermediate late arrival
                     continue
-                if self.departures[agent.handle][wp] < agent.waypoints_earliest_departure[i + 1]:
+                if self.departures[agent.handle][wp.position] < agent.waypoints_earliest_departure[i + 1]:
                     # intermediate early departure
                     continue
                 n_stops_on_time += 1
                 break
         target_wp = agent.waypoints[-1][0]
-        if target_wp in self.arrivals[agent.handle] and self.arrivals[agent.handle][target_wp] <= agent.waypoints_latest_arrival[-1]:
+        if target_wp.position in self.arrivals[agent.handle] and self.arrivals[agent.handle][target_wp.position] <= agent.waypoints_latest_arrival[-1]:
             n_stops_on_time += 1
         n_stops = len(agent.waypoints)
         return n_stops_on_time, n_stops

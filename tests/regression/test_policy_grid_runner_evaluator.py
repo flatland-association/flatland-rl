@@ -17,9 +17,13 @@ def _dummy_reporter(aggregated_scores):
 
 
 def _dummy_aggregator(scores):
-    report = f"Raw scores: {scores}"
-    print(report)
-    return np.sum(scores)
+    print(f"Raw scores: {scores}")
+    data = np.array(scores).transpose()
+    print(f"Scenario raw punctuality: {data}")
+    scenario_punctuality = data[0] / data[1]
+    print(f"Scenario punctuality: {scenario_punctuality}")
+    return np.mean(scenario_punctuality)
+
 
 def test_gen_trajectories_from_metadata(capsys):
     metadata_csv_path = importlib.resources.files("env_data.tests.service_test").joinpath("metadata.csv")
@@ -57,5 +61,5 @@ def test_gen_trajectories_from_metadata(capsys):
                 ])
             assert e_info.value.code == 0
             captured = capsys.readouterr()
-            assert "Aggregated scores: 56" in captured.out
-            assert "Raw scores: [(0, 14), (0, 14), (0, 14), (0, 14)]" in captured.out
+            assert "Aggregated scores: 0.9285714285714286" in captured.out
+            assert "Raw scores: [(12, 14), (14, 14), (12, 14), (14, 14)]" in captured.out

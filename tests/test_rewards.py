@@ -8,6 +8,7 @@ from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import DefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -272,17 +273,20 @@ def test_multi_objective_rewards():
 def test_punctuality_rewards_initial():
     rewards = PunctualityRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
-                     target=(3, 3),
-                     direction=3,
-                     state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
-                     earliest_departure=3,
-                     latest_arrival=10,
-                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
-                     waypoints_earliest_departure=[3, 5, None],
-                     waypoints_latest_arrival=[None, 2, 10],
-                     arrival_time=10)
+    agent = EnvAgent(
+        handle=0,
+        initial_position=(0, 0),
+        initial_direction=5,
+        target=(3, 3),
+        direction=3,
+        state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+        earliest_departure=3,
+        latest_arrival=10,
+        waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
+        waypoints_earliest_departure=[3, 5, None],
+        waypoints_latest_arrival=[None, 2, 10],
+        arrival_time=10
+    )
 
     collect = []
     collect.append(rewards.empty())
@@ -291,8 +295,16 @@ def test_punctuality_rewards_initial():
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
     agent.position = (2, 2)
+
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
+
+    assert (0, 0) not in rewards.arrivals[0]
+    assert rewards.departures[0][(0, 0)] == 5
+    assert rewards.arrivals[0][(2, 2)] == 5
+    assert (2, 2) not in rewards.departures[0]
+    assert (3, 3) not in rewards.arrivals[0]
+    assert (3, 3) not in rewards.departures[0]
 
     # on time only at initial
     assert rewards.cumulate(*collect) == (1, 3)
@@ -301,17 +313,20 @@ def test_punctuality_rewards_initial():
 def test_punctuality_rewards_intermediate():
     rewards = PunctualityRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
-                     target=(3, 3),
-                     direction=3,
-                     state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
-                     earliest_departure=3,
-                     latest_arrival=10,
-                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
-                     waypoints_earliest_departure=[3, 5, None],
-                     waypoints_latest_arrival=[None, 2, 10],
-                     arrival_time=10)
+    agent = EnvAgent(
+        handle=0,
+        initial_position=(0, 0),
+        initial_direction=5,
+        target=(3, 3),
+        direction=3,
+        state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+        earliest_departure=3,
+        latest_arrival=10,
+        waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
+        waypoints_earliest_departure=[3, 5, None],
+        waypoints_latest_arrival=[None, 2, 10],
+        arrival_time=10
+    )
 
     collect = []
     collect.append(rewards.empty())
@@ -326,6 +341,15 @@ def test_punctuality_rewards_intermediate():
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
+    assert (0, 0) not in rewards.arrivals[0]
+    assert rewards.departures[0][(0, 0)] == 2
+    assert rewards.arrivals[0][(2, 2)] == 2
+    assert rewards.departures[0][(2, 2)] == 5
+    assert rewards.arrivals[0][(4, 4)] == 5
+    assert (4, 4) not in rewards.departures[0]
+    assert (3, 3) not in rewards.arrivals[0]
+    assert (3, 3) not in rewards.departures[0]
+
     # on time only at intermediate
     assert rewards.cumulate(*collect) == (1, 3)
 
@@ -333,17 +357,19 @@ def test_punctuality_rewards_intermediate():
 def test_punctuality_rewards_target():
     rewards = PunctualityRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
-                     target=(3, 3),
-                     direction=3,
-                     state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
-                     earliest_departure=3,
-                     latest_arrival=10,
-                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
-                     waypoints_earliest_departure=[3, 5, None],
-                     waypoints_latest_arrival=[None, 2, 10],
-                     arrival_time=10)
+    agent = EnvAgent(
+        handle=0, initial_position=(0, 0),
+        initial_direction=5,
+        target=(3, 3),
+        direction=3,
+        state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+        earliest_departure=3,
+        latest_arrival=10,
+        waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
+        waypoints_earliest_departure=[3, 5, None],
+        waypoints_latest_arrival=[None, 2, 10],
+        arrival_time=10
+    )
 
     collect = []
     collect.append(rewards.empty())
@@ -360,6 +386,15 @@ def test_punctuality_rewards_target():
     agent.position = (3, 3)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
+
+    assert (0, 0) not in rewards.arrivals[0]
+    assert rewards.departures[0][(0, 0)] == 2
+    assert rewards.arrivals[0][(2, 2)] == 2
+    assert rewards.departures[0][(2, 2)] == 4
+    assert rewards.arrivals[0][(4, 4)] == 4
+    assert rewards.departures[0][(4, 4)] == 10
+    assert rewards.arrivals[0][(3, 3)] == 10
+    assert (3, 3) not in rewards.departures[0]
 
     # on time only at target
     assert rewards.cumulate(*collect) == (1, 3)
