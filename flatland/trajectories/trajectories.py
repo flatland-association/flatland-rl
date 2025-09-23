@@ -16,7 +16,7 @@ EVENT_LOGS_SUBDIR = 'event_logs'
 DISCRETE_ACTION_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "ActionEvents.discrete_action.tsv")
 TRAINS_ARRIVED_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_arrived.tsv")
 TRAINS_POSITIONS_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_positions.tsv")
-trains_rewards_dones_infos_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_rewards_dones_infos.tsv")
+TRAINS_REWARDS_DONES_INFOS_FNAME = os.path.join(EVENT_LOGS_SUBDIR, "TrainMovementEvents.trains_rewards_dones_infos.tsv")
 SERIALISED_STATE_SUBDIR = 'serialised_state'
 OUTPUTS_SUBDIR = 'outputs'
 
@@ -126,7 +126,7 @@ class Trajectory:
         episode_only : bool
             Filter df to contain only this episode.
         """
-        f = os.path.join(self.data_dir, trains_rewards_dones_infos_FNAME)
+        f = os.path.join(self.data_dir, TRAINS_REWARDS_DONES_INFOS_FNAME)
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'reward', 'info', 'done'])
         df = pd.read_csv(f, sep='\t')
@@ -163,7 +163,7 @@ class Trajectory:
 
     def _write_trains_rewards_dones_infos(self, df: pd.DataFrame):
         """Store pd df with all trains' rewards for all episodes."""
-        f = os.path.join(self.data_dir, trains_rewards_dones_infos_FNAME)
+        f = os.path.join(self.data_dir, TRAINS_REWARDS_DONES_INFOS_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
