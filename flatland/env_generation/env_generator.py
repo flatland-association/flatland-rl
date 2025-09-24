@@ -97,8 +97,8 @@ def env_generator(n_agents=7,
             max_rails_between_cities=max_rails_between_cities,
             max_rail_pairs_in_city=max_rail_pairs_in_city
         ),
-        malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(
-            min_duration=malfunction_duration_min, max_duration=malfunction_duration_max, malfunction_rate=1.0 / malfunction_interval)),
+        malfunction_generator=ParamMalfunctionGen(
+            MalfunctionParameters(min_duration=malfunction_duration_min, max_duration=malfunction_duration_max, malfunction_rate=1.0 / malfunction_interval)),
         line_generator=sparse_line_generator(speed_ratio_map=speed_ratios, seed=seed, line_length=line_length),
         number_of_agents=n_agents,
         obs_builder_object=obs_builder_object,

@@ -1,8 +1,10 @@
+import importlib
 from typing import Callable, List
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.envs import malfunction_generators as mal_gen
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
 
 
@@ -21,42 +23,74 @@ class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
 MalfunctionCondition = Callable[["EnvAgent", int], bool]
 
 
+def on_map_state_condition(env_agent: EnvAgent, elapsed_steps: int) -> bool:
+    return env_agent.state_machine.state.is_on_map_state()
+
+
 class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
     def __init__(self,
                  malfunction_rate: float = None,
                  min_duration: float = None,
                  max_duration: float = None,
+                 earliest_malfunction: int = None,
+                 max_num_malfunctions: int = None,
                  condition: MalfunctionCondition = None,
+                 condition_pkg: str = None,
+                 condition_cls: str = None,
                  ):
         """
         Generate agent malfunctions conditionally with conditional rate and duration.
 
         Parameters
         ----------
-        malfunction_rate : int
+        malfunction_rate : float
             Poisson process with given rate.
         min_duration : int
             If malfunction, duration uniformly in [min_duration,max_duration].
         max_duration : int
             If malfunction, duration uniformly in [min_duration,max_duration].
+        earliest_malfunction : int
+            Defaults to `None`.
+        max_num_malfunctions : int
+            Defaults to `None`.
+        condition : MalfunctionCondition
+            Additional condition. Defaults to None.
+        condition_pkg : str
+            Additional condition to be created instead of instance via `condition`. Defaults to None.
+        condition_cls : str
+            Additional condition to be created instead of instance via `condition`. Defaults to None.
         """
         super().__init__()
 
-        self._malfunction_rate = malfunction_rate if malfunction_rate is not None else 0
-        self._min_duration = min_duration if min_duration is not None else 1
-        self._max_duration = max_duration if max_duration is not None else 1
+        self._malfunction_rate = float(malfunction_rate)
+        self._min_duration = int(min_duration)
+        self._max_duration = int(max_duration)
 
         self._malfunction_generator = mal_gen.ParamMalfunctionGen(
             mal_gen.MalfunctionParameters(malfunction_rate=self._malfunction_rate, min_duration=self._min_duration, max_duration=self._max_duration)
         )
+        self._earliest_condition = int(earliest_malfunction) if earliest_malfunction is not None else None
+        self._max_num_malfunctions = int(max_num_malfunctions) if max_num_malfunctions is not None else None
+        self._num_malfunctions = 0
         self._condition = condition
+        if condition_pkg is not None and condition_cls is not None:
+            module = importlib.import_module(condition_pkg)
+            self._condition = getattr(module, condition_cls)
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
-        if self._condition is None:
+        if self._earliest_condition is not None and env._elapsed_steps < self._earliest_condition:
+            return env
+        if self._max_num_malfunctions is not None and self._num_malfunctions >= self._max_num_malfunctions:
             return env
         for agent in env.agents:
-            if self._condition(agent, env._elapsed_steps):
+            if self._condition is None or self._condition(agent, env._elapsed_steps):
+                in_malfunction_before = agent.malfunction_handler.in_malfunction
                 agent.malfunction_handler.generate_malfunction(self._malfunction_generator, env.np_random)
+                in_malfunction_after = agent.malfunction_handler.in_malfunction
+                if in_malfunction_after and not in_malfunction_before:
+                    self._num_malfunctions += 1
+                    if self._max_num_malfunctions is not None and self._num_malfunctions >= self._max_num_malfunctions:
+                        return env
         return env
 
 

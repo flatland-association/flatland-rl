@@ -1,3 +1,5 @@
+import sys
+
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, condition_stopped_cells_and_range, \
     condition_stopped_intermediate_and_range, make_multi_malfunction_condition
@@ -8,13 +10,15 @@ from flatland.utils.rendertools import RenderTool
 
 
 def test_conditional_stopped_cells_and_range_malfunction_effects_generator():
-    env, _, _ = env_generator(effects_generator=ConditionalMalfunctionEffectsGenerator(
-        malfunction_rate=1,
-        min_duration=888,
-        max_duration=888,
-        # all cells
-        condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
-    ))
+    env, _, _ = env_generator(
+        malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
+        effects_generator=ConditionalMalfunctionEffectsGenerator(
+            malfunction_rate=1,
+            min_duration=888,
+            max_duration=888,
+            # all cells
+            condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
+        ))
     env.reset()
 
     for _ in range(150):
@@ -33,13 +37,15 @@ def test_conditional_stopped_cells_and_range_malfunction_effects_generator():
 
 
 def test_no_effect_conditional_stopped_cells_and_range_malfunction_effects_generator():
-    env, _, _ = env_generator(effects_generator=ConditionalMalfunctionEffectsGenerator(
-        malfunction_rate=0,
-        min_duration=888,
-        max_duration=888,
-        # all cells
-        condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
-    ))
+    env, _, _ = env_generator(
+        malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
+        effects_generator=ConditionalMalfunctionEffectsGenerator(
+            malfunction_rate=0,
+            min_duration=888,
+            max_duration=888,
+            # all cells
+            condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
+        ))
     env.reset()
 
     for _ in range(150):
@@ -55,6 +61,7 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
         line_length=3,
         n_cities=3,
         n_agents=3,
+        malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
         effects_generator=ConditionalMalfunctionEffectsGenerator(
             malfunction_rate=1,
             min_duration=888,
@@ -63,29 +70,7 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
         ))
     env.reset()
 
-    if rendering:
-        env_renderer = RenderTool(env)
-    for _ in range(400):
-        if rendering:
-            env_renderer.render_env(show=True)
-        if env.dones["__all__"]:
-            break
-        actions = dict()
-        for agent in env.agents:
-            if agent.position is None:
-                actions[agent.handle] = RailEnvActions.MOVE_FORWARD
-            elif agent.position == agent.waypoints[1][0].position:
-                actions[agent.handle] = RailEnvActions.STOP_MOVING
-            else:
-                p = get_k_shortest_paths(env, agent.position, agent.direction, agent.waypoints[1][0].position)
-                shortest_path = p[0]
-                for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
-                    new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action = env.rail.check_action_on_agent(
-                        RailEnvActions.from_value(a), (agent.position, agent.direction))
-                    if new_cell_valid and transition_valid and new_position == shortest_path[1].position and new_direction == shortest_path[1].direction:
-                        actions[agent.handle] = a
-                        break
-        env.step(actions)
+    _run_with_sthortest_path(env=env, rendering=rendering, num_steps=400)
 
     intermediate_waypoints = {w.position for agent in env.agents for ws in agent.waypoints[1:-1] for w in ws}
     in_malfunction = dict()
@@ -105,6 +90,7 @@ def test_make_multi_malfunction_condition():
         line_length=3,
         n_cities=3,
         n_agents=3,
+        malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
         effects_generator=ConditionalMalfunctionEffectsGenerator(
             malfunction_rate=1,
             min_duration=888,
@@ -126,3 +112,58 @@ def test_make_multi_malfunction_condition():
     assert cond(env.agents[0], 55)
     assert not cond(env.agents[0], 33)
     assert not cond(env.agents[0], 100)
+
+
+def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
+    duration = 888
+    earliest = 77
+    conditional_malfunction_effects_generator = ConditionalMalfunctionEffectsGenerator(
+        malfunction_rate=sys.maxsize,
+        min_duration=duration, max_duration=duration,
+        earliest_malfunction=earliest, max_num_malfunctions=2,
+    )
+    env, _, _ = env_generator(
+        line_length=3,
+        n_cities=3,
+        n_agents=3,
+        malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
+        effects_generator=conditional_malfunction_effects_generator)
+    env.reset()
+
+    num_steps_run = 150
+    _run_with_sthortest_path(env, rendering, num_steps_run)
+
+    in_malfunction = [agent for agent in env.agents if agent.malfunction_handler.in_malfunction]
+
+    # there is an agent stopped by the conditional malfunction generator at each waypoint
+    assert conditional_malfunction_effects_generator._num_malfunctions == 2
+    assert len(in_malfunction) == 2
+    for agent in in_malfunction:
+        assert agent.malfunction_handler.malfunction_down_counter == duration - (num_steps_run - earliest)
+
+
+def _run_with_sthortest_path(env, rendering, num_steps=400):
+    if rendering:
+        env_renderer = RenderTool(env)
+    for _ in range(num_steps):
+        if rendering:
+            env_renderer.render_env(show=True)
+        if env.dones["__all__"]:
+            break
+        actions = dict()
+        for agent in env.agents:
+            if agent.position is None:
+                actions[agent.handle] = RailEnvActions.MOVE_FORWARD
+            elif agent.position == agent.waypoints[1][0].position:
+                actions[agent.handle] = RailEnvActions.STOP_MOVING
+            else:
+                p = get_k_shortest_paths(env, agent.position, agent.direction, agent.waypoints[1][0].position)
+                shortest_path = p[0]
+                for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
+                    new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action = env.rail.check_action_on_agent(
+                        RailEnvActions.from_value(a), (agent.position, agent.direction))
+                    if new_cell_valid and transition_valid and new_position == shortest_path[1].position and new_direction == shortest_path[1].direction:
+                        actions[agent.handle] = a
+                        break
+        env.step(actions)
+    return agent

@@ -1,17 +1,14 @@
 import importlib
 from pathlib import Path
-from typing import Optional
 
 import click
 import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
-from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rewards import Rewards
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
 
@@ -21,28 +18,14 @@ class PolicyRunner:
     def create_from_policy(
         policy: Policy,
         data_dir: Path,
-        env: RailEnv = None,
-        n_agents=7,
-        x_dim=30,
-        y_dim=30,
-        n_cities=2,
-        max_rail_pairs_in_city=4,
-        grid_mode=False,
-        max_rails_between_cities=2,
-        malfunction_duration_min=20,
-        malfunction_duration_max=50,
-        malfunction_interval=540,
-        speed_ratios=None,
-        line_length=2,
-        seed=42,
-        obs_builder: Optional[ObservationBuilder] = None,
-        rewards: Rewards = None,
+        env: RailEnv,
         snapshot_interval: int = 1,
         ep_id: str = None,
         callbacks: FlatlandCallbacks = None,
         tqdm_kwargs: dict = None,
         start_step: int = 0,
         end_step: int = None,
+
         fork_from_trajectory: "Trajectory" = None,
         no_save: bool = False,
     ) -> "Trajectory":
@@ -60,36 +43,6 @@ class PolicyRunner:
             the path to write the trajectory to
         env: RailEnv
             directly inject env, skip env generation
-        n_agents: int
-            number of agents
-        x_dim: int
-            number of columns
-        y_dim: int
-            number of rows
-        n_cities: int
-           Max number of cities to build. The generator tries to achieve this numbers given all the parameters. Goes into `sparse_rail_generator`.
-        max_rail_pairs_in_city: int
-            Number of parallel tracks in the city. This represents the number of tracks in the train stations. Goes into `sparse_rail_generator`.
-        grid_mode: bool
-            How to distribute the cities in the path, either equally in a grid or random. Goes into `sparse_rail_generator`.
-        max_rails_between_cities: int
-            Max number of rails connecting to a city. This is only the number of connection points at city boarder.
-        malfunction_duration_min: int
-            Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.
-        malfunction_duration_max: int
-            Max duration of malfunction. Goes into `ParamMalfunctionGen`.
-        malfunction_interval: int
-            Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.
-        speed_ratios: Dict[float, float]
-            Speed ratios of all agents. They are probabilities of all different speeds and have to add up to 1. Goes into `sparse_line_generator`. Defaults to `{1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}`.
-        line_length : int
-            The length of the lines. Goes into `sparse_line_generator`. Defaults to `2`.
-        seed: int
-             Initiate random seed generators. Goes into `reset`.
-        obs_builder: Optional[ObservationBuilder]
-            Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
-        rewards : Rewards
-            Rewards function. Defaults to `DefaultRewards`.
         snapshot_interval : int
             interval to write pkl snapshots
         ep_id: str
@@ -152,29 +105,9 @@ class PolicyRunner:
                     # replay the trajectory to the start_step from the latest snapshot
                     env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
                 trajectory.load()
-                # TODO bad code smell - private method - check num resets?
-                observations = env._get_observations()
-        elif env is not None:
-            # TODO bad code smell - private method - check num resets?
-            observations = env._get_observations()
-        else:
-            env, observations, _ = env_generator(
-                n_agents=n_agents,
-                x_dim=x_dim,
-                y_dim=y_dim,
-                n_cities=n_cities,
-                max_rail_pairs_in_city=max_rail_pairs_in_city,
-                grid_mode=grid_mode,
-                max_rails_between_cities=max_rails_between_cities,
-                malfunction_duration_min=malfunction_duration_min,
-                malfunction_duration_max=malfunction_duration_max,
-                malfunction_interval=malfunction_interval,
-                speed_ratios=speed_ratios,
-                line_length=line_length,
-                seed=seed,
-                obs_builder_object=obs_builder,
-                rewards=rewards,
-            )
+
+        # TODO bad code smell - private method - check num resets?
+        observations = env._get_observations()
 
         assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
 
@@ -340,6 +273,25 @@ class PolicyRunner:
               type=int,
               help="Initiate random seed generators. Goes into `reset`.",
               required=False, default=42)
+@click.option('--effects-generator-pkg',
+              type=str,
+              help="Use to override options for `ParamMalfunctionGen`. Defaults to `None`.",
+              required=False,
+              default=None
+              )
+@click.option('--effects-generator-cls',
+              type=str,
+              help="Use to override options for `ParamMalfunctionGen`. Defaults to `None`.",
+              required=False,
+              default=None
+              )
+@click.option('--effects-generator-kwargs',
+              multiple=True,
+              nargs=2,
+              type=click.Tuple(types=[str, str]),
+              help="Keyworard args passed to effects generator.",
+              required=False,
+              default=None)
 @click.option('--snapshot-interval',
               type=int,
               help="Interval to right snapshots. Use 0 to switch off, 1 for every step, ....",
@@ -392,6 +344,9 @@ def generate_trajectory_from_policy(
     malfunction_interval=540,
     speed_ratios=None,
     seed: int = 42,
+    effects_generator_pkg: str = None,
+    effects_generator_cls: str = None,
+    effects_generator_kwargs: str = None,
     snapshot_interval: int = 1,
     ep_id: str = None,
     env_path: Path = None,
@@ -408,36 +363,49 @@ def generate_trajectory_from_policy(
         module = importlib.import_module(obs_builder_pkg)
         obs_builder_cls = getattr(module, obs_builder_cls)
         obs_builder = obs_builder_cls()
-    env = None
-    if env_path is not None:
-        env, _ = RailEnvPersister.load_new(str(env_path))
-    fork_from_trajectory = None
-    if fork_data_dir is not None and fork_ep_id is not None:
-        fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
 
     rewards = None
     if rewards_pkg is not None and rewards_cls is not None:
         module = importlib.import_module(rewards_pkg)
-        rewards = getattr(module, rewards_cls)
-        rewards: Rewards = rewards()
+        rewards_cls = getattr(module, rewards_cls)
+        rewards = rewards_cls()
 
+    effects_generator = None
+    if effects_generator_pkg is not None and effects_generator_cls is not None:
+        module = importlib.import_module(effects_generator_pkg)
+        effects_generator_cls = getattr(module, effects_generator_cls)
+        effects_generator_kwargs = dict(effects_generator_kwargs) if len(effects_generator_kwargs) > 0 else {}
+        effects_generator = effects_generator_cls(**effects_generator_kwargs)
+
+    if env_path is not None:
+        env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+        # TODO https://github.com/flatland-association/flatland-rl/issues/278 a bit hacky for now, clean up later...
+        if malfunction_interval == -1 and effects_generator is not None:
+            env.effects_generator = effects_generator
+    else:
+        env, _, _ = env_generator(
+            n_agents=n_agents,
+            x_dim=x_dim,
+            y_dim=y_dim,
+            n_cities=n_cities,
+            max_rail_pairs_in_city=max_rail_pairs_in_city,
+            grid_mode=grid_mode,
+            max_rails_between_cities=max_rails_between_cities,
+            malfunction_duration_min=malfunction_duration_min,
+            malfunction_duration_max=malfunction_duration_max,
+            malfunction_interval=malfunction_interval,
+            effects_generator=effects_generator,
+            speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
+            seed=seed,
+            obs_builder_object=obs_builder,
+            rewards=rewards,
+        )
+    fork_from_trajectory = None
+    if fork_data_dir is not None and fork_ep_id is not None:
+        fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
     PolicyRunner.create_from_policy(
         policy=policy_cls(),
         data_dir=data_dir,
-        n_agents=n_agents,
-        x_dim=x_dim,
-        y_dim=y_dim,
-        n_cities=n_cities,
-        max_rail_pairs_in_city=max_rail_pairs_in_city,
-        grid_mode=grid_mode,
-        max_rails_between_cities=max_rails_between_cities,
-        malfunction_duration_min=malfunction_duration_min,
-        malfunction_duration_max=malfunction_duration_max,
-        malfunction_interval=malfunction_interval,
-        speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
-        seed=seed,
-        obs_builder=obs_builder,
-        rewards=rewards,
         snapshot_interval=snapshot_interval,
         ep_id=ep_id,
         env=env,

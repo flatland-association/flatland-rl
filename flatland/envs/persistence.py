@@ -7,6 +7,7 @@ import msgpack_numpy
 import numpy as np
 from numpy.random import RandomState
 
+from flatland.core.effects_generator import EffectsGenerator
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 
 msgpack_numpy.patch()
@@ -119,7 +120,9 @@ class RailEnvPersister(object):
     def load_new(cls,
                  filename: Union[str, Path],
                  load_from_package=None,
-                 obs_builder: Optional[ObservationBuilder[Any, "RailEnv"]] = None
+                 obs_builder: Optional[ObservationBuilder[Any, "RailEnv"]] = None,
+                 rewards: Optional["Rewards"] = None,
+                 effects_generator: Optional[EffectsGenerator["RailEnv"]] = None,
                  ) -> Tuple["RailEnv", Dict]:
         """
         Load environment with distance map from a file into new env.
@@ -148,7 +151,10 @@ class RailEnvPersister(object):
             timetable_generator=tt_gen.timetable_from_file(env_dict=env_dict),
             malfunction_generator=mal_gen.FileMalfunctionGen(env_dict=env_dict),
             obs_builder_object=obs_builder,
-            record_steps=True)
+            record_steps=True,
+            rewards=rewards,
+            effects_generator=effects_generator,
+        )
 
         cls.set_full_state(env, env_dict)
         return env, env_dict

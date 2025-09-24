@@ -12,9 +12,9 @@ def test_shortest_path_policy_no_intermediate_target():
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(
             policy=ShortestPathPolicy(),
-            obs_builder=FullEnvObservation(),
             data_dir=data_dir,
             snapshot_interval=5,
+            env=env_generator(obs_builder_object=FullEnvObservation(), )[0],
         )
         assert trajectory.trains_arrived_lookup()["success_rate"] == 0.14285714285714285
 
@@ -24,11 +24,9 @@ def test_shortest_path_policy_with_intermediate_targets():
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(
             policy=ShortestPathPolicy(),
-            obs_builder=FullEnvObservation(),
             data_dir=data_dir,
             snapshot_interval=5,
-            n_cities=5,
-            line_length=3,
+            env=env_generator(n_cities=5, line_length=3, obs_builder_object=FullEnvObservation(), )[0],
         )
         assert trajectory.trains_arrived_lookup()["success_rate"] == 1.0
         env, _, _ = env_generator(
