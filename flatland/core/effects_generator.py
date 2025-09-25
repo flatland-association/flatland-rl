@@ -2,10 +2,10 @@ from typing import Callable, TypeVar, Generic
 
 from flatland.core.env import Environment
 
-EnvironmentType = TypeVar('EnvironmentType', bound=Environment, covariant=True)
+EnvType = TypeVar('EnvType', bound=Environment, covariant=True)
 
 
-class EffectsGenerator(Generic[EnvironmentType]):
+class EffectsGenerator(Generic[EnvType]):
     """
     Hook for external events modifying the env (state) before observations and rewards are computed.
 
@@ -14,15 +14,15 @@ class EffectsGenerator(Generic[EnvironmentType]):
 
     def __init__(
             self,
-            on_episode_start: Callable[[EnvironmentType], EnvironmentType] = None,
-            on_episode_step_start: Callable[[EnvironmentType], EnvironmentType] = None,
-            on_episode_step_end: Callable[[EnvironmentType], EnvironmentType] = None,
+        on_episode_start: Callable[[EnvType], EnvType] = None,
+        on_episode_step_start: Callable[[EnvType], EnvType] = None,
+        on_episode_step_end: Callable[[EnvType], EnvType] = None,
     ):
         self._on_episode_start = on_episode_start
         self._on_episode_step_start = on_episode_step_start
         self._on_episode_step_end = on_episode_step_end
 
-    def on_episode_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+    def on_episode_start(self, env: EnvType, *args, **kwargs) -> EnvType:
         """
         Called by env at the end of reset before computing observations and infos.
 
@@ -44,7 +44,7 @@ class EffectsGenerator(Generic[EnvironmentType]):
             return env
         return self._on_episode_start(*args, **kwargs)
 
-    def on_episode_step_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+    def on_episode_step_start(self, env: EnvType, *args, **kwargs) -> EnvType:
         """
         Called by env at the beginning of step before evaluating the agent's actions.
 
@@ -66,7 +66,7 @@ class EffectsGenerator(Generic[EnvironmentType]):
             return env
         return self._on_episode_step_start(*args, **kwargs)
 
-    def on_episode_step_end(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+    def on_episode_step_end(self, env: EnvType, *args, **kwargs) -> EnvType:
         """
         Called by env at the end of step before computing observations and infos.
 
@@ -89,19 +89,19 @@ class EffectsGenerator(Generic[EnvironmentType]):
         return self._on_episode_step_end(*args, **kwargs)
 
 
-def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvironmentType]) -> EffectsGenerator[EnvironmentType]:
-    class _EffectsGeneratorWrapped(EffectsGenerator[EnvironmentType]):
-        def on_episode_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType]) -> EffectsGenerator[EnvType]:
+    class _EffectsGeneratorWrapped(EffectsGenerator[EnvType]):
+        def on_episode_start(self, env: EnvType, *args, **kwargs) -> EnvType:
             for eff in effects_generators:
                 env = eff.on_episode_start(env)
             return env
 
-        def on_episode_step_start(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+        def on_episode_step_start(self, env: EnvType, *args, **kwargs) -> EnvType:
             for eff in effects_generators:
                 env = eff.on_episode_step_start(env)
             return env
 
-        def on_episode_step_end(self, env: EnvironmentType, *args, **kwargs) -> EnvironmentType:
+        def on_episode_step_end(self, env: EnvType, *args, **kwargs) -> EnvType:
             for eff in effects_generators:
                 env = eff.on_episode_step_end(env)
             return env
