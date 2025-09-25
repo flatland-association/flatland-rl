@@ -3,7 +3,7 @@ import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.graph.grid_to_graph import GraphTransitionMap
+from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 
 # rows are top to bottom!

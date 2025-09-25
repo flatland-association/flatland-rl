@@ -3,7 +3,7 @@ from typing import List, Tuple
 import networkx as nx
 from attr import attrs, attrib
 
-from flatland.envs.graph.grid_to_graph import GraphTransitionMap
+from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 
 GridNode = Tuple[int, int, int]  # row, column, heading (at cell entry)
 
