@@ -461,7 +461,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         # Get the possible transitions
         possible_transitions = self.env.rail.get_transitions((position, direction))
         for i, branch_direction in enumerate([(direction + 4 + i) % 4 for i in range(-1, 3)]):
-            if last_is_dead_end and self.env.rail.get_transition((*position, direction),
+            if last_is_dead_end and self.env.rail.get_transition((position, direction),
                                                                  (branch_direction + 2) % 4):
                 # Swap forward and back in case of dead-end, so that an agent can learn that going forward takes
                 # it back

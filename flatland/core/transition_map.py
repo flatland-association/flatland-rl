@@ -24,7 +24,6 @@ UnderlyingTransitionsValidityType = TypeVar('UnderlyingTransitionsValidityType')
 ActionsType = TypeVar('ActionsType')
 
 
-# TODO implement set_transition
 class TransitionMap(Generic[NodeType, UnderlyingTransitionsType, UnderlyingTransitionsValidityType, ActionsType]):
     """
     Base TransitionMap class.
@@ -222,7 +221,8 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
             List of the validity of transitions in the cell as given by the maps transitions.
 
         """
-        return self.transitions.get_transitions(self.grid[cell_id[0]], cell_id[1])
+        row_col, orientation = cell_id
+        return self.transitions.get_transitions(self.grid[row_col], orientation)
 
     def set_transitions(self, cell_id: IntVector2D, new_transitions: Transitions):
         """
@@ -252,10 +252,11 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
             self.grid[cell_id] = new_transitions
 
     @lru_cache(maxsize=4_000_000)
-    def get_transition(self, cell_id: NodeType, transition_index):
-        return self.transitions.get_transition(self.grid[cell_id[0:2]], cell_id[2], transition_index)
+    def get_transition(self, cell_id: Tuple[Tuple[int, int], int], transition_index):
+        row_col, orientation = cell_id
+        return self.transitions.get_transition(self.grid[row_col], orientation, transition_index)
 
-    def set_transition(self, cell_id, transition_index, new_transition, remove_deadends=False):
+    def set_transition(self, cell_id: Tuple[Tuple[int, int], int], transition_index, new_transition, remove_deadends=False):
         """
         Replaces the validity of transition to `transition_index` in cell
         `cell_id' with the new `new_transition`.
@@ -303,11 +304,9 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
             # print("fixing new_transition:", cell_id, new_transition)
             new_transition = int(new_transition.ravel()[0])
 
-        # print("fixed:", cell_id, type(nDir), transition_index, new_transition, remove_deadends)
-
         self.grid[cell_id[0]][cell_id[1]] = self.transitions.set_transition(
             self.grid[cell_id[0:2]],
-            nDir,  # cell_id[2],
+            nDir,
             transition_index,
             new_transition,
             remove_deadends)
@@ -496,7 +495,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
                 # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
 
                 for orientation in range(4):
-                    connected += self.get_transition((gPos2[0], gPos2[1], orientation), mirror(iDirOut))
+                    connected += self.get_transition(((gPos2[0], gPos2[1]), orientation), mirror(iDirOut))
             if connected > 0:
                 return False
 

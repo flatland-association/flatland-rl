@@ -724,7 +724,7 @@ class RenderLocal(RenderBase):
                     direction = agent.direction
                     for possible_direction in range(4):
                         # Is a transition along movement `desired_movement_from_new_cell` to the current cell possible?
-                        isValid = env.rail.get_transition((*agent.position, agent.direction), possible_direction)
+                        isValid = env.rail.get_transition((agent.position, agent.direction), possible_direction)
                         if isValid:
                             direction = possible_direction
 

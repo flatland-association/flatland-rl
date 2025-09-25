@@ -24,7 +24,6 @@ class PredictionBuilder(Generic[EnvType, PredictionType]):
         self.max_depth = max_depth
         self.env: EnvType = None
 
-    # TODO bad code smell...
     def set_env(self, env: EnvType):
         self.env = env
 

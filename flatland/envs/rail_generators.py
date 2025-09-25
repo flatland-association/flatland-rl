@@ -772,7 +772,7 @@ class SparseRailGen(RailGen):
             # if there are no available transitions, ie (0,0,0,0), then rcPos is invalid
             connected = 0
             for orientation in range(4):
-                connected += grid_transition_map.get_transition((gPos2[0], gPos2[1], orientation), mirror(iDirOut))
+                connected += grid_transition_map.get_transition(((gPos2[0], gPos2[1]), orientation), mirror(iDirOut))
             if connected > 0:
                 incoming_connections[iDirOut] = 1
 

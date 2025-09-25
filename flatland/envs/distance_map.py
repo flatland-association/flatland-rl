@@ -11,7 +11,6 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.states import TrainState
 
 
-# TODO generic?
 class DistanceMap:
     def __init__(self, agents: List[EnvAgent], env_height: int, env_width: int):
         self.env_height = env_height
@@ -20,7 +19,6 @@ class DistanceMap:
         self.agents_previous_computation = None
         self.reset_was_called = False
         self.agents: List[EnvAgent] = agents
-        # TODO
         self.rail: Optional[RailGridTransitionMap] = None
 
     def set(self, distance_map: np.ndarray):
@@ -149,7 +147,7 @@ class DistanceMap:
                 # Check all possible transitions in new_cell
                 for agent_orientation in range(4):
                     # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
-                    is_valid = rail.get_transition((new_cell[0], new_cell[1], agent_orientation),
+                    is_valid = rail.get_transition(((new_cell[0], new_cell[1]), agent_orientation),
                                                    desired_movement_from_new_cell)
 
                     if is_valid:
