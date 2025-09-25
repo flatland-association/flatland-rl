@@ -111,9 +111,9 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         """
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
-    def check_action_on_agent(self, action: RailEnvActions, cell_id: GridNode) -> Tuple[
+    def check_action_on_agent(self, action: RailEnvActions, configuration: GridNode) -> Tuple[
         bool, GridNode, bool, RailEnvActions]:
-        position, direction = cell_id
+        position, direction = configuration
         new_position = None
         new_direction, transition_valid, preprocessed_action = direction, True, action
 
@@ -160,5 +160,5 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         new_cell_valid = (*new_position, new_direction) in self.g.nodes
         return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action
 
-    def get_transitions(self, cell_id: GridNode) -> Tuple[bool]:
+    def get_transitions(self, configuration: GridNode) -> Tuple[bool]:
         return True,

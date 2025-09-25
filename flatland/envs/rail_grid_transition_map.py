@@ -135,7 +135,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         return direction, False, RailEnvActions.STOP_MOVING
 
     @lru_cache(maxsize=1_000_000)
-    def check_action_on_agent(self, action: RailEnvActions, cell_id: Tuple[Tuple[int, int], int]) -> Tuple[
+    def check_action_on_agent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Tuple[
         bool, Tuple[Tuple[int, int], int], bool, RailEnvActions]:
         """
 
@@ -143,7 +143,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         -------
         new_cell_valid: bool
             is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
-        new_position: [NodeType]
+        new_position: [ConfigurationType]
             New position after applying the action
         transition_valid: bool
             Whether the transition from old and direction is defined in the grid.
@@ -159,7 +159,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
             - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
             - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
         """
-        position, direction = cell_id
+        position, direction = configuration
         new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
         new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
