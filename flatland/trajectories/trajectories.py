@@ -56,13 +56,28 @@ class Trajectory:
     trains_arrived = attrib(type=pd.DataFrame, default=None)
     trains_rewards_dones_infos = attrib(type=pd.DataFrame, default=None)
 
+    _trains_positions_collect = None
+    _actions_collect = None
+    _trains_arrived_collect = None
+    _trains_rewards_dones_infos_collect = None
+
     def load(self, episode_only: bool = False):
         self.trains_positions = self._read_trains_positions(episode_only=episode_only)
         self.actions = self._read_actions(episode_only=episode_only)
         self.trains_arrived = self._read_trains_arrived(episode_only=episode_only)
         self.trains_rewards_dones_infos = self._read_trains_rewards_dones_infos(episode_only=episode_only)
 
+        self._trains_positions_collect = []
+        self._actions_collect = []
+        self._trains_arrived_collect = []
+        self._trains_rewards_dones_infos_collect = []
+
     def persist(self):
+        self.actions = pd.concat([self.actions, pd.DataFrame.from_records(self._actions_collect)])
+        self.trains_positions = pd.concat([self.trains_positions, pd.DataFrame.from_records(self._trains_positions_collect)])
+        self.trains_arrived = pd.concat([self.trains_arrived, pd.DataFrame.from_records(self._trains_arrived_collect)])
+        self.trains_rewards_dones_infos = pd.concat([self.trains_rewards_dones_infos, pd.DataFrame.from_records(self._trains_rewards_dones_infos_collect)])
+
         self._write_actions(self.actions)
         self._write_trains_positions(self.trains_positions)
         self._write_trains_arrived(self.trains_arrived)
@@ -210,20 +225,18 @@ class Trajectory:
         return closest
 
     def position_collect(self, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
-        df = self.trains_positions
-        df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position}
+        self._trains_positions_collect.append({'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position})
 
     def action_collect(self, env_time: int, agent_id: int, action: RailEnvActions):
-        df = self.actions
-        df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'action': action}
+        self._actions_collect.append({'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'action': action})
 
     def arrived_collect(self, env_time: int, success_rate: float):
-        df = self.trains_arrived
-        df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate}
+        self._trains_arrived_collect.append({'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate})
 
     def rewards_dones_infos_collect(self, env_time: int, agent_id: int, reward: float, info: Any, done: bool):
-        df = self.trains_rewards_dones_infos
-        df.loc[len(df)] = {'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'reward': reward, 'info': info, 'done': done}
+        self._trains_rewards_dones_infos_collect.append({
+            'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'reward': reward, 'info': info, 'done': done
+        })
 
     def position_lookup(self, env_time: int, agent_id: int) -> Tuple[Tuple[int, int], int]:
         """Method used to retrieve the stored position (if available).
