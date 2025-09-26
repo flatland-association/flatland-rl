@@ -10,6 +10,8 @@ on:
             run_benchmarks:
                 type: boolean
     pull_request:
+    push:
+        branches: [ "main" ]
     schedule:
         -   cron: '30 5 * * *'
 concurrency:
