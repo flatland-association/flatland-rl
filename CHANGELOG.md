@@ -12,11 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * feature: offline evaluation. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/272
 * feature: add routing flexibility to intermediate waypoints. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/271
 * feat(policy runner): additional options and fixes. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/276
-* perf(trajectories): improve collecting during policy run. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/283
-* test: verify known flatland bugs from maze release 2 are fixed. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/273
-* feat: Use GraphTransitionMap with RailEnv. refactor: Use Generic Type Hints for the Core / Envs Levels. Pull-up to core of several components. by @chenkins
-  in https://github.com/flatland-association/flatland-rl/pull/257
-* chore: update dependency post merge flatland-baselines. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/286
 
 ### Changed
 
