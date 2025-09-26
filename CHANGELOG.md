@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * feature: offline evaluation. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/272
 * feature: add routing flexibility to intermediate waypoints. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/271
 * feat(policy runner): additional options and fixes. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/276
+* perf(trajectories): improve collecting during policy run. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/283
+* test: verify known flatland bugs from maze release 2 are fixed. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/273
+* feat: Use GraphTransitionMap with RailEnv. refactor: Use Generic Type Hints for the Core / Envs Levels. Pull-up to core of several components. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/257
+* chore: update dependency post merge flatland-baselines. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/286
 
 ### Changed
 
@@ -19,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   in https://github.com/flatland-association/flatland-rl/pull/257
 * perf(trajectories): improve collecting during policy run. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/283
 * test: verify known flatland bugs from maze release 2 are fixed. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/273
+* ci: run checks workflow upon push to main. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/288
+* chore: update dependency post merge flatland baselines by @chenkins in https://github.com/flatland-association/flatland-rl/pull/289
+* ci: fix condition run benchmarks on main. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/290
+* chore: Release Notes 4.2.2. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/287
+* ci: fix tests in publish workflows. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/291
 
 ## [[4.2.1]](https://github.com/flatland-association/flatland-rl/compare/v4.2.0...v4.2.1) 2025-09-03
 
