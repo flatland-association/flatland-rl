@@ -2,8 +2,7 @@ name: Main
 
 env:
     # DEPENDENCY SWITCH:
-    # TODO https://github.com/flatland-association/flatland-rl/issues/243 update dependency after merge
-    flatland-baselines-ref: feature/graph-env-first-steps
+    flatland-baselines-ref: main
 
 on:
     workflow_dispatch:
