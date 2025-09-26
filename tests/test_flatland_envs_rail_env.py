@@ -8,10 +8,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
@@ -309,7 +309,7 @@ def test_get_entry_directions():
     env.reset()
 
     def _assert(position, expected):
-        actual = env.get_valid_directions_on_grid(*position)
+        actual = env.rail.get_valid_directions_on_grid(*position)
         assert actual == expected, "[{},{}] actual={}, expected={}".format(*position, actual, expected)
 
     # north dead end

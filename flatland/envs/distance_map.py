@@ -147,7 +147,7 @@ class DistanceMap:
                 # Check all possible transitions in new_cell
                 for agent_orientation in range(4):
                     # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
-                    is_valid = rail.get_transition((new_cell[0], new_cell[1], agent_orientation),
+                    is_valid = rail.get_transition(((new_cell[0], new_cell[1]), agent_orientation),
                                                    desired_movement_from_new_cell)
 
                     if is_valid:

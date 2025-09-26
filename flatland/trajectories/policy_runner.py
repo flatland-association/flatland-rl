@@ -27,6 +27,7 @@ class PolicyRunner:
         end_step: int = None,
 
         fork_from_trajectory: "Trajectory" = None,
+        no_save: bool = False,
     ) -> "Trajectory":
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -114,7 +115,8 @@ class PolicyRunner:
             tqdm_kwargs = {}
 
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
-        RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
+        if not no_save:
+            RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
 
         if snapshot_interval > 0:
             from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks

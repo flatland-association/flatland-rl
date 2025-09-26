@@ -9,10 +9,11 @@ import numpy as np
 
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.observations import TreeObsForRailEnv, Node
+from flatland.envs.rail_env import RailEnv
 from flatland.ml.observations.gym_observation_builder import GymObservationBuilder
 
 
-class FlattenedTreeObsForRailEnv(GymObservationBuilder[np.ndarray], TreeObsForRailEnv):
+class FlattenedTreeObsForRailEnv(GymObservationBuilder[RailEnv, np.ndarray], TreeObsForRailEnv):
     """
     Gym-ified and flattened normalized tree observation.
     """

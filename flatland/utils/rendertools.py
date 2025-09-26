@@ -7,10 +7,8 @@ import numpy as np
 from numpy import array
 from recordtype import recordtype
 
-from flatland.envs.step_utils.states import TrainState
-
-from flatland.utils.graphics_pil import PILGL, PILSVG
 from flatland.utils.graphics_pgl import PGLGL
+from flatland.utils.graphics_pil import PILGL, PILSVG
 
 
 # TODO: suggested renaming to RailEnvRenderTool, as it will only work with RailEnv!
@@ -67,14 +65,14 @@ class RenderTool(object):
 
     def reset(self):
         self.renderer.reset()
-    
+
     def set_new_rail(self):
         self.renderer.set_new_rail()
         self.renderer.env = self.env  # bit of a hack - copy our env to the delegate
 
     def update_background(self):
         self.renderer.update_background()
-    
+
     def get_endpoint_URL(self):
         """ Returns a string URL for the root of the HTTP server
             TODO: Need to update this work work on a remote server!  May be tricky...
@@ -87,7 +85,7 @@ class RenderTool(object):
             return None
 
     def get_image(self):
-        """ 
+        """
         """
         if hasattr(self.renderer, "gl"):
             return self.renderer.gl.get_image()
@@ -115,7 +113,7 @@ class RenderBase(object):
         pass
 
     def update_background(self):
-        """ A lesser version of set_new_rail?  
+        """ A lesser version of set_new_rail?
             TODO: can update_background be pruned for simplicity?
         """
         pass
@@ -232,7 +230,7 @@ class RenderLocal(RenderBase):
         )
         """
 
-        transitions = self.env.rail.get_transitions(*row_col_pos, direction)
+        transitions = self.env.rail.get_transitions((row_col_pos, direction))
         transition_list = np.where(transitions)[0]  # RC list of transitions
 
         # HACK: workaround dead-end transitions
@@ -494,7 +492,7 @@ class RenderLocal(RenderBase):
                     from_ori = (orientation + 2) % 4  # 0123=NESW -> 2301=SWNE
                     from_xy = coords[from_ori]
 
-                    moves = env.rail.get_transitions(row, col, orientation)
+                    moves = env.rail.get_transitions(((row, col), orientation))
 
                     for to_ori in range(4):
                         to_xy = coords[to_ori]
@@ -560,7 +558,7 @@ class RenderLocal(RenderBase):
                        show=False,  # whether to call matplotlib show() or equivalent after completion
                        # use false when calling from Jupyter.  (and matplotlib no longer supported!)
                        show_agents=True,  # whether to include agents
-                       show_inactive_agents=False, 
+                       show_inactive_agents=False,
                        show_observations=True,  # whether to include observations
                        show_predictions=False,  # whether to include predictions
                        show_rowcols=False, # label the rows and columns
@@ -680,7 +678,7 @@ class RenderLocal(RenderBase):
                 if agent.position is None:
                     if show_inactive_agents:
                         # print("agent ", agent_idx, agent.position, agent.old_position, agent.initial_position)
-                        self.gl.set_agent_at(agent_idx, *(agent.initial_position), 
+                        self.gl.set_agent_at(agent_idx, *(agent.initial_position),
                             agent.initial_direction, agent.initial_direction,
                             is_selected=(selected_agent == agent_idx),
                             rail_grid=env.rail.grid,
@@ -707,7 +705,7 @@ class RenderLocal(RenderBase):
                         position = agent.position
                         direction = agent.direction
                         old_direction = agent.direction
-                        
+
                     # When the editor has just added an agent
                     elif agent.initial_position is not None:
                         position = agent.initial_position
@@ -726,7 +724,7 @@ class RenderLocal(RenderBase):
                     direction = agent.direction
                     for possible_direction in range(4):
                         # Is a transition along movement `desired_movement_from_new_cell` to the current cell possible?
-                        isValid = env.rail.get_transition((*agent.position, agent.direction), possible_direction)
+                        isValid = env.rail.get_transition((agent.position, agent.direction), possible_direction)
                         if isValid:
                             direction = possible_direction
 
@@ -739,14 +737,14 @@ class RenderLocal(RenderBase):
                     # set_agent_at uses the agent index for the color
                     if self.agent_render_variant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:
                         self.gl.set_cell_occupied(agent_idx, *(agent.position))
-                    
+
                     if show_inactive_agents:
                         show_this_agent = True
                     else:
                         show_this_agent = agent.state.is_on_map_state()
 
                     if show_this_agent:
-                        self.gl.set_agent_at(agent_idx, *position, agent.direction, direction, 
+                        self.gl.set_agent_at(agent_idx, *position, agent.direction, direction,
                                         selected_agent == agent_idx,
                                         rail_grid=env.rail.grid, malfunction=is_malfunction)
 
@@ -754,8 +752,6 @@ class RenderLocal(RenderBase):
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)
         if show_predictions:
             self.render_prediction(range(env.get_num_agents()), env.dev_pred_dict)
-        
-
 
         if show:
             self.gl.show()

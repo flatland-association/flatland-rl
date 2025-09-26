@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Set
+from typing import Set, List
 from typing import Tuple
 
 import numpy as np
@@ -7,15 +7,15 @@ import numpy as np
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import IntVector2D
-from flatland.core.grid.rail_env_grid import RailEnvTransitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.core.transitions import Transitions
 from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_action import RailEnvNextAction
 
 
-class RailGridTransitionMap(GridTransitionMap):
+class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
 
     def __init__(self, width, height, transitions: Transitions = RailEnvTransitions(), grid: np.ndarray = None):
         super().__init__(width=width, height=height, transitions=transitions, grid=grid)
@@ -41,7 +41,7 @@ class RailGridTransitionMap(GridTransitionMap):
             It is not checked that the next cell is free.
         """
         valid_actions: Set[RailEnvNextAction] = []
-        possible_transitions = self.get_transitions(*agent_position, agent_direction)
+        possible_transitions = self.get_transitions((agent_position, agent_direction))
         num_transitions = fast_count_nonzero(possible_transitions)
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right], relative to the current orientation
@@ -96,7 +96,7 @@ class RailGridTransitionMap(GridTransitionMap):
         Tuple[Grid4TransitionsEnum, bool]
             the new direction and whether the the action was valid
         """
-        possible_transitions = self.get_transitions(*position, direction)
+        possible_transitions = self.get_transitions((position, direction))
         num_transitions = fast_count_nonzero(possible_transitions)
 
         if num_transitions == 1:
@@ -135,42 +135,38 @@ class RailGridTransitionMap(GridTransitionMap):
         return direction, False, RailEnvActions.STOP_MOVING
 
     @lru_cache(maxsize=1_000_000)
-    def check_action_on_agent(self, action: RailEnvActions, position: IntVector2D, direction: Grid4TransitionsEnum):
-        """ Apply the action on the train regardless of locations of other trains.
-            Checks for valid cells to move and valid rail transitions.
-
-            Parameters
-            ----------
-            action : RailEnvActions
-                Action to execute
-            position : IntVector2D
-                current position of the train
-            direction : Grid4TransitionsEnum
-                current direction of the train
-
-            Returns
-            -------
-            new_cell_valid: bool
-                is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
-            new_position
-                New position after applying the action
-            new_direction
-                New direction after applying the action
-            transition_valid: bool
-                Whether the transition from old and direction is defined in the grid.
-                In other words, can the action be applied directly? False if
-                - MOVE_FORWARD/DO_NOTHING when entering symmetric switch
-                - MOVE_LEFT/MOVE_RIGHT corrected to MOVE_FORWARD in switches and dead-ends
-                However, transition_valid for dead-ends and turns either with the correct MOVE_RIGHT/MOVE_LEFT or MOVE_FORWARD/DO_NOTHING.
-            preprocessed_action: RailEnvActions
-                Corrected action if not transition_valid.
-
-                The preprocessed action has the following semantics:
-                - MOVE_LEFT/MOVE_RIGHT: turn left/right without acceleration
-                - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
-                - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
+    def check_action_on_agent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Tuple[
+        bool, Tuple[Tuple[int, int], int], bool, RailEnvActions]:
         """
+
+        Returns
+        -------
+        new_cell_valid: bool
+            is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
+        new_position: [ConfigurationType]
+            New position after applying the action
+        transition_valid: bool
+            Whether the transition from old and direction is defined in the grid.
+            In other words, can the action be applied directly? False if
+            - MOVE_FORWARD/DO_NOTHING when entering symmetric switch
+            - MOVE_LEFT/MOVE_RIGHT corrected to MOVE_FORWARD in switches and dead-ends
+            However, transition_valid for dead-ends and turns either with the correct MOVE_RIGHT/MOVE_LEFT or MOVE_FORWARD/DO_NOTHING.
+        preprocessed_action: [ActionType]
+            Corrected action if not transition_valid.
+
+            The preprocessed action has the following semantics:
+            - MOVE_LEFT/MOVE_RIGHT: turn left/right without acceleration
+            - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
+            - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
+        """
+        position, direction = configuration
         new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
         new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
-        return new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action
+        return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action
+
+    def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
+        """
+        Returns directions in which the agent can move
+        """
+        return self.transitions.get_entry_directions(self.get_full_transitions(row, col))

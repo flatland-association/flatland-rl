@@ -160,11 +160,8 @@ def _run_with_sthortest_path(env, rendering, num_steps=400):
                 p = get_k_shortest_paths(env, agent.position, agent.direction, agent.waypoints[1][0].position)
                 shortest_path = p[0]
                 for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
-                    new_cell_valid, new_direction, new_position, transition_valid, preprocessed_action = env.rail.check_action_on_agent(
-                        RailEnvActions.from_value(a),
-                        agent.position,
-                        agent.direction
-                    )
+                    new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action = env.rail.check_action_on_agent(
+                        RailEnvActions.from_value(a), (agent.position, agent.direction))
                     if new_cell_valid and transition_valid and new_position == shortest_path[1].position and new_direction == shortest_path[1].direction:
                         actions[agent.handle] = a
                         break

@@ -1,5 +1,10 @@
 name: Checks
 
+env:
+    # DEPENDENCY SWITCH:
+    # TODO https://github.com/flatland-association/flatland-rl/issues/243 update dependency after merge
+    flatland-baselines-ref: feature/graph-env-first-steps
+
 on:
     workflow_dispatch:
         inputs:
@@ -95,6 +100,14 @@ jobs:
                     wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+            -   name: Clone flatland-baselines
+                run: |
+                    set -euxo pipefail
+                    git clone -b ${{ env.flatland-baselines-ref }} https://github.com/flatland-association/flatland-baselines.git
+                    cd flatland-baselines
+                    git remote show origin
+                    git status
+                    git branch
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -246,7 +259,12 @@ jobs:
                 working-directory: ${{ github.workspace }}
             -   name: Clone flatland-baselines
                 run: |
-                    git clone https://github.com/flatland-association/flatland-baselines.git
+                    set -euxo pipefail
+                    git clone -b ${{ env.flatland-baselines-ref }} https://github.com/flatland-association/flatland-baselines.git
+                    cd flatland-baselines
+                    git remote show origin
+                    git status
+                    git branch
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip

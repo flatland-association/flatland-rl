@@ -6,7 +6,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.step_utils.states import TrainState
 
 
-class FlatlandEvaluatorCallbacks(FlatlandCallbacks):
+class FlatlandEvaluatorCallbacks(FlatlandCallbacks[RailEnv]):
     """
     Implements Flatland evaluation similar to FlatlandRemoteEvaluationService for just one scenario and in offline mode.
 

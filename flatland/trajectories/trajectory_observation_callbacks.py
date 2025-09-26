@@ -10,7 +10,7 @@ from flatland.trajectories.trajectories import SERIALISED_STATE_SUBDIR
 from flatland.trajectories.trajectories import Trajectory
 
 
-class TrajectoryObservationCallbacks(FlatlandCallbacks):
+class TrajectoryObservationCallbacks(FlatlandCallbacks[RailEnv]):
     """
     FlatlandCallbacks to write observations.
 

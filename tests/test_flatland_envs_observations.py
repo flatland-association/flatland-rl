@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from numpy.random import RandomState
 
+from flatland.core.env import Environment
 from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder, gauss_perturbation_observation_builder_wrapper
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
@@ -67,7 +68,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
                 # Check all possible transitions in new_cell
                 for agent_orientation in range(4):
                     # Is a transition along movement `entry_direction` to the neighbour possible?
-                    is_valid = obs_builder.env.rail.get_transition((neighbour[0], neighbour[1], agent_orientation),
+                    is_valid = obs_builder.env.rail.get_transition(((neighbour[0], neighbour[1]), agent_orientation),
                                                                    desired_movement_from_new_cell)
                     if is_valid:
                         distance_to_target = obs_builder.env.distance_map.get()[
@@ -356,7 +357,7 @@ def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape: Callab
 
 
 def test_gauss_perturbation_observation_builder_wrapper():
-    class ZeroArrayObservationBuilder(ObservationBuilder[np.ndarray]):
+    class ZeroArrayObservationBuilder(ObservationBuilder[Environment, np.ndarray]):
         def __init__(self, shape: tuple):
             super().__init__()
             self._shape = shape

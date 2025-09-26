@@ -7,12 +7,13 @@ from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder, AgentHandle
 from flatland.envs.malfunction_generators import ParamMalfunctionGen, MalfunctionParameters
 from flatland.envs.observations import TreeObsForRailEnv, Node
+from flatland.envs.rail_env import RailEnv
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 
 
 def perturbation_tree_observation_builder_wrapper(
     builder: TreeObsForRailEnv, np_random: RandomState, perturbation_rate: float = None, min_duration: float = None, max_duration: float = None, blank=-np.inf,
-) -> ObservationBuilder[Node]:
+) -> ObservationBuilder[RailEnv, Node]:
     """
     Make some trains blind for some time according to Poisson process.
 
@@ -35,7 +36,7 @@ def perturbation_tree_observation_builder_wrapper(
     Observations with some trains not seeing anything..
     """
 
-    class _PerturbedTreeObsForRailEnv(ObservationBuilder[Node]):
+    class _PerturbedTreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         def __init__(self, builder: TreeObsForRailEnv):
             super().__init__()
             self._malfunction_rate = perturbation_rate if perturbation_rate is not None else 0

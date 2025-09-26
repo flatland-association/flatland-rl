@@ -19,15 +19,19 @@ References:
 - Nygren, E., Eichenberger, Ch., Frejinger, E. Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
 """
 from collections import defaultdict
+from typing import Tuple
 
 import networkx as nx
 
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.transition_map import GridTransitionMap
+from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 
+GridNode = Tuple[Tuple[int, int], int]
+GridEdge = Tuple[GridNode, GridNode]
 
-class GraphTransitionMap:
+class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]):
     """
     Flatland 3 Transition map represented by a directed graph.
 
@@ -84,7 +88,7 @@ class GraphTransitionMap:
         for r in range(transition_map.height):
             for c in range(transition_map.width):
                 for d in range(4):
-                    possible_transitions = transition_map.get_transitions(r, c, d)
+                    possible_transitions = transition_map.get_transitions(((r, c), d))
                     for new_direction in range(4):
                         if possible_transitions[new_direction]:
                             new_position = get_new_position((r, c), new_direction)
@@ -106,3 +110,55 @@ class GraphTransitionMap:
             The graph transition map.
         """
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
+
+    def check_action_on_agent(self, action: RailEnvActions, configuration: GridNode) -> Tuple[
+        bool, GridNode, bool, RailEnvActions]:
+        position, direction = configuration
+        new_position = None
+        new_direction, transition_valid, preprocessed_action = direction, True, action
+
+        n = (*position, direction)
+        succs = list(self.g.successors(n))
+        assert 1 <= len(succs) <= 2
+
+        if len(succs) == 1:
+            succ = list(succs)[0]
+            r, c, d = succ
+            new_position = r, c
+            new_direction = d
+        else:
+            if action == RailEnvActions.MOVE_LEFT:
+                # find
+                new_direction = (direction - 1) % 4
+                for r, c, d in succs:
+                    if d == new_direction:
+                        new_position = r, c
+                        break
+
+            elif action == RailEnvActions.MOVE_RIGHT:
+                # find
+                new_direction = (direction + 1) % 4
+                for r, c, d in succs:
+                    if d == new_direction:
+                        new_position = r, c
+                        break
+            if new_position is None:
+                new_direction = direction
+                for r, c, d in succs:
+                    if d == new_direction:
+                        new_position = r, c
+                        break
+        assert new_position is not None
+        transition_valid = True
+        if action == RailEnvActions.MOVE_LEFT and new_direction != ((direction - 1) % 4):
+            transition_valid = False
+            preprocessed_action = RailEnvActions.MOVE_FORWARD
+        elif action == RailEnvActions.MOVE_RIGHT and new_direction != ((direction + 1) % 4):
+            transition_valid = False
+            preprocessed_action = RailEnvActions.MOVE_FORWARD
+
+        new_cell_valid = (*new_position, new_direction) in self.g.nodes
+        return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action
+
+    def get_transitions(self, configuration: GridNode) -> Tuple[bool]:
+        return True,

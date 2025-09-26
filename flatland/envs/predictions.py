@@ -1,17 +1,19 @@
 """
 Collection of environment-specific PredictionBuilder.
 """
+from typing import Dict
 
 import numpy as np
 
 from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.ordered_set import OrderedSet
 
 
-class DummyPredictorForRailEnv(PredictionBuilder):
+class DummyPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.ndarray]]):
     """
     DummyPredictorForRailEnv object.
 
@@ -19,7 +21,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
     The prediction acts as if no other agent is in the environment and always takes the forward action.
     """
 
-    def get(self, handle: int = None):
+    def get(self, handle: int = None) -> Dict[int, np.ndarray]:
         """
         Called whenever get_many in the observation build is called.
 
@@ -62,8 +64,8 @@ class DummyPredictorForRailEnv(PredictionBuilder):
                     prediction[index] = [index, *agent.target, agent.direction, RailEnvActions.STOP_MOVING.value]
                     continue
                 for action in action_priorities:
-                    new_cell_is_valid, new_direction, new_position, transition_is_valid, _ = \
-                        self.env.rail.check_action_on_agent(action, agent.position, agent.direction)
+                    new_cell_is_valid, (new_position, new_direction), transition_is_valid, _ = \
+                        self.env.rail.check_action_on_agent(action, (agent.position, agent.direction))
                     if all([new_cell_is_valid, transition_is_valid]):
                         # move and change direction to face the new_direction that was
                         # performed
@@ -80,7 +82,7 @@ class DummyPredictorForRailEnv(PredictionBuilder):
         return prediction_dict
 
 
-class ShortestPathPredictorForRailEnv(PredictionBuilder):
+class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.ndarray]]):
     """
     ShortestPathPredictorForRailEnv object.
 
@@ -91,7 +93,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder):
     def __init__(self, max_depth: int = 20):
         super().__init__(max_depth)
 
-    def get(self, handle: int = None):
+    def get(self, handle: int = None) -> Dict[int, np.ndarray]:
         """
         Called whenever get_many in the observation build is called.
         Requires distance_map to extract the shortest path.
