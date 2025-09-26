@@ -2,8 +2,7 @@ name: Checks
 
 env:
     # DEPENDENCY SWITCH:
-    # TODO https://github.com/flatland-association/flatland-rl/issues/243 update dependency after merge
-    flatland-baselines-ref: feature/graph-env-first-steps
+    flatland-baselines-ref: main
 
 on:
     workflow_dispatch:
@@ -11,7 +10,8 @@ on:
             run_benchmarks:
                 type: boolean
     pull_request:
-
+    schedule:
+        -   cron: '30 5 * * *'
 concurrency:
     group: ${{ github.head_ref || github.ref }}
     cancel-in-progress: true
@@ -208,7 +208,7 @@ jobs:
                     if-no-files-found: error
 
     benchmarks:
-        if: ${{ github.event.inputs.run_benchmarks }}
+        if: ${{ github.event.inputs.run_benchmarks || github.head_ref == 'main' }}
         runs-on: ubuntu-22.04
         strategy:
             fail-fast: false
@@ -239,7 +239,7 @@ jobs:
                     if-no-files-found: error
 
     regression:
-        if: ${{ github.event.inputs.run_benchmarks }}
+        if: ${{ github.event.inputs.run_benchmarks || github.head_ref == 'main' }}
         runs-on: ubuntu-22.04
         strategy:
             fail-fast: false
