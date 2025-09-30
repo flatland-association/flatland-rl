@@ -56,7 +56,6 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-    "cachetools<6", # pin because of dependency conflict tox and ray dependencies
     "coverage",
     "opencv-python",
     "deptry",
