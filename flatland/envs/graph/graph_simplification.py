@@ -4,6 +4,7 @@ import networkx as nx
 from attr import attrs, attrib
 
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 GridNode = Tuple[int, int, int]  # row, column, heading (at cell entry)
 
@@ -27,8 +28,8 @@ class DecisionPointGraphEdgeData:
 
 class DecisionPointGraph:
     """
-    Overlay on top of Flatland 3 grid where consecutive cells where agents cannot choose between alternative paths are collapsed into a single edge.
-    A reference to the underlying grid nodes is maintained.
+    Overlay on top of Flatland 3 grid where agents need to choose between alternative paths before entering are collapsed into a single edge.
+    A reference to the underlying grid nodes is maintained: all but last positions have only one neighbor.
     The edge length is the number of cells "collapsed" into this edge.
     See `DecisionPointGraphEdgeData`.
 
@@ -96,3 +97,22 @@ class DecisionPointGraph:
                 open.discard((u_, v_))
 
         return DecisionPointGraph(g)
+
+    @staticmethod
+    def micro_edge_to_waypoint(p1: GridNode, p2: GridNode) -> Waypoint:
+        """
+        Micro edge ((u,v,_), (_,_,d)) <=> directed cell (u,v,d).
+
+        Parameters
+        ----------
+        p1 : GridNode
+            starting vertex of directed edge
+        p2 : GridNode
+            end vertex of directed edge
+
+        Returns
+        -------
+        Waypoint
+            the waypoint (agent position and direction), identifying the cell occupied and direction in which the agent is moving (specifying the next neighbor cell).
+        """
+        return Waypoint(position=(p1[0], p1[1]), direction=p2[2])
