@@ -3,7 +3,6 @@ from typing import Generic
 
 import gymnasium as gym
 import numpy as np
-from ray.rllib.utils.typing import MultiAgentDict
 
 from flatland.core.env_observation_builder import DummyObservationBuilder, AgentHandle, ObservationType, EnvType
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -40,7 +39,7 @@ class GymObservationBuilderWrapper(GymObservationBuilder[EnvType, ObservationTyp
     def reset(self):
         self.wrap.reset()
 
-    def get(self, handle: AgentHandle = 0) -> MultiAgentDict:
+    def get(self, handle: AgentHandle = 0) -> ObservationType:
         return self.wrap.get(handle)
 
     def get_observation_space(self, handle: int = 0) -> gym.Space:
