@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, Set, List, Optional, Tuple
+from typing import Dict, Set, List, Optional, Tuple, TypeVar, Callable
 
 import numpy as np
 
@@ -11,15 +11,19 @@ from flatland.envs.observations import Node
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
+TreeObsNodeType = TypeVar('TreeObsNodeType')
 
-class DecisionPointTreeObs(ObservationBuilder[RailEnv, Node]):
 
-    def __init__(self, max_depth: int):
+class DecisionPointTreeObs(ObservationBuilder[RailEnv, TreeObsNodeType]):
+
+    def __init__(self, max_depth: int, branch_to_node: Callable[[Optional[List[Waypoint]]], TreeObsNodeType]):
+        super().__init__()
         self.max_depth = max_depth
         self.dpg = None
         self.waypoint_edge_mapping: Optional[Dict[Waypoint, Set[Tuple[GridEdge, int]]]] = None
         self.curr_edges: Optional[Dict[AgentHandle, GridEdge]] = None
         self.curr_edge_remaining: Optional[Dict[AgentHandle, List[GridNode]]] = None
+        self._collect_branch = branch_to_node
 
     def reset(self):
         gtm = GraphTransitionMap(GraphTransitionMap.grid_to_digraph(self.env.rail))
@@ -33,16 +37,16 @@ class DecisionPointTreeObs(ObservationBuilder[RailEnv, Node]):
         self.curr_edges = defaultdict(lambda: None)
         self.curr_edge_remaining = defaultdict(lambda: None)
 
-    def get(self, handle: AgentHandle = 0) -> Node:
+    def get(self, handle: AgentHandle = 0) -> TreeObsNodeType:
         agent = self.env.agents[handle]
-        self._update_agent_position(agent, handle)
+        self._update_agent_position(agent)
         curr_edge = self.curr_edges.get(handle, None)
         if curr_edge is not None:
             edge_remaining_vertices = self.curr_edge_remaining.get(handle, None)
             edge_remaining_cells = len(edge_remaining_vertices) - 1
             assert edge_remaining_cells >= 1
             return self._traverse_branch(curr_edge, path=edge_remaining_vertices, depth=0, max_depth=self.max_depth)
-        return Node(*[-np.inf] * 12, {})
+        return self._collect_branch(None)
 
     def _traverse_branch(self, edge: GridEdge, path: List[GridNode], depth: int, max_depth) -> Node:
         wps = [DecisionPointGraph.micro_edge_to_waypoint(p1, p2) for p1, p2 in zip(path, path[1:])]
@@ -54,14 +58,12 @@ class DecisionPointTreeObs(ObservationBuilder[RailEnv, Node]):
             # TODO warning only: in the case of loops, there is only one outgoing branch!
             assert len(outgoing_edges_with_data) == 2
             for i, (_, v, edge_data) in enumerate(outgoing_edges_with_data):
+                # TODO interface for .childs
                 r.childs[i] = self._traverse_branch((u, v), edge_data["d"].path, depth + 1, max_depth)
         return r
 
-    def _collect_branch(self, wps: List[Waypoint]) -> Node:
-        r = Node(*[-np.inf] * 12, {})
-        return r
-
-    def _update_agent_position(self, agent: EnvAgent, handle: EnvAgent):
+    def _update_agent_position(self, agent: EnvAgent):
+        handle = agent.handle
         if agent.position is None:
             self.curr_edges.pop(handle, None)
             self.curr_edge_remaining.pop(handle, None)
@@ -88,3 +90,7 @@ class DecisionPointTreeObs(ObservationBuilder[RailEnv, Node]):
                         # take unique next cell in current edge
                         self.curr_edge_remaining[handle] = self.curr_edge_remaining[handle][1:]
                         assert DecisionPointGraph.micro_edge_to_waypoint(*self.curr_edge_remaining[handle][:2]) == waypoint
+
+
+def standard_branch_to_node(wps: Optional[List[Waypoint]]) -> Node:
+    return Node(*[-np.inf] * 12, {})
