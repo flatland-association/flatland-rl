@@ -85,7 +85,7 @@ class DecisionPointGraph:
                 for u, v, in zip(branch, branch[1:]):
                     closed.add((u, v))
 
-        # special cases closed loops
+        # special cases closed loops (actually not a decision point, i.e. only one micro successor)
         open = set(micro.edges) - closed
         while not len(open) == 0:
             u, v = next(iter(open))
