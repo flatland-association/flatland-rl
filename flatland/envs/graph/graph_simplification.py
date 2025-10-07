@@ -1,12 +1,10 @@
-from typing import List, Tuple
+from typing import List
 
 import networkx as nx
 from attr import attrs, attrib
 
-from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
+from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap, GridNode
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-
-GridNode = Tuple[int, int, int]  # row, column, heading (at cell entry)
 
 
 @attrs
