@@ -145,9 +145,9 @@ class FlattenedTreeObsForRailEnv(GymObservationBuilder[RailEnv, np.ndarray], Tre
         - `NUM_BRANCHES=4`
 
         I.e.
-        - max_depth=1 -> 60
-        - max_depth=2 -> 252
-        - max_depth=3 -> 1020
+        - max_depth=1 -> $60 = (4^1 + 4^0) * 12 = 5 * 12$
+        - max_depth=2 -> $252 = (4^2 + ...  + 4^0) * 12 = 21 * 12$
+        - max_depth=3 -> $1020 = (4^3 + ...  + 4^0) * 12 = 85 * 12$
         - ...
 
         Returns
@@ -314,6 +314,7 @@ class UngroupedFlattenedTreeObsForRailEnv(GymObservationBuilder[RailEnv, np.ndar
 
     def get(self, handle: Optional[AgentHandle] = 0) -> np.ndarray:
         root_node = super(UngroupedFlattenedTreeObsForRailEnv, self).get(handle)
+        make_complete_nary(root_node, 0, self.max_depth, UngroupedFlattenedTreeObsForRailEnv.tree_explored_actions_char)
         return self.traverse_tree(root_node, self.max_depth)
 
     def get_observation_space(self, handle: int = 0) -> gym.Space:
@@ -344,3 +345,25 @@ class UngroupedFlattenedTreeObsForRailEnv(GymObservationBuilder[RailEnv, np.ndar
         for _ in range(self.max_depth):
             k = k * UngroupedFlattenedTreeObsForRailEnv.NUM_BRANCHES + UngroupedFlattenedTreeObsForRailEnv.NUM_FEATURES
         return k
+
+
+def unflatten(flat, index, depth, max_depth, num_features, tree_explored_actions_char):
+    if (flat[index * num_features:index * num_features + num_features] == -np.inf).all():
+        # reference: https://stackoverflow.com/questions/515214/total-number-of-nodes-in-a-tree-data-structure
+        sub_tree_size = int((4 ** (max_depth - depth + 1) - 1) / (4 - 1))
+        return -np.inf, index + sub_tree_size
+    n = Node(*flat[index * num_features:index * num_features + num_features], childs={})
+    index += 1
+    if depth < max_depth:
+        for a in tree_explored_actions_char:
+            child, index = unflatten(flat, index, depth + 1, max_depth, num_features, tree_explored_actions_char)
+            n.childs[a] = child
+    return n, index
+
+
+def make_complete_nary(node: Node, depth, max_depth, tree_explored_actions_char):
+    if depth < max_depth:
+        for a in tree_explored_actions_char:
+            if a not in node.childs or node.childs[a] == -np.inf:
+                node.childs[a] = Node(*[-np.inf] * 12, {})
+            make_complete_nary(node.childs[a], depth + 1, max_depth, tree_explored_actions_char)

@@ -2,8 +2,10 @@ import numpy as np
 
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.env_generation.env_generator import env_generator
+from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenedNormalizedTreeObsForRailEnv, UngroupedFlattenedTreeObsForRailEnv
+from flatland.ml.observations.flatten_tree_observation_for_rail_env import FlattenedNormalizedTreeObsForRailEnv, UngroupedFlattenedTreeObsForRailEnv, unflatten, \
+    make_complete_nary
 
 
 def test_flatten_tree_obs_for_rail_env():
@@ -111,3 +113,25 @@ def test_ungrouped_flatten_tree_obs_for_rail_env():
     obs = obs_builder.get()
     assert obs.dtype == float
     assert obs.shape == (5 * 12,)
+
+
+def test_unflatten_ungrouped_flattened_tree_obs_for_rail_env():
+    max_depth = 2
+    obs_builder = TreeObsForRailEnv(max_depth=max_depth, predictor=ShortestPathPredictorForRailEnv(max_depth=10))
+    env_generator(n_agents=7, obs_builder_object=obs_builder)
+    root_node = obs_builder.get(2)
+
+    obs_builder = UngroupedFlattenedTreeObsForRailEnv(max_depth=max_depth, predictor=ShortestPathPredictorForRailEnv(max_depth=10))
+    env_generator(n_agents=7, obs_builder_object=obs_builder)
+    obs = obs_builder.get(2)
+    print(obs.shape)
+    tree, _ = unflatten(obs, 0, 0, max_depth, obs_builder.NUM_FEATURES, obs_builder.tree_explored_actions_char)
+    assert tree == root_node
+
+
+def test_make_complete_nary():
+    tree = Node(*[-np.inf] * 12, {})
+    tree.childs["L"] = Node(*[-np.inf] * 12, {})
+    make_complete_nary(tree, 0, 2, UngroupedFlattenedTreeObsForRailEnv.tree_explored_actions_char)
+    assert isinstance(tree.childs["R"].childs["R"], Node)
+    assert "R" not in tree.childs["R"].childs["R"]
