@@ -1,8 +1,9 @@
 from collections import defaultdict
+from typing import Dict, Set
 
 from flatland.core.env_observation_builder import ObservationBuilder, AgentHandle
 from flatland.envs.graph.graph_simplification import DecisionPointGraph, DecisionPointGraphEdgeData
-from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
+from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap, GridEdge
 from flatland.envs.observations import Node
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -13,9 +14,9 @@ class DecisionPointTreeObs(ObservationBuilder[RailEnv, Node]):
     def __init__(self, depth: int):
         self.depth = depth
         self.dpg = None
-        self.waypoint_edge_mapping = None
-        self.curr_edges = None
-        self.curr_edge_remaining = None
+        self.waypoint_edge_mapping: Dict[Waypoint, Set[GridEdge]] = None
+        self.curr_edges: Dict[AgentHandle, GridEdge] = None
+        self.curr_edge_remaining: Dict[AgentHandle, GridEdge] = None
 
     def reset(self):
         gtm = GraphTransitionMap(GraphTransitionMap.grid_to_digraph(self.env.rail))
@@ -48,7 +49,7 @@ class DecisionPointTreeObs(ObservationBuilder[RailEnv, Node]):
                 else:
                     assert len(self.curr_edge_remaining) >= 2
                     if len(self.curr_edge_remaining) == 2:
-                        # update unique next branch from dcell (unique because merger results in separate micro-edges)
+                        # update unique next branch from waypoint (unique because merger results in separate micro-edges)
                         edges_offsets = list(self.waypoint_edge_mapping[waypoint])
                         assert len(edges_offsets) == 1, edges_offsets
                         edge, offset = edges_offsets[0]
