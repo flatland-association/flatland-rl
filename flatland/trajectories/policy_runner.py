@@ -404,7 +404,7 @@ def generate_trajectory_from_policy(
     if fork_data_dir is not None and fork_ep_id is not None:
         fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
     PolicyRunner.create_from_policy(
-        policy=policy_cls(env=env),
+        policy=policy_cls(),
         data_dir=data_dir,
         snapshot_interval=snapshot_interval,
         ep_id=ep_id,
