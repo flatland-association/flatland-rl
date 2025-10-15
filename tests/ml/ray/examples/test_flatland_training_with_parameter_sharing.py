@@ -38,6 +38,8 @@ def test_rail_env_wrappers_training_and_rollout(obid: str, algo: str):
     best_result = results.get_best_result(
         metric=f"{EVALUATION_RESULTS}/{ENV_RUNNER_RESULTS}/{EPISODE_RETURN_MEAN}", mode="max"
     )
+    assert f"{EVALUATION_RESULTS}/{ENV_RUNNER_RESULTS}/percentage_complete" in best_result.metrics_dataframe.keys()
+    assert f"{EVALUATION_RESULTS}/{ENV_RUNNER_RESULTS}/normalized_reward" in best_result.metrics_dataframe.keys()
     register_flatland_ray_cli_observation_builders()
     parser = add_flatland_inference_with_random_policy_args()
     rollout(parser.parse_args(["--num-agents", "2", "--obs-builder", obid, "--cp", best_result.checkpoint.path, "--policy-id", "p0"]))
