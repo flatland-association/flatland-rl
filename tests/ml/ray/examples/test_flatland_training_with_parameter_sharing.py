@@ -1,5 +1,5 @@
 import pytest
-from ray.rllib.utils.metrics import ENV_RUNNER_RESULTS, EPISODE_RETURN_MEAN
+from ray.rllib.utils.metrics import ENV_RUNNER_RESULTS, EPISODE_RETURN_MEAN, EVALUATION_RESULTS
 
 from flatland.ml.ray.examples.flatland_inference_with_random_policy import add_flatland_inference_with_random_policy_args, rollout
 from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import train, add_flatland_training_with_parameter_sharing_args, \
@@ -36,7 +36,7 @@ def test_rail_env_wrappers_training_and_rollout(obid: str, algo: str):
     results = train(parser.parse_args(
         ["--num-agents", "2", "--obs-builder", obid, "--algo", algo, "--stop-iters", "1", "--train-batch-size-per-learner", "200", "--checkpoint-freq", "1"]))
     best_result = results.get_best_result(
-        metric=f"{ENV_RUNNER_RESULTS}/{EPISODE_RETURN_MEAN}", mode="max"
+        metric=f"{EVALUATION_RESULTS}/{ENV_RUNNER_RESULTS}/{EPISODE_RETURN_MEAN}", mode="max"
     )
     register_flatland_ray_cli_observation_builders()
     parser = add_flatland_inference_with_random_policy_args()
