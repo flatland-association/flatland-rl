@@ -325,27 +325,38 @@ class Trajectory:
     def outputs_dir(self) -> Path:
         return self.data_dir / OUTPUTS_SUBDIR
 
-    def compare_actions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+    def compare_actions(self, other: "Trajectory", start_step: int = None, end_step: int = None, ignoring_waiting=False) -> pd.DataFrame:
         df = self._read_actions(episode_only=True)
         other_df = other._read_actions(episode_only=True)
-        return self._compare(df, other_df, end_step, start_step)
+        num_agents = df["agent_id"].max() + 1
+        if ignoring_waiting:
+            df["state"] = self._read_trains_rewards_dones_infos(episode_only=True)["info"].map(lambda d: d["state"])
+            other_df["state"] = other._read_trains_rewards_dones_infos(episode_only=True)["info"].map(lambda d: d["state"])
+
+            # we need to consider prev_state as the state for env_time is after the state update at the end of step function!
+            df["prev_state"] = df["state"].shift(num_agents)
+            other_df["prev_state"] = other_df["state"].shift(num_agents)
+
+            df = df[df["prev_state"] != TrainState.WAITING]
+            other_df = other_df[other_df["prev_state"] != TrainState.WAITING]
+        return self._compare(df, other_df, ['env_time', 'agent_id', 'action'], end_step, start_step)
 
     def compare_positions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
         df = self._read_trains_positions(episode_only=True)
         other_df = other._read_trains_positions(episode_only=True)
-        return self._compare(df, other_df, end_step, start_step)
+        return self._compare(df, other_df, ['env_time', 'agent_id', 'position'], end_step, start_step)
 
     def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
         df = self._read_trains_arrived(episode_only=True)
         other_df = other._read_trains_arrived(episode_only=True)
-        return self._compare(df, other_df, end_step, start_step)
+        return self._compare(df, other_df, ['env_time', 'success_rate'], end_step, start_step)
 
     def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
         df = self._read_trains_rewards_dones_infos(episode_only=True)
         other_df = other._read_trains_rewards_dones_infos(episode_only=True)
-        return self._compare(df, other_df, end_step, start_step)
+        return self._compare(df, other_df, ['env_time', 'agent_id', 'reward', 'info', 'done'], end_step, start_step)
 
-    def _compare(self, df, other_df, end_step, start_step):
+    def _compare(self, df, other_df, columns, end_step, start_step, return_frames=False):
         if start_step is not None:
             df = df[df["env_time"] >= start_step]
             other_df = other_df[other_df["env_time"] >= start_step]
@@ -356,5 +367,8 @@ class Trajectory:
         other_df.reset_index(drop=True, inplace=True)
         df.drop(columns="episode_id", inplace=True)
         other_df.drop(columns="episode_id", inplace=True)
-        diff = df.compare(other_df)
+
+        diff = df[columns].compare(other_df[columns])
+        if return_frames:
+            return diff, df, other_df
         return diff
