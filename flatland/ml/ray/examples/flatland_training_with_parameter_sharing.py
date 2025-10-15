@@ -8,6 +8,7 @@ import argparse
 import logging
 from typing import Union, Optional
 
+import numpy as np
 import ray
 from ray import tune
 from ray.rllib.core.rl_module.multi_rl_module import MultiRLModuleSpec
@@ -95,7 +96,8 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
         **init_args,
     )
     env_name = "flatland_env"
-    register_env(env_name, lambda _: ray_env_generator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
+    register_env(env_name, lambda _: ray_env_generator(n_agents=args.num_agents, seed=int(np.random.default_rng().integers(2 ** 32 - 1)),
+                                                       obs_builder_object=registry_get_input(args.obs_builder)()))
 
     # TODO could be extracted to cli - keep it low key as illustration only
     additional_training_config = {}
@@ -126,6 +128,16 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
                 rl_module_specs={"p0": RLModuleSpec()},
             )
         )
+        # https://docs.ray.io/en/latest/rllib/new-api-stack-migration-guide.html#algorithmconfig-env-runners
+        .env_runners(create_env_on_local_worker=True)
+        # https://docs.ray.io/en/latest/rllib/package_ref/algorithm-config.html#rllib-config-evaluation
+        .evaluation(
+            evaluation_num_env_runners=2,
+            evaluation_interval=1,
+            evaluation_force_reset_envs_before_iteration=True,
+            evaluation_duration=20,
+            evaluation_parallel_to_training=False,
+        )
     )
     res = run_rllib_example_script_experiment(base_config, args)
 
@@ -134,11 +146,6 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
     return res
 
 
-# TODO https://github.com/flatland-association/flatland-rl/issues/100 verify implementation
-# TODO https://github.com/flatland-association/flatland-rl/issues/73 get pettingzoo up and running again.
-# TODO https://github.com/flatland-association/flatland-rl/issues/75 illustrate algorithm/policy abstraction in ray
-# TODO https://github.com/flatland-association/flatland-rl/issues/76 illustrate generic callbacks with ray
-# TODO https://github.com/flatland-association/flatland-rl/issues/77 illustrate logging (wandb/tensorflow/custom)...
 if __name__ == '__main__':
     register_flatland_ray_cli_observation_builders()
     parser = add_flatland_training_with_parameter_sharing_args()

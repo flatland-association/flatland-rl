@@ -12,6 +12,7 @@ import tempfile
 from argparse import Namespace
 from pathlib import Path
 
+import numpy as np
 from ray.rllib.core import DEFAULT_MODULE_ID
 from ray.rllib.examples.rl_modules.classes.random_rlm import RandomRLModule
 from ray.tune.registry import registry_get_input
@@ -55,10 +56,10 @@ def add_flatland_inference_with_random_policy_args():
 
 def rollout(args: Namespace):
     # Create an env to do inference in.
-    env = ray_env_generator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)())
+    env = ray_env_generator(n_agents=args.num_agents, seed=int(np.random.default_rng().integers(2 ** 32 - 1)),
+                            obs_builder_object=registry_get_input(args.obs_builder)())
     obs, _ = env.reset()
 
-    num_episodes = 0
 
     checkpoint_path = args.cp
     if checkpoint_path is not None:
@@ -69,11 +70,13 @@ def rollout(args: Namespace):
         policy = ray_policy_wrapper(rl_module)
 
     for _ in range(args.num_episodes_during_inference):
-        env.reset()
+        env.reset(seed=int(np.random.default_rng().integers(2 ** 32 - 1)))
         with tempfile.TemporaryDirectory() as tmpdirname:
             data_dir = Path(tmpdirname)
-            PolicyRunner.create_from_policy(env=env.wrap(), policy=policy, data_dir=data_dir)
-    print(f"Done performing action inference through {num_episodes} Episodes")
+            t = PolicyRunner.create_from_policy(env=env.wrap(), policy=policy, data_dir=data_dir)
+            print(t.trains_arrived_lookup())
+
+    print(f"Done performing action inference through {args.num_episodes_during_inference} Episodes")
 
 
 if __name__ == '__main__':
