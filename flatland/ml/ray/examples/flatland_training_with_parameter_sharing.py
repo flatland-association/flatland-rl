@@ -20,6 +20,7 @@ from ray.rllib.utils.test_utils import (
 from ray.rllib.utils.typing import ResultDict
 from ray.tune.registry import get_trainable_cls, register_env, registry_get_input
 
+from flatland.ml.ray.FlatlandMetricsCallback import FlatlandMetricsCallback
 from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
 from flatland.ml.ray.wrappers import ray_env_generator
 
@@ -138,6 +139,7 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
             evaluation_duration=20,
             evaluation_parallel_to_training=False,
         )
+        .callbacks(FlatlandMetricsCallback)
     )
     res = run_rllib_example_script_experiment(base_config, args)
 
