@@ -8,6 +8,7 @@ from benchmarks.benchmark_episodes import DOWNLOAD_INSTRUCTIONS
 from flatland.envs.persistence import RailEnvPersister
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.trajectories.trajectories import Trajectory
+from flatland_baselines.deadlock_avoidance_heuristic.observation.full_env_observation import FullEnvObservation
 from flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy import DeadLockAvoidancePolicy
 
 
@@ -88,19 +89,21 @@ def re_run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval
     """
     expected_trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
     env_pkl = str((data_dir / "serialised_state" / f"{ep_id}.pkl").resolve())
-    env, _ = RailEnvPersister.load_new(env_pkl)
+    env, _ = RailEnvPersister.load_new(env_pkl, obs_builder=FullEnvObservation())
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         temp_data_dir = Path(tmpdirname)
 
         recreated_trajectory = PolicyRunner.create_from_policy(
-            policy=DeadLockAvoidancePolicy(env=env),
+            policy=DeadLockAvoidancePolicy(),
             data_dir=temp_data_dir,
             env=env,
             snapshot_interval=0,
             ep_id=ep_id + "_regen",
         )
-        assert len(expected_trajectory.compare_actions(recreated_trajectory)) == 0
+
+        # we optimize and do not consider opposing agents when in state WAITING any more as before perf optimization
+        assert len(expected_trajectory.compare_actions(recreated_trajectory, ignoring_waiting=True)) == 0
         assert len(expected_trajectory.compare_positions(recreated_trajectory)) == 0
         assert len(expected_trajectory.compare_arrived(recreated_trajectory)) == 0
         assert len(expected_trajectory.compare_rewards_dones_infos(recreated_trajectory)) == 0
