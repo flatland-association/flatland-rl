@@ -131,14 +131,6 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
         )
         # https://docs.ray.io/en/latest/rllib/new-api-stack-migration-guide.html#algorithmconfig-env-runners
         .env_runners(create_env_on_local_worker=True)
-        # https://docs.ray.io/en/latest/rllib/package_ref/algorithm-config.html#rllib-config-evaluation
-        .evaluation(
-            evaluation_num_env_runners=2,
-            evaluation_interval=1,
-            evaluation_force_reset_envs_before_iteration=True,
-            evaluation_duration=20,
-            evaluation_parallel_to_training=False,
-        )
         .callbacks(FlatlandMetricsCallback)
     )
     res = run_rllib_example_script_experiment(base_config, args)
