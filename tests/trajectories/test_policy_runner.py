@@ -58,10 +58,10 @@ class EnvStepObservationBuilder(ObservationBuilder[RailEnv, int]):
 def test_from_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
         env = trajectory.restore_episode()
-        gen, _, _ = env_generator()
+        gen, _, _ = env_generator(seed=42, )
         assert random_state_to_hashablestate(env.np_random) == random_state_to_hashablestate(gen.np_random)
 
         gen.reset(random_seed=42)
@@ -71,7 +71,7 @@ def test_from_episode():
 def test_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
 
         assert (data_dir / DISCRETE_ACTION_FNAME).exists()
         assert (data_dir / TRAINS_ARRIVED_FNAME).exists()
@@ -247,7 +247,7 @@ def test_failing_from_wrong_intermediate_step():
 def test_evaluation_snapshots():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
         print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
         assert len(list(trajectory.data_dir.rglob("**/*step*.pkl"))) == 0
         TrajectoryEvaluator(trajectory).evaluate(snapshot_interval=1)
@@ -305,3 +305,36 @@ def test_effects_generator():
         trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
         trajectory.load()
         assert sum([info["malfunction"] > 0 for info in trajectory.trains_rewards_dones_infos["info"]]) == 25
+
+
+@pytest.mark.parametrize(
+    "p",
+    [
+        "Test_0/Level_0.pkl",
+        "Test_0/Level_1.pkl",
+        "Test_1/Level_0.pkl",
+        "Test_1/Level_1.pkl",
+        "Test_1/Level_2.pkl",
+    ]
+)
+def test_debugenvs(p):
+    env, _ = RailEnvPersister.load_new(str(f"/Users/che/workspaces/benchmarking/evaluation/flatland3_benchmarks/evaluator/debug-environments/{p}", ))
+    # print(env.np_random.get_state())
+    # return
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectory_from_policy([
+                "--data-dir", data_dir,
+                "--policy-pkg", "flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy", "--policy-cls", "DeadLockAvoidancePolicy",
+                "--obs-builder-pkg", "flatland_baselines.deadlock_avoidance_heuristic.observation.full_env_observation", "--obs-builder-cls",
+                "FullEnvObservation",
+                "--ep-id", "banana",
+                "--env-path", f"/Users/che/workspaces/benchmarking/evaluation/flatland3_benchmarks/evaluator/debug-environments/{p}",
+                "--seed", 1001
+            ])
+        assert e_info.value.code == 0
+
+        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
+        trajectory.load()
+        assert trajectory.trains_rewards_dones_infos["reward"].sum() == 0

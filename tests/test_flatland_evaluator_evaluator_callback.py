@@ -33,7 +33,7 @@ class DelayPolicy(RailEnvPolicy):
 def test_evaluator_callbacks():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, tqdm_kwargs={"disable": True})
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, tqdm_kwargs={"disable": True})
         cb = FlatlandEvaluatorCallbacks()
         TrajectoryEvaluator(trajectory, cb).evaluate(tqdm_kwargs={"disable": True})
         assert cb.get_evaluation() == {'normalized_reward': -0.5417045799211404,

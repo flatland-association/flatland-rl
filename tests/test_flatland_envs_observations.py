@@ -382,7 +382,7 @@ def test_gauss_perturbation_observation_builder_wrapper():
 
 def test_neutral_perturbation_tree_observation_builder_wrapper():
     obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
-    env, _, _ = env_generator(obs_builder_object=obs_builder)
+    env, _, _ = env_generator(obs_builder_object=obs_builder, seed=42, )
     obs, _ = env.reset()
 
     for _ in range(25):
@@ -392,7 +392,7 @@ def test_neutral_perturbation_tree_observation_builder_wrapper():
     raw_obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
     # malfunction_rate 0
     perturbed_obs_builder = perturbation_tree_observation_builder_wrapper(raw_obs_builder, RandomState())
-    env, _, _ = env_generator(obs_builder_object=perturbed_obs_builder)
+    env, _, _ = env_generator(obs_builder_object=perturbed_obs_builder, seed=42, )
     obs, _ = env.reset()
 
     for _ in range(25):

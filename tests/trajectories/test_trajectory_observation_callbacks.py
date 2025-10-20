@@ -11,7 +11,7 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 def test_observation_callbacks():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
         assert len(list(trajectory.data_dir.rglob("**/*step*.pkl"))) == 0
         assert len(list(trajectory.data_dir.rglob("**/*obs*.pkl"))) == 0
 
