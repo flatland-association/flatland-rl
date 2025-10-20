@@ -102,7 +102,7 @@ def test_cli_from_submission():
         data_dir = Path(tmpdirname)
         with pytest.raises(SystemExit) as e_info:
             generate_trajectory_from_policy(
-                ["--data-dir", str(data_dir), "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy"])
+                ["--data-dir", str(data_dir), "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy", "--seed", 42])
         assert e_info.value.code == 0
 
         ep_id = re.sub(r"_step.*", "", str(next((data_dir / SERIALISED_STATE_SUBDIR).glob("*step*.pkl")).name))
