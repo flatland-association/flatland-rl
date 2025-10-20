@@ -271,8 +271,8 @@ class PolicyRunner:
               default=None)
 @click.option('--seed',
               type=int,
-              help="Initiate random seed generators. Goes into `reset`.",
-              required=False, default=42)
+              help="Initiate random seed generators. Goes into `reset`. If --env is used, the env is reset with the seed, otherwise the env is not reset.",
+              required=False, default=None)
 @click.option('--effects-generator-pkg',
               type=str,
               help="Use to override options for `ParamMalfunctionGen`. Defaults to `None`.",
@@ -343,7 +343,7 @@ def generate_trajectory_from_policy(
     malfunction_duration_max=50,
     malfunction_interval=540,
     speed_ratios=None,
-    seed: int = 42,
+    seed: int = None,
     effects_generator_pkg: str = None,
     effects_generator_cls: str = None,
     effects_generator_kwargs: str = None,
@@ -379,6 +379,8 @@ def generate_trajectory_from_policy(
 
     if env_path is not None:
         env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+        if seed is not None:
+            env.reset(random_seed=seed)
         # TODO https://github.com/flatland-association/flatland-rl/issues/278 a bit hacky for now, clean up later...
         if malfunction_interval == -1 and effects_generator is not None:
             env.effects_generator = effects_generator
