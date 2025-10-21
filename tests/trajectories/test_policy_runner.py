@@ -305,36 +305,3 @@ def test_effects_generator():
         trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
         trajectory.load()
         assert sum([info["malfunction"] > 0 for info in trajectory.trains_rewards_dones_infos["info"]]) == 25
-
-
-@pytest.mark.parametrize(
-    "p",
-    [
-        "Test_0/Level_0.pkl",
-        "Test_0/Level_1.pkl",
-        "Test_1/Level_0.pkl",
-        "Test_1/Level_1.pkl",
-        "Test_1/Level_2.pkl",
-    ]
-)
-def test_debugenvs(p):
-    env, _ = RailEnvPersister.load_new(str(f"/Users/che/workspaces/benchmarking/evaluation/flatland3_benchmarks/evaluator/debug-environments/{p}", ))
-    # print(env.np_random.get_state())
-    # return
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        data_dir = Path(tmpdirname)
-        with pytest.raises(SystemExit) as e_info:
-            generate_trajectory_from_policy([
-                "--data-dir", data_dir,
-                "--policy-pkg", "flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy", "--policy-cls", "DeadLockAvoidancePolicy",
-                "--obs-builder-pkg", "flatland_baselines.deadlock_avoidance_heuristic.observation.full_env_observation", "--obs-builder-cls",
-                "FullEnvObservation",
-                "--ep-id", "banana",
-                "--env-path", f"/Users/che/workspaces/benchmarking/evaluation/flatland3_benchmarks/evaluator/debug-environments/{p}",
-                "--seed", 1001
-            ])
-        assert e_info.value.code == 0
-
-        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
-        trajectory.load()
-        assert trajectory.trains_rewards_dones_infos["reward"].sum() == 0
