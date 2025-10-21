@@ -8,14 +8,15 @@ from flatland.ml.pettingzoo.wrappers import PettingzooFlatland
 
 
 def test_parallel_pettingzoo_non_compatible_observation_builder():
-    env, _, _ = env_generator()
+    env, _, _ = env_generator(seed=42, )
     with pytest.raises(AssertionError) as exc:
         PettingzooFlatland(env).parallel_env()
     assert str(exc.value) == "<class 'flatland.envs.observations.TreeObsForRailEnv'> is not gym-compatible, missing get_observation_space"
 
 
 def test_parallel_pettingzoo():
-    raw_env, _, _ = env_generator(obs_builder_object=FlattenedNormalizedTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
+    raw_env, _, _ = env_generator(seed=42,
+                                  obs_builder_object=FlattenedNormalizedTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
     env = PettingzooFlatland(raw_env).parallel_env()
     observations, infos = env.reset()
     assert len(observations) == 7

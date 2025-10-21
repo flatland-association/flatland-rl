@@ -345,7 +345,7 @@ def test_reward_function_waiting(rendering=False):
 def test_obs_builder_gym(obs_builder: ObservationBuilder, expected_shape: Callable):
     expected_agent_ids = [0, 1, 2, 3, 4, 5, 6]
 
-    env, _, _ = env_generator(obs_builder_object=obs_builder)
+    env, _, _ = env_generator(seed=42, obs_builder_object=obs_builder)
     obs, _ = env.reset()
     assert list(obs.keys()) == expected_agent_ids
     for i in range(7):
@@ -382,7 +382,7 @@ def test_gauss_perturbation_observation_builder_wrapper():
 
 def test_neutral_perturbation_tree_observation_builder_wrapper():
     obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
-    env, _, _ = env_generator(obs_builder_object=obs_builder, seed=42, )
+    env, _, _ = env_generator(seed=42, obs_builder_object=obs_builder)
     obs, _ = env.reset()
 
     for _ in range(25):
@@ -392,7 +392,7 @@ def test_neutral_perturbation_tree_observation_builder_wrapper():
     raw_obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
     # malfunction_rate 0
     perturbed_obs_builder = perturbation_tree_observation_builder_wrapper(raw_obs_builder, RandomState())
-    env, _, _ = env_generator(obs_builder_object=perturbed_obs_builder, seed=42, )
+    env, _, _ = env_generator(seed=42, obs_builder_object=perturbed_obs_builder)
     obs, _ = env.reset()
 
     for _ in range(25):
@@ -410,7 +410,7 @@ def test_full_perturbation_tree_observation_builder_wrapper():
     raw_obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
     perturbed_obs_builder = perturbation_tree_observation_builder_wrapper(raw_obs_builder, RandomState(), perturbation_rate=1, min_duration=9999999,
                                                                           max_duration=9999999)
-    env, _, _ = env_generator(obs_builder_object=perturbed_obs_builder)
+    env, _, _ = env_generator(seed=42, obs_builder_object=perturbed_obs_builder)
     obs, _ = env.reset()
 
     for _ in range(25):

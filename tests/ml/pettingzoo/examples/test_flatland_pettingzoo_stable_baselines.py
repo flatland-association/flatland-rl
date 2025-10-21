@@ -9,7 +9,8 @@ from flatland.ml.pettingzoo.wrappers import PettingzooFlatland
 
 @pytest.mark.slow
 def test_train_and_eval_():
-    raw_env, _, _ = env_generator(obs_builder_object=FlattenedNormalizedTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
+    raw_env, _, _ = env_generator(seed=42,
+                                  obs_builder_object=FlattenedNormalizedTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
     env_fn = PettingzooFlatland(raw_env)
     env_kwargs = {}
 
