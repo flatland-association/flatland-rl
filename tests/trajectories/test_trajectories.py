@@ -32,10 +32,10 @@ class RandomPolicy(Policy):
 def test_from_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
         env = trajectory.restore_episode()
-        gen, _, _ = env_generator()
+        gen, _, _ = env_generator(seed=42)
         assert random_state_to_hashablestate(env.np_random) == random_state_to_hashablestate(gen.np_random)
 
         gen.reset(random_seed=42)
@@ -45,7 +45,7 @@ def test_from_episode():
 def test_restore_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42)[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         assert trajectory._find_closest_snapshot(5) == 5
         assert trajectory._find_closest_snapshot(7) == 5
 
@@ -62,7 +62,7 @@ def test_restore_episode():
 def test_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
 
         assert (data_dir / DISCRETE_ACTION_FNAME).exists()
         assert (data_dir / TRAINS_ARRIVED_FNAME).exists()

@@ -58,10 +58,10 @@ class EnvStepObservationBuilder(ObservationBuilder[RailEnv, int]):
 def test_from_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
         env = trajectory.restore_episode()
-        gen, _, _ = env_generator()
+        gen, _, _ = env_generator(seed=42)
         assert random_state_to_hashablestate(env.np_random) == random_state_to_hashablestate(gen.np_random)
 
         gen.reset(random_seed=42)
@@ -71,7 +71,7 @@ def test_from_episode():
 def test_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
 
         assert (data_dir / DISCRETE_ACTION_FNAME).exists()
         assert (data_dir / TRAINS_ARRIVED_FNAME).exists()
@@ -247,7 +247,7 @@ def test_failing_from_wrong_intermediate_step():
 def test_evaluation_snapshots():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
         print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
         assert len(list(trajectory.data_dir.rglob("**/*step*.pkl"))) == 0
         TrajectoryEvaluator(trajectory).evaluate(snapshot_interval=1)
