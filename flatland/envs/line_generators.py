@@ -131,8 +131,6 @@ class SparseLineGen(BaseLineGen):
         Line:
             the line
         """
-
-        _runtime_seed = self.seed + num_resets
         city_positions: IntVector2DArray = hints['city_positions']
 
         # Place agents and targets within available train stations
