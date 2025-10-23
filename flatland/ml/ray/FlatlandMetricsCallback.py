@@ -50,12 +50,11 @@ class FlatlandMetricsCallback(RLlibCallback):
         normalized_reward = sum([sum(agent_rewards) for agent_rewards in episode_rewards.values()]) / (
             rail_env._max_episode_steps *
             num_agents
-        )
+        ) + 1
 
         metrics_logger.log_value(
             "normalized_reward",
             normalized_reward,
-            reduce="sum",
         )
 
         percentage_complete = float(episode_done_agents) / num_agents
