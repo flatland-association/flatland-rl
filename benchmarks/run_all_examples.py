@@ -33,13 +33,12 @@ def run_all_examples():
                     runpy.run_path(file_in, run_name="__main__", init_globals={
                         'argv': ['--sleep-for-animation=False', '--do_rendering=False']
                     })
+                    print("runpy done.")
                 except Exception as e:
                     print(e)
                     error_log_examples.update({file_in: e})
-                except:
                     print("runpy failed:")
                     traceback.print_exc()
-                print("runpy done.")
             print("Done with {}".format(entry))
     if len(error_log_examples.keys()) > 0:
         print("*****************************************************************")
