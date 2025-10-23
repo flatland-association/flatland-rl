@@ -163,9 +163,9 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/scenario-olten-fix/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v1.zip" -O OLTEN_PARTIALLY_CLOSED_v1.zip
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
-                    unzip OLTEN_PARTIALLY_CLOSED_v1 -d scenarios/scenario_olten/data
+                    unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -187,9 +187,9 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/scenario-olten-fix/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v1.zip" -O OLTEN_PARTIALLY_CLOSED_v1.zip
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
-                    unzip OLTEN_PARTIALLY_CLOSED_v1 -d scenarios/scenario_olten/data
+                    unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
