@@ -64,6 +64,7 @@ class Rewards(Generic[RewardType]):
 def defaultdict_set():
     return defaultdict(lambda: set())
 
+
 class DefaultRewards(Rewards[float]):
     """
     Reward Function.
@@ -129,11 +130,17 @@ class DefaultRewards(Rewards[float]):
             self.departures[agent.handle][agent.old_position] = elapsed_steps
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED and not agent_transition_data.state_transition_signal.stop_action_given:
             reward += -1 * agent_transition_data.speed * self.crash_penalty_factor
+
+        if agent.state == TrainState.DONE and agent.state_machine.previous_state != TrainState.DONE:
+            reward += self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps)
         return reward
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> float:
-        reward = None
+        if agent.state_machine.previous_state != TrainState.DONE:
+            return self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps)
+        return 0
 
+    def _agent_done_or_max_episode_steps_reward(self, agent, distance_map, elapsed_steps):
         if agent.state == TrainState.DONE:
             # delay at target
             # if agent arrived earlier or on time = 0
@@ -148,7 +155,6 @@ class DefaultRewards(Rewards[float]):
             # target not reached
             if agent.state.is_on_map_state():
                 reward = agent.get_current_delay(elapsed_steps, distance_map)
-
         for wps, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
             agent_arrivals = set(self.arrivals[agent.handle])
             wps_intersection = set(wps).intersection(agent_arrivals)

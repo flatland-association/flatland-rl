@@ -86,6 +86,7 @@ class RayMultiAgentWrapper(MultiAgentEnv, WrappedRailEnv):
                 del obs[str(i)]
                 del terminateds[str(i)]
                 del infos[str(i)]
+                del rewards[str(i)]
         truncateds = {"__all__": False}
 
         if self.render_mode is not None:
