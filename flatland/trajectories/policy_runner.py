@@ -96,12 +96,12 @@ class PolicyRunner:
                 (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
                 if env is None:
                     # copy initial env
-                    RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
+                    trajectory.save_initial(env)
                     # replay the trajectory to the start_step from the latest snapshot
                     env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
                 else:
                     # copy latest snapshot
-                    RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+                    trajectory.save_intermediate(env)
                     # replay the trajectory to the start_step from the latest snapshot
                     env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
                 trajectory.load()
@@ -116,7 +116,7 @@ class PolicyRunner:
 
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
         if not no_save:
-            RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
+            trajectory.save_initial(env)
 
         if snapshot_interval > 0:
             from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks

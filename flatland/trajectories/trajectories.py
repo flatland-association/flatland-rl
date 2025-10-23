@@ -358,3 +358,9 @@ class Trajectory:
         other_df.drop(columns="episode_id", inplace=True)
         diff = df.compare(other_df)
         return diff
+
+    def save_intermediate(self, env: RailEnv):
+        RailEnvPersister.save(env, self.data_dir / SERIALISED_STATE_SUBDIR / f"{self.ep_id}_step{env._elapsed_steps:04d}.pkl")
+
+    def save_initial(self, env: RailEnv):
+        RailEnvPersister.save(env, self.data_dir / SERIALISED_STATE_SUBDIR / f"{self.ep_id}.pkl")
