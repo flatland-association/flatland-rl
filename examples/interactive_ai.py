@@ -28,6 +28,6 @@ if __name__ == '__main__':
 
     # see above for configuration options, use collect_only=False for live POSTing
     cb = FlatlandInteractiveAICallbacks(position_to_latlon_olten, collect_only=True, step_to_millis=REALTIME_STEP_TO_MILLIS / SPEEDUP)
-    TrajectoryEvaluator(trajectory, cb).evaluate(end_step=150, skip_rewards_dones_infos=True)
+    TrajectoryEvaluator(trajectory, cb).evaluate(end_step=150, skip_rewards_dones_infos=True, skip_rewards=True)
     print(cb.events)
     print(cb.contexts)

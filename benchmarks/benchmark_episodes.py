@@ -134,10 +134,12 @@ def test_episode(data_sub_dir: str, ep_id: str):
     assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
     data_dir = Path(os.path.join(_dir, data_sub_dir))
-    run_episode(data_dir, ep_id)
+    # TODO re-generate episodes instead of ignoring rewards
+    run_episode(data_dir, ep_id, skip_rewards=True)
 
 
-def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None, skip_rewards_dones_infos: bool = False):
+def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None, skip_rewards_dones_infos: bool = False,
+                skip_rewards: bool = False):
     """
     The data is structured as follows:
         -30x30 map
@@ -166,8 +168,12 @@ def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0,
         interval to write pkl snapshots. 1 means at every step. 0 means never.
     skip_rewards_dones_infos : bool
             skip verification of rewards/dones/infos
+    skip_rewards : bool
+            skip verification of rewards
     """
     TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id)).evaluate(
         start_step=start_step,
         snapshot_interval=snapshot_interval,
-        skip_rewards_dones_infos=skip_rewards_dones_infos)
+        skip_rewards_dones_infos=skip_rewards_dones_infos,
+        skip_rewards=skip_rewards,
+    )

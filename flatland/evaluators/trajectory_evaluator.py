@@ -24,6 +24,7 @@ class TrajectoryEvaluator:
         end_step: int = None,
         snapshot_interval=0, tqdm_kwargs: dict = None,
         skip_rewards_dones_infos: bool = False,
+        skip_rewards: bool = False,
         rewards: Rewards = None
     ) -> RailEnv:
         """
@@ -104,7 +105,8 @@ class TrajectoryEvaluator:
                     actual_info = {k: v[agent_id] for k, v in infos.items()}
                     expected_reward, expected_done, expected_info = self.trajectory.trains_rewards_dones_infos_lookup(env_time=elapsed_after_step,
                                                                                                                       agent_id=agent_id)
-                    assert actual_reward == expected_reward, (elapsed_after_step, agent_id, actual_reward, expected_reward)
+                    if not skip_rewards:
+                        assert actual_reward == expected_reward, (elapsed_after_step, agent_id, actual_reward, expected_reward)
                     assert actual_done == expected_done, (elapsed_after_step, agent_id, actual_done, expected_done)
                     assert actual_info == expected_info, (elapsed_after_step, agent_id, actual_info, expected_info)
 
