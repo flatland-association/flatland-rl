@@ -1,3 +1,4 @@
+import sys
 from typing import Tuple, Dict, Optional
 
 from flatland.core.effects_generator import EffectsGenerator
@@ -86,6 +87,10 @@ def env_generator(n_agents=7,
         speed_ratios = {1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}
     if obs_builder_object is None:
         obs_builder_object = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))
+
+    # avoid division by zero.
+    if malfunction_interval is None or malfunction_interval == 0:
+        malfunction_interval = sys.maxsize
 
     env = RailEnv(
         width=x_dim,
