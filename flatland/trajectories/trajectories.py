@@ -351,10 +351,13 @@ class Trajectory:
         other_df = other._read_trains_arrived(episode_only=True)
         return self._compare(df, other_df, ['env_time', 'success_rate'], end_step, start_step)
 
-    def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+    def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None, ignoring_rewards: bool = False) -> pd.DataFrame:
         df = self._read_trains_rewards_dones_infos(episode_only=True)
         other_df = other._read_trains_rewards_dones_infos(episode_only=True)
-        return self._compare(df, other_df, ['env_time', 'agent_id', 'reward', 'info', 'done'], end_step, start_step)
+        columns = ['env_time', 'agent_id', 'reward', 'info', 'done']
+        if ignoring_rewards:
+            columns = ['env_time', 'agent_id', 'info', 'done']
+        return self._compare(df, other_df, columns, end_step, start_step)
 
     def _compare(self, df, other_df, columns, end_step, start_step, return_frames=False):
         if start_step is not None:
