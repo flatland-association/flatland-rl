@@ -4,12 +4,16 @@ Runs Flatland env in RLlib using single policy learning, based on
 
 Take this as starting point to build your own training (cli) script.
 """
+
 import argparse
+import importlib
 import logging
 from typing import Union, Optional
 
+import numpy as np
 import ray
 from ray import tune
+from ray.rllib.algorithms import AlgorithmConfig
 from ray.rllib.core.rl_module.multi_rl_module import MultiRLModuleSpec
 from ray.rllib.core.rl_module.rl_module import RLModuleSpec
 from ray.rllib.utils.test_utils import (
@@ -17,9 +21,9 @@ from ray.rllib.utils.test_utils import (
     run_rllib_example_script_experiment,
 )
 from ray.rllib.utils.typing import ResultDict
-from ray.tune.registry import get_trainable_cls, register_env, registry_get_input
+from ray.tune.registry import get_trainable_cls
+from ray.tune.registry import register_env, registry_get_input
 
-from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
 from flatland.ml.ray.wrappers import ray_env_generator
 
 
@@ -54,6 +58,34 @@ def add_flatland_training_with_parameter_sharing_args():
         required=False,
         help="The address of the ray cluster to connect to in the form ray://<head_node_ip_address>:10001. Leave empty to start a new cluster. Passed to ray.init(address=...). See https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html ",
     )
+    parser.add_argument(
+        '--callbacks-pkg',
+        type=str,
+        help="Defaults to `flatland.ml.ray.FlatlandMetricsCallback.FlatlandMetricsCallback`",
+        required=False,
+        default="flatland.ml.ray.FlatlandMetricsCallback"
+    )
+    parser.add_argument(
+        '--callbacks-cls',
+        type=str,
+        help="Defaults to `flatland.ml.ray.FlatlandMetricsCallback.FlatlandMetricsCallback`",
+        required=False,
+        default="FlatlandMetricsCallback"
+    )
+    parser.add_argument(
+        '--evaluation-callbacks-pkg',
+        type=str,
+        help="Defaults to `flatland.ml.ray.FlatlandMetricsAndTrajectoryCallback.FlatlandMetricsAndTrajectoryCallback`",
+        required=False,
+        default="flatland.ml.ray.FlatlandMetricsAndTrajectoryCallback"
+    )
+    parser.add_argument(
+        '--evaluation-callbacks-cls',
+        type=str,
+        help="Defaults to `flatland.ml.ray.FlatlandMetricsAndTrajectoryCallback.FlatlandMetricsAndTrajectoryCallback`",
+        required=False,
+        default="FlatlandMetricsAndTrajectoryCallback"
+    )
     parser.add_argument("--env_var", "-e",
                         metavar="KEY=VALUE",
                         nargs='*',
@@ -61,7 +93,7 @@ def add_flatland_training_with_parameter_sharing_args():
     return parser
 
 
-def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[ResultDict, tune.result_grid.ResultGrid]:
+def train_with_parameter_sharing(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[ResultDict, tune.result_grid.ResultGrid]:
     if args is None:
         parser = add_flatland_training_with_parameter_sharing_args()
         args = parser.parse_args()
@@ -95,7 +127,8 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
         **init_args,
     )
     env_name = "flatland_env"
-    register_env(env_name, lambda _: ray_env_generator(n_agents=args.num_agents, obs_builder_object=registry_get_input(args.obs_builder)()))
+    register_env(env_name, lambda _: ray_env_generator(n_agents=args.num_agents, seed=int(np.random.default_rng().integers(2 ** 32 - 1)),
+                                                       obs_builder_object=registry_get_input(args.obs_builder)()))
 
     # TODO could be extracted to cli - keep it low key as illustration only
     additional_training_config = {}
@@ -126,21 +159,21 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
                 rl_module_specs={"p0": RLModuleSpec()},
             )
         )
+        # https://docs.ray.io/en/latest/rllib/new-api-stack-migration-guide.html#algorithmconfig-env-runners
+        .env_runners(create_env_on_local_worker=True)
     )
+    if args.callbacks_pkg is not None and args.callbacks_cls is not None:
+        module = importlib.import_module(args.callbacks_pkg)
+        callbacks = getattr(module, args.callbacks_cls)
+        base_config = base_config.callbacks(callbacks)
+    if args.evaluation_callbacks_pkg is not None and args.evaluation_callbacks_cls is not None:
+        module = importlib.import_module(args.evaluation_callbacks_pkg)
+        callbacks = getattr(module, args.evaluation_callbacks_cls)
+        base_config = base_config.evaluation(
+            evaluation_config=AlgorithmConfig.overrides(callbacks=callbacks),
+        )
     res = run_rllib_example_script_experiment(base_config, args)
 
     if res.num_errors > 0:
         raise AssertionError(f"{res.errors}")
     return res
-
-
-# TODO https://github.com/flatland-association/flatland-rl/issues/100 verify implementation
-# TODO https://github.com/flatland-association/flatland-rl/issues/73 get pettingzoo up and running again.
-# TODO https://github.com/flatland-association/flatland-rl/issues/75 illustrate algorithm/policy abstraction in ray
-# TODO https://github.com/flatland-association/flatland-rl/issues/76 illustrate generic callbacks with ray
-# TODO https://github.com/flatland-association/flatland-rl/issues/77 illustrate logging (wandb/tensorflow/custom)...
-if __name__ == '__main__':
-    register_flatland_ray_cli_observation_builders()
-    parser = add_flatland_training_with_parameter_sharing_args()
-    args = parser.parse_args()
-    train(args)

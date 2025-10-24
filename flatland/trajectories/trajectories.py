@@ -317,7 +317,7 @@ class Trajectory:
         """
         rewards_df = self.trains_rewards_dones_infos
         data = rewards_df.loc[(rewards_df['env_time'] == env_time) & (rewards_df['agent_id'] == agent_id) & (rewards_df['episode_id'] == self.ep_id)]
-        assert len(data) == 1
+        assert len(data) == 1, (env_time, agent_id, data)
         data = data.iloc[0]
         return data["reward"], data["done"], data["info"]
 
@@ -358,3 +358,9 @@ class Trajectory:
         other_df.drop(columns="episode_id", inplace=True)
         diff = df.compare(other_df)
         return diff
+
+    def save_intermediate(self, env: RailEnv):
+        RailEnvPersister.save(env, self.data_dir / SERIALISED_STATE_SUBDIR / f"{self.ep_id}_step{env._elapsed_steps:04d}.pkl")
+
+    def save_initial(self, env: RailEnv):
+        RailEnvPersister.save(env, self.data_dir / SERIALISED_STATE_SUBDIR / f"{self.ep_id}.pkl")
