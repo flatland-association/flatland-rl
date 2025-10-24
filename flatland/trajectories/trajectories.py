@@ -10,6 +10,7 @@ from attr import attrs, attrib
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils.states import TrainState
 
 EVENT_LOGS_SUBDIR = 'event_logs'
@@ -71,6 +72,7 @@ class Trajectory:
         self._actions_collect = []
         self._trains_arrived_collect = []
         self._trains_rewards_dones_infos_collect = []
+        self.outputs_dir.mkdir(exist_ok=True, parents=True)
 
     def persist(self):
         self.actions = pd.concat([self.actions, pd.DataFrame.from_records(self._actions_collect)])
@@ -182,36 +184,7 @@ class Trajectory:
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def restore_episode(self, start_step: int = None, inexact: bool = False) -> Optional[RailEnv]:
-        """Restore an episode.
 
-        Parameters
-        ----------
-
-        start_step : Optional[int]
-            start from snapshot (if it exists)
-        inexact : bool
-            allows returning the last snapshot before start_step
-        Returns
-        -------
-        RailEnv
-            the rail env or None if the snapshot at the step does not exist
-        """
-        if start_step is None:
-            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-            env, _ = RailEnvPersister.load_new(f)
-            return env
-        else:
-            closest = start_step
-            if inexact:
-                closest = self._find_closest_snapshot(start_step)
-                if closest is None:
-                    f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                    env, _ = RailEnvPersister.load_new(f)
-                    return env
-            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
-            env, _ = RailEnvPersister.load_new(f)
-            return env
 
     def _find_closest_snapshot(self, start_step):
         closest = None
@@ -359,7 +332,8 @@ class Trajectory:
             columns = ['env_time', 'agent_id', 'info', 'done']
         return self._compare(df, other_df, columns, end_step, start_step)
 
-    def _compare(self, df, other_df, columns, end_step, start_step, return_frames=False):
+    @staticmethod
+    def _compare(df, other_df, columns, end_step, start_step, return_frames=False):
         if start_step is not None:
             df = df[df["env_time"] >= start_step]
             other_df = other_df[other_df["env_time"] >= start_step]
@@ -375,3 +349,83 @@ class Trajectory:
         if return_frames:
             return diff, df, other_df
         return diff
+
+    def get_env(self, start_step: int = None, inexact: bool = False, rewards: Rewards = None) -> Optional[RailEnv]:
+        """Restore an episode.
+
+        Parameters
+        ----------
+        start_step : Optional[int]
+            start from snapshot (if it exists)
+        inexact : bool
+            allows returning the last snapshot before start_step
+        rewards : Rewards
+            rewards for the loaded env. If not provided, defaults to the loaded env's rewards.
+        Returns
+        -------
+        RailEnv
+            the rail env or None if the snapshot at the step does not exist
+        """
+        self.outputs_dir.mkdir(exist_ok=True)
+        if start_step is None:
+            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
+            env, _ = RailEnvPersister.load_new(f, rewards=rewards)
+            return env
+        else:
+            closest = start_step
+            if inexact:
+                closest = self._find_closest_snapshot(start_step)
+                if closest is None:
+                    f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
+                    env, _ = RailEnvPersister.load_new(f, rewards=rewards)
+                    return env
+            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
+            env, _ = RailEnvPersister.load_new(f, rewards=rewards)
+            return env
+
+    def fork(self, data_dir, ep_id, start_step, callbacks):
+        trajectory = Trajectory.create_empty_and_load(data_dir, ep_id)
+
+        env = self.get_env(start_step=start_step, inexact=True)
+        self.load(episode_only=True)
+        # will run action start_step into step start_step+1
+        trajectory.actions = self.actions[self.actions["env_time"] < start_step]
+        trajectory.trains_positions = self.trains_positions[self.trains_positions["env_time"] <= start_step]
+        trajectory.trains_arrived = self.trains_arrived[self.trains_arrived["env_time"] <= start_step]
+        trajectory.trains_rewards_dones_infos = self.trains_rewards_dones_infos[
+            self.trains_rewards_dones_infos["env_time"] <= start_step]
+        trajectory.actions["episode_id"] = trajectory.ep_id
+        trajectory.trains_positions["episode_id"] = trajectory.ep_id
+        trajectory.trains_arrived["episode_id"] = trajectory.ep_id
+        trajectory.trains_rewards_dones_infos["episode_id"] = trajectory.ep_id
+        trajectory.persist()
+        if env is None or env._elapsed_steps < start_step:
+            from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
+            (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
+            if env is None:
+                # copy initial env
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
+                # replay the trajectory to the start_step from the latest snapshot
+                env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
+            else:
+                # copy latest snapshot
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+                # replay the trajectory to the start_step from the latest snapshot
+                env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
+            trajectory.load()
+        return env, trajectory
+
+    @staticmethod
+    def create_empty_and_load(data_dir, ep_id) -> "Trajectory":
+        if ep_id is not None:
+            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
+        else:
+            trajectory = Trajectory(data_dir=data_dir)
+        trajectory.load()
+
+        # ensure to start with new empty df to avoid inconsistencies:
+        assert len(trajectory.trains_positions) == 0
+        assert len(trajectory.actions) == 0
+        assert len(trajectory.trains_arrived) == 0
+        assert len(trajectory.trains_rewards_dones_infos) == 0
+        return trajectory

@@ -60,7 +60,7 @@ def test_from_episode():
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
-        env = trajectory.restore_episode()
+        env = trajectory.get_env()
         gen, _, _ = env_generator(seed=42)
         assert random_state_to_hashablestate(env.np_random) == random_state_to_hashablestate(gen.np_random)
 
@@ -153,7 +153,6 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
             print(trajectory.trains_rewards_dones_infos)
 
         fork = PolicyRunner.create_from_policy(
-            env=env_generator(obs_builder_object=EnvStepObservationBuilder(), )[0],
             data_dir=data_dir / "fork",
             policy=RandomPolicy(),
             # no snapshot here, PolicyRunner needs to start from a previous snapshot and run forward to starting step:

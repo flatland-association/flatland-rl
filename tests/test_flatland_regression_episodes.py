@@ -103,7 +103,7 @@ def test_restore_episode():
             shutil.copytree(data_dir, tmpdirname, dirs_exist_ok=True)
 
             t = Trajectory(data_dir=Path(tmpdirname), ep_id=ep_id)
-            env_restored = t.restore_episode()
+            env_restored = t.get_env()
 
             # TODO poor man's state comparison for now
             assert [a.position for a in env_regen.agents] == [a.position for a in env_restored.agents]
