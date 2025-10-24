@@ -317,7 +317,7 @@ class Trajectory:
         """
         rewards_df = self.trains_rewards_dones_infos
         data = rewards_df.loc[(rewards_df['env_time'] == env_time) & (rewards_df['agent_id'] == agent_id) & (rewards_df['episode_id'] == self.ep_id)]
-        assert len(data) == 1
+        assert len(data) == 1, (env_time, agent_id, self.ep_id, data)
         data = data.iloc[0]
         return data["reward"], data["done"], data["info"]
 
