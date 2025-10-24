@@ -52,6 +52,9 @@ from flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_p
     ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_5", "Test_03_Level_5"),
 ])
 def test_episode(data_sub_dir: str, ep_id: str):
+    """
+    Re-run episode and compare with existing trajectory.
+    """
     _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
     assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
     assert os.path.exists(_dir), (DOWNLOAD_INSTRUCTIONS, _dir)
