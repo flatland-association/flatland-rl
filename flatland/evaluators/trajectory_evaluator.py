@@ -1,3 +1,4 @@
+import importlib
 from pathlib import Path
 
 import click
@@ -136,5 +137,33 @@ class TrajectoryEvaluator:
               help="Episode ID.",
               required=True
               )
-def evaluate_trajectory(data_dir: Path, ep_id: str):
-    TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id)).evaluate()
+@click.option('--callbacks-pkg',
+              type=str,
+              help="Defaults to `None`",
+              required=False,
+              default="flatland.envs.rewards"
+              )
+@click.option('--callbacks-cls',
+              type=str,
+              help="Defaults to `None`",
+              required=False,
+              default=None
+              )
+@click.option('--skip-rewards-dones-infos',
+              type=bool,
+              default=False,
+              help="Skip verification of rewards/dones/infos.",
+              required=False
+              )
+def evaluate_trajectory(
+    data_dir: Path,
+    ep_id: str,
+    callbacks_pkg: str = None,
+    callbacks_cls: str = None,
+    skip_rewards_dones_infos: bool = False
+):
+    callbacks = None
+    if callbacks_pkg is not None and callbacks_cls is not None:
+        module = importlib.import_module(callbacks_pkg)
+        callbacks = getattr(module, callbacks_cls)()
+    TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id), callbacks=callbacks).evaluate(skip_rewards_dones_infos=skip_rewards_dones_infos)

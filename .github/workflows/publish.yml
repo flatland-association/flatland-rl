@@ -20,6 +20,10 @@ jobs:
         steps:
             -   name: Check disk space
                 run: df . -h
+            -   name: Install ffmpeg
+                run: |
+                    sudo apt-get update
+                    sudo apt-get -y install ffmpeg
             -   uses: actions/checkout@v4
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5

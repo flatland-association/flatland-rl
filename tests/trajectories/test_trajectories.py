@@ -14,7 +14,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
 from flatland.trajectories.policy_runner import generate_trajectory_from_policy, PolicyRunner
-from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR
+from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, OUTPUTS_SUBDIR
 from flatland.utils.seeding import np_random
 from flatland.utils.seeding import random_state_to_hashablestate
 
@@ -122,8 +122,12 @@ def test_cli_from_submission():
         assert "episode_id	env_time	agent_id	position" in (data_dir / TRAINS_POSITIONS_FNAME).read_text()
 
         with pytest.raises(SystemExit) as e_info:
-            evaluate_trajectory(["--data-dir", str(data_dir), "--ep-id", ep_id])
+            evaluate_trajectory(
+                ["--data-dir", str(data_dir), "--ep-id", ep_id, "--callbacks-pkg", "flatland.callbacks.generate_movie_callbacks", "--callbacks-cls",
+                 "GenerateMovieCallbacks"])
         assert e_info.value.code == 0
+        # requires ffmpeg
+        assert len(list((data_dir / OUTPUTS_SUBDIR).glob("*.mp4"))) == 2
 
 
 @pytest.mark.parametrize(
