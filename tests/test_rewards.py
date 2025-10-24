@@ -63,7 +63,7 @@ def test_rewards_intermediate_served_and_stopped_penalty():
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
+                     waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
                      waypoints_earliest_departure=[3, 7, None],
                      waypoints_latest_arrival=[None, 11, 10],
                      arrival_time=10)
@@ -74,7 +74,7 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent, None, distance_map, 5)
     agent.state = TrainState.DONE
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == 0
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == -rewards.intermediate_not_served_penalty
 
     rewards = BasicMultiObjectiveRewards()
     rewards.intermediate_not_served_penalty = 33
@@ -82,7 +82,7 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent, None, distance_map, 5)
     agent.state = TrainState.DONE
-    assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (0, 0, 0)
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == (-rewards.intermediate_not_served_penalty, 0, 0)
 
 
 def test_rewards_intermediate_served_but_not_stopped_penalty():
@@ -95,7 +95,7 @@ def test_rewards_intermediate_served_but_not_stopped_penalty():
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
+                     waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
                      waypoints_earliest_departure=[3, 7, None],
                      waypoints_latest_arrival=[None, 11, 10],
                      arrival_time=10)
@@ -125,7 +125,7 @@ def test_rewards_intermediate_not_served_penalty():
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
+                     waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
                      waypoints_earliest_departure=[3, 7, None],
                      waypoints_latest_arrival=[None, 11, 10],
                      arrival_time=10)
@@ -148,19 +148,23 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=11,
-                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
+                     waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
                      waypoints_earliest_departure=[3, 7, None],
                      waypoints_latest_arrival=[None, 11, 11],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
+    agent.old_direction = 0
     agent.position = (2, 2)
+    agent.direction = 2
     agent.state = TrainState.STOPPED
-    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
+    assert rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5) == 0
     agent.old_position = (2, 2)
+    agent.old_direction = 2
     agent.position = (3, 3)
-    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
+    agent.direction = 3
+    assert rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5) == 0
     agent.state = TrainState.DONE
     assert rewards.end_of_episode_reward(agent, distance_map=distance_map, elapsed_steps=25) == -66
 
@@ -175,18 +179,22 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
+                     waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
                      waypoints_earliest_departure=[3, 5, None],
                      waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
+    agent.old_direction = 0
     agent.position = (2, 2)
+    agent.direction = 2
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
     agent.old_position = (2, 2)
+    agent.old_direction = 2
     agent.position = (3, 3)
+    agent.direction = 3
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
     agent.state = TrainState.DONE
     assert rewards.end_of_episode_reward(agent, distance_map=distance_map, elapsed_steps=25) == -99
@@ -202,14 +210,16 @@ def test_rewards_departed_but_never_arrived():
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=10,
-                     waypoints=[[(0, 0)], [(2, 2)], [(3, 3)]],
+                     waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
                      waypoints_earliest_departure=[3, 5, None],
                      waypoints_latest_arrival=[None, 2, 10],
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_position = (0, 0)
+    agent.old_direction = 0
     agent.position = (2, 2)
+    agent.direction = 2
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, None, None, None, StateTransitionSignals()),
                         distance_map=distance_map,
