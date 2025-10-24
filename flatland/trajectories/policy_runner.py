@@ -326,6 +326,18 @@ class PolicyRunner:
               help="Path to existing RailEnv to start trajectory from",
               required=False, default=None
               )
+@click.option('--callbacks-pkg',
+              type=str,
+              help="Pass FlatlandCallbacks during policy run. Defaults to `None`.",
+              required=False,
+              default=None
+              )
+@click.option('--callbacks-cls',
+              type=str,
+              help="Pass FlatlandCallbacks during policy run. Defaults to `None`.",
+              required=False,
+              default=None
+              )
 def generate_trajectory_from_policy(
     data_dir: Path,
     policy_pkg: str, policy_cls: str,
@@ -354,6 +366,8 @@ def generate_trajectory_from_policy(
     end_step: int = None,
     fork_data_dir: Path = None,
     fork_ep_id: str = None,
+    callbacks_pkg: str = None,
+    callbacks_cls: str = None,
 ):
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
@@ -376,6 +390,11 @@ def generate_trajectory_from_policy(
         effects_generator_cls = getattr(module, effects_generator_cls)
         effects_generator_kwargs = dict(effects_generator_kwargs) if len(effects_generator_kwargs) > 0 else {}
         effects_generator = effects_generator_cls(**effects_generator_kwargs)
+    callbacks = None
+    if callbacks_pkg is not None and callbacks_cls is not None:
+        module = importlib.import_module(callbacks_pkg)
+        callbacks_cls = getattr(module, callbacks_cls)
+        callbacks: FlatlandCallbacks = callbacks_cls()
 
     if env_path is not None:
         env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
@@ -414,4 +433,5 @@ def generate_trajectory_from_policy(
         start_step=start_step,
         end_step=end_step,
         fork_from_trajectory=fork_from_trajectory,
+        callbacks=callbacks,
     )
