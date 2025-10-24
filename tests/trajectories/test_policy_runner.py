@@ -153,7 +153,6 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
             print(trajectory.trains_rewards_dones_infos)
 
         fork = PolicyRunner.create_from_policy(
-            env=env_generator(obs_builder_object=EnvStepObservationBuilder(), )[0],
             data_dir=data_dir / "fork",
             policy=RandomPolicy(),
             # no snapshot here, PolicyRunner needs to start from a previous snapshot and run forward to starting step:
