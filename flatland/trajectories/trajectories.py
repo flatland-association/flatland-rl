@@ -72,7 +72,7 @@ class Trajectory:
         self._actions_collect = []
         self._trains_arrived_collect = []
         self._trains_rewards_dones_infos_collect = []
-        self.outputs_dir.mkdir(exist_ok=True)
+        self.outputs_dir.mkdir(exist_ok=True, parents=True)
 
     def persist(self):
         self.actions = pd.concat([self.actions, pd.DataFrame.from_records(self._actions_collect)])
