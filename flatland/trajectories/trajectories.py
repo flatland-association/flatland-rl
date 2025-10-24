@@ -358,3 +358,38 @@ class Trajectory:
         other_df.drop(columns="episode_id", inplace=True)
         diff = df.compare(other_df)
         return diff
+
+    def _fork_trajectory(self, data_dir, ep_id, start_step, callbacks):
+        if ep_id is not None:
+            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
+        else:
+            trajectory = Trajectory(data_dir=data_dir)
+        trajectory.load()
+        env = self.restore_episode(start_step=start_step, inexact=True)
+        self.load(episode_only=True)
+        # will run action start_step into step start_step+1
+        trajectory.actions = self.actions[self.actions["env_time"] < start_step]
+        trajectory.trains_positions = self.trains_positions[self.trains_positions["env_time"] <= start_step]
+        trajectory.trains_arrived = self.trains_arrived[self.trains_arrived["env_time"] <= start_step]
+        trajectory.trains_rewards_dones_infos = self.trains_rewards_dones_infos[
+            self.trains_rewards_dones_infos["env_time"] <= start_step]
+        trajectory.actions["episode_id"] = trajectory.ep_id
+        trajectory.trains_positions["episode_id"] = trajectory.ep_id
+        trajectory.trains_arrived["episode_id"] = trajectory.ep_id
+        trajectory.trains_rewards_dones_infos["episode_id"] = trajectory.ep_id
+        trajectory.persist()
+        if env is None or env._elapsed_steps < start_step:
+            from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
+            (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
+            if env is None:
+                # copy initial env
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
+                # replay the trajectory to the start_step from the latest snapshot
+                env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
+            else:
+                # copy latest snapshot
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+                # replay the trajectory to the start_step from the latest snapshot
+                env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
+            trajectory.load()
+        return env, trajectory

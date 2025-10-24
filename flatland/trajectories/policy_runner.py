@@ -9,7 +9,6 @@ from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
-from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
 
 
@@ -76,35 +75,7 @@ class PolicyRunner:
         assert len(trajectory.trains_rewards_dones_infos) == 0
 
         if fork_from_trajectory is not None:
-            env = fork_from_trajectory.restore_episode(start_step=start_step, inexact=True)
-            fork_from_trajectory.load(episode_only=True)
-
-            # will run action start_step into step start_step+1
-            trajectory.actions = fork_from_trajectory.actions[fork_from_trajectory.actions["env_time"] < start_step]
-            trajectory.trains_positions = fork_from_trajectory.trains_positions[fork_from_trajectory.trains_positions["env_time"] <= start_step]
-            trajectory.trains_arrived = fork_from_trajectory.trains_arrived[fork_from_trajectory.trains_arrived["env_time"] <= start_step]
-            trajectory.trains_rewards_dones_infos = fork_from_trajectory.trains_rewards_dones_infos[
-                fork_from_trajectory.trains_rewards_dones_infos["env_time"] <= start_step]
-            trajectory.actions["episode_id"] = trajectory.ep_id
-            trajectory.trains_positions["episode_id"] = trajectory.ep_id
-            trajectory.trains_arrived["episode_id"] = trajectory.ep_id
-            trajectory.trains_rewards_dones_infos["episode_id"] = trajectory.ep_id
-
-            trajectory.persist()
-
-            if env is None or env._elapsed_steps < start_step:
-                (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
-                if env is None:
-                    # copy initial env
-                    RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
-                    # replay the trajectory to the start_step from the latest snapshot
-                    env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
-                else:
-                    # copy latest snapshot
-                    RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
-                    # replay the trajectory to the start_step from the latest snapshot
-                    env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
-                trajectory.load()
+            env, trajectory = PolicyRunner._fork_trajectory(fork_from_trajectory, data_dir, ep_id, start_step, callbacks)
 
         # TODO bad code smell - private method - check num resets?
         observations = env._get_observations()
@@ -271,7 +242,7 @@ class PolicyRunner:
               default=None)
 @click.option('--seed',
               type=int,
-              help="Initiate random seed generators. Goes into `reset`. If --env is used, the env is reset with the seed, otherwise the env is not reset.",
+              help="Initiate random seed generators. Goes into `reset`. If --env-path is used, the env is reset with the seed, otherwise the env is NOT reset.",
               required=False, default=None)
 @click.option('--effects-generator-pkg',
               type=str,
