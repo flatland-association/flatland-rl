@@ -53,7 +53,8 @@ from flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_p
 ])
 def test_episode(data_sub_dir: str, ep_id: str):
     """
-    Re-run episode and compare with existing trajectory.
+    Re-generate trajectory from policy and compare with existing trajectory.
+    Protects against behaviour change in dla and breaking changes in flatland-rl.
     """
     _dir = os.getenv("BENCHMARK_EPISODES_FOLDER")
     assert _dir is not None, (DOWNLOAD_INSTRUCTIONS, _dir)
