@@ -59,7 +59,7 @@ def test_episode(data_sub_dir: str, ep_id: str):
     re_run_episode(data_dir, ep_id)
 
 
-def re_run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None, skip_rewards: bool = False):
+def re_run_episode(data_dir: str, ep_id: str):
     """
     The data is structured as follows:
         -30x30 map
@@ -80,12 +80,6 @@ def re_run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval
         data dir with trajectory
     ep_id : str
         the episode ID
-    start_step : int
-        start evaluation from intermediate step (requires snapshot to be present)
-    rendering : bool
-        render while evaluating
-    snapshot_interval : int
-        interval to write pkl snapshots. 1 means at every step. 0 means never.
     """
     expected_trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
     env_pkl = str((data_dir / "serialised_state" / f"{ep_id}.pkl").resolve())
