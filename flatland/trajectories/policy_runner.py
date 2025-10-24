@@ -17,7 +17,7 @@ class PolicyRunner:
     def create_from_policy(
         policy: Policy,
         data_dir: Path,
-        env: RailEnv,
+        env: RailEnv = None,
         snapshot_interval: int = 1,
         ep_id: str = None,
         callbacks: FlatlandCallbacks = None,
@@ -61,21 +61,14 @@ class PolicyRunner:
         Trajectory
 
         """
-        if ep_id is not None:
-            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
-        else:
-            trajectory = Trajectory(data_dir=data_dir)
-
-        trajectory.load()
-
-        # ensure to start with new empty df to avoid inconsistencies:
-        assert len(trajectory.trains_positions) == 0
-        assert len(trajectory.actions) == 0
-        assert len(trajectory.trains_arrived) == 0
-        assert len(trajectory.trains_rewards_dones_infos) == 0
-
+        if fork_from_trajectory is not None and env is not None:
+            raise Exception("Provided fork-from-trajectory and env, cannot do both.")
+        elif fork_from_trajectory is None and env is None:
+            raise Exception("Provided neither fork-from-trajectory nor env, must provide exactly one.")
         if fork_from_trajectory is not None:
-            env, trajectory = PolicyRunner._fork_trajectory(fork_from_trajectory, data_dir, ep_id, start_step, callbacks)
+            env, trajectory = fork_from_trajectory.fork(data_dir, ep_id, start_step, callbacks)
+        else:
+            trajectory = Trajectory.create_empty_and_load(data_dir=data_dir, ep_id=ep_id)
 
         # TODO bad code smell - private method - check num resets?
         observations = env._get_observations()

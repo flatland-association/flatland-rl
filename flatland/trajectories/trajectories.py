@@ -359,12 +359,9 @@ class Trajectory:
         diff = df.compare(other_df)
         return diff
 
-    def _fork_trajectory(self, data_dir, ep_id, start_step, callbacks):
-        if ep_id is not None:
-            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
-        else:
-            trajectory = Trajectory(data_dir=data_dir)
-        trajectory.load()
+    def fork(self, data_dir, ep_id, start_step, callbacks):
+        trajectory = Trajectory.create_empty_and_load(data_dir, ep_id)
+
         env = self.restore_episode(start_step=start_step, inexact=True)
         self.load(episode_only=True)
         # will run action start_step into step start_step+1
@@ -393,3 +390,18 @@ class Trajectory:
                 env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
             trajectory.load()
         return env, trajectory
+
+    @staticmethod
+    def create_empty_and_load(data_dir, ep_id) -> "Trajectory":
+        if ep_id is not None:
+            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
+        else:
+            trajectory = Trajectory(data_dir=data_dir)
+        trajectory.load()
+
+        # ensure to start with new empty df to avoid inconsistencies:
+        assert len(trajectory.trains_positions) == 0
+        assert len(trajectory.actions) == 0
+        assert len(trajectory.trains_arrived) == 0
+        assert len(trajectory.trains_rewards_dones_infos) == 0
+        return trajectory
