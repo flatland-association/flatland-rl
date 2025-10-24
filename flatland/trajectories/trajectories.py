@@ -10,6 +10,7 @@ from attr import attrs, attrib
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils.states import TrainState
 
 EVENT_LOGS_SUBDIR = 'event_logs'
@@ -71,6 +72,7 @@ class Trajectory:
         self._actions_collect = []
         self._trains_arrived_collect = []
         self._trains_rewards_dones_infos_collect = []
+        self.outputs_dir.mkdir(exist_ok=True)
 
     def persist(self):
         self.actions = pd.concat([self.actions, pd.DataFrame.from_records(self._actions_collect)])
@@ -182,24 +184,26 @@ class Trajectory:
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def restore_episode(self, start_step: int = None, inexact: bool = False) -> Optional[RailEnv]:
+    def restore_episode(self, start_step: int = None, inexact: bool = False, rewards: Rewards = None) -> Optional[RailEnv]:
         """Restore an episode.
 
         Parameters
         ----------
-
         start_step : Optional[int]
             start from snapshot (if it exists)
         inexact : bool
             allows returning the last snapshot before start_step
+        rewards : Rewards
+            rewards for the loaded env. If not provided, defaults to the loaded env's rewards.
         Returns
         -------
         RailEnv
             the rail env or None if the snapshot at the step does not exist
         """
+        self.outputs_dir.mkdir(exist_ok=True)
         if start_step is None:
             f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-            env, _ = RailEnvPersister.load_new(f)
+            env, _ = RailEnvPersister.load_new(f, rewards=rewards)
             return env
         else:
             closest = start_step
@@ -207,10 +211,10 @@ class Trajectory:
                 closest = self._find_closest_snapshot(start_step)
                 if closest is None:
                     f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                    env, _ = RailEnvPersister.load_new(f)
+                    env, _ = RailEnvPersister.load_new(f, rewards=rewards)
                     return env
             f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
-            env, _ = RailEnvPersister.load_new(f)
+            env, _ = RailEnvPersister.load_new(f, rewards=rewards)
             return env
 
     def _find_closest_snapshot(self, start_step):
@@ -345,7 +349,8 @@ class Trajectory:
         other_df = other._read_trains_rewards_dones_infos(episode_only=True)
         return self._compare(df, other_df, end_step, start_step)
 
-    def _compare(self, df, other_df, end_step, start_step):
+    @staticmethod
+    def _compare(df, other_df, end_step, start_step):
         if start_step is not None:
             df = df[df["env_time"] >= start_step]
             other_df = other_df[other_df["env_time"] >= start_step]

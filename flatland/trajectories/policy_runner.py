@@ -90,7 +90,7 @@ class PolicyRunner:
                 callbacks = make_multi_callbacks(callbacks,
                                                  TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir))
 
-        trajectory.outputs_dir.mkdir(exist_ok=True)
+
 
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
@@ -98,11 +98,13 @@ class PolicyRunner:
         env_time = start_step
         if end_step is None:
             end_step = env._max_episode_steps
+        assert end_step >= start_step
         env_time_range = range(start_step, end_step)
 
         if callbacks is not None and start_step == 0:
             callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
 
+        done = False
         for env_time in tqdm.tqdm(env_time_range, **tqdm_kwargs):
             assert env_time == env._elapsed_steps
 
