@@ -8,5 +8,7 @@ from flatland.ml.observations.gym_observation_builder import DummyObservationBui
 def register_flatland_ray_cli_observation_builders():
     register_input("DummyObservationBuilderGym", lambda: DummyObservationBuilderGym()),
     register_input("GlobalObsForRailEnvGym", lambda: GlobalObsForRailEnvGym()),
+    register_input("FlattenedNormalizedTreeObsForRailEnv_max_depth_2_50",
+                   lambda: FlattenedNormalizedTreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
     register_input("FlattenedNormalizedTreeObsForRailEnv_max_depth_3_50",
                    lambda: FlattenedNormalizedTreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
