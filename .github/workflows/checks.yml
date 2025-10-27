@@ -2,7 +2,7 @@ name: Checks
 
 env:
     # DEPENDENCY SWITCH:
-    flatland-baselines-ref: dla-performance-improvements
+    flatland-baselines-ref: main
 
 on:
     workflow_dispatch:
