@@ -3,7 +3,7 @@
 
 ![Flatland](https://i.imgur.com/0rnbSLY.gif)
 
-[![Main](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml/badge.svg)](https://github.com/flatland-association/flatland-rl/actions/workflows/main.yml)
+[![Main](https://github.com/flatland-association/flatland-rl/actions/workflows/checks.yml/badge.svg)](https://github.com/flatland-association/flatland-rl/actions/workflows/checks.yml)
 
 Flatland is an open-source toolkit for developing and comparing Multi-Agent Reinforcement Learning algorithms in little
 (or ridiculously large!) gridworlds.
