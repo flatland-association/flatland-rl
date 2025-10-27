@@ -8,7 +8,8 @@ from ray.rllib.utils.metrics import ENV_RUNNER_RESULTS, EPISODE_RETURN_MEAN, EVA
 
 from flatland.ml.ray.examples.flatland_inference_with_random_policy import add_flatland_inference_with_random_policy_args, rollout
 from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
-from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import add_flatland_training_with_parameter_sharing_args, train_with_parameter_sharing
+from flatland.ml.ray.examples.flatland_training_with_parameter_sharing import add_flatland_training_with_parameter_sharing_args, \
+    train_with_parameter_sharing_cli
 
 
 @pytest.mark.parametrize(
@@ -40,7 +41,7 @@ def test_rail_env_wrappers_training_and_rollout(obid: str, algo: str):
     parser = add_flatland_training_with_parameter_sharing_args()
     evaluation_duration = 2
     stop_iters = 2
-    results = train_with_parameter_sharing(parser.parse_args(
+    results = train_with_parameter_sharing_cli(parser.parse_args(
         ["--num-agents", "2",
          "--obs-builder", obid,
          "--algo", algo,

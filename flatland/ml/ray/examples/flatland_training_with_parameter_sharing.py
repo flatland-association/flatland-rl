@@ -8,13 +8,12 @@ Take this as starting point to build your own training (cli) script.
 import argparse
 import importlib
 import logging
-from typing import Union, Optional
+from typing import Union, Optional, Dict, Any
 
-import numpy as np
 import ray
 from ray import tune
 from ray.rllib.algorithms import AlgorithmConfig
-from ray.rllib.core.rl_module.multi_rl_module import MultiRLModuleSpec
+from ray.rllib.core.rl_module import MultiRLModuleSpec
 from ray.rllib.core.rl_module.rl_module import RLModuleSpec
 from ray.rllib.utils.test_utils import (
     add_rllib_example_script_args,
@@ -25,6 +24,112 @@ from ray.tune.registry import get_trainable_cls
 from ray.tune.registry import register_env, registry_get_input
 
 from flatland.ml.ray.wrappers import ray_env_generator
+
+
+def train_with_parameter_sharing(
+    module_class: str,
+    obs_builder: str,  # TODO type instead!
+    args: Optional[argparse.Namespace] = None,  # args from add_rllib_example_script_args
+    ray_address: str = None,
+    init_args=None,
+    env_vars=None,
+    train_batch_size_per_learner: int = 4000,
+    additional_training_config: Dict[str, Any] = None,
+    env_config: Dict[str, Any] = None,
+    model_config: Dict[str, Any] = None,
+    callbacks_pkg: Optional[str] = None,
+    evaluation_callbacks_cls: Optional[str] = None,
+    evaluation_callbacks_pkg: Optional[str] = None
+) -> Union[ResultDict, tune.result_grid.ResultGrid]:
+    setup_func()
+
+    # TODO should not have any get_input here any more!
+
+    if args is None:
+        parser = add_rllib_example_script_args()
+        args = parser.parse_args()
+    assert args.num_agents > 0, "Must set --num-agents > 0 when running this script!"
+    assert (
+        args.enable_new_api_stack
+    ), "Must set --enable-new-api-stack when running this script!"
+
+    if init_args is None:
+
+        init_args = {
+            # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#runtime-environments
+            "runtime_env": {
+                "env_vars": env_vars or {},
+                # https://docs.ray.io/en/latest/ray-observability/user-guides/configure-logging.html
+                "worker_process_setup_hook": "flatland.ml.ray.examples.flatland_training_with_parameter_sharing.setup_func"
+            },
+            "ignore_reinit_error": True,
+        }
+
+        if ray_address is not None:
+            init_args['address'] = ray_address
+    # https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html
+    ray.init(
+        **init_args,
+    )
+    if env_config is None:
+        env_config = {}
+    # TODO cli add posibility to use registered input as well
+    env_name = "flatland_env"
+    register_env(env_name, lambda _: ray_env_generator(
+        **env_config,
+        n_agents=args.num_agents,
+        obs_builder_object=registry_get_input(obs_builder)()
+    ))
+    if module_class is not None:
+        module_class = registry_get_input(module_class)
+
+    else:
+        model_config = set()
+    # TODO cleanup, should be caller's responsibility
+    if args.algo == "DQN":
+        additional_training_config = {"replay_buffer_config": {
+            "type": "MultiAgentEpisodeReplayBuffer",
+        }}
+    base_config = (
+        # N.B. the warning `passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64`
+        #   comes from ray.tune.registry._register_all() -->  import ray.rllib.algorithms.dreamerv3 as dreamerv3!
+        get_trainable_cls(args.algo)
+        .get_default_config()
+        .environment("flatland_env")
+        .multi_agent(
+            policies={"p0"},
+            # All agents map to the exact same policy.
+            policy_mapping_fn=(lambda aid, *args, **kwargs: "p0"),
+        )
+        .training(
+            train_batch_size=train_batch_size_per_learner,
+            **(additional_training_config or {})
+        )
+        .rl_module(
+            rl_module_spec=MultiRLModuleSpec(
+                rl_module_specs={"p0": RLModuleSpec(
+                    module_class=module_class,
+                    model_config=model_config,
+                )},
+            )
+        )
+        # https://docs.ray.io/en/latest/rllib/new-api-stack-migration-guide.html#algorithmconfig-env-runners
+        .env_runners(create_env_on_local_worker=True)
+    )
+    if callbacks_pkg is not None and args.callbacks_cls is not None:
+        module = importlib.import_module(callbacks_pkg)
+        callbacks = getattr(module, args.callbacks_cls)
+        base_config = base_config.callbacks(callbacks)
+    if evaluation_callbacks_pkg is not None and evaluation_callbacks_cls is not None:
+        module = importlib.import_module(evaluation_callbacks_pkg)
+        callbacks = getattr(module, evaluation_callbacks_cls)
+        base_config = base_config.evaluation(
+            evaluation_config=AlgorithmConfig.overrides(callbacks=callbacks),
+        )
+    res = run_rllib_example_script_experiment(base_config, args)
+    if res.num_errors > 0:
+        raise AssertionError(f"{res.errors}")
+    return res
 
 
 def setup_func():
@@ -50,7 +155,18 @@ def add_flatland_training_with_parameter_sharing_args():
         "--obs-builder",
         type=str,
         default=None,
+        help="Must be registered input."
     )
+    parser.add_argument(
+        "--module-class",
+        type=str,
+        default=None,
+        help="Must be registered input."
+    )
+    parser.add_argument("--model-config",
+                        metavar="KEY=VALUE",
+                        nargs='*',
+                        help="Passed to model_config.")
     parser.add_argument(
         "--ray-address",
         type=str,
@@ -90,90 +206,37 @@ def add_flatland_training_with_parameter_sharing_args():
                         metavar="KEY=VALUE",
                         nargs='*',
                         help="Set ray runtime environment variables like -e RAY_DEBUG=1, passed to ray.init(runtime_env={env_vars: {...}}), see https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#api-reference")
+    # parser.add_argument("--env-config",
+    #                     metavar="KEY=VALUE",
+    #                     nargs='*',
+    #                     help="Passed to env generator.")  # TODO use literal_eval instead?
     return parser
 
 
-def train_with_parameter_sharing(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[ResultDict, tune.result_grid.ResultGrid]:
+def train_with_parameter_sharing_cli(args: Optional[argparse.Namespace] = None) -> Union[ResultDict, tune.result_grid.ResultGrid]:
     if args is None:
         parser = add_flatland_training_with_parameter_sharing_args()
         args = parser.parse_args()
-    assert args.num_agents > 0, "Must set --num-agents > 0 when running this script!"
-    assert (
-        args.enable_new_api_stack
-    ), "Must set --enable-new-api-stack when running this script!"
     assert (
         args.obs_builder
     ), "Must set --obs-builder <obs builder ID> when running this script!"
 
-    setup_func()
-    if init_args is None:
-        env_vars = set()
-        if args.env_var is not None:
-            env_vars = args.env_var
-        init_args = {
-            # https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#runtime-environments
-            "runtime_env": {
-                "env_vars": dict(map(lambda s: s.split('='), env_vars)),
-                # https://docs.ray.io/en/latest/ray-observability/user-guides/configure-logging.html
-                "worker_process_setup_hook": "flatland.ml.ray.examples.flatland_training_with_parameter_sharing.setup_func"
-            },
-            "ignore_reinit_error": True,
-        }
-        if args.ray_address is not None:
-            init_args['address'] = args.ray_address
+    env_vars = {}
+    if args.env_var is not None:
+        env_vars = dict(map(lambda s: s.split('='), args.env_var))
 
-    # https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html
-    ray.init(
-        **init_args,
+    model_config = None
+    if args.model_config is not None:
+        model_config = dict(map(lambda s: s.split('='), model_config))
+
+    return train_with_parameter_sharing(
+        module_class=args.module_class,
+        obs_builder=args.obs_builder,
+        args=args,
+        init_args=None, env_vars=env_vars,
+        train_batch_size_per_learner=args.train_batch_size_per_learner,
+        additional_training_config={}, env_config=None,
+        model_config=model_config,
+        callbacks_pkg=args.callbacks_pkg,
+        evaluation_callbacks_cls=args.evaluation_callbacks_cls, evaluation_callbacks_pkg=args.evaluation_callbacks_pkg
     )
-    env_name = "flatland_env"
-    register_env(env_name, lambda _: ray_env_generator(n_agents=args.num_agents, seed=int(np.random.default_rng().integers(2 ** 32 - 1)),
-                                                       obs_builder_object=registry_get_input(args.obs_builder)()))
-
-    # TODO could be extracted to cli - keep it low key as illustration only
-    additional_training_config = {}
-    if args.algo == "DQN":
-        additional_training_config = {"replay_buffer_config": {
-            "type": "MultiAgentEpisodeReplayBuffer",
-        }}
-    base_config = (
-        # N.B. the warning `passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64`
-        #   comes from ray.tune.registry._register_all() -->  import ray.rllib.algorithms.dreamerv3 as dreamerv3!
-        get_trainable_cls(args.algo)
-        .get_default_config()
-        .environment("flatland_env")
-        .multi_agent(
-            policies={"p0"},
-            # All agents map to the exact same policy.
-            policy_mapping_fn=(lambda aid, *args, **kwargs: "p0"),
-        )
-        .training(
-            model={
-                "vf_share_layers": True,
-            },
-            train_batch_size=args.train_batch_size_per_learner,
-            **additional_training_config
-        )
-        .rl_module(
-            rl_module_spec=MultiRLModuleSpec(
-                rl_module_specs={"p0": RLModuleSpec()},
-            )
-        )
-        # https://docs.ray.io/en/latest/rllib/new-api-stack-migration-guide.html#algorithmconfig-env-runners
-        .env_runners(create_env_on_local_worker=True)
-    )
-    if args.callbacks_pkg is not None and args.callbacks_cls is not None:
-        module = importlib.import_module(args.callbacks_pkg)
-        callbacks = getattr(module, args.callbacks_cls)
-        base_config = base_config.callbacks(callbacks)
-    if args.evaluation_callbacks_pkg is not None and args.evaluation_callbacks_cls is not None:
-        module = importlib.import_module(args.evaluation_callbacks_pkg)
-        callbacks = getattr(module, args.evaluation_callbacks_cls)
-        base_config = base_config.evaluation(
-            evaluation_config=AlgorithmConfig.overrides(callbacks=callbacks),
-        )
-    res = run_rllib_example_script_experiment(base_config, args)
-
-    if res.num_errors > 0:
-        raise AssertionError(f"{res.errors}")
-    return res
