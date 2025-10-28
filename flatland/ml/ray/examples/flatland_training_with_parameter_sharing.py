@@ -8,13 +8,13 @@ Take this as starting point to build your own training (cli) script.
 import argparse
 import importlib
 import logging
-from typing import Union, Optional, Dict, Any
+from typing import Union, Optional, Dict, Any, Type
 
 import ray
 from ray import tune
 from ray.rllib.algorithms import AlgorithmConfig
 from ray.rllib.core.rl_module import MultiRLModuleSpec
-from ray.rllib.core.rl_module.rl_module import RLModuleSpec
+from ray.rllib.core.rl_module.rl_module import RLModuleSpec, RLModule
 from ray.rllib.utils.test_utils import (
     add_rllib_example_script_args,
     run_rllib_example_script_experiment,
@@ -23,12 +23,13 @@ from ray.rllib.utils.typing import ResultDict
 from ray.tune.registry import get_trainable_cls
 from ray.tune.registry import register_env, registry_get_input
 
+from flatland.ml.observations.gym_observation_builder import GymObservationBuilder
 from flatland.ml.ray.wrappers import ray_env_generator
 
 
 def train_with_parameter_sharing(
-    module_class: str,
-    obs_builder: str,  # TODO type instead!
+    module_class: Type[RLModule],
+    obs_builder_class: Type[GymObservationBuilder],
     args: Optional[argparse.Namespace] = None,  # args from add_rllib_example_script_args
     ray_address: str = None,
     init_args=None,
@@ -43,8 +44,6 @@ def train_with_parameter_sharing(
     evaluation_callbacks_pkg: Optional[str] = None
 ) -> Union[ResultDict, tune.result_grid.ResultGrid]:
     setup_func()
-
-    # TODO should not have any get_input here any more!
 
     if args is None:
         parser = add_rllib_example_script_args()
@@ -79,13 +78,8 @@ def train_with_parameter_sharing(
     register_env(env_name, lambda _: ray_env_generator(
         **env_config,
         n_agents=args.num_agents,
-        obs_builder_object=registry_get_input(obs_builder)()
+        obs_builder_object=obs_builder_class()
     ))
-    if module_class is not None:
-        module_class = registry_get_input(module_class)
-
-    else:
-        model_config = set()
     # TODO cleanup, should be caller's responsibility
     if args.algo == "DQN":
         additional_training_config = {"replay_buffer_config": {
@@ -231,8 +225,8 @@ def train_with_parameter_sharing_cli(args: Optional[argparse.Namespace] = None) 
         model_config = dict(map(lambda s: s.split('='), model_config))
 
     return train_with_parameter_sharing(
-        module_class=args.module_class,
-        obs_builder=args.obs_builder,
+        module_class=registry_get_input(args.module_class) if args.module_class is not None else None,
+        obs_builder_class=registry_get_input(args.obs_builder),
         args=args,
         init_args=None, env_vars=env_vars,
         train_batch_size_per_learner=args.train_batch_size_per_learner,
