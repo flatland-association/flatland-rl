@@ -102,8 +102,8 @@ def test_restore_episode():
         with tempfile.TemporaryDirectory() as tmpdirname:
             shutil.copytree(data_dir, tmpdirname, dirs_exist_ok=True)
 
-            t = Trajectory(data_dir=Path(tmpdirname), ep_id=ep_id)
-            env_restored = t.get_env()
+            t = Trajectory.load_existing(data_dir=Path(tmpdirname), ep_id=ep_id)
+            env_restored = t.load_env()
 
             # TODO poor man's state comparison for now
             assert [a.position for a in env_regen.agents] == [a.position for a in env_restored.agents]

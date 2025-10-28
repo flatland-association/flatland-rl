@@ -24,7 +24,7 @@ if __name__ == '__main__':
     with (data_dir / "position_to_latlon.pkl").resolve().open("rb") as file_in:
         position_to_latlon_olten = pickle.loads(file_in.read())
 
-    trajectory = Trajectory(data_dir=data_dir, ep_id=scenario)
+    trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=scenario)
 
     # see above for configuration options, use collect_only=False for live POSTing
     cb = FlatlandInteractiveAICallbacks(position_to_latlon_olten, collect_only=True, step_to_millis=REALTIME_STEP_TO_MILLIS / SPEEDUP)

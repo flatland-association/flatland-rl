@@ -27,7 +27,7 @@ class PolicyRunner:
 
         fork_from_trajectory: "Trajectory" = None,
         no_save: bool = False,
-    ) -> "Trajectory":
+    ) -> Trajectory:
         """
         Creates trajectory by running submission (policy and obs builder).
 
@@ -56,6 +56,8 @@ class PolicyRunner:
             stop evaluation at intermediate step excl. Capped by env's max_episode_steps
         fork_from_trajectory : Trajectory
             copy data from this trajectory up to start step and run policy from there on
+        no_save : bool
+            do not save the initial env. Deprecated.
         Returns
         -------
         Trajectory
@@ -66,9 +68,10 @@ class PolicyRunner:
         elif fork_from_trajectory is None and env is None:
             raise Exception("Provided neither fork-from-trajectory nor env, must provide exactly one.")
         if fork_from_trajectory is not None:
-            env, trajectory = fork_from_trajectory.fork(data_dir, ep_id, start_step, callbacks)
+            trajectory = fork_from_trajectory.fork(data_dir=data_dir, ep_id=ep_id, start_step=start_step)
+            env = trajectory.load_env(start_step=start_step)
         else:
-            trajectory = Trajectory.create_empty_and_load(data_dir=data_dir, ep_id=ep_id)
+            trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id)
 
         # TODO bad code smell - private method - check num resets?
         observations = env._get_observations()
@@ -389,7 +392,7 @@ def generate_trajectory_from_policy(
         )
     fork_from_trajectory = None
     if fork_data_dir is not None and fork_ep_id is not None:
-        fork_from_trajectory = Trajectory(data_dir=fork_data_dir, ep_id=fork_ep_id)
+        fork_from_trajectory = Trajectory.load_existing(data_dir=fork_data_dir, ep_id=fork_ep_id)
     PolicyRunner.create_from_policy(
         policy=policy_cls(),
         data_dir=data_dir,

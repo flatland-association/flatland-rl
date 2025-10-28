@@ -34,7 +34,7 @@ def test_from_episode():
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
-        env = trajectory.get_env()
+        env = trajectory.load_env()
         gen, _, _ = env_generator(seed=42)
         assert random_state_to_hashablestate(env.np_random) == random_state_to_hashablestate(gen.np_random)
 
@@ -49,7 +49,7 @@ def test_restore_episode():
         assert trajectory._find_closest_snapshot(5) == 5
         assert trajectory._find_closest_snapshot(7) == 5
 
-        env = trajectory.get_env(7, inexact=True)
+        env = trajectory.load_env(7, inexact=True)
 
         env_5, _ = RailEnvPersister.load_new(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{5:04d}.pkl")
         env_10, _ = RailEnvPersister.load_new(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{10:04d}.pkl")

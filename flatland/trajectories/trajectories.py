@@ -62,7 +62,7 @@ class Trajectory:
     _trains_arrived_collect = None
     _trains_rewards_dones_infos_collect = None
 
-    def load(self, episode_only: bool = False):
+    def _load(self, episode_only: bool = False):
         self.trains_positions = self._read_trains_positions(episode_only=episode_only)
         self.actions = self._read_actions(episode_only=episode_only)
         self.trains_arrived = self._read_trains_arrived(episode_only=episode_only)
@@ -183,8 +183,6 @@ class Trajectory:
         f = os.path.join(self.data_dir, TRAINS_REWARDS_DONES_INFOS_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
-
-
 
     def _find_closest_snapshot(self, start_step):
         closest = None
@@ -350,8 +348,9 @@ class Trajectory:
             return diff, df, other_df
         return diff
 
-    def get_env(self, start_step: int = None, inexact: bool = False, rewards: Rewards = None) -> Optional[RailEnv]:
-        """Restore an episode.
+    def load_env(self, start_step: int = None, inexact: bool = False, rewards: Rewards = None) -> Optional[RailEnv]:
+        """
+        Restore an episode's env.
 
         Parameters
         ----------
@@ -383,11 +382,48 @@ class Trajectory:
             env, _ = RailEnvPersister.load_new(f, rewards=rewards)
             return env
 
-    def fork(self, data_dir, ep_id, start_step, callbacks):
-        trajectory = Trajectory.create_empty_and_load(data_dir, ep_id)
+    @staticmethod
+    def load_existing(data_dir: Path, ep_id: str) -> "Trajectory":
+        """
+        Load existing trajectory from disk.
 
-        env = self.get_env(start_step=start_step, inexact=True)
-        self.load(episode_only=True)
+        Parameters
+        ----------
+        data_dir : Path
+            the data dir backing the trajectory.
+        ep_id
+            the ep_id - the data dir may contain multiple trajectories in the same data frames.
+
+        Returns
+        -------
+        Trajectory
+        """
+        t = Trajectory(data_dir=data_dir, ep_id=ep_id)
+        t._load()
+        return t
+
+    def fork(self, data_dir: Path, start_step: int, ep_id: Optional[str] = None) -> "Trajectory":
+        """
+        Fork a trajectory to a new location and a new episode ID.
+
+        Parameters
+        ----------
+        data_dir : Path
+            the data dir backing the forked trajectory.
+        ep_id : str
+            the new episode ID for the fork. If not provided, a new UUID is generated.
+        start_step : int
+            where to start the fork
+        Returns
+        -------
+        Trajectory
+
+        """
+        trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id)
+
+        env = self.load_env(start_step=start_step, inexact=True)
+        self._load(episode_only=True)
+
         # will run action start_step into step start_step+1
         trajectory.actions = self.actions[self.actions["env_time"] < start_step]
         trajectory.trains_positions = self.trains_positions[self.trains_positions["env_time"] <= start_step]
@@ -406,22 +442,37 @@ class Trajectory:
                 # copy initial env
                 RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
                 # replay the trajectory to the start_step from the latest snapshot
-                env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(end_step=start_step)
+                env = TrajectoryEvaluator(trajectory=trajectory).evaluate(end_step=start_step)
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
             else:
                 # copy latest snapshot
                 RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
                 # replay the trajectory to the start_step from the latest snapshot
-                env = TrajectoryEvaluator(trajectory=trajectory, callbacks=callbacks).evaluate(start_step=env._elapsed_steps, end_step=start_step)
-            trajectory.load()
-        return env, trajectory
+                env = TrajectoryEvaluator(trajectory=trajectory).evaluate(start_step=env._elapsed_steps, end_step=start_step)
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+            trajectory._load()
+        return trajectory
 
     @staticmethod
-    def create_empty_and_load(data_dir, ep_id) -> "Trajectory":
+    def create_empty(data_dir: Path, ep_id: Optional[str] = None) -> "Trajectory":
+        """
+        Create a new empty trajectory.
+
+        Parameters
+        ----------
+        data_dir : Path
+            the data dir backing the trajectory. Must be empty.
+        ep_id
+            the episode ID for the new trajectory. If not provided, a new UUID is generated.
+
+        Returns
+        -------
+        Trajectory
+        """
         if ep_id is not None:
-            trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
+            trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)
         else:
-            trajectory = Trajectory(data_dir=data_dir)
-        trajectory.load()
+            trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=_uuid_str())
 
         # ensure to start with new empty df to avoid inconsistencies:
         assert len(trajectory.trains_positions) == 0

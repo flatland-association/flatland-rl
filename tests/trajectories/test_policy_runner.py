@@ -60,7 +60,7 @@ def test_from_episode():
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
-        env = trajectory.get_env()
+        env = trajectory.load_env()
         gen, _, _ = env_generator(seed=42)
         assert random_state_to_hashablestate(env.np_random) == random_state_to_hashablestate(gen.np_random)
 
@@ -266,8 +266,7 @@ def test_effects_generator():
             ])
         assert e_info.value.code == 0
 
-        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
-        trajectory.load()
+        trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id="banana")
         assert sum([info["malfunction"] for info in trajectory.trains_rewards_dones_infos["info"]]) > 0
 
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -281,8 +280,7 @@ def test_effects_generator():
             ])
         assert e_info.value.code == 0
 
-        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
-        trajectory.load()
+        trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id="banana")
         assert sum([info["malfunction"] for info in trajectory.trains_rewards_dones_infos["info"]]) == 0
 
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -301,6 +299,5 @@ def test_effects_generator():
             ])
         assert e_info.value.code == 0
 
-        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
-        trajectory.load()
+        trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id="banana")
         assert sum([info["malfunction"] > 0 for info in trajectory.trains_rewards_dones_infos["info"]]) == 25

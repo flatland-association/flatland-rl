@@ -85,7 +85,7 @@ def re_run_episode(data_dir: str, ep_id: str):
     ep_id : str
         the episode ID
     """
-    expected_trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
+    expected_trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)
     env_pkl = str((data_dir / "serialised_state" / f"{ep_id}.pkl").resolve())
     env, _ = RailEnvPersister.load_new(env_pkl, obs_builder=FullEnvObservation())
 

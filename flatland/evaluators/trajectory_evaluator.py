@@ -41,12 +41,10 @@ class TrajectoryEvaluator:
         rewards : Rewards
             Rewards used for evaluation. If not provided, defaults to the restored env's rewards.
         """
-        self.trajectory.load()
-
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
 
-        env = self.trajectory.get_env(start_step=start_step, rewards=rewards)
+        env = self.trajectory.load_env(start_step=start_step, rewards=rewards)
         if start_step is None:
             start_step = 0
         if end_step is None:
@@ -157,4 +155,5 @@ def evaluate_trajectory(
     if callbacks_pkg is not None and callbacks_cls is not None:
         module = importlib.import_module(callbacks_pkg)
         callbacks = getattr(module, callbacks_cls)()
-    TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id), callbacks=callbacks).evaluate(skip_rewards_dones_infos=skip_rewards_dones_infos)
+    TrajectoryEvaluator(Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id), callbacks=callbacks).evaluate(
+        skip_rewards_dones_infos=skip_rewards_dones_infos)
