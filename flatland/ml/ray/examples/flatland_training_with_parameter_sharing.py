@@ -178,28 +178,28 @@ def add_flatland_training_with_parameter_sharing_args():
     parser.add_argument(
         '--callbacks-pkg',
         type=str,
-        help="Defaults to `flatland.ml.ray.FlatlandMetricsCallback.FlatlandMetricsCallback`",
+        help="Defaults to `flatland.ml.ray.flatland_metrics_callback.FlatlandMetricsCallback`",
         required=False,
-        default="flatland.ml.ray.FlatlandMetricsCallback"
+        default="flatland.ml.ray.flatland_metrics_callback"
     )
     parser.add_argument(
         '--callbacks-cls',
         type=str,
-        help="Defaults to `flatland.ml.ray.FlatlandMetricsCallback.FlatlandMetricsCallback`",
+        help="Defaults to `flatland.ml.ray.flatland_metrics_callback.FlatlandMetricsCallback`",
         required=False,
         default="FlatlandMetricsCallback"
     )
     parser.add_argument(
         '--evaluation-callbacks-pkg',
         type=str,
-        help="Defaults to `flatland.ml.ray.FlatlandMetricsAndTrajectoryCallback.FlatlandMetricsAndTrajectoryCallback`",
+        help="Defaults to `flatland.ml.ray.flatland_metrics_and_trajectory_callback.FlatlandMetricsAndTrajectoryCallback`",
         required=False,
-        default="flatland.ml.ray.FlatlandMetricsAndTrajectoryCallback"
+        default="flatland.ml.ray.flatland_metrics_and_trajectory_callback"
     )
     parser.add_argument(
         '--evaluation-callbacks-cls',
         type=str,
-        help="Defaults to `flatland.ml.ray.FlatlandMetricsAndTrajectoryCallback.FlatlandMetricsAndTrajectoryCallback`",
+        help="Defaults to `flatland.ml.ray.flatland_metrics_and_trajectory_callback.FlatlandMetricsAndTrajectoryCallback`",
         required=False,
         default="FlatlandMetricsAndTrajectoryCallback"
     )
@@ -240,5 +240,6 @@ def train_with_parameter_sharing_cli(args: Optional[argparse.Namespace] = None) 
         model_config=model_config,
         callbacks_pkg=args.callbacks_pkg,
         callbacks_cls=args.callbacks_cls,
-        evaluation_callbacks_cls=args.evaluation_callbacks_cls, evaluation_callbacks_pkg=args.evaluation_callbacks_pkg
+        evaluation_callbacks_pkg=args.evaluation_callbacks_pkg,
+        evaluation_callbacks_cls=args.evaluation_callbacks_cls,
     )
