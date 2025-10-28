@@ -38,6 +38,7 @@ def train_with_parameter_sharing(
     env_config: Dict[str, Any] = None,
     model_config: Dict[str, Any] = None,
     callbacks_pkg: Optional[str] = None,
+    callbacks_cls: Optional[str] = None,
     evaluation_callbacks_cls: Optional[str] = None,
     evaluation_callbacks_pkg: Optional[str] = None
 ) -> Union[ResultDict, tune.result_grid.ResultGrid]:
@@ -116,9 +117,9 @@ def train_with_parameter_sharing(
         # https://docs.ray.io/en/latest/rllib/new-api-stack-migration-guide.html#algorithmconfig-env-runners
         .env_runners(create_env_on_local_worker=True)
     )
-    if callbacks_pkg is not None and args.callbacks_cls is not None:
+    if callbacks_pkg is not None and callbacks_cls is not None:
         module = importlib.import_module(callbacks_pkg)
-        callbacks = getattr(module, args.callbacks_cls)
+        callbacks = getattr(module, callbacks_cls)
         base_config = base_config.callbacks(callbacks)
     if evaluation_callbacks_pkg is not None and evaluation_callbacks_cls is not None:
         module = importlib.import_module(evaluation_callbacks_pkg)
@@ -238,5 +239,6 @@ def train_with_parameter_sharing_cli(args: Optional[argparse.Namespace] = None) 
         additional_training_config={}, env_config=None,
         model_config=model_config,
         callbacks_pkg=args.callbacks_pkg,
+        callbacks_cls=args.callbacks_cls,
         evaluation_callbacks_cls=args.evaluation_callbacks_cls, evaluation_callbacks_pkg=args.evaluation_callbacks_pkg
     )
