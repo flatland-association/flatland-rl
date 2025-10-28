@@ -15,7 +15,7 @@ from ray.rllib.utils.typing import EpisodeType, PolicyID
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.step_utils.states import TrainState
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
-from flatland.ml.ray.FlatlandMetricsCallback import FlatlandMetricsCallback
+from flatland.ml.ray.flatland_metrics_callback import FlatlandMetricsCallback
 from flatland.ml.ray.ray_multi_agent_rail_env import RayMultiAgentWrapper
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
 
