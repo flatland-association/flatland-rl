@@ -1,11 +1,14 @@
 from pathlib import Path
+from typing import Tuple
 
+import click
 import pandas as pd
+from pandas import DataFrame
 
 from flatland.trajectories.trajectories import Trajectory
 
 
-def data_frame_for_trajectories(root_data_dir: Path):
+def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
     all_actions = []
     all_trains_positions = []
     all_trains_arrived = []
@@ -13,7 +16,9 @@ def data_frame_for_trajectories(root_data_dir: Path):
     env_stats = []
     agent_stats = []
 
-    data_dirs = sorted(list(root_data_dir.glob("*")))
+    data_dirs = sorted([serialised_state.parent for serialised_state in (root_data_dir.resolve().glob("**/serialised_state"))])
+    print(data_dirs)
+
     for data_dir in data_dirs:
         snapshots = [snapshot for snapshot in (data_dir / "serialised_state").glob("*.pkl") if "step" not in snapshot.name]
         assert len(snapshots) == 1
@@ -50,5 +55,35 @@ def data_frame_for_trajectories(root_data_dir: Path):
     all_trains_rewards_dones_infos = pd.concat(all_trains_rewards_dones_infos)
     env_stats = pd.concat(env_stats)
     agent_stats = pd.concat(agent_stats)
+    print(all_trains_arrived)
 
     return all_actions, all_trains_positions, all_trains_arrived, all_trains_rewards_dones_infos, env_stats, agent_stats
+
+
+@click.command()
+@click.option(
+    '--root-data-dir',
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to existing trjajectories. Defaults to current directory.",
+    default=Path("."),
+)
+@click.option(
+    '--output-dir',
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Path store data frames to. Must be empty.",
+    required=False,
+    default=None
+)
+def cli(root_data_dir: Path, output_dir: Path):
+    all_actions, all_trains_positions, all_trains_arrived, all_trains_rewards_dones_infos, env_stats, agent_stats = data_frame_for_trajectories(
+        root_data_dir=root_data_dir)
+    if output_dir is not None:
+        output_dir.mkdir(exist_ok=True, parents=True)
+        assert len(list(output_dir.glob("*"))) == 0
+
+        all_actions.to_csv(output_dir / "all_actions.csv", index=False)
+        all_trains_positions.to_csv(output_dir / "all_trains_positions.csv", index=False)
+        all_trains_arrived.to_csv(output_dir / "all_trains_arrived.csv", index=False)
+        all_trains_rewards_dones_infos.to_csv(output_dir / "all_trains_rewards_dones_infos.csv", index=False)
+        env_stats.to_csv(output_dir / "env_stats.csv", index=False)
+        agent_stats.to_csv(output_dir / "agent_stats.csv", index=False)
