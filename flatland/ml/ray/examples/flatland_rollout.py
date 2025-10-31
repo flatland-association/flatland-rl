@@ -13,16 +13,17 @@ from argparse import Namespace
 from pathlib import Path
 
 import numpy as np
+from ray.rllib.algorithms import Algorithm
 from ray.rllib.core import DEFAULT_MODULE_ID
 from ray.rllib.examples.rl_modules.classes.random_rlm import RandomRLModule
 from ray.tune.registry import registry_get_input
 
-from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
 from flatland.ml.ray.wrappers import ray_env_generator, ray_policy_wrapper, ray_policy_wrapper_from_rllib_checkpoint
 from flatland.trajectories.policy_runner import PolicyRunner
 
 
-def add_flatland_inference_with_random_policy_args():
+# TODO drop argparse
+def add_flatland_inference_from_checkpoint():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--num-agents",
@@ -54,33 +55,40 @@ def add_flatland_inference_with_random_policy_args():
     return parser
 
 
-def rollout(args: Namespace):
+# TODO unused?
+def random_rollout(args: Namespace):
+    num_episodes_during_inference = args.num_episodes_during_inference
+    env = ray_env_generator(n_agents=args.num_agents, seed=int(np.random.default_rng().integers(2 ** 32 - 1)),
+                            obs_builder_object=registry_get_input(args.obs_builder)())
+    obs, _ = env.reset()
+    rl_module = RandomRLModule(action_space=env.action_space)
+    policy = ray_policy_wrapper(rl_module)
+
+    do_rollout(env, num_episodes_during_inference, policy)
+
+
+def rollout_from_checkpoint(args: Namespace, algo: Algorithm):
     # Create an env to do inference in.
     env = ray_env_generator(n_agents=args.num_agents, seed=int(np.random.default_rng().integers(2 ** 32 - 1)),
                             obs_builder_object=registry_get_input(args.obs_builder)())
     obs, _ = env.reset()
 
-
     checkpoint_path = args.cp
-    if checkpoint_path is not None:
-        policy_id = args.policy_id
-        policy = ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path, policy_id)
-    else:
-        rl_module = RandomRLModule(action_space=env.action_space)
-        policy = ray_policy_wrapper(rl_module)
+    policy_id = args.policy_id
 
-    for _ in range(args.num_episodes_during_inference):
-        env.reset(seed=int(np.random.default_rng().integers(2 ** 32 - 1)))
+    policy = ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path, algo, policy_id)
+
+    num_episodes_during_inference = args.num_episodes_during_inference
+    do_rollout(env, num_episodes_during_inference, policy)
+
+
+def do_rollout(env, num_episodes_during_inference, policy):
+    for _ in range(num_episodes_during_inference):
+        env.reset()
         with tempfile.TemporaryDirectory() as tmpdirname:
             data_dir = Path(tmpdirname)
             t = PolicyRunner.create_from_policy(env=env.wrap(), policy=policy, data_dir=data_dir)
             print(t.trains_arrived_lookup())
-
-    print(f"Done performing action inference through {args.num_episodes_during_inference} Episodes")
-
-
-if __name__ == '__main__':
-    register_flatland_ray_cli_observation_builders()
-    parser = add_flatland_inference_with_random_policy_args()
-    args = parser.parse_args()
-    rollout(args)
+            print(t.actions)
+    # TODO add option for data_dir and analysis on it
+    print(f"Done performing action inference through {num_episodes_during_inference} Episodes")
