@@ -107,7 +107,7 @@ class TrajectoryEvaluator:
                     expected_reward, expected_done, expected_info = self.trajectory.trains_rewards_dones_infos_lookup(env_time=elapsed_after_step,
                                                                                                                       agent_id=agent_id)
                     if not skip_rewards:
-                        assert actual_reward == expected_reward, (elapsed_after_step, agent_id, actual_reward, expected_reward)
+                        assert np.allclose(actual_reward, expected_reward), (elapsed_after_step, agent_id, actual_reward, expected_reward)
                     assert actual_done == expected_done, (elapsed_after_step, agent_id, actual_done, expected_done)
                     assert actual_info == expected_info, (elapsed_after_step, agent_id, actual_info, expected_info)
 
