@@ -21,7 +21,7 @@ def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFra
 
     for data_dir in data_dirs:
         snapshots = [snapshot for snapshot in (data_dir / "serialised_state").glob("*.pkl") if "step" not in snapshot.name]
-        assert len(snapshots) == 1
+        assert len(snapshots) == 1, snapshots
         ep_id = snapshots[0].stem
         trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
         trajectory.load()
