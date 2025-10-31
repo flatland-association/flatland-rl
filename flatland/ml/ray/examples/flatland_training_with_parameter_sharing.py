@@ -28,8 +28,8 @@ from flatland.ml.ray.wrappers import ray_env_generator
 
 
 def train_with_parameter_sharing(
-    module_class: Type[RLModule],
-    obs_builder_class: Type[GymObservationBuilder],
+    module_class: Type[RLModule] = None,
+    obs_builder_class: Type[GymObservationBuilder] = None,
     args: Optional[argparse.Namespace] = None,  # args from add_rllib_example_script_args
     ray_address: str = None,
     init_args=None,
@@ -41,10 +41,49 @@ def train_with_parameter_sharing(
     callbacks_pkg: Optional[str] = None,
     callbacks_cls: Optional[str] = None,
     evaluation_callbacks_cls: Optional[str] = None,
-    evaluation_callbacks_pkg: Optional[str] = None
+    evaluation_callbacks_pkg: Optional[str] = None,
 ) -> Union[ResultDict, tune.result_grid.ResultGrid]:
-    setup_func()
+    base_config = _get_algo_config_parameter_sharing(
+        module_class=module_class,
+        obs_builder_class=obs_builder_class,
+        args=args,
+        ray_address=ray_address,
+        init_args=init_args,
+        env_vars=env_vars,
+        train_batch_size_per_learner=train_batch_size_per_learner,
+        additional_training_config=additional_training_config,
+        env_config=env_config,
+        model_config=model_config,
+        callbacks_pkg=callbacks_pkg,
+        callbacks_cls=callbacks_cls,
+        evaluation_callbacks_cls=evaluation_callbacks_cls,
+        evaluation_callbacks_pkg=evaluation_callbacks_pkg,
+    )
 
+    # TODO do plain RLlib instead of using run_rllib_example_script_experiment (which config options do we need?) and then add --checkpoint-path to inject resuming training from checkpoint
+    res = run_rllib_example_script_experiment(base_config, args)
+    if res.num_errors > 0:
+        raise AssertionError(f"{res.errors}")
+    return res
+
+
+def _get_algo_config_parameter_sharing(
+    module_class: Type[RLModule] = None,
+    obs_builder_class: Type[GymObservationBuilder] = None,
+    args: Optional[argparse.Namespace] = None,  # args from add_rllib_example_script_args
+    ray_address: str = None,
+    init_args=None,
+    env_vars=None,
+    train_batch_size_per_learner: int = 4000,
+    additional_training_config: Dict[str, Any] = None,
+    env_config: Dict[str, Any] = None,
+    model_config: Dict[str, Any] = None,
+    callbacks_pkg: Optional[str] = None,
+    callbacks_cls: Optional[str] = None,
+    evaluation_callbacks_cls: Optional[str] = None,
+    evaluation_callbacks_pkg: Optional[str] = None,
+) -> AlgorithmConfig:
+    setup_func()
     if args is None:
         parser = add_rllib_example_script_args()
         args = parser.parse_args()
@@ -52,7 +91,6 @@ def train_with_parameter_sharing(
     assert (
         args.enable_new_api_stack
     ), "Must set --enable-new-api-stack when running this script!"
-
     if init_args is None:
 
         init_args = {
@@ -68,9 +106,11 @@ def train_with_parameter_sharing(
         if ray_address is not None:
             init_args['address'] = ray_address
     # https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html
+    # TODO already done in run experiment!
     ray.init(
         **init_args,
     )
+    # TODO pass as env_config
     if env_config is None:
         env_config = {}
     # TODO cli add posibility to use registered input as well
@@ -85,7 +125,7 @@ def train_with_parameter_sharing(
         additional_training_config = {"replay_buffer_config": {
             "type": "MultiAgentEpisodeReplayBuffer",
         }}
-    base_config = (
+    base_config: AlgorithmConfig = (
         # N.B. the warning `passive_env_checker.py:164: UserWarning: WARN: The obs returned by the `reset()` method was expecting numpy array dtype to be float32, actual type: float64`
         #   comes from ray.tune.registry._register_all() -->  import ray.rllib.algorithms.dreamerv3 as dreamerv3!
         get_trainable_cls(args.algo)
@@ -121,10 +161,7 @@ def train_with_parameter_sharing(
         base_config = base_config.evaluation(
             evaluation_config=AlgorithmConfig.overrides(callbacks=callbacks),
         )
-    res = run_rllib_example_script_experiment(base_config, args)
-    if res.num_errors > 0:
-        raise AssertionError(f"{res.errors}")
-    return res
+    return base_config
 
 
 def setup_func():

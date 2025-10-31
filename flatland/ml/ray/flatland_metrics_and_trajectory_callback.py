@@ -1,5 +1,4 @@
 import shutil
-from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Optional, Union, List
 
@@ -38,7 +37,6 @@ class FlatlandMetricsAndTrajectoryCallback(FlatlandMetricsCallback):
         base_env: Optional[BaseEnv] = None,
         policies: Optional[Dict[PolicyID, Policy]] = None,
         **kwargs, ) -> None:
-
         rail_env = self._unwrap_rail_env(env)
         data_dir = Path("trajectories") / episode.id_
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
@@ -46,11 +44,8 @@ class FlatlandMetricsAndTrajectoryCallback(FlatlandMetricsCallback):
         trajectory.load()
         trajectory.save_initial(rail_env)
         assert rail_env._elapsed_steps == 0
-
         episode.custom_data["trajectory"] = trajectory
-        episode.custom_data["dones"] = defaultdict(dict)
-
-        # N.B. initial position not stored in trajectory.
+        # N.B. initial position (None) not stored in trajectory.
 
     def on_episode_step(
         self,
@@ -68,11 +63,27 @@ class FlatlandMetricsAndTrajectoryCallback(FlatlandMetricsCallback):
     ) -> None:
         rail_env: RailEnv = self._unwrap_rail_env(env)
         trajectory = episode.custom_data["trajectory"]
-        dones = episode.custom_data["dones"]
         # N.B. initial position not stored in trajectory.
+        infos = rail_env.get_info_dict()
+        infos = {
+            i:
+                {
+                    'action_required': infos['action_required'][i],
+                    'malfunction': infos['malfunction'][i],
+                    'speed': infos['speed'][i],
+                    'state': infos['state'][i]
+                } for i in rail_env.get_agent_handles()
+        }
         for agent in rail_env.agents:
             trajectory.position_collect(rail_env._elapsed_steps, agent.handle, (agent.position, agent.direction))
-            dones[rail_env._elapsed_steps][agent.handle] = rail_env.dones[agent.handle]
+            rail_env._get_observations()
+            trajectory.rewards_dones_infos_collect(
+                rail_env._elapsed_steps,
+                agent.handle,
+                rail_env.rewards_dict[agent.handle],
+                infos[agent.handle],
+                rail_env.dones[agent.handle]
+            )
 
     def on_episode_end(
         self,
@@ -114,7 +125,6 @@ class FlatlandMetricsAndTrajectoryCallback(FlatlandMetricsCallback):
         episode_actions = episode.get_actions()
 
         trajectory: Trajectory = episode.custom_data["trajectory"]
-        dones = episode.custom_data["dones"]
 
         trajectory.arrived_collect(episode_length, percentage_complete)
         for agent_id in rail_env.get_agent_handles():
@@ -124,27 +134,8 @@ class FlatlandMetricsAndTrajectoryCallback(FlatlandMetricsCallback):
             # info from reset - we do not store it in trajectory.
             agent_episode_length = len(episode_rewards[str(agent_id)])
             assert agent_episode_length == len(episode_infos[str(agent_id)][1:])
-            last_info = None
-
-            for env_time, (rewards, infos) in enumerate(zip(episode_rewards[str(agent_id)], episode_infos[str(agent_id)][1:])):
-                last_info = infos
-                trajectory.rewards_dones_infos_collect(
-                    env_time + 1,
-                    agent_id,
-                    rewards,
-                    infos,
-                    dones[env_time + 1][agent_id]
-                )
-            # comply with policy runner behaviour (which continues collecting after single agent end)
-            for env_time in range(agent_episode_length + 1, episode_length + 1):
-                trajectory.rewards_dones_infos_collect(
-                    env_time,
-                    agent_id,
-                    0,
-                    last_info,
-                    True
-                )
         trajectory.persist()
+
         TrajectoryEvaluator(trajectory).evaluate(tqdm_kwargs={"disable": True})
         shutil.make_archive(trajectory.data_dir.name, "zip", base_dir=str(trajectory.data_dir))
         with Path(f"{trajectory.data_dir.name}.zip").open("rb") as f:
