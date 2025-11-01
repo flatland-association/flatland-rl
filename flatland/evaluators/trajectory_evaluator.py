@@ -8,16 +8,13 @@ import tqdm
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rewards import Rewards
-from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
+from flatland.trajectories.trajectories import Trajectory
 
 
 class TrajectoryEvaluator:
     def __init__(self, trajectory: Trajectory, callbacks: FlatlandCallbacks = None):
         self.trajectory = trajectory
         self.callbacks = callbacks
-
-    def __call__(self, *args, **kwargs):
-        self.evaluate()
 
     def evaluate(
         self,
@@ -32,11 +29,9 @@ class TrajectoryEvaluator:
          Parameters
         ----------
         start_step : int
-            start evaluation from intermediate step incl. (requires snapshot to be present)
+            start evaluation from intermediate step incl. (requires snapshot to be present). If not provided, defaults to 0.
         end_step : int
-            stop evaluation at intermediate step excl.
-        rendering : bool
-            render while evaluating
+            stop evaluation at intermediate step excl. If not provided, defaults to env's max_episode_steps.
         snapshot_interval : int
             interval to write pkl snapshots to outputs/serialised_state subdirectory (not serialised_state subdirectory directly). 1 means at every step. 0 means never.
         tqdm_kwargs: dict
@@ -44,20 +39,17 @@ class TrajectoryEvaluator:
         skip_rewards_dones_infos : bool
             skip verification of rewards/dones/infos
         rewards : Rewards
-            Rewards used for evaluation. Defaults to `None`.
+            Rewards used for evaluation. If not provided, defaults to the restored env's rewards.
         """
-        self.trajectory.load()
-
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
 
-        env = self.trajectory.restore_episode(start_step)
-        if env is None:
-            raise FileNotFoundError(self.trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{self.trajectory.ep_id}.pkl")
-        self.trajectory.outputs_dir.mkdir(exist_ok=True)
-
-        if rewards is not None:
-            env.rewards = rewards
+        env = self.trajectory.load_env(start_step=start_step, rewards=rewards)
+        if start_step is None:
+            start_step = 0
+        if end_step is None:
+            end_step = env._max_episode_steps
+        assert end_step >= start_step
 
         if snapshot_interval > 0:
             from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
@@ -68,14 +60,11 @@ class TrajectoryEvaluator:
 
         if self.callbacks is not None:
             self.callbacks.on_episode_start(env=env, data_dir=self.trajectory.outputs_dir)
-        env.record_steps = True
+
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
-        if start_step is None:
-            start_step = 0
 
-        if end_step is None:
-            end_step = env._max_episode_steps
+        done = False
         for elapsed_before_step in tqdm.tqdm(range(start_step, end_step), **tqdm_kwargs):
             action = {agent_id: self.trajectory.action_lookup(env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
             assert env._elapsed_steps == elapsed_before_step
@@ -166,4 +155,5 @@ def evaluate_trajectory(
     if callbacks_pkg is not None and callbacks_cls is not None:
         module = importlib.import_module(callbacks_pkg)
         callbacks = getattr(module, callbacks_cls)()
-    TrajectoryEvaluator(Trajectory(data_dir=data_dir, ep_id=ep_id), callbacks=callbacks).evaluate(skip_rewards_dones_infos=skip_rewards_dones_infos)
+    TrajectoryEvaluator(Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id), callbacks=callbacks).evaluate(
+        skip_rewards_dones_infos=skip_rewards_dones_infos)

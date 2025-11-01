@@ -83,7 +83,7 @@ def evaluate_trajectories_from_metadata(
                 rewards = getattr(module, rewards_cls)
                 rewards: Rewards = rewards()
             test_folder = data_dir / v["test_id"] / v["env_id"]
-            trajectory = Trajectory(data_dir=test_folder, ep_id=v["test_id"] + "_" + v["env_id"])
+            trajectory = Trajectory.load_existing(data_dir=test_folder, ep_id=v["test_id"] + "_" + v["env_id"])
             TrajectoryEvaluator(trajectory).evaluate(rewards=rewards)
             scenario_rewards.append(rewards.cumulate(*trajectory.trains_rewards_dones_infos['reward'].to_list()))
         except SystemExit as exc:
