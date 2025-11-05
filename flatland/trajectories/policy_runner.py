@@ -136,7 +136,8 @@ class PolicyRunner:
                 break
         actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
         if done:
-            normalized_reward = env.rewards.normalize(trajectory.trains_rewards_dones_infos["reward"], env._max_episode_steps, env.get_num_agents())
+            normalized_reward = env.rewards.normalize(*trajectory.trains_rewards_dones_infos["reward"], max_episode_steps=env._max_episode_steps,
+                                                      num_agents=env.get_num_agents())
             trajectory.arrived_collect(env_time, actual_success_rate, normalized_reward)
         trajectory.persist()
         return trajectory
