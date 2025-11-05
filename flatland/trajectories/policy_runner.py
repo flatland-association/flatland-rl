@@ -1,4 +1,5 @@
 import importlib
+import os
 from pathlib import Path
 
 import click
@@ -93,8 +94,6 @@ class PolicyRunner:
                 callbacks = make_multi_callbacks(callbacks,
                                                  TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir))
 
-
-
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
 
@@ -151,23 +150,25 @@ class PolicyRunner:
               )
 @click.option('--policy-pkg',
               type=str,
-              help="Policy's fully qualified package name.",
-              required=True
+              help="Policy's fully qualified package name. Can also be provided through env var POLICY_CLS.",
+              required=False,
+              default=None,
               )
 @click.option('--policy-cls',
               type=str,
-              help="Policy class name.",
-              required=True
+              help="Policy class name. Can also be provided through env var POLICY_CLS.",
+              required=False,
+              default=None,
               )
 @click.option('--obs-builder-pkg',
               type=str,
-              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              help="Can also be provided through env var OBS_BUILDER_PKG. Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
               required=False,
               default=None
               )
 @click.option('--obs-builder-cls',
               type=str,
-              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              help="Can also be provided through env var OBS_BUILDER_CLS. Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
               required=False,
               default=None
               )
@@ -311,8 +312,10 @@ class PolicyRunner:
               )
 def generate_trajectory_from_policy(
     data_dir: Path,
-    policy_pkg: str, policy_cls: str,
-    obs_builder_pkg: str, obs_builder_cls: str,
+    policy_pkg: str = None,
+    policy_cls: str = None,
+    obs_builder_pkg: str = None,
+    obs_builder_cls: str = None,
     rewards_pkg: str = "flatland.envs.rewards",
     rewards_cls: str = "DefaultRewards",
     n_agents=7,
@@ -340,10 +343,17 @@ def generate_trajectory_from_policy(
     callbacks_pkg: str = None,
     callbacks_cls: str = None,
 ):
+    if policy_pkg is None and policy_cls is None:
+        policy_pkg = os.environ.get("POLICY_PKG", None)
+        policy_cls = os.environ.get("POLICY_CLS", None)
+
     module = importlib.import_module(policy_pkg)
     policy_cls = getattr(module, policy_cls)
 
     obs_builder = None
+    if obs_builder_pkg is None and obs_builder_cls is None:
+        obs_builder_pkg = os.environ.get("OBS_BUILDER_PKG", None)
+        obs_builder_cls = os.environ.get("OBS_BUILDER_CLS", None)
     if obs_builder_pkg is not None and obs_builder_cls is not None:
         module = importlib.import_module(obs_builder_pkg)
         obs_builder_cls = getattr(module, obs_builder_cls)
