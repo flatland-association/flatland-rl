@@ -25,9 +25,8 @@ def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFra
         # must be data dir with single episode data
         assert len(snapshots) == 1, snapshots
         ep_id = snapshots[0].stem
-        trajectory = Trajectory(data_dir=data_dir, ep_id=ep_id)
-        trajectory.load()
-        env = trajectory.restore_episode()
+        trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)
+        env = trajectory.load_env()
 
         all_actions.append(trajectory.actions)
         all_trains_positions.append(trajectory.trains_positions)
@@ -41,7 +40,7 @@ def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFra
         env_stats.append(pd.DataFrame.from_records([{
             "episode_id": ep_id,
             "max_episode_steps": env._max_episode_steps,
-            "num_agents": len(env.agents)
+            "num_agents": len(env.agents),
         }]))
 
         agent_stats.append(pd.DataFrame.from_records([{
