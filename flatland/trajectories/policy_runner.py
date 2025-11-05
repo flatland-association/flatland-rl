@@ -1,4 +1,3 @@
-import importlib
 import os
 from pathlib import Path
 
@@ -8,9 +7,13 @@ import tqdm
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator
+from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
+from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rewards import DefaultRewards
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
+from flatland.utils.cli_utils import resolve_type
 
 
 class PolicyRunner:
@@ -148,41 +151,59 @@ class PolicyRunner:
               help="Path to folder containing Flatland episode",
               required=True
               )
+@click.option('--policy',
+              type=str,
+              help=" Policy's fully qualified name. Can also be provided through env var POLICY (command-line option takes priority).",
+              required=False,
+              default=None,
+              )
 @click.option('--policy-pkg',
               type=str,
-              help="Policy's fully qualified package name. Can also be provided through env var POLICY_CLS.",
+              help="DEPRECATED: use --policy instead. Policy's fully qualified package name. Can also be provided through env var POLICY_PKG (command-line option takes priority).",
               required=False,
               default=None,
               )
 @click.option('--policy-cls',
               type=str,
-              help="Policy class name. Can also be provided through env var POLICY_CLS.",
+              help="DEPRECATED: use --policy instead. Policy class name. Can also be provided through env var POLICY_CLS  (command-line option takes priority).",
+              required=False,
+              default=None,
+              )
+@click.option('--obs-builder',
+              type=str,
+              help="Can also be provided through env var OBS_BUILDER (command-line option takes priority). Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
               required=False,
               default=None,
               )
 @click.option('--obs-builder-pkg',
               type=str,
-              help="Can also be provided through env var OBS_BUILDER_PKG. Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              help="DEPRECATED: use --obs-builder instead. Can also be provided through env var OBS_BUILDER_PKG. Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
               required=False,
-              default=None
+              default=None,
               )
 @click.option('--obs-builder-cls',
               type=str,
-              help="Can also be provided through env var OBS_BUILDER_CLS. Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              help="DEPRECATED: use --obs-builder instead. Can also be provided through env var OBS_BUILDER_CLS. Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
               required=False,
-              default=None
+              default=None,
+              )
+@click.option('--rewards',
+              type=str,
+              help="Defaults to `flatland.envs.rewards.DefaultRewards`. Can also be provided through env var REWARDS (command-line option takes priority).",
+              required=False,
+              default=None,
               )
 @click.option('--rewards-pkg',
               type=str,
-              help="Defaults to `flatland.envs.rewards.DefaultRewards`",
+              help="DEPRECATED: use --rewards instead. Defaults to `flatland.envs.rewards.DefaultRewards`. Can also be provided through env var REWARDS_PKG (command-line option takes priority).",
               required=False,
-              default="flatland.envs.rewards"
+              default=None,
               )
 @click.option('--rewards-cls',
               type=str,
-              help="Defaults to `flatland.envs.rewards.DefaultRewards`",
+              help="DEPRECATED: use --rewards instead. Defaults to `flatland.envs.rewards.DefaultRewards. Can also be provided through env var REWARDS_CLS (command-line option takes priority).",
               required=False,
-              default="DefaultRewards"
+              default=None,
               )
 @click.option('--n-agents',
               type=int,
@@ -245,15 +266,21 @@ class PolicyRunner:
               type=int,
               help="Initiate random seed generators. Goes into `reset`. If --env-path is used, the env is reset with the seed, otherwise the env is NOT reset.",
               required=False, default=None)
+@click.option('--effects-generator',
+              type=str,
+              help="Use to override options for `ParamMalfunctionGen`. Defaults to `None`. Can also be provided through env var EFFECTS_GENERATOR (command-line option takes priority).",
+              required=False,
+              default=None
+              )
 @click.option('--effects-generator-pkg',
               type=str,
-              help="Use to override options for `ParamMalfunctionGen`. Defaults to `None`.",
+              help="DEPRECATED: use --effects-generator instead. Use to override options for `ParamMalfunctionGen`. Defaults to `None`. Can also be provided through env var EFFECTS_GENERATOR_PKG (command-line option takes priority).",
               required=False,
               default=None
               )
 @click.option('--effects-generator-cls',
               type=str,
-              help="Use to override options for `ParamMalfunctionGen`. Defaults to `None`.",
+              help="DEPRECATED: use --effects-generator instead. Use to override options for `ParamMalfunctionGen`. Defaults to `None`. Can also be provided through env var EFFECTS_GENERATOR_CLS (command-line option takes priority).",
               required=False,
               default=None
               )
@@ -298,26 +325,35 @@ class PolicyRunner:
               help="Path to existing RailEnv to start trajectory from",
               required=False, default=None
               )
+@click.option('--callbacks',
+              type=str,
+              help="Pass FlatlandCallbacks during policy run. Defaults to `None`. Can also be provided through env var CALLBACKS (command-line option takes priority).",
+              required=False,
+              default=None
+              )
 @click.option('--callbacks-pkg',
               type=str,
-              help="Pass FlatlandCallbacks during policy run. Defaults to `None`.",
+              help="Pass FlatlandCallbacks during policy run. Defaults to `None`. Can also be provided through env var CALLBACKS_PKG (command-line option takes priority).",
               required=False,
               default=None
               )
 @click.option('--callbacks-cls',
               type=str,
-              help="Pass FlatlandCallbacks during policy run. Defaults to `None`.",
+              help="Pass FlatlandCallbacks during policy run. Defaults to `None`. Can also be provided through env var CALLBACKS_CLS (command-line option takes priority).",
               required=False,
               default=None
               )
 def generate_trajectory_from_policy(
     data_dir: Path,
+    policy: str = None,
     policy_pkg: str = None,
     policy_cls: str = None,
+    obs_builder: str = None,
     obs_builder_pkg: str = None,
     obs_builder_cls: str = None,
-    rewards_pkg: str = "flatland.envs.rewards",
-    rewards_cls: str = "DefaultRewards",
+    rewards: str = None,
+    rewards_pkg: str = None,
+    rewards_cls: str = None,
     n_agents=7,
     x_dim=30,
     y_dim=30,
@@ -330,6 +366,7 @@ def generate_trajectory_from_policy(
     malfunction_interval=540,
     speed_ratios=None,
     seed: int = None,
+    effects_generator: str = None,
     effects_generator_pkg: str = None,
     effects_generator_cls: str = None,
     effects_generator_kwargs: str = None,
@@ -340,42 +377,60 @@ def generate_trajectory_from_policy(
     end_step: int = None,
     fork_data_dir: Path = None,
     fork_ep_id: str = None,
+    callbacks: str = None,
     callbacks_pkg: str = None,
     callbacks_cls: str = None,
 ):
-    if policy_pkg is None and policy_cls is None:
+    if policy is None:
+        policy = os.environ.get("POLICY", None)
+    if policy_pkg is None:
         policy_pkg = os.environ.get("POLICY_PKG", None)
+    if policy_cls is None:
         policy_cls = os.environ.get("POLICY_CLS", None)
+    policy_cls = resolve_type(policy, policy_pkg, policy_cls)
 
-    module = importlib.import_module(policy_pkg)
-    policy_cls = getattr(module, policy_cls)
-
-    obs_builder = None
-    if obs_builder_pkg is None and obs_builder_cls is None:
+    if obs_builder is None:
+        obs_builder = os.environ.get("OBS_BUILDER", None)
+    if obs_builder_pkg is None:
         obs_builder_pkg = os.environ.get("OBS_BUILDER_PKG", None)
+    if obs_builder_cls is None:
         obs_builder_cls = os.environ.get("OBS_BUILDER_CLS", None)
-    if obs_builder_pkg is not None and obs_builder_cls is not None:
-        module = importlib.import_module(obs_builder_pkg)
-        obs_builder_cls = getattr(module, obs_builder_cls)
-        obs_builder = obs_builder_cls()
 
-    rewards = None
-    if rewards_pkg is not None and rewards_cls is not None:
-        module = importlib.import_module(rewards_pkg)
-        rewards_cls = getattr(module, rewards_cls)
-        rewards = rewards_cls()
+    obs_builder = resolve_type(obs_builder, obs_builder_pkg, obs_builder_cls)
+    if obs_builder is None:
+        obs_builder = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
+    else:
+        obs_builder = obs_builder()
 
-    effects_generator = None
-    if effects_generator_pkg is not None and effects_generator_cls is not None:
-        module = importlib.import_module(effects_generator_pkg)
-        effects_generator_cls = getattr(module, effects_generator_cls)
-        effects_generator_kwargs = dict(effects_generator_kwargs) if len(effects_generator_kwargs) > 0 else {}
-        effects_generator = effects_generator_cls(**effects_generator_kwargs)
-    callbacks = None
-    if callbacks_pkg is not None and callbacks_cls is not None:
-        module = importlib.import_module(callbacks_pkg)
-        callbacks_cls = getattr(module, callbacks_cls)
-        callbacks: FlatlandCallbacks = callbacks_cls()
+    if rewards is None:
+        rewards = os.environ.get("REWARDS", None)
+    if rewards_pkg is None:
+        rewards_pkg = os.environ.get("REWARDS_PKG", None)
+    if rewards_cls is None:
+        rewards_cls = os.environ.get("REWARDS_CLS", None)
+    rewards = resolve_type(rewards, rewards_pkg, rewards_cls) or DefaultRewards
+    rewards = rewards()
+
+    if effects_generator is None:
+        effects_generator = os.environ.get("EFFECTS_GENERATOR", None)
+    if effects_generator_pkg is None:
+        effects_generator_pkg = os.environ.get("EFFECTS_GENERATOR_PKG", None)
+    if effects_generator_cls is None:
+        effects_generator_cls = os.environ.get("EFFECTS_GENERATOR_CLS", None)
+    effects_generator_kwargs = dict(effects_generator_kwargs) if len(effects_generator_kwargs) > 0 else {}
+    effects_generator = resolve_type(effects_generator, effects_generator_pkg, effects_generator_cls)
+    if effects_generator is not None:
+        effects_generator = effects_generator(**effects_generator_kwargs)
+
+    if callbacks is None:
+        callbacks = os.environ.get("CALLBACKS", None)
+    if callbacks_pkg is None:
+        callbacks_pkg = os.environ.get("CALLBACKS_PKG", None)
+    if callbacks_cls is None:
+        callbacks_cls = os.environ.get("CALLBACKS_CLS", None)
+    callbacks = resolve_type(callbacks, callbacks_pkg, callbacks_cls)
+    if callbacks is not None:
+        callbacks = callbacks()
 
     if env_path is not None:
         env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)

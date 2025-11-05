@@ -1,11 +1,11 @@
-import importlib
-from typing import Callable, List
+from typing import Callable, List, Union
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
+from flatland.utils.cli_utils import resolve_type
 
 
 class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
@@ -34,7 +34,7 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
                  max_duration: float = None,
                  earliest_malfunction: int = None,
                  max_num_malfunctions: int = None,
-                 condition: MalfunctionCondition = None,
+                 condition: Union[MalfunctionCondition, str] = None,
                  condition_pkg: str = None,
                  condition_cls: str = None,
                  ):
@@ -53,7 +53,7 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
             Defaults to `None`.
         max_num_malfunctions : int
             Defaults to `None`.
-        condition : MalfunctionCondition
+        condition : MalfunctionCondition | str
             Additional condition. Defaults to None.
         condition_pkg : str
             Additional condition to be created instead of instance via `condition`. Defaults to None.
@@ -72,10 +72,8 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         self._earliest_condition = int(earliest_malfunction) if earliest_malfunction is not None else None
         self._max_num_malfunctions = int(max_num_malfunctions) if max_num_malfunctions is not None else None
         self._num_malfunctions = 0
-        self._condition = condition
-        if condition_pkg is not None and condition_cls is not None:
-            module = importlib.import_module(condition_pkg)
-            self._condition = getattr(module, condition_cls)
+        self._condition = resolve_type(condition, condition_pkg, condition_cls)
+        self._condition = self._condition
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         if self._earliest_condition is not None and env._elapsed_steps < self._earliest_condition:
