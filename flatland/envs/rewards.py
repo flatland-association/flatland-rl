@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Generic, TypeVar, Tuple, Dict, Set
+from typing import Generic, TypeVar, Tuple, Dict, Set, Optional
 
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.agent_utils import EnvAgent
@@ -61,6 +61,22 @@ class Rewards(Generic[RewardType]):
         Return empty initial value neutral for the cumulation.
         """
         raise NotImplementedError()
+
+    def normalize(self, *rewards: RewardType, num_agents: int, max_episode_steps: int) -> Optional[float]:
+        """
+        Return normalized cumulated rewards. Can be `None` for some rewards.
+
+        Parameters
+        ----------
+        rewards : List[RewardType]
+        num_agents : int
+        max_episode_steps : int
+
+        Returns
+        -------
+
+        """
+        return None
 
 
 def defaultdict_set():
@@ -176,8 +192,12 @@ class DefaultRewards(Rewards[float]):
                     reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][wp] - ed, 0)
         return reward
 
-    def cumulate(self, *rewards: int) -> RewardType:
+    def cumulate(self, *rewards: float) -> float:
         return sum(rewards)
+
+    def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
+        # https://flatland-association.github.io/flatland-book/challenges/flatland3/eval.html
+        return sum(rewards) / (max_episode_steps * num_agents) + 1
 
     def empty(self) -> float:
         return 0
