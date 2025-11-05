@@ -184,57 +184,57 @@ class PolicyRunner:
               required=False,
               default="DefaultRewards"
               )
-@click.option('--n_agents',
+@click.option('--n-agents',
               type=int,
               help="Number of agents.",
               required=False,
               default=7)
-@click.option('--x_dim',
+@click.option('--x-dim',
               type=int,
               help="Number of columns.",
               required=False,
               default=30)
-@click.option('--y_dim',
+@click.option('--y-dim',
               type=int,
               help="Number of rows.",
               required=False,
               default=30)
-@click.option('--n_cities',
+@click.option('--n-cities',
               type=int,
               help="Max number of cities to build. The generator tries to achieve this numbers given all the parameters. Goes into `sparse_rail_generator`. ",
               required=False,
               default=2)
-@click.option('--max_rail_pairs_in_city',
+@click.option('--max-rail-pairs-in-city',
               type=int,
               help="Number of parallel tracks in the city. This represents the number of tracks in the train stations. Goes into `sparse_rail_generator`.",
               required=False,
               default=4)
-@click.option('--grid_mode',
+@click.option('--grid-mode',
               type=bool,
               help="How to distribute the cities in the path, either equally in a grid or random. Goes into `sparse_rail_generator`.",
               required=False,
               default=False)
-@click.option('--max_rails_between_cities',
+@click.option('--max-rails-between-cities',
               type=int,
               help="Max number of rails connecting to a city. This is only the number of connection points at city boarder.",
               required=False,
               default=2)
-@click.option('--malfunction_duration_min',
+@click.option('--malfunction-duration-min',
               type=int,
               help="Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.",
               required=False,
               default=20)
-@click.option('--malfunction_duration_max',
+@click.option('--malfunction-duration-max',
               type=int,
               help="Max duration of malfunction. Goes into `ParamMalfunctionGen`.",
               required=False,
               default=50)
-@click.option('--malfunction_interval',
+@click.option('--malfunction-interval',
               type=int,
               help="Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.",
               required=False,
               default=540)
-@click.option('--speed_ratios',
+@click.option('--speed-ratios',
               multiple=True,
               nargs=2,
               type=click.Tuple(types=[float, float]),

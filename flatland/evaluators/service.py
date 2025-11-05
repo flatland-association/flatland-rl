@@ -1452,30 +1452,30 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description='Submit the result to AIcrowd')
-    parser.add_argument('--service_id',
+    parser.add_argument('--service-id',
                         dest='service_id',
                         default=FLATLAND_RL_SERVICE_ID,
                         required=False)
-    parser.add_argument('--test_folder',
+    parser.add_argument('--test-folder',
                         dest='test_folder',
                         default="../../../submission-scoring/Envs-Small",
                         help="Folder containing the files for the test envs",
                         required=False)
 
-    parser.add_argument('--actionDir',
-                        dest='actionDir',
+    parser.add_argument('--action-dir',
+                        dest='action_dir',
                         default=None,
                         help="deprecated - use mergeDir.  Folder containing the files for the test envs",
                         required=False)
 
-    parser.add_argument('--episodeDir',
-                        dest='episodeDir',
+    parser.add_argument('--episode-dir',
+                        dest='episode_dir',
                         default=None,
                         help="deprecated - use mergeDir.   Folder containing the files for the test envs",
                         required=False)
 
-    parser.add_argument('--mergeDir',
-                        dest='mergeDir',
+    parser.add_argument('--merge-dir',
+                        dest='merge_dir',
                         default=None,
                         help="Folder to store merged envs, actions, episodes.",
                         required=False)
@@ -1492,19 +1492,19 @@ if __name__ == "__main__":
                         help="Shuffle the environments",
                         required=False)
 
-    parser.add_argument('--disableTimeouts',
+    parser.add_argument('--disable-timeouts',
                         default=False,
                         action="store_true",
                         help="Disable all timeouts.",
                         required=False)
 
-    parser.add_argument('--missingOnly',
+    parser.add_argument('--missing-only',
                         default=False,
                         action="store_true",
                         help="only request the envs/actions which are missing",
                         required=False)
 
-    parser.add_argument('--resultsDir',
+    parser.add_argument('--results-dir',
                         default="/tmp/output.csv",
                         help="Results CSV path",
                         required=False)
@@ -1524,14 +1524,14 @@ if __name__ == "__main__":
         verbose=args.verbose,
         visualize=True,
         video_generation_envs=["Test_0/Level_100.pkl"],
-        result_output_path=args.resultsDir,
-        action_dir=args.actionDir,
-        episode_dir=args.episodeDir,
-        merge_dir=args.mergeDir,
+        result_output_path=args.results_dir,
+        action_dir=args.action_dir,
+        episode_dir=args.episode_dir,
+        merge_dir=args.merge_dir,
         use_pickle=args.pickle,
         shuffle=args.shuffle,
-        missing_only=args.missingOnly,
-        disable_timeouts=args.disableTimeouts
+        missing_only=args.missing_only,
+        disable_timeouts=args.disable_timeouts
     )
     result = grader.run()
     if result['type'] == messages.FLATLAND_RL.ENV_SUBMIT_RESPONSE:

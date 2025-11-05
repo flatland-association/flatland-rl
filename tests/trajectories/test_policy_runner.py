@@ -262,7 +262,7 @@ def test_effects_generator():
                 "--data-dir", data_dir,
                 "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
                 "--ep-id", "banana",
-                "--malfunction_interval", "1"
+                "--malfunction-interval", "1"
             ])
         assert e_info.value.code == 0
 
@@ -276,7 +276,7 @@ def test_effects_generator():
                 "--data-dir", data_dir,
                 "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
                 "--ep-id", "banana",
-                "--malfunction_interval", "-1"
+                "--malfunction-interval", "-1"
             ])
         assert e_info.value.code == 0
 
@@ -290,7 +290,7 @@ def test_effects_generator():
                 "--data-dir", data_dir,
                 "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
                 "--ep-id", "banana",
-                "--malfunction_interval", "-1",
+                "--malfunction-interval", "-1",
                 "--effects-generator-pkg", "flatland.envs.malfunction_effects_generators", "--effects-generator-cls", "ConditionalMalfunctionEffectsGenerator",
                 "--effects-generator-kwargs", "max_num_malfunctions", "1",
                 "--effects-generator-kwargs", "min_duration", "25",
