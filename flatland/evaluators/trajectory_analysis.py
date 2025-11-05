@@ -5,6 +5,7 @@ import click
 import pandas as pd
 from pandas import DataFrame
 
+from flatland.envs.rail_env import RailEnv
 from flatland.trajectories.trajectories import Trajectory
 
 
@@ -26,7 +27,7 @@ def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFra
         assert len(snapshots) == 1, snapshots
         ep_id = snapshots[0].stem
         trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)
-        env = trajectory.load_env()
+        env: RailEnv = trajectory.load_env()
 
         all_actions.append(trajectory.actions)
         all_trains_positions.append(trajectory.trains_positions)
@@ -41,6 +42,24 @@ def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFra
             "episode_id": ep_id,
             "max_episode_steps": env._max_episode_steps,
             "num_agents": len(env.agents),
+            "x_dim": env.width,
+            "y_dim": env.height,
+            # TODO https://github.com/flatland-association/flatland-rl/issues/242 rail/line/timetable/malfunction generator not serializable currently.
+            # max_rail_pairs_in_city=4,
+            # grid_mode=False,
+            # max_rails_between_cities=2,
+            "malfunction_process_data": env.malfunction_process_data,
+            # malfunction_duration_min=20,
+            # malfunction_duration_max=50,
+            # malfunction_interval=540,
+            # speed_ratios=None,
+            # line_length=2,
+            # TODO https://github.com/flatland-association/flatland-rl/issues/7 standardization of obs builder interface and serialization
+            "obs_builder": type(env.obs_builder),
+            "acceleration_delta": env.acceleration_delta,
+            "braking_delta": env.braking_delta,
+            # TODO https://github.com/flatland-association/flatland-rl/issues/242 rewards not serializable currently.
+            "rewards": type(env.rewards),
         }]))
 
         agent_stats.append(pd.DataFrame.from_records([{
