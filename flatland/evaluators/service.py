@@ -1465,7 +1465,7 @@ if __name__ == "__main__":
     parser.add_argument('--action-dir',
                         dest='action_dir',
                         default=None,
-                        help="deprecated - use mergeDir.  Folder containing the files for the test envs",
+                        help="deprecated - --use merge-dir.  Folder containing the files for the test envs",
                         required=False)
 
     parser.add_argument('--episode-dir',
