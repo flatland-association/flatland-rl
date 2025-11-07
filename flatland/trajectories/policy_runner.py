@@ -398,7 +398,7 @@ def generate_trajectory_from_policy(
 
     obs_builder = resolve_type(obs_builder, obs_builder_pkg, obs_builder_cls)
     if obs_builder is None:
-        obs_builder = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
+        obs_builder = TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv())
     else:
         obs_builder = obs_builder()
 
