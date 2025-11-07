@@ -54,7 +54,7 @@ def add_flatland_training_with_parameter_sharing_args():
         required=False,
         help="The address of the ray cluster to connect to in the form ray://<head_node_ip_address>:10001. Leave empty to start a new cluster. Passed to ray.init(address=...). See https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html ",
     )
-    parser.add_argument("--env_var", "-e",
+    parser.add_argument("--env-var", "-e",
                         metavar="KEY=VALUE",
                         nargs='*',
                         help="Set ray runtime environment variables like -e RAY_DEBUG=1, passed to ray.init(runtime_env={env_vars: {...}}), see https://docs.ray.io/en/latest/ray-core/handling-dependencies.html#api-reference")

@@ -1,4 +1,4 @@
-import importlib
+import os
 from pathlib import Path
 
 import click
@@ -9,6 +9,7 @@ from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rewards import Rewards
 from flatland.trajectories.trajectories import Trajectory
+from flatland.utils.cli_utils import resolve_type
 
 
 class TrajectoryEvaluator:
@@ -126,17 +127,23 @@ class TrajectoryEvaluator:
               help="Episode ID.",
               required=True
               )
+@click.option('--callbacks',
+              type=str,
+              help="Defaults to `None`. Can also be provided through env var CALLBACKS (command-line option takes priority).",
+              required=False,
+              default=None
+              )
 @click.option('--callbacks-pkg',
               type=str,
-              help="Defaults to `None`",
+              help="DEPRECATED: use --callbacks instead. Defaults to `None`. Can also be provided through env var CALLBACKS_OKG (command-line option takes priority).",
               required=False,
-              default="flatland.envs.rewards"
+              default=None
               )
 @click.option('--callbacks-cls',
               type=str,
-              help="Defaults to `None`",
+              help="DEPRECATED: use --callbacks instead. Defaults to `None`. Can also be provided through env var CALLBACKS_CLS (command-line option takes priority).",
               required=False,
-              default=None
+              default=None,
               )
 @click.option('--skip-rewards-dones-infos',
               type=bool,
@@ -147,13 +154,20 @@ class TrajectoryEvaluator:
 def evaluate_trajectory(
     data_dir: Path,
     ep_id: str,
+    callbacks: str = None,
     callbacks_pkg: str = None,
     callbacks_cls: str = None,
     skip_rewards_dones_infos: bool = False
 ):
-    callbacks = None
-    if callbacks_pkg is not None and callbacks_cls is not None:
-        module = importlib.import_module(callbacks_pkg)
-        callbacks = getattr(module, callbacks_cls)()
-    TrajectoryEvaluator(Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id), callbacks=callbacks).evaluate(
-        skip_rewards_dones_infos=skip_rewards_dones_infos)
+    if callbacks is None:
+        callbacks = os.environ.get("CALLBACKS", None)
+    if callbacks_pkg is None:
+        callbacks_pkg = os.environ.get("CALLBACKS_PKG", None)
+    if callbacks_cls is None:
+        callbacks_cls = os.environ.get("CALLBACKS_CLS", None)
+    callbacks = resolve_type(callbacks, callbacks_pkg, callbacks_cls)
+    if callbacks is not None:
+        callbacks = callbacks()
+
+    trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)
+    TrajectoryEvaluator(trajectory, callbacks=callbacks).evaluate(skip_rewards_dones_infos=skip_rewards_dones_infos)
