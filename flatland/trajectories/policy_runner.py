@@ -436,6 +436,8 @@ def generate_trajectory_from_policy(
         env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
         if seed is not None:
             env.reset(random_seed=seed)
+        else:
+            env.reset(regenerate_rail=False, regenerate_schedule=False)
         # TODO https://github.com/flatland-association/flatland-rl/issues/278 a bit hacky for now, clean up later...
         if malfunction_interval == -1 and effects_generator is not None:
             env.effects_generator = effects_generator
