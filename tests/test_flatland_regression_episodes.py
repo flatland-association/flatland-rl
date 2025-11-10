@@ -55,7 +55,9 @@ def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool, ski
             shutil.copytree(os.path.join(data_dir, EVENT_LOGS_SUBDIR), os.path.join(tmpdirname, OUTPUTS_SUBDIR, EVENT_LOGS_SUBDIR), dirs_exist_ok=True)
 
             # start episode from a snapshot to ensure snapshot contains full state!
-            run_episode(Path(tmpdirname) / OUTPUTS_SUBDIR, ep_id, start_step=np.random.randint(0, 50),
+            start_step = np.random.randint(0, 50)
+            print(f"start_step={start_step}")
+            run_episode(Path(tmpdirname) / OUTPUTS_SUBDIR, ep_id, start_step=start_step,
                         skip_rewards_dones_infos=skip_rewards_dones_infos,
                         skip_rewards=skip_rewards)
 
