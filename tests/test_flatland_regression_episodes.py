@@ -3,13 +3,12 @@ import shutil
 import tempfile
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
 
 from benchmarks.benchmark_episodes import run_episode, DOWNLOAD_INSTRUCTIONS
 from flatland.env_generation.env_generator import env_generator
-from flatland.trajectories.trajectories import EVENT_LOGS_SUBDIR, OUTPUTS_SUBDIR, Trajectory
+from flatland.trajectories.trajectories import EVENT_LOGS_SUBDIR, OUTPUTS_SUBDIR, Trajectory, SERIALISED_STATE_SUBDIR
 
 
 @pytest.mark.parametrize("data_sub_dir,ep_id,run_from_intermediate,skip_rewards_dones_infos,skip_rewards", [
@@ -51,11 +50,13 @@ def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool, ski
                     skip_rewards=skip_rewards)
 
         if run_from_intermediate:
-            # copy actions etc. to outputs subfolder, so outputs subfolder becomes a proper trajectory data dir.
+            # copy initial env, actions etc. to outputs subfolder, so outputs subfolder becomes a proper trajectory data dir.
+            shutil.copyfile(os.path.join(data_dir, SERIALISED_STATE_SUBDIR, f"{ep_id}.pkl"),
+                            os.path.join(tmpdirname, OUTPUTS_SUBDIR, SERIALISED_STATE_SUBDIR, f"{ep_id}.pkl"))
             shutil.copytree(os.path.join(data_dir, EVENT_LOGS_SUBDIR), os.path.join(tmpdirname, OUTPUTS_SUBDIR, EVENT_LOGS_SUBDIR), dirs_exist_ok=True)
 
             # start episode from a snapshot to ensure snapshot contains full state!
-            start_step = np.random.randint(0, 50)
+            start_step = 0  # np.random.randint(0, 50)
             print(f"start_step={start_step}")
             run_episode(Path(tmpdirname) / OUTPUTS_SUBDIR, ep_id, start_step=start_step,
                         skip_rewards_dones_infos=skip_rewards_dones_infos,
