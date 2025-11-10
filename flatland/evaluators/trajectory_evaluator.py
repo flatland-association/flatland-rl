@@ -82,6 +82,7 @@ class TrajectoryEvaluator:
                 expected_position = self.trajectory.position_lookup(env_time=elapsed_after_step, agent_id=agent_id)
                 actual_position = (agent.position, agent.direction)
                 assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
+                                                             f"- env_time:\t{elapsed_after_step}\n" \
                                                              f"- actual_position:\t{actual_position}\n" \
                                                              f"- expected_position:\t{expected_position}\n" \
                                                              f"- trajectory:\tTrajectory({self.trajectory.data_dir}, {self.trajectory.ep_id})\n" \
