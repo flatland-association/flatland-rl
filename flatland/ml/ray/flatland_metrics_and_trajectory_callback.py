@@ -40,8 +40,7 @@ class FlatlandMetricsAndTrajectoryCallback(FlatlandMetricsCallback):
         rail_env = self._unwrap_rail_env(env)
         data_dir = Path("trajectories") / episode.id_
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
-        trajectory = Trajectory(data_dir=data_dir, ep_id=episode.id_)
-        trajectory.load()
+        trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=episode.id_)
         trajectory.save_initial(rail_env)
         assert rail_env._elapsed_steps == 0
         episode.custom_data["trajectory"] = trajectory
@@ -126,7 +125,12 @@ class FlatlandMetricsAndTrajectoryCallback(FlatlandMetricsCallback):
 
         trajectory: Trajectory = episode.custom_data["trajectory"]
 
-        trajectory.arrived_collect(episode_length, percentage_complete)
+        normalized_reward = sum([sum(agent_rewards) for agent_rewards in episode_rewards.values()]) / (
+            rail_env._max_episode_steps *
+            num_agents
+        ) + 1
+
+        trajectory.arrived_collect(episode_length, percentage_complete, normalized_reward)
         for agent_id in rail_env.get_agent_handles():
             for env_time, action in enumerate(episode_actions[str(agent_id)]):
                 trajectory.action_collect(env_time, agent_id, action)
