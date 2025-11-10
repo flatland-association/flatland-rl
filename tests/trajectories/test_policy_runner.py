@@ -301,3 +301,28 @@ def test_effects_generator():
 
         trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id="banana")
         assert sum([info["malfunction"] > 0 for info in trajectory.trains_rewards_dones_infos["info"]]) == 25
+
+
+def test_env_path_and_obs_builder():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_dir = Path(tmpdirname)
+        env_file = str(tmp_dir / "env.pkl")
+        data_dir = tmp_dir / "data_dir"
+        data_dir.mkdir()
+        env, _, _ = env_generator()
+        expected = random_state_to_hashablestate(env.np_random)
+        RailEnvPersister.save(env, env_file)
+
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectory_from_policy([
+                "--data-dir", str(data_dir),
+                "--policy-pkg", "tests.trajectories.test_trajectories",
+                "--policy-cls", "RandomPolicy",
+                "--ep-id", "dummy",
+                "--env-path", env_file])
+        assert e_info.value.code == 0
+
+        # ensure the obs-builder is correctly reset without re-generating rails
+        env, _ = RailEnvPersister.load_new(str(data_dir / SERIALISED_STATE_SUBDIR / f"dummy.pkl"))
+        actual = random_state_to_hashablestate(env.np_random)
+        assert actual == expected
