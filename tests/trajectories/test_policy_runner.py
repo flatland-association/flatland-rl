@@ -1,5 +1,7 @@
+import json
 import re
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Optional, Any, List, Dict
 
@@ -325,4 +327,42 @@ def test_env_path_and_obs_builder():
         # ensure the obs-builder is correctly reset without re-generating rails
         env, _ = RailEnvPersister.load_new(str(data_dir / SERIALISED_STATE_SUBDIR / f"dummy.pkl"))
         actual = random_state_to_hashablestate(env.np_random)
+        assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "seed, expected",
+    [
+        (1002, {'normalized_reward': -0.007067137809187279, 'percentage_complete': 1.0, 'reward': -14, 'termination_cause': None, }),
+        (1003, {'normalized_reward': -0.019182231196365473, 'percentage_complete': 1.0, 'reward': -38, 'termination_cause': None}),
+        (None, {'normalized_reward': 0.0, 'termination_cause': None, 'reward': 0, 'percentage_complete': 1.0}),
+    ])
+def test_env_path_and_seed(seed, expected):
+    with tempfile.TemporaryDirectory() as tmp_dir_name:
+        tmp_dir = Path(tmp_dir_name)
+        env_file = str(tmp_dir / "env.pkl")
+        data_dir = tmp_dir / "data_dir"
+        data_dir.mkdir()
+        # TODO https://github.com/flatland-association/flatland-rl/issues/242 rail_generator etc. not persisted, the outcome should not depend on this seed, but it currently does. In particular, seed same seed here and in --seed (pased to reset()) should have the same outcome.
+        env, _, _ = env_generator(seed=1001)
+        scenario_id = uuid.uuid4()
+        RailEnvPersister.save(env, env_file)
+
+        with pytest.raises(SystemExit) as e_info:
+            args = [
+                "--data-dir", data_dir,
+                "--ep-id", scenario_id,
+                "--env-path", env_file,
+                "--policy", "flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy.DeadLockAvoidancePolicy",
+                "--obs-builder", "flatland_baselines.deadlock_avoidance_heuristic.observation.full_env_observation.FullEnvObservation",
+                "--callbacks", "flatland.evaluators.evaluator_callback.FlatlandEvaluatorCallbacks",
+                "--snapshot-interval", "-1",
+            ]
+            if seed is not None:
+                args += ["--seed", str(seed)]
+            generate_trajectory_from_policy(args)
+        assert e_info.value.code == 0
+        with (data_dir / "outputs" / "evaluation.json").open("r") as f:
+            actual = json.load(f)
+        print(actual)
         assert actual == expected
