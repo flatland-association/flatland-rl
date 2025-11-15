@@ -243,6 +243,9 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
     def empty(self) -> Tuple[float, float, float]:
         return 0, 0, 0
 
+    def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
+        return None
+
 
 class PunctualityRewards(Rewards[Tuple[int, int]]):
     """
