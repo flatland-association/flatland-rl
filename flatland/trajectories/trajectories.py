@@ -75,15 +75,27 @@ class Trajectory:
         self.outputs_dir.mkdir(exist_ok=True, parents=True)
 
     def persist(self):
-        self.actions = pd.concat([self.actions, pd.DataFrame.from_records(self._actions_collect)])
-        self.trains_positions = pd.concat([self.trains_positions, pd.DataFrame.from_records(self._trains_positions_collect)])
-        self.trains_arrived = pd.concat([self.trains_arrived, pd.DataFrame.from_records(self._trains_arrived_collect)])
-        self.trains_rewards_dones_infos = pd.concat([self.trains_rewards_dones_infos, pd.DataFrame.from_records(self._trains_rewards_dones_infos_collect)])
+        self.actions = pd.concat([self.actions, self._collected_actions_to_df()])
+        self.trains_positions = pd.concat([self.trains_positions, self._collected_trains_positions_to_df()])
+        self.trains_arrived = pd.concat([self.trains_arrived, self._collected_trains_arrived_to_df()])
+        self.trains_rewards_dones_infos = pd.concat([self.trains_rewards_dones_infos, self._collected_trains_rewards_dones_infos_to_df()])
 
         self._write_actions(self.actions)
         self._write_trains_positions(self.trains_positions)
         self._write_trains_arrived(self.trains_arrived)
         self._write_trains_rewards_dones_infos(self.trains_rewards_dones_infos)
+
+    def _collected_trains_rewards_dones_infos_to_df(self) -> pd.DataFrame:
+        return pd.DataFrame.from_records(self._trains_rewards_dones_infos_collect)
+
+    def _collected_trains_arrived_to_df(self) -> pd.DataFrame:
+        return pd.DataFrame.from_records(self._trains_arrived_collect)
+
+    def _collected_trains_positions_to_df(self) -> pd.DataFrame:
+        return pd.DataFrame.from_records(self._trains_positions_collect)
+
+    def _collected_actions_to_df(self) -> pd.DataFrame:
+        return pd.DataFrame.from_records(self._actions_collect)
 
     def _read_actions(self, episode_only: bool = False) -> pd.DataFrame:
         """Returns pd df with all actions for all episodes.
