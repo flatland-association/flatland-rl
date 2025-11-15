@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -52,6 +53,9 @@ class FlatlandEvaluatorCallbacks(FlatlandCallbacks[RailEnv]):
             if agent.state == TrainState.DONE:
                 complete += 1
         self._percentage_complete = complete * 1.0 / env.get_num_agents()
+        if data_dir is not None:
+            with (data_dir / "evaluation.json").open("w") as f:
+                json.dump(self.get_evaluation(), f)
 
     def get_evaluation(self) -> dict:
         """

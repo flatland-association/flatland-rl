@@ -474,6 +474,8 @@ class Trajectory:
         -------
         Trajectory
         """
+        data_dir.mkdir(parents=True, exist_ok=True)
+
         if ep_id is not None:
             trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)
         else:
