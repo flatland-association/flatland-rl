@@ -197,7 +197,7 @@ class DefaultRewards(Rewards[float]):
 
     def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
         # https://flatland-association.github.io/flatland-book/challenges/flatland3/eval.html
-        return sum(rewards) / (max_episode_steps * num_agents) + 1
+        return sum(rewards) / (max_episode_steps * num_agents) + 1.0
 
     def empty(self) -> float:
         return 0

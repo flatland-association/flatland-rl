@@ -40,12 +40,10 @@ class FlatlandEvaluatorCallbacks(FlatlandCallbacks[RailEnv]):
         The normalized rewards normalize the reward for an
         episode by dividing the whole reward by max-time-steps
         allowed in that episode, and the number of agents present in
-        that episode
+        that episode, plus one.
         """
-        self._normalized_reward = (self._cumulative_reward / (
-            env._max_episode_steps *
-            env.get_num_agents()
-        ))
+        # https://flatland-association.github.io/flatland-book/challenges/flatland3/eval.html
+        self._normalized_reward = (self._cumulative_reward / (env._max_episode_steps * env.get_num_agents())) + 1
         # Compute percentage complete
         complete = 0
         for i_agent in range(env.get_num_agents()):
@@ -66,7 +64,7 @@ class FlatlandEvaluatorCallbacks(FlatlandCallbacks[RailEnv]):
         reward : float
             cumulative reward of all agents.
         normalized reward : float
-            The normalized rewards normalize the reward for an episode by dividing the whole reward by max-time-steps allowed in that episode, and the number of agents present in that episode.
+            The normalized rewards normalize the reward for an episode by dividing the whole reward by max-time-steps allowed in that episode, and the number of agents present in that episode, plus one.
         termination_cause : Optional[str]
             if timeout occurs.
         percentage_complete : float
