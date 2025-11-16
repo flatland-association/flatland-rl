@@ -34,9 +34,13 @@ def test_evaluator_callbacks():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, tqdm_kwargs={"disable": True})
+        print(trajectory.trains_arrived)
+        assert trajectory.trains_arrived.iloc[0]["mean_normalized_reward"] == 0.4582954200788596
+        assert trajectory.trains_arrived.iloc[0]["success_rate"] == 0
+        assert trajectory.trains_rewards_dones_infos["reward"].sum() == -1786
         cb = FlatlandEvaluatorCallbacks()
         TrajectoryEvaluator(trajectory, cb).evaluate(tqdm_kwargs={"disable": True})
-        assert cb.get_evaluation() == {'normalized_reward': -0.5417045799211404,
+        assert cb.get_evaluation() == {'normalized_reward': -0.5417045799211404 + 1,
                                        'percentage_complete': 0.0,
                                        'reward': -1786,
                                        'termination_cause': None}
