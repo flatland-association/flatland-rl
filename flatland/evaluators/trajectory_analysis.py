@@ -81,6 +81,19 @@ def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFra
     return all_actions, all_trains_positions, all_trains_arrived, all_trains_rewards_dones_infos, env_stats, agent_stats
 
 
+def persist_data_frame_for_trajectories(agent_stats, all_actions, all_trains_arrived, all_trains_positions, all_trains_rewards_dones_infos, env_stats,
+                                        output_dir):
+    output_dir.mkdir(exist_ok=True, parents=True)
+    assert len(list(output_dir.glob("*"))) == 0
+
+    all_actions.to_csv(output_dir / "all_actions.csv", index=False)
+    all_trains_positions.to_csv(output_dir / "all_trains_positions.csv", index=False)
+    all_trains_arrived.to_csv(output_dir / "all_trains_arrived.csv", index=False)
+    all_trains_rewards_dones_infos.to_csv(output_dir / "all_trains_rewards_dones_infos.csv", index=False)
+    env_stats.to_csv(output_dir / "env_stats.csv", index=False)
+    agent_stats.to_csv(output_dir / "agent_stats.csv", index=False)
+
+
 @click.command()
 @click.option(
     '--root-data-dir',
@@ -99,12 +112,5 @@ def cli(root_data_dir: Path, output_dir: Path):
     all_actions, all_trains_positions, all_trains_arrived, all_trains_rewards_dones_infos, env_stats, agent_stats = data_frame_for_trajectories(
         root_data_dir=root_data_dir)
     if output_dir is not None:
-        output_dir.mkdir(exist_ok=True, parents=True)
-        assert len(list(output_dir.glob("*"))) == 0
-
-        all_actions.to_csv(output_dir / "all_actions.csv", index=False)
-        all_trains_positions.to_csv(output_dir / "all_trains_positions.csv", index=False)
-        all_trains_arrived.to_csv(output_dir / "all_trains_arrived.csv", index=False)
-        all_trains_rewards_dones_infos.to_csv(output_dir / "all_trains_rewards_dones_infos.csv", index=False)
-        env_stats.to_csv(output_dir / "env_stats.csv", index=False)
-        agent_stats.to_csv(output_dir / "agent_stats.csv", index=False)
+        persist_data_frame_for_trajectories(agent_stats, all_actions, all_trains_arrived, all_trains_positions, all_trains_rewards_dones_infos, env_stats,
+                                            output_dir)
