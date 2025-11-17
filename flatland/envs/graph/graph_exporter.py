@@ -25,7 +25,7 @@ class NpEncoder(json.JSONEncoder):
 
 
 if __name__ == '__main__':
-    env, _, _ = env_generator()
+    env, _, _ = env_generator(seed=66)
 
     micro = GraphTransitionMap.grid_to_digraph(env.rail)
     decision_point_graph = DecisionPointGraph.fromGraphTransitionMap(GraphTransitionMap(micro))
@@ -37,6 +37,9 @@ if __name__ == '__main__':
             "waypoints": {agent.handle: agent.waypoints for agent in env.agents},
             "waypoints_earliest_departure": {agent.handle: agent.waypoints_earliest_departure for agent in env.agents},
             "waypoints_latest_arrival": {agent.handle: agent.waypoints_latest_arrival for agent in env.agents}
+        },
+        "max_speeds": {
+            agent.handle: agent.speed_counter.max_speed for agent in env.agents
         }
     }
     print(json.dumps(d, indent=4, cls=NpEncoder))
