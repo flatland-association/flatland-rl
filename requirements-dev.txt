@@ -574,7 +574,9 @@ widgetsnbextension==4.0.14
     # via ipywidgets
 xyzservices==2025.4.0
     # via folium
-
 # The following packages are considered to be unsafe in a requirements file:
 # pip
 # setuptools
+
+
+testcontainers==4.9.1
