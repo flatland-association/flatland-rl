@@ -1,6 +1,7 @@
 import tempfile
 from pathlib import Path
 
+from flatland.core.graph.graph_resource_map import GraphResourceMap
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.rail_env import RailEnv
@@ -17,6 +18,7 @@ def test_graph_transition_map_from_with_random_policy():
     clone = RailEnv(30, 30)
     clone.clone_from(env)
     clone.rail = GraphTransitionMap.from_rail_env(env)
+    clone.resource_map = GraphResourceMap(clone.resource_map.level_free_positions)
 
     for r in range(env.height):
         for c in range(env.width):
