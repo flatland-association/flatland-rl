@@ -485,38 +485,35 @@ class RailEnv(Environment):
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent_max_speed, new_speed))
             if state == TrainState.READY_TO_DEPART and movement_action_given:
-                new_position = agent.initial_position
-                new_direction = agent.initial_direction
+                new_configuration = (agent.initial_position, agent.initial_direction)
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
                 movement_action_given or stop_action_given):
                 # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
-                new_position = agent.initial_position
-                new_direction = agent.initial_direction
+                new_configuration = (agent.initial_position, agent.initial_direction)
             elif state.is_on_map_state():
-                new_position, new_direction = agent.position, agent.direction
+                new_configuration = (agent.position, agent.direction)
                 # transition to next cell: at end of cell and next state potentially MOVING
                 if (agent.speed_counter.is_cell_exit(new_speed)
                     and
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
                 ):
-                    new_position, new_direction = new_position_independent, new_direction_independent
+                    new_configuration = new_position_independent, new_direction_independent
                 assert agent.position is not None
             else:
                 assert state.is_off_map_state() or state == TrainState.DONE
-                new_position = None
-                new_direction = None
+                new_configuration = (None, None)
 
-            if new_position is not None:
-                valid_position_direction = any(self.rail.get_transitions((new_position, new_direction)))
+            if new_configuration[0] is not None:
+                valid_position_direction = any(self.rail.get_transitions(new_configuration))
                 if not valid_position_direction:
-                    warnings.warn(f"{(new_position, new_direction)} not valid on the grid."
+                    warnings.warn(f"{new_configuration} not valid on the grid."
                                   f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*current_position)).name}")
                 # fails if initial position has invalid direction
                 # assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
             agent_position_level_free = self.resource_map.get_resource((agent.position, agent.direction))
-            new_position_level_free = self.resource_map.get_resource((new_position, new_direction))
+            new_configuration_level_free = self.resource_map.get_resource(new_configuration)
 
             # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
             self.temp_transition_data[i_agent].state_transition_signal.in_malfunction = agent.malfunction_handler.in_malfunction
@@ -535,14 +532,14 @@ class RailEnv(Environment):
 
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
             self.temp_transition_data[i_agent].agent_position_level_free = agent_position_level_free
-            self.temp_transition_data[i_agent].new_position = new_position
-            self.temp_transition_data[i_agent].new_direction = new_direction
-            self.temp_transition_data[i_agent].new_speed = new_speed
-            self.temp_transition_data[i_agent].new_position_level_free = new_position_level_free
-            self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
-            # self.temp_transition_data[i_agent].state_transition_signal = state_transition_signals
 
-            self.motion_check.add_agent(i_agent, agent_position_level_free, new_position_level_free)
+            self.temp_transition_data[i_agent].new_position = new_configuration[0]
+            self.temp_transition_data[i_agent].new_direction = new_configuration[1]
+            self.temp_transition_data[i_agent].new_speed = new_speed
+            self.temp_transition_data[i_agent].new_position_level_free = new_configuration_level_free
+            self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
+
+            self.motion_check.add_agent(i_agent, agent_position_level_free, new_configuration_level_free)
 
         # Find conflicts between trains trying to occupy same cell
         self.motion_check.find_conflicts()
