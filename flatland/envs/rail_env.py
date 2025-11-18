@@ -452,6 +452,9 @@ class RailEnv(Environment):
         for agent in self.agents:
             i_agent = agent.handle
 
+            current_configuration = (agent.position, agent.direction)
+            initial_configuration = (agent.initial_position, agent.initial_direction)
+
             agent.old_position = agent.position
             agent.old_direction = agent.direction
 
@@ -460,9 +463,10 @@ class RailEnv(Environment):
             # Try moving actions on current position
             current_position, current_direction = agent.position, agent.direction
             if current_position is None:  # Agent not added on map yet
-                current_position, current_direction = agent.initial_position, agent.initial_direction
-            _, (new_position_independent, new_direction_independent), _, preprocessed_action = self.rail.check_action_on_agent(
-                RailEnvActions.from_value(raw_action), (current_position, current_direction)
+                current_configuration = initial_configuration
+
+            _, new_configuration_independent, _, preprocessed_action = self.rail.check_action_on_agent(
+                RailEnvActions.from_value(raw_action), current_configuration
             )
 
             # get desired new_position and new_direction
@@ -484,20 +488,21 @@ class RailEnv(Environment):
                 # decelerate
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent_max_speed, new_speed))
+
             if state == TrainState.READY_TO_DEPART and movement_action_given:
-                new_configuration = (agent.initial_position, agent.initial_direction)
+                new_configuration = initial_configuration
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
                 movement_action_given or stop_action_given):
                 # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
-                new_configuration = (agent.initial_position, agent.initial_direction)
+                new_configuration = initial_configuration
             elif state.is_on_map_state():
-                new_configuration = (agent.position, agent.direction)
+                new_configuration = current_configuration
                 # transition to next cell: at end of cell and next state potentially MOVING
                 if (agent.speed_counter.is_cell_exit(new_speed)
                     and
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
                 ):
-                    new_configuration = new_position_independent, new_direction_independent
+                    new_configuration = new_configuration_independent
                 assert agent.position is not None
             else:
                 assert state.is_off_map_state() or state == TrainState.DONE
@@ -507,13 +512,13 @@ class RailEnv(Environment):
                 valid_position_direction = any(self.rail.get_transitions(new_configuration))
                 if not valid_position_direction:
                     warnings.warn(f"{new_configuration} not valid on the grid."
-                                  f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*current_position)).name}")
+                                  f" Coming from {current_configuration} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*current_position)).name}")
                 # fails if initial position has invalid direction
                 # assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
-            agent_position_level_free = self.resource_map.get_resource((agent.position, agent.direction))
-            new_configuration_level_free = self.resource_map.get_resource(new_configuration)
+            current_resource = self.resource_map.get_resource(current_configuration)
+            new_resource = self.resource_map.get_resource(new_configuration)
 
             # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
             self.temp_transition_data[i_agent].state_transition_signal.in_malfunction = agent.malfunction_handler.in_malfunction
@@ -531,15 +536,15 @@ class RailEnv(Environment):
             self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = new_speed == 0.0
 
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
-            self.temp_transition_data[i_agent].agent_position_level_free = agent_position_level_free
+            self.temp_transition_data[i_agent].agent_position_level_free = current_resource
 
             self.temp_transition_data[i_agent].new_position = new_configuration[0]
             self.temp_transition_data[i_agent].new_direction = new_configuration[1]
             self.temp_transition_data[i_agent].new_speed = new_speed
-            self.temp_transition_data[i_agent].new_position_level_free = new_configuration_level_free
+            self.temp_transition_data[i_agent].new_position_level_free = new_resource
             self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
 
-            self.motion_check.add_agent(i_agent, agent_position_level_free, new_configuration_level_free)
+            self.motion_check.add_agent(i_agent, current_resource, new_resource)
 
         # Find conflicts between trains trying to occupy same cell
         self.motion_check.find_conflicts()
