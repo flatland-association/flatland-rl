@@ -90,17 +90,14 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             for c in range(transition_map.width):
                 for d in range(4):
                     possible_transitions = transition_map.get_transitions(((r, c), d))
-                    out_degree = sum(possible_transitions)
                     for new_direction in range(4):
                         if possible_transitions[new_direction]:
                             new_position = get_new_position((r, c), new_direction)
-                            if out_degree == 1:
-                                action = "F"
-                            elif (new_direction - d) % 4 == 0:
+                            if (new_direction - d) % 4 == 0:
                                 action = "F"
                             elif (new_direction - d) % 4 == 1:
                                 action = "R"
-                            elif (new_direction - d) % 4 == 3:
+                            elif (new_direction - d) % 4 == (-1 % 4):
                                 action = "L"
                             else:
                                 raise
@@ -134,12 +131,14 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         succs = list(self.g.successors(n))
         assert 1 <= len(succs) <= 2
 
+        graph_action = None
         if len(succs) == 1:
             # -> None
             succ = list(succs)[0]
             r, c, d = succ
             new_position = r, c
             new_direction = d
+            graph_action = self.g.get_edge_data(n, succ)["action"]
         else:
             if action == RailEnvActions.MOVE_LEFT:
                 for v in succs:
@@ -147,6 +146,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                         r, c, d = v
                         new_position = r, c
                         new_direction = d
+                        graph_action = "L"
                         break
 
             elif action == RailEnvActions.MOVE_RIGHT:
@@ -155,6 +155,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                         r, c, d = v
                         new_position = r, c
                         new_direction = d
+                        graph_action = "R"
                         break
             if new_position is None:
                 for v in succs:
@@ -162,13 +163,15 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                         r, c, d = v
                         new_position = r, c
                         new_direction = d
+                        graph_action = "F"
                         break
         assert new_position is not None
+        assert graph_action is not None
         transition_valid = True
-        if action == RailEnvActions.MOVE_LEFT and new_direction != ((direction - 1) % 4):
+        if action == RailEnvActions.MOVE_LEFT and graph_action != "L":
             transition_valid = False
             preprocessed_action = RailEnvActions.MOVE_FORWARD
-        elif action == RailEnvActions.MOVE_RIGHT and new_direction != ((direction + 1) % 4):
+        elif action == RailEnvActions.MOVE_RIGHT and graph_action != "R":
             transition_valid = False
             preprocessed_action = RailEnvActions.MOVE_FORWARD
 
