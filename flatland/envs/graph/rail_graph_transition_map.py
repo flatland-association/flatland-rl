@@ -31,6 +31,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 GridNode = Tuple[Tuple[int, int], int]
 GridEdge = Tuple[GridNode, GridNode]
 
+
 class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]):
     """
     Flatland 3 Transition map represented by a directed graph.
@@ -89,10 +90,22 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             for c in range(transition_map.width):
                 for d in range(4):
                     possible_transitions = transition_map.get_transitions(((r, c), d))
+                    out_degree = sum(possible_transitions)
                     for new_direction in range(4):
                         if possible_transitions[new_direction]:
                             new_position = get_new_position((r, c), new_direction)
-                            g.add_edge((r, c, d), (*new_position, new_direction))
+                            if out_degree == 1:
+                                action = "F"
+                            elif (new_direction - d) % 4 == 0:
+                                action = "F"
+                            elif (new_direction - d) % 4 == 1:
+                                action = "R"
+                            elif (new_direction - d) % 4 == 3:
+                                action = "L"
+                            else:
+                                raise
+                            g.add_edge((r, c, d), (*new_position, new_direction),
+                                       action=action)
         return g
 
     @staticmethod
@@ -122,31 +135,33 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         assert 1 <= len(succs) <= 2
 
         if len(succs) == 1:
+            # -> None
             succ = list(succs)[0]
             r, c, d = succ
             new_position = r, c
             new_direction = d
         else:
             if action == RailEnvActions.MOVE_LEFT:
-                # find
-                new_direction = (direction - 1) % 4
-                for r, c, d in succs:
-                    if d == new_direction:
+                for v in succs:
+                    if self.g.get_edge_data(n, v)["action"] == "L":
+                        r, c, d = v
                         new_position = r, c
+                        new_direction = d
                         break
 
             elif action == RailEnvActions.MOVE_RIGHT:
-                # find
-                new_direction = (direction + 1) % 4
-                for r, c, d in succs:
-                    if d == new_direction:
+                for v in succs:
+                    if self.g.get_edge_data(n, v)["action"] == "R":
+                        r, c, d = v
                         new_position = r, c
+                        new_direction = d
                         break
             if new_position is None:
-                new_direction = direction
-                for r, c, d in succs:
-                    if d == new_direction:
+                for v in succs:
+                    if self.g.get_edge_data(n, v)["action"] == "F":
+                        r, c, d = v
                         new_position = r, c
+                        new_direction = d
                         break
         assert new_position is not None
         transition_valid = True

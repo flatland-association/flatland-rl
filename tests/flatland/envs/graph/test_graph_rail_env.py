@@ -13,7 +13,7 @@ def test_graph_transition_map_from_with_random_policy():
     # TODO restrictions:
     #   - no malfunction
     #   - homogeneous speed
-    #   - L,R,F etc. depending on underlying grid
+    #   - L,R,F etc. depending on underlying grid -> use string instead of tuple and edge attribute
     env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999, speed_ratios={1.0: 1.0})
     clone = RailEnv(30, 30)
     clone.clone_from(env)
