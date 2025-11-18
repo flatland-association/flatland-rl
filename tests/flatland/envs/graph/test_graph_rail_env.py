@@ -13,7 +13,6 @@ def test_graph_transition_map_from_with_random_policy():
     # TODO restrictions:
     #   - no malfunction
     #   - homogeneous speed
-    #   - L,R,F etc. depending on underlying grid -> use string instead of tuple and edge attribute
     env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999, speed_ratios={1.0: 1.0})
     clone = RailEnv(30, 30)
     clone.clone_from(env)
@@ -22,12 +21,18 @@ def test_graph_transition_map_from_with_random_policy():
     for r in range(env.height):
         for c in range(env.width):
             for d in range(4):
-                assert (sum(env.rail.get_transitions(((r, c), d))) > 0) == ((r, c, d) in clone.rail.g.nodes)
+                assert (sum(env.rail.get_transitions(((r, c), d))) > 0) == (f"{r, c, d}" in clone.rail.g.nodes)
                 if sum(env.rail.get_transitions(((r, c), d))) == 0:
                     continue
                 for a in range(5):
-                    assert (clone.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d)) ==
-                            env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d)))
+                    # TODO typing
+                    actual = clone.rail.check_action_on_agent(RailEnvActions.from_value(a), f"{r, c, d}")
+                    expected = env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d))
+                    new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action = expected
+
+                    expected = new_cell_valid, f"{new_position[0], new_position[1], new_direction}", transition_valid, preprocessed_action
+
+                    assert (actual == expected)
 
     # use Trajectory API for comparison
     with tempfile.TemporaryDirectory() as tmpdirname:
