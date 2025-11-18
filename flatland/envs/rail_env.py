@@ -5,7 +5,7 @@ import pickle
 import random
 import warnings
 from functools import lru_cache
-from typing import List, Optional, Dict, Tuple, Set, Any
+from typing import List, Optional, Dict, Tuple, Any
 
 import numpy as np
 
@@ -13,7 +13,7 @@ import flatland.envs.timetable_generators as ttg
 from flatland.core.effects_generator import EffectsGenerator, make_multi_effects_generator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
-from flatland.core.grid.grid_utils import Vector2D
+from flatland.core.grid.grid_resource_map import GridResourceMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_generators as mal_gen
@@ -200,7 +200,7 @@ class RailEnv(Environment):
 
         self.motion_check = ac.MotionCheck()
 
-        self.level_free_positions: Set[Vector2D] = set()
+        self.resource_map = GridResourceMap()
 
         if rewards is None:
             self.rewards = DefaultRewards()
@@ -326,7 +326,7 @@ class RailEnv(Environment):
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
             if optionals and 'level_free_positions' in optionals:
-                self.level_free_positions = optionals['level_free_positions']
+                self.resource_map.level_free_positions = optionals['level_free_positions']
 
             line = self.line_generator(self.rail, self.number_of_agents, agents_hints,
                                        self.num_resets, self.np_random)
@@ -515,12 +515,8 @@ class RailEnv(Environment):
                 # assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
-            new_position_level_free = new_position
-            if new_position in self.level_free_positions:
-                new_position_level_free = (new_position, new_direction % 2)
-            agent_position_level_free = agent.position
-            if agent.position in self.level_free_positions:
-                agent_position_level_free = (agent.position, agent.direction % 2)
+            agent_position_level_free = self.resource_map.get_resource((agent.position, agent.direction))
+            new_position_level_free = self.resource_map.get_resource((new_position, new_direction))
 
             # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
             self.temp_transition_data[i_agent].state_transition_signal.in_malfunction = agent.malfunction_handler.in_malfunction
@@ -636,7 +632,8 @@ class RailEnv(Environment):
         return True
 
     def _verify_mutually_exclusive_resource_allocation(self):
-        resources = [agent.position if agent.position not in self.level_free_positions else (*agent.position, agent.direction % 2) for agent in self.agents if
+        resources = [agent.position if agent.position not in self.resource_map.level_free_positions else (*agent.position, agent.direction % 2) for agent in
+                     self.agents if
                      agent.position is not None]
         if len(resources) != len(set(resources)):
             msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
