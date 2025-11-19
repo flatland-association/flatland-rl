@@ -273,7 +273,7 @@ class RailEnvPersister(object):
             np_random.set_state(malfunction_cached_random_state)
             env.malfunction_generator.generate_rand_numbers(np_random)
 
-        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(env.get_num_agents())}
+        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None) for i in range(env.get_num_agents())}
         for i_agent in range(env.get_num_agents()):
             env.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
