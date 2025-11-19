@@ -365,7 +365,7 @@ class RailEnv(Environment):
         # Empty the episode store of agent positions
         self.cur_episode = []
 
-        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
         for i_agent in range(self.get_num_agents()):
             self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
@@ -536,8 +536,7 @@ class RailEnv(Environment):
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
             self.temp_transition_data[i_agent].current_resource = current_resource
 
-            self.temp_transition_data[i_agent].new_position = new_configuration[0]
-            self.temp_transition_data[i_agent].new_direction = new_configuration[1]
+            self.temp_transition_data[i_agent].new_configuration = new_configuration
             self.temp_transition_data[i_agent].new_speed = new_speed
             self.temp_transition_data[i_agent].new_position_level_free = new_resource
             self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
@@ -568,8 +567,8 @@ class RailEnv(Environment):
             # position and speed_counter update
             if agent.state == TrainState.MOVING:
                 # only position update while MOVING and motion_check OK
-                agent.position = agent_transition_data.new_position
-                agent.direction = agent_transition_data.new_direction
+                agent.position = agent_transition_data.new_configuration[0]
+                agent.direction = agent_transition_data.new_configuration[1]
                 # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
                 if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
                         agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
