@@ -534,7 +534,7 @@ class RailEnv(Environment):
             self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = new_speed == 0.0
 
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
-            self.temp_transition_data[i_agent].agent_position_level_free = current_resource
+            self.temp_transition_data[i_agent].current_resource = current_resource
 
             self.temp_transition_data[i_agent].new_position = new_configuration[0]
             self.temp_transition_data[i_agent].new_direction = new_configuration[1]
@@ -555,7 +555,7 @@ class RailEnv(Environment):
             agent_transition_data = self.temp_transition_data[i_agent]
 
             # motion_check is False if agent wants to stay in the cell
-            motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.agent_position_level_free)
+            motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.current_resource)
             # Movement allowed if inside cell or at end of cell and no conflict with other trains
             movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or motion_check
 
