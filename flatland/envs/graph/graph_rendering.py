@@ -1,3 +1,5 @@
+import ast
+
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -31,7 +33,7 @@ def get_positions(g: nx.DiGraph, delta=0.2):
         3: [delta, 0.5]
     }
 
-    return {(r, c, d): (c + offsets[d][1], r + offsets[d][0]) for (r, c, d) in g}
+    return {f"{r, c, d}": (c + offsets[d][1], r + offsets[d][0]) for (r, c, d) in {ast.literal_eval(n) for n in g}}
 
 
 def add_flatland_styling(env: RailEnv, ax: plt.Axes):
