@@ -15,5 +15,5 @@ class AgentTransitionData:
     new_speed: float
     new_position_level_free: float
     preprocessed_action: RailEnvActions
-    agent_position_level_free: Tuple[int, int]
+    current_resource: Tuple[int, int]
     state_transition_signal: StateTransitionSignals
