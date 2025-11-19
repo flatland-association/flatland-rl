@@ -454,9 +454,7 @@ class RailEnv(Environment):
 
             current_configuration = (agent.position, agent.direction)
             initial_configuration = (agent.initial_position, agent.initial_direction)
-
-            agent.old_position = agent.position
-            agent.old_direction = agent.direction
+            agent.old_configuration = agent.current_configuration
 
             # Get action for the agent
             raw_action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)

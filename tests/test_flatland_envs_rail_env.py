@@ -257,10 +257,10 @@ def test_dead_end():
 
     # We try the configuration in the 4 directions:
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_position=(0, 2), initial_direction=1, direction=1, target=(0, 0), moving=False)]
+    rail_env.agents = [EnvAgent(initial_configuration=((0, 2), 1), current_configuration=(None, 1), target=(0, 0), moving=False)]
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_position=(0, 2), initial_direction=3, direction=3, target=(0, 4), moving=False)]
+    rail_env.agents = [EnvAgent(initial_configuration=((0, 2), 3), current_configuration=(None, 3), target=(0, 4), moving=False)]
 
     # In the vertical configuration:
     rail_map = np.array(
@@ -292,10 +292,10 @@ def test_dead_end():
                        obs_builder_object=GlobalObsForRailEnv())
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_position=(2, 0), initial_direction=2, direction=2, target=(0, 0), moving=False)]
+    rail_env.agents = [EnvAgent(initial_configuration=((2, 0), 2), current_configuration=(None, 2), target=(0, 0), moving=False)]
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_position=(2, 0), initial_direction=0, direction=0, target=(4, 0), moving=False)]
+    rail_env.agents = [EnvAgent(initial_configuration=((2, 0), 0), current_configuration=(None, 0), target=(4, 0), moving=False)]
 
     # TODO make assertions
 
