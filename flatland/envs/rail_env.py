@@ -517,8 +517,8 @@ class RailEnv(Environment):
                 # assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
-            current_resource = self.resource_map.get_resource(current_configuration)
-            new_resource = self.resource_map.get_resource(new_configuration)
+            agent_position_level_free = self.resource_map.get_resource((agent.position, agent.direction))
+            new_configuration_level_free = self.resource_map.get_resource(new_configuration)
 
             # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
             self.temp_transition_data[i_agent].state_transition_signal.in_malfunction = agent.malfunction_handler.in_malfunction
@@ -536,15 +536,15 @@ class RailEnv(Environment):
             self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = new_speed == 0.0
 
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
-            self.temp_transition_data[i_agent].agent_position_level_free = current_resource
+            self.temp_transition_data[i_agent].agent_position_level_free = agent_position_level_free
 
             self.temp_transition_data[i_agent].new_position = new_configuration[0]
             self.temp_transition_data[i_agent].new_direction = new_configuration[1]
             self.temp_transition_data[i_agent].new_speed = new_speed
-            self.temp_transition_data[i_agent].new_position_level_free = new_resource
+            self.temp_transition_data[i_agent].new_position_level_free = new_configuration_level_free
             self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
 
-            self.motion_check.add_agent(i_agent, current_resource, new_resource)
+            self.motion_check.add_agent(i_agent, agent_position_level_free, new_configuration_level_free)
 
         # Find conflicts between trains trying to occupy same cell
         self.motion_check.find_conflicts()
