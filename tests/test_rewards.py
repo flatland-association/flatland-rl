@@ -220,7 +220,7 @@ def test_rewards_departed_but_never_arrived():
     agent.position = (2, 2)
     agent.direction = 2
     agent.state = TrainState.STOPPED
-    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, None, None, None, StateTransitionSignals()),
+    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, None, None, StateTransitionSignals()),
                         distance_map=distance_map,
                         elapsed_steps=5)
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -99 - 15
