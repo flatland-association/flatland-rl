@@ -1,11 +1,10 @@
-from typing import List, Tuple
+from typing import List
 
 import networkx as nx
 from attr import attrs, attrib
 
-from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
-
-GridNode = Tuple[int, int, int]  # row, column, heading (at cell entry)
+from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap, GridNode
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 
 @attrs
@@ -27,8 +26,8 @@ class DecisionPointGraphEdgeData:
 
 class DecisionPointGraph:
     """
-    Overlay on top of Flatland 3 grid where consecutive cells where agents cannot choose between alternative paths are collapsed into a single edge.
-    A reference to the underlying grid nodes is maintained.
+    Overlay on top of Flatland 3 grid where agents need to choose between alternative paths before entering are collapsed into a single edge.
+    A reference to the underlying grid nodes is maintained: all but last positions have only one neighbor.
     The edge length is the number of cells "collapsed" into this edge.
     See `DecisionPointGraphEdgeData`.
 
@@ -86,7 +85,7 @@ class DecisionPointGraph:
                 for u, v, in zip(branch, branch[1:]):
                     closed.add((u, v))
 
-        # special cases closed loops
+        # special cases closed loops (actually not a decision point, i.e. only one micro successor)
         open = set(micro.edges) - closed
         while not len(open) == 0:
             u, v = next(iter(open))
@@ -96,3 +95,22 @@ class DecisionPointGraph:
                 open.discard((u_, v_))
 
         return DecisionPointGraph(g)
+
+    @staticmethod
+    def micro_edge_to_waypoint(p1: GridNode, p2: GridNode) -> Waypoint:
+        """
+        Micro edge ((u,v,_), (_,_,d)) <=> directed cell (u,v,d).
+
+        Parameters
+        ----------
+        p1 : GridNode
+            starting vertex of directed edge
+        p2 : GridNode
+            end vertex of directed edge
+
+        Returns
+        -------
+        Waypoint
+            the waypoint (agent position and direction), identifying the cell occupied and direction in which the agent is moving (specifying the next neighbor cell).
+        """
+        return Waypoint(position=(p1[0], p1[1]), direction=p2[2])
