@@ -1,6 +1,7 @@
 import ast
 import os
 import uuid
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional, Tuple, Any, Dict
 
@@ -221,6 +222,19 @@ class Trajectory:
         self._trains_rewards_dones_infos_collect.append({
             'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'reward': reward, 'info': info, 'done': done
         })
+
+    def build_cache(self) -> Tuple[dict, dict, dict]:
+        action_cache = defaultdict(lambda: defaultdict(dict))
+        for item in self.actions[self.actions["episode_id"] == self.ep_id].to_records():
+            action_cache[item["env_time"]][item["agent_id"]] = RailEnvActions.from_value(item["action"])
+        position_cache = defaultdict(lambda: defaultdict(dict))
+        for item in self.trains_positions[self.trains_positions["episode_id"] == self.ep_id].to_records():
+            p, d = item['position']
+            position_cache[item["env_time"]][item["agent_id"]] = (p, d)
+        trains_rewards_dones_infos_cache = defaultdict(lambda: defaultdict(dict))
+        for data in self.trains_rewards_dones_infos[self.trains_rewards_dones_infos["episode_id"] == self.ep_id].to_records():
+            trains_rewards_dones_infos_cache[data["env_time"]][data["agent_id"]] = (data["reward"], data["done"], data["info"])
+        return action_cache, position_cache, trains_rewards_dones_infos_cache
 
     def position_lookup(self, env_time: int, agent_id: int) -> Tuple[Tuple[int, int], int]:
         """Method used to retrieve the stored position (if available).

@@ -7,6 +7,7 @@ import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import Rewards
 from flatland.trajectories.trajectories import Trajectory
 from flatland.utils.cli_utils import resolve_type
@@ -65,9 +66,11 @@ class TrajectoryEvaluator:
         n_agents = env.get_num_agents()
         assert len(env.agents) == n_agents
 
+        action_cache, position_cache, trains_rewards_dones_infos_cache = self.trajectory.build_cache()
+
         done = False
         for elapsed_before_step in tqdm.tqdm(range(start_step, end_step), **tqdm_kwargs):
-            action = {agent_id: self.trajectory.action_lookup(env_time=elapsed_before_step, agent_id=agent_id) for agent_id in range(n_agents)}
+            action = {agent_id: action_cache[elapsed_before_step].get(agent_id, RailEnvActions.MOVE_FORWARD) for agent_id in range(n_agents)}
             assert env._elapsed_steps == elapsed_before_step
             _, rewards, dones, infos = env.step(action)
             if self.callbacks is not None:
@@ -79,7 +82,7 @@ class TrajectoryEvaluator:
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
-                expected_position = self.trajectory.position_lookup(env_time=elapsed_after_step, agent_id=agent_id)
+                expected_position = position_cache[elapsed_after_step][agent_id]
                 actual_position = (agent.position, agent.direction)
                 assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
                                                              f"- actual_position:\t{actual_position}\n" \
@@ -94,8 +97,7 @@ class TrajectoryEvaluator:
                     actual_reward = rewards[agent_id]
                     actual_done = dones[agent_id]
                     actual_info = {k: v[agent_id] for k, v in infos.items()}
-                    expected_reward, expected_done, expected_info = self.trajectory.trains_rewards_dones_infos_lookup(env_time=elapsed_after_step,
-                                                                                                                      agent_id=agent_id)
+                    expected_reward, expected_done, expected_info = trains_rewards_dones_infos_cache[elapsed_after_step][agent_id]
                     if not skip_rewards:
                         assert np.allclose(actual_reward, expected_reward), (elapsed_after_step, agent_id, actual_reward, expected_reward)
                     assert actual_done == expected_done, (elapsed_after_step, agent_id, actual_done, expected_done)
