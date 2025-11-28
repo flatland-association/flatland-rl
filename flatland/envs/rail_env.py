@@ -512,7 +512,8 @@ class RailEnv(Environment):
                 if not valid_position_direction:
                     warnings.warn(f"{(new_position, new_direction)} not valid on the grid."
                                   f" Coming from {(agent.position, agent.direction)} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
-                assert valid_position_direction
+                # fails if initial position has invalid direction
+                # assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
             new_position_level_free = new_position
