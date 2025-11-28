@@ -72,7 +72,6 @@ dev = [
     "pytest-retry",
     "seaborn",
     "snakeviz",
-    "testcontainers",
     "tox",
 ]
 ml = [
