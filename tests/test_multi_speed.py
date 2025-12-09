@@ -71,6 +71,7 @@ def test_multi_speed_init():
 
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position = env.agents[a_idx].initial_position
+        env.agents[a_idx].direction = env.agents[a_idx].initial_direction
         env.agents[a_idx]._set_state(TrainState.MOVING)
 
     # Here you can also further enhance the provided observation by means of normalization

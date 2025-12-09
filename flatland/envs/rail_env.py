@@ -674,11 +674,13 @@ class RailEnv(Environment):
             # TODO test for configuration None
             if agent.position is None:
                 pos = (0, 0)
+                dir = 0
             else:
                 pos = (int(agent.position[0]), int(agent.position[1]))
+                dir = int(agent.direction)
             # print("pos:", pos, type(pos[0]))
             list_agents_state.append([
-                *pos, int(agent.direction),
+                *pos, dir,
                 agent.malfunction_handler.malfunction_down_counter,
                 agent.state.value,
                 int(agent.position in self.motion_check.deadlocked),

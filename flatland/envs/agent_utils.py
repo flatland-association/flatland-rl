@@ -155,8 +155,8 @@ class EnvAgent:
         """
         Resets the agents to their initial values of the episode. Called after ScheduleTime generation.
         """
-        # TODO: set direction to None
-        self.current_configuration = (None, self.initial_direction)
+        # TODO use single None instead
+        self.current_configuration = (None, None)
         self.old_configuration = (None, None)
         self.moving = False
         self.arrival_time = None

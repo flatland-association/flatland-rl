@@ -128,10 +128,13 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
         for agent in agents:
             if agent.state.is_off_map_state():
                 agent_virtual_position = agent.initial_position
+                agent_virtual_direction = agent.initial_direction
             elif agent.state.is_on_map_state():
                 agent_virtual_position = agent.position
+                agent_virtual_direction = agent.direction
             elif agent.state == TrainState.DONE:
                 agent_virtual_position = agent.target
+                agent_virtual_direction = agent.direction
             else:
 
                 prediction = np.zeros(shape=(self.max_depth + 1, 5))
@@ -140,7 +143,6 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
                 prediction_dict[agent.handle] = prediction
                 continue
 
-            agent_virtual_direction = agent.direction
             # assume constant max_speed
             agent_speed = agent.speed_counter.max_speed
             times_per_cell = int(np.reciprocal(agent_speed))

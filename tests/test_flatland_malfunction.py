@@ -35,14 +35,17 @@ class SingleAgentNavigationObs(ObservationBuilder):
 
         if agent.state.is_off_map_state():
             agent_virtual_position = agent.initial_position
+            agent_virtual_direction = agent.initial_direction
         elif agent.state.is_on_map_state():
             agent_virtual_position = agent.position
+            agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
             agent_virtual_position = agent.target
+            agent_virtual_direction = agent.direction
         else:
             return None
 
-        possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent.direction))
+        possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent_virtual_direction))
         num_transitions = np.count_nonzero(possible_transitions)
 
         # Start from the current orientation, and see which transitions are available;
@@ -52,7 +55,7 @@ class SingleAgentNavigationObs(ObservationBuilder):
             observation = [0, 1, 0]
         else:
             min_distances = []
-            for direction in [(agent.direction + i) % 4 for i in range(-1, 2)]:
+            for direction in [(agent_virtual_direction + i) % 4 for i in range(-1, 2)]:
                 if possible_transitions[direction]:
                     new_position = get_new_position(agent_virtual_position, direction)
                     min_distances.append(
@@ -86,6 +89,7 @@ def test_malfunction_process():
     obs, info = env.reset(False, False, random_seed=10)
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position = env.agents[a_idx].initial_position
+        env.agents[a_idx].direction = env.agents[a_idx].initial_direction
         env.agents[a_idx].state = TrainState.MOVING
 
     agent_halts = 0
@@ -345,7 +349,7 @@ def test_initial_malfunction_stop_moving():
         replay=[
             Replay(  # 0
                 position=None,
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 state=TrainState.READY_TO_DEPART,
 
                 action=RailEnvActions.MOVE_FORWARD,
@@ -356,7 +360,7 @@ def test_initial_malfunction_stop_moving():
             ),
             Replay(  # 1
                 position=None,
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
                 action=RailEnvActions.DO_NOTHING,
@@ -370,7 +374,7 @@ def test_initial_malfunction_stop_moving():
             #
             Replay(  # 2
                 position=None,
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
                 action=RailEnvActions.STOP_MOVING,
@@ -381,7 +385,7 @@ def test_initial_malfunction_stop_moving():
             # need valid movement action to enter the grid
             Replay(  # 3
                 position=None,
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION_OFF_MAP -> MOVING needs move action
@@ -468,7 +472,7 @@ def test_initial_malfunction_do_nothing():
         replay=[
             Replay(  # 0
                 position=None,
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 action=RailEnvActions.MOVE_FORWARD,
                 set_malfunction=3,
                 malfunction=3,
@@ -477,7 +481,7 @@ def test_initial_malfunction_do_nothing():
             ),
             Replay(  # 1
                 position=None,
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 action=None,
                 malfunction=2,
                 reward=env.step_penalty,  # full step penalty while malfunctioning
@@ -485,7 +489,7 @@ def test_initial_malfunction_do_nothing():
             ),
             Replay(  # 2
                 position=None,
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 malfunction=1,
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
@@ -495,7 +499,7 @@ def test_initial_malfunction_do_nothing():
             ),
             Replay(  # 3
                 position=None,
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 malfunction=0,
                 distance=0,
                 speed=1,  # irrelevant
@@ -623,6 +627,7 @@ def test_last_malfunction_step():
     assert len(set([a.initial_position for a in env.agents])) == 1
     for a_idx in range(len(env.agents)):
         env.agents[a_idx].position = env.agents[a_idx].initial_position
+        env.agents[a_idx].direction = env.agents[a_idx].initial_direction
         env.agents[a_idx].state = TrainState.MOVING
     env.agents[0].malfunction_handler.malfunction_down_counter = 0
 

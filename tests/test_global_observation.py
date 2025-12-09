@@ -66,7 +66,7 @@ def test_get_global_observation():
                         "agent {} in state {} at {} expected to contain own direction {}, found {}" \
                             .format(i, agent.state, (r, c), agent.direction, obs_agents_state[(r, c)][0])
                 elif (agent.state == TrainState.READY_TO_DEPART) and (r, c) == agent.initial_position:
-                    assert np.isclose(obs_agents_state[(r, c)][0], agent.direction), \
+                    assert (obs_agents_state[(r, c)][0] and agent.direction is None) or np.isclose(obs_agents_state[(r, c)][0], agent.initial_direction), \
                         "agent {} in state {} at {} expected to contain own direction {}, found {}" \
                             .format(i, agent.state, (r, c), agent.direction, obs_agents_state[(r, c)][0])
                 else:

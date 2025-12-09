@@ -150,7 +150,7 @@ def test_shortest_path_predictor(rendering=False):
 
     # compute the observations and predictions
     distance_map = env.distance_map.get()
-    distance_on_map = distance_map[0, agent.initial_position[0], agent.initial_position[1], agent.direction]
+    distance_on_map = distance_map[0, agent.initial_position[0], agent.initial_position[1], agent.initial_direction]
     assert distance_on_map == 5.0, "found {} instead of {}".format(distance_on_map, 5.0)
 
     paths = env.distance_map.get_shortest_paths()[0]
@@ -280,9 +280,11 @@ def test_shortest_path_predictor_conflicts(rendering=False):
 
     observations, info = env.reset(False, False)
 
-    env.agents[0].position = (5, 6)  # south dead-end
+    env.agents[0].position = env.agents[0].initial_position
+    env.agents[0].direction = env.agents[0].initial_direction
+    env.agents[1].position = env.agents[1].initial_position
+    env.agents[1].direction = env.agents[1].initial_direction
     env.agent_positions[env.agents[0].position] = 0
-    env.agents[1].position = (3, 8)  # east dead-end
     env.agent_positions[env.agents[1].position] = 1
     env.agents[0]._set_state(TrainState.MOVING)
     env.agents[1]._set_state(TrainState.MOVING)
