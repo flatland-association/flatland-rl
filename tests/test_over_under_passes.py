@@ -79,10 +79,10 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
         [Waypoint(position=(3, 3), direction=1), Waypoint(position=(3, 2), direction=2)],
         [Waypoint(position=(3, 4), direction=1), Waypoint(position=(4, 2), direction=2)],
         [Waypoint(position=(3, 5), direction=1), Waypoint(position=(5, 2), direction=2)],
-        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(0, 0), direction=0)],
-        [Waypoint(position=(3, 7), direction=1), Waypoint(position=(0, 0), direction=0)],
-        [Waypoint(position=(3, 8), direction=1), Waypoint(position=(0, 0), direction=0)],
-        [Waypoint(position=(0, 0), direction=0), Waypoint(position=(0, 0), direction=0)]
+        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 7), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 8), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(None, None), direction=None), Waypoint(position=(None, None), direction=None)]
     ]
     assert waypoints == expected, waypoints
 
@@ -155,11 +155,11 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
         [Waypoint(position=(3, 2), direction=1), Waypoint(position=(3, 2), direction=2)],
         [Waypoint(position=(3, 3), direction=1), Waypoint(position=(4, 2), direction=2)],
         [Waypoint(position=(3, 4), direction=1), Waypoint(position=(5, 2), direction=2)],
-        [Waypoint(position=(3, 5), direction=1), Waypoint(position=(0, 0), direction=0)],
-        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(0, 0), direction=0)],
-        [Waypoint(position=(3, 7), direction=1), Waypoint(position=(0, 0), direction=0)],
-        [Waypoint(position=(3, 8), direction=1), Waypoint(position=(0, 0), direction=0)],
-        [Waypoint(position=(0, 0), direction=0), Waypoint(position=(0, 0), direction=0)]
+        [Waypoint(position=(3, 5), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 7), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 8), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(None, None), direction=None), Waypoint(position=(None, None), direction=None)]
     ]
     assert expected == waypoints, waypoints
 
