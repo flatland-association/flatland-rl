@@ -11,25 +11,25 @@ from flatland.envs.timetable_generators import timetable_generator
 
 def test_timetable_generator():
     env_agents = [
-        EnvAgent(handle=0, initial_position=(11, 40), initial_direction=3, target=(39, 8), direction=3, waypoints_latest_arrival=None,
+        EnvAgent(handle=0, initial_configuration=((11, 40), 3), target=(39, 8), current_configuration=(None, 3), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
-        EnvAgent(handle=1, initial_position=(38, 8), initial_direction=1, target=(10, 40), direction=1, waypoints_latest_arrival=None,
+        EnvAgent(handle=1, initial_configuration=((38, 8), 1), target=(10, 40), current_configuration=(None, 1), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
-        EnvAgent(handle=2, initial_position=(17, 5), initial_direction=3, target=(42, 22), direction=3, waypoints_latest_arrival=None,
+        EnvAgent(handle=2, initial_configuration=((17, 5), 3), target=(42, 22), current_configuration=(None, 3), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
-        EnvAgent(handle=3, initial_position=(41, 22), initial_direction=3, target=(18, 5), direction=3, waypoints_latest_arrival=None,
+        EnvAgent(handle=3, initial_configuration=((41, 22), 3), target=(18, 5), current_configuration=(None, 3), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
-        EnvAgent(handle=4, initial_position=(11, 40), initial_direction=1, target=(39, 8), direction=1, waypoints_latest_arrival=None,
+        EnvAgent(handle=4, initial_configuration=((11, 40), 1), target=(39, 8), current_configuration=(None, 1), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
-        EnvAgent(handle=5, initial_position=(38, 8), initial_direction=3, target=(12, 40), direction=3, waypoints_latest_arrival=None,
+        EnvAgent(handle=5, initial_configuration=((38, 8), 3), target=(12, 40), current_configuration=(None, 3), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
-        EnvAgent(handle=6, initial_position=(38, 8), initial_direction=1, target=(31, 27), direction=1, waypoints_latest_arrival=None,
+        EnvAgent(handle=6, initial_configuration=((38, 8), 1), target=(31, 27), current_configuration=(None, 1), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
-        EnvAgent(handle=7, initial_position=(31, 26), initial_direction=0, target=(39, 8), direction=0, waypoints_latest_arrival=None,
+        EnvAgent(handle=7, initial_configuration=((31, 26), 0), target=(39, 8), current_configuration=(None, 0), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
-        EnvAgent(handle=8, initial_position=(41, 22), initial_direction=1, target=(8, 27), direction=1, waypoints_latest_arrival=None,
+        EnvAgent(handle=8, initial_configuration=((41, 22), 1), target=(8, 27), current_configuration=(None, 1), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
-        EnvAgent(handle=9, initial_position=(9, 27), initial_direction=3, target=(44, 22), direction=3, waypoints_latest_arrival=None,
+        EnvAgent(handle=9, initial_configuration=((9, 27), 3), target=(44, 22), current_configuration=(None, 3), waypoints_latest_arrival=None,
                  waypoints_earliest_departure=None),
     ]
     agents_hints = {
@@ -282,34 +282,34 @@ def test_timetable_generator():
 
 def test_timetable_generator_intermediate():
     env_agents = [
-        EnvAgent(handle=0, initial_position=(11, 40), initial_direction=3, target=(27, 41), direction=3,
+        EnvAgent(handle=0, initial_configuration=((11, 40), 3), target=(27, 41), current_configuration=(None, 3),
                  waypoints=[Waypoint(position=(11, 40), direction=3), Waypoint(position=(38, 8), direction=1), Waypoint(position=(27, 41), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
-        EnvAgent(handle=1, initial_position=(27, 40), initial_direction=0, target=(12, 40), direction=0,
+        EnvAgent(handle=1, initial_configuration=((27, 40), 0), target=(12, 40), current_configuration=(None, 0),
                  waypoints=[Waypoint(position=(27, 40), direction=0), Waypoint(position=(38, 8), direction=3), Waypoint(position=(12, 40), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
-        EnvAgent(handle=2, initial_position=(20, 26), initial_direction=2, target=(10, 40), direction=2,
+        EnvAgent(handle=2, initial_configuration=((20, 26), 2), target=(10, 40), current_configuration=(None, 2),
                  waypoints=[Waypoint(position=(20, 26), direction=2), Waypoint(position=(9, 27), direction=3), Waypoint(position=(10, 40), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
-        EnvAgent(handle=3, initial_position=(11, 40), initial_direction=1, target=(20, 27), direction=1,
+        EnvAgent(handle=3, initial_configuration=((11, 40), 1), target=(20, 27), current_configuration=(None, 1),
                  waypoints=[Waypoint(position=(11, 40), direction=1), Waypoint(position=(9, 27), direction=3), Waypoint(position=(20, 27), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
-        EnvAgent(handle=4, initial_position=(38, 8), initial_direction=1, target=(45, 34), direction=1,
+        EnvAgent(handle=4, initial_configuration=((38, 8), 1), target=(45, 34), current_configuration=(None, 1),
                  waypoints=[Waypoint(position=(38, 8), direction=1), Waypoint(position=(31, 26), direction=0), Waypoint(position=(45, 34), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
-        EnvAgent(handle=5, initial_position=(44, 34), initial_direction=1, target=(39, 8), direction=1,
+        EnvAgent(handle=5, initial_configuration=((44, 34), 1), target=(39, 8), current_configuration=(None, 1),
                  waypoints=[Waypoint(position=(44, 34), direction=1), Waypoint(position=(31, 26), direction=0), Waypoint(position=(39, 8), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
-        EnvAgent(handle=6, initial_position=(17, 5), initial_direction=1, target=(12, 40), direction=1,
+        EnvAgent(handle=6, initial_configuration=((17, 5), 1), target=(12, 40), current_configuration=(None, 1),
                  waypoints=[Waypoint(position=(17, 5), direction=1), Waypoint(position=(41, 22), direction=3), Waypoint(position=(12, 40), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
-        EnvAgent(handle=7, initial_position=(9, 40), initial_direction=1, target=(18, 5), direction=1,
+        EnvAgent(handle=7, initial_configuration=((9, 40), 1), target=(18, 5), current_configuration=(None, 1),
                  waypoints=[Waypoint(position=(9, 40), direction=1), Waypoint(position=(41, 22), direction=3), Waypoint(position=(18, 5), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
-        EnvAgent(handle=8, initial_position=(38, 8), initial_direction=1, target=(20, 25), direction=1,
+        EnvAgent(handle=8, initial_configuration=((38, 8), 1), target=(20, 25), current_configuration=(None, 1),
                  waypoints=[Waypoint(position=(38, 8), direction=1), Waypoint(position=(41, 22), direction=1), Waypoint(position=(20, 25), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
-        EnvAgent(handle=9, initial_position=(20, 24), initial_direction=0, target=(39, 8), direction=0,
+        EnvAgent(handle=9, initial_configuration=((20, 24), 0), target=(39, 8), current_configuration=(None, 0),
                  waypoints=[Waypoint(position=(20, 24), direction=0), Waypoint(position=(41, 22), direction=3), Waypoint(position=(39, 8), direction=None)],
                  waypoints_latest_arrival=None, waypoints_earliest_departure=None),
     ]
@@ -318,7 +318,7 @@ def test_timetable_generator_intermediate():
         a.waypoints = [[wp] for wp in a.waypoints]
     for a in env_agents:
         print(
-            f"EnvAgent(handle={a.handle}, initial_position={a.initial_position}, initial_direction={a.initial_direction}, target={a.target}, direction={a.direction}, waypoints={a.waypoints}, waypoints_latest_arrival=None, waypoints_earliest_departure=None),")
+            f"EnvAgent(handle={a.handle}, initial_configuration=({a.initial_position},{a.initial_direction}),  target={a.target}, current_configuration=(None,{a.direction}),  waypoints={a.waypoints}, waypoints_latest_arrival=None, waypoints_earliest_departure=None),")
     agents_hints = {
         'city_positions': [(31, 26), (10, 40), (44, 34), (7, 27), (17, 5), (27, 41), (20, 24), (38, 8), (8, 16), (42, 22)],
         'train_stations': [[((31, 26), 0), ((31, 27), 1)], [((9, 40), 0), ((10, 40), 1), ((11, 40), 2), ((12, 40), 3)],

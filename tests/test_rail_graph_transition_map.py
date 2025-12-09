@@ -1,3 +1,5 @@
+import ast
+
 import numpy as np
 import pytest
 
@@ -150,9 +152,11 @@ def test_grid_to_digraph(transition, expected_edges):
     gtm.grid = rail_map
 
     g = GraphTransitionMap.grid_to_digraph(gtm)
-    print(list(g.edges))
+    actual_edges = g.edges
+    actual_edges = {(ast.literal_eval(u), ast.literal_eval(v)) for u, v in actual_edges}
+    print(list(actual_edges))
     print(expected_edges)
-    print(f"surplus edges: {set(g.edges) - set(expected_edges)}")
-    print(f"missing edges: {set(expected_edges) - set(g.edges)}")
-    assert len(g.edges) == len(expected_edges)
-    assert set(g.edges) == set(expected_edges)
+    print(f"surplus edges: {set(actual_edges) - set(expected_edges)}")
+    print(f"missing edges: {set(expected_edges) - set(actual_edges)}")
+    assert len(actual_edges) == len(expected_edges)
+    assert set(actual_edges) == set(expected_edges)
