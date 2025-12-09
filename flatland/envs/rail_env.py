@@ -671,10 +671,10 @@ class RailEnv(Environment):
             agent = self.agents[i_agent]
             # the int cast is to avoid numpy types which may cause problems with msgpack
             # in env v2, agents may have position None, before starting
-            # TODO test for configuration None
+            # TODO test for configuration None instead
             if agent.position is None:
-                pos = (0, 0)
-                dir = 0
+                pos = (None, None)
+                dir = None
             else:
                 pos = (int(agent.position[0]), int(agent.position[1]))
                 dir = int(agent.direction)
