@@ -80,7 +80,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
 
                         if distance_to_target < shortest_distance:
                             shortest_distance = distance_to_target
-                            actions_to_be_taken_when_facing_north = {
+                            actions_to_be_taken = {
                                 Grid4TransitionsEnum.NORTH: RailEnvActions.MOVE_FORWARD,
                                 Grid4TransitionsEnum.EAST: RailEnvActions.MOVE_RIGHT,
                                 Grid4TransitionsEnum.WEST: RailEnvActions.MOVE_LEFT,
@@ -88,8 +88,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
                             }
                             print("   improved (direction) -> {}".format(exit_direction))
 
-                            actions[agent.handle] = actions_to_be_taken_when_facing_north[
-                                (exit_direction - agent.direction) % len(rail.transitions.get_direction_enum())]
+                            actions[agent.handle] = actions_to_be_taken[(exit_direction - agent.direction) % len(rail.transitions.get_direction_enum())]
                             expected_next_position[agent.handle] = neighbour
                             print("   improved (action) -> {}".format(actions[agent.handle]))
     _, rewards, dones, _ = env.step(actions)
@@ -128,8 +127,10 @@ def test_reward_function_conflict(rendering=False):
     env.agents[1].moving = True
     env.agents[0]._set_state(TrainState.MOVING)
     env.agents[1]._set_state(TrainState.MOVING)
-    env.agents[0].position = (5, 6)
-    env.agents[1].position = (3, 8)
+    env.agents[0].position = env.agents[0].initial_position
+    env.agents[0].direction = env.agents[0].initial_direction
+    env.agents[1].position = env.agents[1].initial_position
+    env.agents[1].direction = env.agents[1].initial_direction
     print("\n")
     print(env.agents[0])
     print(env.agents[1])
@@ -197,18 +198,19 @@ def test_reward_function_waiting(rendering=False):
     # set the initial position
     agent = env.agents[0]
     agent.initial_position = (3, 8)  # east dead-end
+    agent.initial_direction = 3  # west
     agent.position = (3, 8)  # east dead-end
     agent.direction = 3  # west
-    agent.initial_direction = 3  # west
+
     agent.target = (3, 1)  # west dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
 
     agent = env.agents[1]
     agent.initial_position = (5, 6)  # south dead-end
+    agent.initial_direction = 0  # north
     agent.position = (5, 6)  # south dead-end
     agent.direction = 0  # north
-    agent.initial_direction = 0  # north
     agent.target = (3, 8)  # east dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
@@ -218,8 +220,10 @@ def test_reward_function_waiting(rendering=False):
     env.agents[1].moving = True
     env.agents[0]._set_state(TrainState.MOVING)
     env.agents[1]._set_state(TrainState.MOVING)
-    env.agents[0].position = (3, 8)
-    env.agents[1].position = (5, 6)
+    env.agents[0].position = env.agents[0].initial_position
+    env.agents[0].direction = env.agents[0].initial_direction
+    env.agents[1].position = env.agents[1].initial_position
+    env.agents[1].direction = env.agents[1].initial_direction
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")

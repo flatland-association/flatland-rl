@@ -96,7 +96,6 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 # set the initial position
                 agent.initial_position = test_config.initial_position
                 agent.initial_direction = test_config.initial_direction
-                agent.direction = test_config.initial_direction
                 agent.target = test_config.target
                 agent.speed_counter = SpeedCounter(speed=test_config.speed,
                                                    max_speed=test_config.max_speed if test_config.max_speed is not None else test_config.speed)
@@ -112,6 +111,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 assert len(set([a.initial_position for a in env.agents])) == len(env.agents)
                 for a_idx in range(len(env.agents)):
                     env.agents[a_idx].position = env.agents[a_idx].initial_position
+                    env.agents[a_idx].direction = env.agents[a_idx].initial_direction
                     env.agents[a_idx]._set_state(TrainState.MOVING)
 
         def _assert(a, actual, expected, msg, close: bool = True):
