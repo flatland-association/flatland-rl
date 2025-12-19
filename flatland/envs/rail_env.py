@@ -418,9 +418,12 @@ class RailEnv(Environment):
             ((self._max_episode_steps is not None) and (self._elapsed_steps >= self._max_episode_steps)):
 
             for i_agent, agent in enumerate(self.agents):
-                self.rewards_dict[i_agent] = self.rewards.cumulate(
-                    self.rewards_dict[i_agent], self.rewards.end_of_episode_reward(agent, self.distance_map, self._elapsed_steps)
-                )
+                # Only calculate end-of-episode reward for agents that didn't finish
+                # Agents that finished during the episode already got their reward in step_reward()
+                if agent.state != TrainState.DONE:
+                    self.rewards_dict[i_agent] = self.rewards.cumulate(
+                        self.rewards_dict[i_agent], self.rewards.end_of_episode_reward(agent, self.distance_map, self._elapsed_steps)
+                    )
 
                 self.dones[i_agent] = True
 
