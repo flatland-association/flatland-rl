@@ -154,10 +154,9 @@ class DefaultRewards(Rewards[float]):
         return reward
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> float:
-        # Called only for agents that didn't finish (filtered by rail_env.py)
-        # Verify precondition: agent should not be DONE
-        assert agent.state != TrainState.DONE, \
-            "end_of_episode_reward should not be called for DONE agents (they already got their reward in step_reward)"
+        # If agent finished during episode, reward already calculated in step_reward()
+        if agent.state == TrainState.DONE:
+            return 0
         # Calculate penalty for not reaching target before episode end
         return self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps)
 
