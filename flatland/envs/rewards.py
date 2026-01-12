@@ -149,9 +149,12 @@ class DefaultRewards(Rewards[float]):
             old_wp = Waypoint(agent.old_position, agent.old_direction)
             if wp not in self.arrivals[agent.handle]:
                 self.arrivals[agent.handle][wp] = elapsed_steps
-                # Only record departure from old position if we actually moved
-                if old_wp != wp:
+                # Only record departure from old position when we arrive from on-map position
+                if old_wp.position is not None:
                     self.departures[agent.handle][old_wp] = elapsed_steps
+        elif agent.old_position is not None:
+            old_wp = Waypoint(agent.old_position, agent.old_direction)
+            self.departures[agent.handle][old_wp] = elapsed_steps
 
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED and not agent_transition_data.state_transition_signal.stop_action_given:
             reward += -1 * agent_transition_data.speed * self.crash_penalty_factor

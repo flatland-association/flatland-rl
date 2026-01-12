@@ -466,16 +466,25 @@ def test_departure_only_when_moving():
 
     transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
 
+    # agent off map
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=1)
+    off_wp = Waypoint(None, 0)
+    assert off_wp not in rewards.arrivals[agent.handle]
+    assert off_wp not in rewards.departures[agent.handle]
+
     # Agent at initial position
     agent.position = (5, 5)
     agent.direction = 0
-    agent.old_position = (5, 5)  # Same as current (spawned here)
+    agent.old_position = None
     agent.old_direction = 0
 
     # First step - arrival recorded, but no departure (agent hasn't left yet)
-    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=1)
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=2)
+
     wp = Waypoint((5, 5), 0)
-    assert wp in rewards.arrivals[agent.handle]
+    assert off_wp not in rewards.arrivals[agent.handle]
+    assert off_wp not in rewards.departures[agent.handle]
+    assert wp in rewards.arrivals[agent.handle], "Should record arrival when agent enters map"
     assert wp not in rewards.departures[agent.handle], "Should not record departure when agent hasn't moved"
 
     # Agent moves to new position
@@ -485,9 +494,27 @@ def test_departure_only_when_moving():
     agent.direction = 0
 
     # Now departure from old position should be recorded
-    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=2)
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=3)
+    assert off_wp not in rewards.arrivals[agent.handle]
+    assert off_wp not in rewards.departures[agent.handle]
     assert wp in rewards.departures[agent.handle], "Departure should be recorded when agent moves"
-    assert rewards.departures[agent.handle][wp] == 2
+    assert rewards.departures[agent.handle][wp] == 3
+    wp = Waypoint((5, 6), 0)
+    assert wp in rewards.arrivals[agent.handle], "Arrival should be recorded when agent moves"
+    assert rewards.arrivals[agent.handle][wp] == 3
+
+    # Agent arrives at target
+    agent.old_position = (5, 6)
+    agent.old_direction = 0
+    agent.position = None
+    agent.direction = 0
+
+    # Now departure from old position should be recorded, but no arrival for None
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=4)
+    assert off_wp not in rewards.arrivals[agent.handle]
+    assert off_wp not in rewards.departures[agent.handle]
+    assert wp in rewards.departures[agent.handle], "Departure should be recorded when agent moves off map"
+    assert rewards.departures[agent.handle][wp] == 4
 
 
 def test_waypoint_comparison_uses_waypoint_objects():
