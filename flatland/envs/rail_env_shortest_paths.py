@@ -10,7 +10,7 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.utils.ordered_set import OrderedSet
 
 
-def get_k_shortest_paths(env,
+def get_k_shortest_paths(env: "RailEnv",
                          source_position: Tuple[int, int],
                          source_direction: int,
                          target_position=Tuple[int, int],

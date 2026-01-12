@@ -1,5 +1,6 @@
 """Line generators: Railway Undertaking (RU) / Eisenbahnverkehrsunternehmen (EVU)."""
 import pickle
+import warnings
 from pathlib import Path
 from typing import Tuple, List, Callable, Mapping, Optional, Any, Union
 
@@ -8,6 +9,7 @@ from numpy.random.mtrand import RandomState
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid_utils import IntVector2DArray
 from flatland.envs import persistence
+from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.timetable_utils import Line
@@ -168,7 +170,31 @@ class SparseLineGen(BaseLineGen):
         agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, None)]] for
                            i, (pas, das, target)
                            in enumerate(zip(agent_positions, agent_directions, agent_targets))}
-        return Line(agent_waypoints=agent_waypoints, agent_speeds=agent_speeds)
+
+        if self.line_length == 2:
+            return Line(agent_waypoints, agent_speeds)
+
+        # fix intermediate directions in lines:
+        new_agent_waypoints = {}
+        for agent_id, agent_waypoints_ in agent_waypoints.items():
+            new_agent_waypoints[agent_id] = [agent_waypoints_[0]]
+            previous_direction = None
+            for wpp1, wpp2 in zip(agent_waypoints_, agent_waypoints_[1:]):
+                wp1 = wpp1[0]
+                wp2 = wpp2[0]
+
+                k_sh = get_k_shortest_paths(None, wp1.position, previous_direction if previous_direction is not None else wp1.direction, wp2.position,
+                                            rail=rail)
+                # N.B. depending on how the cities are placed in the rail, there may be no path forward, truncate for now
+                if len(k_sh) == 0:
+                    warnings.warn(
+                        f"Could not find path connecting all {self.line_length} cities for agent {agent_id}. Truncating after {len(new_agent_waypoints)}.")
+                    break
+                shortest_path = k_sh[0]
+                previous_direction = shortest_path[-1].direction
+                new_agent_waypoints[agent_id].append([shortest_path[-1]])
+            new_agent_waypoints[agent_id][-1] = [Waypoint(new_agent_waypoints[agent_id][-1][0].position, None)]
+        return Line(agent_waypoints=new_agent_waypoints, agent_speeds=agent_speeds)
 
 
 def line_from_file(filename: Union[str, Path] = None, load_from_package=None, env_dict: dict = None) -> LineGenerator:
