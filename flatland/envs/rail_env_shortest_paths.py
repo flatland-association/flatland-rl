@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.distance_map import DistanceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.utils.ordered_set import OrderedSet
@@ -13,7 +14,9 @@ def get_k_shortest_paths(env,
                          source_position: Tuple[int, int],
                          source_direction: int,
                          target_position=Tuple[int, int],
-                         k: int = 1, debug=False) -> List[Tuple[Waypoint]]:
+                         k: int = 1, debug=False,
+                         rail: GridTransitionMap = None,
+                         ) -> List[Tuple[Waypoint]]:
     """
     Computes the k shortest paths using modified Dijkstra
     following pseudo-code https://en.wikipedia.org/wiki/K_shortest_path_routing
@@ -37,13 +40,21 @@ def get_k_shortest_paths(env,
         We use a list of paths in order to keep the order of length.
     """
 
+    if env is not None:
+        rail = env.rail
+    else:
+        assert rail is not None
+    height = rail.height
+    width = rail.width
+
     # P: set of shortest paths from s to t
     # P =empty,
     shortest_paths: List[Tuple[Waypoint]] = []
 
     # countu: number of shortest paths found to node u
     # countu = 0, for all u in V
-    count = {(r, c, d): 0 for r in range(env.height) for c in range(env.width) for d in range(4)}
+
+    count = {(r, c, d): 0 for r in range(height) for c in range(width) for d in range(4)}
 
     # B is a heap data structure containing paths
     # N.B. use OrderedSet to make result deterministic!
@@ -83,7 +94,7 @@ def get_k_shortest_paths(env,
         # – if countu ≤ K then
         # CAVEAT: do not allow for loopy paths
         elif count[urcd] <= k:
-            possible_transitions = env.rail.get_transitions((urcd[:2], urcd[2]))
+            possible_transitions = rail.get_transitions((urcd[:2], urcd[2]))
             if debug:
                 print("  looking at neighbors of u={}, transitions are {}".format(u, possible_transitions))
             #     for each vertex v adjacent to u:
