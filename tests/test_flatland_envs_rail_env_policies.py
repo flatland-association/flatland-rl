@@ -19,7 +19,7 @@ def test_shortest_path_policy_no_intermediate_target():
             snapshot_interval=5,
             env=env_generator(obs_builder_object=FullEnvObservation(), seed=42, )[0],
         )
-        assert trajectory.trains_arrived_lookup()["success_rate"] == 0.14285714285714285
+        assert np.isclose(trajectory.trains_arrived_lookup()["success_rate"], 1 / 7)
 
 
 def test_shortest_path_policy_with_intermediate_targets(gen_movies=False):
