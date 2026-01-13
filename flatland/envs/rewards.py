@@ -1,8 +1,10 @@
 from collections import defaultdict
-from typing import Generic, TypeVar, Tuple
+from typing import Generic, TypeVar, Tuple, Dict, Set, Optional
 
+from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.states import TrainState
 
@@ -60,9 +62,26 @@ class Rewards(Generic[RewardType]):
         """
         raise NotImplementedError()
 
+    def normalize(self, *rewards: RewardType, num_agents: int, max_episode_steps: int) -> Optional[float]:
+        """
+        Return normalized cumulated rewards. Can be `None` for some rewards.
+
+        Parameters
+        ----------
+        rewards : List[RewardType]
+        num_agents : int
+        max_episode_steps : int
+
+        Returns
+        -------
+
+        """
+        return None
+
 
 def defaultdict_set():
     return defaultdict(lambda: set())
+
 
 class DefaultRewards(Rewards[float]):
     """
@@ -116,24 +135,31 @@ class DefaultRewards(Rewards[float]):
         assert self.cancellation_time_buffer >= 0
         assert self.cancellation_factor >= 0
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
-        self.arrivals = defaultdict(defaultdict)
-        self.departures = defaultdict(defaultdict)
-        self.states = defaultdict(defaultdict_set)
+        self.arrivals: Dict[AgentHandle, Dict[Waypoint, int]] = defaultdict(defaultdict)
+        self.departures: Dict[AgentHandle, Dict[Waypoint, int]] = defaultdict(defaultdict)
+        self.states: Dict[AgentHandle, Dict[Waypoint, Set[TrainState]]] = defaultdict(defaultdict_set)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> float:
         reward = 0
         if agent.position is not None:
-            self.states[agent.handle][agent.position].add(agent.state)
+            self.states[agent.handle][Waypoint(agent.position, agent.direction)].add(agent.state)
         if agent.position not in self.arrivals[agent.handle]:
-            self.arrivals[agent.handle][agent.position] = elapsed_steps
-            self.departures[agent.handle][agent.old_position] = elapsed_steps
+            self.arrivals[agent.handle][Waypoint(agent.position, agent.direction)] = elapsed_steps
+            self.departures[agent.handle][Waypoint(agent.old_position, agent.old_direction)] = elapsed_steps
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED and not agent_transition_data.state_transition_signal.stop_action_given:
             reward += -1 * agent_transition_data.speed * self.crash_penalty_factor
+
+        if agent.state == TrainState.DONE and agent.state_machine.previous_state != TrainState.DONE:
+            reward += self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps)
         return reward
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> float:
-        reward = None
+        if agent.state_machine.previous_state != TrainState.DONE:
+            return self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps)
+        return 0
 
+    def _agent_done_or_max_episode_steps_reward(self, agent, distance_map, elapsed_steps):
+        reward = 0
         if agent.state == TrainState.DONE:
             # delay at target
             # if agent arrived earlier or on time = 0
@@ -148,10 +174,11 @@ class DefaultRewards(Rewards[float]):
             # target not reached
             if agent.state.is_on_map_state():
                 reward = agent.get_current_delay(elapsed_steps, distance_map)
-
-        for wps, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1]):
-            agent_arrivals = set(self.arrivals[agent.handle])
-            wps_intersection = set(wps).intersection(agent_arrivals)
+        for intermediate_alternatives, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1],
+                                                     agent.waypoints_earliest_departure[1:-1]):
+            agent_arrivals: Set[Waypoint] = set(self.arrivals[agent.handle])
+            intermediate_alternatives: Set[Waypoint] = set(intermediate_alternatives)
+            wps_intersection: Set[Waypoint] = intermediate_alternatives.intersection(agent_arrivals)
             if len(wps_intersection) == 0 or TrainState.STOPPED not in self.states[agent.handle][list(wps_intersection)[0]]:
                 # stop not served or served but not stopped
                 reward += -1 * self.intermediate_not_served_penalty
@@ -165,8 +192,12 @@ class DefaultRewards(Rewards[float]):
                     reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][wp] - ed, 0)
         return reward
 
-    def cumulate(self, *rewards: int) -> RewardType:
+    def cumulate(self, *rewards: float) -> float:
         return sum(rewards)
+
+    def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
+        # https://flatland-association.github.io/flatland-book/challenges/flatland3/eval.html
+        return sum(rewards) / (max_episode_steps * num_agents) + 1.0
 
     def empty(self) -> float:
         return 0
@@ -212,11 +243,14 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
     def empty(self) -> Tuple[float, float, float]:
         return 0, 0, 0
 
+    def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
+        return None
+
 
 class PunctualityRewards(Rewards[Tuple[int, int]]):
     """
     Punctuality: n_stops_on_time / n_stops
-    An agent is deemed not punctual at a stop if it arrives to late, departs to early or does not serve the stop at all. If an agent is punctual at a stop, n_stops_on_time is increased by 1.
+    An agent is deemed not punctual at a stop if it arrives too late, departs to early or does not serve the stop at all. If an agent is punctual at a stop, n_stops_on_time is increased by 1.
 
     The implementation returns the tuple `(n_stops_on_time, n_stops)`.
     """

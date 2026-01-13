@@ -42,7 +42,22 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
-
+            -   name: Inspect disk
+                run: |
+                    df -h
+                    docker system df
+            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
+            -   name: Prune docker system
+                run: |
+                    docker system prune --all --force
+            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
+            -   name: Free disk space
+                run: |
+                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
+            -   name: Inspect disk again
+                run: |
+                    df -h
+                    docker system df
             -   uses: actions/checkout@v4
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
@@ -62,8 +77,26 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
-            -   name: Check disk space
-                run: df . -h
+            -   name: Inspect disk
+                run: |
+                    df -h
+                    docker system df
+            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
+            -   name: Prune docker system
+                run: |
+                    docker system prune --all --force
+            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
+            -   name: Free disk space
+                run: |
+                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
+            -   name: Inspect disk again
+                run: |
+                    df -h
+                    docker system df
+            -   name: Install ffmpeg
+                run: |
+                    sudo apt-get update
+                    sudo apt-get -y install ffmpeg
             -   uses: actions/checkout@v4
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
@@ -90,8 +123,26 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
-            -   name: Check disk space
-                run: df . -h
+            -   name: Inspect disk
+                run: |
+                    df -h
+                    docker system df
+            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
+            -   name: Prune docker system
+                run: |
+                    docker system prune --all --force
+            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
+            -   name: Free disk space
+                run: |
+                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
+            -   name: Inspect disk again
+                run: |
+                    df -h
+                    docker system df
+            -   name: Install ffmpeg
+                run: |
+                    sudo apt-get update
+                    sudo apt-get -y install ffmpeg
             -   uses: actions/checkout@v4
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v5
@@ -103,13 +154,11 @@ jobs:
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Clone flatland-baselines
-                run: |
-                    set -euxo pipefail
-                    git clone -b ${{ env.flatland-baselines-ref }} https://github.com/flatland-association/flatland-baselines.git
-                    cd flatland-baselines
-                    git remote show origin
-                    git status
-                    git branch
+                uses: actions/checkout@v4
+                with:
+                    repository: flatland-association/flatland-baselines
+                    ref: ${{ env.flatland-baselines-ref }}
+                    path: flatland-baselines
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -163,9 +212,9 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/scenario-olten-fix/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v1.zip" -O OLTEN_PARTIALLY_CLOSED_v1.zip
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
-                    unzip OLTEN_PARTIALLY_CLOSED_v1 -d scenarios/scenario_olten/data
+                    unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -187,9 +236,9 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/scenario-olten-fix/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v1.zip" -O OLTEN_PARTIALLY_CLOSED_v1.zip
+                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
-                    unzip OLTEN_PARTIALLY_CLOSED_v1 -d scenarios/scenario_olten/data
+                    unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -260,13 +309,11 @@ jobs:
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}
             -   name: Clone flatland-baselines
-                run: |
-                    set -euxo pipefail
-                    git clone -b ${{ env.flatland-baselines-ref }} https://github.com/flatland-association/flatland-baselines.git
-                    cd flatland-baselines
-                    git remote show origin
-                    git status
-                    git branch
+                uses: actions/checkout@v4
+                with:
+                    repository: flatland-association/flatland-baselines
+                    ref: ${{ env.flatland-baselines-ref }}
+                    path: flatland-baselines
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip

@@ -1,6 +1,7 @@
 import ast
 import os
 import uuid
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional, Tuple, Any, Dict
 
@@ -10,6 +11,7 @@ from attr import attrs, attrib
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils.states import TrainState
 
 EVENT_LOGS_SUBDIR = 'event_logs'
@@ -61,7 +63,7 @@ class Trajectory:
     _trains_arrived_collect = None
     _trains_rewards_dones_infos_collect = None
 
-    def load(self, episode_only: bool = False):
+    def _load(self, episode_only: bool = False):
         self.trains_positions = self._read_trains_positions(episode_only=episode_only)
         self.actions = self._read_actions(episode_only=episode_only)
         self.trains_arrived = self._read_trains_arrived(episode_only=episode_only)
@@ -71,17 +73,30 @@ class Trajectory:
         self._actions_collect = []
         self._trains_arrived_collect = []
         self._trains_rewards_dones_infos_collect = []
+        self.outputs_dir.mkdir(exist_ok=True, parents=True)
 
     def persist(self):
-        self.actions = pd.concat([self.actions, pd.DataFrame.from_records(self._actions_collect)])
-        self.trains_positions = pd.concat([self.trains_positions, pd.DataFrame.from_records(self._trains_positions_collect)])
-        self.trains_arrived = pd.concat([self.trains_arrived, pd.DataFrame.from_records(self._trains_arrived_collect)])
-        self.trains_rewards_dones_infos = pd.concat([self.trains_rewards_dones_infos, pd.DataFrame.from_records(self._trains_rewards_dones_infos_collect)])
+        self.actions = pd.concat([self.actions, self._collected_actions_to_df()])
+        self.trains_positions = pd.concat([self.trains_positions, self._collected_trains_positions_to_df()])
+        self.trains_arrived = pd.concat([self.trains_arrived, self._collected_trains_arrived_to_df()])
+        self.trains_rewards_dones_infos = pd.concat([self.trains_rewards_dones_infos, self._collected_trains_rewards_dones_infos_to_df()])
 
         self._write_actions(self.actions)
         self._write_trains_positions(self.trains_positions)
         self._write_trains_arrived(self.trains_arrived)
         self._write_trains_rewards_dones_infos(self.trains_rewards_dones_infos)
+
+    def _collected_trains_rewards_dones_infos_to_df(self) -> pd.DataFrame:
+        return pd.DataFrame.from_records(self._trains_rewards_dones_infos_collect)
+
+    def _collected_trains_arrived_to_df(self) -> pd.DataFrame:
+        return pd.DataFrame.from_records(self._trains_arrived_collect)
+
+    def _collected_trains_positions_to_df(self) -> pd.DataFrame:
+        return pd.DataFrame.from_records(self._trains_positions_collect)
+
+    def _collected_actions_to_df(self) -> pd.DataFrame:
+        return pd.DataFrame.from_records(self._actions_collect)
 
     def _read_actions(self, episode_only: bool = False) -> pd.DataFrame:
         """Returns pd df with all actions for all episodes.
@@ -110,7 +125,7 @@ class Trajectory:
         """
         f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
         if not os.path.exists(f):
-            return pd.DataFrame(columns=['episode_id', 'env_time', 'success_rate'])
+            return pd.DataFrame(columns=['episode_id', 'env_time', 'success_rate', 'mean_normalized_reward'])
         df = pd.read_csv(f, sep='\t')
         if episode_only:
             return df[df['episode_id'] == self.ep_id]
@@ -182,37 +197,6 @@ class Trajectory:
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def restore_episode(self, start_step: int = None, inexact: bool = False) -> Optional[RailEnv]:
-        """Restore an episode.
-
-        Parameters
-        ----------
-
-        start_step : Optional[int]
-            start from snapshot (if it exists)
-        inexact : bool
-            allows returning the last snapshot before start_step
-        Returns
-        -------
-        RailEnv
-            the rail env or None if the snapshot at the step does not exist
-        """
-        if start_step is None:
-            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-            env, _ = RailEnvPersister.load_new(f)
-            return env
-        else:
-            closest = start_step
-            if inexact:
-                closest = self._find_closest_snapshot(start_step)
-                if closest is None:
-                    f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                    env, _ = RailEnvPersister.load_new(f)
-                    return env
-            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
-            env, _ = RailEnvPersister.load_new(f)
-            return env
-
     def _find_closest_snapshot(self, start_step):
         closest = None
         for p in (Path(self.data_dir) / SERIALISED_STATE_SUBDIR).iterdir():
@@ -230,13 +214,27 @@ class Trajectory:
     def action_collect(self, env_time: int, agent_id: int, action: RailEnvActions):
         self._actions_collect.append({'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'action': action})
 
-    def arrived_collect(self, env_time: int, success_rate: float):
-        self._trains_arrived_collect.append({'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate})
+    def arrived_collect(self, env_time: int, success_rate: float, mean_normalized_reward: float):
+        self._trains_arrived_collect.append(
+            {'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate, 'mean_normalized_reward': mean_normalized_reward})
 
     def rewards_dones_infos_collect(self, env_time: int, agent_id: int, reward: float, info: Any, done: bool):
         self._trains_rewards_dones_infos_collect.append({
             'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'reward': reward, 'info': info, 'done': done
         })
+
+    def build_cache(self) -> Tuple[dict, dict, dict]:
+        action_cache = defaultdict(lambda: defaultdict(dict))
+        for item in self.actions[self.actions["episode_id"] == self.ep_id].to_records():
+            action_cache[item["env_time"]][item["agent_id"]] = RailEnvActions.from_value(item["action"])
+        position_cache = defaultdict(lambda: defaultdict(dict))
+        for item in self.trains_positions[self.trains_positions["episode_id"] == self.ep_id].to_records():
+            p, d = item['position']
+            position_cache[item["env_time"]][item["agent_id"]] = (p, d)
+        trains_rewards_dones_infos_cache = defaultdict(lambda: defaultdict(dict))
+        for data in self.trains_rewards_dones_infos[self.trains_rewards_dones_infos["episode_id"] == self.ep_id].to_records():
+            trains_rewards_dones_infos_cache[data["env_time"]][data["agent_id"]] = (data["reward"], data["done"], data["info"])
+        return action_cache, position_cache, trains_rewards_dones_infos_cache
 
     def position_lookup(self, env_time: int, agent_id: int) -> Tuple[Tuple[int, int], int]:
         """Method used to retrieve the stored position (if available).
@@ -317,7 +315,7 @@ class Trajectory:
         """
         rewards_df = self.trains_rewards_dones_infos
         data = rewards_df.loc[(rewards_df['env_time'] == env_time) & (rewards_df['agent_id'] == agent_id) & (rewards_df['episode_id'] == self.ep_id)]
-        assert len(data) == 1
+        assert len(data) == 1, (env_time, agent_id, self.ep_id, data)
         data = data.iloc[0]
         return data["reward"], data["done"], data["info"]
 
@@ -325,27 +323,46 @@ class Trajectory:
     def outputs_dir(self) -> Path:
         return self.data_dir / OUTPUTS_SUBDIR
 
-    def compare_actions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+    def compare_actions(self, other: "Trajectory", start_step: int = None, end_step: int = None, ignoring_waiting=False) -> pd.DataFrame:
         df = self._read_actions(episode_only=True)
         other_df = other._read_actions(episode_only=True)
-        return self._compare(df, other_df, end_step, start_step)
+        num_agents = df["agent_id"].max() + 1
+        if ignoring_waiting:
+            df["state"] = self._read_trains_rewards_dones_infos(episode_only=True)["info"].map(lambda d: d["state"])
+            other_df["state"] = other._read_trains_rewards_dones_infos(episode_only=True)["info"].map(lambda d: d["state"])
+
+            # we need to consider prev_state as the state for env_time is after the state update at the end of step function!
+            df["prev_state"] = df["state"].shift(num_agents)
+            other_df["prev_state"] = other_df["state"].shift(num_agents)
+
+            df = df[df["prev_state"] != TrainState.WAITING]
+            other_df = other_df[other_df["prev_state"] != TrainState.WAITING]
+        return self._compare(df, other_df, ['env_time', 'agent_id', 'action'], end_step, start_step)
 
     def compare_positions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
         df = self._read_trains_positions(episode_only=True)
         other_df = other._read_trains_positions(episode_only=True)
-        return self._compare(df, other_df, end_step, start_step)
+        return self._compare(df, other_df, ['env_time', 'agent_id', 'position'], end_step, start_step)
 
-    def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+    def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None, skip_mean_normalized_reward: bool = True) -> pd.DataFrame:
         df = self._read_trains_arrived(episode_only=True)
         other_df = other._read_trains_arrived(episode_only=True)
-        return self._compare(df, other_df, end_step, start_step)
+        columns = ['env_time', 'success_rate']
+        # TODO re-generate regression trajectories.
+        if not skip_mean_normalized_reward:
+            columns.append('mean_normalized_reward')
+        return self._compare(df, other_df, columns, end_step, start_step)
 
-    def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
+    def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None, ignoring_rewards: bool = False) -> pd.DataFrame:
         df = self._read_trains_rewards_dones_infos(episode_only=True)
         other_df = other._read_trains_rewards_dones_infos(episode_only=True)
-        return self._compare(df, other_df, end_step, start_step)
+        columns = ['env_time', 'agent_id', 'reward', 'info', 'done']
+        if ignoring_rewards:
+            columns = ['env_time', 'agent_id', 'info', 'done']
+        return self._compare(df, other_df, columns, end_step, start_step)
 
-    def _compare(self, df, other_df, end_step, start_step):
+    @staticmethod
+    def _compare(df, other_df, columns, end_step, start_step, return_frames=False):
         if start_step is not None:
             df = df[df["env_time"] >= start_step]
             other_df = other_df[other_df["env_time"] >= start_step]
@@ -356,5 +373,143 @@ class Trajectory:
         other_df.reset_index(drop=True, inplace=True)
         df.drop(columns="episode_id", inplace=True)
         other_df.drop(columns="episode_id", inplace=True)
-        diff = df.compare(other_df)
+
+        diff = df[columns].compare(other_df[columns])
+        if return_frames:
+            return diff, df, other_df
         return diff
+
+    def load_env(self, start_step: int = None, inexact: bool = False, rewards: Rewards = None) -> Optional[RailEnv]:
+        """
+        Restore an episode's env.
+
+        Parameters
+        ----------
+        start_step : Optional[int]
+            start from snapshot (if it exists)
+        inexact : bool
+            allows returning the last snapshot before start_step
+        rewards : Rewards
+            rewards for the loaded env. If not provided, defaults to the loaded env's rewards.
+        Returns
+        -------
+        RailEnv
+            the rail env or None if the snapshot at the step does not exist
+        """
+        self.outputs_dir.mkdir(exist_ok=True)
+        if start_step is None:
+            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
+            env, _ = RailEnvPersister.load_new(f, rewards=rewards)
+            return env
+        else:
+            closest = start_step
+            if inexact:
+                closest = self._find_closest_snapshot(start_step)
+                if closest is None:
+                    f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
+                    env, _ = RailEnvPersister.load_new(f, rewards=rewards)
+                    return env
+            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
+            env, _ = RailEnvPersister.load_new(f, rewards=rewards)
+            return env
+
+    @staticmethod
+    def load_existing(data_dir: Path, ep_id: str) -> "Trajectory":
+        """
+        Load existing trajectory from disk.
+
+        Parameters
+        ----------
+        data_dir : Path
+            the data dir backing the trajectory.
+        ep_id
+            the ep_id - the data dir may contain multiple trajectories in the same data frames.
+
+        Returns
+        -------
+        Trajectory
+        """
+        t = Trajectory(data_dir=data_dir, ep_id=ep_id)
+        t._load()
+        return t
+
+    def fork(self, data_dir: Path, start_step: int, ep_id: Optional[str] = None) -> "Trajectory":
+        """
+        Fork a trajectory to a new location and a new episode ID.
+
+        Parameters
+        ----------
+        data_dir : Path
+            the data dir backing the forked trajectory.
+        ep_id : str
+            the new episode ID for the fork. If not provided, a new UUID is generated.
+        start_step : int
+            where to start the fork
+        Returns
+        -------
+        Trajectory
+
+        """
+        trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id)
+
+        env = self.load_env(start_step=start_step, inexact=True)
+        self._load(episode_only=True)
+
+        # will run action start_step into step start_step+1
+        trajectory.actions = self.actions[self.actions["env_time"] < start_step]
+        trajectory.trains_positions = self.trains_positions[self.trains_positions["env_time"] <= start_step]
+        trajectory.trains_arrived = self.trains_arrived[self.trains_arrived["env_time"] <= start_step]
+        trajectory.trains_rewards_dones_infos = self.trains_rewards_dones_infos[
+            self.trains_rewards_dones_infos["env_time"] <= start_step]
+        trajectory.actions["episode_id"] = trajectory.ep_id
+        trajectory.trains_positions["episode_id"] = trajectory.ep_id
+        trajectory.trains_arrived["episode_id"] = trajectory.ep_id
+        trajectory.trains_rewards_dones_infos["episode_id"] = trajectory.ep_id
+        trajectory.persist()
+        if env is None or env._elapsed_steps < start_step:
+            from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
+            (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
+            if env is None:
+                # copy initial env
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
+                # replay the trajectory to the start_step from the latest snapshot
+                env = TrajectoryEvaluator(trajectory=trajectory).evaluate(end_step=start_step)
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+            else:
+                # copy latest snapshot
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+                # replay the trajectory to the start_step from the latest snapshot
+                env = TrajectoryEvaluator(trajectory=trajectory).evaluate(start_step=env._elapsed_steps, end_step=start_step)
+                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+            trajectory._load()
+        return trajectory
+
+    @staticmethod
+    def create_empty(data_dir: Path, ep_id: Optional[str] = None) -> "Trajectory":
+        """
+        Create a new empty trajectory.
+
+        Parameters
+        ----------
+        data_dir : Path
+            the data dir backing the trajectory. Must be empty.
+        ep_id
+            the episode ID for the new trajectory. If not provided, a new UUID is generated.
+
+        Returns
+        -------
+        Trajectory
+        """
+        data_dir.mkdir(parents=True, exist_ok=True)
+
+        if ep_id is not None:
+            trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)
+        else:
+            trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=_uuid_str())
+
+        # ensure to start with new empty df to avoid inconsistencies:
+        assert len(trajectory.trains_positions) == 0
+        assert len(trajectory.actions) == 0
+        assert len(trajectory.trains_arrived) == 0
+        assert len(trajectory.trains_rewards_dones_infos) == 0
+        return trajectory

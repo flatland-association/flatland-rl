@@ -8,9 +8,9 @@ import click
 import numpy as np
 import redis
 
+from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
-from flatland.envs.line_generators import sparse_line_generator
 from flatland.evaluators.service import FlatlandRemoteEvaluationService, FLATLAND_RL_SERVICE_ID
 from flatland.utils.rendertools import RenderTool
 
@@ -63,7 +63,7 @@ def demo(args=None):
               help="Path to folder containing Flatland tests",
               required=True
               )
-@click.option('--service_id',
+@click.option('--service-id',
               default=FLATLAND_RL_SERVICE_ID,
               help="Evaluation Service ID. This has to match the service id on the client.",
               required=False
@@ -74,12 +74,12 @@ def demo(args=None):
               help="Shuffle the environments before starting evaluation.",
               required=False
               )
-@click.option('--disable_timeouts',
+@click.option('--disable-timeouts',
               default=False,
               help="Disable all evaluation timeouts.",
               required=False
               )
-@click.option('--results_path',
+@click.option('--results-path',
               type=click.Path(exists=False),
               default=None,
               help="Path where the evaluator should write the results metadata.",

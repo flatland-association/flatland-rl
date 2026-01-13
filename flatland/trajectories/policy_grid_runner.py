@@ -17,47 +17,72 @@ from flatland.trajectories.policy_runner import generate_trajectory_from_policy
               help="Path to folder containing Flatland episode",
               required=True
               )
+@click.option('--policy',
+              type=str,
+              help=" Policy's fully qualified name. Can also be provided through env var POLICY (command-line option takes priority).",
+              required=False,
+              default=None,
+              )
 @click.option('--policy-pkg',
               type=str,
-              help="Policy's fully qualified package name.",
-              required=True
+              help="DEPRECATED: use --policy instead. Policy's fully qualified package name. Can also be provided through env var POLICY_PKG (command-line option takes priority).",
+              required=False,
+              default=None,
               )
 @click.option('--policy-cls',
               type=str,
-              help="Policy class name.",
-              required=True
+              help="DEPRECATED: use --policy instead. Policy class name. Can also be provided through env var POLICY_CLS  (command-line option takes priority).",
+              required=False,
+              default=None,
+              )
+@click.option('--obs-builder',
+              type=str,
+              help="Can also be provided through env var OBS_BUILDER (command-line option takes priority). Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              required=False,
+              default=None,
               )
 @click.option('--obs-builder-pkg',
               type=str,
-              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              help="DEPRECATED: use --obs-builder instead. Can also be provided through env var OBS_BUILDER_PKG. Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
               required=False,
-              default=None
+              default=None,
               )
 @click.option('--obs-builder-cls',
               type=str,
-              help="Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
+              help="DEPRECATED: use --obs-builder instead. Can also be provided through env var OBS_BUILDER_CLS. Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`",
               required=False,
-              default=None
+              default=None,
+              )
+@click.option('--rewards',
+              type=str,
+              help="Defaults to `flatland.envs.rewards.DefaultRewards`. Can also be provided through env var REWARDS (command-line option takes priority).",
+              required=False,
+              default=None,
               )
 @click.option('--rewards-pkg',
               type=str,
-              help="Defaults to `flatland.envs.rewards.DefaultRewards`",
+              help="DEPRECATED: use --rewards instead. Defaults to `flatland.envs.rewards.DefaultRewards`. Can also be provided through env var REWARDS_PKG (command-line option takes priority).",
               required=False,
-              default="flatland.envs.rewards"
+              default=None,
               )
 @click.option('--rewards-cls',
               type=str,
-              help="Defaults to `flatland.envs.rewards.DefaultRewards`",
+              help="DEPRECATED: use --rewards instead. Defaults to `flatland.envs.rewards.DefaultRewards. Can also be provided through env var REWARDS_CLS (command-line option takes priority).",
               required=False,
-              default="DefaultRewards"
+              default=None,
               )
 def generate_trajectories_from_metadata(
     metadata_csv: Path,
     data_dir: Path,
-    policy_pkg: str, policy_cls: str,
-    obs_builder_pkg: str, obs_builder_cls: str,
-    rewards_pkg: str = "flatland.envs.rewards",
-    rewards_cls: str = "DefaultRewards",
+    policy: str = None,
+    policy_pkg: str = None,
+    policy_cls: str = None,
+    obs_builder: str = None,
+    obs_builder_pkg: str = None,
+    obs_builder_cls: str = None,
+    rewards: str = None,
+    rewards_pkg: str = None,
+    rewards_cls: str = None,
 ):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
@@ -65,29 +90,45 @@ def generate_trajectories_from_metadata(
             test_folder = data_dir / v["test_id"] / v["env_id"]
             test_folder.mkdir(parents=True, exist_ok=True)
             args = ["--data-dir", test_folder,
-                    "--policy-pkg", policy_pkg, "--policy-cls", policy_cls,
-                    "--obs-builder-pkg", obs_builder_pkg, "--obs-builder-cls", obs_builder_cls,
-                    "--n_agents", v["n_agents"],
-                    "--x_dim", v["x_dim"],
-                    "--y_dim", v["y_dim"],
-                    "--n_cities", v["n_cities"],
-                    "--max_rail_pairs_in_city", v["max_rail_pairs_in_city"],
-                    "--grid_mode", v["grid_mode"],
-                    "--max_rails_between_cities", v["max_rails_between_cities"],
-                    "--malfunction_duration_min", v["malfunction_duration_min"],
-                    "--malfunction_duration_max", v["malfunction_duration_max"],
-                    "--malfunction_interval", v["malfunction_interval"],
-                    "--speed_ratios", "1.0", "0.25",
-                    "--speed_ratios", "0.5", "0.25",
-                    "--speed_ratios", "0.33", "0.25",
-                    "--speed_ratios", "0.25", "0.25",
+                    "--n-agents", v["n_agents"],
+                    "--x-dim", v["x_dim"],
+                    "--y-dim", v["y_dim"],
+                    "--n-cities", v["n_cities"],
+                    "--max-rail-pairs-in-city", v["max_rail_pairs_in_city"],
+                    "--grid-mode", v["grid_mode"],
+                    "--max-rails-between-cities", v["max_rails_between_cities"],
+                    "--malfunction-duration-min", v["malfunction_duration_min"],
+                    "--malfunction-duration-max", v["malfunction_duration_max"],
+                    "--malfunction-interval", v["malfunction_interval"],
+                    "--speed-ratios", "1.0", "0.25",
+                    "--speed-ratios", "0.5", "0.25",
+                    "--speed-ratios", "0.33", "0.25",
+                    "--speed-ratios", "0.25", "0.25",
                     "--seed", v["seed"],
                     "--snapshot-interval", 0,
                     "--ep-id", v["test_id"] + "_" + v["env_id"]
                     ]
+            if policy is not None:
+                args += ["--policy", policy]
+            if policy_pkg is not None:
+                args += ["--policy-pkg", policy_pkg]
+            if policy_cls is not None:
+                args += ["--policy-cls", policy_cls]
 
-            if rewards_pkg is not None and rewards_cls is not None:
-                args += ["--rewards-pkg", rewards_pkg, "--rewards-cls", rewards_cls, ]
+            if obs_builder is not None:
+                args += ["--obs-builder", obs_builder]
+            if obs_builder_pkg is not None:
+                args += ["--obs-builder-pkg", obs_builder_pkg]
+            if obs_builder_cls is not None:
+                args += ["--obs-builder-cls", obs_builder_cls]
+
+            if rewards is not None:
+                args += ["--rewards", rewards]
+            if rewards_pkg is not None:
+                args += ["--rewards-pkg", rewards_pkg]
+            if rewards_cls is not None:
+                args += ["--rewards-cls", rewards_cls]
+
             generate_trajectory_from_policy(args)
 
         except SystemExit as exc:

@@ -28,7 +28,7 @@ def test_dummy_observation_builder_gym():
 
 def test_global_obs_for_rail_env():
     obs_builder = GlobalObsForRailEnvGym()
-    env, _, _ = env_generator(obs_builder_object=obs_builder)
+    env, _, _ = env_generator(seed=42, obs_builder_object=obs_builder)
     obs = obs_builder.get()
     assert obs.shape == (env.width * env.height * (16 + 5 + 2),)
     assert obs.dtype == float

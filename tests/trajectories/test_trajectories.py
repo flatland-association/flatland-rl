@@ -14,7 +14,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
 from flatland.trajectories.policy_runner import generate_trajectory_from_policy, PolicyRunner
-from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR
+from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, OUTPUTS_SUBDIR
 from flatland.utils.seeding import np_random
 from flatland.utils.seeding import random_state_to_hashablestate
 
@@ -32,10 +32,10 @@ class RandomPolicy(Policy):
 def test_from_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
-        env = trajectory.restore_episode()
-        gen, _, _ = env_generator()
+        env = trajectory.load_env()
+        gen, _, _ = env_generator(seed=42)
         assert random_state_to_hashablestate(env.np_random) == random_state_to_hashablestate(gen.np_random)
 
         gen.reset(random_seed=42)
@@ -45,11 +45,11 @@ def test_from_episode():
 def test_restore_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42)[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         assert trajectory._find_closest_snapshot(5) == 5
         assert trajectory._find_closest_snapshot(7) == 5
 
-        env = trajectory.restore_episode(7, inexact=True)
+        env = trajectory.load_env(7, inexact=True)
 
         env_5, _ = RailEnvPersister.load_new(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{5:04d}.pkl")
         env_10, _ = RailEnvPersister.load_new(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{10:04d}.pkl")
@@ -62,7 +62,7 @@ def test_restore_episode():
 def test_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
 
         assert (data_dir / DISCRETE_ACTION_FNAME).exists()
         assert (data_dir / TRAINS_ARRIVED_FNAME).exists()
@@ -102,7 +102,7 @@ def test_cli_from_submission():
         data_dir = Path(tmpdirname)
         with pytest.raises(SystemExit) as e_info:
             generate_trajectory_from_policy(
-                ["--data-dir", str(data_dir), "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy"])
+                ["--data-dir", str(data_dir), "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy", "--seed", 42])
         assert e_info.value.code == 0
 
         ep_id = re.sub(r"_step.*", "", str(next((data_dir / SERIALISED_STATE_SUBDIR).glob("*step*.pkl")).name))
@@ -122,8 +122,12 @@ def test_cli_from_submission():
         assert "episode_id	env_time	agent_id	position" in (data_dir / TRAINS_POSITIONS_FNAME).read_text()
 
         with pytest.raises(SystemExit) as e_info:
-            evaluate_trajectory(["--data-dir", str(data_dir), "--ep-id", ep_id])
+            evaluate_trajectory(
+                ["--data-dir", str(data_dir), "--ep-id", ep_id, "--callbacks-pkg", "flatland.callbacks.generate_movie_callbacks", "--callbacks-cls",
+                 "GenerateMovieCallbacks"])
         assert e_info.value.code == 0
+        # requires ffmpeg
+        assert len(list((data_dir / OUTPUTS_SUBDIR).glob("*.mp4"))) == 2
 
 
 @pytest.mark.parametrize(

@@ -9,6 +9,7 @@ from numpy.random import RandomState
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 msgpack_numpy.patch()
 from flatland.envs.step_utils.states import StateTransitionSignals
@@ -155,6 +156,8 @@ class RailEnvPersister(object):
             rewards=rewards,
             effects_generator=effects_generator,
         )
+        env.obs_builder.set_env(env)
+        env.obs_builder.reset()
 
         cls.set_full_state(env, env_dict)
         return env, env_dict
@@ -280,6 +283,11 @@ class RailEnvPersister(object):
 
         # TODO bad code smell - agent_position initialized in reset() only.
         env.agent_positions = np.zeros((env.height, env.width), dtype=int) - 1
+
+        # backwards compatibility
+        for agent in env.agents:
+            agent.waypoints = [[waypoint_alternatives] if isinstance(waypoint_alternatives, Waypoint) else waypoint_alternatives for waypoint_alternatives in
+                               agent.waypoints]
 
     @classmethod
     def get_full_state(cls, env):

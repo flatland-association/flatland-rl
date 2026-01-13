@@ -397,7 +397,7 @@ def test_rail_env_reset():
 
 
 def test_load_new_random_states():
-    env, _, _ = env_generator()
+    env, _, _ = env_generator(seed=42, )
 
     # env loaded has random state of env AFTER reset since generator use the same
     # TODO https://github.com/flatland-association/flatland-rl/issues/242 revise design - keep random state in generators separate (malfunction, rail etc. have their own)
@@ -412,7 +412,7 @@ def test_load_new_random_states():
 
 
 def test_clone_from_random_states():
-    env, _, _ = env_generator()
+    env, _, _ = env_generator(seed=42, )
 
     # env loaded has random state of env AFTER reset since generator use the same
     # TODO https://github.com/flatland-association/flatland-rl/issues/242 revise design - keep random state in generators separate (malfunction, rail etc. have their own)
@@ -427,7 +427,7 @@ def test_clone_from_random_states():
 
 
 def test_clone_from_with_random_policy():
-    env, _, _ = env_generator()
+    env, _, _ = env_generator(seed=42, )
 
     clone = RailEnv(30, 30)
     clone.clone_from(env)

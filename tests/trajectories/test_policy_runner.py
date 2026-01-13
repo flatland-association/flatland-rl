@@ -1,5 +1,7 @@
+import json
 import re
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Optional, Any, List, Dict
 
@@ -58,10 +60,10 @@ class EnvStepObservationBuilder(ObservationBuilder[RailEnv, int]):
 def test_from_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # np_random in loaded episode is same as if it comes directly from env_generator incl. reset()!
-        env = trajectory.restore_episode()
-        gen, _, _ = env_generator()
+        env = trajectory.load_env()
+        gen, _, _ = env_generator(seed=42)
         assert random_state_to_hashablestate(env.np_random) == random_state_to_hashablestate(gen.np_random)
 
         gen.reset(random_seed=42)
@@ -71,7 +73,7 @@ def test_from_episode():
 def test_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
 
         assert (data_dir / DISCRETE_ACTION_FNAME).exists()
         assert (data_dir / TRAINS_ARRIVED_FNAME).exists()
@@ -111,7 +113,7 @@ def test_cli_from_submission():
         data_dir = Path(tmpdirname)
         with pytest.raises(SystemExit) as e_info:
             generate_trajectory_from_policy(
-                ["--data-dir", data_dir, "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy"])
+                ["--data-dir", data_dir, "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy", "--seed", 42])
         assert e_info.value.code == 0
 
         ep_id = re.sub(r"_step.*", "", str(next((data_dir / SERIALISED_STATE_SUBDIR).glob("*step*.pkl")).name))
@@ -153,7 +155,6 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
             print(trajectory.trains_rewards_dones_infos)
 
         fork = PolicyRunner.create_from_policy(
-            env=env_generator(obs_builder_object=EnvStepObservationBuilder(), )[0],
             data_dir=data_dir / "fork",
             policy=RandomPolicy(),
             # no snapshot here, PolicyRunner needs to start from a previous snapshot and run forward to starting step:
@@ -247,7 +248,7 @@ def test_failing_from_wrong_intermediate_step():
 def test_evaluation_snapshots():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator()[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=0)
         print(list(trajectory.data_dir.rglob("**/*step*.pkl")))
         assert len(list(trajectory.data_dir.rglob("**/*step*.pkl"))) == 0
         TrajectoryEvaluator(trajectory).evaluate(snapshot_interval=1)
@@ -263,12 +264,11 @@ def test_effects_generator():
                 "--data-dir", data_dir,
                 "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
                 "--ep-id", "banana",
-                "--malfunction_interval", "1"
+                "--malfunction-interval", "1"
             ])
         assert e_info.value.code == 0
 
-        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
-        trajectory.load()
+        trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id="banana")
         assert sum([info["malfunction"] for info in trajectory.trains_rewards_dones_infos["info"]]) > 0
 
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -278,12 +278,11 @@ def test_effects_generator():
                 "--data-dir", data_dir,
                 "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
                 "--ep-id", "banana",
-                "--malfunction_interval", "-1"
+                "--malfunction-interval", "-1"
             ])
         assert e_info.value.code == 0
 
-        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
-        trajectory.load()
+        trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id="banana")
         assert sum([info["malfunction"] for info in trajectory.trains_rewards_dones_infos["info"]]) == 0
 
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -293,7 +292,7 @@ def test_effects_generator():
                 "--data-dir", data_dir,
                 "--policy-pkg", "tests.trajectories.test_policy_runner", "--policy-cls", "RandomPolicy",
                 "--ep-id", "banana",
-                "--malfunction_interval", "-1",
+                "--malfunction-interval", "-1",
                 "--effects-generator-pkg", "flatland.envs.malfunction_effects_generators", "--effects-generator-cls", "ConditionalMalfunctionEffectsGenerator",
                 "--effects-generator-kwargs", "max_num_malfunctions", "1",
                 "--effects-generator-kwargs", "min_duration", "25",
@@ -302,6 +301,68 @@ def test_effects_generator():
             ])
         assert e_info.value.code == 0
 
-        trajectory = Trajectory(data_dir=data_dir, ep_id="banana")
-        trajectory.load()
+        trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id="banana")
         assert sum([info["malfunction"] > 0 for info in trajectory.trains_rewards_dones_infos["info"]]) == 25
+
+
+def test_env_path_and_obs_builder():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_dir = Path(tmpdirname)
+        env_file = str(tmp_dir / "env.pkl")
+        data_dir = tmp_dir / "data_dir"
+        data_dir.mkdir()
+        env, _, _ = env_generator()
+        expected = random_state_to_hashablestate(env.np_random)
+        RailEnvPersister.save(env, env_file)
+
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectory_from_policy([
+                "--data-dir", str(data_dir),
+                "--policy-pkg", "tests.trajectories.test_trajectories",
+                "--policy-cls", "RandomPolicy",
+                "--ep-id", "dummy",
+                "--env-path", env_file])
+        assert e_info.value.code == 0
+
+        # ensure the obs-builder is correctly reset without re-generating rails
+        env, _ = RailEnvPersister.load_new(str(data_dir / SERIALISED_STATE_SUBDIR / f"dummy.pkl"))
+        actual = random_state_to_hashablestate(env.np_random)
+        assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "seed, expected",
+    [
+        (1002, {'normalized_reward': -0.007067137809187279 + 1, 'percentage_complete': 1.0, 'reward': -14, 'termination_cause': None, }),
+        (1003, {'normalized_reward': -0.019182231196365473 + 1, 'percentage_complete': 1.0, 'reward': -38, 'termination_cause': None}),
+        (None, {'normalized_reward': 0.0 + 1, 'termination_cause': None, 'reward': 0, 'percentage_complete': 1.0}),
+    ])
+def test_env_path_and_seed(seed, expected):
+    with tempfile.TemporaryDirectory() as tmp_dir_name:
+        tmp_dir = Path(tmp_dir_name)
+        env_file = str(tmp_dir / "env.pkl")
+        data_dir = tmp_dir / "data_dir"
+        data_dir.mkdir()
+        # TODO https://github.com/flatland-association/flatland-rl/issues/242 rail_generator etc. not persisted, the outcome should not depend on this seed, but it currently does. In particular, seed same seed here and in --seed (pased to reset()) should have the same outcome.
+        env, _, _ = env_generator(seed=1001)
+        scenario_id = uuid.uuid4()
+        RailEnvPersister.save(env, env_file)
+
+        with pytest.raises(SystemExit) as e_info:
+            args = [
+                "--data-dir", data_dir,
+                "--ep-id", scenario_id,
+                "--env-path", env_file,
+                "--policy", "flatland_baselines.deadlock_avoidance_heuristic.policy.deadlock_avoidance_policy.DeadLockAvoidancePolicy",
+                "--obs-builder", "flatland_baselines.deadlock_avoidance_heuristic.observation.full_env_observation.FullEnvObservation",
+                "--callbacks", "flatland.evaluators.evaluator_callback.FlatlandEvaluatorCallbacks",
+                "--snapshot-interval", "-1",
+            ]
+            if seed is not None:
+                args += ["--seed", str(seed)]
+            generate_trajectory_from_policy(args)
+        assert e_info.value.code == 0
+        with (data_dir / "outputs" / "evaluation.json").open("r") as f:
+            actual = json.load(f)
+        print(actual)
+        assert actual == expected

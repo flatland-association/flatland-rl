@@ -10,7 +10,7 @@ def test_rail_env_effects_generator_on_episode_start():
             env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
             return env
 
-    env, _, _ = env_generator(effects_generator=TestMalfunctionEffectsGenerator())
+    env, _, _ = env_generator(seed=42, effects_generator=TestMalfunctionEffectsGenerator())
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 999999
     env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 999998
@@ -22,7 +22,7 @@ def test_rail_env_effects_generator_on_episode_step_start():
             env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
             return env
 
-    env, _, _ = env_generator(effects_generator=TestMalfunctionEffectsGenerator())
+    env, _, _ = env_generator(seed=42, effects_generator=TestMalfunctionEffectsGenerator())
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
     env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 999998
@@ -33,7 +33,7 @@ def test_rail_env_effects_generator_on_episode_step_end():
         def on_episode_step_end(self, env: RailEnv, *args, **kwargs) -> RailEnv:
             env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
 
-    env, _, _ = env_generator(effects_generator=TestMalfunctionEffectsGenerator())
+    env, _, _ = env_generator(seed=42, effects_generator=TestMalfunctionEffectsGenerator())
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
     env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 999999

@@ -14,7 +14,7 @@ def test_shortest_path_policy_no_intermediate_target():
             policy=ShortestPathPolicy(),
             data_dir=data_dir,
             snapshot_interval=5,
-            env=env_generator(obs_builder_object=FullEnvObservation(), )[0],
+            env=env_generator(obs_builder_object=FullEnvObservation(), seed=42, )[0],
         )
         assert trajectory.trains_arrived_lookup()["success_rate"] == 0.14285714285714285
 
@@ -26,10 +26,11 @@ def test_shortest_path_policy_with_intermediate_targets():
             policy=ShortestPathPolicy(),
             data_dir=data_dir,
             snapshot_interval=5,
-            env=env_generator(n_cities=5, line_length=3, obs_builder_object=FullEnvObservation(), )[0],
+            env=env_generator(n_cities=5, line_length=3, obs_builder_object=FullEnvObservation(), seed=42, )[0],
         )
         assert trajectory.trains_arrived_lookup()["success_rate"] == 1.0
         env, _, _ = env_generator(
+            seed=42,
             n_cities=5,
             line_length=3
         )

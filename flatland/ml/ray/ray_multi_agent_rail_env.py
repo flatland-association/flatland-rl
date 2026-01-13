@@ -60,7 +60,7 @@ class RayMultiAgentWrapper(MultiAgentEnv, WrappedRailEnv):
 
         prev_dones = copy.deepcopy(self._wrap.dones)
 
-        action_dict = {k: RailEnvActions.from_value(v) for k, v in action_dict.items()}
+        action_dict = {int(k): RailEnvActions.from_value(v) for k, v in action_dict.items()}
         obs, rewards, terminateds, infos = self._wrap.step(action_dict=action_dict)
         infos = {
             str(i):
@@ -86,6 +86,7 @@ class RayMultiAgentWrapper(MultiAgentEnv, WrappedRailEnv):
                 del obs[str(i)]
                 del terminateds[str(i)]
                 del infos[str(i)]
+                del rewards[str(i)]
         truncateds = {"__all__": False}
 
         if self.render_mode is not None:
