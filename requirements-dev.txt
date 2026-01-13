@@ -91,6 +91,8 @@ deptry==0.24.0
     # via flatland-rl (pyproject.toml)
 distlib==0.4.0
     # via virtualenv
+docker==7.1.0
+    # via testcontainers
 entrypoint==2.1.0
     # via versions
 eradicate==2.3.0
@@ -405,6 +407,8 @@ python-dateutil==2.9.0.post0
     #   jupyter-client
     #   matplotlib
     #   pandas
+python-dotenv==1.2.1
+    # via testcontainers
 python-gitlab==7.1.0
     # via crowdai-api
 python-json-logger==4.0.0
@@ -435,6 +439,7 @@ referencing==0.37.0
 requests==2.32.5
     # via
     #   crowdai-api
+    #   docker
     #   flatland-rl (pyproject.toml)
     #   folium
     #   jupyterlab-server
@@ -487,6 +492,8 @@ terminado==0.18.1
     # via
     #   jupyter-server
     #   jupyter-server-terminals
+testcontainers==4.14.0
+    # via flatland-rl (pyproject.toml)
 timeout-decorator==0.5.0
     # via flatland-rl (pyproject.toml)
 tinycss2==1.4.0
@@ -532,6 +539,7 @@ typing-extensions==4.15.0
     #   orderings
     #   pydantic
     #   pydantic-core
+    #   testcontainers
     #   typing-aliases
     #   typing-inspection
     #   versions
@@ -546,8 +554,10 @@ uri-template==1.3.0
 urllib3==2.6.3
     # via
     #   botocore
+    #   docker
     #   flatland-rl (pyproject.toml)
     #   requests
+    #   testcontainers
 versions==1.6.1
     # via flatland-rl (pyproject.toml)
 virtualenv==20.36.1
@@ -566,11 +576,11 @@ wheel==0.45.1
     # via pip-tools
 widgetsnbextension==4.0.15
     # via ipywidgets
+wrapt==2.0.1
+    # via testcontainers
 xyzservices==2025.11.0
     # via folium
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
 # setuptools
-
-testcontainers==4.9.1
