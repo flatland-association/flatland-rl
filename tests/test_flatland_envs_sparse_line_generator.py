@@ -423,15 +423,27 @@ def test_sparse_line_generator_with_intermediate_stops():
     }
     line = line_gen(rail, 10, agents_hints, 0, np_random)
 
-    agent_positions = [[[(11, 40)], [(38, 8)]], [[(27, 40)], [(38, 8)]], [[(20, 26)], [(9, 27)]], [[(11, 40)], [(9, 27)]], [[(38, 8)], [(31, 26)]],
+    agent_positions = [[[(11, 40)], [(38, 8)]],
+                       [[(27, 40)], [(38, 8)]],
+                       [[(20, 26)], [(9, 27)]],
+                       [[(11, 40)]], # truncated
+                       [[(38, 8)], [(31, 26)]],
                        [[(44, 34)], [(31, 26)]],
-                       [[(17, 5)], [(41, 22)]], [[(9, 40)], [(41, 22)]], [[(38, 8)], [(41, 22)]], [[(20, 24)], [(41, 22)]]]
-    agent_directions = [[[Grid4TransitionsEnum.WEST], [Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.WEST]],
-                        [[Grid4TransitionsEnum.SOUTH], [Grid4TransitionsEnum.WEST]], [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]],
-                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH]], [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH]],
-                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]], [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]],
-                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.WEST]]]
-    agent_targets = [(27, 41), (12, 40), (10, 40), (20, 27), (45, 34), (39, 8), (12, 40), (18, 5), (20, 25), (39, 8)]
+                       [[(17, 5)], [(41, 22)]],
+                       [[(9, 40)], [(41, 22)]],
+                       [[(38, 8)], [(41, 22)]],
+                       [[(20, 24)], [(41, 22)]]]
+    agent_directions = [[[Grid4TransitionsEnum.WEST], [Grid4TransitionsEnum.EAST]],
+                        [[Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.EAST]],
+                        [[Grid4TransitionsEnum.SOUTH], [Grid4TransitionsEnum.EAST]],
+                        [[Grid4TransitionsEnum.EAST]],
+                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH]],
+                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH]],
+                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]],
+                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]],
+                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.EAST]],
+                        [[Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.WEST]]]
+    agent_targets = [(27, 41), (12, 40), (10, 40), (9, 27), (45, 34), (39, 8), (12, 40), (18, 5), (20, 25), (39, 8)]
     agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, None)]] for i, (pas, das, target)
                        in enumerate(zip(agent_positions, agent_directions, agent_targets))}
 

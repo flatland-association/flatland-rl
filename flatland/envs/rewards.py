@@ -142,10 +142,20 @@ class DefaultRewards(Rewards[float]):
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> float:
         reward = 0
         if agent.position is not None:
-            self.states[agent.handle][Waypoint(agent.position, agent.direction)].add(agent.state)
-        if agent.position not in self.arrivals[agent.handle]:
-            self.arrivals[agent.handle][Waypoint(agent.position, agent.direction)] = elapsed_steps
-            self.departures[agent.handle][Waypoint(agent.old_position, agent.old_direction)] = elapsed_steps
+            wp = Waypoint(agent.position, agent.direction)
+            self.states[agent.handle][wp].add(agent.state)
+
+            # Only record arrival if this is a new waypoint (not dwelling at same position)
+            old_wp = Waypoint(agent.old_position, agent.old_direction)
+            if wp not in self.arrivals[agent.handle]:
+                self.arrivals[agent.handle][wp] = elapsed_steps
+                # Only record departure from old position when we arrive from on-map position
+                if old_wp.position is not None:
+                    self.departures[agent.handle][old_wp] = elapsed_steps
+        elif agent.old_position is not None:
+            old_wp = Waypoint(agent.old_position, agent.old_direction)
+            self.departures[agent.handle][old_wp] = elapsed_steps
+
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED and not agent_transition_data.state_transition_signal.stop_action_given:
             reward += -1 * agent_transition_data.speed * self.crash_penalty_factor
 
