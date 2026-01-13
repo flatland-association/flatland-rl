@@ -67,9 +67,6 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
         args = parser.parse_args()
     assert args.num_agents > 0, "Must set --num-agents > 0 when running this script!"
     assert (
-        args.enable_new_api_stack
-    ), "Must set --enable-new-api-stack when running this script!"
-    assert (
         args.obs_builder
     ), "Must set --obs-builder <obs builder ID> when running this script!"
 
