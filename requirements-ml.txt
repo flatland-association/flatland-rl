@@ -416,7 +416,7 @@ urllib3==2.6.0
     #   sentry-sdk
 versions==1.6.1
     # via flatland-rl (pyproject.toml)
-virtualenv==20.34.0
+virtualenv==20.36.1
     # via ray
 wandb==0.21.1
     # via flatland-rl (pyproject.toml)
