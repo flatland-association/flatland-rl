@@ -164,11 +164,22 @@ class DefaultRewards(Rewards[float]):
         return reward
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> float:
-        if agent.state_machine.previous_state != TrainState.DONE:
-            return self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps)
-        return 0
+        # If agent finished during episode, reward already calculated in step_reward()
+        if agent.state == TrainState.DONE:
+            return 0
+        # Calculate penalty for not reaching target before episode end
+        return self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps)
 
     def _agent_done_or_max_episode_steps_reward(self, agent, distance_map, elapsed_steps):
+        """
+        Calculate final rewards/penalties for an agent.
+
+        Called in two contexts:
+        1. From step_reward(): when agent transitions to DONE during episode
+        2. From end_of_episode_reward(): when episode ends and agent didn't finish
+
+        Handles both completed and incomplete journeys.
+        """
         reward = 0
         if agent.state == TrainState.DONE:
             # delay at target
