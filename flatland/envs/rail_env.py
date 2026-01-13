@@ -421,7 +421,6 @@ class RailEnv(Environment):
                 self.rewards_dict[i_agent] = self.rewards.cumulate(
                     self.rewards_dict[i_agent], self.rewards.end_of_episode_reward(agent, self.distance_map, self._elapsed_steps)
                 )
-
                 self.dones[i_agent] = True
 
             self.dones["__all__"] = True

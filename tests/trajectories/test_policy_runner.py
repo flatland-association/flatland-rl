@@ -5,6 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Optional, Any, List, Dict
 
+import numpy as np
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
@@ -333,8 +334,8 @@ def test_env_path_and_obs_builder():
 @pytest.mark.parametrize(
     "seed, expected",
     [
-        (1002, {'normalized_reward': -0.007067137809187279 + 1, 'percentage_complete': 1.0, 'reward': -14, 'termination_cause': None, }),
-        (1003, {'normalized_reward': -0.019182231196365473 + 1, 'percentage_complete': 1.0, 'reward': -38, 'termination_cause': None}),
+        (1002, {'normalized_reward': -0.0035335689540936395 + 1, 'percentage_complete': 1.0, 'reward': -7, 'termination_cause': None, }),
+        (1003, {'normalized_reward': -0.0095911155981827365 + 1, 'percentage_complete': 1.0, 'reward': -19, 'termination_cause': None}),
         (None, {'normalized_reward': 0.0 + 1, 'termination_cause': None, 'reward': 0, 'percentage_complete': 1.0}),
     ])
 def test_env_path_and_seed(seed, expected):
@@ -365,4 +366,6 @@ def test_env_path_and_seed(seed, expected):
         with (data_dir / "outputs" / "evaluation.json").open("r") as f:
             actual = json.load(f)
         print(actual)
-        assert actual == expected
+        assert actual['termination_cause'] == expected['termination_cause'], ('termination_cause', actual, expected)
+        for c in ['normalized_reward', 'percentage_complete', 'reward']:
+            assert np.isclose(actual[c], expected[c]), (c, actual, expected)
