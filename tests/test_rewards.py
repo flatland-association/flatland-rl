@@ -407,3 +407,141 @@ def test_punctuality_rewards_target():
 
     # on time only at target
     assert rewards.cumulate(*collect) == (1, 3)
+
+
+def test_arrival_recorded_once_per_waypoint():
+    """Test that arrivals are only recorded once per waypoint, not every step (Bug #327)."""
+    rewards = DefaultRewards()
+    agent = EnvAgent(
+        initial_position=(5, 5),
+        initial_direction=0,
+        target=(10, 10),
+        direction=0,
+        state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+        earliest_departure=0,
+        latest_arrival=100
+    )
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+
+    # Move agent to position (5, 5) facing North (direction 0)
+    agent.position = (5, 5)
+    agent.direction = 0
+    agent.old_position = (5, 4)
+    agent.old_direction = 0
+
+    transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
+
+    # First step at this waypoint - should record arrival
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=10)
+    wp = Waypoint((5, 5), 0)
+    assert rewards.arrivals[agent.handle][wp] == 10
+
+    # Agent dwells at same position for several steps
+    agent.old_position = agent.position
+    agent.old_direction = agent.direction
+
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=11)
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=12)
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=13)
+
+    # Arrival time should NOT be updated - still 10
+    assert rewards.arrivals[agent.handle][wp] == 10, "Arrival should only be recorded once per waypoint"
+
+
+def test_departure_only_when_moving():
+    """Test that departure is only recorded when agent actually moves to new waypoint (Bug #327)."""
+    rewards = DefaultRewards()
+    agent = EnvAgent(
+        initial_position=(5, 5),
+        initial_direction=0,
+        target=(10, 10),
+        direction=0,
+        state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+        earliest_departure=0,
+        latest_arrival=100
+    )
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+
+    transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
+
+    # agent off map
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=1)
+    off_wp = Waypoint(None, 0)
+    assert off_wp not in rewards.arrivals[agent.handle]
+    assert off_wp not in rewards.departures[agent.handle]
+
+    # Agent at initial position
+    agent.position = (5, 5)
+    agent.direction = 0
+    agent.old_position = None
+    agent.old_direction = 0
+
+    # First step - arrival recorded, but no departure (agent hasn't left yet)
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=2)
+
+    wp = Waypoint((5, 5), 0)
+    assert off_wp not in rewards.arrivals[agent.handle]
+    assert off_wp not in rewards.departures[agent.handle]
+    assert wp in rewards.arrivals[agent.handle], "Should record arrival when agent enters map"
+    assert wp not in rewards.departures[agent.handle], "Should not record departure when agent hasn't moved"
+
+    # Agent moves to new position
+    agent.old_position = (5, 5)
+    agent.old_direction = 0
+    agent.position = (5, 6)
+    agent.direction = 0
+
+    # Now departure from old position should be recorded
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=3)
+    assert off_wp not in rewards.arrivals[agent.handle]
+    assert off_wp not in rewards.departures[agent.handle]
+    assert wp in rewards.departures[agent.handle], "Departure should be recorded when agent moves"
+    assert rewards.departures[agent.handle][wp] == 3
+    wp = Waypoint((5, 6), 0)
+    assert wp in rewards.arrivals[agent.handle], "Arrival should be recorded when agent moves"
+    assert rewards.arrivals[agent.handle][wp] == 3
+
+    # Agent arrives at target
+    agent.old_position = (5, 6)
+    agent.old_direction = 0
+    agent.position = None
+    agent.direction = 0
+
+    # Now departure from old position should be recorded, but no arrival for None
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=4)
+    assert off_wp not in rewards.arrivals[agent.handle]
+    assert off_wp not in rewards.departures[agent.handle]
+    assert wp in rewards.departures[agent.handle], "Departure should be recorded when agent moves off map"
+    assert rewards.departures[agent.handle][wp] == 4
+
+
+def test_waypoint_comparison_uses_waypoint_objects():
+    """Test that waypoint tracking correctly uses Waypoint objects, not tuples (Bug #327)."""
+    rewards = DefaultRewards()
+    agent = EnvAgent(
+        initial_position=(7, 8),
+        initial_direction=1,
+        target=(10, 10),
+        direction=1,
+        state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+        earliest_departure=0,
+        latest_arrival=100
+    )
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+
+    transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
+
+    agent.position = (7, 8)
+    agent.direction = 1
+    agent.old_position = (7, 7)
+    agent.old_direction = 1
+
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
+
+    # Check that arrivals dict uses Waypoint as key, not tuple
+    wp = Waypoint((7, 8), 1)
+    assert wp in rewards.arrivals[agent.handle], "Should use Waypoint object as key"
+    assert (7, 8) not in rewards.arrivals[agent.handle], "Should not have tuple as key"
