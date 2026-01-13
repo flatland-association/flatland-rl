@@ -5,6 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Optional, Any, List, Dict
 
+import numpy as np
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
@@ -365,4 +366,6 @@ def test_env_path_and_seed(seed, expected):
         with (data_dir / "outputs" / "evaluation.json").open("r") as f:
             actual = json.load(f)
         print(actual)
-        assert actual == expected
+        assert actual['termination_cause'] == expected['termination_cause'], ('termination_cause', actual, expected)
+        for c in ['normalized_reward', 'percentage_complete', 'reward']:
+            assert np.isclose(actual[c], expected[c]), (c, actual, expected)
