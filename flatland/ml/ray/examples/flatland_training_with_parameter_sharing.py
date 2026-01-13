@@ -33,9 +33,6 @@ def add_flatland_training_with_parameter_sharing_args():
         default_timesteps=1000000,
         default_reward=0.0,
     )
-    parser.set_defaults(
-        enable_new_api_stack=True
-    )
     parser.add_argument(
         "--train-batch-size-per-learner",
         type=int,
