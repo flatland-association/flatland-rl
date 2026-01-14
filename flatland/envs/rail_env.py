@@ -419,6 +419,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         for agent in self.agents:
             i_agent = agent.handle
 
+            # (1) ACTION -> POSITION
             current_or_initial_configuration = agent.current_configuration
             initial_configuration = agent.initial_configuration
             agent.old_configuration = agent.current_configuration
@@ -436,13 +437,22 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             if action_valid:
                 new_configuration_independent, straight = transition
 
+            # (2) STATE TRANSITION SIGNALS
+            # get desired new_position and new_direction
             stop_action_given = raw_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
             movement_action_given = RailEnvActions.is_moving_action(raw_action)
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
             state = agent.state
+
+            # (3) SPEED UPDATE
+            # N.B. new speed is only applied if MOVING state and previous was not READY_TO_DEPART/MALFUNCTION_OFF_MAP, see below
             new_speed = agent.speed_counter.speed
 
+            # N.B. no acceleration if
+            # - symmetric switch (as movement_action_given == False)
+            # - if L/R corrected to F, then do not accelerate (as then raw_action != MOVE_FORWARD)
+            # TODO revise design: does it make sense to accelerate when coming from STOPPED/MALFUNCTION as speed not set to 0?
             # get desired new speed independent of motion check
             agent_max_speed = agent.speed_counter.max_speed
             if not action_valid:
@@ -458,7 +468,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 new_speed += self.braking_delta
             new_speed = cached_cap_speed(agent_max_speed, new_speed)
 
-            # get desired new configuration independent of motion check
+# get desired new configuration independent of motion check
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
                 new_configuration = initial_configuration
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and action_valid and (
@@ -487,10 +497,12 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 # fails if initial position has invalid direction or if the grid is not closed
                 # assert valid_position_direction
 
+            # (4) MOTION/RESOURCE CHECK
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
             current_resource = self.resource_map.get_resource(agent.current_configuration)
             new_resource = self.resource_map.get_resource(new_configuration)
 
+            # (5) GATHER STATE TRANSITION SIGNALS
             # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
             self.temp_transition_data[i_agent].state_transition_signal.in_malfunction = agent.malfunction_handler.in_malfunction
             # Earliest departure reached - Train is allowed to move now
@@ -518,6 +530,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             self.motion_check.add_agent(i_agent, current_resource, new_resource)
 
+        # (6) RESOURCE CONFLICT RESOLUTION
         # Find conflicts between trains trying to occupy same cell
         self.motion_check.find_conflicts()
 
@@ -527,13 +540,15 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             current_or_initial_configuration = agent.current_configuration
             initial_configuration = agent.initial_configuration
 
-            # Fetch the saved transition data
+            # (7) FETCH THE SAVED TRANSITION DATA FOR AGENT
             agent_transition_data = self.temp_transition_data[i_agent]
 
+            # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
             # motion_check is False if agent wants to stay in the cell
             motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.current_resource)
 
             action_valid = agent_transition_data.state_transition_signal.movement_allowed  # action leading to valid next cell
+
             # Movement allowed if both
             # - action leading to valid next cell
             # - inside cell or at end of cell and no conflict with other trains and
@@ -543,11 +558,11 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             agent_transition_data.state_transition_signal.movement_allowed = action_valid
 
-            # state machine step
+            # (9) STATE MACHINE STEP
             agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
             agent.state_machine.step()
 
-            # position and speed_counter update
+            # (10) POSITION AND SPEED_COUNTER UPDATE
             if agent.state == TrainState.MOVING:
                 # only position update while MOVING and motion_check OK
                 agent.current_configuration = agent_transition_data.new_configuration
@@ -558,16 +573,15 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 agent.state_machine.update_if_reached(agent.current_configuration, agent.targets)
             elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
                 agent.current_configuration = initial_configuration
-
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
                 agent.speed_counter.step(speed=Fraction(0))
 
-            # Handle done state actions, optionally remove agents
+            # (10) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
             self.handle_done_state(agent)
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
-            ## Update rewards
+            # (11) UPDATE REWARDS
             self.rewards_dict[i_agent] = self.rewards.cumulate(
                 self.rewards_dict[i_agent],
                 self.rewards.step_reward(
@@ -578,7 +592,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 )
             )
 
-            # update malfunction counter
+            # (12) UPDATE MALFUNCTION COUNTER
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
             agent.malfunction_handler.update_counter()
 
