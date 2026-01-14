@@ -33,9 +33,6 @@ def add_flatland_training_with_parameter_sharing_args():
         default_timesteps=1000000,
         default_reward=0.0,
     )
-    parser.set_defaults(
-        enable_new_api_stack=True
-    )
     parser.add_argument(
         "--train-batch-size-per-learner",
         type=int,
@@ -66,9 +63,6 @@ def train(args: Optional[argparse.Namespace] = None, init_args=None) -> Union[Re
         parser = add_flatland_training_with_parameter_sharing_args()
         args = parser.parse_args()
     assert args.num_agents > 0, "Must set --num-agents > 0 when running this script!"
-    assert (
-        args.enable_new_api_stack
-    ), "Must set --enable-new-api-stack when running this script!"
     assert (
         args.obs_builder
     ), "Must set --obs-builder <obs builder ID> when running this script!"

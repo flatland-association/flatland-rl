@@ -6,7 +6,7 @@
 #
 annotated-types==0.7.0
     # via pydantic
-anyio==4.10.0
+anyio==4.12.1
     # via
     #   httpx
     #   jupyter-server
@@ -16,13 +16,13 @@ argon2-cffi==25.1.0
     # via jupyter-server
 argon2-cffi-bindings==25.1.0
     # via argon2-cffi
-arrow==1.3.0
+arrow==1.4.0
     # via isoduration
-asttokens==3.0.0
+asttokens==3.0.1
     # via stack-data
 async-lru==2.0.5
     # via jupyterlab
-attrs==25.3.0
+attrs==25.4.0
     # via
     #   entrypoint
     #   flake8-eradicate
@@ -32,36 +32,34 @@ attrs==25.3.0
     #   versions
 babel==2.17.0
     # via jupyterlab-server
-beautifulsoup4==4.13.4
+beautifulsoup4==4.14.3
     # via nbconvert
-bleach[css]==6.2.0
+bleach[css]==6.3.0
     # via nbconvert
-boto3==1.40.12
+boto3==1.42.26
     # via flatland-rl (pyproject.toml)
-botocore==1.40.12
+botocore==1.42.26
     # via
     #   boto3
     #   s3transfer
-branca==0.8.1
+branca==0.8.2
     # via folium
-build==1.3.0
+build==1.4.0
     # via pip-tools
-cachetools==5.5.2
-    # via
-    #   flatland-rl (pyproject.toml)
-    #   tox
-certifi==2025.8.3
+cachetools==6.2.4
+    # via tox
+certifi==2026.1.4
     # via
     #   httpcore
     #   httpx
     #   requests
-cffi==1.17.1
+cffi==2.0.0
     # via argon2-cffi-bindings
 chardet==5.2.0
     # via tox
-charset-normalizer==3.4.3
+charset-normalizer==3.4.4
     # via requests
-click==8.2.1
+click==8.3.1
     # via
     #   deptry
     #   flatland-rl (pyproject.toml)
@@ -77,33 +75,35 @@ contourpy==1.3.2
     # via
     #   flatland-rl (pyproject.toml)
     #   matplotlib
-coverage==7.10.4
+coverage==7.13.1
     # via flatland-rl (pyproject.toml)
 crowdai-api==0.1.22
     # via flatland-rl (pyproject.toml)
 cycler==0.12.1
     # via matplotlib
-debugpy==1.8.16
+debugpy==1.8.19
     # via ipykernel
 decorator==5.2.1
     # via ipython
 defusedxml==0.7.1
     # via nbconvert
-deptry==0.23.1
+deptry==0.24.0
     # via flatland-rl (pyproject.toml)
 distlib==0.4.0
     # via virtualenv
+docker==7.1.0
+    # via testcontainers
 entrypoint==2.1.0
     # via versions
 eradicate==2.3.0
     # via flake8-eradicate
-executing==2.2.0
+executing==2.2.1
     # via stack-data
 fastenum==1.1.2
     # via flatland-rl (pyproject.toml)
 fastjsonschema==2.21.2
     # via nbformat
-filelock==3.19.1
+filelock==3.20.3
     # via
     #   tox
     #   virtualenv
@@ -115,7 +115,7 @@ flake8-eradicate==1.5.0
     # via flatland-rl (pyproject.toml)
 folium==0.20.0
     # via flatland-rl (pyproject.toml)
-fonttools==4.61.0
+fonttools==4.61.1
     # via matplotlib
 fqdn==1.5.1
     # via jsonschema
@@ -125,7 +125,7 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via jupyterlab
-idna==3.10
+idna==3.11
     # via
     #   anyio
     #   httpx
@@ -133,15 +133,15 @@ idna==3.10
     #   requests
 importlib-resources==6.5.2
     # via flatland-rl (pyproject.toml)
-iniconfig==2.1.0
+iniconfig==2.3.0
     # via pytest
-ipycanvas==0.14.1
+ipycanvas==0.14.3
     # via flatland-rl (pyproject.toml)
 ipycytoscape==1.3.3
     # via flatland-rl (pyproject.toml)
-ipyevents==2.0.2
+ipyevents==2.0.4
     # via flatland-rl (pyproject.toml)
-ipykernel==6.30.1
+ipykernel==7.1.0
     # via
     #   jupyter
     #   jupyter-console
@@ -149,14 +149,14 @@ ipykernel==6.30.1
     #   nbmake
 ipyplot==1.1.2
     # via flatland-rl (pyproject.toml)
-ipython==8.37.0
+ipython==8.38.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipykernel
     #   ipyplot
     #   ipywidgets
     #   jupyter-console
-ipywidgets==8.1.7
+ipywidgets==8.1.8
     # via
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
@@ -179,20 +179,20 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-json5==0.12.1
+json5==0.13.0
     # via jupyterlab-server
 jsonpointer==3.0.0
     # via jsonschema
-jsonschema[format-nongpl]==4.25.1
+jsonschema[format-nongpl]==4.26.0
     # via
     #   jupyter-events
     #   jupyterlab-server
     #   nbformat
-jsonschema-specifications==2025.4.1
+jsonschema-specifications==2025.9.1
     # via jsonschema
 jupyter==1.1.1
     # via flatland-rl (pyproject.toml)
-jupyter-client==8.6.3
+jupyter-client==8.8.0
     # via
     #   ipykernel
     #   jupyter-console
@@ -200,7 +200,7 @@ jupyter-client==8.6.3
     #   nbclient
 jupyter-console==6.6.3
     # via jupyter
-jupyter-core==5.8.1
+jupyter-core==5.9.1
     # via
     #   ipykernel
     #   jupyter-client
@@ -212,9 +212,9 @@ jupyter-core==5.8.1
     #   nbformat
 jupyter-events==0.12.0
     # via jupyter-server
-jupyter-lsp==2.2.6
+jupyter-lsp==2.3.0
     # via jupyterlab
-jupyter-server==2.16.0
+jupyter-server==2.17.0
     # via
     #   jupyter-lsp
     #   jupyterlab
@@ -223,41 +223,41 @@ jupyter-server==2.16.0
     #   notebook-shim
 jupyter-server-terminals==0.5.3
     # via jupyter-server
-jupyterlab==4.4.8
+jupyterlab==4.5.2
     # via
     #   jupyter
     #   notebook
 jupyterlab-pygments==0.3.0
     # via nbconvert
-jupyterlab-server==2.27.3
+jupyterlab-server==2.28.0
     # via
     #   jupyterlab
     #   notebook
-jupyterlab-widgets==3.0.15
+jupyterlab-widgets==3.0.16
     # via ipywidgets
 kiwisolver==1.4.9
     # via matplotlib
-lark==1.2.2
+lark==1.3.1
     # via rfc3987-syntax
-lxml==6.0.0
+lxml==6.0.2
     # via svgutils
-markupsafe==3.0.2
+markupsafe==3.0.3
     # via
     #   jinja2
     #   nbconvert
-matplotlib==3.10.5
+matplotlib==3.10.8
     # via
     #   flatland-rl (pyproject.toml)
     #   seaborn
-matplotlib-inline==0.1.7
+matplotlib-inline==0.2.1
     # via
     #   ipykernel
     #   ipython
 mccabe==0.7.0
     # via flake8
-mistune==3.1.3
+mistune==3.2.0
     # via nbconvert
-msgpack==1.1.1
+msgpack==1.1.2
     # via
     #   flatland-rl (pyproject.toml)
     #   msgpack-numpy
@@ -267,7 +267,7 @@ named==1.4.2
     # via
     #   entrypoint
     #   solus
-nbclient==0.10.2
+nbclient==0.10.4
     # via
     #   nbconvert
     #   nbmake
@@ -287,7 +287,7 @@ nest-asyncio==1.6.0
     # via ipykernel
 networkx==3.4.2
     # via flatland-rl (pyproject.toml)
-notebook==7.4.5
+notebook==7.5.2
     # via jupyter
 notebook-shim==0.2.4
     # via
@@ -309,8 +309,6 @@ opencv-python==4.11.0.86
     # via flatland-rl (pyproject.toml)
 orderings==1.6.0
     # via versions
-overrides==7.7.0
-    # via jupyter-server
 packaging==25.0
     # via
     #   build
@@ -326,25 +324,25 @@ packaging==25.0
     #   pytest
     #   requirements-parser
     #   tox
-pandas==2.3.1
+pandas==2.3.3
     # via
     #   flatland-rl (pyproject.toml)
     #   seaborn
 pandocfilters==1.5.1
     # via nbconvert
-parso==0.8.4
+parso==0.8.5
     # via jedi
 pexpect==4.9.0
     # via ipython
-pillow==11.3.0
+pillow==12.1.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
     #   ipyplot
     #   matplotlib
-pip-tools==7.5.0
+pip-tools==7.5.2
     # via flatland-rl (pyproject.toml)
-platformdirs==4.3.8
+platformdirs==4.5.1
     # via
     #   jupyter-core
     #   tox
@@ -353,13 +351,13 @@ pluggy==1.6.0
     # via
     #   pytest
     #   tox
-prometheus-client==0.22.1
+prometheus-client==0.24.0
     # via jupyter-server
-prompt-toolkit==3.0.51
+prompt-toolkit==3.0.52
     # via
     #   ipython
     #   jupyter-console
-psutil==7.0.0
+psutil==7.2.1
     # via ipykernel
 ptyprocess==0.7.0
     # via
@@ -369,15 +367,15 @@ pure-eval==0.2.3
     # via stack-data
 pycodestyle==2.14.0
     # via flake8
-pycparser==2.22
+pycparser==2.23
     # via cffi
-pydantic==2.11.7
+pydantic==2.12.5
     # via flatland-rl (pyproject.toml)
-pydantic-core==2.33.2
+pydantic-core==2.41.5
     # via pydantic
 pyflakes==3.4.0
     # via flake8
-pyglet==2.1.8
+pyglet==2.1.12
     # via flatland-rl (pyproject.toml)
 pygments==2.19.2
     # via
@@ -386,15 +384,15 @@ pygments==2.19.2
     #   nbconvert
     #   nbmake
     #   pytest
-pyparsing==3.2.3
+pyparsing==3.3.1
     # via matplotlib
-pyproject-api==1.9.1
+pyproject-api==1.10.0
     # via tox
 pyproject-hooks==1.2.0
     # via
     #   build
     #   pip-tools
-pytest==8.4.1
+pytest==9.0.2
     # via
     #   flatland-rl (pyproject.toml)
     #   nbmake
@@ -409,17 +407,19 @@ python-dateutil==2.9.0.post0
     #   jupyter-client
     #   matplotlib
     #   pandas
-python-gitlab==6.2.0
+python-dotenv==1.2.1
+    # via testcontainers
+python-gitlab==7.1.0
     # via crowdai-api
-python-json-logger==3.3.0
+python-json-logger==4.0.0
     # via jupyter-events
 pytz==2025.2
     # via pandas
-pyyaml==6.0.2
+pyyaml==6.0.3
     # via
     #   flatland-rl (pyproject.toml)
     #   jupyter-events
-pyzmq==27.0.1
+pyzmq==27.1.0
     # via
     #   ipykernel
     #   jupyter-client
@@ -427,11 +427,11 @@ pyzmq==27.0.1
     #   jupyter-server
 recordtype==1.4
     # via flatland-rl (pyproject.toml)
-redis==6.4.0
+redis==7.1.0
     # via
     #   crowdai-api
     #   flatland-rl (pyproject.toml)
-referencing==0.36.2
+referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
@@ -439,6 +439,7 @@ referencing==0.36.2
 requests==2.32.5
     # via
     #   crowdai-api
+    #   docker
     #   flatland-rl (pyproject.toml)
     #   folium
     #   jupyterlab-server
@@ -458,15 +459,15 @@ rfc3986-validator==0.1.1
     #   jupyter-events
 rfc3987-syntax==1.1.0
     # via jsonschema
-rpds-py==0.27.0
+rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-s3transfer==0.13.1
+s3transfer==0.16.0
     # via boto3
 seaborn==0.13.2
     # via flatland-rl (pyproject.toml)
-send2trash==1.8.3
+send2trash==2.0.0
     # via jupyter-server
 shortuuid==1.0.13
     # via ipyplot
@@ -477,11 +478,9 @@ six==1.17.0
     #   rfc3339-validator
 snakeviz==2.2.2
     # via flatland-rl (pyproject.toml)
-sniffio==1.3.1
-    # via anyio
 solus==1.2.2
     # via versions
-soupsieve==2.7
+soupsieve==2.8.1
     # via beautifulsoup4
 spectate==1.0.1
     # via ipycytoscape
@@ -493,11 +492,13 @@ terminado==0.18.1
     # via
     #   jupyter-server
     #   jupyter-server-terminals
+testcontainers==4.14.0
+    # via flatland-rl (pyproject.toml)
 timeout-decorator==0.5.0
     # via flatland-rl (pyproject.toml)
 tinycss2==1.4.0
     # via bleach
-tornado==6.5.2
+tornado==6.5.4
     # via
     #   ipykernel
     #   jupyter-client
@@ -506,7 +507,7 @@ tornado==6.5.2
     #   notebook
     #   snakeviz
     #   terminado
-tox==4.27.0
+tox==4.34.1
     # via flatland-rl (pyproject.toml)
 tqdm==4.67.1
     # via flatland-rl (pyproject.toml)
@@ -525,14 +526,12 @@ traitlets==5.14.3
     #   nbclient
     #   nbconvert
     #   nbformat
-types-python-dateutil==2.9.0.20250809
-    # via arrow
 typing-aliases==1.10.1
     # via
     #   entrypoint
     #   orderings
     #   versions
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
     #   beautifulsoup4
     #   flatland-rl (pyproject.toml)
@@ -540,42 +539,48 @@ typing-extensions==4.14.1
     #   orderings
     #   pydantic
     #   pydantic-core
+    #   testcontainers
     #   typing-aliases
     #   typing-inspection
     #   versions
-typing-inspection==0.4.1
+typing-inspection==0.4.2
     # via pydantic
-tzdata==2025.2
-    # via pandas
+tzdata==2025.3
+    # via
+    #   arrow
+    #   pandas
 uri-template==1.3.0
     # via jsonschema
-urllib3==2.6.0
+urllib3==2.6.3
     # via
     #   botocore
+    #   docker
     #   flatland-rl (pyproject.toml)
     #   requests
+    #   testcontainers
 versions==1.6.1
     # via flatland-rl (pyproject.toml)
-virtualenv==20.34.0
+virtualenv==20.36.1
     # via tox
-wcwidth==0.2.13
+wcwidth==0.2.14
     # via prompt-toolkit
-webcolors==24.11.1
+webcolors==25.10.0
     # via jsonschema
 webencodings==0.5.1
     # via
     #   bleach
     #   tinycss2
-websocket-client==1.8.0
+websocket-client==1.9.0
     # via jupyter-server
 wheel==0.45.1
     # via pip-tools
-widgetsnbextension==4.0.14
+widgetsnbextension==4.0.15
     # via ipywidgets
-xyzservices==2025.4.0
+wrapt==2.0.1
+    # via testcontainers
+xyzservices==2025.11.0
     # via folium
+
 # The following packages are considered to be unsafe in a requirements file:
 # pip
 # setuptools
-
-testcontainers==4.9.1
