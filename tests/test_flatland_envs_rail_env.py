@@ -11,7 +11,7 @@ import pytest
 from flatland.core.transition_map import GridTransitionMap
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.grid.rail_env_grid import RailEnvTransitions
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
@@ -510,4 +510,107 @@ def test_speed_after_malfunction_full_acceleration_braking():
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == 0.5
     # starts at old distance plus increment modulo 1
+    assert agent.speed_counter.distance == 0
+
+
+def test_symmetric_switch_braking():
+    env, _, _ = env_generator(seed=43, n_agents=1)
+    env.braking_delta = -0.1
+    assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
+    print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
+    assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
+    agent = env.agents[0]
+    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.max_speed == 0.5
+    agent.initial_position = (15, 14)
+    agent.initial_direction = 1
+    assert agent.speed_counter.distance == 0
+    while not agent.state == TrainState.READY_TO_DEPART:
+        env.step({})
+        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.speed == 0.5
+        assert agent.position is None
+
+    # enter grid
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
+    assert agent.speed_counter.distance == 0
+
+    env.step({})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.distance == 0.5
+
+    env.step({agent.handle: RailEnvActions.STOP_MOVING})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.4
+    assert agent.speed_counter.distance == 0.9
+
+    env.step({agent.handle: RailEnvActions.STOP_MOVING})
+    assert agent.position == (15, 15)
+    assert agent.direction == 1
+    # TODO bug: moved to invalid position,direction:
+    assert not env.rail.get_valid_directions_on_grid(15, 16)[1]  # cannot enter (15,16) heading EAST == 1:
+    assert agent.state == TrainState.MOVING
+    assert np.isclose(agent.speed_counter.speed, 0.3)
+
+    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
+    assert np.isclose(agent.speed_counter.distance, (0.9 + 0.3) % 1)
+
+
+def test_symmetric_switch_full_braking():
+    env, _, _ = env_generator(seed=43, n_agents=1)
+    assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
+    print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
+    assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
+    agent = env.agents[0]
+    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.max_speed == 0.5
+    agent.initial_position = (15, 14)
+    agent.initial_direction = 1
+    assert agent.speed_counter.distance == 0
+    while not agent.state == TrainState.READY_TO_DEPART:
+        env.step({})
+        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.speed == 0.5
+        assert agent.position is None
+
+    # enter grid
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
+    assert agent.speed_counter.distance == 0
+
+    env.step({})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.distance == 0.5
+
+    env.step({agent.handle: RailEnvActions.STOP_MOVING})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.STOPPED
+    assert agent.speed_counter.speed == 0
+    assert agent.speed_counter.distance == 0.5
+
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.position == (15, 15)
+    assert agent.direction == 1
+    # TODO bug: moved to invalid position,direction:
+    assert not env.rail.get_valid_directions_on_grid(15, 16)[1]  # cannot enter (15,16) heading EAST == 1:
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
     assert agent.speed_counter.distance == 0
