@@ -452,6 +452,7 @@ class RailEnv(Environment):
         for agent in self.agents:
             i_agent = agent.handle
 
+            # (1) ACTION -> POSITION
             agent.old_position = agent.position
             agent.old_direction = agent.direction
 
@@ -465,25 +466,32 @@ class RailEnv(Environment):
                 RailEnvActions.from_value(raw_action), (current_position, current_direction)
             )
 
+            # (2) STATE TRANSITION SIGNALS
             # get desired new_position and new_direction
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
             movement_action_given = RailEnvActions.is_moving_action(preprocessed_action)
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
+
+            # (3) SPEED UPDATE
+            # N.B. new speed is only applied if MOVING state and previous was not READY_TO_DEPART/MALFUNCTION_OFF_MAP, see below
             new_speed = agent.speed_counter.speed
             state = agent.state
             agent_max_speed = agent.speed_counter.max_speed
+            # N.B. no acceleration if
+            # - symmetric switch (as movement_action_given == False)
+            # - if L/R corrected to F, then do not accelerate (as then raw_action != MOVE_FORWARD)
+            # TODO revise design: does it make sense to accelerate when coming from STOPPED/MALFUNCTION as speed not set to 0?
+            accelerate = movement_action_given and (state == TrainState.STOPPED or state == TrainState.MALFUNCTION or raw_action == RailEnvActions.MOVE_FORWARD)
             # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING. Caveat: DO_NOTHING would be undefined for symmetric switches!
-            if (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
+            if accelerate:
                 # start moving
-                new_speed += self.acceleration_delta
-            elif preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD:
-                # accelerate, but not if left/right corrected to forward
                 new_speed += self.acceleration_delta
             elif stop_action_given:
                 # decelerate
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent_max_speed, new_speed))
+
             if state == TrainState.READY_TO_DEPART and movement_action_given:
                 new_position = agent.initial_position
                 new_direction = agent.initial_direction
@@ -514,6 +522,7 @@ class RailEnv(Environment):
                 # fails if initial position has invalid direction
                 # assert valid_position_direction
 
+            # (4) MOTION/RESOURCE CHECK
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
             new_position_level_free = new_position
             if new_position in self.level_free_positions:
@@ -521,7 +530,9 @@ class RailEnv(Environment):
             agent_position_level_free = agent.position
             if agent.position in self.level_free_positions:
                 agent_position_level_free = (agent.position, agent.direction % 2)
+            self.motion_check.add_agent(i_agent, agent_position_level_free, new_position_level_free)
 
+            # (5) GATHER STATE TRANSITION SIGNALS
             # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
             self.temp_transition_data[i_agent].state_transition_signal.in_malfunction = agent.malfunction_handler.in_malfunction
             # Earliest departure reached - Train is allowed to move now
@@ -544,10 +555,8 @@ class RailEnv(Environment):
             self.temp_transition_data[i_agent].new_speed = new_speed
             self.temp_transition_data[i_agent].new_position_level_free = new_position_level_free
             self.temp_transition_data[i_agent].preprocessed_action = preprocessed_action
-            # self.temp_transition_data[i_agent].state_transition_signal = state_transition_signals
 
-            self.motion_check.add_agent(i_agent, agent_position_level_free, new_position_level_free)
-
+        # (6) RESOURCE CONFLICT RESOLUTION
         # Find conflicts between trains trying to occupy same cell
         self.motion_check.find_conflicts()
 
@@ -555,25 +564,27 @@ class RailEnv(Environment):
         for agent in self.agents:
             i_agent = agent.handle
 
-            # Fetch the saved transition data
+            # (7) FETCH THE SAVED TRANSITION DATA FOR AGENT
             agent_transition_data = self.temp_transition_data[i_agent]
 
+            # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
             # motion_check is False if agent wants to stay in the cell
             motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.agent_position_level_free)
+
             # Movement allowed if inside cell or at end of cell and no conflict with other trains
             movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or motion_check
-
             agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
 
-            # state machine step
+            # (9) STATE MACHINE STEP
             agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
             agent.state_machine.step()
 
-            # position and speed_counter update
+            # (10) POSITION AND SPEED_COUNTER UPDATE
             if agent.state == TrainState.MOVING:
                 # only position update while MOVING and motion_check OK
                 agent.position = agent_transition_data.new_position
                 agent.direction = agent_transition_data.new_direction
+                # TODO revise design: set speed to 0 during malfunction and do update whenever MOVING?
                 # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
                 if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
                         agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
@@ -582,16 +593,15 @@ class RailEnv(Environment):
             elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
                 agent.position = agent.initial_position
                 agent.direction = agent.initial_direction
-
             # TODO revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
                 agent.speed_counter.step(speed=0)
 
-            # Handle done state actions, optionally remove agents
+            # (10) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
             self.handle_done_state(agent)
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
-            ## Update rewards
+            # (11) UPDATE REWARDS
             self.rewards_dict[i_agent] = self.rewards.cumulate(
                 self.rewards_dict[i_agent],
                 self.rewards.step_reward(
@@ -602,7 +612,7 @@ class RailEnv(Environment):
                 )
             )
 
-            # update malfunction counter
+            # (12) UPDATE MALFUNCTION COUNTER
             # TODO revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
             agent.malfunction_handler.update_counter()
 
