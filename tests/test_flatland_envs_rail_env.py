@@ -19,6 +19,7 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
+from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
@@ -442,3 +443,71 @@ def test_clone_from_with_random_policy():
         assert len(trajectory.compare_actions(other)) == 0
         assert len(trajectory.compare_positions(other)) == 0
         assert len(trajectory.compare_rewards_dones_infos(other)) == 0
+
+
+def test_speed_after_malfunction():
+    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=1)
+    env.acceleration_delta = 0.1
+    agent = env.agents[0]
+
+    # TODO revise design: initial speed 0?
+    initial_speed = agent.speed_counter.max_speed
+    assert initial_speed == 0.5
+    assert agent.speed_counter.speed == initial_speed
+
+    while not agent.state.is_on_map_state():
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+        assert agent.speed_counter.speed == initial_speed
+        assert agent.speed_counter.distance == 0
+    while not agent.malfunction_handler.in_malfunction:
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    speed = agent.speed_counter.speed
+
+    distance = agent.speed_counter.distance
+    assert speed == 0
+    while agent.state.is_malfunction_state():
+        # TODO revise design: set speed to 0 during malfunction?
+        assert agent.speed_counter.speed == speed
+        assert agent.speed_counter.distance == distance
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+
+    # takes up old speed plus increment.
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == speed + env.acceleration_delta
+    assert agent.speed_counter.speed <= agent.speed_counter.max_speed
+    # starts at old distance plus increment
+    assert agent.speed_counter.distance == distance + env.acceleration_delta
+
+
+def test_speed_after_malfunction_full_acceleration_braking():
+    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=1)
+    agent = env.agents[0]
+
+    assert agent.speed_counter.max_speed == 0.5
+    initial_speed = agent.speed_counter.max_speed
+    assert initial_speed == 0.5
+    assert agent.speed_counter.speed == initial_speed
+    assert agent.speed_counter.speed == initial_speed
+
+    while not agent.state.is_on_map_state():
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+        assert agent.speed_counter.speed == initial_speed
+        assert agent.speed_counter.distance == 0
+    while not agent.malfunction_handler.in_malfunction:
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    speed = agent.speed_counter.speed
+
+    distance = agent.speed_counter.distance
+    assert speed == 0
+    assert distance == 0.5
+    while agent.state.is_malfunction_state():
+        # TODO REVISE DESIGN: set speed to 0 during malfunction?
+        assert agent.speed_counter.speed == speed
+        assert agent.speed_counter.distance == distance
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+
+    # takes up old speed plus increment.
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    # starts at old distance plus increment modulo 1
+    assert agent.speed_counter.distance == 0
