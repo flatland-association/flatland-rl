@@ -6,6 +6,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
 
+# TODO this test might be flawed: check_action_on_agent takes the current cell and not the cell to be entered!
 @pytest.mark.parametrize(
     "elem, direction, expected_left, expected_forward,expected_right,expected_do_nothing",
     [pytest.param(*v, id=f"{v[0].name}")
@@ -72,6 +73,7 @@ def test_check_action_on_agent(elem, direction, expected_left, expected_forward,
     assert rail._check_action_on_agent(RailEnvActions.DO_NOTHING, ((0, 0), direction)) == expected_do_nothing
 
 
+# TODO this test might be flawed: check_action_on_agent takes the current cell and not the cell to be entered!
 def test_check_action_on_agent_horizontal_straight():
     rail = RailGridTransitionMap(3, 3, RailEnvTransitions())
     rail.set_transitions((1, 1,), RailEnvTransitionsEnum.horizontal_straight)
@@ -93,6 +95,7 @@ def test_check_action_on_agent_horizontal_straight():
     assert not transition_valid
 
 
+# TODO this test might be flawed: check_action_on_agent takes the current cell and not the cell to be entered!
 def test_check_action_on_agent_symmetric_switch_from_west():
     rail = RailGridTransitionMap(3, 3, RailEnvTransitions())
     rail.set_transitions((1, 1,), RailEnvTransitionsEnum.symmetric_switch_from_west)
@@ -557,3 +560,20 @@ def test_action_independent(elem, direction, action, expected, regenerate=False)
                 for a in RailEnvActions:
                     t = rail.apply_action_independent(a, ((1, 1), d))
                     print(f"(RailEnvTransitionsEnum.{elem.name},Grid4TransitionsEnum.{Grid4TransitionsEnum(d).name},{a},{t}),")
+
+
+@pytest.mark.parametrize(
+    "elem, expected",
+    [pytest.param(*v, id=f"{v[0].name}")
+     for v in [
+         (RailEnvTransitionsEnum.simple_switch_east_left, [False, True, True, True]),
+         (RailEnvTransitionsEnum.dead_end_from_east, [False, False, False, True]),
+         (RailEnvTransitionsEnum.horizontal_straight, [False, True, False, True]),
+         (RailEnvTransitionsEnum.symmetric_switch_from_west, [True, True, True, False]),
+         (RailEnvTransitionsEnum.right_turn_from_west, [True, True, False, False]),
+     ]]
+)
+def test_get_valid_directions_on_grid(elem, expected):
+    rail = RailGridTransitionMap(1, 1, RailEnvTransitions())
+    rail.set_transitions((0, 0), elem)
+    assert rail.get_valid_directions_on_grid(0, 0) == expected

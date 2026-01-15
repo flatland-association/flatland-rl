@@ -46,6 +46,8 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     @lru_cache(maxsize=1_000_000)
     def _check_action_new(self, action: RailEnvActions, position: IntVector2D, direction: int):
         """
+        Preprocess action.
+
         Checks whether action at position and direction leads to a valid new position in the grid.
 
         Sets action to MOVE_FORWARD if MOVE_LEFT/MOVE_RIGHT is provided but transition is not possible.
@@ -103,6 +105,14 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     def _check_action_on_agent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Tuple[
         bool, Tuple[Tuple[int, int], int], bool, RailEnvActions, bool]:
         """
+        Preprocess action.
+
+        Parameters
+        ----------
+        action : RailEnvActions
+            Action to execute
+        configuration : Tuple[Tuple[int, int], int]
+            current configuration, e.g. position and orientation or current edge
 
         Returns
         -------
@@ -151,3 +161,4 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         Returns directions in which the agent can move
         """
         return self.transitions.get_entry_directions(self.get_full_transitions(row, col))
+
