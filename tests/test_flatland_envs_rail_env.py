@@ -558,7 +558,7 @@ def test_symmetric_switch_braking():
     assert agent.position == (15, 15)
     assert agent.direction == 1
     # TODO bug: moved to invalid position,direction:
-    assert not env.rail.get_valid_directions_on_grid(15, 16)[1]  # cannot enter (15,16) heading EAST == 1:
+    assert not env.rail.is_valid_configuration(((15, 16), 1))  # cannot enter (15,16) heading EAST == 1:
     assert agent.state == TrainState.MOVING
     assert np.isclose(agent.speed_counter.speed, 0.3)
 
@@ -568,6 +568,7 @@ def test_symmetric_switch_braking():
 
 def test_symmetric_switch_full_braking():
     env, _, _ = env_generator(seed=43, n_agents=1)
+
     assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
     print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
     assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
@@ -610,7 +611,7 @@ def test_symmetric_switch_full_braking():
     assert agent.position == (15, 15)
     assert agent.direction == 1
     # TODO bug: moved to invalid position,direction:
-    assert not env.rail.get_valid_directions_on_grid(15, 16)[1]  # cannot enter (15,16) heading EAST == 1:
+    assert not env.rail.is_valid_configuration(((15, 16), 1))  # cannot enter (15,16) heading EAST == 1:
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == 0.5
     assert agent.speed_counter.distance == 0

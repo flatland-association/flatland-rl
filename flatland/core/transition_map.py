@@ -139,6 +139,20 @@ class TransitionMap(Generic[ConfigurationType, UnderlyingTransitionsType, Underl
         """
         raise NotImplementedError()
 
+    def is_valid_configuration(self, configuration: ConfigurationType) -> bool:
+        """
+        Whether the map contains the configuration (position+direction tuple for grid or edge for graphs).
+
+        Parameters
+        ----------
+        configuration: ConfigurationType
+
+        Returns
+        -------
+
+        """
+        raise NotImplementedError()
+
 
 class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transitions, Tuple[bool], Any], Generic[ActionsType]):
     """
