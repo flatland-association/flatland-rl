@@ -310,25 +310,31 @@ def test_get_entry_directions():
     env.reset()
 
     def _assert(position, expected):
-        actual = env.rail.get_valid_directions_on_grid(*position)
+        actual = env.rail.get_valid_entry_directions_on_grid(*position)
         assert actual == expected, "[{},{}] actual={}, expected={}".format(*position, actual, expected)
 
     # north dead end
+    assert env.rail.get_full_transitions(0, 3) == RailEnvTransitionsEnum.dead_end_from_south
     _assert((0, 3), [True, False, False, False])
 
     # west dead end
+    assert env.rail.get_full_transitions(3, 0) == RailEnvTransitionsEnum.dead_end_from_east
     _assert((3, 0), [False, False, False, True])
 
     # switch
+    assert env.rail.get_full_transitions(3, 3) == RailEnvTransitionsEnum.simple_switch_west_right
     _assert((3, 3), [False, True, True, True])
 
     # horizontal
+    assert env.rail.get_full_transitions(3, 2) == RailEnvTransitionsEnum.horizontal_straight
     _assert((3, 2), [False, True, False, True])
 
     # vertical
+    assert env.rail.get_full_transitions(2, 3) == RailEnvTransitionsEnum.vertical_straight
     _assert((2, 3), [True, False, True, False])
 
     # nowhere
+    assert env.rail.get_full_transitions(0, 0) == RailEnvTransitionsEnum.empty
     _assert((0, 0), [False, False, False, False])
 
 
@@ -569,6 +575,11 @@ def test_symmetric_switch_braking():
 def test_symmetric_switch_full_braking():
     env, _, _ = env_generator(seed=43, n_agents=1)
 
+    # TODO this should return invalid_configuration
+    assert env.rail.check_action_on_agent(RailEnvActions.MOVE_FORWARD, ((15, 14), 1)) == (
+        True, ((15, 15), 1), True, RailEnvActions.MOVE_FORWARD
+    )
+
     assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
     print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
     assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
@@ -615,3 +626,10 @@ def test_symmetric_switch_full_braking():
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == 0.5
     assert agent.speed_counter.distance == 0
+
+
+def test_motion_check_braking():
+    """
+    Verify that without full braking, the agent losing the tie does not move forward to the next cell.
+    """
+    pass

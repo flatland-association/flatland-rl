@@ -462,6 +462,7 @@ class RailEnv(Environment):
             current_position, current_direction = agent.position, agent.direction
             if current_position is None:  # Agent not added on map yet
                 current_position, current_direction = agent.initial_position, agent.initial_direction
+            # TODO new_cell_valid and transition_valid ignored in step(). should we set next state to stopped and new speed to 0 if invalid action given or invalid new cell (inconsistent grid)?
             _, (new_position_independent, new_direction_independent), _, preprocessed_action = self.rail.check_action_on_agent(
                 RailEnvActions.from_value(raw_action), (current_position, current_direction)
             )
