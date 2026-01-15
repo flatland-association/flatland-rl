@@ -122,10 +122,10 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
 
         Parameters
         ----------
-        action : [ActionsType]
+        action : ActionsType
             Action to execute
         configuration : ConfigurationType
-            position and orientation
+            current configuration, e.g. position and orientation or current edge
 
         Returns
         -------
