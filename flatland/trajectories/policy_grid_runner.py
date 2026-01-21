@@ -71,6 +71,24 @@ from flatland.trajectories.policy_runner import generate_trajectory_from_policy
               required=False,
               default=None,
               )
+@click.option('--callbacks',
+              type=str,
+              help="Defaults to `flatland.envs.callbacks.Defaultcallbacks`. Can also be provided through env var callbacks (command-line option takes priority).",
+              required=False,
+              default=None,
+              )
+@click.option('--callbacks-pkg',
+              type=str,
+              help="DEPRECATED: use --callbacks instead. Defaults to `flatland.envs.callbacks.Defaultcallbacks`. Can also be provided through env var callbacks_PKG (command-line option takes priority).",
+              required=False,
+              default=None,
+              )
+@click.option('--callbacks-cls',
+              type=str,
+              help="DEPRECATED: use --callbacks instead. Defaults to `flatland.envs.callbacks.Defaultcallbacks. Can also be provided through env var callbacks_CLS (command-line option takes priority).",
+              required=False,
+              default=None,
+              )
 def generate_trajectories_from_metadata(
     metadata_csv: Path,
     data_dir: Path,
@@ -83,6 +101,9 @@ def generate_trajectories_from_metadata(
     rewards: str = None,
     rewards_pkg: str = None,
     rewards_cls: str = None,
+    callbacks: str = None,
+    callbacks_pkg: str = None,
+    callbacks_cls: str = None,
 ):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
@@ -128,6 +149,13 @@ def generate_trajectories_from_metadata(
                 args += ["--rewards-pkg", rewards_pkg]
             if rewards_cls is not None:
                 args += ["--rewards-cls", rewards_cls]
+
+            if callbacks is not None:
+                args += ["--callbacks", callbacks]
+            if callbacks_pkg is not None:
+                args += ["--callbacks-pkg", callbacks_pkg]
+            if callbacks_cls is not None:
+                args += ["--callbacks-cls", callbacks_cls]
 
             generate_trajectory_from_policy(args)
 
