@@ -572,7 +572,7 @@ webencodings==0.5.1
     #   tinycss2
 websocket-client==1.9.0
     # via jupyter-server
-wheel==0.45.1
+wheel==0.46.2
     # via pip-tools
 widgetsnbextension==4.0.15
     # via ipywidgets
