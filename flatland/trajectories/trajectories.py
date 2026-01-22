@@ -125,7 +125,7 @@ class Trajectory:
         """
         f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
         if not os.path.exists(f):
-            return pd.DataFrame(columns=['episode_id', 'env_time', 'success_rate', 'mean_normalized_reward'])
+            return pd.DataFrame(columns=['episode_id', 'env_time', 'success_rate', 'normalized_reward'])
         df = pd.read_csv(f, sep='\t')
         if episode_only:
             return df[df['episode_id'] == self.ep_id]
@@ -214,9 +214,9 @@ class Trajectory:
     def action_collect(self, env_time: int, agent_id: int, action: RailEnvActions):
         self._actions_collect.append({'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'action': action})
 
-    def arrived_collect(self, env_time: int, success_rate: float, mean_normalized_reward: float):
+    def arrived_collect(self, env_time: int, success_rate: float, normalized_reward: float):
         self._trains_arrived_collect.append(
-            {'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate, 'mean_normalized_reward': mean_normalized_reward})
+            {'episode_id': self.ep_id, 'env_time': env_time, 'success_rate': success_rate, 'normalized_reward': normalized_reward})
 
     def rewards_dones_infos_collect(self, env_time: int, agent_id: int, reward: float, info: Any, done: bool):
         self._trains_rewards_dones_infos_collect.append({
@@ -344,13 +344,13 @@ class Trajectory:
         other_df = other._read_trains_positions(episode_only=True)
         return self._compare(df, other_df, ['env_time', 'agent_id', 'position'], end_step, start_step)
 
-    def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None, skip_mean_normalized_reward: bool = True) -> pd.DataFrame:
+    def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None, skip_normalized_reward: bool = True) -> pd.DataFrame:
         df = self._read_trains_arrived(episode_only=True)
         other_df = other._read_trains_arrived(episode_only=True)
         columns = ['env_time', 'success_rate']
         # TODO re-generate regression trajectories.
-        if not skip_mean_normalized_reward:
-            columns.append('mean_normalized_reward')
+        if not skip_normalized_reward:
+            columns.append('normalized_reward')
         return self._compare(df, other_df, columns, end_step, start_step)
 
     def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None, ignoring_rewards: bool = False) -> pd.DataFrame:
