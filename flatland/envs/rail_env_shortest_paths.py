@@ -15,6 +15,7 @@ def get_k_shortest_paths(env: "RailEnv",
                          source_direction: int,
                          target_position=Tuple[int, int],
                          k: int = 1, debug=False,
+                         target_direction: int = None,
                          rail: GridTransitionMap = None,
                          ) -> List[Tuple[Waypoint]]:
     """
@@ -87,9 +88,10 @@ def get_k_shortest_paths(env: "RailEnv",
 
         # – if u = t then P = P U {Pu}
         if u.position == target_position:
-            if debug:
-                print(" found of length {} {}".format(len(pu), pu))
-            shortest_paths.append(pu)
+            if target_direction is None or (target_direction == u.direction):
+                if debug:
+                    print(" found of length {} {}".format(len(pu), pu))
+                shortest_paths.append(pu)
 
         # – if countu ≤ K then
         # CAVEAT: do not allow for loopy paths
