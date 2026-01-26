@@ -15,7 +15,7 @@ def get_k_shortest_paths(env: "RailEnv",
                          source_direction: int,
                          target_position=Tuple[int, int],
                          k: int = 1, debug=False,
-                         target_direction:int=None,
+                         target_direction: int = None,
                          rail: GridTransitionMap = None,
                          ) -> List[Tuple[Waypoint]]:
     """
