@@ -1,6 +1,6 @@
 import sys
 
-from flatland.env_generation.env_generator import env_generator
+from flatland.env_generation.env_generator import env_generator, env_generator_legacy
 from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, condition_stopped_cells_and_range, \
     condition_stopped_intermediate_and_range, make_multi_malfunction_condition
 from flatland.envs.rail_env_action import RailEnvActions
@@ -10,7 +10,7 @@ from flatland.utils.rendertools import RenderTool
 
 
 def test_conditional_stopped_cells_and_range_malfunction_effects_generator():
-    env, _, _ = env_generator(seed=42,
+    env, _, _ = env_generator_legacy(seed=42,
         malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
         effects_generator=ConditionalMalfunctionEffectsGenerator(
             malfunction_rate=1,
@@ -58,7 +58,7 @@ def test_no_effect_conditional_stopped_cells_and_range_malfunction_effects_gener
 
 
 def test_conditional_stopped_intermediate_and_range_malfunction_effects_generator(rendering: bool = False):
-    env, _, _ = env_generator(
+    env, _, _ = env_generator_legacy(
         seed=42,
         line_length=3,
         n_cities=3,
@@ -88,7 +88,7 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
 
 
 def test_make_multi_malfunction_condition():
-    env, _, _ = env_generator(seed=42,
+    env, _, _ = env_generator_legacy(seed=42,
         line_length=3,
         n_cities=3,
         n_agents=3,
@@ -124,7 +124,7 @@ def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
         min_duration=duration, max_duration=duration,
         earliest_malfunction=earliest, max_num_malfunctions=2,
     )
-    env, _, _ = env_generator(
+    env, _, _ = env_generator_legacy(
         seed=42,
         line_length=3,
         n_cities=3,
