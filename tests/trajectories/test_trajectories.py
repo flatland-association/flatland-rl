@@ -8,7 +8,7 @@ import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.policy import Policy
-from flatland.env_generation.env_generator import env_generator
+from flatland.env_generation.env_generator import env_generator, env_generator_legacy
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
@@ -45,7 +45,7 @@ def test_from_episode():
 def test_restore_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42)[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator_legacy(seed=42)[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         assert trajectory._find_closest_snapshot(5) == 5
         assert trajectory._find_closest_snapshot(7) == 5
 
@@ -62,7 +62,7 @@ def test_restore_episode():
 def test_from_submission():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator_legacy(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
 
         assert (data_dir / DISCRETE_ACTION_FNAME).exists()
         assert (data_dir / TRAINS_ARRIVED_FNAME).exists()
@@ -102,7 +102,8 @@ def test_cli_from_submission():
         data_dir = Path(tmpdirname)
         with pytest.raises(SystemExit) as e_info:
             generate_trajectory_from_policy(
-                ["--data-dir", str(data_dir), "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy", "--seed", 42])
+                ["--data-dir", str(data_dir), "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy", "--seed", 42,
+                 "--legacy-env-generator", "True"])
         assert e_info.value.code == 0
 
         ep_id = re.sub(r"_step.*", "", str(next((data_dir / SERIALISED_STATE_SUBDIR).glob("*step*.pkl")).name))
