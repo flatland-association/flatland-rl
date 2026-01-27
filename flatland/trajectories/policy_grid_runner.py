@@ -71,6 +71,12 @@ from flatland.trajectories.policy_runner import generate_trajectory_from_policy
               required=False,
               default=None,
               )
+@click.option('--legacy-env-generator',
+              type=bool,
+              default=False,
+              help="DEPRECATED: use the patched env_generator. Keep only for regression tests. Update tests and drop in separate pr.",
+              required=False
+              )
 def generate_trajectories_from_metadata(
     metadata_csv: Path,
     data_dir: Path,
@@ -83,6 +89,7 @@ def generate_trajectories_from_metadata(
     rewards: str = None,
     rewards_pkg: str = None,
     rewards_cls: str = None,
+    legacy_env_generator: bool = False,
 ):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
@@ -128,6 +135,8 @@ def generate_trajectories_from_metadata(
                 args += ["--rewards-pkg", rewards_pkg]
             if rewards_cls is not None:
                 args += ["--rewards-cls", rewards_cls]
+            if legacy_env_generator:
+                args += ["--legacy-env-generator", True]
 
             generate_trajectory_from_policy(args)
 
