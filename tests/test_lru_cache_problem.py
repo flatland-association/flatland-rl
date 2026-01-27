@@ -1,7 +1,7 @@
+from flatland.env_generation.env_generator import _sparse_rail_generator_legacy
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import sparse_rail_generator
 
 maxsize = 1000000
 env_42_hits = 0
@@ -21,7 +21,7 @@ def test_lru_load():
 
     # (1) new env with seed 42
     env_42 = RailEnv(width=30, height=30,
-                     rail_generator=sparse_rail_generator(seed=1),
+                     rail_generator=_sparse_rail_generator_legacy(seed=1),
                      line_generator=sparse_line_generator(), number_of_agents=2, random_seed=42)
     assert _info_lru_cache() == (0, 0, maxsize, 0)
     env_42.reset(random_seed=42)
@@ -38,7 +38,7 @@ def test_lru_load():
 
     # (2) new env with seed 43
     env_43 = RailEnv(width=30, height=30,
-                     rail_generator=sparse_rail_generator(seed=2),
+                     rail_generator=_sparse_rail_generator_legacy(seed=2),
                      line_generator=sparse_line_generator(), number_of_agents=2, random_seed=43)
     assert _info_lru_cache() == (env_42_hits + grid_size, env_42_cache_size, maxsize, env_42_cache_size)
     env_43.reset(random_seed=43)
@@ -54,7 +54,7 @@ def test_lru_load():
 
     # (3) second new env with seed 42
     env_42_bis = RailEnv(width=30, height=30,
-                         rail_generator=sparse_rail_generator(seed=1),
+                         rail_generator=_sparse_rail_generator_legacy(seed=1),
                          line_generator=sparse_line_generator(), number_of_agents=2, random_seed=42)
     assert _info_lru_cache() == (env_42_hits + grid_size + env_43_hits + grid_size, cache_size_42_43, maxsize, cache_size_42_43)
     env_42_bis.reset(random_seed=42)
@@ -73,7 +73,7 @@ def test_lru_load():
 
     # (4) populate cache with infrastructure from seed 43
     env_43 = RailEnv(width=30, height=30,
-                     rail_generator=sparse_rail_generator(seed=2),
+                     rail_generator=_sparse_rail_generator_legacy(seed=2),
                      line_generator=sparse_line_generator(), number_of_agents=2, random_seed=43)
     env_43.reset(random_seed=43)
 
@@ -114,7 +114,7 @@ def test_lru_load_new():
 
     # (1) new env with seed 42
     env_42 = RailEnv(width=30, height=30,
-                     rail_generator=sparse_rail_generator(seed=1),
+                     rail_generator=_sparse_rail_generator_legacy(seed=1),
                      line_generator=sparse_line_generator(), number_of_agents=2, random_seed=42)
     assert _info_lru_cache() == (0, 0, maxsize, 0)
     env_42.reset(random_seed=42)
@@ -131,7 +131,7 @@ def test_lru_load_new():
 
     # (2) new env with seed 43
     env_43 = RailEnv(width=30, height=30,
-                     rail_generator=sparse_rail_generator(seed=2),
+                     rail_generator=_sparse_rail_generator_legacy(seed=2),
                      line_generator=sparse_line_generator(), number_of_agents=2, random_seed=43)
     assert _info_lru_cache() == (env_42_hits + grid_size, env_42_cache_size, maxsize, env_42_cache_size)
     env_43.reset(random_seed=43)
@@ -146,7 +146,7 @@ def test_lru_load_new():
 
     # (3) second new env with seed 42
     env_42_bis = RailEnv(width=30, height=30,
-                         rail_generator=sparse_rail_generator(seed=1),
+                         rail_generator=_sparse_rail_generator_legacy(seed=1),
                          line_generator=sparse_line_generator(), number_of_agents=2, random_seed=42)
 
     env_42_bis.reset(random_seed=42)
@@ -162,7 +162,7 @@ def test_lru_load_new():
 
     # (4) populate cache with infrastructure from seed 43
     env_43 = RailEnv(width=30, height=30,
-                     rail_generator=sparse_rail_generator(seed=2),
+                     rail_generator=_sparse_rail_generator_legacy(seed=2),
                      line_generator=sparse_line_generator(), number_of_agents=2, random_seed=43)
     env_43.reset(random_seed=43)
 
