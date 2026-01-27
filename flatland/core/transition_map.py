@@ -121,21 +121,35 @@ class TransitionMap(Generic[ConfigurationType, UnderlyingTransitionsType, Underl
 
         Parameters
         ----------
-        action : [ActionsType]
+        action : ActionsType
             Action to execute
         configuration : ConfigurationType
-            position and orientation
+            current configuration, e.g. position and orientation or current edge
 
         Returns
         -------
         new_cell_valid: bool
             is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
         new_position: [ConfigurationType]
-            New position after applying the action
+            New configuration (e.g. position and direction) after applying the action
         transition_valid: bool
             Whether the transition from old and direction is defined in the grid.
         preprocessed_action: [ActionType]
             Corrected action if not transition_valid.
+        """
+        raise NotImplementedError()
+
+    def is_valid_configuration(self, configuration: ConfigurationType) -> bool:
+        """
+        Whether the map contains the configuration (position+direction tuple for grid or edge for graphs).
+
+        Parameters
+        ----------
+        configuration: ConfigurationType
+
+        Returns
+        -------
+
         """
         raise NotImplementedError()
 
@@ -247,7 +261,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         if len(configuration) == 3:
             self.grid[configuration[0:2]] = self.transitions.set_transitions(self.grid[configuration[0:2]],
                                                                              configuration[2],
-                                                                       new_transitions)
+                                                                             new_transitions)
         elif len(configuration) == 2:
             self.grid[configuration] = new_transitions
 
