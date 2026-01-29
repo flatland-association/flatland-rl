@@ -2,36 +2,32 @@
 Definition of the RailEnv environment.
 """
 import random
-
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-from gym.utils import seeding
 
-from flatland.utils.rendertools import RenderTool, AgentRenderVariant
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.transition_map import GridTransitionMap
+from flatland.envs import agent_chains as ac
+from flatland.envs import line_generators as line_gen
+from flatland.envs import malfunction_generators as mal_gen
+from flatland.envs import persistence
+from flatland.envs import rail_generators as rail_gen
+from flatland.envs import seeding
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
-from flatland.envs.rail_env_action import RailEnvActions
-
-from flatland.envs import malfunction_generators as mal_gen
-from flatland.envs import rail_generators as rail_gen
-from flatland.envs import line_generators as line_gen
-from flatland.envs.timetable_generators import timetable_generator
-from flatland.envs import persistence
-from flatland.envs import agent_chains as ac
 from flatland.envs.fast_methods import fast_position_equal
-
 from flatland.envs.observations import GlobalObsForRailEnv
-
-from flatland.envs.timetable_generators import timetable_generator
-from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
-from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils import action_preprocessing
 from flatland.envs.step_utils import env_utils
+from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+from flatland.envs.step_utils.transition_utils import check_valid_action
+from flatland.envs.timetable_generators import timetable_generator
+from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+
 
 class RailEnv(Environment):
     """
