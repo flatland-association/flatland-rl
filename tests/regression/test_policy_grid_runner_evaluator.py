@@ -40,6 +40,7 @@ def test_gen_trajectories_from_metadata(capsys):
                     "--obs-builder-cls", "FullEnvObservation",
                     "--rewards-pkg", "flatland.envs.rewards",
                     "--rewards-cls", "PunctualityRewards",
+                    "--legacy-env-generator", "True",
                 ])
             assert e_info.value.code == 0
             metadata = pd.read_csv(metadata_csv)

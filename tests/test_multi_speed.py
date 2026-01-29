@@ -1,11 +1,12 @@
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.env_generation.env_generator import _sparse_rail_generator_legacy
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
-from flatland.envs.rail_generators import sparse_rail_generator, rail_from_grid_transition_map
+from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rewards import DefaultRewards
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
@@ -52,7 +53,7 @@ class RandomAgent:
 
 def test_multi_speed_init():
     env = RailEnv(width=50, height=50,
-                  rail_generator=sparse_rail_generator(seed=2), line_generator=sparse_line_generator(),
+                  rail_generator=_sparse_rail_generator_legacy(seed=2), line_generator=sparse_line_generator(),
                   # fix random_seed where all agents have different initial_position
                   random_seed=4,
                   number_of_agents=3)
