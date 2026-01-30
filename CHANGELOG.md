@@ -5,6 +5,55 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## ## [[4.2.3]](https://github.com/flatland-association/flatland-rl/compare/v4.2.2...v4.2.3) 2026-01-30
+
+### Added
+
+* feat(trajectory API): allow combination --seed with --env. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/299
+* feat(Trajectory API): add cli option for callbacks to policy runner. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/305
+* feat(trajectory API): statistical analysis of trajectories. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/303
+* feat: add optional direction at target for `get_k_shortest_paths`. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/344
+* feat: add cli options for callbacks to policy grid runner cli. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/340
+* feat: add cutoff option to k shortest paths. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/345
+*
+
+### Changed
+
+* chore(deps-dev): bump jupyterlab from 4.4.6 to 4.4.8 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/293
+* refactor(env generator): allow for seed None in env_generator. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/300
+* refactor(dla): avoid env in dla policy init, get it from observation. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/297
+* docs: fix status badge. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/309
+* refactor(trajectories API): simplify policy runner API. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/307
+* feat(trajectory API): data analysis cli. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/308
+* refactor(trajectory API): allow policy and observation builder to be passed through env var. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/311
+* refactor(trajectory analysis): extract method. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/315
+* ci: add testcontainers dev dependency for DLA test. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/320
+* ci: free disk space before running tests. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/324
+* chore(deps): bump urllib3 from 2.5.0 to 2.6.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/323
+* chore(deps): bump fonttools from 4.59.1 to 4.61.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/322
+* chore(deps): update pip dependencies. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/295
+* chore(deps): bump pyasn1 from 0.6.1 to 0.6.2 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/339
+* chore(deps-dev): bump wheel from 0.45.1 to 0.46.2 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/343
+* refactor(trajectoy API): rename colum`normalized_reward`. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/342
+
+### Fixed
+
+* !fix(ml-RLlib): RLlib compatibility: no rewards after (single) agent is done. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/302
+* fix(env-generator): avoid division by zero. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/306
+* fix(trajectories API): fix float comparison. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/310
+* fix(policy runner): fix missing reset without re-generating in policy runner. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/312
+* fix(policy runner): regression if `--env-path` and `--seed` is provided according to poliy runner cli description. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/313
+* fix(policy runner, evaluator callbacks): fix computation of `normalized_reward` in evaluator callback and and policy runner. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/314
+* perf(Trajectory Evaluator): Pandas lookups are very slow, add caching. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/318
+* fix: ignore failing on invalid initial direction. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/319
+* fix: ignore failing on invalid initial direction. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/321
+* fix: correct waypoint tracking in DefaultRewards by @florath in https://github.com/flatland-association/flatland-rl/pull/328
+* fix: directions at intermediate waypoints in sparse line generator. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/335
+* fix: prevent duplicate reward calculation for completed agents by @florath in https://github.com/flatland-association/flatland-rl/pull/329
+
 ## [[4.2.2]](https://github.com/flatland-association/flatland-rl/compare/v4.2.1...v4.2.2) 2025-09-26
 
 ### Added
