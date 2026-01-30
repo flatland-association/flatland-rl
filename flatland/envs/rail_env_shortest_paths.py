@@ -17,6 +17,7 @@ def get_k_shortest_paths(env: "RailEnv",
                          k: int = 1, debug=False,
                          target_direction: int = None,
                          rail: GridTransitionMap = None,
+                         cutoff: int = None,
                          ) -> List[Tuple[Waypoint]]:
     """
     Computes the k shortest paths using modified Dijkstra
@@ -33,14 +34,15 @@ def get_k_shortest_paths(env: "RailEnv",
         max number of shortest paths
     debug:            bool
         print debug statements
-
+    target_direction: Optional[Tuple[int,int]]
+    cutoff :          Optional[int]
+        do not consider paths longer than cutoff
     Returns
     -------
     List[Tuple[WalkingElement]]
         We use tuples since we need the path elements to be hashable.
         We use a list of paths in order to keep the order of length.
     """
-
     if env is not None:
         rail = env.rail
     else:
@@ -115,6 +117,8 @@ def get_k_shortest_paths(env: "RailEnv",
 
                     # – let Pv be a new path with cost C + w(u, v) formed by concatenating edge (u, v) to path Pu
                     pv = pu + (v,)
+                    if cutoff is not None and len(pv) > cutoff:
+                        continue
                     #     – insert Pv into B
                     heap.add(pv)
 
