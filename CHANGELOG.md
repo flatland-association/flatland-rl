@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * feat(trajectory API): statistical analysis of trajectories. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/303
 * feat: add optional direction at target for `get_k_shortest_paths`. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/344
 * feat: add cli options for callbacks to policy grid runner cli. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/340
+* feat: add cutoff option to k shortest paths. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/345
+*
 
 ### Changed
 
@@ -27,7 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   in https://github.com/flatland-association/flatland-rl/pull/311
 * refactor(trajectory analysis): extract method. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/315
 * ci: add testcontainers dev dependency for DLA test. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/320
-
 * ci: free disk space before running tests. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/324
 * chore(deps): bump urllib3 from 2.5.0 to 2.6.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/323
 * chore(deps): bump fonttools from 4.59.1 to 4.61.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/322
