@@ -24,9 +24,6 @@ def get_k_shortest_paths(env: "RailEnv",
     following pseudo-code https://en.wikipedia.org/wiki/K_shortest_path_routing
     In contrast to the pseudo-code in wikipedia, we do not a allow for loopy paths.
 
-    A `cutoff` can be defined optionally to limit search.
-    If the grid is not closed under transitions, then paths going out of the grid are ignored.
-
     Parameters
     ----------
     env :             RailEnv
@@ -120,17 +117,7 @@ def get_k_shortest_paths(env: "RailEnv",
 
                     # – let Pv be a new path with cost C + w(u, v) formed by concatenating edge (u, v) to path Pu
                     pv = pu + (v,)
-
-                    # ignore if cutoff reached
                     if cutoff is not None and len(pv) > cutoff:
-                        if debug:
-                            print(f"        ignoring v={v} as out cutoff {cutoff} reached.")
-                        continue
-                    # ignore if out of bounds
-                    r, c = v.position
-                    if r >= height or r < 0 or c >= width or c < 0:
-                        if debug:
-                            print(f"        ignoring v={v} as out out bounds ({height, width}).")
                         continue
                     #     – insert Pv into B
                     heap.add(pv)
