@@ -408,10 +408,9 @@ def test_arrival_recorded_once_per_waypoint():
     """Test that arrivals are only recorded once per waypoint, not every step (Bug #327)."""
     rewards = DefaultRewards()
     agent = EnvAgent(
-        initial_position=(5, 5),
-        initial_direction=0,
+        initial_configuration=((5, 5), 0),
+        current_configuration=(None, None),
         target=(10, 10),
-        direction=0,
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
         latest_arrival=100
@@ -425,7 +424,7 @@ def test_arrival_recorded_once_per_waypoint():
     agent.old_position = (5, 4)
     agent.old_direction = 0
 
-    transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, None, None, None, None, StateTransitionSignals())
 
     # First step at this waypoint - should record arrival
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=10)
@@ -448,10 +447,9 @@ def test_departure_only_when_moving():
     """Test that departure is only recorded when agent actually moves to new waypoint (Bug #327)."""
     rewards = DefaultRewards()
     agent = EnvAgent(
-        initial_position=(5, 5),
-        initial_direction=0,
+        initial_configuration=((5, 5), 0),
+        current_configuration=(None, None),
         target=(10, 10),
-        direction=0,
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
         latest_arrival=100
@@ -459,7 +457,7 @@ def test_departure_only_when_moving():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, None, None, None, None, StateTransitionSignals())
 
     # agent off map
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=1)
@@ -516,10 +514,9 @@ def test_waypoint_comparison_uses_waypoint_objects():
     """Test that waypoint tracking correctly uses Waypoint objects, not tuples (Bug #327)."""
     rewards = DefaultRewards()
     agent = EnvAgent(
-        initial_position=(7, 8),
-        initial_direction=1,
+        initial_configuration=((7, 8), 1),
+        current_configuration=(None, None),
         target=(10, 10),
-        direction=1,
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
         latest_arrival=100
@@ -527,7 +524,7 @@ def test_waypoint_comparison_uses_waypoint_objects():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, None, None, None, None, StateTransitionSignals())
 
     agent.position = (7, 8)
     agent.direction = 1
