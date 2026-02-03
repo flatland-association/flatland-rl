@@ -162,7 +162,7 @@ class SparseRailGen(RailGen):
         self.max_rails_between_cities = max_rails_between_cities
         self.max_rail_pairs_in_city = max_rail_pairs_in_city
         if seed is not None:
-            warnings.warn("Line Generator should be not have random state.")
+            warnings.warn("Line Generator should not have random state.")
         self.p_level_free = p_level_free
         self.backwards_compatibility_mode = backwards_compatibility_mode
 
