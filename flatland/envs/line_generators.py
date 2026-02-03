@@ -48,7 +48,7 @@ class BaseLineGen(object):
         self.speed_ratio_map = speed_ratio_map
         self.line_length = line_length
         if seed is not None:
-            warnings.warn("Line Generator should be not have random state.")
+            warnings.warn("Line Generator should not have random state.")
 
     def generate(self, rail: RailGridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
         pass
