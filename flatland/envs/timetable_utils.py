@@ -16,3 +16,13 @@ Timetable = NamedTuple('Timetable', [
     ('latest_arrivals', List[List[int]]),
     ('max_episode_steps', int)
 ])
+
+
+class TimetableUtils:
+    @staticmethod
+    def from_agents(agents: List["EnvAgent"], max_episode_steps: int):
+        return Timetable(
+            earliest_departures=[agent.waypoints_earliest_departure for agent in agents],
+            latest_arrivals=[agent.waypoints_latest_arrival for agent in agents],
+            max_episode_steps=max_episode_steps
+        )

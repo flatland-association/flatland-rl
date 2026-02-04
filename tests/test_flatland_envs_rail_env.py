@@ -43,7 +43,6 @@ def test_save_load():
     os.makedirs("tmp", exist_ok=True)
 
     RailEnvPersister.save(env, "tmp/test_save.pkl")
-    env.save("tmp/test_save_2.pkl")
 
     # env.load("test_save.dat")
     env, env_dict = RailEnvPersister.load_new("tmp/test_save.pkl")
