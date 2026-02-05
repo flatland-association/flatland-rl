@@ -687,6 +687,9 @@ class RailEnv(AbstractRailEnv[GridTransitionMap]):
             The height of the rail map. Potentially in the future,
             a range of heights to sample from.
         """
+        self.width = width
+        self.height = height
+
         super().__init__(
             rail_generator=rail_generator,
             line_generator=line_generator,
@@ -703,8 +706,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap]):
             effects_generator=effects_generator,
             distance_map=DistanceMap([], height, width),
         )
-        self.width = width
-        self.height = height
 
         self.agent_positions = None
 
