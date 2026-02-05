@@ -143,7 +143,7 @@ class SparseRailGen(RailGen):
         max_rail_pairs_in_city: int
             Number of parallel tracks in the city. This represents the number of tracks in the trainstations
         seed: int
-            Initiate the seed
+            Deprecated. Not used any more.
         p_level_free : float
             Percentage of diamond-crossings which are level-free.
         backwards_compatibility_mode: bool
@@ -161,7 +161,8 @@ class SparseRailGen(RailGen):
         self.grid_mode = grid_mode
         self.max_rails_between_cities = max_rails_between_cities
         self.max_rail_pairs_in_city = max_rail_pairs_in_city
-        self.seed = seed
+        if seed is not None:
+            warnings.warn("Line Generator should not have random state.")
         self.p_level_free = p_level_free
         self.backwards_compatibility_mode = backwards_compatibility_mode
 
@@ -190,11 +191,6 @@ class SparseRailGen(RailGen):
             'train_stations': locations of train stations for start and targets
             'city_orientations' : orientation of cities
         """
-        if self.seed is not None:
-            np_random = RandomState(self.seed)
-        elif np_random is None:
-            np_random = RandomState(np.random.randint(2 ** 32))
-
         rail_trans = RailEnvTransitions()
         grid_map = RailGridTransitionMap(width=width, height=height, transitions=rail_trans)
         # backwards compatibility:

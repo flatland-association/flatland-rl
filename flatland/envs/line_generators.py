@@ -44,10 +44,11 @@ def speed_initialization_helper(nb_agents: int, speed_ratio_map: Mapping[float, 
 
 
 class BaseLineGen(object):
-    def __init__(self, speed_ratio_map: Mapping[float, float] = None, seed: int = 1, line_length: int = 2):
+    def __init__(self, speed_ratio_map: Mapping[float, float] = None, seed: int = None, line_length: int = 2):
         self.speed_ratio_map = speed_ratio_map
-        self.seed = seed
         self.line_length = line_length
+        if seed is not None:
+            warnings.warn("Line Generator should not have random state.")
 
     def generate(self, rail: RailGridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = 0, np_random: RandomState = None) -> Line:
         pass
@@ -56,12 +57,12 @@ class BaseLineGen(object):
         return self.generate(*args, **kwargs)
 
 
-def sparse_line_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = 1, line_length: int = 2) -> LineGenerator:
+def sparse_line_generator(speed_ratio_map: Mapping[float, float] = None, seed: int = None, line_length: int = 2) -> LineGenerator:
     return SparseLineGen(speed_ratio_map, seed, line_length)
 
 
 class SparseLineGen(BaseLineGen):
-    def __init__(self, speed_ratio_map: Mapping[float, float] = None, seed: int = 1, line_length: int = 2):
+    def __init__(self, speed_ratio_map: Mapping[float, float] = None, seed: int = None, line_length: int = 2):
         """
 
         This is the line generator which is used for Round 2 of the Flatland challenge. It produces lines
