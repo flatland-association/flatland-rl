@@ -203,8 +203,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             agent_virtual_position = agent.position
             agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
-            agent_virtual_position = agent.target
-            agent_virtual_direction = agent.direction
+            agent_virtual_position, agent_virtual_direction = list(agent.targets)[0]
         else:
             return None
 

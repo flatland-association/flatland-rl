@@ -121,8 +121,7 @@ class PolicyRunner:
 
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
-                actual_position = (agent.position, agent.direction)
-                trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=actual_position)
+                trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=agent.current_configuration)
                 trajectory.rewards_dones_infos_collect(env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
                                                        info={k: v[agent_id] for k, v in infos.items()},
                                                        done=dones[agent_id])
