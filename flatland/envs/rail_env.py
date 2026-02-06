@@ -594,16 +594,16 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         return True
 
     def _verify_mutually_exclusive_resource_allocation(self):
-        resources = [self.resource_map.get_resource((agent.position, agent.direction)) for agent in self.agents if agent.position is not None]
+        resources = [self.resource_map.get_resource(agent.current_configuration) for agent in self.agents if agent.position is not None]
         if len(resources) != len(set(resources)):
             msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
             msgs += f"- motion check: {list(self.motion_check.stopped)}"
             warnings.warn(msgs)
             counts = {resource: resources.count(resource) for resource in set(resources)}
-            dup_positions = [pos for pos, count in counts.items() if count > 1]
-            for dup in dup_positions:
+            dup_resources = [res for res, count in counts.items() if count > 1]
+            for dup in dup_resources:
                 for agent in self.agents:
-                    if agent.position == dup:
+                    if self.resource_map.get_resource(agent.current_configuration) == dup:
                         msg = (f"\n================== BAD AGENT ==================================\n\n\n\n\n"
                                f"- agent:\t{agent} \n"
                                f"- state_machine:\t{agent.state_machine}\n"
