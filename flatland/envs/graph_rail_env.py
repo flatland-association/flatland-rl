@@ -24,7 +24,7 @@ class GraphDistanceMap(AbstractDistanceMap[GraphTransitionMap, Any]):
         return {a.handle: [] for a in self.agents}
 
 
-class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap]):
+class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     @staticmethod
     def from_rail_env(rail_env: RailEnv, observation_builder: ObservationBuilder) -> "GraphRailEnv":
         rail_env.reset(False, False)

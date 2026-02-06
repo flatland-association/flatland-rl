@@ -35,9 +35,10 @@ from flatland.utils import seeding
 
 UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=TransitionMap)
 UnderlyingResourceMapType = TypeVar('UnderlyingResourceMapType', bound=ResourceMap)
+ConfigurationType = TypeVar('ConfigurationType')
 
 
-class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, UnderlyingResourceMapType]):
+class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, UnderlyingResourceMapType, ConfigurationType]):
     """
     AbstractRailEnv environment class.
 
@@ -176,7 +177,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         self.dev_obs_dict = {}
         self.dev_pred_dict = {}
 
-        self.agents: List[EnvAgent] = []
+        self.agents: List[EnvAgent[ConfigurationType]] = []
         self.num_resets = 0
 
         self.dones = None
@@ -656,7 +657,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         return self.rail_generator(self.number_of_agents, self.num_resets, self.np_random)
 
 
-class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap]):
+class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[int, int], int]]):
     def __init__(self,
                  width,
                  height,

@@ -1,6 +1,6 @@
 import sys
 import warnings
-from typing import Tuple, NamedTuple, List
+from typing import Tuple, NamedTuple, List, TypeVar, Generic
 
 import numpy as np
 from attr import attrs, attrib, Factory
@@ -62,8 +62,9 @@ def load_env_agent(agent_tuple: Agent):
     )
 
 
+ConfigurationType = TypeVar('ConfigurationType')
 @attrs
-class EnvAgent:
+class EnvAgent(Generic[ConfigurationType]):
     # backwards compatibility
     # TODO drop setters, keep only getters for backwards compatibility but get core free of setters
     @property
@@ -116,9 +117,9 @@ class EnvAgent:
         self.old_configuration = (self.old_position, value)
 
     # INIT FROM HERE IN _from_line()
-    initial_configuration = attrib(type=Tuple[Tuple[int, int], int])
+    initial_configuration = attrib(type=ConfigurationType)
     # TODO make optional
-    current_configuration = attrib(type=Tuple[Tuple[int, int], int])
+    current_configuration = attrib(type=ConfigurationType)
 
     target = attrib(type=Tuple[int, int])
 
