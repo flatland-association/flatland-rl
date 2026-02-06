@@ -99,10 +99,7 @@ def re_run_episode(data_dir: str, ep_id: str):
             snapshot_interval=0,
             ep_id=ep_id + "_regen",
         )
-        # TODO https://github.com/flatland-association/flatland-baselines/issues/24 re-generate episodes instead of ignoring waiting and reward
-        # we optimize and do not consider opposing agents when in state WAITING any more as before perf optimization
-        assert len(expected_trajectory.compare_actions(recreated_trajectory, ignoring_waiting=True)) == 0
+        assert len(expected_trajectory.compare_actions(recreated_trajectory)) == 0
         assert len(expected_trajectory.compare_positions(recreated_trajectory)) == 0
         assert len(expected_trajectory.compare_arrived(recreated_trajectory)) == 0
-        # ignore rewards due to behaviour change: https://github.com/flatland-association/flatland-rl/pull/302/files
-        assert len(expected_trajectory.compare_rewards_dones_infos(recreated_trajectory, ignoring_rewards=True)) == 0
+        assert len(expected_trajectory.compare_rewards_dones_infos(recreated_trajectory)) == 0
