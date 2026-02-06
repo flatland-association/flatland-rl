@@ -19,10 +19,9 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 
 def test_rewards_late_arrival():
     rewards = DefaultRewards()
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
+    agent = EnvAgent(initial_configuration=((0, 0), 5),
                      target=(3, 3),
-                     direction=3,
+                     current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -39,10 +38,9 @@ def test_rewards_late_arrival():
 
 def test_rewards_early_arrival():
     rewards = DefaultRewards()
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
+    agent = EnvAgent(initial_configuration=((0, 0), 5),
                      target=(3, 3),
-                     direction=3,
+                     current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=14,
@@ -58,10 +56,9 @@ def test_rewards_early_arrival():
 def test_rewards_intermediate_served_and_stopped_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_not_served_penalty = 33
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
+    agent = EnvAgent(initial_configuration=((0, 0), 5),
                      target=(3, 3),
-                     direction=3,
+                     current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -90,10 +87,9 @@ def test_rewards_intermediate_served_and_stopped_penalty():
 def test_rewards_intermediate_served_but_not_stopped_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_not_served_penalty = 33
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
+    agent = EnvAgent(initial_configuration=((0, 0), 5),
                      target=(3, 3),
-                     direction=3,
+                     current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -122,10 +118,9 @@ def test_rewards_intermediate_served_but_not_stopped_penalty():
 def test_rewards_intermediate_not_served_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_not_served_penalty = 33
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
+    agent = EnvAgent(initial_configuration=((0, 0), 5),
                      target=(3, 3),
-                     direction=3,
+                     current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -147,10 +142,9 @@ def test_rewards_intermediate_not_served_penalty():
 def test_rewards_intermediate_intermediate_early_departure_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_early_departure_penalty_factor = 33
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
+    agent = EnvAgent(initial_configuration=((0, 0), 5),
                      target=(3, 3),
-                     direction=3,
+                     current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=11,
@@ -178,10 +172,9 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
 def test_rewards_intermediate_intermediate_late_arrival_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
+    agent = EnvAgent(initial_configuration=((0, 0), 5),
                      target=(3, 3),
-                     direction=3,
+                     current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -210,10 +203,9 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
 def test_rewards_departed_but_never_arrived():
     rewards = DefaultRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
+    agent = EnvAgent(initial_configuration=((0, 0), 5),
                      target=(3, 3),
-                     direction=3,
+                     current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -228,7 +220,7 @@ def test_rewards_departed_but_never_arrived():
     agent.position = (2, 2)
     agent.direction = 2
     agent.state = TrainState.STOPPED
-    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, None, None, None, StateTransitionSignals()),
+    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, None, None, StateTransitionSignals()),
                         distance_map=distance_map,
                         elapsed_steps=5)
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -99 - 15
@@ -236,10 +228,9 @@ def test_rewards_departed_but_never_arrived():
 
 def test_energy_efficiency_smoothniss_in_morl():
     rewards = BasicMultiObjectiveRewards()
-    agent = EnvAgent(initial_position=(0, 0),
-                     initial_direction=5,
+    agent = EnvAgent(initial_configuration=((0, 0), 5),
                      target=(3, 3),
-                     direction=3,
+                     current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=14,
@@ -291,10 +282,9 @@ def test_punctuality_rewards_initial():
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(
         handle=0,
-        initial_position=(0, 0),
-        initial_direction=5,
+        initial_configuration=((0, 0), 5),
         target=(3, 3),
-        direction=3,
+        current_configuration=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
         latest_arrival=10,
@@ -331,10 +321,9 @@ def test_punctuality_rewards_intermediate():
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(
         handle=0,
-        initial_position=(0, 0),
-        initial_direction=5,
+        initial_configuration=((0, 0), 5),
         target=(3, 3),
-        direction=3,
+        current_configuration=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
         latest_arrival=10,
@@ -374,10 +363,9 @@ def test_punctuality_rewards_target():
     rewards = PunctualityRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(
-        handle=0, initial_position=(0, 0),
-        initial_direction=5,
+        handle=0, initial_configuration=((0, 0), 5),
         target=(3, 3),
-        direction=3,
+        current_configuration=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
         latest_arrival=10,
@@ -420,10 +408,9 @@ def test_arrival_recorded_once_per_waypoint():
     """Test that arrivals are only recorded once per waypoint, not every step (Bug #327)."""
     rewards = DefaultRewards()
     agent = EnvAgent(
-        initial_position=(5, 5),
-        initial_direction=0,
+        initial_configuration=((5, 5), 0),
+        current_configuration=(None, None),
         target=(10, 10),
-        direction=0,
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
         latest_arrival=100
@@ -437,7 +424,7 @@ def test_arrival_recorded_once_per_waypoint():
     agent.old_position = (5, 4)
     agent.old_direction = 0
 
-    transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, None, None, None, None, StateTransitionSignals())
 
     # First step at this waypoint - should record arrival
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=10)
@@ -460,10 +447,9 @@ def test_departure_only_when_moving():
     """Test that departure is only recorded when agent actually moves to new waypoint (Bug #327)."""
     rewards = DefaultRewards()
     agent = EnvAgent(
-        initial_position=(5, 5),
-        initial_direction=0,
+        initial_configuration=((5, 5), 0),
+        current_configuration=(None, None),
         target=(10, 10),
-        direction=0,
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
         latest_arrival=100
@@ -471,7 +457,7 @@ def test_departure_only_when_moving():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, None, None, None, None, StateTransitionSignals())
 
     # agent off map
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=1)
@@ -528,10 +514,9 @@ def test_waypoint_comparison_uses_waypoint_objects():
     """Test that waypoint tracking correctly uses Waypoint objects, not tuples (Bug #327)."""
     rewards = DefaultRewards()
     agent = EnvAgent(
-        initial_position=(7, 8),
-        initial_direction=1,
+        initial_configuration=((7, 8), 1),
+        current_configuration=(None, None),
         target=(10, 10),
-        direction=1,
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
         latest_arrival=100
@@ -539,7 +524,7 @@ def test_waypoint_comparison_uses_waypoint_objects():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    transition_data = AgentTransitionData(1.0, None, None, None, None, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, None, None, None, None, StateTransitionSignals())
 
     agent.position = (7, 8)
     agent.direction = 1

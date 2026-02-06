@@ -29,14 +29,14 @@ def test_initial_status():
         replay=[
             Replay(  # 0
                 position=None,  # not entered grid yet
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 state=TrainState.READY_TO_DEPART,
 
                 action=RailEnvActions.DO_NOTHING,
             ),
             Replay(  # 1
                 position=None,  # not entered grid yet before step
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 state=TrainState.READY_TO_DEPART,
 
                 action=RailEnvActions.MOVE_LEFT,
@@ -143,14 +143,14 @@ def test_status_done_remove():
         replay=[
             Replay(  # 0
                 position=None,  # not entered grid yet
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 state=TrainState.READY_TO_DEPART,
                 action=RailEnvActions.DO_NOTHING,
 
             ),
             Replay(  # 1
                 position=None,  # not entered grid yet before step
-                direction=Grid4TransitionsEnum.EAST,
+                direction=None,
                 state=TrainState.READY_TO_DEPART,
                 action=RailEnvActions.MOVE_LEFT,
             ),

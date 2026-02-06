@@ -1,6 +1,6 @@
 import sys
 import warnings
-from typing import Tuple, Optional, NamedTuple, List
+from typing import Tuple, NamedTuple, List
 
 import numpy as np
 from attr import attrs, attrib, Factory
@@ -40,18 +40,15 @@ class Agent(NamedTuple):
 
 def load_env_agent(agent_tuple: Agent):
     return EnvAgent(
-        initial_position=agent_tuple.initial_position,
-        initial_direction=agent_tuple.initial_direction,
-        direction=agent_tuple.direction,
+        initial_configuration=(agent_tuple.initial_position, agent_tuple.initial_direction),
+        current_configuration=(agent_tuple.position, agent_tuple.direction),
+        old_configuration=(agent_tuple.old_position, agent_tuple.old_direction),
         target=agent_tuple.target,
         moving=agent_tuple.moving,
         earliest_departure=agent_tuple.earliest_departure,
         latest_arrival=agent_tuple.latest_arrival,
         handle=agent_tuple.handle,
-        position=agent_tuple.position,
         arrival_time=agent_tuple.arrival_time,
-        old_direction=agent_tuple.old_direction,
-        old_position=agent_tuple.old_position,
         speed_counter=agent_tuple.speed_counter,
         action_saver=agent_tuple.action_saver,
         state_machine=agent_tuple.state_machine,
@@ -67,11 +64,64 @@ def load_env_agent(agent_tuple: Agent):
 
 @attrs
 class EnvAgent:
+    # backwards compatibility
+    # TODO drop setters, keep only getters for backwards compatibility but get core free of setters
+    @property
+    def initial_position(self):
+        return self.initial_configuration[0]
+
+    @initial_position.setter
+    def initial_position(self, value):
+        self.initial_configuration = (value, self.initial_direction)
+
+    @property
+    def initial_direction(self):
+        return self.initial_configuration[1]
+
+    @initial_direction.setter
+    def initial_direction(self, value):
+        self.initial_configuration = (self.initial_position, value)
+
+    @property
+    def position(self):
+        return self.current_configuration[0]
+
+    @position.setter
+    def position(self, value):
+        self.current_configuration = (value, self.direction)
+
+    @property
+    def direction(self):
+        return self.current_configuration[1]
+
+    @direction.setter
+    def direction(self, value):
+        self.current_configuration = (self.position, value)
+
+    # used in rendering
+    @property
+    def old_position(self):
+        return self.old_configuration[0]
+
+    @old_position.setter
+    def old_position(self, value):
+        self.old_configuration = (value, self.old_direction)
+
+    @property
+    def old_direction(self):
+        return self.old_configuration[1]
+
+    @old_direction.setter
+    def old_direction(self, value):
+        self.old_configuration = (self.old_position, value)
+
     # INIT FROM HERE IN _from_line()
-    initial_position = attrib(type=Tuple[int, int])
-    initial_direction = attrib(type=Grid4TransitionsEnum)
-    direction = attrib(type=Grid4TransitionsEnum)
+    initial_configuration = attrib(type=Tuple[Tuple[int, int], int])
+    # TODO make optional
+    current_configuration = attrib(type=Tuple[Tuple[int, int], int])
+
     target = attrib(type=Tuple[int, int])
+
     moving = attrib(default=False, type=bool)
 
     # NEW : EnvAgent - Schedule properties
@@ -95,24 +145,19 @@ class EnvAgent:
                            type=TrainStateMachine)
     malfunction_handler = attrib(default=Factory(lambda: MalfunctionHandler()), type=MalfunctionHandler)
 
-    position = attrib(default=None, type=Optional[Tuple[int, int]])
-
     # NEW : EnvAgent Reward Handling
     arrival_time = attrib(default=None, type=int)
 
-    # used in rendering
-    old_direction = attrib(default=None)
-    old_position = attrib(default=None)
+    # TODO make optional instead
+    old_configuration = attrib(type=Tuple[Tuple[int, int], int], default=Factory(lambda: (None, None)))
 
     def reset(self):
         """
         Resets the agents to their initial values of the episode. Called after ScheduleTime generation.
         """
-        self.position = None
-        # TODO: set direction to None
-        self.direction = self.initial_direction
-        self.old_position = None
-        self.old_direction = None
+        # TODO use single None instead
+        self.current_configuration = (None, None)
+        self.old_configuration = (None, None)
         self.moving = False
         self.arrival_time = None
 
@@ -177,18 +222,19 @@ class EnvAgent:
         for i_agent in range(num_agents):
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
 
-            agent = EnvAgent(initial_position=line.agent_waypoints[i_agent][0][0].position,
-                             initial_direction=line.agent_waypoints[i_agent][0][0].direction,
-                             direction=line.agent_waypoints[i_agent][0][0].direction,
-                             target=line.agent_waypoints[i_agent][-1][0].position,
-                             waypoints=line.agent_waypoints[i_agent],
-                             moving=False,
-                             earliest_departure=None,
-                             latest_arrival=None,
-                             waypoints_earliest_departure=None,
-                             waypoints_latest_arrival=None,
-                             handle=i_agent,
-                             speed_counter=SpeedCounter(speed=speed))
+            agent = EnvAgent(
+                initial_configuration=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
+                current_configuration=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
+                old_configuration=(None, None),
+                target=line.agent_waypoints[i_agent][-1][0].position,
+                waypoints=line.agent_waypoints[i_agent],
+                moving=False,
+                earliest_departure=None,
+                latest_arrival=None,
+                waypoints_earliest_departure=None,
+                waypoints_latest_arrival=None,
+                handle=i_agent,
+                speed_counter=SpeedCounter(speed=speed))
             agent_list.append(agent)
 
         return agent_list
@@ -201,14 +247,18 @@ class EnvAgent:
                 speed = static_agent[4]['speed']
                 speed = 1 / (round(1 / speed))
                 agent = EnvAgent(
-                    initial_position=static_agent[0], initial_direction=static_agent[1],
-                    direction=static_agent[1], target=static_agent[2], moving=static_agent[3],
+                    initial_configuration=(static_agent[0], static_agent[1]),
+                    current_configuration=(static_agent[0], static_agent[1]),
+                    old_configuration=(None, None),
+                    target=static_agent[2], moving=static_agent[3],
                     speed_counter=SpeedCounter(speed), handle=i,
                 )
             else:
                 agent = EnvAgent(
-                    initial_position=static_agent[0], initial_direction=static_agent[1],
-                    direction=static_agent[1], target=static_agent[2],
+                    initial_configuration=(static_agent[0], static_agent[1]),
+                    current_configuration=(static_agent[0], static_agent[1]),
+                    old_configuration=(None, None),
+                    target=static_agent[2],
                     moving=False,
                     speed_counter=SpeedCounter(1.0),
                     handle=i,
