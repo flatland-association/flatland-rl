@@ -10,7 +10,7 @@ from flatland.env_generation.env_generator import env_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env import RailEnv, AbstractRailEnv
 from flatland.envs.rewards import DefaultRewards
 from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
 from flatland.utils.cli_utils import resolve_type
@@ -21,7 +21,7 @@ class PolicyRunner:
     def create_from_policy(
         policy: Policy,
         data_dir: Path,
-        env: RailEnv = None,
+        env: AbstractRailEnv = None,
         snapshot_interval: int = 1,
         ep_id: str = None,
         callbacks: FlatlandCallbacks = None,

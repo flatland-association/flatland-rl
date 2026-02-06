@@ -1,6 +1,6 @@
 import math
 from collections import deque
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Generic, TypeVar
 
 import numpy as np
 
@@ -10,11 +10,12 @@ from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.states import TrainState
 
+UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType')
+UnderlyingDistanceMapType = TypeVar('UnderlyingDistanceMapType')
 
-class DistanceMap:
-    def __init__(self, agents: List[EnvAgent], env_height: int, env_width: int):
-        self.env_height = env_height
-        self.env_width = env_width
+
+class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanceMapType]):
+    def __init__(self, agents: List[EnvAgent]):
         self.distance_map = None
         self.agents_previous_computation = None
         self.reset_was_called = False
@@ -47,13 +48,32 @@ class DistanceMap:
 
         return self.distance_map
 
-    def reset(self, agents: List[EnvAgent], rail: RailGridTransitionMap):
+    def reset(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
         """
         Reset the distance map
         """
         self.reset_was_called = True
         self.agents: List[EnvAgent] = agents
         self.rail = rail
+
+    def get_shortest_paths(self, max_depth: Optional[int] = None, agent_handle: Optional[int] = None) -> Dict[int, Optional[List[Waypoint]]]:
+        raise NotImplementedError()
+
+    def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
+        raise NotImplementedError()
+
+
+class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray]):
+    def __init__(self, agents: List[EnvAgent], env_height: int, env_width: int):
+        super().__init__(agents=agents)
+        self.env_height = env_height
+        self.env_width = env_width
+
+    def reset(self, agents: List[EnvAgent], rail: RailGridTransitionMap):
+        """
+        Reset the distance map
+        """
+        super().reset(agents=agents, rail=rail)
         self.env_height = rail.height
         self.env_width = rail.width
 
