@@ -499,8 +499,7 @@ def test_departure_only_when_moving():
     # Agent arrives at target
     agent.old_position = (5, 6)
     agent.old_direction = 0
-    agent.position = None
-    agent.direction = 0
+    agent.current_configuration = None
 
     # Now departure from old position should be recorded, but no arrival for None
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=4)

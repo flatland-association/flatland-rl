@@ -395,8 +395,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             agent.arrival_time = self._elapsed_steps
             self.dones[agent.handle] = True
             if self.remove_agents_at_target:
-                # TODO refactor for configurations
-                agent.position = None
+                agent.current_configuration = None
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
         """
@@ -424,7 +423,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # Get action for the agent
             raw_action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
             # Try moving actions on current position
-            if current_or_initial_configuration[0] is None:  # Agent not added on map yet
+            if current_or_initial_configuration is None:  # Agent not added on map yet
                 current_or_initial_configuration = initial_configuration
 
             _, new_configuration_independent, _, preprocessed_action = self.rail.check_action_on_agent(
@@ -465,15 +464,12 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
                 ):
                     new_configuration = new_configuration_independent
-                # TODO replace with None instead of tuple
-                assert agent.current_configuration[0] is not None
+                assert agent.current_configuration is not None
             else:
                 assert state.is_off_map_state() or state == TrainState.DONE
-                # TODO replace with None instead of tuple
-                new_configuration = (None, None)
+                new_configuration = None
 
-            # TODO replace with None instead of tuple
-            if new_configuration[0] is not None:
+            if new_configuration is not None:
                 valid_position_direction = any(self.rail.get_transitions(new_configuration))
                 if not valid_position_direction:
                     warnings.warn(f"{new_configuration} not valid on the grid."

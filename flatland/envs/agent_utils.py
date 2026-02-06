@@ -1,6 +1,6 @@
 import sys
 import warnings
-from typing import Tuple, NamedTuple, List, TypeVar, Generic
+from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional
 
 import numpy as np
 from attr import attrs, attrib, Factory
@@ -41,8 +41,9 @@ class Agent(NamedTuple):
 def load_env_agent(agent_tuple: Agent):
     return EnvAgent(
         initial_configuration=(agent_tuple.initial_position, agent_tuple.initial_direction),
-        current_configuration=(agent_tuple.position, agent_tuple.direction),
-        old_configuration=(agent_tuple.old_position, agent_tuple.old_direction),
+        current_configuration=(agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None,
+        old_configuration=(
+        agent_tuple.old_position, agent_tuple.old_direction) if agent_tuple.old_position is not None and agent_tuple.old_direction is not None else None,
         target=agent_tuple.target,
         moving=agent_tuple.moving,
         earliest_departure=agent_tuple.earliest_departure,
@@ -63,6 +64,8 @@ def load_env_agent(agent_tuple: Agent):
 
 
 ConfigurationType = TypeVar('ConfigurationType')
+
+
 @attrs
 class EnvAgent(Generic[ConfigurationType]):
     # backwards compatibility
@@ -85,23 +88,31 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @property
     def position(self):
+        if self.current_configuration is None:
+            return None
         return self.current_configuration[0]
 
     @position.setter
     def position(self, value):
+        assert value is not None
         self.current_configuration = (value, self.direction)
 
     @property
     def direction(self):
+        if self.current_configuration is None:
+            return None
         return self.current_configuration[1]
 
     @direction.setter
     def direction(self, value):
+        assert value is not None
         self.current_configuration = (self.position, value)
 
     # used in rendering
     @property
     def old_position(self):
+        if self.old_configuration is None:
+            return None
         return self.old_configuration[0]
 
     @old_position.setter
@@ -110,6 +121,8 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @property
     def old_direction(self):
+        if self.old_configuration is None:
+            return None
         return self.old_configuration[1]
 
     @old_direction.setter
@@ -118,10 +131,9 @@ class EnvAgent(Generic[ConfigurationType]):
 
     # INIT FROM HERE IN _from_line()
     initial_configuration = attrib(type=ConfigurationType)
-    # TODO make optional
-    current_configuration = attrib(type=ConfigurationType)
 
     target = attrib(type=Tuple[int, int])
+    current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
 
     moving = attrib(default=False, type=bool)
 
@@ -149,16 +161,14 @@ class EnvAgent(Generic[ConfigurationType]):
     # NEW : EnvAgent Reward Handling
     arrival_time = attrib(default=None, type=int)
 
-    # TODO make optional instead
-    old_configuration = attrib(type=Tuple[Tuple[int, int], int], default=Factory(lambda: (None, None)))
+    old_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
 
     def reset(self):
         """
         Resets the agents to their initial values of the episode. Called after ScheduleTime generation.
         """
-        # TODO use single None instead
-        self.current_configuration = (None, None)
-        self.old_configuration = (None, None)
+        self.current_configuration = None
+        self.old_configuration = None
         self.moving = False
         self.arrival_time = None
 
@@ -225,8 +235,9 @@ class EnvAgent(Generic[ConfigurationType]):
 
             agent = EnvAgent(
                 initial_configuration=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
+                # why
                 current_configuration=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
-                old_configuration=(None, None),
+                old_configuration=None,
                 target=line.agent_waypoints[i_agent][-1][0].position,
                 waypoints=line.agent_waypoints[i_agent],
                 moving=False,

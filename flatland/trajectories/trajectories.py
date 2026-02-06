@@ -342,6 +342,9 @@ class Trajectory:
     def compare_positions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
         df = self._read_trains_positions(episode_only=True)
         other_df = other._read_trains_positions(episode_only=True)
+        # TODO re-generate trajectories instead with configuration None instead of (None, d)
+        df["position"] = df["position"].map(lambda t: None if t[0] is None else t)
+        other_df["position"] = other_df["position"].map(lambda t: None if t[0] is None else t)
         return self._compare(df, other_df, ['env_time', 'agent_id', 'position'], end_step, start_step)
 
     def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None, skip_normalized_reward: bool = True) -> pd.DataFrame:
