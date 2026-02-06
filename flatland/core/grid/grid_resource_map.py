@@ -1,4 +1,4 @@
-from typing import Tuple, Union, Set
+from typing import Tuple, Union, Set, Optional
 
 from flatland.core.grid.grid_utils import Vector2D
 from flatland.core.resource_map import ResourceMap
@@ -10,7 +10,7 @@ class GridResourceMap(ResourceMap[Tuple[Tuple[int, int], int], Union[Tuple[Tuple
         if self.level_free_positions is None:
             self.level_free_positions = set()
 
-    def get_resource(self, configuration):
+    def get_resource(self, configuration: Optional[Tuple[Tuple[int, int], int]]) -> Optional[Tuple[int, int]]:
         # TODO replace with None instead of tuple
         if configuration[0] is None:
             return None

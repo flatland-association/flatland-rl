@@ -1,9 +1,9 @@
-from typing import Set, List, Any, Optional, Dict
+import ast
+from typing import List, Any, Optional, Dict
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env_observation_builder import ObservationBuilder, DummyObservationBuilder
 from flatland.core.graph.graph_resource_map import GraphResourceMap
-from flatland.core.grid.grid_utils import Vector2D
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import AbstractDistanceMap
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
@@ -30,12 +30,22 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap]):
         rail_env.reset(False, False)
         line = EnvAgent.to_line(rail_env.agents)
         timetable = TimetableUtils.from_agents(rail_env.agents, rail_env._max_episode_steps)
+
+        gtm = GraphTransitionMap.from_rail_env(rail_env)
+        _resource_map = {}
+        for n in gtm.g.nodes:
+            # TODO temporary workaround as long as step function relies on tuples
+            r, c, d = ast.literal_eval(n)
+            if (r, c) in rail_env.resource_map.level_free_positions:
+                _resource_map[((r, c), d)] = (r, c, d % 2)
+            else:
+                _resource_map[((r, c), d)] = (r, c)
+
         return GraphRailEnv(
             number_of_agents=rail_env.get_num_agents(),
-            rail_generator=lambda *args, **kwargs: ({}, GraphTransitionMap.from_rail_env(rail_env)),
+            rail_generator=lambda *args, **kwargs: ({"resource_map": _resource_map}, gtm),
             line_generator=lambda *args, **kwargs: line,
             timetable_generator=lambda *arg, **kwargs: timetable,
-            level_free_positions=rail_env.resource_map.level_free_positions,
             observation_builder=observation_builder,
         )
 
@@ -46,8 +56,6 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap]):
         line_generator: "LineGenerator" = None,
         number_of_agents=2,
         observation_builder: ObservationBuilder = None,
-        # TODO should come from rail_generator as well and go into resource map
-        level_free_positions: Set[Vector2D] = None,
         malfunction_generator_and_process_data=None,
         malfunction_generator: "MalfunctionGenerator" = None,
         random_seed=None,
@@ -75,17 +83,13 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap]):
             effects_generator=effects_generator,
             distance_map=GraphDistanceMap([]) if distance_map is None else distance_map,
         )
-
-        self.resource_map = GraphResourceMap(level_free_positions)
-
         self.agents = [EnvAgent(None, None, None) for i in range(self.get_num_agents())]
 
     def get_num_agents(self) -> int:
         return self.number_of_agents
 
     def _extract_resource_map_from_optionals(self, optionals: dict) -> GraphResourceMap:
-        resource_map = GraphResourceMap()
-        # TODO implement / necessary?
-        if optionals and 'level_free_positions' in optionals:
-            resource_map.level_free_positions = optionals['level_free_positions']
-        return resource_map
+        if "resource_map" in optionals:
+            return GraphResourceMap(optionals["resource_map"])
+        else:
+            return GraphResourceMap({})

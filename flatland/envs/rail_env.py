@@ -14,7 +14,8 @@ from flatland.core.effects_generator import EffectsGenerator, make_multi_effects
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_resource_map import GridResourceMap
-from flatland.core.transition_map import GridTransitionMap
+from flatland.core.resource_map import ResourceMap
+from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_generators as mal_gen
@@ -32,11 +33,10 @@ from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
 
-UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType')
-UnderlyingResourceMapType = TypeVar('UnderlyingResourceMapType')
+UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=TransitionMap)
+UnderlyingResourceMapType = TypeVar('UnderlyingResourceMapType', bound=ResourceMap)
 
 
-# TODO naming?
 class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, UnderlyingResourceMapType]):
     """
     AbstractRailEnv environment class.
@@ -593,11 +593,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             return False
         return True
 
-    # TODO refactor for into resource map?
     def _verify_mutually_exclusive_resource_allocation(self):
-        resources = [agent.position if agent.position not in self.resource_map.level_free_positions else (*agent.position, agent.direction % 2) for agent in
-                     self.agents if
-                     agent.position is not None]
+        resources = [self.resource_map.get_resource((agent.position, agent.direction)) for agent in self.agents if agent.position is not None]
         if len(resources) != len(set(resources)):
             msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
             msgs += f"- motion check: {list(self.motion_check.stopped)}"
