@@ -11,7 +11,7 @@ import pytest
 from flatland.core.transition_map import GridTransitionMap
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.grid.rail_env_grid import RailEnvTransitions
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
@@ -19,6 +19,7 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
+from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
@@ -309,25 +310,31 @@ def test_get_entry_directions():
     env.reset()
 
     def _assert(position, expected):
-        actual = env.rail.get_valid_directions_on_grid(*position)
+        actual = env.rail.get_valid_entry_directions_on_grid(*position)
         assert actual == expected, "[{},{}] actual={}, expected={}".format(*position, actual, expected)
 
     # north dead end
+    assert env.rail.get_full_transitions(0, 3) == RailEnvTransitionsEnum.dead_end_from_south
     _assert((0, 3), [True, False, False, False])
 
     # west dead end
+    assert env.rail.get_full_transitions(3, 0) == RailEnvTransitionsEnum.dead_end_from_east
     _assert((3, 0), [False, False, False, True])
 
     # switch
+    assert env.rail.get_full_transitions(3, 3) == RailEnvTransitionsEnum.simple_switch_west_right
     _assert((3, 3), [False, True, True, True])
 
     # horizontal
+    assert env.rail.get_full_transitions(3, 2) == RailEnvTransitionsEnum.horizontal_straight
     _assert((3, 2), [False, True, False, True])
 
     # vertical
+    assert env.rail.get_full_transitions(2, 3) == RailEnvTransitionsEnum.vertical_straight
     _assert((2, 3), [True, False, True, False])
 
     # nowhere
+    assert env.rail.get_full_transitions(0, 0) == RailEnvTransitionsEnum.empty
     _assert((0, 0), [False, False, False, False])
 
 
@@ -442,3 +449,187 @@ def test_clone_from_with_random_policy():
         assert len(trajectory.compare_actions(other)) == 0
         assert len(trajectory.compare_positions(other)) == 0
         assert len(trajectory.compare_rewards_dones_infos(other)) == 0
+
+
+def test_speed_after_malfunction():
+    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=1)
+    env.acceleration_delta = 0.1
+    agent = env.agents[0]
+
+    # TODO revise design: initial speed 0?
+    initial_speed = agent.speed_counter.max_speed
+    assert initial_speed == 0.5
+    assert agent.speed_counter.speed == initial_speed
+
+    while not agent.state.is_on_map_state():
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+        assert agent.speed_counter.speed == initial_speed
+        assert agent.speed_counter.distance == 0
+    while not agent.malfunction_handler.in_malfunction:
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    speed = agent.speed_counter.speed
+
+    distance = agent.speed_counter.distance
+    assert speed == 0
+    while agent.state.is_malfunction_state():
+        # TODO revise design: set speed to 0 during malfunction?
+        assert agent.speed_counter.speed == speed
+        assert agent.speed_counter.distance == distance
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+
+    # takes up old speed plus increment.
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == speed + env.acceleration_delta
+    assert agent.speed_counter.speed <= agent.speed_counter.max_speed
+    # starts at old distance plus increment
+    assert agent.speed_counter.distance == distance + env.acceleration_delta
+
+
+def test_speed_after_malfunction_full_acceleration_braking():
+    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=1)
+    agent = env.agents[0]
+
+    assert agent.speed_counter.max_speed == 0.5
+    initial_speed = agent.speed_counter.max_speed
+    assert initial_speed == 0.5
+    assert agent.speed_counter.speed == initial_speed
+    assert agent.speed_counter.speed == initial_speed
+
+    while not agent.state.is_on_map_state():
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+        assert agent.speed_counter.speed == initial_speed
+        assert agent.speed_counter.distance == 0
+    while not agent.malfunction_handler.in_malfunction:
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    speed = agent.speed_counter.speed
+
+    distance = agent.speed_counter.distance
+    assert speed == 0
+    assert distance == 0.5
+    while agent.state.is_malfunction_state():
+        # TODO REVISE DESIGN: set speed to 0 during malfunction?
+        assert agent.speed_counter.speed == speed
+        assert agent.speed_counter.distance == distance
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+
+    # takes up old speed plus increment.
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    # starts at old distance plus increment modulo 1
+    assert agent.speed_counter.distance == 0
+
+
+def test_symmetric_switch_braking():
+    env, _, _ = env_generator(seed=43, n_agents=1)
+    env.braking_delta = -0.1
+    assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
+    print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
+    assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
+    agent = env.agents[0]
+    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.max_speed == 0.5
+    agent.initial_position = (15, 14)
+    agent.initial_direction = 1
+    assert agent.speed_counter.distance == 0
+    while not agent.state == TrainState.READY_TO_DEPART:
+        env.step({})
+        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.speed == 0.5
+        assert agent.position is None
+
+    # enter grid
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
+    assert agent.speed_counter.distance == 0
+
+    env.step({})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.distance == 0.5
+
+    env.step({agent.handle: RailEnvActions.STOP_MOVING})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.4
+    assert agent.speed_counter.distance == 0.9
+
+    env.step({agent.handle: RailEnvActions.STOP_MOVING})
+    assert agent.position == (15, 15)
+    assert agent.direction == 1
+    # TODO bug: moved to invalid position,direction:
+    assert not env.rail.is_valid_configuration(((15, 16), 1))  # cannot enter (15,16) heading EAST == 1:
+    assert agent.state == TrainState.MOVING
+    assert np.isclose(agent.speed_counter.speed, 0.3)
+
+    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
+    assert np.isclose(agent.speed_counter.distance, (0.9 + 0.3) % 1)
+
+
+def test_symmetric_switch_full_braking():
+    env, _, _ = env_generator(seed=43, n_agents=1)
+
+    # TODO this should return invalid_configuration
+    assert env.rail.check_action_on_agent(RailEnvActions.MOVE_FORWARD, ((15, 14), 1)) == (
+        True, ((15, 15), 1), True, RailEnvActions.MOVE_FORWARD
+    )
+
+    assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
+    print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
+    assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
+    agent = env.agents[0]
+    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.max_speed == 0.5
+    agent.initial_position = (15, 14)
+    agent.initial_direction = 1
+    assert agent.speed_counter.distance == 0
+    while not agent.state == TrainState.READY_TO_DEPART:
+        env.step({})
+        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.speed == 0.5
+        assert agent.position is None
+
+    # enter grid
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
+    assert agent.speed_counter.distance == 0
+
+    env.step({})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.distance == 0.5
+
+    env.step({agent.handle: RailEnvActions.STOP_MOVING})
+    assert agent.position == (15, 14)
+    assert agent.direction == 1
+    assert agent.state == TrainState.STOPPED
+    assert agent.speed_counter.speed == 0
+    assert agent.speed_counter.distance == 0.5
+
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.position == (15, 15)
+    assert agent.direction == 1
+    # TODO bug: moved to invalid position,direction:
+    assert not env.rail.is_valid_configuration(((15, 16), 1))  # cannot enter (15,16) heading EAST == 1:
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.distance == 0
+
+
+def test_motion_check_braking():
+    """
+    Verify that without full braking, the agent losing the tie does not move forward to the next cell.
+    """
+    pass
