@@ -473,7 +473,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 valid_position_direction = any(self.rail.get_transitions(new_configuration))
                 if not valid_position_direction:
                     warnings.warn(f"{new_configuration} not valid on the grid."
-                                  f" Coming from {current_or_initial_configuration} with raw action {raw_action} and preprocessed action {preprocessed_action}. {RailEnvTransitionsEnum(self.rail.get_full_transitions(*agent.position)).name}")
+                                  f" Coming from {current_or_initial_configuration} with raw action {raw_action} and preprocessed action {preprocessed_action}. {self._infrastructure_representation(agent)}")
                 # fails if initial position has invalid direction
                 # assert valid_position_direction
 
@@ -537,8 +537,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
                         agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
                     agent.speed_counter.step(speed=agent_transition_data.new_speed)
-                # TODO generalize to configuration
-                agent.state_machine.update_if_reached(agent.position, agent.target)
+                agent.state_machine.update_if_reached(agent.current_configuration, agent.targets)
             elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
                 agent.current_configuration = initial_configuration
 
@@ -566,9 +565,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             agent.malfunction_handler.update_counter()
 
             # Off map or on map state and position should match
-            # TODO generalize to configuration
-            if not self._fast_state_position_sync_check(agent.state, agent.position, self.remove_agents_at_target):
-                agent.state_machine.state_position_sync_check(agent.position, agent.handle, self.remove_agents_at_target)
+            if not self._fast_state_position_sync_check(agent.state, agent.current_configuration, self.remove_agents_at_target):
+                agent.state_machine.state_position_sync_check(agent.current_configuration, agent.handle, self.remove_agents_at_target)
 
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
@@ -580,18 +578,18 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
     @lru_cache()
-    def _fast_state_position_sync_check(self, state, position, remove_agents_at_target):
+    def _fast_state_position_sync_check(self, state, configuration, remove_agents_at_target):
         """ Check for whether on map and off map states are matching with position being None """
-        if TrainState.is_on_map_state(state) and position is None:
+        if TrainState.is_on_map_state(state) and configuration is None:
             return False
-        elif TrainState.is_off_map_state(state) and position is not None:
+        elif TrainState.is_off_map_state(state) and configuration is not None:
             return False
-        elif state == TrainState.DONE and remove_agents_at_target and position is not None:
+        elif state == TrainState.DONE and remove_agents_at_target and configuration is not None:
             return False
         return True
 
     def _verify_mutually_exclusive_resource_allocation(self):
-        resources = [self.resource_map.get_resource(agent.current_configuration) for agent in self.agents if agent.position is not None]
+        resources = [self.resource_map.get_resource(agent.current_configuration) for agent in self.agents if agent.current_configuration is not None]
         if len(resources) != len(set(resources)):
             msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
             msgs += f"- motion check: {list(self.motion_check.stopped)}"
@@ -612,33 +610,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                         msgs += msg
             assert len(resources) == len(set(resources)), msgs
 
-    # TODO https://github.com/flatland-association/flatland-rl/issues/195  extract to callbacks instead!
-    def record_timestep(self, dActions):
-        """
-        Record the positions and orientations of all agents in memory, in the cur_episode
-        """
-        list_agents_state = []
-        for i_agent in range(self.get_num_agents()):
-            agent = self.agents[i_agent]
-            # the int cast is to avoid numpy types which may cause problems with msgpack
-            # in env v2, agents may have position None, before starting
-            # TODO test for configuration None instead
-            if agent.position is None:
-                pos = (None, None)
-                dir = None
-            else:
-                pos = (int(agent.position[0]), int(agent.position[1]))
-                dir = int(agent.direction)
-            # print("pos:", pos, type(pos[0]))
-            list_agents_state.append([
-                *pos, dir,
-                agent.malfunction_handler.malfunction_down_counter,
-                agent.state.value,
-                int(agent.position in self.motion_check.deadlocked),
-            ])
-
-        self.cur_episode.append(list_agents_state)
-        self.list_actions.append(dActions)
+    def _infrastructure_representation(self, configuration: ConfigurationType) -> str:
+        raise NotImplementedError()
 
     def _get_observations(self):
         """
@@ -761,3 +734,34 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         # TODO add idiomatic wrapper instead of override
         self._update_agent_positions_map()
         return obs, rewards, dones, info
+
+    def _infrastructure_representation(self, configuration: Tuple[Tuple[int, int], int]) -> str:
+        return RailEnvTransitionsEnum(self.rail.get_full_transitions(*configuration.position)).name
+
+    # TODO https://github.com/flatland-association/flatland-rl/issues/195  extract to callbacks instead!
+    def record_timestep(self, dActions):
+        """
+        Record the positions and orientations of all agents in memory, in the cur_episode
+        """
+        list_agents_state = []
+        for i_agent in range(self.get_num_agents()):
+            agent = self.agents[i_agent]
+            # the int cast is to avoid numpy types which may cause problems with msgpack
+            # in env v2, agents may have position None, before starting
+            # TODO test for configuration None instead
+            if agent.position is None:
+                pos = (None, None)
+                dir = None
+            else:
+                pos = (int(agent.position[0]), int(agent.position[1]))
+                dir = int(agent.direction)
+            # print("pos:", pos, type(pos[0]))
+            list_agents_state.append([
+                *pos, dir,
+                agent.malfunction_handler.malfunction_down_counter,
+                agent.state.value,
+                int(agent.position in self.motion_check.deadlocked),
+            ])
+
+        self.cur_episode.append(list_agents_state)
+        self.list_actions.append(dActions)

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
@@ -20,7 +21,7 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 def test_rewards_late_arrival():
     rewards = DefaultRewards()
     agent = EnvAgent(initial_configuration=((0, 0), 5),
-                     target=(3, 3),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
@@ -39,7 +40,7 @@ def test_rewards_late_arrival():
 def test_rewards_early_arrival():
     rewards = DefaultRewards()
     agent = EnvAgent(initial_configuration=((0, 0), 5),
-                     target=(3, 3),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
@@ -57,7 +58,7 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_not_served_penalty = 33
     agent = EnvAgent(initial_configuration=((0, 0), 5),
-                     target=(3, 3),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
@@ -88,7 +89,7 @@ def test_rewards_intermediate_served_but_not_stopped_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_not_served_penalty = 33
     agent = EnvAgent(initial_configuration=((0, 0), 5),
-                     target=(3, 3),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
@@ -119,7 +120,7 @@ def test_rewards_intermediate_not_served_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_not_served_penalty = 33
     agent = EnvAgent(initial_configuration=((0, 0), 5),
-                     target=(3, 3),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
@@ -143,7 +144,7 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_early_departure_penalty_factor = 33
     agent = EnvAgent(initial_configuration=((0, 0), 5),
-                     target=(3, 3),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
@@ -173,7 +174,7 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
     rewards = DefaultRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(initial_configuration=((0, 0), 5),
-                     target=(3, 3),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
@@ -204,7 +205,7 @@ def test_rewards_departed_but_never_arrived():
     rewards = DefaultRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(initial_configuration=((0, 0), 5),
-                     target=(3, 3),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
@@ -229,7 +230,7 @@ def test_rewards_departed_but_never_arrived():
 def test_energy_efficiency_smoothniss_in_morl():
     rewards = BasicMultiObjectiveRewards()
     agent = EnvAgent(initial_configuration=((0, 0), 5),
-                     target=(3, 3),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_configuration=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
@@ -283,7 +284,7 @@ def test_punctuality_rewards_initial():
     agent = EnvAgent(
         handle=0,
         initial_configuration=((0, 0), 5),
-        target=(3, 3),
+        targets={((3, 3), d) for d in Grid4TransitionsEnum},
         current_configuration=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
@@ -322,7 +323,7 @@ def test_punctuality_rewards_intermediate():
     agent = EnvAgent(
         handle=0,
         initial_configuration=((0, 0), 5),
-        target=(3, 3),
+        targets={((3, 3), d) for d in Grid4TransitionsEnum},
         current_configuration=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
@@ -364,7 +365,7 @@ def test_punctuality_rewards_target():
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(
         handle=0, initial_configuration=((0, 0), 5),
-        target=(3, 3),
+        targets={((3, 3), d) for d in Grid4TransitionsEnum},
         current_configuration=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
@@ -410,7 +411,7 @@ def test_arrival_recorded_once_per_waypoint():
     agent = EnvAgent(
         initial_configuration=((5, 5), 0),
         current_configuration=(None, None),
-        target=(10, 10),
+        targets={((10, 10), d) for d in Grid4TransitionsEnum},
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
         latest_arrival=100
@@ -449,7 +450,7 @@ def test_departure_only_when_moving():
     agent = EnvAgent(
         initial_configuration=((5, 5), 0),
         current_configuration=(None, None),
-        target=(10, 10),
+        targets={((10, 10), d) for d in Grid4TransitionsEnum},
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
         latest_arrival=100
@@ -515,7 +516,7 @@ def test_waypoint_comparison_uses_waypoint_objects():
     agent = EnvAgent(
         initial_configuration=((7, 8), 1),
         current_configuration=(None, None),
-        target=(10, 10),
+        targets={((10, 10), d) for d in Grid4TransitionsEnum},
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
         latest_arrival=100

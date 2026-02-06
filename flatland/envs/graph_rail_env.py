@@ -93,3 +93,6 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             return GraphResourceMap(optionals["resource_map"])
         else:
             return GraphResourceMap({})
+
+    def _infrastructure_representation(self, configuration: str) -> str:
+        return configuration

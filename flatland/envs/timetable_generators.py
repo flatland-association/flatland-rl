@@ -7,6 +7,7 @@ from typing import List, Union
 import numpy as np
 from numpy.random.mtrand import RandomState
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs import persistence
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.distance_map import DistanceMap
@@ -70,7 +71,7 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
                     # N.B. routing flexibility is ignored by this timetable generator
                     current_configuration=(waypoints[i][0].position, waypoints[i][0].direction),
                     old_configuration=(None, None),
-                    target=waypoints[i + 1][0].position,
+                    targets={(waypoints[i + 1][0].position, d) for d in Grid4TransitionsEnum},
                 ))
         distance_map_with_intermediates = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
         distance_map_with_intermediates.reset(fake_agents, distance_map.rail)

@@ -1,6 +1,6 @@
 import sys
 import warnings
-from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional
+from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional, Set
 
 import numpy as np
 from attr import attrs, attrib, Factory
@@ -43,8 +43,8 @@ def load_env_agent(agent_tuple: Agent):
         initial_configuration=(agent_tuple.initial_position, agent_tuple.initial_direction),
         current_configuration=(agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None,
         old_configuration=(
-        agent_tuple.old_position, agent_tuple.old_direction) if agent_tuple.old_position is not None and agent_tuple.old_direction is not None else None,
-        target=agent_tuple.target,
+            agent_tuple.old_position, agent_tuple.old_direction) if agent_tuple.old_position is not None and agent_tuple.old_direction is not None else None,
+        targets={(agent_tuple.target, d) for d in Grid4TransitionsEnum},
         moving=agent_tuple.moving,
         earliest_departure=agent_tuple.earliest_departure,
         latest_arrival=agent_tuple.latest_arrival,
@@ -69,7 +69,7 @@ ConfigurationType = TypeVar('ConfigurationType')
 @attrs
 class EnvAgent(Generic[ConfigurationType]):
     # backwards compatibility
-    # TODO drop setters, keep only getters for backwards compatibility but get core free of setters
+    # TODO split grid special cases from general implementation
     @property
     def initial_position(self):
         return self.initial_configuration[0]
@@ -129,11 +129,20 @@ class EnvAgent(Generic[ConfigurationType]):
     def old_direction(self, value):
         self.old_configuration = (self.old_position, value)
 
+    @property
+    def target(self):
+        # assuming same cell for all
+        return list(self.targets)[0][0]
+
+    @target.setter
+    def target(self, value):
+        self.targets = {(value, d) for d in Grid4TransitionsEnum}
+
     # INIT FROM HERE IN _from_line()
     initial_configuration = attrib(type=ConfigurationType)
 
-    target = attrib(type=Tuple[int, int])
     current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
+    targets = attrib(type=Set[ConfigurationType], default=Factory(lambda: set()))
 
     moving = attrib(default=False, type=bool)
 
@@ -238,7 +247,7 @@ class EnvAgent(Generic[ConfigurationType]):
                 # why
                 current_configuration=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
                 old_configuration=None,
-                target=line.agent_waypoints[i_agent][-1][0].position,
+                targets={(line.agent_waypoints[i_agent][-1][0].position, d) for d in Grid4TransitionsEnum},
                 waypoints=line.agent_waypoints[i_agent],
                 moving=False,
                 earliest_departure=None,
@@ -268,16 +277,17 @@ class EnvAgent(Generic[ConfigurationType]):
                 agent = EnvAgent(
                     initial_configuration=(static_agent[0], static_agent[1]),
                     current_configuration=(static_agent[0], static_agent[1]),
-                    old_configuration=(None, None),
-                    target=static_agent[2], moving=static_agent[3],
+                    old_configuration=None,
+                    targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
+                    moving=static_agent[3],
                     speed_counter=SpeedCounter(speed), handle=i,
                 )
             else:
                 agent = EnvAgent(
                     initial_configuration=(static_agent[0], static_agent[1]),
                     current_configuration=(static_agent[0], static_agent[1]),
-                    old_configuration=(None, None),
-                    target=static_agent[2],
+                    old_configuration=None,
+                    targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=False,
                     speed_counter=SpeedCounter(1.0),
                     handle=i,
