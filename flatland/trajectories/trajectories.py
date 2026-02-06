@@ -228,8 +228,7 @@ class Trajectory:
             action_cache[item["env_time"]][item["agent_id"]] = RailEnvActions.from_value(item["action"])
         position_cache = defaultdict(lambda: defaultdict(dict))
         for item in self.trains_positions[self.trains_positions["episode_id"] == self.ep_id].to_records():
-            # TODO bad design smell
-            position_cache[item["env_time"]][item["agent_id"]] = None if item['position'] == (None, None) else item['position']
+            position_cache[item["env_time"]][item["agent_id"]] = item['position']
         trains_rewards_dones_infos_cache = defaultdict(lambda: defaultdict(dict))
         for data in self.trains_rewards_dones_infos[self.trains_rewards_dones_infos["episode_id"] == self.ep_id].to_records():
             trains_rewards_dones_infos_cache[data["env_time"]][data["agent_id"]] = (data["reward"], data["done"], data["info"])
