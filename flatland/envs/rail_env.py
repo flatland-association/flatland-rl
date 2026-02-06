@@ -33,10 +33,11 @@ from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
 
 UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType')
+UnderlyingResourceMapType = TypeVar('UnderlyingResourceMapType')
 
 
 # TODO naming?
-class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType]):
+class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, UnderlyingResourceMapType]):
     """
     AbstractRailEnv environment class.
 
@@ -186,8 +187,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType]):
 
         self.motion_check = ac.MotionCheck()
 
-        # TODO graph resource map?
-        self.resource_map = GridResourceMap()
+        # TODO bad design smell - resource map is not persisted, in particular level_free_positions is not persisted, only rail!
+        self.resource_map: UnderlyingResourceMapType = self._extract_resource_map_from_optionals({})
 
         if rewards is None:
             self.rewards = DefaultRewards()
@@ -301,9 +302,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType]):
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
-            # TODO specific to grid, move down?
-            if optionals and 'level_free_positions' in optionals:
-                self.resource_map.level_free_positions = optionals['level_free_positions']
+            self.resource_map = self._extract_resource_map_from_optionals(optionals)
 
             line = self.line_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets, self.np_random)
 
@@ -318,6 +317,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType]):
             self._max_episode_steps = timetable.max_episode_steps
             EnvAgent.apply_timetable(self.agents, timetable)
         else:
+            self.resource_map = self._extract_resource_map_from_optionals(optionals)
             self.distance_map.reset(self.agents, self.rail)
 
         # Reset agents to initial states
@@ -344,6 +344,9 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType]):
         # Return the new observation vectors for each agent
         observation_dict: Dict = self._get_observations()
         return observation_dict, info_dict
+
+    def _extract_resource_map_from_optionals(self, optionals: dict) -> UnderlyingResourceMapType:
+        raise NotImplementedError()
 
     def clear_rewards_dict(self):
         """ Reset the rewards dictionary """
@@ -656,7 +659,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType]):
         return self.rail_generator(self.number_of_agents, self.num_resets, self.np_random)
 
 
-class RailEnv(AbstractRailEnv[GridTransitionMap]):
+class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap]):
     def __init__(self,
                  width,
                  height,
@@ -733,6 +736,12 @@ class RailEnv(AbstractRailEnv[GridTransitionMap]):
             self.distance_map.set(optionals['distance_map'])
 
         return optionals, rail
+
+    def _extract_resource_map_from_optionals(self, optionals: dict) -> GridResourceMap:
+        resource_map = GridResourceMap()
+        if optionals and 'level_free_positions' in optionals:
+            resource_map.level_free_positions = optionals['level_free_positions']
+        return resource_map
 
     def _update_agent_positions_map(self, ignore_old_positions=True):
         """ Update the agent_positions array for agents that changed positions """

@@ -24,7 +24,7 @@ class GraphDistanceMap(AbstractDistanceMap[GraphTransitionMap, Any]):
         return {a.handle: [] for a in self.agents}
 
 
-class GraphRailEnv(AbstractRailEnv[GraphTransitionMap]):
+class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap]):
     @staticmethod
     def from_rail_env(rail_env: RailEnv, observation_builder: ObservationBuilder) -> "GraphRailEnv":
         rail_env.reset(False, False)
@@ -40,23 +40,23 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap]):
         )
 
     def __init__(
-            self,
-            # TODO fix signature https://github.com/flatland-association/flatland-rl/issues/242
-            rail_generator: "RailGenerator" = None,
-            line_generator: "LineGenerator" = None,
-            number_of_agents=2,
-            observation_builder: ObservationBuilder = None,
-            # TODO should come from rail_generator as well and go into resource map
-            level_free_positions: Set[Vector2D] = None,
-            malfunction_generator_and_process_data=None,
-            malfunction_generator: "MalfunctionGenerator" = None,
-            random_seed=None,
-            timetable_generator=None,
-            acceleration_delta=1.0,
-            braking_delta=-1.0,
-            rewards: Rewards = None,
-            effects_generator: EffectsGenerator["GraphRailEnv"] = None,
-            distance_map: GraphDistanceMap = None
+        self,
+        # TODO fix signature https://github.com/flatland-association/flatland-rl/issues/242
+        rail_generator: "RailGenerator" = None,
+        line_generator: "LineGenerator" = None,
+        number_of_agents=2,
+        observation_builder: ObservationBuilder = None,
+        # TODO should come from rail_generator as well and go into resource map
+        level_free_positions: Set[Vector2D] = None,
+        malfunction_generator_and_process_data=None,
+        malfunction_generator: "MalfunctionGenerator" = None,
+        random_seed=None,
+        timetable_generator=None,
+        acceleration_delta=1.0,
+        braking_delta=-1.0,
+        rewards: Rewards = None,
+        effects_generator: EffectsGenerator["GraphRailEnv"] = None,
+        distance_map: GraphDistanceMap = None
     ):
         if observation_builder is None:
             observation_builder = DummyObservationBuilder()
@@ -80,6 +80,12 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap]):
 
         self.agents = [EnvAgent(None, None, None) for i in range(self.get_num_agents())]
 
-    # TODO move to parent?
     def get_num_agents(self) -> int:
         return self.number_of_agents
+
+    def _extract_resource_map_from_optionals(self, optionals: dict) -> GraphResourceMap:
+        resource_map = GraphResourceMap()
+        # TODO implement / necessary?
+        if optionals and 'level_free_positions' in optionals:
+            resource_map.level_free_positions = optionals['level_free_positions']
+        return resource_map

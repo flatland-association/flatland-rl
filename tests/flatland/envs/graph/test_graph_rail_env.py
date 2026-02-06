@@ -12,7 +12,7 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 def test_graph_transition_map_from_with_random_policy():
     # TODO restrictions:
     #   - no malfunction
-    #   - homogeneous speed
+    #   - test multi-speed and dynamic speed
     #   - rewards (distance map)
     #   - mapping level-free/non-level free
     env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999, speed_ratios={1.0: 1.0})
