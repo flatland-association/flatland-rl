@@ -43,7 +43,11 @@ def test_graph_transition_map_from_with_random_policy():
 
         assert len(trajectory.compare_arrived(other)) == 0
         assert len(trajectory.compare_actions(other)) == 0
+        print(trajectory.trains_positions)
+        print(other.trains_positions)
+        # TODO convert and then compare instead of converting to grid format.
         print(trajectory.compare_positions(other))
+
         assert len(trajectory.compare_positions(other)) == 0
         # TODO fix distance map and rewards
         # assert len(trajectory.compare_rewards_dones_infos(other)) == 0

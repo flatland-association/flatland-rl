@@ -337,10 +337,11 @@ class EnvAgent(Generic[ConfigurationType]):
         raise ValueError("agent.speed_data is deprecated, please use agent.speed_counter instead")
 
     @classmethod
-    def apply_timetable(cls, agents: List["EnvAgent"], timetable: Timetable):
+    def apply_timetable(cls, agents: List["EnvAgent"], timetable: Timetable) -> List["EnvAgent"]:
         for agent_i, agent in enumerate(agents):
             # TODO revise design: should we set state to READY_TO_DEPART if earliest_departure == 0? See `test_known_flatland_bugs.test_earliest_departure_zero_bug`.
             agent.earliest_departure = timetable.earliest_departures[agent_i][0]
             agent.latest_arrival = timetable.latest_arrivals[agent_i][-1]
             agent.waypoints_earliest_departure = timetable.earliest_departures[agent_i]
             agent.waypoints_latest_arrival = timetable.latest_arrivals[agent_i]
+        return agents

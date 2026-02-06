@@ -143,7 +143,7 @@ class Trajectory:
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'position'])
         df = pd.read_csv(f, sep='\t')
-        df["position"] = df["position"].map(ast.literal_eval).map(lambda p: (p[0], int(p[1]) if p[1] is not None else None))
+        df["position"] = df["position"].map(normalize_position_read)
         if episode_only:
             return df[df['episode_id'] == self.ep_id]
         return df
@@ -175,7 +175,7 @@ class Trajectory:
         """Store pd df with all trains' positions for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
-        df["position"] = df["position"].map(lambda p: (p[0], int(p[1]) if p[1] is not None else None))
+        df["position"] = df["position"].map(normalize_position_write)
         df.to_csv(f, sep='\t', index=False)
 
     def _write_actions(self, df: pd.DataFrame):
@@ -229,8 +229,8 @@ class Trajectory:
             action_cache[item["env_time"]][item["agent_id"]] = RailEnvActions.from_value(item["action"])
         position_cache = defaultdict(lambda: defaultdict(dict))
         for item in self.trains_positions[self.trains_positions["episode_id"] == self.ep_id].to_records():
-            p, d = item['position']
-            position_cache[item["env_time"]][item["agent_id"]] = (p, d)
+            # TODO bad design smell
+            position_cache[item["env_time"]][item["agent_id"]] = None if item['position'] == (None, None) else item['position']
         trains_rewards_dones_infos_cache = defaultdict(lambda: defaultdict(dict))
         for data in self.trains_rewards_dones_infos[self.trains_rewards_dones_infos["episode_id"] == self.ep_id].to_records():
             trains_rewards_dones_infos_cache[data["env_time"]][data["agent_id"]] = (data["reward"], data["done"], data["info"])
@@ -342,9 +342,6 @@ class Trajectory:
     def compare_positions(self, other: "Trajectory", start_step: int = None, end_step: int = None) -> pd.DataFrame:
         df = self._read_trains_positions(episode_only=True)
         other_df = other._read_trains_positions(episode_only=True)
-        # TODO re-generate trajectories instead with configuration None instead of (None, d)
-        df["position"] = df["position"].map(lambda t: None if t[0] is None else t)
-        other_df["position"] = other_df["position"].map(lambda t: None if t[0] is None else t)
         return self._compare(df, other_df, ['env_time', 'agent_id', 'position'], end_step, start_step)
 
     def compare_arrived(self, other: "Trajectory", start_step: int = None, end_step: int = None, skip_normalized_reward: bool = True) -> pd.DataFrame:
@@ -516,3 +513,36 @@ class Trajectory:
         assert len(trajectory.trains_arrived) == 0
         assert len(trajectory.trains_rewards_dones_infos) == 0
         return trajectory
+
+
+# TODO bad design smell - write actual configurations plainly and normalize upon reading only
+def normalize_position_write(p):
+    """
+    Backwards compatibility for grids and graphs-from-grids:
+    - ((r,c),d) -> ((r,c),d)
+    - None -> None,None
+    - str((r,c,d) -> ((r,c),d)
+    """
+    if p is None:
+        return None, None
+    elif isinstance(p, str):
+        r, c, d = ast.literal_eval(p)
+        return ((r, c), d)
+    else:
+        return p[0], int(p[1]) if p[1] is not None else None
+
+
+def normalize_position_read(p):
+    """
+    Backwards compatibility for grids and graphs-from-grids:
+    - ((r,c),d) -> ((r,c),d)
+    - None,None -> None
+    """
+    t = ast.literal_eval(p)
+    if t[0] is None:
+        return None
+    elif len(t) == 3:
+        r, c, d = t
+        return ((r, c), d)
+    else:
+        return t

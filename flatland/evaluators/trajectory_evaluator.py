@@ -84,9 +84,6 @@ class TrajectoryEvaluator:
                 agent = env.agents[agent_id]
                 expected_position = position_cache[elapsed_after_step][agent_id]
                 actual_position = agent.current_configuration
-                # TODO re-generate trajectories instead with configuration None instead of (None, d)
-                if expected_position[0] is None:
-                    expected_position = None
                 assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
                                                              f"- actual_position:\t{actual_position}\n" \
                                                              f"- expected_position:\t{expected_position}\n" \

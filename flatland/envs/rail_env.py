@@ -26,7 +26,6 @@ from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -161,8 +160,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         self.line_generator: "LineGenerator" = line_generator
         self.timetable_generator = timetable_generator
 
-        # TODO typing
-        self.rail: Optional[RailGridTransitionMap] = None
+        self.rail: Optional[UnderlyingTransitionMapType] = None
 
         self.remove_agents_at_target = remove_agents_at_target
 
@@ -307,7 +305,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             line = self.line_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets, self.np_random)
 
-            self.agents = EnvAgent.from_line(line)
+            self.agents = self._agents_from_line(line)
 
             # Reset distance map - basically initializing
             self.distance_map.reset(self.agents, self.rail)
@@ -316,7 +314,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             timetable = self.timetable_generator(self.agents, self.distance_map, agents_hints, self.np_random)
 
             self._max_episode_steps = timetable.max_episode_steps
-            EnvAgent.apply_timetable(self.agents, timetable)
+            self.agents = self._apply_timetable_to_agents(self.agents, timetable)
         else:
             self.resource_map = self._extract_resource_map_from_optionals(optionals)
             self.distance_map.reset(self.agents, self.rail)
@@ -625,6 +623,12 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         # TODO https://github.com/flatland-association/flatland-rl/issues/242 fix signature
         return self.rail_generator(self.number_of_agents, self.num_resets, self.np_random)
 
+    def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[ConfigurationType]]:
+        raise NotImplementedError()
+
+    def _agents_from_line(self, line: "Line") -> List[EnvAgent[ConfigurationType]]:
+        raise NotImplementedError()
+
 
 class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[int, int], int]]):
     def __init__(self,
@@ -765,3 +769,9 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
 
         self.cur_episode.append(list_agents_state)
         self.list_actions.append(dActions)
+
+    def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
+        return EnvAgent.apply_timetable(self.agents, timetable)
+
+    def _agents_from_line(self, line: "Line") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
+        return EnvAgent.from_line(line)

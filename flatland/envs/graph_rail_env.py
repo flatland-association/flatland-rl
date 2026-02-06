@@ -34,12 +34,11 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         gtm = GraphTransitionMap.from_rail_env(rail_env)
         _resource_map = {}
         for n in gtm.g.nodes:
-            # TODO temporary workaround as long as step function relies on tuples
             r, c, d = ast.literal_eval(n)
             if (r, c) in rail_env.resource_map.level_free_positions:
-                _resource_map[((r, c), d)] = (r, c, d % 2)
+                _resource_map[GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)] = str((r, c, d % 2))
             else:
-                _resource_map[((r, c), d)] = (r, c)
+                _resource_map[GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)] = str((r, c))
 
         return GraphRailEnv(
             number_of_agents=rail_env.get_num_agents(),
@@ -96,3 +95,20 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
 
     def _infrastructure_representation(self, configuration: str) -> str:
         return configuration
+
+    def _apply_timetable_to_agents(self, agents: List[EnvAgent[str]], timetable: "Timetable") -> List[EnvAgent[str]]:
+        EnvAgent.apply_timetable(self.agents, timetable)
+        for agent in self.agents:
+            assert len(agent.waypoints[-1]) == 1
+            agent.waypoints = [[GraphTransitionMap.grid_configuration_to_graph_configuration(*wp.position, wp.direction) for wp in flex_intermediate_stop] for
+                               flex_intermediate_stop in agent.waypoints[:1]] + [
+                                  GraphTransitionMap.grid_configuration_to_graph_configuration(*(agent.waypoints[-1][0].position), d) for d in range(4)]
+        return agents
+
+    def _agents_from_line(self, line: "Line") -> List[EnvAgent[str]]:
+        agents = EnvAgent.from_line(line)
+        for agent in agents:
+            agent.initial_configuration = GraphTransitionMap.grid_configuration_to_graph_configuration(*agent.initial_position, agent.initial_direction)
+            agent.current_configuration = GraphTransitionMap.grid_configuration_to_graph_configuration(*agent.position, agent.direction)
+            agent.targets = {GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) for t in agent.targets}
+        return agents
