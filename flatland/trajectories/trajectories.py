@@ -255,9 +255,7 @@ class Trajectory:
             print(f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}")
             print(df[(df['agent_id'] == agent_id) & (df['episode_id'] == self.ep_id)]["env_time"])
         assert len(pos) == 1, f"Found {len(pos)} positions for {self.ep_id} {env_time} {agent_id}"
-        # fail fast
-        p, d = pos.iloc[0]
-        return p, d
+        return pos.iloc[0]
 
     def action_lookup(self, env_time: int, agent_id: int) -> RailEnvActions:
         """Method used to retrieve the stored action (if available). Defaults to 2 = MOVE_FORWARD.
