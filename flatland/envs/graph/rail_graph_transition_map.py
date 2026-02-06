@@ -18,9 +18,10 @@ References:
 - Egli, Adrian. FlatlandGraphBuilder. https://github.com/aiAdrian/flatland_railway_extension/blob/e2b15bdd851ad32fb26c1a53f04621a3ca38fc00/flatland_railway_extension/FlatlandGraphBuilder.py
 - Nygren, E., Eichenberger, Ch., Frejinger, E. Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
 """
+import ast
 from collections import defaultdict
 from functools import lru_cache
-from typing import Tuple
+from typing import Tuple, Optional
 
 import networkx as nx
 
@@ -178,3 +179,11 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
     @lru_cache
     def grid_configuration_to_graph_configuration(r: int, c: int, d: int) -> str:
         return f"{int(r), int(c), int(d)}"
+
+    @staticmethod
+    @lru_cache
+    def graph_configuration_to_grid_configuration(s: str) -> Optional[Tuple[Tuple[int, int], int]]:
+        if s is None:
+            return None
+        r, c, d = ast.literal_eval(s)
+        return ((r, c), d)

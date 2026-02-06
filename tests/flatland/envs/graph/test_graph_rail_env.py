@@ -3,6 +3,7 @@ from pathlib import Path
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.env_generation.env_generator import env_generator
+from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.trajectories.policy_runner import PolicyRunner
@@ -15,20 +16,20 @@ def test_graph_transition_map_from_with_random_policy():
     #   - test multi-speed and dynamic speed
     #   - rewards (distance map)
     #   - mapping level-free/non-level free
-    env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999, speed_ratios={1.0: 1.0})
-    clone: GraphRailEnv = GraphRailEnv.from_rail_env(env, DummyObservationBuilder())
-    clone.reset()
+    grid_env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999, speed_ratios={1.0: 1.0})
+    graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder())
+    graph_env.reset()
 
-    for r in range(env.height):
-        for c in range(env.width):
+    for r in range(grid_env.height):
+        for c in range(grid_env.width):
             for d in range(4):
-                assert (sum(env.rail.get_transitions(((r, c), d))) > 0) == (f"{r, c, d}" in clone.rail.g.nodes)
-                if sum(env.rail.get_transitions(((r, c), d))) == 0:
+                assert (sum(grid_env.rail.get_transitions(((r, c), d))) > 0) == (f"{r, c, d}" in graph_env.rail.g.nodes)
+                if sum(grid_env.rail.get_transitions(((r, c), d))) == 0:
                     continue
                 for a in range(5):
                     # TODO typing
-                    actual = clone.rail.check_action_on_agent(RailEnvActions.from_value(a), f"{r, c, d}")
-                    expected = env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d))
+                    actual = graph_env.rail.check_action_on_agent(RailEnvActions.from_value(a), f"{r, c, d}")
+                    expected = grid_env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d))
                     new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action = expected
 
                     expected = new_cell_valid, f"{new_position[0], new_position[1], new_direction}", transition_valid, preprocessed_action
@@ -38,16 +39,14 @@ def test_graph_transition_map_from_with_random_policy():
     # use Trajectory API for comparison
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env, policy=RandomPolicy(), data_dir=data_dir / "one")
-        other = PolicyRunner.create_from_policy(env=clone, policy=RandomPolicy(), data_dir=data_dir / "two", snapshot_interval=0, no_save=True)
+        grid_trajectory = PolicyRunner.create_from_policy(env=grid_env, policy=RandomPolicy(), data_dir=data_dir / "one")
+        graph_trajectory = PolicyRunner.create_from_policy(env=graph_env, policy=RandomPolicy(), data_dir=data_dir / "two", snapshot_interval=0, no_save=True)
 
-        assert len(trajectory.compare_arrived(other)) == 0
-        assert len(trajectory.compare_actions(other)) == 0
-        print(trajectory.trains_positions)
-        print(other.trains_positions)
-        # TODO convert and then compare instead of converting to grid format.
-        print(trajectory.compare_positions(other))
+        assert len(grid_trajectory.compare_arrived(graph_trajectory)) == 0
+        assert len(grid_trajectory.compare_actions(graph_trajectory)) == 0
+        graph_trajectory.trains_positions["position"] = graph_trajectory.trains_positions["position"].map(
+            GraphTransitionMap.graph_configuration_to_grid_configuration)
+        assert len(graph_trajectory.trains_positions["position"].compare(grid_trajectory.trains_positions["position"])) == 0
 
-        assert len(trajectory.compare_positions(other)) == 0
         # TODO fix distance map and rewards
         # assert len(trajectory.compare_rewards_dones_infos(other)) == 0

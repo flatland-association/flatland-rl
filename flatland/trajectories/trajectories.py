@@ -175,7 +175,6 @@ class Trajectory:
         """Store pd df with all trains' positions for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
-        df["position"] = df["position"].map(normalize_position_write)
         df.to_csv(f, sep='\t', index=False)
 
     def _write_actions(self, df: pd.DataFrame):
@@ -515,34 +514,22 @@ class Trajectory:
         return trajectory
 
 
-# TODO bad design smell - write actual configurations plainly and normalize upon reading only
-def normalize_position_write(p):
-    """
-    Backwards compatibility for grids and graphs-from-grids:
-    - ((r,c),d) -> ((r,c),d)
-    - None -> None,None
-    - str((r,c,d) -> ((r,c),d)
-    """
-    if p is None:
-        return None, None
-    elif isinstance(p, str):
-        r, c, d = ast.literal_eval(p)
-        return ((r, c), d)
-    else:
-        return p[0], int(p[1]) if p[1] is not None else None
-
-
 def normalize_position_read(p):
     """
     Backwards compatibility for grids and graphs-from-grids:
     - ((r,c),d) -> ((r,c),d)
     - None,None -> None
+    - None,d -> None
+    - nan -> None (why?)
     """
+    if pd.isna(p):
+        return None
     t = ast.literal_eval(p)
+    # (None,None) -> None
+    # (None,d) -> None
     if t[0] is None:
         return None
-    elif len(t) == 3:
-        r, c, d = t
-        return ((r, c), d)
-    else:
+    elif len(t) == 2:
         return t
+    else:
+        return p
