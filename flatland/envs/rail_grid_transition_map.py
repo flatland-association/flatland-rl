@@ -21,17 +21,14 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         super().__init__(width=width, height=height, transitions=transitions, grid=grid)
 
     @lru_cache
-    def get_valid_move_actions_(self, agent_direction: Grid4TransitionsEnum, agent_position: Tuple[int, int]) -> Set[RailEnvNextAction]:
+    def get_valid_move_actions_(self, direction: Grid4TransitionsEnum, position: Tuple[int, int]) -> Set[RailEnvNextAction]:
         """
         Get the valid move actions (forward, left, right) for an agent.
 
-        TODO The implementation could probably be more efficient and more elegant,
-          but given the few calls this has no priority now.
-
         Parameters
         ----------
-        agent_direction : Grid4TransitionsEnum
-        agent_position: Tuple[int,int]
+        direction : Grid4TransitionsEnum
+        position: Tuple[int,int]
 
 
         Returns
@@ -41,37 +38,11 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
             It is not checked that the next cell is free.
         """
         valid_actions: Set[RailEnvNextAction] = []
-        possible_transitions = self.get_transitions((agent_position, agent_direction))
-        num_transitions = fast_count_nonzero(possible_transitions)
-        # Start from the current orientation, and see which transitions are available;
-        # organize them as [left, forward, right], relative to the current orientation
-        # If only one transition is possible, the forward branch is aligned with it.
-        if self.is_dead_end(agent_position):
-            action = RailEnvActions.MOVE_FORWARD
-            exit_direction = (agent_direction + 2) % 4
-            if possible_transitions[exit_direction]:
-                new_position = get_new_position(agent_position, exit_direction)
-                valid_actions = [(RailEnvNextAction(action, new_position, exit_direction))]
-        elif num_transitions == 1:
-            action = RailEnvActions.MOVE_FORWARD
-            for new_direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
-                if possible_transitions[new_direction]:
-                    new_position = get_new_position(agent_position, new_direction)
-                    valid_actions = [(RailEnvNextAction(action, new_position, new_direction))]
-        else:
-            for new_direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
-                if possible_transitions[new_direction]:
-                    if new_direction == agent_direction:
-                        action = RailEnvActions.MOVE_FORWARD
-                    elif new_direction == (agent_direction + 1) % 4:
-                        action = RailEnvActions.MOVE_RIGHT
-                    elif new_direction == (agent_direction - 1) % 4:
-                        action = RailEnvActions.MOVE_LEFT
-                    else:
-                        raise Exception("Illegal state")
-
-                    new_position = get_new_position(agent_position, new_direction)
-                    valid_actions.append(RailEnvNextAction(action, new_position, new_direction))
+        for action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT]:
+            new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
+            new_position = get_new_position(position, new_direction)
+            if transition_valid:
+                valid_actions.append(RailEnvNextAction(action, new_position, new_direction))
         return valid_actions
 
     def check_bounds(self, position):
@@ -128,7 +99,6 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
                 return new_direction, True, RailEnvActions.MOVE_RIGHT
             elif possible_transitions[direction]:
                 return direction, False, RailEnvActions.MOVE_FORWARD
-
         elif possible_transitions[direction]:
             return direction, True, action
 
