@@ -13,7 +13,7 @@ from flatland.envs.rewards import Rewards
 from flatland.envs.timetable_utils import TimetableUtils
 
 
-class GraphDistanceMap(AbstractDistanceMap[GraphTransitionMap, Any]):
+class GraphDistanceMap(AbstractDistanceMap[GraphTransitionMap, Any, str]):
     # TODO implement/generalize distance map for graph
     def _compute(self, agents: List[EnvAgent], rail: GraphTransitionMap):
         pass

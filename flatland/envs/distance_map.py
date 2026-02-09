@@ -13,9 +13,10 @@ from flatland.envs.step_utils.states import TrainState
 
 UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=TransitionMap)
 UnderlyingDistanceMapType = TypeVar('UnderlyingDistanceMapType')
+UnderlyingConfigurationType = TypeVar('UnderlyingConfigurationType')
 
 
-class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanceMapType]):
+class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingConfigurationType]):
     def __init__(self, agents: List[EnvAgent]):
         self.distance_map = None
         self.agents_previous_computation = None
@@ -64,7 +65,7 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
         raise NotImplementedError()
 
 
-class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray]):
+class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoint]):
     def __init__(self, agents: List[EnvAgent], env_height: int, env_width: int):
         super().__init__(agents=agents)
         self.env_height = env_height
@@ -80,7 +81,7 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray]):
 
     def _compute(self, agents: List[EnvAgent], rail: RailGridTransitionMap):
         """
-        This function computes the distance maps for each unique target. Thus if several targets are the same
+        This function computes the distance maps for each unique target. Thus, if several targets are the same
         we only compute the distance for them once and copy to all targets with same position.
         :param agents: All the agents in the environment, independent of their current status
         :param rail: The rail transition map
@@ -211,34 +212,31 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray]):
         """
         shortest_paths = dict()
 
-        def _shortest_path_for_agent(agent):
+        def _shortest_path_for_agent(agent: EnvAgent):
             if agent.state.is_off_map_state():
-                position = agent.initial_position
-                direction = agent.initial_direction
+                configuration = agent.initial_configuration
             elif agent.state.is_on_map_state():
-                position = agent.position
-                direction = agent.direction
+                configuration = agent.current_configuration
             elif agent.state == TrainState.DONE:
-                position = agent.target
-                direction = agent.direction
+                shortest_paths[agent.handle] = None
+                return
             else:
                 shortest_paths[agent.handle] = None
                 return
+
+            position, direction = configuration
 
             shortest_paths[agent.handle] = []
             distance = math.inf
             depth = 0
             while (position != agent.target and (max_depth is None or depth < max_depth)):
-                next_actions = self.rail.get_valid_move_actions_(direction, position)
+                next_actions = self.rail.get_valid_move_actions((position, direction))
                 best_next_action = None
                 for next_action in next_actions:
-                    next_action_distance = self.get()[
-                        agent.handle, next_action.next_position[0], next_action.next_position[
-                            1], next_action.next_direction]
+                    next_action_distance = self.get()[agent.handle, next_action.next_position[0], next_action.next_position[1], next_action.next_direction]
                     if next_action_distance < distance:
                         best_next_action = next_action
                         distance = next_action_distance
-
                 shortest_paths[agent.handle].append(Waypoint(position, direction))
                 depth += 1
 

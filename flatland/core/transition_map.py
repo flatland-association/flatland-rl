@@ -5,7 +5,7 @@ import traceback
 import uuid
 import warnings
 from functools import lru_cache
-from typing import Tuple, Generic, TypeVar, Any
+from typing import Tuple, Generic, TypeVar, Any, Set
 
 import numpy as np
 from importlib_resources import path
@@ -16,22 +16,23 @@ from flatland.core.grid.grid4_utils import get_new_position, get_direction
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transitions import Transitions
+from flatland.envs.rail_env_action import RailEnvNextAction
 from flatland.utils.ordered_set import OrderedSet
 
-ConfigurationType = TypeVar('ConfigurationType')
+UnderlyingConfigurationType = TypeVar('ConfigurationType')
 UnderlyingTransitionsType = TypeVar('UnderlyingTransitionsType')
 UnderlyingTransitionsValidityType = TypeVar('UnderlyingTransitionsValidityType')
 ActionsType = TypeVar('ActionsType')
 
 
-class TransitionMap(Generic[ConfigurationType, UnderlyingTransitionsType, UnderlyingTransitionsValidityType, ActionsType]):
+class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsType, UnderlyingTransitionsValidityType, ActionsType]):
     """
     Base TransitionMap class.
 
     Generic class that implements a collection of transitions over a set of cells.
     """
 
-    def get_transitions(self, configuration: ConfigurationType) -> Tuple[UnderlyingTransitionsValidityType]:
+    def get_transitions(self, configuration: UnderlyingConfigurationType) -> Tuple[UnderlyingTransitionsValidityType]:
         """
         Return a tuple of transitions available in a cell specified by
         `configuration` (e.g., a tuple of size of the maximum number of transitions,
@@ -50,7 +51,7 @@ class TransitionMap(Generic[ConfigurationType, UnderlyingTransitionsType, Underl
         """
         raise NotImplementedError()
 
-    def set_transitions(self, configuration: ConfigurationType, new_transitions: UnderlyingTransitionsType):
+    def set_transitions(self, configuration: UnderlyingConfigurationType, new_transitions: UnderlyingTransitionsType):
         """
         Replaces the available transitions in cell `configuration` with the tuple
         `new_transitions'. `new_transitions` must have
@@ -67,7 +68,7 @@ class TransitionMap(Generic[ConfigurationType, UnderlyingTransitionsType, Underl
         """
         raise NotImplementedError()
 
-    def get_transition(self, configuration: ConfigurationType, transition_index: int) -> UnderlyingTransitionsValidityType:
+    def get_transition(self, configuration: UnderlyingConfigurationType, transition_index: int) -> UnderlyingTransitionsValidityType:
         """
         Return the status of whether an agent in cell `configuration` can perform a
         movement along transition `transition_index` (e.g., the NESW direction
@@ -92,7 +93,7 @@ class TransitionMap(Generic[ConfigurationType, UnderlyingTransitionsType, Underl
         """
         raise NotImplementedError()
 
-    def set_transition(self, configuration: ConfigurationType, transition_index, new_transition):
+    def set_transition(self, configuration: UnderlyingConfigurationType, transition_index, new_transition):
         """
         Replaces the validity of transition to `transition_index` in cell
         `configuration' with the new `new_transition`.
@@ -114,7 +115,9 @@ class TransitionMap(Generic[ConfigurationType, UnderlyingTransitionsType, Underl
         """
         raise NotImplementedError()
 
-    def check_action_on_agent(self, action: ActionsType, configuration: ConfigurationType) -> Tuple[bool, ConfigurationType, bool, ActionsType]:
+    @lru_cache
+    def check_action_on_agent(self, action: ActionsType, configuration: UnderlyingConfigurationType) -> Tuple[
+        bool, UnderlyingConfigurationType, bool, ActionsType]:
         """
         Apply the action on the train regardless of locations of other agents.
         Checks for valid cells to move and valid rail transitions.
@@ -136,6 +139,24 @@ class TransitionMap(Generic[ConfigurationType, UnderlyingTransitionsType, Underl
             Whether the transition from old and direction is defined in the grid.
         preprocessed_action: [ActionType]
             Corrected action if not transition_valid.
+        """
+        raise NotImplementedError()
+
+    @lru_cache
+    def get_valid_move_actions(self, configuration: UnderlyingConfigurationType) -> Set[RailEnvNextAction]:
+        """
+        Get the valid move actions (forward, left, right) for an agent.
+
+        Parameters
+        ----------
+        configuration: ConfigurationType.
+
+
+        Returns
+        -------
+        Set of `RailEnvNextAction` (tuples of (action,position,direction))
+            Possible move actions (forward,left,right) and the next position/direction they lead to.
+            It is not checked that the next cell is free.
         """
         raise NotImplementedError()
 

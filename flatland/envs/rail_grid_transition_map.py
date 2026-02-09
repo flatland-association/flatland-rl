@@ -21,14 +21,13 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         super().__init__(width=width, height=height, transitions=transitions, grid=grid)
 
     @lru_cache
-    def get_valid_move_actions_(self, direction: Grid4TransitionsEnum, position: Tuple[int, int]) -> Set[RailEnvNextAction]:
+    def get_valid_move_actions(self, configuration: Tuple[Tuple[int, int], int]) -> Set[RailEnvNextAction]:
         """
         Get the valid move actions (forward, left, right) for an agent.
 
         Parameters
         ----------
-        direction : Grid4TransitionsEnum
-        position: Tuple[int,int]
+        configuration: Tuple[Tuple[int,int],int]
 
 
         Returns
@@ -37,6 +36,8 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
             Possible move actions (forward,left,right) and the next position/direction they lead to.
             It is not checked that the next cell is free.
         """
+        position, direction = configuration
+
         valid_actions: Set[RailEnvNextAction] = []
         for action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT]:
             new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
