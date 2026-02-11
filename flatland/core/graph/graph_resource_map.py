@@ -8,7 +8,6 @@ class GraphResourceMap(ResourceMap[str, str]):
         self._resource_map = _resource_map
 
     def get_resource(self, configuration: Optional[str]) -> Optional[str]:
-        # TODO configuration None only
-        if configuration is None or configuration == (None, None):
+        if configuration is None:
             return None
         return self._resource_map[configuration]

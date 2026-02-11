@@ -5,12 +5,13 @@ from typing import Dict, List, Optional, Generic, TypeVar
 import numpy as np
 
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.core.transition_map import TransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.states import TrainState
 
-UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType')
+UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=TransitionMap)
 UnderlyingDistanceMapType = TypeVar('UnderlyingDistanceMapType')
 
 

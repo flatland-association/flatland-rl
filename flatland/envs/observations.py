@@ -203,8 +203,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             agent_virtual_position = agent.position
             agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
-            agent_virtual_position = agent.target
-            agent_virtual_direction = agent.direction
+            agent_virtual_position, agent_virtual_direction = list(agent.targets)[0]
         else:
             return None
 
@@ -585,7 +584,7 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
 
         obs_agents_state[:, :, 4] = 0
 
-        obs_agents_state[agent_virtual_position][0] = agent_virtual_direction
+        obs_agents_state[agent_virtual_position][0] = agent_virtual_direction if agent_virtual_direction is not None else -1
         obs_targets[agent.target][0] = 1
 
         for i in range(len(self.env.agents)):
@@ -607,6 +606,17 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
             # fifth channel: all ready to depart on this position
             if other_agent.state.is_off_map_state():
                 obs_agents_state[other_agent.initial_position][4] += 1
+        assert np.count_nonzero(~np.isfinite(self.rail_obs)) == 0, self.rail_obs
+        assert np.count_nonzero(np.isnan(self.rail_obs)) == 0, self.rail_obs
+        # TODO culprit
+        if self.env._elapsed_steps == 85 and handle == 1:
+            a = 5
+        if np.count_nonzero(~np.isfinite(obs_agents_state)) != 0:
+            a = 5
+        assert np.count_nonzero(~np.isfinite(obs_agents_state)) == 0, obs_agents_state
+        assert np.count_nonzero(np.isnan(obs_agents_state)) == 0, obs_agents_state
+        assert np.count_nonzero(~np.isfinite(obs_targets)) == 0, obs_targets
+        assert np.count_nonzero(np.isnan(obs_targets)) == 0, obs_targets
         return self.rail_obs, obs_agents_state, obs_targets
 
 

@@ -11,8 +11,7 @@ class GridResourceMap(ResourceMap[Tuple[Tuple[int, int], int], Union[Tuple[Tuple
             self.level_free_positions = set()
 
     def get_resource(self, configuration: Optional[Tuple[Tuple[int, int], int]]) -> Optional[Tuple[int, int]]:
-        # TODO replace with None instead of tuple
-        if configuration[0] is None:
+        if configuration is None:
             return None
         position, direction = configuration
         if position in self.level_free_positions:

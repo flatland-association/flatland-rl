@@ -92,7 +92,10 @@ class GlobalObsForRailEnvGym(GymObservationBuilderWrapper):
         self.observation_space = gym.spaces.flatten_space(self.unflattened_observation_space)
 
     def get(self, handle: int = 0):
-        return gym.spaces.utils.flatten(self.unflattened_observation_space, super().get(handle))
+        obs = gym.spaces.utils.flatten(self.unflattened_observation_space, super().get(handle))
+        assert np.count_nonzero(~np.isfinite(obs)) == 0, obs
+        assert np.count_nonzero(np.isnan(obs)) == 0, obs
+        return obs
 
     def reset(self):
         super().reset()

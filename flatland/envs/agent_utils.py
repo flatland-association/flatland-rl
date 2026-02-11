@@ -1,6 +1,6 @@
 import sys
 import warnings
-from typing import Tuple, NamedTuple, List
+from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional, Set
 
 import numpy as np
 from attr import attrs, attrib, Factory
@@ -41,9 +41,10 @@ class Agent(NamedTuple):
 def load_env_agent(agent_tuple: Agent):
     return EnvAgent(
         initial_configuration=(agent_tuple.initial_position, agent_tuple.initial_direction),
-        current_configuration=(agent_tuple.position, agent_tuple.direction),
-        old_configuration=(agent_tuple.old_position, agent_tuple.old_direction),
-        target=agent_tuple.target,
+        current_configuration=(agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None,
+        old_configuration=(
+            agent_tuple.old_position, agent_tuple.old_direction) if agent_tuple.old_position is not None and agent_tuple.old_direction is not None else None,
+        targets={(agent_tuple.target, d) for d in Grid4TransitionsEnum},
         moving=agent_tuple.moving,
         earliest_departure=agent_tuple.earliest_departure,
         latest_arrival=agent_tuple.latest_arrival,
@@ -62,10 +63,13 @@ def load_env_agent(agent_tuple: Agent):
     )
 
 
+ConfigurationType = TypeVar('ConfigurationType')
+
+
 @attrs
-class EnvAgent:
+class EnvAgent(Generic[ConfigurationType]):
     # backwards compatibility
-    # TODO drop setters, keep only getters for backwards compatibility but get core free of setters
+    # TODO split grid special cases from general implementation
     @property
     def initial_position(self):
         return self.initial_configuration[0]
@@ -84,23 +88,31 @@ class EnvAgent:
 
     @property
     def position(self):
+        if self.current_configuration is None:
+            return None
         return self.current_configuration[0]
 
     @position.setter
     def position(self, value):
+        assert value is not None
         self.current_configuration = (value, self.direction)
 
     @property
     def direction(self):
+        if self.current_configuration is None:
+            return None
         return self.current_configuration[1]
 
     @direction.setter
     def direction(self, value):
+        assert value is not None
         self.current_configuration = (self.position, value)
 
     # used in rendering
     @property
     def old_position(self):
+        if self.old_configuration is None:
+            return None
         return self.old_configuration[0]
 
     @old_position.setter
@@ -109,18 +121,28 @@ class EnvAgent:
 
     @property
     def old_direction(self):
+        if self.old_configuration is None:
+            return None
         return self.old_configuration[1]
 
     @old_direction.setter
     def old_direction(self, value):
         self.old_configuration = (self.old_position, value)
 
-    # INIT FROM HERE IN _from_line()
-    initial_configuration = attrib(type=Tuple[Tuple[int, int], int])
-    # TODO make optional
-    current_configuration = attrib(type=Tuple[Tuple[int, int], int])
+    @property
+    def target(self):
+        # assuming same cell for all
+        return list(self.targets)[0][0]
 
-    target = attrib(type=Tuple[int, int])
+    @target.setter
+    def target(self, value):
+        self.targets = {(value, d) for d in Grid4TransitionsEnum}
+
+    # INIT FROM HERE IN _from_line()
+    initial_configuration = attrib(type=ConfigurationType)
+
+    current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
+    targets = attrib(type=Set[ConfigurationType], default=Factory(lambda: set()))
 
     moving = attrib(default=False, type=bool)
 
@@ -148,16 +170,14 @@ class EnvAgent:
     # NEW : EnvAgent Reward Handling
     arrival_time = attrib(default=None, type=int)
 
-    # TODO make optional instead
-    old_configuration = attrib(type=Tuple[Tuple[int, int], int], default=Factory(lambda: (None, None)))
+    old_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
 
     def reset(self):
         """
         Resets the agents to their initial values of the episode. Called after ScheduleTime generation.
         """
-        # TODO use single None instead
-        self.current_configuration = (None, None)
-        self.old_configuration = (None, None)
+        self.current_configuration = None
+        self.old_configuration = None
         self.moving = False
         self.arrival_time = None
 
@@ -224,9 +244,10 @@ class EnvAgent:
 
             agent = EnvAgent(
                 initial_configuration=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
+                # why
                 current_configuration=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
-                old_configuration=(None, None),
-                target=line.agent_waypoints[i_agent][-1][0].position,
+                old_configuration=None,
+                targets={(line.agent_waypoints[i_agent][-1][0].position, d) for d in Grid4TransitionsEnum},
                 waypoints=line.agent_waypoints[i_agent],
                 moving=False,
                 earliest_departure=None,
@@ -256,16 +277,17 @@ class EnvAgent:
                 agent = EnvAgent(
                     initial_configuration=(static_agent[0], static_agent[1]),
                     current_configuration=(static_agent[0], static_agent[1]),
-                    old_configuration=(None, None),
-                    target=static_agent[2], moving=static_agent[3],
+                    old_configuration=None,
+                    targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
+                    moving=static_agent[3],
                     speed_counter=SpeedCounter(speed), handle=i,
                 )
             else:
                 agent = EnvAgent(
                     initial_configuration=(static_agent[0], static_agent[1]),
                     current_configuration=(static_agent[0], static_agent[1]),
-                    old_configuration=(None, None),
-                    target=static_agent[2],
+                    old_configuration=None,
+                    targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=False,
                     speed_counter=SpeedCounter(1.0),
                     handle=i,
@@ -315,10 +337,11 @@ class EnvAgent:
         raise ValueError("agent.speed_data is deprecated, please use agent.speed_counter instead")
 
     @classmethod
-    def apply_timetable(cls, agents: List["EnvAgent"], timetable: Timetable):
+    def apply_timetable(cls, agents: List["EnvAgent"], timetable: Timetable) -> List["EnvAgent"]:
         for agent_i, agent in enumerate(agents):
             # TODO revise design: should we set state to READY_TO_DEPART if earliest_departure == 0? See `test_known_flatland_bugs.test_earliest_departure_zero_bug`.
             agent.earliest_departure = timetable.earliest_departures[agent_i][0]
             agent.latest_arrival = timetable.latest_arrivals[agent_i][-1]
             agent.waypoints_earliest_departure = timetable.earliest_departures[agent_i]
             agent.waypoints_latest_arrival = timetable.latest_arrivals[agent_i]
+        return agents
