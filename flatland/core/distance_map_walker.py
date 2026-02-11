@@ -1,18 +1,23 @@
 from collections import deque
-from typing import Tuple, List
+from typing import List, Generic, TypeVar
 
-from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+from flatland.core.distance_map import AbstractDistanceMap
+from flatland.core.transition_map import TransitionMap
+
+UnderlyingDistanceMapType = TypeVar('UnderlyingDistanceMapType', bound=AbstractDistanceMap)
+UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=TransitionMap)
+UnderlyingConfigurationType = TypeVar('UnderlyingConfigurationType')
 
 
-class DistanceMapWalker:
+class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionMapType, UnderlyingConfigurationType]):
     """
     Utility class to compute distance maps from each cell in the rail network (and each possible orientation within it) to each agent's target cell.
     """
 
-    def __init__(self, distance_map: "AbstractDistanceMap"):
+    def __init__(self, distance_map: AbstractDistanceMap):
         self.distance_map = distance_map
 
-    def _distance_map_walker(self, rail: RailGridTransitionMap, target_nr: int, target_configurations: List[Tuple[Tuple[int, int], int]]):
+    def _distance_map_walker(self, rail: UnderlyingTransitionMapType, target_nr: int, target_configurations: List[UnderlyingConfigurationType]):
         """
         Utility function to compute distance maps from each cell in the rail network (and each possible
         orientation within it) to each agent's target cell.
@@ -54,7 +59,7 @@ class DistanceMapWalker:
 
         return max_distance
 
-    def _get_and_update_neighbors(self, rail: RailGridTransitionMap, configuration: Tuple[Tuple[int, int], int], target_nr: int, current_distance: int):
+    def _get_and_update_neighbors(self, rail: UnderlyingTransitionMapType, configuration: UnderlyingConfigurationType, target_nr: int, current_distance: int):
         """
         Utility function used by _distance_map_walker to perform a BFS walk over the rail, filling in the
         minimum distances from each target cell.

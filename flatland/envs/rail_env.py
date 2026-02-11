@@ -10,6 +10,7 @@ from typing import List, Optional, Dict, Tuple, Any, Generic, TypeVar
 import numpy as np
 
 import flatland.envs.timetable_generators as ttg
+from flatland.core.distance_map import AbstractDistanceMap
 from flatland.core.effects_generator import EffectsGenerator, make_multi_effects_generator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -21,7 +22,7 @@ from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.distance_map import DistanceMap, AbstractDistanceMap
+from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 from flatland.envs.observations import GlobalObsForRailEnv
