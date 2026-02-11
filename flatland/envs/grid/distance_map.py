@@ -98,7 +98,7 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
                 next_actions = self.rail.get_valid_move_actions(configuration)
                 best_next_action = None
                 for next_action in next_actions:
-                    next_action_distance = self.get()[agent.handle, next_action.next_position[0], next_action.next_position[1], next_action.next_direction]
+                    next_action_distance = self._get_distance((next_action.next_position, next_action.next_direction), agent.handle)
                     if next_action_distance < distance:
                         best_next_action = next_action
                         distance = next_action_distance
@@ -127,5 +127,6 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
         self.distance_map[target_nr, *position, direction] = new_distance
 
     def _get_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int):
+        distance_map = self.get()
         position, direction = configuration
-        return self.distance_map[target_nr, *position, direction]
+        return distance_map[target_nr, *position, direction]
