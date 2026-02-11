@@ -64,14 +64,11 @@ class DistanceMapWalker:
         """
         neighbors = []
 
-        possible_directions = [0, 1, 2, 3]
-
         position, enforce_target_direction = configuration
 
-        if enforce_target_direction >= 0:
-            # The agent must land into the current cell with orientation `enforce_target_direction'.
-            # This is only possible if the agent has arrived from the cell in the opposite direction!
-            possible_directions = [(enforce_target_direction + 2) % 4]
+        # The agent must land into the current cell with orientation `enforce_target_direction'.
+        # This is only possible if the agent has arrived from the cell in the opposite direction!
+        possible_directions = [(enforce_target_direction + 2) % 4]
 
         for neigh_direction in possible_directions:
             new_cell = get_new_position(position, neigh_direction)
