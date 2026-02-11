@@ -10,7 +10,7 @@ from numpy.random.mtrand import RandomState
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs import persistence
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.distance_map import DistanceMap
+from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.timetable_utils import Timetable
 
 

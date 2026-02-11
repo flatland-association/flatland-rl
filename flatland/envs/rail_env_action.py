@@ -1,6 +1,6 @@
 from ast import literal_eval
 from functools import lru_cache
-from typing import NamedTuple, Any
+from typing import NamedTuple, Any, Tuple
 
 import fastenum
 import numpy as np
@@ -74,5 +74,4 @@ class RailEnvActions(fastenum.Enum):
 
 
 RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])
-RailEnvNextAction = NamedTuple('RailEnvNextAction', [('action', RailEnvActions), ('next_position', RailEnvGridPos),
-                                                     ('next_direction', Grid4TransitionsEnum)])
+RailEnvNextAction = NamedTuple('RailEnvNextAction', [('action', RailEnvActions), ('next_configuration', Tuple[RailEnvGridPos, Grid4TransitionsEnum])])

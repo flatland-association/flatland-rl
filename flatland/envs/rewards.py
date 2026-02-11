@@ -3,7 +3,7 @@ from typing import Generic, TypeVar, Tuple, Dict, Set, Optional
 
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.distance_map import DistanceMap
+from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.states import TrainState

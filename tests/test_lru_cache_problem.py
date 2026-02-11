@@ -4,9 +4,9 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator
 
 maxsize = 1000000
-env_42_hits = 53
+env_42_hits = 0
 env_42_cache_size = 1137
-env_43_hits = 60
+env_43_hits = 0
 env_43_cache_size = 1108
 grid_size = 30 * 30
 hits_42_900_43_900_42_900_43_900 = env_42_hits + grid_size + env_43_hits + grid_size + env_42_hits + grid_size + env_43_hits + grid_size

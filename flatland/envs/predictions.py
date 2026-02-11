@@ -6,7 +6,7 @@ from typing import Dict
 import numpy as np
 
 from flatland.core.env_prediction_builder import PredictionBuilder
-from flatland.envs.distance_map import DistanceMap
+from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.step_utils.states import TrainState
