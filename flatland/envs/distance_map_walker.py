@@ -11,10 +11,8 @@ class DistanceMapWalker:
     Utility class to compute distance maps from each cell in the rail network (and each possible orientation within it) to each agent's target cell.
     """
 
-    def __init__(self, distance_map: np.ndarray, env_height: int, env_width: int):
+    def __init__(self, distance_map: np.ndarray):
         self.distance_map = distance_map
-        self.env_height = env_height
-        self.env_width = env_width
 
     def _distance_map_walker(self, rail: RailGridTransitionMap, position: Tuple[int, int], target_nr: int):
         """

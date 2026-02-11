@@ -93,7 +93,7 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
                                            4),
                                     fill_value=np.inf
                                     )
-        distance_map_walker = DistanceMapWalker(self.distance_map, self.env_height, self.env_width)
+        distance_map_walker = DistanceMapWalker(self.distance_map)
         computed_targets = []
         for i, agent in enumerate(agents):
             if agent.target not in computed_targets:
