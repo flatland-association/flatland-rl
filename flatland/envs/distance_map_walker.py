@@ -17,7 +17,7 @@ class DistanceMapWalker:
         self.env_height = env_height
         self.env_width = env_width
 
-    def _distance_map_walker(self, rail: RailGridTransitionMap, position, target_nr: int):
+    def _distance_map_walker(self, rail: RailGridTransitionMap, position: Tuple[int, int], target_nr: int):
         """
         Utility function to compute distance maps from each cell in the rail network (and each possible
         orientation within it) to each agent's target cell.
@@ -28,7 +28,7 @@ class DistanceMapWalker:
         # Fill in the (up to) 4 neighboring nodes
         # direction is the direction of movement, meaning that at least a possible orientation of an agent
         # in cell (row,col) allows a movement in direction `direction'
-        nodes_queue = deque(self._get_and_update_neighbors(rail, position, target_nr, 0, enforce_target_direction=-1))
+        nodes_queue = deque(x for xs in (self._get_and_update_neighbors(rail, position, target_nr, 0, d) for d in range(4)) for x in xs)
 
         # BFS from target `position' to all the reachable nodes in the grid
         # Stop the search if the target position is re-visited, in any direction
@@ -58,7 +58,7 @@ class DistanceMapWalker:
         return max_distance
 
     def _get_and_update_neighbors(self, rail: RailGridTransitionMap, position: Tuple[int, int], target_nr: int, current_distance,
-                                  enforce_target_direction=-1):
+                                  enforce_target_direction):
         """
         Utility function used by _distance_map_walker to perform a BFS walk over the rail, filling in the
         minimum distances from each target cell.
