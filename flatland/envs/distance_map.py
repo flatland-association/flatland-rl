@@ -97,7 +97,8 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
         computed_targets = []
         for i, agent in enumerate(agents):
             if agent.target not in computed_targets:
-                distance_map_walker._distance_map_walker(rail, agent.target, i)
+                targets = [target for target in agent.targets if rail.is_valid_configuration(target)]
+                distance_map_walker._distance_map_walker(rail, i, targets)
             else:
                 # just copy the distance map form other agent with same target (performance)
                 self.distance_map[i, :, :, :] = np.copy(
