@@ -80,6 +80,8 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     @lru_cache(maxsize=1_000_000)
     def _check_action_new(self, action: RailEnvActions, position: IntVector2D, direction: int):
         """
+        Preprocess action.
+
         Checks whether action at position and direction leads to a valid new position in the grid.
 
         Sets action to MOVE_FORWARD if MOVE_LEFT/MOVE_RIGHT is provided but transition is not possible.
@@ -94,7 +96,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         Returns
         -------
         Tuple[Grid4TransitionsEnum, bool]
-            the new direction and whether the the action was valid
+            the new direction and whether the action was valid
         """
         possible_transitions = self.get_transitions((position, direction))
         num_transitions = fast_count_nonzero(possible_transitions)
@@ -138,6 +140,14 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     def check_action_on_agent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Tuple[
         bool, Tuple[Tuple[int, int], int], bool, RailEnvActions]:
         """
+        Preprocess action.
+
+        Parameters
+        ----------
+        action : RailEnvActions
+            Action to execute
+        configuration : Tuple[Tuple[int, int], int]
+            current configuration, e.g. position and orientation or current edge
 
         Returns
         -------
@@ -160,13 +170,27 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
             - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
         """
         position, direction = configuration
+        # TODO could we not simplify: start with new_position and from entry direction and action, determine the next direction?
+        # TODO should transition_valid reflect whether the action was corrected (L -> F) or only FORWARD invalid in the symmetric switch case? Rename to action_valid?
         new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
-        new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
-        return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action
+        new_configuration = (new_position, new_direction)
 
-    def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
+        # TODO new_cell_valid should depend on direction as well and not only on position, i.e. should be fixed to:
+        # new_cell_valid = self.check_bounds(new_position) and self.is_valid_configuration(new_configuration) > 0
+        new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
+        return new_cell_valid, new_configuration, transition_valid, preprocessed_action
+
+    def get_valid_entry_directions_on_grid(self, row: int, col: int) -> List[int]:
         """
-        Returns directions in which the agent can move
+        Returns directions in which the agent can enter the cell.
         """
         return self.transitions.get_entry_directions(self.get_full_transitions(row, col))
+
+    def is_valid_configuration(self, configuration: Tuple[Tuple[int, int], int]) -> bool:
+        """
+        Returns configurations in wich the agent can be: position and travelling direction (=where exiting the cell, where entering the next cell).
+        In other words: is there transition entering the cell and exiting through travelling direction?
+        """
+        position, direction = configuration
+        return any([self.get_transitions(((position[0], position[1]), iDirOut))[direction] for iDirOut in range(4)])

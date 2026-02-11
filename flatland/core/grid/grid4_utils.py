@@ -34,6 +34,18 @@ MOVEMENT_ARRAY = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 
 @lru_cache(maxsize=1_000_000)
 def get_new_position(position, movement):
+    """
+    When in configuration (position, movement), which next cell do we enter in which direction?
+
+    Parameters
+    ----------
+    position : Tuple[int, int]
+    movement : int
+
+    Returns
+    -------
+
+    """
     m = MOVEMENT_ARRAY[movement]
     return (position[0] + m[0], position[1] + m[1])
 
