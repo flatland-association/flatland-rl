@@ -41,7 +41,7 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[T
                                            4),
                                     fill_value=np.inf
                                     )
-        distance_map_walker = DistanceMapWalker[DistanceMap, RailGridTransitionMap, Tuple[Tuple[int, int], int], int](self)
+        distance_map_walker = DistanceMapWalker[DistanceMap, RailGridTransitionMap, Tuple[Tuple[int, int], int]](self)
         computed_targets = []
         for i, agent in enumerate(agents):
             # TODO safe?
