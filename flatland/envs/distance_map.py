@@ -142,20 +142,19 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
                 shortest_paths[agent.handle] = None
                 return
 
-            position, direction = configuration
 
             shortest_paths[agent.handle] = []
             distance = math.inf
             depth = 0
-            while (position != agent.target and (max_depth is None or depth < max_depth)):
-                next_actions = self.rail.get_valid_move_actions((position, direction))
+            while configuration not in agent.targets and (max_depth is None or depth < max_depth):
+                next_actions = self.rail.get_valid_move_actions(configuration)
                 best_next_action = None
                 for next_action in next_actions:
                     next_action_distance = self.get()[agent.handle, next_action.next_position[0], next_action.next_position[1], next_action.next_direction]
                     if next_action_distance < distance:
                         best_next_action = next_action
                         distance = next_action_distance
-                shortest_paths[agent.handle].append(Waypoint(position, direction))
+                shortest_paths[agent.handle].append(Waypoint(*configuration))
                 depth += 1
 
                 # if there is no way to continue, the rail must be disconnected!
@@ -163,11 +162,9 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
                 if best_next_action is None:
                     shortest_paths[agent.handle] = None
                     return
-
-                position = best_next_action.next_position
-                direction = best_next_action.next_direction
+                configuration = (best_next_action.next_position, best_next_action.next_direction)
             if max_depth is None or depth < max_depth:
-                shortest_paths[agent.handle].append(Waypoint(position, direction))
+                shortest_paths[agent.handle].append(Waypoint(*configuration))
 
         if agent_handle is not None:
             _shortest_path_for_agent(self.agents[agent_handle])
