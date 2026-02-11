@@ -160,6 +160,14 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
         """
         raise NotImplementedError()
 
+    @lru_cache
+    def get_successor_configurations(self, configuration: UnderlyingConfigurationType) -> Set[UnderlyingConfigurationType]:
+        raise NotImplementedError()
+
+    @lru_cache
+    def get_predecessor_configurations(self, configuration: UnderlyingConfigurationType) -> Set[UnderlyingConfigurationType]:
+        raise NotImplementedError()
+
 
 class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transitions, Tuple[bool], Any], Generic[ActionsType]):
     """
@@ -268,7 +276,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         if len(configuration) == 3:
             self.grid[configuration[0:2]] = self.transitions.set_transitions(self.grid[configuration[0:2]],
                                                                              configuration[2],
-                                                                       new_transitions)
+                                                                             new_transitions)
         elif len(configuration) == 2:
             self.grid[configuration] = new_transitions
 
