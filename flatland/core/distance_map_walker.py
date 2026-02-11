@@ -69,8 +69,7 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
         """
         neighbors = []
         for configuration in rail.get_predecessor_configurations(configuration):
-            new_cell, agent_orientation = configuration
             new_distance = min(self.distance_map._get_distance(configuration, target_nr), current_distance + 1)
-            neighbors.append(((new_cell, agent_orientation), new_distance))
+            neighbors.append((configuration, new_distance))
             self.distance_map._set_distance(configuration, target_nr, new_distance)
         return neighbors

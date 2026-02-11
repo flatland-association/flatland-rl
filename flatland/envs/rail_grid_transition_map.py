@@ -45,7 +45,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
             new_position = get_new_position(position, new_direction)
             # TODO why not and self.check_bounds(new_position)?
             if transition_valid:
-                valid_actions.append(RailEnvNextAction(action, new_position, new_direction))
+                valid_actions.append(RailEnvNextAction(action, (new_position, new_direction)))
         return valid_actions
 
     @lru_cache

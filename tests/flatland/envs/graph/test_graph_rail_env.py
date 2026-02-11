@@ -49,4 +49,4 @@ def test_graph_transition_map_from_with_random_policy():
         assert len(graph_trajectory.trains_positions["position"].compare(grid_trajectory.trains_positions["position"])) == 0
 
         # TODO fix distance map and rewards
-        # assert len(trajectory.compare_rewards_dones_infos(other)) == 0
+        # assert len(graph_trajectory.compare_rewards_dones_infos(grid_trajectory)) == 0
