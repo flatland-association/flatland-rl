@@ -3,7 +3,6 @@ from typing import Tuple
 
 import numpy as np
 
-from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
 
@@ -63,36 +62,9 @@ class DistanceMapWalker:
         minimum distances from each target cell.
         """
         neighbors = []
-
-        position, enforce_target_direction = configuration
-
-        # The agent must land into the current cell with orientation `enforce_target_direction'.
-        # This is only possible if the agent has arrived from the cell in the opposite direction!
-        possible_directions = [(enforce_target_direction + 2) % 4]
-
-        for neigh_direction in possible_directions:
-            new_cell = get_new_position(position, neigh_direction)
-
-            if new_cell[0] >= 0 and new_cell[0] < self.env_height and new_cell[1] >= 0 and new_cell[1] < self.env_width:
-
-                desired_movement_from_new_cell = (neigh_direction + 2) % 4
-
-                # Check all possible transitions in new_cell
-                for agent_orientation in range(4):
-                    # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
-                    is_valid = rail.get_transition(((new_cell[0], new_cell[1]), agent_orientation),
-                                                   desired_movement_from_new_cell)
-
-                    if is_valid:
-                        """
-                        # TODO: check that it works with deadends! -- still bugged!
-                        movement = desired_movement_from_new_cell
-                        if isNextCellDeadEnd:
-                            movement = (desired_movement_from_new_cell+2) % 4
-                        """
-                        new_distance = min(self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation],
-                                           current_distance + 1)
-                        neighbors.append((new_cell[0], new_cell[1], agent_orientation, new_distance))
-                        self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation] = new_distance
-
+        for n in rail.get_predecessor_configurations(configuration):
+            new_cell, agent_orientation = n
+            new_distance = min(self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation], current_distance + 1)
+            neighbors.append((new_cell[0], new_cell[1], agent_orientation, new_distance))
+            self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation] = new_distance
         return neighbors
