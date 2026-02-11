@@ -7,9 +7,10 @@ from flatland.core.transition_map import TransitionMap
 UnderlyingDistanceMapType = TypeVar('UnderlyingDistanceMapType', bound=AbstractDistanceMap)
 UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=TransitionMap)
 UnderlyingConfigurationType = TypeVar('UnderlyingConfigurationType')
+UnderlyingTargetIndexType = TypeVar('UnderlyingTargetIndexType')
 
 
-class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionMapType, UnderlyingConfigurationType]):
+class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionMapType, UnderlyingConfigurationType, UnderlyingTargetIndexType]):
     """
     Utility class to compute distance maps from each cell in the rail network (and each possible orientation within it) to each agent's target cell.
     """
@@ -17,7 +18,8 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
     def __init__(self, distance_map: AbstractDistanceMap):
         self.distance_map = distance_map
 
-    def _distance_map_walker(self, rail: UnderlyingTransitionMapType, target_nr: int, target_configurations: List[UnderlyingConfigurationType]):
+    def _distance_map_walker(self, rail: UnderlyingTransitionMapType, target_nr: UnderlyingTargetIndexType,
+                             target_configurations: List[UnderlyingConfigurationType]):
         """
         Utility function to compute distance maps from each cell in the rail network (and each possible
         orientation within it) to each agent's target cell.
@@ -59,7 +61,8 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
 
         return max_distance
 
-    def _get_and_update_neighbors(self, rail: UnderlyingTransitionMapType, configuration: UnderlyingConfigurationType, target_nr: int, current_distance: int):
+    def _get_and_update_neighbors(self, rail: UnderlyingTransitionMapType, configuration: UnderlyingConfigurationType, target_nr: UnderlyingTargetIndexType,
+                                  current_distance: int):
         """
         Utility function used by _distance_map_walker to perform a BFS walk over the rail, filling in the
         minimum distances from each target cell.
