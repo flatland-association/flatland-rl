@@ -28,7 +28,7 @@ class DistanceMapWalker:
         # Fill in the (up to) 4 neighboring nodes
         # direction is the direction of movement, meaning that at least a possible orientation of an agent
         # in cell (row,col) allows a movement in direction `direction'
-        nodes_queue = deque(x for xs in (self._get_and_update_neighbors(rail, position, target_nr, 0, d) for d in range(4)) for x in xs)
+        nodes_queue = deque(x for xs in (self._get_and_update_neighbors(rail, (position, d), target_nr, 0) for d in range(4)) for x in xs)
 
         # BFS from target `position' to all the reachable nodes in the grid
         # Stop the search if the target position is re-visited, in any direction
@@ -47,7 +47,7 @@ class DistanceMapWalker:
 
                 # From the list of possible neighbors that have at least a path to the current node, only keep those
                 # whose new orientation in the current cell would allow a transition to direction node[2]
-                valid_neighbors = self._get_and_update_neighbors(rail, (node[0], node[1]), target_nr, node[3], node[2])
+                valid_neighbors = self._get_and_update_neighbors(rail, ((node[0], node[1]), node[2]), target_nr, node[3])
 
                 for n in valid_neighbors:
                     nodes_queue.append(n)
@@ -57,8 +57,7 @@ class DistanceMapWalker:
 
         return max_distance
 
-    def _get_and_update_neighbors(self, rail: RailGridTransitionMap, position: Tuple[int, int], target_nr: int, current_distance,
-                                  enforce_target_direction):
+    def _get_and_update_neighbors(self, rail: RailGridTransitionMap, configuration: Tuple[Tuple[int, int], int], target_nr: int, current_distance: int):
         """
         Utility function used by _distance_map_walker to perform a BFS walk over the rail, filling in the
         minimum distances from each target cell.
@@ -66,6 +65,8 @@ class DistanceMapWalker:
         neighbors = []
 
         possible_directions = [0, 1, 2, 3]
+
+        position, enforce_target_direction = configuration
 
         if enforce_target_direction >= 0:
             # The agent must land into the current cell with orientation `enforce_target_direction'.
