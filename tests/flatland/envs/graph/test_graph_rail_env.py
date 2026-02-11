@@ -13,9 +13,8 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 def test_graph_transition_map_from_with_random_policy():
     # TODO restrictions:
     #   - no malfunction
-    #   - test multi-speed and dynamic speed
     #   - mapping level-free/non-level free
-    grid_env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999, speed_ratios={1.0: 1.0})
+    grid_env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999)
     graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder())
     graph_env.reset()
 
