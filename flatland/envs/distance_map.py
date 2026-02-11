@@ -1,5 +1,5 @@
 import math
-from typing import Dict, List, Optional, Generic, TypeVar
+from typing import Dict, List, Optional, Generic, TypeVar, Tuple
 
 import numpy as np
 
@@ -63,6 +63,12 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
     def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
         raise NotImplementedError()
 
+    def _set_distance(self, configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+        raise NotImplementedError()
+
+    def _get_distance(self, configuration: UnderlyingConfigurationType, target_nr: int):
+        raise NotImplementedError()
+
 
 class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoint]):
     def __init__(self, agents: List[EnvAgent], env_height: int, env_width: int):
@@ -93,7 +99,7 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
                                            4),
                                     fill_value=np.inf
                                     )
-        distance_map_walker = DistanceMapWalker(self.distance_map)
+        distance_map_walker = DistanceMapWalker(self)
         computed_targets = []
         for i, agent in enumerate(agents):
             if agent.target not in computed_targets:
@@ -143,7 +149,6 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
                 shortest_paths[agent.handle] = None
                 return
 
-
             shortest_paths[agent.handle] = []
             distance = math.inf
             depth = 0
@@ -174,3 +179,11 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
                 _shortest_path_for_agent(agent)
 
         return shortest_paths
+
+    def _set_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
+        position, direction = configuration
+        self.distance_map[target_nr, *position, direction] = new_distance
+
+    def _get_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int):
+        position, direction = configuration
+        return self.distance_map[target_nr, *position, direction]

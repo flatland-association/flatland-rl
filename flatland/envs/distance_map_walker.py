@@ -1,8 +1,6 @@
 from collections import deque
 from typing import Tuple, List
 
-import numpy as np
-
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
 
@@ -11,7 +9,7 @@ class DistanceMapWalker:
     Utility class to compute distance maps from each cell in the rail network (and each possible orientation within it) to each agent's target cell.
     """
 
-    def __init__(self, distance_map: np.ndarray):
+    def __init__(self, distance_map: "AbstractDistanceMap"):
         self.distance_map = distance_map
 
     def _distance_map_walker(self, rail: RailGridTransitionMap, target_nr: int, target_configurations: List[Tuple[Tuple[int, int], int]]):
@@ -25,8 +23,7 @@ class DistanceMapWalker:
         """
         # Returns max distance to target, from the farthest away node, while filling in distance_map
         for target_configuration in target_configurations:
-            position, direction = target_configuration
-            self.distance_map[target_nr, *position, direction] = 0
+            self.distance_map._set_distance(target_configuration, target_nr, 0)
 
         # Fill in the (up to) 4 neighboring nodes
         # direction is the direction of movement, meaning that at least a possible orientation of an agent
@@ -63,9 +60,9 @@ class DistanceMapWalker:
         minimum distances from each target cell.
         """
         neighbors = []
-        for n in rail.get_predecessor_configurations(configuration):
-            new_cell, agent_orientation = n
-            new_distance = min(self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation], current_distance + 1)
+        for configuration in rail.get_predecessor_configurations(configuration):
+            new_cell, agent_orientation = configuration
+            new_distance = min(self.distance_map._get_distance(configuration, target_nr), current_distance + 1)
             neighbors.append(((new_cell, agent_orientation), new_distance))
-            self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation] = new_distance
+            self.distance_map._set_distance(configuration, target_nr, new_distance)
         return neighbors
