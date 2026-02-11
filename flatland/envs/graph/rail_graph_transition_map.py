@@ -21,7 +21,7 @@ References:
 import ast
 from collections import defaultdict
 from functools import lru_cache
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Set
 
 import networkx as nx
 
@@ -187,3 +187,15 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             return None
         r, c, d = ast.literal_eval(s)
         return ((r, c), d)
+
+    @lru_cache
+    def get_successor_configurations(self, configuration: GridNode) -> Set[GridNode]:
+        return set(self.g.successors(configuration))
+
+    @lru_cache
+    def get_predecessor_configurations(self, configuration: GridNode) -> Set[GridNode]:
+        return set(self.g.predecessors(configuration))
+
+    @lru_cache
+    def is_valid_configuration(self, configuration: GridNode) -> bool:
+        return configuration in self.g.nodes

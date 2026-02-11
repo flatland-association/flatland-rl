@@ -43,6 +43,7 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Waypoin
         distance_map_walker = DistanceMapWalker[DistanceMap, RailGridTransitionMap, Tuple[Tuple[int, int], int], int](self)
         computed_targets = []
         for i, agent in enumerate(agents):
+            # TODO safe?
             if agent.target not in computed_targets:
                 targets = [target for target in agent.targets if rail.is_valid_configuration(target)]
                 distance_map_walker._distance_map_walker(rail, i, targets)
