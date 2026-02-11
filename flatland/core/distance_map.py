@@ -1,7 +1,5 @@
 from typing import Dict, List, Optional, Generic, TypeVar
 
-import numpy as np
-
 from flatland.core.transition_map import TransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
@@ -20,13 +18,13 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
         self.agents: List[EnvAgent] = agents
         self.rail: Optional[RailGridTransitionMap] = None
 
-    def set(self, distance_map: np.ndarray):
+    def set(self, distance_map: UnderlyingDistanceMapType):
         """
         Set the distance map
         """
         self.distance_map = distance_map
 
-    def get(self) -> np.ndarray:
+    def get(self) -> UnderlyingDistanceMapType:
         """
         Get the distance map
         """

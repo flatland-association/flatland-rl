@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Any, Optional, Dict
+from typing import List, Optional, Dict
 
 import numpy as np
 
@@ -10,7 +10,7 @@ from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 
-class GraphDistanceMap(AbstractDistanceMap[GraphTransitionMap, Any, str]):
+class GraphDistanceMap(AbstractDistanceMap[GraphTransitionMap, Dict[str, Dict[str, int]], str]):
     def _compute(self, agents: List[EnvAgent], rail: GraphTransitionMap):
         self.agents_previous_computation = self.agents
         self.distance_map = defaultdict(lambda: defaultdict(lambda: np.inf))
