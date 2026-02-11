@@ -31,28 +31,25 @@ class DistanceMapWalker:
 
         # BFS from target `position' to all the reachable nodes in the grid
         # Stop the search if the target position is re-visited, in any direction
-        visited = {(position[0], position[1], 0), (position[0], position[1], 1), (position[0], position[1], 2),
-                   (position[0], position[1], 3)}
+        visited = {(position, d) for d in range(4)}
 
         max_distance = 0
 
         while nodes_queue:
-            node = nodes_queue.popleft()
+            configuration, distance = nodes_queue.popleft()
 
-            node_id = (node[0], node[1], node[2])
-
-            if node_id not in visited:
-                visited.add(node_id)
+            if configuration not in visited:
+                visited.add(configuration)
 
                 # From the list of possible neighbors that have at least a path to the current node, only keep those
-                # whose new orientation in the current cell would allow a transition to direction node[2]
-                valid_neighbors = self._get_and_update_neighbors(rail, ((node[0], node[1]), node[2]), target_nr, node[3])
+                # whose new orientation in the current cell would allow a transition to the configuration
+                valid_neighbors = self._get_and_update_neighbors(rail, configuration, target_nr, distance)
 
                 for n in valid_neighbors:
                     nodes_queue.append(n)
 
                 if len(valid_neighbors) > 0:
-                    max_distance = max(max_distance, node[3] + 1)
+                    max_distance = max(max_distance, distance + 1)
 
         return max_distance
 
@@ -65,6 +62,6 @@ class DistanceMapWalker:
         for n in rail.get_predecessor_configurations(configuration):
             new_cell, agent_orientation = n
             new_distance = min(self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation], current_distance + 1)
-            neighbors.append((new_cell[0], new_cell[1], agent_orientation, new_distance))
+            neighbors.append(((new_cell, agent_orientation), new_distance))
             self.distance_map[target_nr, new_cell[0], new_cell[1], agent_orientation] = new_distance
         return neighbors
