@@ -187,7 +187,7 @@ jobs:
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Start Redis
-                uses: supercharge/redis-github-action@1.7.0
+                uses: supercharge/redis-github-action@1.8.1
                 with:
                     redis-version: 7.4.2
                     redis-port: 6379
