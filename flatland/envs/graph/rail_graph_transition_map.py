@@ -159,7 +159,9 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                         new_configuration = v
                         graph_action = "F"
                         break
-        assert graph_action is not None
+        if graph_action is None:
+            # symmetric switches
+            return False, new_configuration, False, RailEnvActions.STOP_MOVING
         transition_valid = True
         preprocessed_action = action
         if action == RailEnvActions.MOVE_LEFT and graph_action != "L":

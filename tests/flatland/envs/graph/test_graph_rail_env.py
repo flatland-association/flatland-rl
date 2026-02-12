@@ -1,20 +1,24 @@
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
+from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.trajectories.policy_runner import PolicyRunner
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 
-def test_graph_transition_map_from_with_random_policy():
+@pytest.mark.parametrize("seed", range(42, 58))
+def test_graph_transition_map_from_with_random_policy(seed):
     # TODO restrictions:
     #   - no malfunction
     #   - mapping level-free/non-level free
-    grid_env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999)
+    grid_env, _, _ = env_generator(seed=seed, malfunction_interval=9999999999999)
     graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder())
     graph_env.reset()
 
@@ -32,7 +36,9 @@ def test_graph_transition_map_from_with_random_policy():
 
                     expected = new_cell_valid, f"{new_position[0], new_position[1], new_direction}", transition_valid, preprocessed_action
 
-                    assert (actual == expected)
+                    if "symmetric" not in RailEnvTransitionsEnum(grid_env.rail.get_full_transitions(r, c)).name:
+                        # TODO new position is derived from grid, not possible on graph alone
+                        assert (actual == expected)
 
     # use Trajectory API for comparison
     with tempfile.TemporaryDirectory() as tmpdirname:
