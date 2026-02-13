@@ -429,14 +429,14 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 RailEnvActions.from_value(raw_action), current_or_initial_configuration
             )
 
-            movement_allowed = not (preprocessed_action == RailEnvActions.STOP_MOVING and raw_action != RailEnvActions.STOP_MOVING)
+            action_valid = not (preprocessed_action == RailEnvActions.STOP_MOVING and raw_action != RailEnvActions.STOP_MOVING)
 
             # get desired new_position and new_direction
-            assert (raw_action == RailEnvActions.STOP_MOVING or not movement_allowed) == (preprocessed_action == RailEnvActions.STOP_MOVING)
+            assert (raw_action == RailEnvActions.STOP_MOVING or not action_valid) == (preprocessed_action == RailEnvActions.STOP_MOVING)
             stop_action_given = raw_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
 
-            assert (RailEnvActions.is_moving_action(raw_action) and movement_allowed) == RailEnvActions.is_moving_action(preprocessed_action)
+            assert (RailEnvActions.is_moving_action(raw_action) and action_valid) == RailEnvActions.is_moving_action(preprocessed_action)
             movement_action_given = RailEnvActions.is_moving_action(raw_action)
 
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
@@ -444,21 +444,23 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             state = agent.state
             agent_max_speed = agent.speed_counter.max_speed
             # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING. Caveat: DO_NOTHING would be undefined for symmetric switches!
-            if (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
+            if not action_valid:
+                new_speed = 0.0
+            elif (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
                 # start moving
                 new_speed += self.acceleration_delta
             elif preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD:
                 # accelerate, but not if left/right corrected to forward
                 new_speed += self.acceleration_delta
-            elif (stop_action_given or not movement_allowed):
+            elif stop_action_given:
                 # decelerate
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent_max_speed, new_speed))
 
-            if state == TrainState.READY_TO_DEPART and movement_action_given and movement_allowed:
+            if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
                 new_configuration = initial_configuration
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
-                (movement_action_given and movement_allowed) or (stop_action_given or not movement_allowed)):
+                (movement_action_given and action_valid) or (stop_action_given or not action_valid)):
                 # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_configuration = initial_configuration
             elif state.is_on_map_state():
@@ -466,8 +468,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 # transition to next cell: at end of cell and next state potentially MOVING
                 if (agent.speed_counter.is_cell_exit(new_speed)
                     and
-                    TrainStateMachine.can_get_moving_independent(state, in_malfunction, (movement_action_given and movement_allowed), new_speed,
-                                                                 (stop_action_given or not movement_allowed))
+                    TrainStateMachine.can_get_moving_independent(state, in_malfunction, (movement_action_given and action_valid), new_speed,
+                                                                 (stop_action_given or not action_valid))
                 ):
                     new_configuration = new_configuration_independent
                 assert agent.current_configuration is not None
@@ -498,11 +500,11 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # Target reached - we only know after state and positions update - see handle_done_state below
             self.temp_transition_data[i_agent].state_transition_signal.target_reached = None  # we only know after motion check
 
-            assert (stop_action_given or not movement_allowed) == (stop_action_given or not movement_allowed)
-            self.temp_transition_data[i_agent].state_transition_signal.action_valid = movement_allowed
-            # Movement allowed if inside cell or at end of cell and no conflict with other trains and action leading to valid next cell
+            # Movement allowed if both
+            # - action leading to valid next cell
+            # - inside cell or at end of cell and no conflict with other trains and
             self.temp_transition_data[
-                i_agent].state_transition_signal.movement_allowed = movement_allowed  # action leading to valid next cell for now - remainder we only know after motion check!
+                i_agent].state_transition_signal.movement_allowed = action_valid  # action leading to valid next cell for now - remainder we only know after motion check!
             # New desired speed zero?
             self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = new_speed == 0.0
 
@@ -529,12 +531,15 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # motion_check is False if agent wants to stay in the cell
             motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.current_resource)
 
-            movement_allowed = agent_transition_data.state_transition_signal.movement_allowed  # action leading to valid next cell
-            # Movement allowed if inside cell or at end of cell and no conflict with other trains and action leading to valid next cell
-            movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or (
-                    motion_check and movement_allowed)
+            action_valid = agent_transition_data.state_transition_signal.movement_allowed  # action leading to valid next cell
+            # Movement allowed if both
+            # - action leading to valid next cell
+            # - inside cell or at end of cell and no conflict with other trains and
+            # TODO https://github.com/flatland-association/flatland-rl/issues/175 beware: on symmetric switches, DO_NOTHING is invalid - is the setup consistent?
+            action_valid = action_valid and (
+                    (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or (motion_check))
 
-            agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
+            agent_transition_data.state_transition_signal.movement_allowed = action_valid
 
             # state machine step
             agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
