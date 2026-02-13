@@ -433,7 +433,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             # get desired new_position and new_direction
             assert (raw_action == RailEnvActions.STOP_MOVING or not movement_allowed) == (preprocessed_action == RailEnvActions.STOP_MOVING)
-            stop_action_given = raw_action == RailEnvActions.STOP_MOVING or not movement_allowed
+            stop_action_given = raw_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
 
             assert (RailEnvActions.is_moving_action(raw_action) and movement_allowed) == RailEnvActions.is_moving_action(preprocessed_action)
@@ -450,7 +450,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif preprocessed_action == RailEnvActions.MOVE_FORWARD and raw_action == RailEnvActions.MOVE_FORWARD:
                 # accelerate, but not if left/right corrected to forward
                 new_speed += self.acceleration_delta
-            elif stop_action_given:
+            elif (stop_action_given or not movement_allowed):
                 # decelerate
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent_max_speed, new_speed))
@@ -458,7 +458,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             if state == TrainState.READY_TO_DEPART and movement_action_given and movement_allowed:
                 new_configuration = initial_configuration
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
-                (movement_action_given and movement_allowed) or stop_action_given):
+                (movement_action_given and movement_allowed) or (stop_action_given or not movement_allowed)):
                 # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_configuration = initial_configuration
             elif state.is_on_map_state():
@@ -467,7 +467,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 if (agent.speed_counter.is_cell_exit(new_speed)
                     and
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, (movement_action_given and movement_allowed), new_speed,
-                                                                 stop_action_given)
+                                                                 (stop_action_given or not movement_allowed))
                 ):
                     new_configuration = new_configuration_independent
                 assert agent.current_configuration is not None
@@ -492,7 +492,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # Earliest departure reached - Train is allowed to move now
             self.temp_transition_data[i_agent].state_transition_signal.earliest_departure_reached = self._elapsed_steps >= agent.earliest_departure
             # Stop action given
-            self.temp_transition_data[i_agent].state_transition_signal.stop_action_given = stop_action_given
+            self.temp_transition_data[i_agent].state_transition_signal.stop_action_given = (stop_action_given or not movement_allowed)
             # Movement action given
             self.temp_transition_data[i_agent].state_transition_signal.movement_action_given = movement_action_given
             # Target reached - we only know after state and positions update - see handle_done_state below
