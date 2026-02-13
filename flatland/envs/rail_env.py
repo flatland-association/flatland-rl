@@ -493,12 +493,12 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # Stop action given
             self.temp_transition_data[i_agent].state_transition_signal.stop_action_given = stop_action_given
             # Movement action given
-            # TODO simplify
-            self.temp_transition_data[i_agent].state_transition_signal.movement_action_given = (movement_action_given and movement_allowed)
+            self.temp_transition_data[i_agent].state_transition_signal.movement_action_given = movement_action_given
             # Target reached - we only know after state and positions update - see handle_done_state below
             self.temp_transition_data[i_agent].state_transition_signal.target_reached = None  # we only know after motion check
-            # Movement allowed if inside cell or at end of cell and no conflict with other trains - we only know after motion check!
-            self.temp_transition_data[i_agent].state_transition_signal.movement_allowed = None  # we only know after motion check
+            # Movement allowed if inside cell or at end of cell and no conflict with other trains and action leading to valid next cell
+            self.temp_transition_data[
+                i_agent].state_transition_signal.movement_allowed = movement_allowed  # action leading to valid next cell for now - remainder we only know after motion check!
             # New desired speed zero?
             self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = new_speed == 0.0
 
@@ -524,8 +524,11 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             # motion_check is False if agent wants to stay in the cell
             motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.current_resource)
-            # Movement allowed if inside cell or at end of cell and no conflict with other trains
-            movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or motion_check
+
+            movement_allowed = agent_transition_data.state_transition_signal.movement_allowed  # action leading to valid next cell
+            # Movement allowed if inside cell or at end of cell and no conflict with other trains and action leading to valid next cell
+            movement_allowed = (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or (
+                    motion_check and movement_allowed)
 
             agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
 
