@@ -432,7 +432,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             movement_allowed = not (preprocessed_action == RailEnvActions.STOP_MOVING and raw_action != RailEnvActions.STOP_MOVING)
 
             # get desired new_position and new_direction
-            stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
+            assert (raw_action == RailEnvActions.STOP_MOVING or not movement_allowed) == (preprocessed_action == RailEnvActions.STOP_MOVING)
+            stop_action_given = raw_action == RailEnvActions.STOP_MOVING or not movement_allowed
             in_malfunction = agent.malfunction_handler.in_malfunction
 
             assert (RailEnvActions.is_moving_action(raw_action) and movement_allowed) == RailEnvActions.is_moving_action(preprocessed_action)
