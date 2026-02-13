@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
 # rows are top to bottom!
 _EAST_OWN = (1, 1, Grid4TransitionsEnum.EAST)  # at "W" side, heading "E"
@@ -148,7 +148,7 @@ def test_grid_to_digraph(transition, expected_edges):
         [[RailEnvTransitionsEnum.empty, transition, RailEnvTransitionsEnum.empty]] +
         [[RailEnvTransitionsEnum.empty] * 3], dtype=np.uint16)
 
-    gtm = GridTransitionMap(width=rail_map.shape[1], height=rail_map.shape[0], transitions=RailEnvTransitions())
+    gtm = RailGridTransitionMap(width=rail_map.shape[1], height=rail_map.shape[0], transitions=RailEnvTransitions())
     gtm.grid = rail_map
 
     g = GraphTransitionMap.grid_to_digraph(gtm)

@@ -91,6 +91,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         for r in range(transition_map.height):
             for c in range(transition_map.width):
                 for d in range(4):
+                    covered_actions = set()
                     possible_transitions = transition_map.get_transitions(((r, c), d))
                     for new_direction in range(4):
                         if possible_transitions[new_direction]:
@@ -111,9 +112,23 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                             g.add_edge(
                                 GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d),
                                 GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2), action=action)
+                            covered_actions.add(action)
+                    u = GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)
+                    if u not in g.nodes:
+                        continue
                     for a in RailEnvActions:
                         new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action = transition_map.check_action_on_agent(a, ((r, c), d))
-                        u = GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)
+
+                        v = GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2)
+                        if new_cell_valid:
+                            if ((r2, c2), d2) != ((r, c), d):
+                                g[u][v].setdefault("actions", []).append(action)
+                        else:
+                            g.nodes[u].setdefault("prohibited_actions", []).append(action)
+                    # if len(covered_actions) == 2:
+                    #     assert  "symmetric" in RailEnvTransitionsEnum(transition_map.get_full_transitions(r, c)).name
+                    for a in RailEnvActions:
+                        new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action = transition_map.check_action_on_agent(a, ((r, c), d))
                         v = GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2)
                         if (u, v) in g.edges:
                             g[u][v].setdefault("_grid_check_action_on_agent", []).append(
@@ -139,6 +154,16 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
 
     def check_action_on_agent(self, action: RailEnvActions, configuration: GridNode) -> Tuple[bool, GridNode, bool, RailEnvActions]:
         succs = list(self.g.successors(configuration))
+        if False:
+            if action in self.g.nodes[configuration].get("prohibited_actions", set()):
+                # TODO does not work - currently the new position derived from grid is returned -> first refactor core without returning a new invalid position (return e.g. None)
+                return True, configuration, True, action
+
+            for v in succs:
+                if self.g.get_edge_data(configuration, v)["action"] == action:
+                    # TODO does not work - currently preprocessed action is returned which can differ from raw action in some cases -> first refactor core without preprocessing
+                    return True, v, True, action
+
         assert 1 <= len(succs) <= 2
 
         graph_action = None
