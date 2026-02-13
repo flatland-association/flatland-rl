@@ -111,6 +111,14 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                             g.add_edge(
                                 GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d),
                                 GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2), action=action)
+                    for a in RailEnvActions:
+                        new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action = transition_map.check_action_on_agent(a, ((r, c), d))
+                        u = GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)
+                        v = GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2)
+                        if (u, v) in g.edges:
+                            g[u][v].setdefault("_grid_check_action_on_agent", []).append(
+                                (new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action))
+
         return g
 
     @staticmethod

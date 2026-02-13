@@ -31,14 +31,19 @@ def test_graph_transition_map_from_with_random_policy(seed):
                 for a in range(5):
                     # TODO typing
                     actual = graph_env.rail.check_action_on_agent(RailEnvActions.from_value(a), f"{r, c, d}")
-                    expected = grid_env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d))
-                    new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action = expected
+                    expected_raw = grid_env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d))
+                    new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action = expected_raw
 
-                    expected = new_cell_valid, f"{new_position[0], new_position[1], new_direction}", transition_valid, preprocessed_action
+                    expected = new_cell_valid, f"{r2, c2, d2}", transition_valid, preprocessed_action
 
                     if "symmetric" not in RailEnvTransitionsEnum(grid_env.rail.get_full_transitions(r, c)).name:
-                        # TODO new position is derived from grid, not possible on graph alone
                         assert (actual == expected)
+
+                        # TODO new position is derived from grid, not possible on graph alone
+                        # TODO maybe add invalid actions on node?
+                        u = GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)
+                        v = GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2)
+                        assert expected_raw in graph_env.rail.g[u][v]["_grid_check_action_on_agent"]
 
     # use Trajectory API for comparison
     with tempfile.TemporaryDirectory() as tmpdirname:
