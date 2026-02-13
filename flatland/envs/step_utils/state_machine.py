@@ -48,7 +48,9 @@ class TrainStateMachine:
         elif self.st_signals.target_reached:
             # this branch is never used as target reached is not handled by state_machine.step() but by state_machine.update_if_reached()!
             self.next_state = TrainState.DONE
-        elif (self.st_signals.stop_action_given and self.st_signals.new_speed_zero) or not self.st_signals.movement_allowed:
+        # TODO simplify to setting new speed to zero and drop action_valid signal again.
+        elif (
+            (self.st_signals.stop_action_given or not self.st_signals.action_valid) and self.st_signals.new_speed_zero) or not self.st_signals.movement_allowed:
             self.next_state = TrainState.STOPPED
         else:
             self.next_state = TrainState.MOVING

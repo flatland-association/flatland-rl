@@ -492,11 +492,14 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # Earliest departure reached - Train is allowed to move now
             self.temp_transition_data[i_agent].state_transition_signal.earliest_departure_reached = self._elapsed_steps >= agent.earliest_departure
             # Stop action given
-            self.temp_transition_data[i_agent].state_transition_signal.stop_action_given = (stop_action_given or not movement_allowed)
+            self.temp_transition_data[i_agent].state_transition_signal.stop_action_given = stop_action_given
             # Movement action given
             self.temp_transition_data[i_agent].state_transition_signal.movement_action_given = movement_action_given
             # Target reached - we only know after state and positions update - see handle_done_state below
             self.temp_transition_data[i_agent].state_transition_signal.target_reached = None  # we only know after motion check
+
+            assert (stop_action_given or not movement_allowed) == (stop_action_given or not movement_allowed)
+            self.temp_transition_data[i_agent].state_transition_signal.action_valid = movement_allowed
             # Movement allowed if inside cell or at end of cell and no conflict with other trains and action leading to valid next cell
             self.temp_transition_data[
                 i_agent].state_transition_signal.movement_allowed = movement_allowed  # action leading to valid next cell for now - remainder we only know after motion check!
