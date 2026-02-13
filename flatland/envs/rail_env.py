@@ -434,7 +434,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # get desired new_position and new_direction
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
-            movement_action_given = RailEnvActions.is_moving_action(preprocessed_action)
+
+            assert (RailEnvActions.is_moving_action(raw_action) and movement_allowed) == RailEnvActions.is_moving_action(preprocessed_action)
+            movement_action_given = RailEnvActions.is_moving_action(raw_action) and movement_allowed
+
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
             new_speed = agent.speed_counter.speed
             state = agent.state
