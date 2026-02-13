@@ -429,6 +429,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 RailEnvActions.from_value(raw_action), current_or_initial_configuration
             )
 
+            movement_allowed = not (preprocessed_action == RailEnvActions.STOP_MOVING and raw_action != RailEnvActions.STOP_MOVING)
+
             # get desired new_position and new_direction
             stop_action_given = preprocessed_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
@@ -449,7 +451,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 new_speed += self.braking_delta
             new_speed = max(0.0, min(agent_max_speed, new_speed))
 
-            if state == TrainState.READY_TO_DEPART and movement_action_given:
+            if state == TrainState.READY_TO_DEPART and movement_action_given and movement_allowed:
                 new_configuration = initial_configuration
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
                 movement_action_given or stop_action_given):

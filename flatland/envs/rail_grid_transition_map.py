@@ -177,6 +177,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         position, direction = configuration
         new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
+        # TODO this is wrong?! should also include whether transitions from direction are defined!
         new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
         return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action
 
