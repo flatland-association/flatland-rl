@@ -420,13 +420,13 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             agent.old_configuration = agent.current_configuration
 
             # Get action for the agent
-            raw_action = action_dict.get(i_agent, RailEnvActions.DO_NOTHING)
+            raw_action = RailEnvActions.from_value(action_dict.get(i_agent, RailEnvActions.DO_NOTHING))
             # Try moving actions on current position
             if current_or_initial_configuration is None:  # Agent not added on map yet
                 current_or_initial_configuration = initial_configuration
 
             _, new_configuration_independent, straight, preprocessed_action = self.rail.check_action_on_agent(
-                RailEnvActions.from_value(raw_action), current_or_initial_configuration
+                raw_action, current_or_initial_configuration
             )
 
             action_valid = not (preprocessed_action == RailEnvActions.STOP_MOVING and raw_action != RailEnvActions.STOP_MOVING)
