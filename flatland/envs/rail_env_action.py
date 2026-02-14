@@ -65,6 +65,7 @@ class RailEnvActions(fastenum.Enum):
     @staticmethod
     @lru_cache()
     def is_moving_action(value: "RailEnvActions") -> bool:
+        value = RailEnvActions.from_value(value)
         return value in [RailEnvActions.MOVE_RIGHT, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD]
 
     @staticmethod
