@@ -117,7 +117,8 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                     if u not in g.nodes:
                         continue
                     for a in RailEnvActions:
-                        new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action = transition_map.check_action_on_agent(a, ((r, c), d))
+                        new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action, action_valid = transition_map.check_action_on_agent(a,
+                                                                                                                                                   ((r, c), d))
 
                         v = GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2)
                         if new_cell_valid:
@@ -128,11 +129,11 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                     # if len(covered_actions) == 2:
                     #     assert  "symmetric" in RailEnvTransitionsEnum(transition_map.get_full_transitions(r, c)).name
                     for a in RailEnvActions:
-                        new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action = transition_map.check_action_on_agent(a, ((r, c), d))
+                        new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action, _ = transition_map.check_action_on_agent(a, ((r, c), d))
                         v = GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2)
                         if (u, v) in g.edges:
                             g[u][v].setdefault("_grid_check_action_on_agent", []).append(
-                                (new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action))
+                                (new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action, action_valid))
 
         return g
 
@@ -194,7 +195,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                         break
         if graph_action is None:
             # symmetric switches
-            return False, new_configuration, False, RailEnvActions.STOP_MOVING
+            return False, new_configuration, False, RailEnvActions.STOP_MOVING, False
         transition_valid = True
         preprocessed_action = action
         if action == RailEnvActions.MOVE_LEFT and graph_action != "L":
@@ -205,7 +206,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             preprocessed_action = RailEnvActions.MOVE_FORWARD
 
         new_cell_valid = new_configuration in self.g.nodes
-        return new_cell_valid, new_configuration, transition_valid, preprocessed_action
+        return new_cell_valid, new_configuration, transition_valid, preprocessed_action, True
 
     @lru_cache
     def get_valid_move_actions(self, configuration: GridNode) -> Set[RailEnvNextAction]:

@@ -115,6 +115,8 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
         """
         raise NotImplementedError()
 
+    # TODO finally: Optional tuple (new configuration, accelerate): if None, action invalid. Maybe keep this full signature as grid-specific-low-level method?
+    # TODO add check valid configuration as well
     @lru_cache
     def check_action_on_agent(self, action: ActionsType, configuration: UnderlyingConfigurationType) -> Tuple[
         bool, UnderlyingConfigurationType, bool, ActionsType]:

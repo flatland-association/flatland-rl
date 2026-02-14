@@ -12,52 +12,52 @@ from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
      for v in [
          # switch left facing
          (RailEnvTransitionsEnum.simple_switch_east_left, Grid4TransitionsEnum.EAST,
-          (False, ((-1, 0), Grid4TransitionsEnum.NORTH), True, RailEnvActions.MOVE_LEFT),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.DO_NOTHING),
+          (False, ((-1, 0), Grid4TransitionsEnum.NORTH), True, RailEnvActions.MOVE_LEFT, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.DO_NOTHING, True),
           ),
          # switch left non-facing
          (RailEnvTransitionsEnum.simple_switch_east_left, Grid4TransitionsEnum.WEST,
-          (False, ((0, -1), Grid4TransitionsEnum.WEST), False, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, -1), Grid4TransitionsEnum.WEST), False, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.DO_NOTHING),
+          (False, ((0, -1), Grid4TransitionsEnum.WEST), False, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, -1), Grid4TransitionsEnum.WEST), False, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.DO_NOTHING, True),
           ),
          # dead-end
          (RailEnvTransitionsEnum.dead_end_from_east, Grid4TransitionsEnum.WEST,
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.DO_NOTHING),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.DO_NOTHING, True),
           ),
          # straight
          (RailEnvTransitionsEnum.horizontal_straight, Grid4TransitionsEnum.EAST,
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.DO_NOTHING),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), True, RailEnvActions.DO_NOTHING, True),
           ),
          # symmetric switch facing
          (RailEnvTransitionsEnum.symmetric_switch_from_west, Grid4TransitionsEnum.EAST,
-          (False, ((-1, 0), Grid4TransitionsEnum.NORTH), True, RailEnvActions.MOVE_LEFT),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.STOP_MOVING),
-          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), True, RailEnvActions.MOVE_RIGHT),
-          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.STOP_MOVING),
+          (False, ((-1, 0), Grid4TransitionsEnum.NORTH), True, RailEnvActions.MOVE_LEFT, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.STOP_MOVING, False),
+          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), True, RailEnvActions.MOVE_RIGHT, True),
+          (False, ((0, 1), Grid4TransitionsEnum.EAST), False, RailEnvActions.STOP_MOVING, False),
           ),
          # symmetric switch non-facing (same as right-turn)
          (RailEnvTransitionsEnum.symmetric_switch_from_west, Grid4TransitionsEnum.SOUTH,
-          (False, ((0, -1), Grid4TransitionsEnum.WEST), False, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.MOVE_FORWARD),
-          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.MOVE_RIGHT),
-          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.DO_NOTHING),
+          (False, ((0, -1), Grid4TransitionsEnum.WEST), False, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.MOVE_RIGHT, True),
+          (False, ((0, -1), Grid4TransitionsEnum.WEST), True, RailEnvActions.DO_NOTHING, True),
           ),
          # right turn (both forward and right are valid transitions)
          (RailEnvTransitionsEnum.right_turn_from_west, Grid4TransitionsEnum.EAST,
-          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), False, RailEnvActions.MOVE_FORWARD),
-          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), True, RailEnvActions.MOVE_FORWARD),
-          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), True, RailEnvActions.MOVE_RIGHT),
-          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), True, RailEnvActions.DO_NOTHING),
+          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), False, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), True, RailEnvActions.MOVE_FORWARD, True),
+          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), True, RailEnvActions.MOVE_RIGHT, True),
+          (False, ((1, 0), Grid4TransitionsEnum.SOUTH), True, RailEnvActions.DO_NOTHING, True),
           ),
      ]]
 )
@@ -78,14 +78,14 @@ def test_check_action_on_agent_horizontal_straight():
     rail.set_transitions((1, 2), RailEnvTransitionsEnum.horizontal_straight)
     rail.set_transitions((0, 1), RailEnvTransitionsEnum.vertical_straight)
 
-    new_cell_valid, (new_position, new_direction), transition_valid, _ = rail.check_action_on_agent(
+    new_cell_valid, (new_position, new_direction), transition_valid, _, _ = rail.check_action_on_agent(
         RailEnvActions.MOVE_FORWARD, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.EAST
     assert new_position == (1, 2)
     assert transition_valid
 
-    new_cell_valid, (new_position, new_direction), transition_valid, _ = rail.check_action_on_agent(
+    new_cell_valid, (new_position, new_direction), transition_valid, _, _ = rail.check_action_on_agent(
         RailEnvActions.MOVE_LEFT, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.EAST
@@ -100,28 +100,28 @@ def test_check_action_on_agent_symmetric_switch_from_west():
     rail.set_transitions((1, 2), RailEnvTransitionsEnum.horizontal_straight)
     rail.set_transitions((2, 1), RailEnvTransitionsEnum.vertical_straight)
 
-    new_cell_valid, (new_position, new_direction), transition_valid, _ = rail.check_action_on_agent(
+    new_cell_valid, (new_position, new_direction), transition_valid, _, _ = rail.check_action_on_agent(
         RailEnvActions.MOVE_RIGHT, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.SOUTH
     assert new_position == (2, 1)
     assert transition_valid
 
-    new_cell_valid, (new_position, new_direction), transition_valid, _ = rail.check_action_on_agent(
+    new_cell_valid, (new_position, new_direction), transition_valid, _, _ = rail.check_action_on_agent(
         RailEnvActions.MOVE_FORWARD, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.EAST
     assert new_position == (1, 2)
     assert not transition_valid
 
-    new_cell_valid, (new_position, new_direction), transition_valid, _ = rail.check_action_on_agent(
+    new_cell_valid, (new_position, new_direction), transition_valid, _, _ = rail.check_action_on_agent(
         RailEnvActions.MOVE_LEFT, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.NORTH
     assert new_position == (0, 1)
     assert transition_valid
 
-    new_cell_valid, (new_position, new_direction), transition_valid, _ = rail.check_action_on_agent(
+    new_cell_valid, (new_position, new_direction), transition_valid, _, _ = rail.check_action_on_agent(
         RailEnvActions.DO_NOTHING, ((1, 1), Grid4TransitionsEnum.EAST))
     assert new_cell_valid
     assert new_direction == Grid4TransitionsEnum.EAST

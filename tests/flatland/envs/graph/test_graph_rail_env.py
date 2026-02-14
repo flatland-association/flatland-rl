@@ -32,9 +32,9 @@ def test_graph_transition_map_from_with_random_policy(seed):
                     # TODO typing
                     actual = graph_env.rail.check_action_on_agent(RailEnvActions.from_value(a), f"{r, c, d}")
                     expected_raw = grid_env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d))
-                    new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action = expected_raw
+                    new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action, action_valid = expected_raw
 
-                    expected = new_cell_valid, f"{r2, c2, d2}", transition_valid, preprocessed_action
+                    expected = new_cell_valid, f"{r2, c2, d2}", transition_valid, preprocessed_action, action_valid
 
                     if "symmetric" not in RailEnvTransitionsEnum(grid_env.rail.get_full_transitions(r, c)).name:
                         assert (actual == expected)

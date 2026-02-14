@@ -425,18 +425,14 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             if current_or_initial_configuration is None:  # Agent not added on map yet
                 current_or_initial_configuration = initial_configuration
 
-            _, new_configuration_independent, straight, preprocessed_action = self.rail.check_action_on_agent(
+            _, new_configuration_independent, straight, _, action_valid = self.rail.check_action_on_agent(
                 raw_action, current_or_initial_configuration
             )
 
-            action_valid = not (preprocessed_action == RailEnvActions.STOP_MOVING and raw_action != RailEnvActions.STOP_MOVING)
-
             # get desired new_position and new_direction
-            assert (raw_action == RailEnvActions.STOP_MOVING or not action_valid) == (preprocessed_action == RailEnvActions.STOP_MOVING)
             stop_action_given = raw_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
 
-            assert (RailEnvActions.is_moving_action(raw_action) and action_valid) == RailEnvActions.is_moving_action(preprocessed_action)
             movement_action_given = RailEnvActions.is_moving_action(raw_action)
 
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
@@ -481,7 +477,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 valid_position_direction = any(self.rail.get_transitions(new_configuration))
                 if not valid_position_direction:
                     warnings.warn(f"{new_configuration} not valid on the grid."
-                                  f" Coming from {current_or_initial_configuration} with raw action {raw_action} and preprocessed action {preprocessed_action}. {self._infrastructure_representation(agent)}")
+                                  f" Coming from {current_or_initial_configuration} with raw action {raw_action} and  action valid {action_valid}. {self._infrastructure_representation(agent)}")
                 # fails if initial position has invalid direction
                 # assert valid_position_direction
 
@@ -537,7 +533,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # - inside cell or at end of cell and no conflict with other trains and
             # TODO https://github.com/flatland-association/flatland-rl/issues/175 beware: on symmetric switches, DO_NOTHING is invalid - is the setup consistent?
             action_valid = action_valid and (
-                    (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or (motion_check))
+                (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or (motion_check))
 
             agent_transition_data.state_transition_signal.movement_allowed = action_valid
 

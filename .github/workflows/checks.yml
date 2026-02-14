@@ -2,7 +2,7 @@ name: Checks
 
 env:
     # DEPENDENCY SWITCH:
-    flatland-baselines-ref: main
+    flatland-baselines-ref: comply-graph-generalization
 
 on:
     workflow_dispatch:
