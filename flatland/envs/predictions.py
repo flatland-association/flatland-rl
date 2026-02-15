@@ -64,6 +64,7 @@ class DummyPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.ndarray]]
                     prediction[index] = [index, *agent.target, agent.direction, RailEnvActions.STOP_MOVING.value]
                     continue
                 for action in action_priorities:
+                    # TODO use new higher-level method
                     new_cell_is_valid, (new_position, new_direction), transition_is_valid, _, _ = \
                         self.env.rail.check_action_on_agent(action, (agent.position, agent.direction))
                     if all([new_cell_is_valid, transition_is_valid]):

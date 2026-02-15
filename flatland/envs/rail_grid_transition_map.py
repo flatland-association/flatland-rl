@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Set, List
+from typing import Set, List, Optional
 from typing import Tuple
 
 import numpy as np
@@ -150,6 +150,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
 
         return direction, False, RailEnvActions.STOP_MOVING, False
 
+    # TODO make private and check usages -> prefer use of apply_action_independent
     @lru_cache(maxsize=1_000_000)
     def check_action_on_agent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Tuple[
         bool, Tuple[Tuple[int, int], int], bool, RailEnvActions, bool]:
@@ -181,6 +182,15 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         # TODO this is wrong?! should also include whether transitions from direction are defined!
         new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
         return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, action_valid
+
+    @lru_cache(maxsize=1_000_000)
+    def apply_action_independent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Optional[
+        Tuple[Tuple[Tuple[int, int], int], bool]]:
+        new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, action_valid = self.check_action_on_agent(action, configuration)
+        if action_valid:
+            return (new_position, new_direction), transition_valid
+        else:
+            return None
 
     def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
         """

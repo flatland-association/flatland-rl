@@ -425,9 +425,13 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             if current_or_initial_configuration is None:  # Agent not added on map yet
                 current_or_initial_configuration = initial_configuration
 
-            _, new_configuration_independent, straight, _, action_valid = self.rail.check_action_on_agent(
+            transition = self.rail.apply_action_independent(
                 raw_action, current_or_initial_configuration
             )
+            action_valid = transition is not None
+            if action_valid:
+                new_configuration_independent, transition_valid = transition
+
 
             # get desired new_position and new_direction
             stop_action_given = raw_action == RailEnvActions.STOP_MOVING
@@ -445,7 +449,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
                 # start moving
                 new_speed += self.acceleration_delta
-            elif raw_action == RailEnvActions.MOVE_FORWARD and straight:
+            elif raw_action == RailEnvActions.MOVE_FORWARD and transition_valid:
                 # accelerate upon forward, but only if running straight
                 new_speed += self.acceleration_delta
             elif stop_action_given:

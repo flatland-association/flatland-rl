@@ -5,7 +5,7 @@ import traceback
 import uuid
 import warnings
 from functools import lru_cache
-from typing import Tuple, Generic, TypeVar, Any, Set
+from typing import Tuple, Generic, TypeVar, Any, Set, Optional
 
 import numpy as np
 from importlib_resources import path
@@ -115,11 +115,8 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
         """
         raise NotImplementedError()
 
-    # TODO finally: Optional tuple (new configuration, accelerate): if None, action invalid. Maybe keep this full signature as grid-specific-low-level method?
-    # TODO add check valid configuration as well
     @lru_cache
-    def check_action_on_agent(self, action: ActionsType, configuration: UnderlyingConfigurationType) -> Tuple[
-        bool, UnderlyingConfigurationType, bool, ActionsType]:
+    def apply_action_independent(self, action: ActionsType, configuration: UnderlyingConfigurationType) -> Optional[Tuple[UnderlyingConfigurationType, bool]]:
         """
         Apply the action on the train regardless of locations of other agents.
         Checks for valid cells to move and valid rail transitions.
@@ -133,14 +130,10 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
 
         Returns
         -------
-        new_cell_valid: bool
-            is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
-        new_position: [ConfigurationType]
-            New position after applying the action
-        transition_valid: bool
-            Whether the transition from old and direction is defined in the grid.
-        preprocessed_action: [ActionType]
-            Corrected action if not transition_valid.
+        configuration : UnderlyingConfigurationType
+            the next configuration (cell + direction, resp., edge)
+        accelerate : bool
+            whether the transition allows acceleration (only straight moves and FORWARD action in the grid)
         """
         raise NotImplementedError()
 

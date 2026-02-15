@@ -153,6 +153,14 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         """
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
+    @lru_cache(maxsize=1_000_000)
+    def apply_action_independent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Optional[Tuple[GridNode, bool]]:
+        new_cell_valid, new_configuration, transition_valid, preprocessed_action, action_valid = self.check_action_on_agent(action, configuration)
+        if action_valid:
+            return new_configuration, transition_valid
+        else:
+            return None
+
     def check_action_on_agent(self, action: RailEnvActions, configuration: GridNode) -> Tuple[bool, GridNode, bool, RailEnvActions]:
         succs = list(self.g.successors(configuration))
         if False:
