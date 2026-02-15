@@ -481,7 +481,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 if not valid_position_direction:
                     warnings.warn(f"{new_configuration} not valid on the grid."
                                   f" Coming from {current_or_initial_configuration} with raw action {raw_action} and  action valid {action_valid}. {self._infrastructure_representation(agent)}")
-                # fails if initial position has invalid direction
+                # fails if initial position has invalid direction or if the grid is not closed
                 # assert valid_position_direction
 
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)

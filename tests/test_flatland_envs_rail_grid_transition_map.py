@@ -96,7 +96,7 @@ def test_check_action_on_agent_horizontal_straight():
 def test_check_action_on_agent_symmetric_switch_from_west():
     rail = RailGridTransitionMap(3, 3, RailEnvTransitions())
     rail.set_transitions((1, 1,), RailEnvTransitionsEnum.symmetric_switch_from_west)
-    rail.set_transitions((0, 1), RailEnvTransitionsEnum.horizontal_straight)
+    rail.set_transitions((0, 1), RailEnvTransitionsEnum.vertical_straight)
     rail.set_transitions((1, 2), RailEnvTransitionsEnum.horizontal_straight)
     rail.set_transitions((2, 1), RailEnvTransitionsEnum.vertical_straight)
 
