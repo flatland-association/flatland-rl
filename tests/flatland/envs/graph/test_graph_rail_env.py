@@ -26,24 +26,40 @@ def test_graph_transition_map_from_with_random_policy(seed):
         for c in range(grid_env.width):
             for d in range(4):
                 assert (sum(grid_env.rail.get_transitions(((r, c), d))) > 0) == (f"{r, c, d}" in graph_env.rail.g.nodes)
-                if sum(grid_env.rail.get_transitions(((r, c), d))) == 0:
+                u = GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)
+                is_grid_configuration = sum(grid_env.rail.get_transitions(((r, c), d))) > 0
+                is_graph_configuration = u in graph_env.rail.g.nodes
+                assert is_graph_configuration == is_grid_configuration
+                if not is_grid_configuration:
                     continue
+
+                if "symmetric" in RailEnvTransitionsEnum(grid_env.rail.get_full_transitions(r, c)).name and sum(
+                    grid_env.rail.get_transitions(((r, c), d))) == 2:
+                    assert RailEnvActions.MOVE_FORWARD in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                    assert RailEnvActions.DO_NOTHING in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                    # TODO revise design: no braking on symmetric switches?
+                    assert RailEnvActions.STOP_MOVING in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                else:
+                    assert RailEnvActions.MOVE_FORWARD not in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                    assert RailEnvActions.DO_NOTHING not in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                    assert RailEnvActions.STOP_MOVING not in graph_env.rail.g.nodes[u]["prohibited_actions"]
+
+                # verify prohibited actions and edge actions are pairwise disjoint and cover all 5 Flatland actions
+                actions = list(graph_env.rail.g.nodes[u]["prohibited_actions"])
+                for v in list(graph_env.rail.g.successors(u)):
+                    actions.extend(graph_env.rail.g.get_edge_data(u, v)["actions"])
+                assert len(actions) == 5
+
                 for a in range(5):
                     # TODO typing
-                    actual = graph_env.rail.check_action_on_agent(RailEnvActions.from_value(a), f"{r, c, d}")
-                    expected_raw = grid_env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d))
-                    new_cell_valid, ((r2, c2), d2), transition_valid, preprocessed_action, action_valid = expected_raw
-
-                    expected = new_cell_valid, f"{r2, c2, d2}", transition_valid, preprocessed_action, action_valid
-
-                    if "symmetric" not in RailEnvTransitionsEnum(grid_env.rail.get_full_transitions(r, c)).name:
-                        assert (actual == expected)
-
-                        # TODO new position is derived from grid, not possible on graph alone
-                        # TODO maybe add invalid actions on node?
-                        u = GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)
-                        v = GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2)
-                        assert expected_raw in graph_env.rail.g[u][v]["_grid_check_action_on_agent"]
+                    actual = graph_env.rail.apply_action_independent(RailEnvActions.from_value(a), f"{r, c, d}")
+                    expected_raw = grid_env.rail.apply_action_independent(RailEnvActions.from_value(a), ((r, c), d))
+                    if expected_raw is None:
+                        assert actual == expected_raw
+                    else:
+                        ((r2, c2), d2), transition_valid = expected_raw
+                        expected = f"{r2, c2, d2}", transition_valid
+                        assert actual == expected
 
     # use Trajectory API for comparison
     with tempfile.TemporaryDirectory() as tmpdirname:
