@@ -22,12 +22,11 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
             return RailEnvActions.DO_NOTHING
 
         for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
-            new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, _ = env.rail.check_action_on_agent(
-                RailEnvActions.from_value(a), (agent.position, agent.direction)
-            )
-            if new_cell_valid and transition_valid and (
-                new_position == self._shortest_paths[agent.handle][1].position and new_direction == self._shortest_paths[agent.handle][1].direction):
-                return a
+            result = env.rail.apply_action_independent(RailEnvActions.from_value(a), (agent.position, agent.direction))
+            if result is not None:
+                (new_position, new_direction), _ = result
+                if new_position == self._shortest_paths[agent.handle][1].position and new_direction == self._shortest_paths[agent.handle][1].direction:
+                    return a
         raise Exception("Invalid state")
 
     def act_many(self, handles: List[int], observations: List[RailEnv], **kwargs):
