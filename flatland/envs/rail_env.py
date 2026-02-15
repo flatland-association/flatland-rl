@@ -432,7 +432,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             if action_valid:
                 new_configuration_independent, transition_valid = transition
 
-
             # get desired new_position and new_direction
             stop_action_given = raw_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
@@ -443,7 +442,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             new_speed = agent.speed_counter.speed
             state = agent.state
             agent_max_speed = agent.speed_counter.max_speed
-            # TODO revise design: should we instead of correcting LEFT/RIGHT to FORWARD instead preprocess to DO_NOTHING. Caveat: DO_NOTHING would be undefined for symmetric switches!
             if not action_valid:
                 new_speed = 0.0
             elif (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
@@ -459,8 +457,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
                 new_configuration = initial_configuration
-            elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and (
-                (movement_action_given and action_valid) or (stop_action_given or not action_valid)):
+            elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and action_valid and (
+                movement_action_given or stop_action_given):
                 # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_configuration = initial_configuration
             elif state.is_on_map_state():
