@@ -430,7 +430,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             )
             action_valid = transition is not None
             if action_valid:
-                new_configuration_independent, transition_valid = transition
+                new_configuration_independent, straight = transition
 
 
             stop_action_given = raw_action == RailEnvActions.STOP_MOVING
@@ -447,7 +447,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
                 # start moving
                 new_speed += self.acceleration_delta
-            elif raw_action == RailEnvActions.MOVE_FORWARD and transition_valid:
+            elif raw_action == RailEnvActions.MOVE_FORWARD and straight:
                 # accelerate upon forward, but only if running straight
                 new_speed += self.acceleration_delta
             elif stop_action_given:

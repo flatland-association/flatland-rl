@@ -132,8 +132,8 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
         -------
         configuration : UnderlyingConfigurationType
             the next configuration (cell + direction, resp., edge)
-        accelerate : bool
-            whether the transition allows acceleration (only straight moves and FORWARD action in the grid)
+        straight : bool
+            whether the transition allows acceleration (only straight moves in the grid)
         """
         raise NotImplementedError()
 

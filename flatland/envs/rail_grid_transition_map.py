@@ -150,7 +150,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
 
         return direction, False, RailEnvActions.STOP_MOVING, False
 
-    # TODO make private and check usages -> prefer use of apply_action_independent
+    # TODO make private and check usages -> prefer use of apply_action_independent outside of core.
     @lru_cache(maxsize=1_000_000)
     def check_action_on_agent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Tuple[
         bool, Tuple[Tuple[int, int], int], bool, RailEnvActions, bool]:
@@ -186,9 +186,13 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     @lru_cache(maxsize=1_000_000)
     def apply_action_independent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Optional[
         Tuple[Tuple[Tuple[int, int], int], bool]]:
+        position, direction = configuration
+
         new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, action_valid = self.check_action_on_agent(action, configuration)
         if action_valid:
-            return (new_position, new_direction), transition_valid
+            # TODO revise design: allow acceleration in turns? dis-allow in dead-ends?
+            straight = new_direction % 2 == direction % 2
+            return (new_position, new_direction), straight
         else:
             return None
 
