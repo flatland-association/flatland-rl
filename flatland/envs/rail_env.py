@@ -536,7 +536,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # - inside cell or at end of cell and no conflict with other trains and
             # TODO https://github.com/flatland-association/flatland-rl/issues/175 beware: on symmetric switches, DO_NOTHING is invalid - is the setup consistent?
             action_valid = action_valid and (
-                (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or (motion_check))
+                (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or motion_check)
 
             agent_transition_data.state_transition_signal.movement_allowed = action_valid
 
