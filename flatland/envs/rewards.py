@@ -86,13 +86,13 @@ def defaultdict_set():
 
 
 class DefaultPenalties(fastenum.Enum):
-    crash_penalty = "crash_penalty",
-    delay_at_target = "delay_at_target",
-    cancellation = "cancellation",
-    target_not_reached = "target_not_reached",
-    intermediate_not_served = "intermediate_not_served",
-    intermediate_late_arrival = "intermediate_late_arrival",
-    intermediate_early_departure = "intermediate_early_departure"
+    COLLISION = "COLLISION"
+    TARGET_LATE_ARRIVAL = "TARGET_LATE_ARRIVAL"
+    CANCELLATION = "CANCELLATION"
+    TARGET_NOT_REACHED = "TARGET_NOT_REACHED"
+    INTERMEDIATE_NOT_SERVED = "INTERMEDIATE_NOT_SERVED"
+    INTERMEDIATE_LATE_ARRIVAL = "INTERMEDIATE_LATE_ARRIVAL"
+    INTERMEDIATE_EARLY_DEPARTURE = "INTERMEDIATE_EARLY_DEPARTURE"
 
 
 class BaseDefaultRewards(Rewards[Dict[str, float]]):
@@ -114,7 +114,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
                  intermediate_not_served_penalty: float = 1,
                  intermediate_late_arrival_penalty_factor: float = 0.2,
                  intermediate_early_departure_penalty_factor: float = 0.5,
-                 crash_penalty_factor: float = 0.0
+                 collision_factor: float = 0.0
                  ):
         """
         Parameters
@@ -131,16 +131,16 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
             Intermediate late arrival penalty factor $\alpha \geq 0$. Defaults to 0.2.
         intermediate_early_departure_penalty_factor : float
             Intermediate early departure penalty factor $\delta \geq 0$. Defaults to 0.5.
-        crash_penalty_factor : float
+        collision_factor : float
             Crash penalty factor $\kappa \geq 0$. Defaults to 0.0.
         """
-        self.crash_penalty_factor = crash_penalty_factor
+        self.collision_factor = collision_factor
         self.intermediate_early_departure_penalty_factor = intermediate_early_departure_penalty_factor
         self.intermediate_late_arrival_penalty_factor = intermediate_late_arrival_penalty_factor
         self.intermediate_not_served_penalty = intermediate_not_served_penalty
         self.cancellation_time_buffer = cancellation_time_buffer
         self.cancellation_factor = cancellation_factor
-        assert self.crash_penalty_factor >= 0
+        assert self.collision_factor >= 0
         assert self.intermediate_early_departure_penalty_factor >= 0
         assert self.intermediate_late_arrival_penalty_factor >= 0
         assert self.intermediate_not_served_penalty >= 0
@@ -174,7 +174,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
             # - if not braking, still full speed
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design, should we penalize invalid actions upon symmetric switch?
             # - if invalid action, speed set to 0
-            d["crash_penalty"] = -1 * agent_transition_data.speed * self.crash_penalty_factor
+            d[DefaultPenalties.COLLISION.value] = -1 * agent_transition_data.speed * self.collision_factor
 
         if agent.state == TrainState.DONE and agent.state_machine.previous_state != TrainState.DONE:
             self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps, d)
@@ -202,16 +202,16 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
             # delay at target
             # if agent arrived earlier or on time = 0
             # if agent arrived later = -ve reward based on how late
-            d["delay_at_target"] = min(agent.latest_arrival - agent.arrival_time, 0)
+            d[DefaultPenalties.TARGET_LATE_ARRIVAL.value] = min(agent.latest_arrival - agent.arrival_time, 0)
         else:
             if agent.state.is_off_map_state():
                 # journey not started
-                d["cancellation"] = -1 * self.cancellation_factor * \
-                                    (agent.get_travel_time_on_shortest_path(distance_map) + self.cancellation_time_buffer)
+                d[DefaultPenalties.CANCELLATION.value] = -1 * self.cancellation_factor * \
+                                                         (agent.get_travel_time_on_shortest_path(distance_map) + self.cancellation_time_buffer)
 
             # target not reached
             if agent.state.is_on_map_state():
-                d["target_not_reached"] = agent.get_current_delay(elapsed_steps, distance_map)
+                d[DefaultPenalties.TARGET_NOT_REACHED.value] = agent.get_current_delay(elapsed_steps, distance_map)
         for intermediate_alternatives, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1],
                                                      agent.waypoints_earliest_departure[1:-1]):
             agent_arrivals: Set[Waypoint] = set(self.arrivals[agent.handle])
@@ -219,15 +219,17 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
             wps_intersection: Set[Waypoint] = intermediate_alternatives.intersection(agent_arrivals)
             if len(wps_intersection) == 0 or TrainState.STOPPED not in self.states[agent.handle][list(wps_intersection)[0]]:
                 # stop not served or served but not stopped
-                d["intermediate_not_served"] += -1 * self.intermediate_not_served_penalty
+                d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] += -1 * self.intermediate_not_served_penalty
             else:
                 wp = list(wps_intersection)[0]
                 # late arrival
-                d["intermediate_late_arrival"] += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][wp], 0)
+                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][wp],
+                                                                                                                           0)
                 # early departure
                 # N.B. if arrival but not departure, handled by above by departed but never reached.
                 if wp in self.departures[agent.handle]:
-                    d["intermediate_early_departure"] += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][wp] - ed, 0)
+                    d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += self.intermediate_early_departure_penalty_factor * min(
+                        self.departures[agent.handle][wp] - ed, 0)
         return d
 
     def cumulate(self, *rewards: float) -> Dict[str, float]:
@@ -253,7 +255,7 @@ class DefaultRewards(Rewards[float]):
                  intermediate_not_served_penalty: float = 1,
                  intermediate_late_arrival_penalty_factor: float = 0.2,
                  intermediate_early_departure_penalty_factor: float = 0.5,
-                 crash_penalty_factor: float = 0.0
+                 collision_factor: float = 0.0
                  ):
         self._proxy = BaseDefaultRewards(
             epsilon=epsilon,
@@ -262,12 +264,12 @@ class DefaultRewards(Rewards[float]):
             intermediate_not_served_penalty=intermediate_not_served_penalty,
             intermediate_late_arrival_penalty_factor=intermediate_late_arrival_penalty_factor,
             intermediate_early_departure_penalty_factor=intermediate_early_departure_penalty_factor,
-            crash_penalty_factor=crash_penalty_factor
+            collision_factor=collision_factor
         )
 
     @property
-    def crash_penalty_factor(self):
-        return self._proxy.crash_penalty_factor
+    def collision_factor(self):
+        return self._proxy.collision_factor
 
     @property
     def intermediate_early_departure_penalty_factor(self):
@@ -289,9 +291,9 @@ class DefaultRewards(Rewards[float]):
     def cancellation_factor(self):
         return self._proxy.cancellation_factor
 
-    @crash_penalty_factor.setter
-    def crash_penalty_factor(self, v):
-        self._proxy.crash_penalty_factor = v
+    @collision_factor.setter
+    def collision_factor(self, v):
+        self._proxy.collision_factor = v
 
     @intermediate_early_departure_penalty_factor.setter
     def intermediate_early_departure_penalty_factor(self, v):
