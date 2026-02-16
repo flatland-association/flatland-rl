@@ -86,14 +86,6 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
                         predecessors.add((new_cell, agent_orientation))
         return predecessors
 
-    @lru_cache
-    def is_valid_configuration(self, configuration: Tuple[Tuple[int, int], int]) -> bool:
-        position, direction = configuration
-        return self.check_bounds(position) and fast_count_nonzero(self.get_transitions(configuration)) > 0
-
-    def check_bounds(self, position):
-        return position[0] >= 0 and position[1] >= 0 and position[0] < self.height and position[1] < self.width
-
     @lru_cache(maxsize=1_000_000)
     def _check_action_new(self, action: RailEnvActions, position: IntVector2D, direction: int):
         """

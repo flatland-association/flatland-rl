@@ -1463,7 +1463,7 @@ def test_sparse_generator_changes_to_grid_mode():
     # Catch warnings and check that a warning *IS* raised
     with warnings.catch_warnings(record=True) as w:
         rail_env.reset(True, True, random_seed=15)
-        assert "[WARNING]" in str(w[-1].message)
+        assert any("[WARNING]" in str(m.message) for m in w)
 
 
 def test_sparse_generator_with_level_free_03():

@@ -4,6 +4,7 @@ from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional, Set
 
 import numpy as np
 from attr import attrs, attrib, Factory
+from typing_extensions import deprecated
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -130,12 +131,15 @@ class EnvAgent(Generic[ConfigurationType]):
         self.old_configuration = (self.old_position, value)
 
     @property
+    @deprecated("Use targets instead")
     def target(self):
         # assuming same cell for all
         return list(self.targets)[0][0]
 
     @target.setter
+    @deprecated("Use targets instead")
     def target(self, value):
+        # backwards compatibility to mean any direction into the cell. Will valid directions be post-cleaned in _agents_from_line.
         self.targets = {(value, d) for d in Grid4TransitionsEnum}
 
     # INIT FROM HERE IN _from_line()
@@ -191,6 +195,7 @@ class EnvAgent(Generic[ConfigurationType]):
         return Agent(initial_position=self.initial_position,
                      initial_direction=self.initial_direction,
                      direction=self.direction,
+                     # N.B. not serialized, valid targets post-processed.
                      target=self.target,
                      moving=self.moving,
                      earliest_departure=self.earliest_departure,
@@ -278,7 +283,7 @@ class EnvAgent(Generic[ConfigurationType]):
                     initial_configuration=(static_agent[0], static_agent[1]),
                     current_configuration=(static_agent[0], static_agent[1]),
                     old_configuration=None,
-                    # TODO agent should only have valid targets
+                    # N.B. valid targets cleaned in _agents_from_line
                     targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=static_agent[3],
                     speed_counter=SpeedCounter(speed), handle=i,
@@ -288,7 +293,7 @@ class EnvAgent(Generic[ConfigurationType]):
                     initial_configuration=(static_agent[0], static_agent[1]),
                     current_configuration=(static_agent[0], static_agent[1]),
                     old_configuration=None,
-                    # TODO agent should only have valid targets
+                    # N.B. valid targets cleaned in _agents_from_line
                     targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=False,
                     speed_counter=SpeedCounter(1.0),
@@ -306,6 +311,7 @@ class EnvAgent(Generic[ConfigurationType]):
             f"\tposition={self.position},\n"
             f"\tdirection={self.direction if self.direction is None else Grid4TransitionsEnum(self.direction).value},\n"
             f"\ttarget={self.target},\n"
+            f"\ttargets={self.targets},\n"
             f"\told_position={self.old_position},\n"
             f"\told_direction={self.old_direction},\n"
             f"\tearliest_departure={self.earliest_departure},\n"

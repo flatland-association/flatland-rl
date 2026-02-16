@@ -227,6 +227,10 @@ class RailEnvPersister(object):
         env.rail.grid = grid
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
 
+        # N.B. targets not serialised, so do post-cleaning. Otherwise, done in env._agents_from_line() during reset().
+        for agent in env.agents:
+            agent.targets = {t for t in agent.targets if env.rail.is_valid_configuration(t)}
+
         max_episode_steps = env_dict.get('max_episode_steps', None)
         if max_episode_steps is not None:
             env._max_episode_steps = max_episode_steps

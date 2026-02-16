@@ -314,7 +314,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             line = self.line_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets, self.np_random)
 
-            self.agents = self._agents_from_line(line)
+            self.agents = self._agents_from_line(line, self.rail)
 
             # Reset distance map - basically initializing
             self.distance_map.reset(self.agents, self.rail)
@@ -439,7 +439,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             action_valid = transition is not None
             if action_valid:
                 new_configuration_independent, straight = transition
-
 
             stop_action_given = raw_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
@@ -796,5 +795,8 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
     def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
         return EnvAgent.apply_timetable(self.agents, timetable)
 
-    def _agents_from_line(self, line: "Line") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
-        return EnvAgent.from_line(line)
+    def _agents_from_line(self, line: "Line", rail: GridTransitionMap) -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
+        agents = EnvAgent.from_line(line)
+        for agent in agents:
+            agent.targets = {t for t in agent.targets if rail.is_valid_configuration(t)}
+        return agents

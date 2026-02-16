@@ -44,9 +44,8 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[T
         distance_map_walker = DistanceMapWalker[DistanceMap, RailGridTransitionMap, Tuple[Tuple[int, int], int]](self)
         computed_targets = []
         for i, agent in enumerate(agents):
-            # TODO safe?
-            if agent.target not in computed_targets:
-                targets = [target for target in agent.targets if rail.is_valid_configuration(target)]
+            targets = [target for target in agent.targets if rail.is_valid_configuration(target)]
+            if targets not in computed_targets:
                 distance_map_walker._distance_map_walker(rail, i, targets)
             else:
                 # just copy the distance map form other agent with same target (performance)

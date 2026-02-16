@@ -40,7 +40,7 @@ def make_simple_rail() -> Tuple[RailGridTransitionMap, np.array, Dict]:
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
     rail = RailGridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+                                 height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
     train_stations = [
@@ -91,7 +91,7 @@ def make_disconnected_simple_rail() -> Tuple[RailGridTransitionMap, np.array, Di
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
     rail = RailGridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+                                 height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
     train_stations = [
@@ -139,7 +139,7 @@ def make_simple_rail2() -> Tuple[RailGridTransitionMap, np.array, Dict]:
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
     rail = RailGridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+                                 height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
     train_stations = [
@@ -188,7 +188,7 @@ def make_simple_rail_unconnected() -> Tuple[RailGridTransitionMap, np.array, Dic
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
     rail = RailGridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+                                 height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
     train_stations = [
@@ -243,7 +243,7 @@ def make_simple_rail_with_alternatives() -> Tuple[RailGridTransitionMap, np.arra
         [[empty] * 6 + [vertical_straight] + [empty] * 3] +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
     rail = RailGridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+                                 height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
     train_stations = [
@@ -292,7 +292,7 @@ def make_invalid_simple_rail() -> Tuple[RailGridTransitionMap, np.array, Dict[st
         [[empty] * 6 + [vertical_straight] + [empty] * 3] * 2 +
         [[empty] * 6 + [dead_end_from_north] + [empty] * 3], dtype=np.uint16)
     rail = RailGridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+                                 height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(0, 3), (6, 6)]
     train_stations = [
@@ -329,7 +329,7 @@ def make_oval_rail() -> Tuple[RailGridTransitionMap, np.array, Any]:
         [[empty] * 9], dtype=np.uint16)
 
     rail = RailGridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+                                 height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
     city_positions = [(1, 4), (4, 4)]
     train_stations = [
@@ -364,14 +364,15 @@ def make_diamond_crossing_rail() -> Tuple[RailGridTransitionMap, np.array, Dict]
         [[RailEnvTransitionsEnum.empty] * 2 + [RailEnvTransitionsEnum.dead_end_from_north] + [RailEnvTransitionsEnum.empty] * 7]
         , dtype=np.uint16)
     rail = RailGridTransitionMap(width=rail_map.shape[1],
-                             height=rail_map.shape[0], transitions=transitions)
+                                 height=rail_map.shape[0], transitions=transitions)
     rail.grid = rail_map
-    city_positions = [(1, 4), (4, 4)]
+    city_positions = [(1, 2), (4, 2)]
     train_stations = [
-        [((1, 4), 0)],
-        [((4, 4), 0)],
+        [((1, 2), 0)],
+        [((4, 2), 0)],
     ]
     city_orientations = [1, 3]
+
     agents_hints = {'city_positions': city_positions,
                     'train_stations': train_stations,
                     'city_orientations': city_orientations
