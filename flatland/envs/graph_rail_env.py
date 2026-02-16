@@ -39,7 +39,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             # N.B. ParamMalfunctionGen is not stateless due to cached random nums, see https://github.com/flatland-association/flatland-rl/issues/364.
             malfunction_generator=ParamMalfunctionGen(rail_env.malfunction_generator.MFP),
         )
-        # TODO hack while awaiting https://github.com/flatland-association/flatland-rl/pull/341
+        # TODO https://github.com/flatland-association/flatland-rl/pull/341 hack while awaiting this pr
         graph_env.reset(random_seed=seed)
         s = random_state_to_hashablestate(rail_env.np_random)
         graph_env.np_random = random_state_from_hashablestate(s)
@@ -47,7 +47,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
 
     def __init__(
         self,
-        # TODO fix signature https://github.com/flatland-association/flatland-rl/issues/242
+        # TODO https://github.com/flatland-association/flatland-rl/issues/242 fix signature
         rail_generator: "RailGenerator" = None,
         line_generator: "LineGenerator" = None,
         number_of_agents=2,

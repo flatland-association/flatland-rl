@@ -742,7 +742,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
     def _update_agent_positions_map(self, ignore_old_positions=True):
         """ Update the agent_positions array for agents that changed positions """
         for agent in self.agents:
-            # TODO refactor for configurations
             if not ignore_old_positions or agent.old_position != agent.position:
                 if agent.position is not None:
                     self.agent_positions[agent.position] = agent.handle
@@ -760,7 +759,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         if self.record_steps:
             self.record_timestep(action_dict)
-        # TODO add idiomatic wrapper instead of override
+        # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
         return obs, rewards, dones, info
 
@@ -777,7 +776,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             agent = self.agents[i_agent]
             # the int cast is to avoid numpy types which may cause problems with msgpack
             # in env v2, agents may have position None, before starting
-            # TODO test for configuration None instead
             if agent.position is None:
                 pos = (None, None)
                 dir = None

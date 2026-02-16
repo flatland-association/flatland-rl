@@ -278,6 +278,7 @@ class EnvAgent(Generic[ConfigurationType]):
                     initial_configuration=(static_agent[0], static_agent[1]),
                     current_configuration=(static_agent[0], static_agent[1]),
                     old_configuration=None,
+                    # TODO agent should only have valid targets
                     targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=static_agent[3],
                     speed_counter=SpeedCounter(speed), handle=i,
@@ -287,6 +288,7 @@ class EnvAgent(Generic[ConfigurationType]):
                     initial_configuration=(static_agent[0], static_agent[1]),
                     current_configuration=(static_agent[0], static_agent[1]),
                     old_configuration=None,
+                    # TODO agent should only have valid targets
                     targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=False,
                     speed_counter=SpeedCounter(1.0),
