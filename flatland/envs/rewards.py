@@ -156,8 +156,12 @@ class DefaultRewards(Rewards[float]):
             old_wp = Waypoint(agent.old_position, agent.old_direction)
             self.departures[agent.handle][old_wp] = elapsed_steps
 
-        # TODO revise design: late braking leading to crash may not be penalized? Forced stop may not only come from motion check, but also from invalid action - should we differentiate?
-        if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED and not agent_transition_data.state_transition_signal.stop_action_given:
+        if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED:
+            # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
+            # - if braking, still reduced speed
+            # - if not braking, still full speed
+            # TODO revise design, should we penalize invalid actions upon symmetric switch?
+            # - if invalid action, speed set to 0
             reward += -1 * agent_transition_data.speed * self.crash_penalty_factor
 
         if agent.state == TrainState.DONE and agent.state_machine.previous_state != TrainState.DONE:
