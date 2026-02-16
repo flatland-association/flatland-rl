@@ -30,8 +30,8 @@ from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions, RailEnvNextAction
 
-GridNode = Tuple[Tuple[int, int], int]
-GridEdge = Tuple[GridNode, GridNode]
+GridNode = str
+GridEdge = Tuple[str]
 
 
 class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]):
@@ -145,7 +145,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
     @lru_cache(maxsize=1_000_000)
-    def apply_action_independent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Optional[Tuple[GridNode, bool]]:
+    def apply_action_independent(self, action: RailEnvActions, configuration: GridNode) -> Optional[Tuple[GridNode, bool]]:
         if action in self.g.nodes[configuration].get("prohibited_actions", set()):
             return None
         succs = list(self.g.successors(configuration))

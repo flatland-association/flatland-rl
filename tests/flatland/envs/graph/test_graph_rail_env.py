@@ -49,7 +49,6 @@ def test_graph_transition_map_from_with_random_policy(seed):
                 assert len(actions) == 5
 
                 for a in range(5):
-                    # TODO typing
                     actual = graph_env.rail.apply_action_independent(RailEnvActions.from_value(a), f"{r, c, d}")
                     expected_raw = grid_env.rail.apply_action_independent(RailEnvActions.from_value(a), ((r, c), d))
                     if expected_raw is None:
