@@ -108,7 +108,6 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
     """
 
     def __init__(self,
-                 epsilon: float = 0.01,
                  cancellation_factor: float = 1,
                  cancellation_time_buffer: float = 0,
                  intermediate_not_served_penalty: float = 1,
@@ -119,8 +118,6 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
         """
         Parameters
         ----------
-        epsilon : float
-            avoid rounding errors, defaults to 0.01.
         cancellation_factor : float
             Cancellation factor $\phi \geq 0$. defaults to  1.
         cancellation_time_buffer : float
@@ -249,7 +246,6 @@ class DefaultRewards(Rewards[float]):
     """
 
     def __init__(self,
-                 epsilon: float = 0.01,
                  cancellation_factor: float = 1,
                  cancellation_time_buffer: float = 0,
                  intermediate_not_served_penalty: float = 1,
@@ -258,7 +254,6 @@ class DefaultRewards(Rewards[float]):
                  collision_factor: float = 0.0
                  ):
         self._proxy = BaseDefaultRewards(
-            epsilon=epsilon,
             cancellation_factor=cancellation_factor,
             cancellation_time_buffer=cancellation_time_buffer,
             intermediate_not_served_penalty=intermediate_not_served_penalty,
