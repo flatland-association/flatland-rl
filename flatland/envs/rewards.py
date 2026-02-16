@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import Generic, TypeVar, Tuple, Dict, Set, Optional
 
+from fastenum import fastenum
+
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
@@ -83,6 +85,16 @@ def defaultdict_set():
     return defaultdict(lambda: set())
 
 
+class DefaultPenalties(fastenum.Enum):
+    crash_penalty = "crash_penalty",
+    delay_at_target = "delay_at_target",
+    cancellation = "cancellation",
+    target_not_reached = "target_not_reached",
+    intermediate_not_served = "intermediate_not_served",
+    intermediate_late_arrival = "intermediate_late_arrival",
+    intermediate_early_departure = "intermediate_early_departure"
+
+
 class BaseDefaultRewards(Rewards[Dict[str, float]]):
     """
     Reward Function.
@@ -94,15 +106,6 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
 
     Safety measures are implemented as penalties for collisions which are directly proportional to the train’s speed at impact, ensuring that high-speed operations are managed with extra caution.
     """
-
-    keys = ["crash_penalty",
-            "delay_at_target",
-            "cancellation",
-            "target_not_reached",
-            "intermediate_not_served",
-            "intermediate_late_arrival",
-            "intermediate_early_departure"
-            ]
 
     def __init__(self,
                  epsilon: float = 0.01,
@@ -228,14 +231,14 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
         return d
 
     def cumulate(self, *rewards: float) -> Dict[str, float]:
-        return {k: sum([r[k] for r in rewards]) for k in self.keys}
+        return {p.value: sum([r[p.value] for r in rewards]) for p in DefaultPenalties}
 
     def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
         # https://flatland-association.github.io/flatland-book/challenges/flatland3/eval.html
-        return sum([sum([r[k] for r in rewards]) / (max_episode_steps * num_agents) for k in self.keys]) + 1
+        return sum([sum([r[p.value] for r in rewards]) / (max_episode_steps * num_agents) for p in DefaultPenalties]) + 1
 
     def empty(self) -> Dict[str, float]:
-        return {k: 0 for k in self.keys}
+        return {p.value: 0 for p in DefaultPenalties}
 
 
 class DefaultRewards(Rewards[float]):
