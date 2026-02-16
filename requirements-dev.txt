@@ -271,7 +271,7 @@ nbclient==0.10.4
     # via
     #   nbconvert
     #   nbmake
-nbconvert==7.16.6
+nbconvert==7.17.0
     # via
     #   jupyter
     #   jupyter-server
@@ -334,7 +334,7 @@ parso==0.8.5
     # via jedi
 pexpect==4.9.0
     # via ipython
-pillow==12.1.0
+pillow==12.1.1
     # via
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
