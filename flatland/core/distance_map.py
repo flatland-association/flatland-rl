@@ -72,8 +72,8 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
         Parameters
         ----------
         self : reference to the distance_map
-        max_depth : max path length, if the shortest path is longer, it will be cutted
-        agent_handle : if set, the shortest for agent.handle will be returned , otherwise for all agents
+        max_depth : max path length, if the shortest path is longer, it will be cut
+        agent_handle : if set, the shortest path for agent.handle will be returned, otherwise for all agents
 
         Returns
         -------

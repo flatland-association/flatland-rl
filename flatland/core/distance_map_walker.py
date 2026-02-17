@@ -32,7 +32,7 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
             self.distance_map._set_distance(target_configuration, target_nr, 0)
 
         # Fill in the (up to) 4 neighboring nodes
-        # direction is the direction of movement, meaning that at least a possible orientation of an agent
+        # direction is the direction of movement, meaning that at least one possible orientation of an agent
         # in cell (row,col) allows a movement in direction `direction'
         nodes_queue = deque(x for xs in (self._get_and_update_neighbors(rail, tc, target_nr, 0) for tc in target_configurations) for x in xs)
 
