@@ -138,7 +138,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             if own target lies on the explored branch the current distance from the agent in number of cells is stored
 
         #2:
-            if another agents target is detected the distance in number of cells from the agents current location\
+            if another agents target is detected, the distance in number of cells from current agent position
             is stored
 
         #3:
