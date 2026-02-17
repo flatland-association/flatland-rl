@@ -13,10 +13,8 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 def test_graph_transition_map_from_with_random_policy():
     # TODO restrictions:
     #   - no malfunction
-    #   - test multi-speed and dynamic speed
-    #   - rewards (distance map)
     #   - mapping level-free/non-level free
-    grid_env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999, speed_ratios={1.0: 1.0})
+    grid_env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999)
     graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder())
     graph_env.reset()
 
@@ -48,5 +46,4 @@ def test_graph_transition_map_from_with_random_policy():
             GraphTransitionMap.graph_configuration_to_grid_configuration)
         assert len(graph_trajectory.trains_positions["position"].compare(grid_trajectory.trains_positions["position"])) == 0
 
-        # TODO fix distance map and rewards
-        # assert len(trajectory.compare_rewards_dones_infos(other)) == 0
+        assert len(graph_trajectory.compare_rewards_dones_infos(grid_trajectory)) == 0

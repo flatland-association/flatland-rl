@@ -21,14 +21,14 @@ References:
 import ast
 from collections import defaultdict
 from functools import lru_cache
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Set
 
 import networkx as nx
 
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_env_action import RailEnvActions, RailEnvNextAction
 
 GridNode = Tuple[Tuple[int, int], int]
 GridEdge = Tuple[GridNode, GridNode]
@@ -172,6 +172,10 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         new_cell_valid = new_configuration in self.g.nodes
         return new_cell_valid, new_configuration, transition_valid, preprocessed_action
 
+    @lru_cache
+    def get_valid_move_actions(self, configuration: GridNode) -> Set[RailEnvNextAction]:
+        return [RailEnvNextAction(a, s) for s in self.g.successors(configuration) for a in self.g.get_edge_data(configuration, s)["action"]]
+
     def get_transitions(self, configuration: GridNode) -> Tuple[bool]:
         return True,
 
@@ -187,3 +191,15 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             return None
         r, c, d = ast.literal_eval(s)
         return ((r, c), d)
+
+    @lru_cache
+    def get_successor_configurations(self, configuration: GridNode) -> Set[GridNode]:
+        return set(self.g.successors(configuration))
+
+    @lru_cache
+    def get_predecessor_configurations(self, configuration: GridNode) -> Set[GridNode]:
+        return set(self.g.predecessors(configuration))
+
+    @lru_cache
+    def is_valid_configuration(self, configuration: GridNode) -> bool:
+        return configuration in self.g.nodes

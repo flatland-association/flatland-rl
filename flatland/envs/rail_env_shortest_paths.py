@@ -5,7 +5,7 @@ import numpy as np
 
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
-from flatland.envs.distance_map import DistanceMap
+from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.utils.ordered_set import OrderedSet
 

@@ -1,27 +1,15 @@
 import ast
-from typing import List, Any, Optional, Dict
+from typing import List
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env_observation_builder import ObservationBuilder, DummyObservationBuilder
 from flatland.core.graph.graph_resource_map import GraphResourceMap
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.distance_map import AbstractDistanceMap
+from flatland.envs.graph.distance_map import GraphDistanceMap
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.rail_env import RailEnv, AbstractRailEnv
-from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import Rewards
 from flatland.envs.timetable_utils import TimetableUtils
-
-
-class GraphDistanceMap(AbstractDistanceMap[GraphTransitionMap, Any]):
-    # TODO implement/generalize distance map for graph
-    def _compute(self, agents: List[EnvAgent], rail: GraphTransitionMap):
-        pass
-
-    def get_shortest_paths(self, max_depth: Optional[int] = None, agent_handle: Optional[int] = None) -> Dict[int, Optional[List[Waypoint]]]:
-        if agent_handle is not None:
-            return {agent_handle: []}
-        return {a.handle: [] for a in self.agents}
 
 
 class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
