@@ -21,7 +21,7 @@ References:
 import ast
 from collections import defaultdict
 from functools import lru_cache
-from typing import Tuple
+from typing import Tuple, Optional
 
 import networkx as nx
 
@@ -130,13 +130,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
     def check_action_on_agent(self, action: RailEnvActions, configuration: GridNode) -> Tuple[bool, GridNode, bool, RailEnvActions]:
-        n = configuration
-        # TODO temporary workaround as long as step function relies on tuples
-        convert = False
-        if type(n) == tuple:
-            convert = True
-            n = f"{n[0][0], n[0][1], n[1]}"
-        succs = list(self.g.successors(n))
+        succs = list(self.g.successors(configuration))
         assert 1 <= len(succs) <= 2
 
         graph_action = None
@@ -144,24 +138,24 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         if len(succs) == 1:
             succ = list(succs)[0]
             new_configuration = succ
-            graph_action = self.g.get_edge_data(n, succ)["action"]
+            graph_action = self.g.get_edge_data(configuration, succ)["action"]
         else:
             if action == RailEnvActions.MOVE_LEFT:
                 for v in succs:
-                    if self.g.get_edge_data(n, v)["action"] == "L":
+                    if self.g.get_edge_data(configuration, v)["action"] == "L":
                         new_configuration = v
                         graph_action = "L"
                         break
 
             elif action == RailEnvActions.MOVE_RIGHT:
                 for v in succs:
-                    if self.g.get_edge_data(n, v)["action"] == "R":
+                    if self.g.get_edge_data(configuration, v)["action"] == "R":
                         new_configuration = v
                         graph_action = "R"
                         break
             if new_configuration is None:
                 for v in succs:
-                    if self.g.get_edge_data(n, v)["action"] == "F":
+                    if self.g.get_edge_data(configuration, v)["action"] == "F":
                         new_configuration = v
                         graph_action = "F"
                         break
@@ -176,9 +170,6 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             preprocessed_action = RailEnvActions.MOVE_FORWARD
 
         new_cell_valid = new_configuration in self.g.nodes
-        if convert:
-            new_configuration = ast.literal_eval(new_configuration)
-            new_configuration = (new_configuration[0], new_configuration[1]), new_configuration[2]
         return new_cell_valid, new_configuration, transition_valid, preprocessed_action
 
     def get_transitions(self, configuration: GridNode) -> Tuple[bool]:
@@ -187,4 +178,12 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
     @staticmethod
     @lru_cache
     def grid_configuration_to_graph_configuration(r: int, c: int, d: int) -> str:
-        return f"{r, c, d}"
+        return f"{int(r), int(c), int(d)}"
+
+    @staticmethod
+    @lru_cache
+    def graph_configuration_to_grid_configuration(s: str) -> Optional[Tuple[Tuple[int, int], int]]:
+        if s is None:
+            return None
+        r, c, d = ast.literal_eval(s)
+        return ((r, c), d)

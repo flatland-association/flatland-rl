@@ -1,4 +1,3 @@
-from flatland.envs.fast_methods import fast_position_equal
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 
 
@@ -131,9 +130,9 @@ class TrainStateMachine:
         self.st_signals = StateTransitionSignals()
         self.clear_next_state()
 
-    def update_if_reached(self, position, target):
+    def update_if_reached(self, configuration, targets):
         # Need to do this hacky fix for now, state machine needed speed related states for proper handling
-        self.st_signals.target_reached = fast_position_equal(position, target)
+        self.st_signals.target_reached = configuration in targets
         if self.st_signals.target_reached:
             self.next_state = TrainState.DONE
             self.set_state(self.next_state)
@@ -176,17 +175,17 @@ class TrainStateMachine:
     def set_transition_signals(self, state_transition_signals):
         self.st_signals = state_transition_signals
 
-    def state_position_sync_check(self, position, i_agent, remove_agents_at_target):
+    def state_position_sync_check(self, configuration, i_agent, remove_agents_at_target):
         """ Check for whether on map and off map states are matching with position being None """
-        if self.state.is_on_map_state() and position is None:
+        if self.state.is_on_map_state() and configuration is None:
             raise ValueError("Agent ID {} Agent State {} is on map Agent Position {} if off map ".format(
-                i_agent, str(self.state), str(position)))
-        elif self.state.is_off_map_state() and position is not None:
+                i_agent, str(self.state), str(configuration)))
+        elif self.state.is_off_map_state() and configuration is not None:
             raise ValueError("Agent ID {} Agent State {} is off map Agent Position {} if on map ".format(
-                i_agent, str(self.state), str(position)))
-        elif self.state == TrainState.DONE and remove_agents_at_target and position is not None:
+                i_agent, str(self.state), str(configuration)))
+        elif self.state == TrainState.DONE and remove_agents_at_target and configuration is not None:
             raise ValueError("Agent ID {} Agent State {} is not None Agent Position {} if remove_agents_at_target".format(
-                i_agent, str(self.state), str(position)))
+                i_agent, str(self.state), str(configuration)))
 
     def __repr__(self):
         return (

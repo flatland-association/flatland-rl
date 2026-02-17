@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import EnvAgent
@@ -256,10 +257,12 @@ def test_dead_end():
 
     # We try the configuration in the 4 directions:
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_configuration=((0, 2), 1), current_configuration=(None, 1), target=(0, 0), moving=False)]
+    rail_env.agents = [
+        EnvAgent(initial_configuration=((0, 2), 1), current_configuration=(None, 1), targets={((0, 0), d) for d in Grid4TransitionsEnum}, moving=False)]
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_configuration=((0, 2), 3), current_configuration=(None, 3), target=(0, 4), moving=False)]
+    rail_env.agents = [
+        EnvAgent(initial_configuration=((0, 2), 3), current_configuration=(None, 3), targets={((0, 4), d) for d in Grid4TransitionsEnum}, moving=False)]
 
     # In the vertical configuration:
     rail_map = np.array(
@@ -291,10 +294,12 @@ def test_dead_end():
                        obs_builder_object=GlobalObsForRailEnv())
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_configuration=((2, 0), 2), current_configuration=(None, 2), target=(0, 0), moving=False)]
+    rail_env.agents = [
+        EnvAgent(initial_configuration=((2, 0), 2), current_configuration=(None, 2), targets={((0, 0), d) for d in Grid4TransitionsEnum}, moving=False)]
 
     rail_env.reset()
-    rail_env.agents = [EnvAgent(initial_configuration=((2, 0), 0), current_configuration=(None, 0), target=(4, 0), moving=False)]
+    rail_env.agents = [
+        EnvAgent(initial_configuration=((2, 0), 0), current_configuration=(None, 0), targets={((4, 0), d) for d in Grid4TransitionsEnum}, moving=False)]
 
     # TODO make assertions
 
