@@ -60,5 +60,5 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[T
 
     def _get_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int):
         distance_map = self.get()
-        position, direction = configuration
-        return distance_map[target_nr, *position, direction]
+        (r, c), direction = configuration
+        return distance_map[target_nr, r, c, direction]
