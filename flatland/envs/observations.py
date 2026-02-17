@@ -135,24 +135,24 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         Each node information is composed of 9 features:
 
         #1:
-            if own target lies on the explored branch the current distance from the agent in number of cells is stored.
+            if own target lies on the explored branch the current distance from the agent in number of cells is stored
 
         #2:
             if another agents target is detected the distance in number of cells from the agents current location\
             is stored
 
         #3:
-            if another agent is detected the distance in number of cells from current agent position is stored.
+            if another agent is detected, the distance in number of cells from current agent position is stored
 
         #4:
             possible conflict detected
-            tot_dist = Other agent predicts to pass along this cell at the same time as the agent, we store the \
-             distance in number of cells from current agent position
+            tot_dist = Other agent predicts to pass along this cell at the same time as the agent,
+             the distance in number of cells from current agent position is stored
 
-            0 = No other agent reserve the same cell at similar time
+            0 = No other agent reserves the same cell at the same time
 
         #5:
-            if an not usable switch (for agent) is detected we store the distance.
+            if an unusable switch (for agent) is detected we store the distance
 
         #6:
             This feature stores the distance in number of cells to the next branching  (current node)
