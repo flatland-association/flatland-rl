@@ -18,6 +18,7 @@ References:
 - Egli, Adrian. FlatlandGraphBuilder. https://github.com/aiAdrian/flatland_railway_extension/blob/e2b15bdd851ad32fb26c1a53f04621a3ca38fc00/flatland_railway_extension/FlatlandGraphBuilder.py
 - Nygren, E., Eichenberger, Ch., Frejinger, E. Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
 """
+import ast
 from collections import defaultdict
 from typing import Tuple
 
@@ -30,6 +31,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 
 GridNode = Tuple[Tuple[int, int], int]
 GridEdge = Tuple[GridNode, GridNode]
+
 
 class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]):
     """
@@ -92,7 +94,20 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                     for new_direction in range(4):
                         if possible_transitions[new_direction]:
                             new_position = get_new_position((r, c), new_direction)
-                            g.add_edge((r, c, d), (*new_position, new_direction))
+                            if (new_direction - d) % 4 == 0:
+                                action = "F"
+                            elif (new_direction - d) % 4 == 1:
+                                action = "R"
+                            elif (new_direction - d) % 4 == (-1 % 4):
+                                action = "L"
+                            elif (new_direction - d) % 4 == 2:
+                                # dead-end
+                                action = "F"
+                            else:
+                                raise
+                            r2, c2 = new_position
+                            d2 = new_direction
+                            g.add_edge(f"{r, c, d}", f"{r2, c2, d2}", action=action)
         return g
 
     @staticmethod
@@ -111,54 +126,57 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         """
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
-    def check_action_on_agent(self, action: RailEnvActions, configuration: GridNode) -> Tuple[
-        bool, GridNode, bool, RailEnvActions]:
-        position, direction = configuration
-        new_position = None
-        new_direction, transition_valid, preprocessed_action = direction, True, action
-
-        n = (*position, direction)
+    def check_action_on_agent(self, action: RailEnvActions, configuration: GridNode) -> Tuple[bool, GridNode, bool, RailEnvActions]:
+        n = configuration
+        # TODO temporary workaround as long as step function relies on tuples
+        convert = False
+        if type(n) == tuple:
+            convert = True
+            n = f"{n[0][0], n[0][1], n[1]}"
         succs = list(self.g.successors(n))
         assert 1 <= len(succs) <= 2
 
+        graph_action = None
+        new_configuration = None
         if len(succs) == 1:
             succ = list(succs)[0]
-            r, c, d = succ
-            new_position = r, c
-            new_direction = d
+            new_configuration = succ
+            graph_action = self.g.get_edge_data(n, succ)["action"]
         else:
             if action == RailEnvActions.MOVE_LEFT:
-                # find
-                new_direction = (direction - 1) % 4
-                for r, c, d in succs:
-                    if d == new_direction:
-                        new_position = r, c
+                for v in succs:
+                    if self.g.get_edge_data(n, v)["action"] == "L":
+                        new_configuration = v
+                        graph_action = "L"
                         break
 
             elif action == RailEnvActions.MOVE_RIGHT:
-                # find
-                new_direction = (direction + 1) % 4
-                for r, c, d in succs:
-                    if d == new_direction:
-                        new_position = r, c
+                for v in succs:
+                    if self.g.get_edge_data(n, v)["action"] == "R":
+                        new_configuration = v
+                        graph_action = "R"
                         break
-            if new_position is None:
-                new_direction = direction
-                for r, c, d in succs:
-                    if d == new_direction:
-                        new_position = r, c
+            if new_configuration is None:
+                for v in succs:
+                    if self.g.get_edge_data(n, v)["action"] == "F":
+                        new_configuration = v
+                        graph_action = "F"
                         break
-        assert new_position is not None
+        assert graph_action is not None
         transition_valid = True
-        if action == RailEnvActions.MOVE_LEFT and new_direction != ((direction - 1) % 4):
+        preprocessed_action = action
+        if action == RailEnvActions.MOVE_LEFT and graph_action != "L":
             transition_valid = False
             preprocessed_action = RailEnvActions.MOVE_FORWARD
-        elif action == RailEnvActions.MOVE_RIGHT and new_direction != ((direction + 1) % 4):
+        elif action == RailEnvActions.MOVE_RIGHT and graph_action != "R":
             transition_valid = False
             preprocessed_action = RailEnvActions.MOVE_FORWARD
 
-        new_cell_valid = (*new_position, new_direction) in self.g.nodes
-        return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action
+        new_cell_valid = new_configuration in self.g.nodes
+        if convert:
+            new_configuration = ast.literal_eval(new_configuration)
+            new_configuration = (new_configuration[0], new_configuration[1]), new_configuration[2]
+        return new_cell_valid, new_configuration, transition_valid, preprocessed_action
 
     def get_transitions(self, configuration: GridNode) -> Tuple[bool]:
         return True,

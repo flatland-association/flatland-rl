@@ -31,9 +31,9 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
     # set the initial position
     agent_0 = env.agents[0]
     agent_0.initial_position = (3, 0)  # one cell ahead of diamond crossing facing east
+    agent_0.initial_direction = 3  # east
     agent_0.position = (3, 0)  # one cell ahead of diamond crossing facing east
     agent_0.direction = 3  # east
-    agent_0.initial_direction = 3  # east
     agent_0.target = (3, 9)  # east dead-end
     agent_0.moving = True
     agent_0.latest_arrival = 999
@@ -41,9 +41,9 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
 
     agent_1 = env.agents[1]
     agent_1.initial_position = (1, 2)  # one cell ahead of diamond crossing facing south
+    agent_1.initial_direction = 2  # south
     agent_1.position = (1, 2)  # one cell ahead of diamond crossing facing south
     agent_1.direction = 2  # south
-    agent_1.initial_direction = 2  # south
     agent_1.target = (6, 2)  # south dead-end
     agent_1.moving = True
     agent_1.latest_arrival = 999
@@ -79,12 +79,12 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
         [Waypoint(position=(3, 3), direction=1), Waypoint(position=(3, 2), direction=2)],
         [Waypoint(position=(3, 4), direction=1), Waypoint(position=(4, 2), direction=2)],
         [Waypoint(position=(3, 5), direction=1), Waypoint(position=(5, 2), direction=2)],
-        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(3, 7), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(3, 8), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(0, 0), direction=1), Waypoint(position=(0, 0), direction=2)]
+        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 7), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 8), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(None, None), direction=None), Waypoint(position=(None, None), direction=None)]
     ]
-    assert expected == waypoints, waypoints
+    assert waypoints == expected, waypoints
 
 
 def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
@@ -124,7 +124,7 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)
 
-    env.level_free_positions.add((3, 2))
+    env.resource_map.level_free_positions.add((3, 2))
 
     env.distance_map._compute(env.agents, env.rail)
     done = False
@@ -155,13 +155,13 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
         [Waypoint(position=(3, 2), direction=1), Waypoint(position=(3, 2), direction=2)],
         [Waypoint(position=(3, 3), direction=1), Waypoint(position=(4, 2), direction=2)],
         [Waypoint(position=(3, 4), direction=1), Waypoint(position=(5, 2), direction=2)],
-        [Waypoint(position=(3, 5), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(3, 7), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(3, 8), direction=1), Waypoint(position=(0, 0), direction=2)],
-        [Waypoint(position=(0, 0), direction=1), Waypoint(position=(0, 0), direction=2)]
+        [Waypoint(position=(3, 5), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 7), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(3, 8), direction=1), Waypoint(position=(None, None), direction=None)],
+        [Waypoint(position=(None, None), direction=None), Waypoint(position=(None, None), direction=None)]
     ]
-    assert expected == waypoints, waypoints
+    assert waypoints == expected, waypoints
 
 
 def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = False):
@@ -200,7 +200,7 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)
 
-    env.level_free_positions.add((3, 2))
+    env.resource_map.level_free_positions.add((3, 2))
 
     env.distance_map._compute(env.agents, env.rail)
     done = False

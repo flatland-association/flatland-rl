@@ -180,8 +180,8 @@ class DistanceMap:
         Parameters
         ----------
         self : reference to the distance_map
-        max_depth : max path length, if the shortest path is longer, it will be cutted
-        agent_handle : if set, the shortest for agent.handle will be returned , otherwise for all agents
+        max_depth : max path length, if the shortest path is longer, it will be cut
+        agent_handle : if set, the shortest path for agent.handle will be returned, otherwise for all agents
 
         Returns
         -------
@@ -193,14 +193,17 @@ class DistanceMap:
         def _shortest_path_for_agent(agent):
             if agent.state.is_off_map_state():
                 position = agent.initial_position
+                direction = agent.initial_direction
             elif agent.state.is_on_map_state():
                 position = agent.position
+                direction = agent.direction
             elif agent.state == TrainState.DONE:
                 position = agent.target
+                direction = agent.direction
             else:
                 shortest_paths[agent.handle] = None
                 return
-            direction = agent.direction
+
             shortest_paths[agent.handle] = []
             distance = math.inf
             depth = 0

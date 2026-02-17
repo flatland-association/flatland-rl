@@ -135,24 +135,24 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         Each node information is composed of 9 features:
 
         #1:
-            if own target lies on the explored branch the current distance from the agent in number of cells is stored.
+            if own target lies on the explored branch the current distance from the agent in number of cells is stored
 
         #2:
-            if another agents target is detected the distance in number of cells from the agents current location\
+            if another agents target is detected, the distance in number of cells from current agent position
             is stored
 
         #3:
-            if another agent is detected the distance in number of cells from current agent position is stored.
+            if another agent is detected, the distance in number of cells from current agent position is stored
 
         #4:
             possible conflict detected
-            tot_dist = Other agent predicts to pass along this cell at the same time as the agent, we store the \
-             distance in number of cells from current agent position
+            tot_dist = Other agent predicts to pass along this cell at the same time as the agent,
+             the distance in number of cells from current agent position is stored
 
-            0 = No other agent reserve the same cell at similar time
+            0 = No other agent reserves the same cell at the same time
 
         #5:
-            if an not usable switch (for agent) is detected we store the distance.
+            if an unusable switch (for agent) is detected we store the distance
 
         #6:
             This feature stores the distance in number of cells to the next branching  (current node)
@@ -198,14 +198,17 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
 
         if agent.state.is_off_map_state():
             agent_virtual_position = agent.initial_position
+            agent_virtual_direction = agent.initial_direction
         elif agent.state.is_on_map_state():
             agent_virtual_position = agent.position
+            agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
             agent_virtual_position = agent.target
+            agent_virtual_direction = agent.direction
         else:
             return None
 
-        possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent.direction))
+        possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent_virtual_direction))
         num_transitions = fast_count_nonzero(possible_transitions)
 
         # Here information about the agent itself is stored
@@ -214,9 +217,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         root_node_observation = Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
                                      dist_other_agent_encountered=0, dist_potential_conflict=0,
                                      dist_unusable_switch=0, dist_to_next_branch=0,
-                                     dist_min_to_target=distance_map[
-                                         (handle, *agent_virtual_position,
-                                          agent.direction)],
+                                     dist_min_to_target=distance_map[(handle, *agent_virtual_position, agent_virtual_direction)],
                                      num_agents_same_direction=0, num_agents_opposite_direction=0,
                                      num_agents_malfunctioning=agent.malfunction_handler.malfunction_down_counter,
                                      speed_min_fractional=agent.speed_counter.speed,
@@ -229,7 +230,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         # Start from the current orientation, and see which transitions are available;
         # organize them as [left, forward, right, back], relative to the current orientation
         # If only one transition is possible, the tree is oriented with this transition as the forward branch.
-        orientation = agent.direction
+        orientation = agent_virtual_direction
 
         if num_transitions == 1:
             orientation = fast_argmax(possible_transitions)
@@ -569,10 +570,13 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
         agent = self.env.agents[handle]
         if agent.state.is_off_map_state():
             agent_virtual_position = agent.initial_position
+            agent_virtual_direction = agent.initial_direction
         elif agent.state.is_on_map_state():
             agent_virtual_position = agent.position
+            agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
             agent_virtual_position = agent.target
+            agent_virtual_direction = agent.direction
         else:
             return None
 
@@ -581,7 +585,7 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
 
         obs_agents_state[:, :, 4] = 0
 
-        obs_agents_state[agent_virtual_position][0] = agent.direction
+        obs_agents_state[agent_virtual_position][0] = agent_virtual_direction
         obs_targets[agent.target][0] = 1
 
         for i in range(len(self.env.agents)):

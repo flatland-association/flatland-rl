@@ -1487,7 +1487,7 @@ def test_sparse_generator_with_level_free_03():
                   number_of_agents=1,
                   random_seed=1)
     env.reset()
-    assert env.level_free_positions == set()
+    assert env.resource_map.level_free_positions == set()
 
 
 def test_sparse_generator_with_level_free_04():
@@ -1511,7 +1511,7 @@ def test_sparse_generator_with_level_free_04():
                   number_of_agents=1,
                   random_seed=1)
     env.reset()
-    assert env.level_free_positions == {(12, 20)}
+    assert env.resource_map.level_free_positions == {(12, 20)}
 
 
 def test_sparse_generator_with_level_free_08():
@@ -1535,7 +1535,7 @@ def test_sparse_generator_with_level_free_08():
                   number_of_agents=1,
                   random_seed=1)
     env.reset()
-    assert env.level_free_positions == {(12, 20)}
+    assert env.resource_map.level_free_positions == {(12, 20)}
 
 
 def test_sparse_generator_with_level_free_09():
@@ -1559,7 +1559,7 @@ def test_sparse_generator_with_level_free_09():
                   number_of_agents=1,
                   random_seed=1)
     env.reset()
-    assert env.level_free_positions == {(12, 20), (4, 18)}
+    assert env.resource_map.level_free_positions == {(12, 20), (4, 18)}
 
 
 def test_sparse_generator_with_level_free_10():
@@ -1583,7 +1583,7 @@ def test_sparse_generator_with_level_free_10():
                   number_of_agents=1,
                   random_seed=1)
     env.reset()
-    assert env.level_free_positions == {(4, 18), (12, 20)}
+    assert env.resource_map.level_free_positions == {(4, 18), (12, 20)}
 
 
 def main():

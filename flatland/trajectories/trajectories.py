@@ -143,7 +143,7 @@ class Trajectory:
         if not os.path.exists(f):
             return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'position'])
         df = pd.read_csv(f, sep='\t')
-        df["position"] = df["position"].map(ast.literal_eval).map(lambda p: (p[0], int(p[1])))
+        df["position"] = df["position"].map(ast.literal_eval).map(lambda p: (p[0], int(p[1]) if p[1] is not None else None))
         if episode_only:
             return df[df['episode_id'] == self.ep_id]
         return df
@@ -175,7 +175,7 @@ class Trajectory:
         """Store pd df with all trains' positions for all episodes."""
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
         Path(f).parent.mkdir(parents=True, exist_ok=True)
-        df["position"] = df["position"].map(lambda p: (p[0], int(p[1])))
+        df["position"] = df["position"].map(lambda p: (p[0], int(p[1]) if p[1] is not None else None))
         df.to_csv(f, sep='\t', index=False)
 
     def _write_actions(self, df: pd.DataFrame):
