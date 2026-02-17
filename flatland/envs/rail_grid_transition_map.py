@@ -183,7 +183,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         _, new_configuration, _, preprocessed_action, action_valid = self._check_action_on_agent(action, configuration)
         if action_valid and self.is_valid_configuration(new_configuration):
             new_position, new_direction = new_configuration
-            # TODO revise design: allow acceleration in turns? dis-allow in dead-ends?
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: allow acceleration in turns? dis-allow in dead-ends?
             straight = new_direction % 2 == direction % 2
             return new_configuration, straight
         else:

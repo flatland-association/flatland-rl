@@ -70,7 +70,7 @@ ConfigurationType = TypeVar('ConfigurationType')
 @attrs
 class EnvAgent(Generic[ConfigurationType]):
     # backwards compatibility
-    # TODO split grid special cases from general implementation
+    # TODO https://github.com/flatland-association/flatland-rl/issues/366 split grid special cases from general implementation
     @property
     def initial_position(self):
         return self.initial_configuration[0]
@@ -347,7 +347,7 @@ class EnvAgent(Generic[ConfigurationType]):
     @classmethod
     def apply_timetable(cls, agents: List["EnvAgent"], timetable: Timetable) -> List["EnvAgent"]:
         for agent_i, agent in enumerate(agents):
-            # TODO revise design: should we set state to READY_TO_DEPART if earliest_departure == 0? See `test_known_flatland_bugs.test_earliest_departure_zero_bug`.
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: should we set state to READY_TO_DEPART if earliest_departure == 0? See `test_known_flatland_bugs.test_earliest_departure_zero_bug`.
             agent.earliest_departure = timetable.earliest_departures[agent_i][0]
             agent.latest_arrival = timetable.latest_arrivals[agent_i][-1]
             agent.waypoints_earliest_departure = timetable.earliest_departures[agent_i]

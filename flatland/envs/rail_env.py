@@ -195,7 +195,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
         self.motion_check = ac.MotionCheck()
 
-        # TODO bad design smell - resource map is not persisted, in particular level_free_positions is not persisted, only rail!
+        # TODO https://github.com/flatland-association/flatland-rl/issues/242 bad design smell - resource map is not persisted, in particular level_free_positions is not persisted, only rail!
         self.resource_map: UnderlyingResourceMapType = self._extract_resource_map_from_optionals({})
 
         if rewards is None:
@@ -467,7 +467,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 new_configuration = initial_configuration
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and action_valid and (
                 movement_action_given or stop_action_given):
-                # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_configuration = initial_configuration
             elif state.is_on_map_state():
                 new_configuration = current_or_initial_configuration
@@ -563,7 +563,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
                 agent.current_configuration = initial_configuration
 
-            # TODO revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
                 agent.speed_counter.step(speed=0)
 
@@ -583,7 +583,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             )
 
             # update malfunction counter
-            # TODO revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
             agent.malfunction_handler.update_counter()
 
             # Off map or on map state and position should match

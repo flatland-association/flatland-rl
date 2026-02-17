@@ -160,7 +160,7 @@ class DefaultRewards(Rewards[float]):
             # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
             # - if braking, reduced speed
             # - if not braking, still full speed
-            # TODO revise design, should we penalize invalid actions upon symmetric switch?
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design, should we penalize invalid actions upon symmetric switch?
             # - if invalid action, speed set to 0
             reward += -1 * agent_transition_data.speed * self.crash_penalty_factor
 
@@ -246,7 +246,7 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
         float, float, float]:
         default_reward = super().step_reward(agent=agent, agent_transition_data=agent_transition_data, distance_map=distance_map, elapsed_steps=elapsed_steps)
 
-        # TODO revise design: speed_counter currently is not set to 0 during malfunctions.
+        # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: speed_counter currently is not set to 0 during malfunctions.
         # N.B. enforces penalization before/after malfunction
         current_speed = agent.speed_counter.speed if agent.state == TrainState.MOVING else 0
 

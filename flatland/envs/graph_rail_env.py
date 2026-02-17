@@ -35,7 +35,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             line_generator=lambda *args, **kwargs: line,
             timetable_generator=lambda *arg, **kwargs: timetable,
             observation_builder=observation_builder,
-            # TODO generalize malfunction generator injection
+            # TODO https://github.com/flatland-association/flatland-rl/issues/242 generalize malfunction generator injection
             # N.B. ParamMalfunctionGen is not stateless due to cached random nums, see https://github.com/flatland-association/flatland-rl/issues/364.
             malfunction_generator=ParamMalfunctionGen(rail_env.malfunction_generator.MFP),
         )

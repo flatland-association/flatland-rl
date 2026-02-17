@@ -35,7 +35,7 @@ def test_graph_transition_map_from_with_random_policy(seed):
                     grid_env.rail.get_transitions(((r, c), d))) == 2:
                     assert RailEnvActions.MOVE_FORWARD in graph_env.rail.g.nodes[u]["prohibited_actions"]
                     assert RailEnvActions.DO_NOTHING in graph_env.rail.g.nodes[u]["prohibited_actions"]
-                    # TODO revise design: no braking on symmetric switches?
+                    # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: no braking on symmetric switches?
                     assert RailEnvActions.STOP_MOVING in graph_env.rail.g.nodes[u]["prohibited_actions"]
                 else:
                     assert RailEnvActions.MOVE_FORWARD not in graph_env.rail.g.nodes[u]["prohibited_actions"]
