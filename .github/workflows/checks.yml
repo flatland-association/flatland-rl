@@ -44,7 +44,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   name: Inspect disk
                 run: |
@@ -94,7 +94,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   name: Inspect disk
                 run: |
@@ -155,7 +155,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   name: Inspect disk
                 run: |
@@ -224,7 +224,7 @@ jobs:
             matrix:
                 python-version: [
                   # "3.10", # commented out as failing too often
-                    "3.11", "3.12", "3.13" ]
+                    "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Install ffmpeg
@@ -269,7 +269,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -311,7 +311,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -542,7 +542,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -591,7 +591,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
