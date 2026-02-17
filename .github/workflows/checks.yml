@@ -3,6 +3,8 @@ name: Checks
 env:
     # DEPENDENCY SWITCH:
     flatland-baselines-ref: main
+    flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip"
+    flatland-scenarios-olten-partially-closed-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip"
 
 on:
     workflow_dispatch:
@@ -104,7 +106,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Install tox
@@ -150,7 +152,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Clone flatland-baselines
@@ -185,7 +187,7 @@ jobs:
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Start Redis
-                uses: supercharge/redis-github-action@1.7.0
+                uses: supercharge/redis-github-action@1.8.1
                 with:
                     redis-version: 7.4.2
                     redis-port: 6379
@@ -212,7 +214,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip" -O OLTEN_PARTIALLY_CLOSED_v2.zip
+                    wget "${{ env.flatland-scenarios-olten-partially-closed-url }}" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
                     unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
             -   name: Install tox
@@ -236,7 +238,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip" -O OLTEN_PARTIALLY_CLOSED_v2.zip
+                    wget "${{ env.flatland-scenarios-olten-partially-closed-url }}" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
                     unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
             -   name: Install tox
@@ -273,7 +275,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}
@@ -304,7 +306,7 @@ jobs:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
                 run: |
-                    wget "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
+                    wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}

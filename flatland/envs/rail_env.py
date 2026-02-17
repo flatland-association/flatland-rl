@@ -114,15 +114,21 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         number_of_agents : int
             Number of agents to spawn on the map. Potentially in the future,
             a range of number of agents to sample from.
-        obs_builder_object: ObservationBuilder object
+        obs_builder_object: ObservationBuilder
             ObservationBuilder-derived object that takes builds observation
             vectors for each agent.
+        malfunction_generator_and_process_data : Tuple["MalfunctionGenerator","MalfunctionProcessData"]
+            Deprecated. Use `malfunction_generator` option instead.
+        malfunction_generator: "MalfunctionGenerator"
+            Convenience option to inject effects generator. Defaults to `NoMalfunctionGen`.
         remove_agents_at_target : bool
             If remove_agents_at_target is set to true then the agents will be removed by placing to
             RailEnv.DEPOT_POSITION when the agent has reached its target position.
         random_seed : int or None
             if None, then its ignored, else the random generators are seeded with this number to ensure
             that stochastic operations are replicable across multiple operations
+        timetable_generator
+            Timetable generator to be used in `reset()`. Defaults to "ttg.timetable_generator".
         acceleration_delta : float
             Determines how much speed is increased by MOVE_FORWARD action up to max_speed set by train's Line (sampled from `speed_ratios` by `LineGenerator`).
             As speed is between 0.0 and 1.0, acceleration_delta=1.0 restores to previous constant speed behaviour
@@ -134,6 +140,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
         effects_generator : Optional[EffectsGenerator["RailEnv"]]
             The effects generator that can modify the env at the env of env reset, at the beginning of the env step and at the end of the env step.
+        distance_map: AbstractDistanceMap
+            Use pre-computed distance map. Defaults to new distance map.
         """
         super().__init__()
 
