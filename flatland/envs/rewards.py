@@ -158,7 +158,7 @@ class DefaultRewards(Rewards[float]):
 
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED:
             # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
-            # - if braking, still reduced speed
+            # - if braking, reduced speed
             # - if not braking, still full speed
             # TODO revise design, should we penalize invalid actions upon symmetric switch?
             # - if invalid action, speed set to 0

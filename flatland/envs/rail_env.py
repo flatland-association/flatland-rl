@@ -480,7 +480,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 valid_position_direction = any(self.rail.get_transitions(new_configuration))
                 if not valid_position_direction:
                     warnings.warn(f"{new_configuration} not valid on the grid."
-                                  f" Coming from {current_or_initial_configuration} with raw action {raw_action} and  action valid {action_valid}. {self._infrastructure_representation(agent)}")
+                                  f" Coming from {current_or_initial_configuration} with raw action {raw_action} and action valid {action_valid}. {self._infrastructure_representation(agent)}")
                 # fails if initial position has invalid direction or if the grid is not closed
                 # assert valid_position_direction
 
@@ -501,7 +501,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             # Movement allowed if both
             # - action leading to valid next cell
-            # - inside cell or at end of cell and no conflict with other trains and
+            # - inside cell or at end of cell and no conflict with other trains
             self.temp_transition_data[
                 i_agent].state_transition_signal.movement_allowed = action_valid  # action leading to valid next cell for now - remainder we only know after motion check!
             # New desired speed zero?
