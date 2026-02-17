@@ -161,7 +161,7 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
         [Waypoint(position=(3, 8), direction=1), Waypoint(position=(None, None), direction=None)],
         [Waypoint(position=(None, None), direction=None), Waypoint(position=(None, None), direction=None)]
     ]
-    assert expected == waypoints, waypoints
+    assert waypoints == expected, waypoints
 
 
 def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = False):
