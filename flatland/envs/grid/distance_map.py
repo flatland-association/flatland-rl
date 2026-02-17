@@ -29,7 +29,7 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[T
     def _compute(self, agents: List[EnvAgent], rail: RailGridTransitionMap):
         """
         This function computes the distance maps for each unique target. Thus, if several targets are the same
-        we only compute the distance for them once and copy to all targets with same position.
+        we only compute the distance for them once and copy to all targets with the same position.
         :param agents: All the agents in the environment, independent of their current status
         :param rail: The rail transition map
 
@@ -55,10 +55,10 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[T
             computed_targets.append(agent.target)
 
     def _set_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
-        position, direction = configuration
-        self.distance_map[target_nr, *position, direction] = new_distance
+        (r, c), direction = configuration
+        self.distance_map[target_nr, r, c, direction] = new_distance
 
     def _get_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int):
         distance_map = self.get()
-        position, direction = configuration
-        return distance_map[target_nr, *position, direction]
+        (r, c), direction = configuration
+        return distance_map[target_nr, r, c, direction]
