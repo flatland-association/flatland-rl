@@ -20,6 +20,7 @@ References:
 """
 import ast
 from collections import defaultdict
+from functools import lru_cache
 from typing import Tuple
 
 import networkx as nx
@@ -107,7 +108,9 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                                 raise
                             r2, c2 = new_position
                             d2 = new_direction
-                            g.add_edge(f"{r, c, d}", f"{r2, c2, d2}", action=action)
+                            g.add_edge(
+                                GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d),
+                                GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2), action=action)
         return g
 
     @staticmethod
@@ -180,3 +183,8 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
 
     def get_transitions(self, configuration: GridNode) -> Tuple[bool]:
         return True,
+
+    @staticmethod
+    @lru_cache
+    def grid_configuration_to_graph_configuration(r: int, c: int, d: int) -> str:
+        return f"{r, c, d}"

@@ -1,20 +1,14 @@
-from typing import Set
+from typing import Dict, Optional
 
-from flatland.core.grid.grid_utils import Vector2D
 from flatland.core.resource_map import ResourceMap
 
 
 class GraphResourceMap(ResourceMap[str, str]):
-    def __init__(self, level_free_positions: Set[Vector2D] = None):
-        self.level_free_positions = level_free_positions
-        if self.level_free_positions is None:
-            self.level_free_positions = set()
+    def __init__(self, _resource_map: Dict[str, str]):
+        self._resource_map = _resource_map
 
-    def get_resource(self, configuration):
-        if configuration[0] is None:
+    def get_resource(self, configuration: Optional[str]) -> Optional[str]:
+        # TODO configuration None only
+        if configuration is None or configuration == (None, None):
             return None
-
-        position, direction = configuration
-        if position in self.level_free_positions:
-            return position, direction % 2
-        return str(position)
+        return self._resource_map[configuration]

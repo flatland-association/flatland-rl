@@ -1,17 +1,17 @@
 
-from flatland.utils.editor_interfaces import AbstractController, AbstractModel, AbstractView
-
-from flatland.core.grid.grid4_utils import mirror
-from flatland.envs.persistence import RailEnvPersister
-from flatland.envs.rail_generators import sparse_rail_generator, empty_rail_generator
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.rail_env import RailEnv
-
 import os
 import time
+
 import numpy as np
 from numpy import array
+
+from flatland.core.grid.grid4_utils import mirror
+from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.observations import TreeObsForRailEnv
+from flatland.envs.persistence import RailEnvPersister
+from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_generators import sparse_rail_generator, empty_rail_generator
+from flatland.utils.editor_interfaces import AbstractModel, AbstractView
 
 
 class EditorModel(AbstractModel):
@@ -123,7 +123,7 @@ class EditorModel(AbstractModel):
         # disabled functionality (no longer required)
         if bAddRemove is False:
             return
-        
+
         # This elif means we wait until all the mouse events have been processed (black square drawn)
         # before trying to draw rails.  (We could change this behaviour)
         # Equivalent to waiting for mouse button to be lifted (and a mouse event is necessary:
@@ -416,7 +416,7 @@ class EditorModel(AbstractModel):
             self.view.log(*args, **kwargs)
 
     def debug_event(self, event:dict):
-        
+
         if self.debug_bool:
             lsKeys = "type relative button shift ctrl alt meta".split(" ")
             sMsg = "event "

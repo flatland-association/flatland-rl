@@ -5,7 +5,7 @@ import pickle
 import random
 import warnings
 from functools import lru_cache
-from typing import List, Optional, Dict, Tuple, Any
+from typing import List, Optional, Dict, Tuple, Any, Generic, TypeVar
 
 import numpy as np
 
@@ -14,13 +14,14 @@ from flatland.core.effects_generator import EffectsGenerator, make_multi_effects
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_resource_map import GridResourceMap
+from flatland.core.resource_map import ResourceMap
+from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_generators as mal_gen
-from flatland.envs import persistence
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.distance_map import DistanceMap
+from flatland.envs.distance_map import DistanceMap, AbstractDistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 from flatland.envs.observations import GlobalObsForRailEnv
@@ -31,12 +32,14 @@ from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
-from flatland.utils.rendertools import RenderTool, AgentRenderVariant
+
+UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=TransitionMap)
+UnderlyingResourceMapType = TypeVar('UnderlyingResourceMapType', bound=ResourceMap)
 
 
-class RailEnv(Environment):
+class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, UnderlyingResourceMapType]):
     """
-    RailEnv environment class.
+    AbstractRailEnv environment class.
 
     RailEnv is an environment inspired by a (simplified version of) a rail
     network, in which agents (trains) have to navigate to their target
@@ -77,8 +80,6 @@ class RailEnv(Environment):
     """
 
     def __init__(self,
-                 width,
-                 height,
                  rail_generator: "RailGenerator" = None,
                  line_generator: "LineGenerator" = None,
                  number_of_agents=2,
@@ -87,12 +88,12 @@ class RailEnv(Environment):
                  malfunction_generator: "MalfunctionGenerator" = None,
                  remove_agents_at_target=True,
                  random_seed=None,
-                 record_steps=False,
                  timetable_generator=ttg.timetable_generator,
                  acceleration_delta=1.0,
                  braking_delta=-1.0,
                  rewards: Rewards = None,
-                 effects_generator: EffectsGenerator["RailEnv"] = None
+                 effects_generator: EffectsGenerator["RailEnv"] = None,
+                 distance_map: AbstractDistanceMap = None,
                  ):
         """
         Environment init.
@@ -110,24 +111,24 @@ class RailEnv(Environment):
             The line_generator function is a function that takes the grid, the number of agents and optional hints
             and returns a list of starting positions, targets, initial orientations and speed for all agent handles.
             Implementations can be found in flatland/envs/line_generators.py
-        width : int
-            The width of the rail map. Potentially in the future,
-            a range of widths to sample from.
-        height : int
-            The height of the rail map. Potentially in the future,
-            a range of heights to sample from.
         number_of_agents : int
             Number of agents to spawn on the map. Potentially in the future,
             a range of number of agents to sample from.
-        obs_builder_object: ObservationBuilder object
+        obs_builder_object: ObservationBuilder
             ObservationBuilder-derived object that takes builds observation
             vectors for each agent.
+        malfunction_generator_and_process_data : Tuple["MalfunctionGenerator","MalfunctionProcessData"]
+            Deprecated. Use `malfunction_generator` option instead.
+        malfunction_generator: "MalfunctionGenerator"
+            Convenience option to inject effects generator. Defaults to `NoMalfunctionGen`.
         remove_agents_at_target : bool
             If remove_agents_at_target is set to true then the agents will be removed by placing to
             RailEnv.DEPOT_POSITION when the agent has reached its target position.
         random_seed : int or None
             if None, then its ignored, else the random generators are seeded with this number to ensure
             that stochastic operations are replicable across multiple operations
+        timetable_generator
+            Timetable generator to be used in `reset()`. Defaults to "ttg.timetable_generator".
         acceleration_delta : float
             Determines how much speed is increased by MOVE_FORWARD action up to max_speed set by train's Line (sampled from `speed_ratios` by `LineGenerator`).
             As speed is between 0.0 and 1.0, acceleration_delta=1.0 restores to previous constant speed behaviour
@@ -139,6 +140,8 @@ class RailEnv(Environment):
             The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
         effects_generator : Optional[EffectsGenerator["RailEnv"]]
             The effects generator that can modify the env at the env of env reset, at the beginning of the env step and at the end of the env step.
+        distance_map: AbstractDistanceMap
+            Use pre-computed distance map. Defaults to new distance map.
         """
         super().__init__()
 
@@ -165,9 +168,8 @@ class RailEnv(Environment):
         self.line_generator: "LineGenerator" = line_generator
         self.timetable_generator = timetable_generator
 
+        # TODO typing
         self.rail: Optional[RailGridTransitionMap] = None
-        self.width = width
-        self.height = height
 
         self.remove_agents_at_target = remove_agents_at_target
 
@@ -184,23 +186,17 @@ class RailEnv(Environment):
 
         self.agents: List[EnvAgent] = []
         self.num_resets = 0
-        self.distance_map = DistanceMap(self.agents, self.height, self.width)
+
+        self.dones = None
 
         self.action_space = [5]
 
         self._seed(seed=random_seed)
 
-        self.agent_positions = None
-
-        # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
-        self.record_steps = record_steps  # whether to save timesteps
-        # save timesteps in here: [[[row, col, dir, malfunction],...nAgents], ...nSteps]
-        self.cur_episode = []
-        self.list_actions = []  # save actions in here
-
         self.motion_check = ac.MotionCheck()
 
-        self.resource_map = GridResourceMap()
+        # TODO bad design smell - resource map is not persisted, in particular level_free_positions is not persisted, only rail!
+        self.resource_map: UnderlyingResourceMapType = self._extract_resource_map_from_optionals({})
 
         if rewards is None:
             self.rewards = DefaultRewards()
@@ -216,9 +212,11 @@ class RailEnv(Environment):
         else:
             self.effects_generator = make_multi_effects_generator(effects_generator, mf)
 
-        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None, None, None) for i in range(self.get_num_agents())}
         for i_agent in range(self.get_num_agents()):
             self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
+
+        self.distance_map = distance_map
 
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
@@ -300,49 +298,34 @@ class RailEnv(Environment):
 
         optionals = {}
         if regenerate_rail or self.rail is None:
-
-            if "__call__" in dir(self.rail_generator):
-                rail, optionals = self.rail_generator(
-                    self.width, self.height, self.number_of_agents, self.num_resets, self.np_random)
-            elif "generate" in dir(self.rail_generator):
-                rail, optionals = self.rail_generator.generate(
-                    self.width, self.height, self.number_of_agents, self.num_resets, self.np_random)
-            else:
-                raise ValueError("Could not invoke __call__ or generate on rail_generator")
-
+            optionals, rail = self._call_rail_generator(optionals)
             self.rail = rail
-            self.height, self.width = self.rail.grid.shape
 
             # Do a new set_env call on the obs_builder to ensure
             # that obs_builder specific instantiations are made according to the
             # specifications of the current environment : like width, height, etc
             self.obs_builder.set_env(self)
 
-        if optionals and 'distance_map' in optionals:
-            self.distance_map.set(optionals['distance_map'])
-
         if regenerate_schedule or regenerate_rail or self.get_num_agents() == 0:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
                 agents_hints = optionals['agents_hints']
-            if optionals and 'level_free_positions' in optionals:
-                self.resource_map.level_free_positions = optionals['level_free_positions']
+            self.resource_map = self._extract_resource_map_from_optionals(optionals)
 
-            line = self.line_generator(self.rail, self.number_of_agents, agents_hints,
-                                       self.num_resets, self.np_random)
+            line = self.line_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets, self.np_random)
+
             self.agents = EnvAgent.from_line(line)
 
             # Reset distance map - basically initializing
             self.distance_map.reset(self.agents, self.rail)
 
-            # NEW : Timetable Generation
-            timetable = self.timetable_generator(self.agents, self.distance_map,
-                                                 agents_hints, self.np_random)
+            # Timetable Generation
+            timetable = self.timetable_generator(self.agents, self.distance_map, agents_hints, self.np_random)
 
             self._max_episode_steps = timetable.max_episode_steps
-
             EnvAgent.apply_timetable(self.agents, timetable)
         else:
+            self.resource_map = self._extract_resource_map_from_optionals(optionals)
             self.distance_map.reset(self.agents, self.rail)
 
         # Reset agents to initial states
@@ -350,10 +333,6 @@ class RailEnv(Environment):
 
         self.num_resets += 1
         self._elapsed_steps = 0
-
-        # Agent positions map
-        self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
-        self._update_agent_positions_map(ignore_old_positions=False)
 
         self.effects_generator.on_episode_start(self)
 
@@ -372,19 +351,10 @@ class RailEnv(Environment):
         info_dict = self.get_info_dict()
         # Return the new observation vectors for each agent
         observation_dict: Dict = self._get_observations()
-        if hasattr(self, "renderer") and self.renderer is not None:
-            self.renderer = None
         return observation_dict, info_dict
 
-    def _update_agent_positions_map(self, ignore_old_positions=True):
-        """ Update the agent_positions array for agents that changed positions """
-        for agent in self.agents:
-            # TODO refactor for configurations
-            if not ignore_old_positions or agent.old_position != agent.position:
-                if agent.position is not None:
-                    self.agent_positions[agent.position] = agent.handle
-                if agent.old_position is not None:
-                    self.agent_positions[agent.old_position] = -1
+    def _extract_resource_map_from_optionals(self, optionals: dict) -> UnderlyingResourceMapType:
+        raise NotImplementedError()
 
     def clear_rewards_dict(self):
         """ Reset the rewards dictionary """
@@ -614,12 +584,7 @@ class RailEnv(Environment):
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
 
-        self._update_agent_positions_map()
-
         self._verify_mutually_exclusive_resource_allocation()
-
-        if self.record_steps:
-            self.record_timestep(action_dict)
 
         self.effects_generator.on_episode_step_end(self)
 
@@ -636,20 +601,17 @@ class RailEnv(Environment):
             return False
         return True
 
-    # TODO refactor for into resource map?
     def _verify_mutually_exclusive_resource_allocation(self):
-        resources = [agent.position if agent.position not in self.resource_map.level_free_positions else (*agent.position, agent.direction % 2) for agent in
-                     self.agents if
-                     agent.position is not None]
+        resources = [self.resource_map.get_resource(agent.current_configuration) for agent in self.agents if agent.position is not None]
         if len(resources) != len(set(resources)):
             msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
             msgs += f"- motion check: {list(self.motion_check.stopped)}"
             warnings.warn(msgs)
             counts = {resource: resources.count(resource) for resource in set(resources)}
-            dup_positions = [pos for pos, count in counts.items() if count > 1]
-            for dup in dup_positions:
+            dup_resources = [res for res, count in counts.items() if count > 1]
+            for dup in dup_resources:
                 for agent in self.agents:
-                    if agent.position == dup:
+                    if self.resource_map.get_resource(agent.current_configuration) == dup:
                         msg = (f"\n================== BAD AGENT ==================================\n\n\n\n\n"
                                f"- agent:\t{agent} \n"
                                f"- state_machine:\t{agent.state_machine}\n"
@@ -661,7 +623,7 @@ class RailEnv(Environment):
                         msgs += msg
             assert len(resources) == len(set(resources)), msgs
 
-    # TODO extract to callbacks instead!
+    # TODO https://github.com/flatland-association/flatland-rl/issues/195  extract to callbacks instead!
     def record_timestep(self, dActions):
         """
         Record the positions and orientations of all agents in memory, in the cur_episode
@@ -697,112 +659,116 @@ class RailEnv(Environment):
         self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
         return self.obs_dict
 
-    def _exp_distirbution_synced(self, rate: float) -> float:
-        """
-        Generates sample from exponential distribution
-        We need this to guarantee synchronicity between different instances with the same seed.
-        :param rate:
-        :return:
-        """
-        u = self.np_random.rand()
-        x = - np.log(1 - u) * rate
-        return x
+    def _call_rail_generator(self, optionals) -> Tuple[dict, UnderlyingTransitionMapType]:
+        # TODO https://github.com/flatland-association/flatland-rl/issues/242 fix signature
+        return self.rail_generator(self.number_of_agents, self.num_resets, self.np_random)
 
-    def _is_agent_ok(self, agent: EnvAgent) -> bool:
+
+class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap]):
+    def __init__(self,
+                 width,
+                 height,
+                 rail_generator: "RailGenerator" = None,
+                 line_generator: "LineGenerator" = None,
+                 number_of_agents=2,
+                 obs_builder_object: ObservationBuilder = GlobalObsForRailEnv(),
+                 malfunction_generator_and_process_data=None,
+                 malfunction_generator: "MalfunctionGenerator" = None,
+                 remove_agents_at_target=True,
+                 random_seed=None,
+                 record_steps=False,
+                 timetable_generator=ttg.timetable_generator,
+                 acceleration_delta=1.0,
+                 braking_delta=-1.0,
+                 rewards: Rewards = None,
+                 effects_generator: EffectsGenerator["RailEnv"] = None
+                 ):
         """
-        Checks if an agent is ok, meaning it can move and is not malfunctioning.
+        All parameters from parent `AbstractRailEnv`
+
         Parameters
         ----------
-        agent
-
-        Returns
-        -------
-        True if agent is ok, False otherwise
-
+        width : int
+            The width of the rail map. Potentially in the future,
+            a range of widths to sample from.
+        height : int
+            The height of the rail map. Potentially in the future,
+            a range of heights to sample from.
         """
-        return agent.malfunction_handler.in_malfunction
+        self.width = width
+        self.height = height
 
-    def save(self, filename):
-        print("DEPRECATED call to env.save() - pls call RailEnvPersister.save()")
-        persistence.RailEnvPersister.save(self, filename)
+        super().__init__(
+            rail_generator=rail_generator,
+            line_generator=line_generator,
+            number_of_agents=number_of_agents,
+            obs_builder_object=obs_builder_object,
+            malfunction_generator_and_process_data=malfunction_generator_and_process_data,
+            malfunction_generator=malfunction_generator,
+            remove_agents_at_target=remove_agents_at_target,
+            random_seed=random_seed,
+            timetable_generator=timetable_generator,
+            acceleration_delta=acceleration_delta,
+            braking_delta=braking_delta,
+            rewards=rewards,
+            effects_generator=effects_generator,
+            distance_map=DistanceMap([], height, width),
+        )
 
-    def render(self, mode="rgb_array", gl="PGL", agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-               show_debug=False, clear_debug_text=True, show=False,
-               screen_height=600, screen_width=800,
-               show_observations=False, show_predictions=False,
-               show_rowcols=False, return_image=True):
-        """
-        Provides the option to render the
-        environment's behavior as an image or to a window.
-        Parameters
-        ----------
-        mode
+        self.agent_positions = None
 
-        Returns
-        -------
-        Image if mode is rgb_array, opens a window otherwise
-        """
-        if not hasattr(self, "renderer") or self.renderer is None:
-            self.initialize_renderer(mode=mode, gl=gl,  # gl="TKPILSVG",
-                                     agent_render_variant=agent_render_variant,
-                                     show_debug=show_debug,
-                                     clear_debug_text=clear_debug_text,
-                                     show=show,
-                                     screen_height=screen_height,  # Adjust these parameters to fit your resolution
-                                     screen_width=screen_width)
-        return self.update_renderer(mode=mode, show=show, show_observations=show_observations,
-                                    show_predictions=show_predictions,
-                                    show_rowcols=show_rowcols, return_image=return_image)
+        # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
+        self.record_steps = record_steps  # whether to save timesteps
+        # save timesteps in here: [[[row, col, dir, malfunction],...nAgents], ...nSteps]
+        self.cur_episode = []
+        self.list_actions = []  # save actions in here
 
-    def initialize_renderer(self, mode, gl,
-                            agent_render_variant,
-                            show_debug,
-                            clear_debug_text,
-                            show,
-                            screen_height,
-                            screen_width):
-        # Initiate the renderer
-        self.renderer = RenderTool(self, gl=gl,  # gl="TKPILSVG",
-                                   agent_render_variant=agent_render_variant,
-                                   show_debug=show_debug,
-                                   clear_debug_text=clear_debug_text,
-                                   screen_height=screen_height,  # Adjust these parameters to fit your resolution
-                                   screen_width=screen_width)  # Adjust these parameters to fit your resolution
-        self.renderer.show = show
-        self.renderer.reset()
+        # Agent positions map
+        self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
+        self._update_agent_positions_map(ignore_old_positions=False)
 
-    def update_renderer(self, mode, show, show_observations, show_predictions,
-                        show_rowcols, return_image):
-        """
-        This method updates the render.
-        Parameters
-        ----------
-        mode
+    def _call_rail_generator(self, optionals) -> Tuple[dict, GridTransitionMap]:
+        if "__call__" in dir(self.rail_generator):
+            rail, optionals = self.rail_generator(
+                self.width, self.height, self.number_of_agents, self.num_resets, self.np_random)
+        elif "generate" in dir(self.rail_generator):
+            rail, optionals = self.rail_generator.generate(
+                self.width, self.height, self.number_of_agents, self.num_resets, self.np_random)
+        else:
+            raise ValueError("Could not invoke __call__ or generate on rail_generator")
+        self.height, self.width = rail.grid.shape
+        if optionals and 'distance_map' in optionals:
+            self.distance_map.set(optionals['distance_map'])
 
-        Returns
-        -------
-        Image if mode is rgb_array, None otherwise
-        """
-        image = self.renderer.render_env(show=show, show_observations=show_observations,
-                                         show_predictions=show_predictions,
-                                         show_rowcols=show_rowcols, return_image=return_image)
-        if mode == 'rgb_array':
-            return image[:, :, :3]
+        return optionals, rail
 
-    def close(self):
-        """
-        Closes any renderer window.
-        """
-        if hasattr(self, "renderer") and self.renderer is not None:
-            try:
-                if self.renderer.show:
-                    self.renderer.close_window()
-            except Exception as e:
-                print("Could Not close window due to:", e)
-            self.renderer = None
+    def _extract_resource_map_from_optionals(self, optionals: dict) -> GridResourceMap:
+        resource_map = GridResourceMap()
+        if optionals and 'level_free_positions' in optionals:
+            resource_map.level_free_positions = optionals['level_free_positions']
+        return resource_map
+
+    def _update_agent_positions_map(self, ignore_old_positions=True):
+        """ Update the agent_positions array for agents that changed positions """
+        for agent in self.agents:
+            # TODO refactor for configurations
+            if not ignore_old_positions or agent.old_position != agent.position:
+                if agent.position is not None:
+                    self.agent_positions[agent.position] = agent.handle
+                if agent.old_position is not None:
+                    self.agent_positions[agent.old_position] = -1
 
     def clone_from(self, env: 'RailEnv', obs_builder: Optional[ObservationBuilder["RailEnv", Any]] = None):
         from flatland.envs.persistence import RailEnvPersister
         # avoid in-memory references
         env_dict = pickle.loads(pickle.dumps(RailEnvPersister.get_full_state(env)))
         RailEnvPersister.load(self, env_dict=env_dict, obs_builder=obs_builder)
+
+    def step(self, action_dict: Dict[int, RailEnvActions]):
+        obs, rewards, dones, info = super().step(action_dict=action_dict)
+        # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
+        if self.record_steps:
+            self.record_timestep(action_dict)
+        # TODO add idiomatic wrapper instead of override
+        self._update_agent_positions_map()
+        return obs, rewards, dones, info

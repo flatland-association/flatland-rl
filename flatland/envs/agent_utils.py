@@ -239,6 +239,13 @@ class EnvAgent:
 
         return agent_list
 
+    @staticmethod
+    def to_line(agents: List["EnvAgent"]):
+        return Line(
+            agent_waypoints={agent.handle: agent.waypoints for agent in agents},
+            agent_speeds={agent.handle: agent.speed_counter.max_speed for agent in agents},
+        )
+
     @classmethod
     def load_legacy_static_agent(cls, static_agents_data: Tuple):
         agents = []
