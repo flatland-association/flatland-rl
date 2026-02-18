@@ -96,7 +96,7 @@ class DefaultPenalties(fastenum.Enum):
 
 
 class BaseDefaultRewards(Rewards[Dict[str, float]]):
-    """
+    r"""
     Reward Function.
 
     This scoring function is designed to capture key operational metrics such as punctuality, efficiency in responding to disruptions, and safety.
@@ -105,6 +105,21 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
     as well as penalties for intermediate stops not served or even journeys not started.
 
     Safety measures are implemented as penalties for collisions which are directly proportional to the train’s speed at impact, ensuring that high-speed operations are managed with extra caution.
+
+    Parameters
+    ----------
+    cancellation_factor : float
+        Cancellation factor :math:`\phi \geq 0`. defaults to  1.
+    cancellation_time_buffer : float
+        Cancellation time buffer :math:`\pi \geq 0`. Defaults to 0.
+    intermediate_not_served_penalty : float
+       Intermediate stop not served penalty :math:`\mu \geq 0`. Applied if one of the intermediates is not served or only run through without stopping. Defaults to 1.
+    intermediate_late_arrival_penalty_factor : float
+        Intermediate late arrival penalty factor :math:`\alpha \geq 0`. Defaults to 0.2.
+    intermediate_early_departure_penalty_factor : float
+        Intermediate early departure penalty factor :math:`\delta \geq 0`. Defaults to 0.5.
+    collision_factor : float
+        Crash penalty factor :math:`\kappa \geq 0`. Defaults to 0.0.
     """
 
     def __init__(self,
@@ -115,22 +130,6 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
                  intermediate_early_departure_penalty_factor: float = 0.5,
                  collision_factor: float = 0.0
                  ):
-        """
-        Parameters
-        ----------
-        cancellation_factor : float
-            Cancellation factor $\phi \geq 0$. defaults to  1.
-        cancellation_time_buffer : float
-            Cancellation time buffer $\pi \geq 0$. Defaults to 0.
-        intermediate_not_served_penalty : float
-           Intermediate stop not served penalty $\mu \geq 0$. Applied if one of the intermediates is not served or only run through without stopping. Defaults to 1.
-        intermediate_late_arrival_penalty_factor : float
-            Intermediate late arrival penalty factor $\alpha \geq 0$. Defaults to 0.2.
-        intermediate_early_departure_penalty_factor : float
-            Intermediate early departure penalty factor $\delta \geq 0$. Defaults to 0.5.
-        collision_factor : float
-            Crash penalty factor $\kappa \geq 0$. Defaults to 0.0.
-        """
         self.collision_factor = collision_factor
         self.intermediate_early_departure_penalty_factor = intermediate_early_departure_penalty_factor
         self.intermediate_late_arrival_penalty_factor = intermediate_late_arrival_penalty_factor
