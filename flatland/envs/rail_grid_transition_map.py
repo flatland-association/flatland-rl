@@ -21,7 +21,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     def __init__(self, width, height, transitions: Transitions = RailEnvTransitions(), grid: np.ndarray = None):
         super().__init__(width=width, height=height, transitions=transitions, grid=grid)
 
-    @lru_cache
+    @lru_cache(maxsize=4_000_000)
     def get_valid_move_actions(self, configuration: Tuple[Tuple[int, int], int]) -> Set[RailEnvNextAction]:
         """
         Get the valid move actions (forward, left, right) for an agent.
@@ -48,7 +48,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
                     valid_actions.append(RailEnvNextAction(action, new_configuration))
         return valid_actions
 
-    @lru_cache
+    @lru_cache(maxsize=4_000_000)
     def get_successor_configurations(self, configuration: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
         position, direction = configuration
         successors = OrderedSet()
@@ -60,7 +60,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
                     successors.add(new_configuration)
         return successors
 
-    @lru_cache
+    @lru_cache(maxsize=4_000_000)
     def get_predecessor_configurations(self, configuration: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
         position, direction = configuration
 
