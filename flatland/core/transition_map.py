@@ -16,6 +16,7 @@ from flatland.core.grid.grid4_utils import get_new_position, get_direction
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transitions import Transitions
+from flatland.envs.fast_methods import fast_count_nonzero
 from flatland.envs.rail_env_action import RailEnvNextAction
 from flatland.utils.ordered_set import OrderedSet
 
@@ -115,7 +116,6 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
         """
         raise NotImplementedError()
 
-    @lru_cache
     def apply_action_independent(self, action: ActionsType, configuration: UnderlyingConfigurationType) -> Optional[Tuple[UnderlyingConfigurationType, bool]]:
         """
         Apply the action on the train regardless of locations of other agents.
@@ -137,7 +137,6 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
         """
         raise NotImplementedError()
 
-    @lru_cache
     def get_valid_move_actions(self, configuration: UnderlyingConfigurationType) -> Set[RailEnvNextAction]:
         """
         Get the valid move actions (forward, left, right) for an agent.
@@ -155,15 +154,12 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
         """
         raise NotImplementedError()
 
-    @lru_cache
     def get_successor_configurations(self, configuration: UnderlyingConfigurationType) -> Set[UnderlyingConfigurationType]:
         raise NotImplementedError()
 
-    @lru_cache
     def get_predecessor_configurations(self, configuration: UnderlyingConfigurationType) -> Set[UnderlyingConfigurationType]:
         raise NotImplementedError()
 
-    @lru_cache
     def is_valid_configuration(self, configuration: UnderlyingConfigurationType) -> bool:
         raise NotImplementedError()
 
@@ -640,6 +636,15 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
 
         # is transition is valid?
         return self.transitions.is_valid(new_trans)
+
+    @lru_cache(maxsize=1_000_000)
+    def check_bounds(self, position):
+        return position[0] >= 0 and position[1] >= 0 and position[0] < self.height and position[1] < self.width
+
+    @lru_cache(maxsize=1_000_000)
+    def is_valid_configuration(self, configuration: Tuple[Tuple[int, int], int]) -> bool:
+        position, direction = configuration
+        return self.check_bounds(position) and fast_count_nonzero(self.get_transitions(configuration)) > 0
 
 
 def mirror(dir):

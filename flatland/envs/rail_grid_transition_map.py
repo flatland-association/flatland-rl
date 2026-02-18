@@ -21,7 +21,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     def __init__(self, width, height, transitions: Transitions = RailEnvTransitions(), grid: np.ndarray = None):
         super().__init__(width=width, height=height, transitions=transitions, grid=grid)
 
-    @lru_cache
+    @lru_cache(maxsize=4_000_000)
     def get_valid_move_actions(self, configuration: Tuple[Tuple[int, int], int]) -> Set[RailEnvNextAction]:
         """
         Get the valid move actions (forward, left, right) for an agent.
@@ -48,7 +48,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
                     valid_actions.append(RailEnvNextAction(action, new_configuration))
         return valid_actions
 
-    @lru_cache
+    @lru_cache(maxsize=4_000_000)
     def get_successor_configurations(self, configuration: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
         position, direction = configuration
         successors = OrderedSet()
@@ -60,39 +60,20 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
                     successors.add(new_configuration)
         return successors
 
-    @lru_cache
+    @lru_cache(maxsize=4_000_000)
     def get_predecessor_configurations(self, configuration: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
         position, direction = configuration
-        predecessors = OrderedSet()
 
         # The agent must land into the current cell with orientation `direction`.
         # This is only possible if the agent has arrived from the cell in the opposite direction!
-        possible_directions = [(direction + 2) % 4]
+        neigh_direction = (direction + 2) % 4
+        previous_cell = get_new_position(position, neigh_direction)
 
-        for neigh_direction in possible_directions:
-            new_cell = get_new_position(position, neigh_direction)
-
-            if self.check_bounds(new_cell):
-
-                desired_movement_from_new_cell = (neigh_direction + 2) % 4
-
-                # Check all possible transitions in new_cell
-                for agent_orientation in range(4):
-                    # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
-                    is_valid = self.get_transition(((new_cell[0], new_cell[1]), agent_orientation),
-                                                   desired_movement_from_new_cell)
-
-                    if is_valid:
-                        predecessors.add((new_cell, agent_orientation))
-        return predecessors
-
-    @lru_cache
-    def is_valid_configuration(self, configuration: Tuple[Tuple[int, int], int]) -> bool:
-        position, direction = configuration
-        return self.check_bounds(position) and fast_count_nonzero(self.get_transitions(configuration)) > 0
-
-    def check_bounds(self, position):
-        return position[0] >= 0 and position[1] >= 0 and position[0] < self.height and position[1] < self.width
+        if self.check_bounds(previous_cell):
+            # Check all possible transitions from previous cell
+            return set([(previous_cell, agent_orientation) for agent_orientation in range(4) if
+                        self.get_transition(((previous_cell[0], previous_cell[1]), agent_orientation), direction)])
+        return set()
 
     @lru_cache(maxsize=1_000_000)
     def _check_action_new(self, action: RailEnvActions, position: IntVector2D, direction: int):
@@ -191,7 +172,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         _, new_configuration, _, preprocessed_action, action_valid = self._check_action_on_agent(action, configuration)
         if action_valid and self.is_valid_configuration(new_configuration):
             new_position, new_direction = new_configuration
-            # TODO revise design: allow acceleration in turns? dis-allow in dead-ends?
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: allow acceleration in turns? dis-allow in dead-ends?
             straight = new_direction % 2 == direction % 2
             return new_configuration, straight
         else:

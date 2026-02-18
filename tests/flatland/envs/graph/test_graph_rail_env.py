@@ -10,17 +10,15 @@ from flatland.envs.graph_rail_env import GraphRailEnv
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.trajectories.policy_runner import PolicyRunner
+from flatland.utils.seeding import random_state_to_hashablestate
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 
 @pytest.mark.parametrize("seed", range(42, 58))
 def test_graph_transition_map_from_with_random_policy(seed):
-    # TODO restrictions:
-    #   - no malfunction
-    #   - mapping level-free/non-level free
-    grid_env, _, _ = env_generator(seed=seed, malfunction_interval=9999999999999)
-    graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder())
-    graph_env.reset()
+    grid_env, _, _ = env_generator(seed=seed)
+    graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed)
+    assert random_state_to_hashablestate(grid_env.np_random) == random_state_to_hashablestate(graph_env.np_random)
 
     for r in range(grid_env.height):
         for c in range(grid_env.width):
@@ -37,7 +35,7 @@ def test_graph_transition_map_from_with_random_policy(seed):
                     grid_env.rail.get_transitions(((r, c), d))) == 2:
                     assert RailEnvActions.MOVE_FORWARD in graph_env.rail.g.nodes[u]["prohibited_actions"]
                     assert RailEnvActions.DO_NOTHING in graph_env.rail.g.nodes[u]["prohibited_actions"]
-                    # TODO revise design: no braking on symmetric switches?
+                    # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: no braking on symmetric switches?
                     assert RailEnvActions.STOP_MOVING in graph_env.rail.g.nodes[u]["prohibited_actions"]
                 else:
                     assert RailEnvActions.MOVE_FORWARD not in graph_env.rail.g.nodes[u]["prohibited_actions"]
@@ -51,7 +49,6 @@ def test_graph_transition_map_from_with_random_policy(seed):
                 assert len(actions) == 5
 
                 for a in range(5):
-                    # TODO typing
                     actual = graph_env.rail.apply_action_independent(RailEnvActions.from_value(a), f"{r, c, d}")
                     expected_raw = grid_env.rail.apply_action_independent(RailEnvActions.from_value(a), ((r, c), d))
                     if expected_raw is None:

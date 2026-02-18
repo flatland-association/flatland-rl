@@ -49,7 +49,7 @@ def makeEnv(nAg=2, width=20, height=10, oSG=None):
     return env, envModel
 
 
-def makeEnv2(nAg=2, shape=(20, 10), llrcPaths=[], lrcStarts=[], lrcTargs=[], liDirs=[], remove_agents_at_target=True):
+def makeEnv2(nAg=0, shape=(20, 10), llrcPaths=[], lrcStarts=[], lrcTargs=[], liDirs=[], remove_agents_at_target=True):
     oSG = SchedGen3(lrcStarts, lrcTargs, liDirs)
 
     env = RailEnv(width=shape[0], height=shape[1],

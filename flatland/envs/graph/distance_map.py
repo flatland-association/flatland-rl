@@ -19,13 +19,11 @@ class GraphDistanceMap(AbstractDistanceMap[GraphTransitionMap, Dict[int, Dict[st
         distance_map_walker = DistanceMapWalker[GraphDistanceMap, GraphTransitionMap, str](self)
         computed_targets = []
         for i, agent in enumerate(agents):
-            # TODO agent should only have valid targets
-            targets = [t for t in agent.targets if self.rail.is_valid_configuration(t)]
-            if targets not in computed_targets:
-                distance_map_walker._distance_map_walker(rail, agent.handle, targets)
+            if agent.targets not in computed_targets:
+                distance_map_walker._distance_map_walker(rail, agent.handle, agent.targets)
             else:
-                self.distance_map[i] = self.distance_map[computed_targets.index(targets)]
-            computed_targets.append(targets)
+                self.distance_map[i] = self.distance_map[computed_targets.index(agent.targets)]
+            computed_targets.append(agent.targets)
 
     def _set_distance(self, configuration: str, target_nr: int, new_distance: int):
         self.distance_map[target_nr][configuration] = new_distance

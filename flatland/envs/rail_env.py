@@ -195,7 +195,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
         self.motion_check = ac.MotionCheck()
 
-        # TODO bad design smell - resource map is not persisted, in particular level_free_positions is not persisted, only rail!
+        # TODO https://github.com/flatland-association/flatland-rl/issues/242 bad design smell - resource map is not persisted, in particular level_free_positions is not persisted, only rail!
         self.resource_map: UnderlyingResourceMapType = self._extract_resource_map_from_optionals({})
 
         if rewards is None:
@@ -314,7 +314,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             line = self.line_generator(self.rail, self.number_of_agents, agents_hints, self.num_resets, self.np_random)
 
-            self.agents = self._agents_from_line(line)
+            self.agents = self._agents_from_line(line, self.rail)
 
             # Reset distance map - basically initializing
             self.distance_map.reset(self.agents, self.rail)
@@ -440,7 +440,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             if action_valid:
                 new_configuration_independent, straight = transition
 
-
             stop_action_given = raw_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
             movement_action_given = RailEnvActions.is_moving_action(raw_action)
@@ -468,7 +467,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 new_configuration = initial_configuration
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and action_valid and (
                 movement_action_given or stop_action_given):
-                # TODO revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_configuration = initial_configuration
             elif state.is_on_map_state():
                 new_configuration = current_or_initial_configuration
@@ -564,7 +563,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
                 agent.current_configuration = initial_configuration
 
-            # TODO revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
                 agent.speed_counter.step(speed=0)
 
@@ -584,7 +583,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             )
 
             # update malfunction counter
-            # TODO revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
             agent.malfunction_handler.update_counter()
 
             # Off map or on map state and position should match
@@ -742,7 +741,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
     def _update_agent_positions_map(self, ignore_old_positions=True):
         """ Update the agent_positions array for agents that changed positions """
         for agent in self.agents:
-            # TODO refactor for configurations
             if not ignore_old_positions or agent.old_position != agent.position:
                 if agent.position is not None:
                     self.agent_positions[agent.position] = agent.handle
@@ -760,7 +758,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         if self.record_steps:
             self.record_timestep(action_dict)
-        # TODO add idiomatic wrapper instead of override
+        # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
         return obs, rewards, dones, info
 
@@ -777,7 +775,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             agent = self.agents[i_agent]
             # the int cast is to avoid numpy types which may cause problems with msgpack
             # in env v2, agents may have position None, before starting
-            # TODO test for configuration None instead
             if agent.position is None:
                 pos = (None, None)
                 dir = None
@@ -798,5 +795,8 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
     def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
         return EnvAgent.apply_timetable(self.agents, timetable)
 
-    def _agents_from_line(self, line: "Line") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
-        return EnvAgent.from_line(line)
+    def _agents_from_line(self, line: "Line", rail: GridTransitionMap) -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
+        agents = EnvAgent.from_line(line)
+        for agent in agents:
+            agent.targets = {t for t in agent.targets if rail.is_valid_configuration(t)}
+        return agents

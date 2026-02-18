@@ -608,11 +608,6 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
                 obs_agents_state[other_agent.initial_position][4] += 1
         assert np.count_nonzero(~np.isfinite(self.rail_obs)) == 0, self.rail_obs
         assert np.count_nonzero(np.isnan(self.rail_obs)) == 0, self.rail_obs
-        # TODO culprit
-        if self.env._elapsed_steps == 85 and handle == 1:
-            a = 5
-        if np.count_nonzero(~np.isfinite(obs_agents_state)) != 0:
-            a = 5
         assert np.count_nonzero(~np.isfinite(obs_agents_state)) == 0, obs_agents_state
         assert np.count_nonzero(np.isnan(obs_agents_state)) == 0, obs_agents_state
         assert np.count_nonzero(~np.isfinite(obs_targets)) == 0, obs_targets

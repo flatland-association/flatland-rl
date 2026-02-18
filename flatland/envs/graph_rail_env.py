@@ -1,5 +1,5 @@
 import ast
-from typing import List
+from typing import List, Optional
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env_observation_builder import ObservationBuilder, DummyObservationBuilder
@@ -7,15 +7,16 @@ from flatland.core.graph.graph_resource_map import GraphResourceMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.graph.distance_map import GraphDistanceMap
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
+from flatland.envs.malfunction_generators import MalfunctionGenerator, ParamMalfunctionGen
 from flatland.envs.rail_env import RailEnv, AbstractRailEnv
 from flatland.envs.rewards import Rewards
 from flatland.envs.timetable_utils import TimetableUtils
+from flatland.utils.seeding import random_state_to_hashablestate, random_state_from_hashablestate
 
 
 class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     @staticmethod
-    def from_rail_env(rail_env: RailEnv, observation_builder: ObservationBuilder) -> "GraphRailEnv":
-        rail_env.reset(False, False)
+    def from_rail_env(rail_env: RailEnv, observation_builder: ObservationBuilder, seed: Optional[int] = None) -> "GraphRailEnv":
         line = EnvAgent.to_line(rail_env.agents)
         timetable = TimetableUtils.from_agents(rail_env.agents, rail_env._max_episode_steps)
 
@@ -28,17 +29,25 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             else:
                 _resource_map[GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)] = str((r, c))
 
-        return GraphRailEnv(
+        graph_env = GraphRailEnv(
             number_of_agents=rail_env.get_num_agents(),
             rail_generator=lambda *args, **kwargs: ({"resource_map": _resource_map}, gtm),
             line_generator=lambda *args, **kwargs: line,
             timetable_generator=lambda *arg, **kwargs: timetable,
             observation_builder=observation_builder,
+            # TODO https://github.com/flatland-association/flatland-rl/issues/242 generalize malfunction generator injection
+            # N.B. ParamMalfunctionGen is not stateless due to cached random nums, see https://github.com/flatland-association/flatland-rl/issues/364.
+            malfunction_generator=ParamMalfunctionGen(rail_env.malfunction_generator.MFP),
         )
+        # TODO https://github.com/flatland-association/flatland-rl/pull/341 hack while awaiting this pr
+        graph_env.reset(random_seed=seed)
+        s = random_state_to_hashablestate(rail_env.np_random)
+        graph_env.np_random = random_state_from_hashablestate(s)
+        return graph_env
 
     def __init__(
         self,
-        # TODO fix signature https://github.com/flatland-association/flatland-rl/issues/242
+        # TODO https://github.com/flatland-association/flatland-rl/issues/242 fix signature
         rail_generator: "RailGenerator" = None,
         line_generator: "LineGenerator" = None,
         number_of_agents=2,
@@ -93,10 +102,11 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
                                   GraphTransitionMap.grid_configuration_to_graph_configuration(*(agent.waypoints[-1][0].position), d) for d in range(4)]
         return agents
 
-    def _agents_from_line(self, line: "Line") -> List[EnvAgent[str]]:
+    def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:
         agents = EnvAgent.from_line(line)
         for agent in agents:
             agent.initial_configuration = GraphTransitionMap.grid_configuration_to_graph_configuration(*agent.initial_position, agent.initial_direction)
             agent.current_configuration = GraphTransitionMap.grid_configuration_to_graph_configuration(*agent.position, agent.direction)
-            agent.targets = {GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) for t in agent.targets}
+            agent.targets = {GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) for t in agent.targets if
+                             GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) in rail.g.nodes}
         return agents
