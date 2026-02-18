@@ -63,28 +63,17 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     @lru_cache
     def get_predecessor_configurations(self, configuration: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
         position, direction = configuration
-        predecessors = OrderedSet()
 
         # The agent must land into the current cell with orientation `direction`.
         # This is only possible if the agent has arrived from the cell in the opposite direction!
-        possible_directions = [(direction + 2) % 4]
+        neigh_direction = (direction + 2) % 4
+        previous_cell = get_new_position(position, neigh_direction)
 
-        for neigh_direction in possible_directions:
-            new_cell = get_new_position(position, neigh_direction)
-
-            if self.check_bounds(new_cell):
-
-                desired_movement_from_new_cell = (neigh_direction + 2) % 4
-
-                # Check all possible transitions in new_cell
-                for agent_orientation in range(4):
-                    # Is a transition along movement `desired_movement_from_new_cell' to the current cell possible?
-                    is_valid = self.get_transition(((new_cell[0], new_cell[1]), agent_orientation),
-                                                   desired_movement_from_new_cell)
-
-                    if is_valid:
-                        predecessors.add((new_cell, agent_orientation))
-        return predecessors
+        if self.check_bounds(previous_cell):
+            # Check all possible transitions from previous cell
+            return set([(previous_cell, agent_orientation) for agent_orientation in range(4) if
+                        self.get_transition(((previous_cell[0], previous_cell[1]), agent_orientation), direction)])
+        return set()
 
     @lru_cache(maxsize=1_000_000)
     def _check_action_new(self, action: RailEnvActions, position: IntVector2D, direction: int):

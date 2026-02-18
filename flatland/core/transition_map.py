@@ -642,6 +642,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         # is transition is valid?
         return self.transitions.is_valid(new_trans)
 
+    @lru_cache
     def check_bounds(self, position):
         return position[0] >= 0 and position[1] >= 0 and position[0] < self.height and position[1] < self.width
 
