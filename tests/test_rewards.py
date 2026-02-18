@@ -81,6 +81,7 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent, None, distance_map, 5)
     agent.state = TrainState.DONE
+    # if agent is done, intermediate not served is handled in step reward and not in end_of_episode_reward
     assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == (-intermediate_not_served_penalty, 0, 0)
 
 
