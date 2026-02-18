@@ -167,19 +167,21 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
 class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transitions, Tuple[bool], Any], Generic[ActionsType]):
     """
     Implements a TransitionMap over a 2D grid.
+
+    Parameters
+    ----------
+    width : int
+        Width of the grid.
+    height : int
+        Height of the grid.
+    transitions : Transitions
+        The Transitions object to use to encode/decode transitions over the
+        grid.
     """
 
     def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), grid: np.ndarray = None):
         """
-        Parameters
-        ----------
-        width : int
-            Width of the grid.
-        height : int
-            Height of the grid.
-        transitions : Transitions
-            The Transitions object to use to encode/decode transitions over the
-            grid.
+
 
         """
         self.width = width
