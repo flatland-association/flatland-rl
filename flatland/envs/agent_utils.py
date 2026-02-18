@@ -4,7 +4,6 @@ from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional, Set
 
 import numpy as np
 from attr import attrs, attrib, Factory
-from typing_extensions import deprecated
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -131,13 +130,11 @@ class EnvAgent(Generic[ConfigurationType]):
         self.old_configuration = (self.old_position, value)
 
     @property
-    @deprecated("Use targets instead")
     def target(self):
         # assuming same cell for all
         return list(self.targets)[0][0]
 
     @target.setter
-    @deprecated("Use targets instead")
     def target(self, value):
         # backwards compatibility to mean any direction into the cell. Will valid directions be post-cleaned in _agents_from_line.
         self.targets = {(value, d) for d in Grid4TransitionsEnum}
