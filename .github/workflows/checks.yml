@@ -2,7 +2,7 @@ name: Checks
 
 env:
     # DEPENDENCY SWITCH:
-    flatland-baselines-ref: main
+    flatland-baselines-ref: comply-graph-generalization
     flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip"
     flatland-scenarios-olten-partially-closed-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip"
 

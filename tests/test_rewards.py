@@ -221,7 +221,7 @@ def test_rewards_departed_but_never_arrived():
     agent.position = (2, 2)
     agent.direction = 2
     agent.state = TrainState.STOPPED
-    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, None, None, StateTransitionSignals()),
+    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, StateTransitionSignals()),
                         distance_map=distance_map,
                         elapsed_steps=5)
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -99 - 15
@@ -425,7 +425,7 @@ def test_arrival_recorded_once_per_waypoint():
     agent.old_position = (5, 4)
     agent.old_direction = 0
 
-    transition_data = AgentTransitionData(1.0, None, None, None, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, None, None, StateTransitionSignals())
 
     # First step at this waypoint - should record arrival
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=10)
@@ -458,7 +458,7 @@ def test_departure_only_when_moving():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    transition_data = AgentTransitionData(1.0, None, None, None, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, None, None, StateTransitionSignals())
 
     # agent off map
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=1)
@@ -524,7 +524,7 @@ def test_waypoint_comparison_uses_waypoint_objects():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    transition_data = AgentTransitionData(1.0, None, None, None, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, None, None, StateTransitionSignals())
 
     agent.position = (7, 8)
     agent.direction = 1

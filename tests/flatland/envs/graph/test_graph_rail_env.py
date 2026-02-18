@@ -1,20 +1,24 @@
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
+from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.trajectories.policy_runner import PolicyRunner
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 
-def test_graph_transition_map_from_with_random_policy():
+@pytest.mark.parametrize("seed", range(42, 58))
+def test_graph_transition_map_from_with_random_policy(seed):
     # TODO restrictions:
     #   - no malfunction
     #   - mapping level-free/non-level free
-    grid_env, _, _ = env_generator(seed=42, malfunction_interval=9999999999999)
+    grid_env, _, _ = env_generator(seed=seed, malfunction_interval=9999999999999)
     graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder())
     graph_env.reset()
 
@@ -22,17 +26,40 @@ def test_graph_transition_map_from_with_random_policy():
         for c in range(grid_env.width):
             for d in range(4):
                 assert (sum(grid_env.rail.get_transitions(((r, c), d))) > 0) == (f"{r, c, d}" in graph_env.rail.g.nodes)
-                if sum(grid_env.rail.get_transitions(((r, c), d))) == 0:
+                u = GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)
+                is_grid_configuration = sum(grid_env.rail.get_transitions(((r, c), d))) > 0
+                is_graph_configuration = u in graph_env.rail.g.nodes
+                assert is_graph_configuration == is_grid_configuration
+                if not is_grid_configuration:
                     continue
+
+                if "symmetric" in RailEnvTransitionsEnum(grid_env.rail.get_full_transitions(r, c)).name and sum(
+                    grid_env.rail.get_transitions(((r, c), d))) == 2:
+                    assert RailEnvActions.MOVE_FORWARD in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                    assert RailEnvActions.DO_NOTHING in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                    # TODO revise design: no braking on symmetric switches?
+                    assert RailEnvActions.STOP_MOVING in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                else:
+                    assert RailEnvActions.MOVE_FORWARD not in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                    assert RailEnvActions.DO_NOTHING not in graph_env.rail.g.nodes[u]["prohibited_actions"]
+                    assert RailEnvActions.STOP_MOVING not in graph_env.rail.g.nodes[u]["prohibited_actions"]
+
+                # verify prohibited actions and edge actions are pairwise disjoint and cover all 5 Flatland actions
+                actions = list(graph_env.rail.g.nodes[u]["prohibited_actions"])
+                for v in list(graph_env.rail.g.successors(u)):
+                    actions.extend(graph_env.rail.g.get_edge_data(u, v)["actions"])
+                assert len(actions) == 5
+
                 for a in range(5):
                     # TODO typing
-                    actual = graph_env.rail.check_action_on_agent(RailEnvActions.from_value(a), f"{r, c, d}")
-                    expected = grid_env.rail.check_action_on_agent(RailEnvActions.from_value(a), ((r, c), d))
-                    new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action = expected
-
-                    expected = new_cell_valid, f"{new_position[0], new_position[1], new_direction}", transition_valid, preprocessed_action
-
-                    assert (actual == expected)
+                    actual = graph_env.rail.apply_action_independent(RailEnvActions.from_value(a), f"{r, c, d}")
+                    expected_raw = grid_env.rail.apply_action_independent(RailEnvActions.from_value(a), ((r, c), d))
+                    if expected_raw is None:
+                        assert actual == expected_raw
+                    else:
+                        ((r2, c2), d2), transition_valid = expected_raw
+                        expected = f"{r2, c2, d2}", transition_valid
+                        assert actual == expected
 
     # use Trajectory API for comparison
     with tempfile.TemporaryDirectory() as tmpdirname:

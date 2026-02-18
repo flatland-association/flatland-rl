@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Set, List
+from typing import Set, List, Optional
 from typing import Tuple
 
 import numpy as np
@@ -41,11 +41,11 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
 
         valid_actions: Set[RailEnvNextAction] = []
         for action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT]:
-            new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
-            new_position = get_new_position(position, new_direction)
-            # TODO why not and self.check_bounds(new_position)?
-            if transition_valid:
-                valid_actions.append(RailEnvNextAction(action, (new_position, new_direction)))
+            t = self.apply_action_independent(action, (position, direction))
+            if t is not None:
+                new_configuration, _ = t
+                if self.is_valid_configuration(new_configuration):
+                    valid_actions.append(RailEnvNextAction(action, new_configuration))
         return valid_actions
 
     @lru_cache
@@ -53,10 +53,11 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         position, direction = configuration
         successors = OrderedSet()
         for action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT]:
-            new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
-            new_position = get_new_position(position, new_direction)
-            if transition_valid and self.check_bounds(new_position):
-                successors.add((new_position, new_direction))
+            t = self.apply_action_independent(action, (position, direction))
+            if t is not None:
+                new_configuration, _ = t
+                if self.is_valid_configuration(new_configuration):
+                    successors.add(new_configuration)
         return successors
 
     @lru_cache
@@ -122,36 +123,36 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
             new_direction = fast_argmax(possible_transitions)
             if action == RailEnvActions.MOVE_LEFT and new_direction != (direction - 1) % 4:
                 action = RailEnvActions.MOVE_FORWARD
-                return new_direction, False, action
+                return new_direction, False, action, True
 
             elif action == RailEnvActions.MOVE_RIGHT and new_direction != (direction + 1) % 4:
                 action = RailEnvActions.MOVE_FORWARD
-                return new_direction, False, action
+                return new_direction, False, action, True
 
             # straight or dead-end
-            return new_direction, True, action
+            return new_direction, True, action, True
 
         if action == RailEnvActions.MOVE_LEFT:
             new_direction = (direction - 1) % 4
             if possible_transitions[new_direction]:
-                return new_direction, True, RailEnvActions.MOVE_LEFT
+                return new_direction, True, RailEnvActions.MOVE_LEFT, True
             elif possible_transitions[direction]:
-                return direction, False, RailEnvActions.MOVE_FORWARD
+                return direction, False, RailEnvActions.MOVE_FORWARD, True
 
         elif action == RailEnvActions.MOVE_RIGHT:
             new_direction = (direction + 1) % 4
             if possible_transitions[new_direction]:
-                return new_direction, True, RailEnvActions.MOVE_RIGHT
+                return new_direction, True, RailEnvActions.MOVE_RIGHT, True
             elif possible_transitions[direction]:
-                return direction, False, RailEnvActions.MOVE_FORWARD
+                return direction, False, RailEnvActions.MOVE_FORWARD, True
         elif possible_transitions[direction]:
-            return direction, True, action
+            return direction, True, action, True
 
-        return direction, False, RailEnvActions.STOP_MOVING
+        return direction, False, RailEnvActions.STOP_MOVING, False
 
     @lru_cache(maxsize=1_000_000)
-    def check_action_on_agent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Tuple[
-        bool, Tuple[Tuple[int, int], int], bool, RailEnvActions]:
+    def _check_action_on_agent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Tuple[
+        bool, Tuple[Tuple[int, int], int], bool, RailEnvActions, bool]:
         """
 
         Returns
@@ -173,12 +174,28 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
             - MOVE_LEFT/MOVE_RIGHT: turn left/right without acceleration
             - MOVE_FORWARD: move forward with acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing)
             - DO_NOTHING: if already moving, keep moving forward without acceleration (swap direction in dead-end, also works in left/right turns or symmetric-switches non-facing); if stopped, stay stopped.
+        action_valid : bool
+            Whether the action is valid at all - irrespective of transition_valid (action_valid=False implies transition_valid=False, but not inversely).
+            Happens only on symmetric switches.
         """
         position, direction = configuration
-        new_direction, transition_valid, preprocessed_action = self._check_action_new(action, position, direction)
+        new_direction, transition_valid, preprocessed_action, action_valid = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
-        new_cell_valid = self.check_bounds(new_position) and self.get_full_transitions(*new_position) > 0
-        return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action
+        new_cell_valid = self.is_valid_configuration((new_position, new_direction))
+        return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, action_valid
+
+    @lru_cache(maxsize=1_000_000)
+    def apply_action_independent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Optional[
+        Tuple[Tuple[Tuple[int, int], int], bool]]:
+        position, direction = configuration
+        _, new_configuration, _, preprocessed_action, action_valid = self._check_action_on_agent(action, configuration)
+        if action_valid and self.is_valid_configuration(new_configuration):
+            new_position, new_direction = new_configuration
+            # TODO revise design: allow acceleration in turns? dis-allow in dead-ends?
+            straight = new_direction % 2 == direction % 2
+            return new_configuration, straight
+        else:
+            return None
 
     def get_valid_directions_on_grid(self, row: int, col: int) -> List[int]:
         """
