@@ -24,15 +24,13 @@ from flatland.utils.seeding import random_state_to_hashablestate, np_random
 class RandomPolicy(RailEnvPolicy):
     """
     Random action with reset of random sequence to allow synchronization with partial trajectory.
+
+    Parameters
+    ----------
+    reset_at : Optional[int] actions applied in env step reset_at+1 (e.g. reset at 7 to start at step 8)
     """
 
     def __init__(self, action_size: int = 5, seed=42, reset_at: int = None):
-        """
-
-        Parameters
-        ----------
-        reset_at : Optional[int] actions applied in env step reset_at+1 (e.g. reset at 7 to start at step 8)
-        """
         super(RandomPolicy, self).__init__()
         self.action_size = action_size
         self._seed = seed

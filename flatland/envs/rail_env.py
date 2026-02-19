@@ -78,6 +78,50 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
     TODO: currently, the parameters that control the stochasticity of the environment are hard-coded in init().
     For Round 2, they will be passed to the constructor as arguments, to allow for more flexibility.
 
+    Parameters
+    ----------
+    rail_generator : function
+        The rail_generator function is a function that takes the width,
+        height and agent handles of a rail environment, along with the number of times
+        the env has been reset, and returns a GridTransitionMap object and a list of
+        starting positions, targets, and initial orientations for agent handles.
+        The rail_generator can pass a distance map in the hints or information for specific line_generators.
+        Implementations can be found in flatland/envs/rail_generators.py
+    line_generator : function
+        The line_generator function is a function that takes the grid, the number of agents and optional hints
+        and returns a list of starting positions, targets, initial orientations and maximum speeds for all agent handles.
+        Implementations can be found in flatland/envs/line_generators.py
+    number_of_agents : int
+        Number of agents to spawn on the map. Potentially in the future,
+        a range of number of agents to sample from.
+    obs_builder_object: ObservationBuilder
+        ObservationBuilder-derived object that builds observation
+        vectors for each agent.
+    malfunction_generator_and_process_data : Tuple["MalfunctionGenerator","MalfunctionProcessData"]
+        Deprecated. Use `malfunction_generator` option instead.
+    malfunction_generator: "MalfunctionGenerator"
+        Convenience option to inject effects generator. Defaults to `NoMalfunctionGen`.
+    remove_agents_at_target : bool
+        If remove_agents_at_target is set to true then the agents will be removed by placing to
+        RailEnv.DEPOT_POSITION when the agent has reached its target position.
+    random_seed : int or None
+        if None, then it is ignored, else the random generators are seeded with this number to ensure
+        that stochastic operations are replicable across multiple operations
+    timetable_generator
+        Timetable generator to be used in `reset()`. Defaults to "ttg.timetable_generator".
+    acceleration_delta : float
+        Determines how much speed is increased by MOVE_FORWARD action up to max_speed set by train's Line (sampled from `speed_ratios` by `LineGenerator`).
+        As speed is between 0.0 and 1.0, acceleration_delta=1.0 restores the previous constant speed behaviour
+        (i.e. MOVE_FORWARD always sets to max speed allowed for train).
+    braking_delta : float
+        Determines how much speed is decreased by STOP_MOVING action.
+        As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
+    rewards : DefaultRewards
+        The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
+    effects_generator : Optional[EffectsGenerator["RailEnv"]]
+        The effects generator that can modify the env at the end of env reset, at the beginning of the env step and at the end of the env step.
+    distance_map: AbstractDistanceMap
+        Use pre-computed distance map. Defaults to new distance map.
     """
 
     def __init__(self,
@@ -96,54 +140,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                  effects_generator: EffectsGenerator["RailEnv"] = None,
                  distance_map: AbstractDistanceMap = None,
                  ):
-        """
-        Environment init.
 
-        Parameters
-        ----------
-        rail_generator : function
-            The rail_generator function is a function that takes the width,
-            height and agents handles of a  rail environment, along with the number of times
-            the env has been reset, and returns a GridTransitionMap object and a list of
-            starting positions, targets, and initial orientations for agent handle.
-            The rail_generator can pass a distance map in the hints or information for specific line_generators.
-            Implementations can be found in flatland/envs/rail_generators.py
-        line_generator : function
-            The line_generator function is a function that takes the grid, the number of agents and optional hints
-            and returns a list of starting positions, targets, initial orientations and speed for all agent handles.
-            Implementations can be found in flatland/envs/line_generators.py
-        number_of_agents : int
-            Number of agents to spawn on the map. Potentially in the future,
-            a range of number of agents to sample from.
-        obs_builder_object: ObservationBuilder
-            ObservationBuilder-derived object that takes builds observation
-            vectors for each agent.
-        malfunction_generator_and_process_data : Tuple["MalfunctionGenerator","MalfunctionProcessData"]
-            Deprecated. Use `malfunction_generator` option instead.
-        malfunction_generator: "MalfunctionGenerator"
-            Convenience option to inject effects generator. Defaults to `NoMalfunctionGen`.
-        remove_agents_at_target : bool
-            If remove_agents_at_target is set to true then the agents will be removed by placing to
-            RailEnv.DEPOT_POSITION when the agent has reached its target position.
-        random_seed : int or None
-            if None, then its ignored, else the random generators are seeded with this number to ensure
-            that stochastic operations are replicable across multiple operations
-        timetable_generator
-            Timetable generator to be used in `reset()`. Defaults to "ttg.timetable_generator".
-        acceleration_delta : float
-            Determines how much speed is increased by MOVE_FORWARD action up to max_speed set by train's Line (sampled from `speed_ratios` by `LineGenerator`).
-            As speed is between 0.0 and 1.0, acceleration_delta=1.0 restores to previous constant speed behaviour
-            (i.e. MOVE_FORWARD always sets to max speed allowed for train).
-        braking_delta : float
-            Determines how much speed is decreased by STOP_MOVING action.
-            As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
-        rewards : DefaultRewards
-            The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
-        effects_generator : Optional[EffectsGenerator["RailEnv"]]
-            The effects generator that can modify the env at the env of env reset, at the beginning of the env step and at the end of the env step.
-        distance_map: AbstractDistanceMap
-            Use pre-computed distance map. Defaults to new distance map.
-        """
         super().__init__()
 
         if malfunction_generator_and_process_data is not None:
