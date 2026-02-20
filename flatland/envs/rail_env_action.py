@@ -1,11 +1,9 @@
 from ast import literal_eval
 from functools import lru_cache
-from typing import NamedTuple, Any, Tuple
+from typing import Any
 
 import fastenum
 import numpy as np
-
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
 
 
 class RailEnvActions(fastenum.Enum):
@@ -74,5 +72,3 @@ class RailEnvActions(fastenum.Enum):
         return value in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]
 
 
-RailEnvGridPos = NamedTuple('RailEnvGridPos', [('r', int), ('c', int)])
-RailEnvNextAction = NamedTuple('RailEnvNextAction', [('action', RailEnvActions), ('next_configuration', Tuple[RailEnvGridPos, Grid4TransitionsEnum])])

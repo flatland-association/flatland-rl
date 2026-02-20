@@ -3,7 +3,6 @@ from typing import Dict, List, Optional, Generic, TypeVar, Callable
 
 from flatland.core.transition_map import TransitionMap
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.rail_env_action import RailEnvNextAction
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.step_utils.states import TrainState
 
@@ -98,22 +97,22 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
             distance = math.inf
             depth = 0
             while configuration not in agent.targets and (max_depth is None or depth < max_depth):
-                next_actions: List[RailEnvNextAction] = self.rail.get_valid_move_actions(configuration)
-                best_next_action = None
-                for next_action in next_actions:
-                    next_action_distance = self._get_distance(next_action.next_configuration, agent.handle)
+                best_next_configuration = None
+                next_configurations = self.rail.get_successor_configurations(configuration)
+                for next_configuration in next_configurations:
+                    next_action_distance = self._get_distance(next_configuration, agent.handle)
                     if next_action_distance < distance:
-                        best_next_action = next_action
                         distance = next_action_distance
+                        best_next_configuration = next_configuration
                 shortest_paths[agent.handle].append(self.waypoint_init(configuration))
                 depth += 1
 
                 # if there is no way to continue, the rail must be disconnected!
                 # (or distance map is incorrect)
-                if best_next_action is None:
+                if best_next_configuration is None:
                     shortest_paths[agent.handle] = None
                     return
-                configuration = best_next_action.next_configuration
+                configuration = best_next_configuration
             if max_depth is None or depth < max_depth:
                 shortest_paths[agent.handle].append(self.waypoint_init(configuration))
 

@@ -94,7 +94,6 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @position.setter
     def position(self, value):
-        assert value is not None
         self.current_configuration = (value, self.direction)
 
     @property
@@ -105,7 +104,6 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @direction.setter
     def direction(self, value):
-        assert value is not None
         self.current_configuration = (self.position, value)
 
     # used in rendering
