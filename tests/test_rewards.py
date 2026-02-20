@@ -70,19 +70,20 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    agent.position = (2, 2)
+    agent.current_configuration = ((2, 2), 2)
+    # intermediate stop evaluation when done
     agent.state = TrainState.STOPPED
-    rewards.step_reward(agent, None, distance_map, 5)
+    assert rewards.step_reward(agent, None, distance_map, 5) == rewards.empty()
     agent.state = TrainState.DONE
-    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == -intermediate_not_served_penalty
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == rewards.empty()
 
     rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
-    agent.position = (2, 2)
+    agent.current_configuration = ((2, 2), 2)
     agent.state = TrainState.STOPPED
-    rewards.step_reward(agent, None, distance_map, 5)
+    assert rewards.step_reward(agent, None, distance_map, 5) == rewards.empty()
     agent.state = TrainState.DONE
     # if agent is done, intermediate not served is handled in step reward and not in end_of_episode_reward
-    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == (-intermediate_not_served_penalty, 0, 0)
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == rewards.empty()
 
 
 def test_rewards_intermediate_served_but_not_stopped_penalty():
