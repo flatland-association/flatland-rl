@@ -350,6 +350,10 @@ class PolicyRunner:
               help="DEPRECATED: use the patched env_generator. Keep only for regression tests. Update tests and drop in separate pr.",
               required=False
               )
+@click.option('--post-seed',
+              type=int,
+              help="DEPRECATED: only applicable with legacy env generator.",
+              required=False, default=None)
 def generate_trajectory_from_policy(
     data_dir: Path,
     policy: str = None,
@@ -388,6 +392,7 @@ def generate_trajectory_from_policy(
     callbacks_pkg: str = None,
     callbacks_cls: str = None,
     legacy_env_generator: bool = False,
+    post_seed: int = None,
 ):
     if policy is None:
         policy = os.environ.get("POLICY", None)
@@ -464,6 +469,7 @@ def generate_trajectory_from_policy(
             seed=seed,
             obs_builder_object=obs_builder,
             rewards=rewards,
+            post_seed=post_seed,
         )
     else:
         env, _, _ = env_generator(
