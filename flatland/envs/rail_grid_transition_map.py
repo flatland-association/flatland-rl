@@ -12,7 +12,6 @@ from flatland.core.transitions import Transitions
 from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.rail_env_action import RailEnvNextAction
 from flatland.utils.ordered_set import OrderedSet
 
 
@@ -20,33 +19,6 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
 
     def __init__(self, width, height, transitions: Transitions = RailEnvTransitions(), grid: np.ndarray = None):
         super().__init__(width=width, height=height, transitions=transitions, grid=grid)
-
-    @lru_cache(maxsize=4_000_000)
-    def get_valid_move_actions(self, configuration: Tuple[Tuple[int, int], int]) -> Set[RailEnvNextAction]:
-        """
-        Get the valid move actions (forward, left, right) for an agent.
-
-        Parameters
-        ----------
-        configuration: Tuple[Tuple[int,int],int]
-
-
-        Returns
-        -------
-        Set of `RailEnvNextAction` (tuples of (action,position,direction))
-            Possible move actions (forward,left,right) and the next position/direction they lead to.
-            It is not checked that the next cell is free.
-        """
-        position, direction = configuration
-
-        valid_actions: Set[RailEnvNextAction] = []
-        for action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT]:
-            t = self.apply_action_independent(action, (position, direction))
-            if t is not None:
-                new_configuration, _ = t
-                if self.is_valid_configuration(new_configuration):
-                    valid_actions.append(RailEnvNextAction(action, new_configuration))
-        return valid_actions
 
     @lru_cache(maxsize=4_000_000)
     def get_successor_configurations(self, configuration: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
@@ -64,11 +36,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     def get_predecessor_configurations(self, configuration: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
         position, direction = configuration
 
-        # The agent must land into the current cell with orientation `direction`.
-        # This is only possible if the agent has arrived from the cell in the opposite direction!
-        neigh_direction = (direction + 2) % 4
-        previous_cell = get_new_position(position, neigh_direction)
-
+        previous_cell = get_new_position(position, (direction + 2) % 4)
         if self.check_bounds(previous_cell):
             # Check all possible transitions from previous cell
             return set([(previous_cell, agent_orientation) for agent_orientation in range(4) if

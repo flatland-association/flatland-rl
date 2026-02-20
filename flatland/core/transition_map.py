@@ -17,7 +17,6 @@ from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transitions import Transitions
 from flatland.envs.fast_methods import fast_count_nonzero
-from flatland.envs.rail_env_action import RailEnvNextAction
 from flatland.utils.ordered_set import OrderedSet
 
 UnderlyingConfigurationType = TypeVar('ConfigurationType')
@@ -134,23 +133,6 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
             the next configuration (cell + direction, resp., edge)
         straight : bool
             whether the transition allows acceleration (only straight transitions in the grid, i.e. facing along the same axis: N->N/S, E->E/W, S->S/N, W->W/E)
-        """
-        raise NotImplementedError()
-
-    def get_valid_move_actions(self, configuration: UnderlyingConfigurationType) -> Set[RailEnvNextAction]:
-        """
-        Get the valid move actions (forward, left, right) for an agent.
-
-        Parameters
-        ----------
-        configuration: ConfigurationType.
-
-
-        Returns
-        -------
-        Set of `RailEnvNextAction` (tuples of (action,position,direction))
-            Possible move actions (forward,left,right) and the next position/direction they lead to.
-            It is not checked that the next cell is free.
         """
         raise NotImplementedError()
 

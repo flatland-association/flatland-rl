@@ -28,7 +28,7 @@ import networkx as nx
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_action import RailEnvActions, RailEnvNextAction
+from flatland.envs.rail_env_action import RailEnvActions
 
 GridNode = str
 GridEdge = Tuple[str]
@@ -153,10 +153,6 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             edge_data = self.g.get_edge_data(configuration, v)
             if action in edge_data["actions"]:
                 return v, edge_data["straight"]
-
-    @lru_cache
-    def get_valid_move_actions(self, configuration: GridNode) -> Set[RailEnvNextAction]:
-        return [RailEnvNextAction(a, s) for s in self.g.successors(configuration) for a in self.g.get_edge_data(configuration, s)["actions"]]
 
     def get_transitions(self, configuration: GridNode) -> Tuple[bool]:
         return True,
