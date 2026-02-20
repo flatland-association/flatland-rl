@@ -95,6 +95,10 @@ from flatland.trajectories.policy_runner import generate_trajectory_from_policy
               help="DEPRECATED: use the patched env_generator. Keep only for regression tests. Update tests and drop in separate pr.",
               required=False
               )
+@click.option('--post-seed',
+              type=int,
+              help="DEPRECATED: only applicable with legacy env generator.",
+              required=False, default=None)
 def generate_trajectories_from_metadata(
     metadata_csv: Path,
     data_dir: Path,
@@ -111,6 +115,7 @@ def generate_trajectories_from_metadata(
     callbacks_pkg: str = None,
     callbacks_cls: str = None,
     legacy_env_generator: bool = False,
+    post_seed: int = None,
 ):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
@@ -165,11 +170,10 @@ def generate_trajectories_from_metadata(
                 args += ["--callbacks-pkg", callbacks_pkg]
             if callbacks_cls is not None:
                 args += ["--callbacks-cls", callbacks_cls]
+            if post_seed is not None:
+                args += ["--post-seed", post_seed]
 
             generate_trajectory_from_policy(args)
 
         except SystemExit as exc:
             assert exc.code == 0
-
-
-
