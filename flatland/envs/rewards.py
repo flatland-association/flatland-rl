@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import Generic, TypeVar, Tuple, Dict, Set, Optional
 
+from fastenum import fastenum
+
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
@@ -83,8 +85,18 @@ def defaultdict_set():
     return defaultdict(lambda: set())
 
 
-class DefaultRewards(Rewards[float]):
-    """
+class DefaultPenalties(fastenum.Enum):
+    COLLISION = "COLLISION"
+    TARGET_LATE_ARRIVAL = "TARGET_LATE_ARRIVAL"
+    CANCELLATION = "CANCELLATION"
+    TARGET_NOT_REACHED = "TARGET_NOT_REACHED"
+    INTERMEDIATE_NOT_SERVED = "INTERMEDIATE_NOT_SERVED"
+    INTERMEDIATE_LATE_ARRIVAL = "INTERMEDIATE_LATE_ARRIVAL"
+    INTERMEDIATE_EARLY_DEPARTURE = "INTERMEDIATE_EARLY_DEPARTURE"
+
+
+class BaseDefaultRewards(Rewards[Dict[str, float]]):
+    r"""
     Reward Function.
 
     This scoring function is designed to capture key operational metrics such as punctuality, efficiency in responding to disruptions, and safety.
@@ -93,42 +105,38 @@ class DefaultRewards(Rewards[float]):
     as well as penalties for intermediate stops not served or even journeys not started.
 
     Safety measures are implemented as penalties for collisions which are directly proportional to the train’s speed at impact, ensuring that high-speed operations are managed with extra caution.
+
+    Parameters
+    ----------
+    cancellation_factor : float
+        Cancellation factor :math:`\phi \geq 0`. defaults to  1.
+    cancellation_time_buffer : float
+        Cancellation time buffer :math:`\pi \geq 0`. Defaults to 0.
+    intermediate_not_served_penalty : float
+       Intermediate stop not served penalty :math:`\mu \geq 0`. Applied if one of the intermediates is not served or only run through without stopping. Defaults to 1.
+    intermediate_late_arrival_penalty_factor : float
+        Intermediate late arrival penalty factor :math:`\alpha \geq 0`. Defaults to 0.2.
+    intermediate_early_departure_penalty_factor : float
+        Intermediate early departure penalty factor :math:`\delta \geq 0`. Defaults to 0.5.
+    collision_factor : float
+        Crash penalty factor :math:`\kappa \geq 0`. Defaults to 0.0.
     """
 
     def __init__(self,
-                 epsilon: float = 0.01,
                  cancellation_factor: float = 1,
                  cancellation_time_buffer: float = 0,
                  intermediate_not_served_penalty: float = 1,
                  intermediate_late_arrival_penalty_factor: float = 0.2,
                  intermediate_early_departure_penalty_factor: float = 0.5,
-                 crash_penalty_factor: float = 0.0
+                 collision_factor: float = 0.0
                  ):
-        """
-        Parameters
-        ----------
-        epsilon : float
-            avoid rounding errors, defaults to 0.01.
-        cancellation_factor : float
-            Cancellation factor $\phi \geq 0$. defaults to  1.
-        cancellation_time_buffer : float
-            Cancellation time buffer $\pi \geq 0$. Defaults to 0.
-        intermediate_not_served_penalty : float
-           Intermediate stop not served penalty $\mu \geq 0$. Applied if one of the intermediates is not served or only run through without stopping. Defaults to 1.
-        intermediate_late_arrival_penalty_factor : float
-            Intermediate late arrival penalty factor $\alpha \geq 0$. Defaults to 0.2.
-        intermediate_early_departure_penalty_factor : float
-            Intermediate early departure penalty factor $\delta \geq 0$. Defaults to 0.5.
-        crash_penalty_factor : float
-            Crash penalty factor $\kappa \geq 0$. Defaults to 0.0.
-        """
-        self.crash_penalty_factor = crash_penalty_factor
+        self.collision_factor = collision_factor
         self.intermediate_early_departure_penalty_factor = intermediate_early_departure_penalty_factor
         self.intermediate_late_arrival_penalty_factor = intermediate_late_arrival_penalty_factor
         self.intermediate_not_served_penalty = intermediate_not_served_penalty
         self.cancellation_time_buffer = cancellation_time_buffer
         self.cancellation_factor = cancellation_factor
-        assert self.crash_penalty_factor >= 0
+        assert self.collision_factor >= 0
         assert self.intermediate_early_departure_penalty_factor >= 0
         assert self.intermediate_late_arrival_penalty_factor >= 0
         assert self.intermediate_not_served_penalty >= 0
@@ -139,8 +147,8 @@ class DefaultRewards(Rewards[float]):
         self.departures: Dict[AgentHandle, Dict[Waypoint, int]] = defaultdict(defaultdict)
         self.states: Dict[AgentHandle, Dict[Waypoint, Set[TrainState]]] = defaultdict(defaultdict_set)
 
-    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> float:
-        reward = 0
+    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
+        d = self.empty()
         if agent.position is not None:
             wp = Waypoint(agent.position, agent.direction)
             self.states[agent.handle][wp].add(agent.state)
@@ -162,20 +170,21 @@ class DefaultRewards(Rewards[float]):
             # - if not braking, still full speed
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design, should we penalize invalid actions upon symmetric switch?
             # - if invalid action, speed set to 0
-            reward += -1 * agent_transition_data.speed * self.crash_penalty_factor
+            d[DefaultPenalties.COLLISION.value] = -1 * agent_transition_data.speed * self.collision_factor
 
         if agent.state == TrainState.DONE and agent.state_machine.previous_state != TrainState.DONE:
-            reward += self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps)
-        return reward
+            self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps, d)
+        return d
 
-    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> float:
+    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
+        d = self.empty()
         # If agent finished during episode, reward already calculated in step_reward()
         if agent.state == TrainState.DONE:
-            return 0
+            return d
         # Calculate penalty for not reaching target before episode end
-        return self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps)
+        return self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps, d)
 
-    def _agent_done_or_max_episode_steps_reward(self, agent, distance_map, elapsed_steps):
+    def _agent_done_or_max_episode_steps_reward(self, agent, distance_map, elapsed_steps, d: Dict[str, float]):
         """
         Calculate final rewards/penalties for an agent.
 
@@ -185,21 +194,20 @@ class DefaultRewards(Rewards[float]):
 
         Handles both completed and incomplete journeys.
         """
-        reward = 0
         if agent.state == TrainState.DONE:
             # delay at target
             # if agent arrived earlier or on time = 0
             # if agent arrived later = -ve reward based on how late
-            reward = min(agent.latest_arrival - agent.arrival_time, 0)
+            d[DefaultPenalties.TARGET_LATE_ARRIVAL.value] = min(agent.latest_arrival - agent.arrival_time, 0)
         else:
             if agent.state.is_off_map_state():
                 # journey not started
-                reward = -1 * self.cancellation_factor * \
-                         (agent.get_travel_time_on_shortest_path(distance_map) + self.cancellation_time_buffer)
+                d[DefaultPenalties.CANCELLATION.value] = -1 * self.cancellation_factor * \
+                                                         (agent.get_travel_time_on_shortest_path(distance_map) + self.cancellation_time_buffer)
 
             # target not reached
             if agent.state.is_on_map_state():
-                reward = agent.get_current_delay(elapsed_steps, distance_map)
+                d[DefaultPenalties.TARGET_NOT_REACHED.value] = agent.get_current_delay(elapsed_steps, distance_map)
         for intermediate_alternatives, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1],
                                                      agent.waypoints_earliest_departure[1:-1]):
             agent_arrivals: Set[Waypoint] = set(self.arrivals[agent.handle])
@@ -207,16 +215,105 @@ class DefaultRewards(Rewards[float]):
             wps_intersection: Set[Waypoint] = intermediate_alternatives.intersection(agent_arrivals)
             if len(wps_intersection) == 0 or TrainState.STOPPED not in self.states[agent.handle][list(wps_intersection)[0]]:
                 # stop not served or served but not stopped
-                reward += -1 * self.intermediate_not_served_penalty
+                d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] += -1 * self.intermediate_not_served_penalty
             else:
                 wp = list(wps_intersection)[0]
                 # late arrival
-                reward += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][wp], 0)
+                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][wp],
+                                                                                                                           0)
                 # early departure
                 # N.B. if arrival but not departure, handled by above by departed but never reached.
                 if wp in self.departures[agent.handle]:
-                    reward += self.intermediate_early_departure_penalty_factor * min(self.departures[agent.handle][wp] - ed, 0)
-        return reward
+                    d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += self.intermediate_early_departure_penalty_factor * min(
+                        self.departures[agent.handle][wp] - ed, 0)
+        return d
+
+    def cumulate(self, *rewards: float) -> Dict[str, float]:
+        return {p.value: sum([r[p.value] for r in rewards]) for p in DefaultPenalties}
+
+    def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
+        # https://flatland-association.github.io/flatland-book/challenges/flatland3/eval.html
+        return sum([sum([r[p.value] for r in rewards]) / (max_episode_steps * num_agents) for p in DefaultPenalties]) + 1
+
+    def empty(self) -> Dict[str, float]:
+        return {p.value: 0 for p in DefaultPenalties}
+
+
+class DefaultRewards(Rewards[float]):
+    """
+    Aggregates `FineDefaultRewards` to single `float`.
+    """
+
+    def __init__(self,
+                 cancellation_factor: float = 1,
+                 cancellation_time_buffer: float = 0,
+                 intermediate_not_served_penalty: float = 1,
+                 intermediate_late_arrival_penalty_factor: float = 0.2,
+                 intermediate_early_departure_penalty_factor: float = 0.5,
+                 collision_factor: float = 0.0
+                 ):
+        self._proxy = BaseDefaultRewards(
+            cancellation_factor=cancellation_factor,
+            cancellation_time_buffer=cancellation_time_buffer,
+            intermediate_not_served_penalty=intermediate_not_served_penalty,
+            intermediate_late_arrival_penalty_factor=intermediate_late_arrival_penalty_factor,
+            intermediate_early_departure_penalty_factor=intermediate_early_departure_penalty_factor,
+            collision_factor=collision_factor
+        )
+
+    @property
+    def collision_factor(self):
+        return self._proxy.collision_factor
+
+    @property
+    def intermediate_early_departure_penalty_factor(self):
+        return self._proxy.intermediate_early_departure_penalty_factor
+
+    @property
+    def intermediate_late_arrival_penalty_factor(self):
+        return self._proxy.intermediate_late_arrival_penalty_factor
+
+    @property
+    def intermediate_not_served_penalty(self):
+        return self._proxy.intermediate_not_served_penalty
+
+    @property
+    def cancellation_time_buffer(self):
+        return self._proxy.cancellation_time_buffer
+
+    @property
+    def cancellation_factor(self):
+        return self._proxy.cancellation_factor
+
+    @collision_factor.setter
+    def collision_factor(self, v):
+        self._proxy.collision_factor = v
+
+    @intermediate_early_departure_penalty_factor.setter
+    def intermediate_early_departure_penalty_factor(self, v):
+        self._proxy.intermediate_early_departure_penalty_factor = v
+
+    @intermediate_late_arrival_penalty_factor.setter
+    def intermediate_late_arrival_penalty_factor(self, v):
+        self._proxy.intermediate_late_arrival_penalty_factor = v
+
+    @intermediate_not_served_penalty.setter
+    def intermediate_not_served_penalty(self, v):
+        self._proxy.intermediate_not_served_penalty = v
+
+    @cancellation_time_buffer.setter
+    def cancellation_time_buffer(self, v):
+        self._proxy.cancellation_time_buffer = v
+
+    @cancellation_factor.setter
+    def cancellation_factor(self, v):
+        self._proxy.cancellation_factor = v
+
+    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> float:
+        return sum(self._proxy.step_reward(agent, agent_transition_data, distance_map, elapsed_steps).values())
+
+    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> float:
+        return sum(self._proxy.end_of_episode_reward(agent, distance_map, elapsed_steps).values())
 
     def cumulate(self, *rewards: float) -> float:
         return sum(rewards)
@@ -238,8 +335,8 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
     For illustration purposes.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._previous_speeds = {}
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[
