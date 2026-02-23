@@ -9,7 +9,7 @@ from flatland.envs.rail_env import RailEnv
 from flatland.trajectories.trajectories import Trajectory
 
 
-def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
+def data_frame_for_trajectories(root_data_dir: Path, verbose: bool = False) -> Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
     all_actions = []
     all_trains_positions = []
     all_trains_arrived = []
@@ -18,7 +18,8 @@ def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFra
     agent_stats = []
 
     data_dirs = sorted([serialised_state.parent for serialised_state in (root_data_dir.resolve().glob("**/serialised_state"))])
-    print(data_dirs)
+    if verbose:
+        print(data_dirs)
 
     for data_dir in data_dirs:
         snapshots = [snapshot for snapshot in (data_dir / "serialised_state").glob("*.pkl") if "step" not in snapshot.name]
@@ -76,7 +77,8 @@ def data_frame_for_trajectories(root_data_dir: Path) -> Tuple[DataFrame, DataFra
     all_trains_rewards_dones_infos = pd.concat(all_trains_rewards_dones_infos)
     env_stats = pd.concat(env_stats)
     agent_stats = pd.concat(agent_stats)
-    print(all_trains_arrived)
+    if verbose:
+        print(all_trains_arrived)
 
     return all_actions, all_trains_positions, all_trains_arrived, all_trains_rewards_dones_infos, env_stats, agent_stats
 
