@@ -265,7 +265,7 @@ class PolicyRunner:
               default=None)
 @click.option('--seed',
               type=int,
-              help="Initiate random seed generators. Goes into `reset`. If --env-path is used, the env is reset with the seed, otherwise the env is NOT reset.",
+              help="Initiate random seed generators. Goes into `reset`",
               required=False, default=None)
 @click.option('--effects-generator',
               type=str,
@@ -352,7 +352,7 @@ class PolicyRunner:
               )
 @click.option('--post-seed',
               type=int,
-              help="DEPRECATED: only applicable with legacy env generator.",
+              help="DEPRECATED: only applicable with legacy_env_generator.",
               required=False, default=None)
 def generate_trajectory_from_policy(
     data_dir: Path,
