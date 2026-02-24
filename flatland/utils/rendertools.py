@@ -179,15 +179,6 @@ class RenderLocal(RenderBase):
         return
 
     def update_background(self):
-        # # create background map
-        # targets = {}
-        # for agent_idx, agent in enumerate(self.env.agents):
-        #     if agent is None:
-        #         continue
-        #     #print(f"updatebg: {agent_idx} {agent.target}")
-        #     targets[tuple(agent.target)] = agent_idx
-        # self.gl.build_background_map(targets)
-
         # create background map
         station_id = 0
         stations = {}
