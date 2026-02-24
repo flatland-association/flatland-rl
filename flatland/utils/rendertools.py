@@ -634,31 +634,35 @@ class RenderLocal(RenderBase):
             self.new_rail = False
             self.gl.clear_rails()
 
-            # store the targets
-            targets = {}
-            selected = {}
-            for agent_idx, agent in enumerate(self.env.agents):
+            # store the stations
+            # assign id to stations, so multiple cells belonging to one station are rendered with the same color
+            station_id = 0
+            stations = {}
+            for agent in self.env.agents:
                 if agent is None:
                     continue
-                targets[tuple(agent.target)] = agent_idx
-                selected[tuple(agent.target)] = (agent_idx == selected_agent)
+                for wps in agent.waypoints:
+                    for wp in wps:
+                        if wp not in stations:
+                            stations[wp.position] = station_id
+                    station_id += 1
 
             # Draw each cell independently
             for r in range(env.height):
                 for c in range(env.width):
                     transitions = env.rail.grid[r, c]
-                    if (r, c) in targets:
-                        target = targets[(r, c)]
-                        is_selected = selected[(r, c)]
+                    if (r, c) in stations:
+                        station = stations[(r, c)]
+                        is_selected = True
                     else:
-                        target = None
+                        station = None
                         is_selected = False
 
-                    self.gl.set_rail_at(r, c, transitions, target=target, is_selected=is_selected,
+                    self.gl.set_rail_at(r, c, transitions, target=station, is_selected=is_selected,
                                         rail_grid=env.rail.grid, num_agents=env.get_num_agents(),
                                         show_debug=self.show_debug)
 
-            self.gl.build_background_map(targets)
+            self.gl.build_background_map(stations)
 
             if show_rowcols:
                 # label rows, cols
