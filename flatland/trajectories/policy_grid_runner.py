@@ -89,6 +89,16 @@ from flatland.trajectories.policy_runner import generate_trajectory_from_policy
               required=False,
               default=None,
               )
+@click.option('--legacy-env-generator',
+              type=bool,
+              default=False,
+              help="DEPRECATED: use the patched env_generator. Keep only for regression tests. Update tests and drop in separate pr.",
+              required=False
+              )
+@click.option('--post-seed',
+              type=int,
+              help="DEPRECATED: only applicable with legacy env generator.",
+              required=False, default=None)
 def generate_trajectories_from_metadata(
     metadata_csv: Path,
     data_dir: Path,
@@ -104,6 +114,8 @@ def generate_trajectories_from_metadata(
     callbacks: str = None,
     callbacks_pkg: str = None,
     callbacks_cls: str = None,
+    legacy_env_generator: bool = False,
+    post_seed: int = None,
 ):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
@@ -149,6 +161,8 @@ def generate_trajectories_from_metadata(
                 args += ["--rewards-pkg", rewards_pkg]
             if rewards_cls is not None:
                 args += ["--rewards-cls", rewards_cls]
+            if legacy_env_generator:
+                args += ["--legacy-env-generator", True]
 
             if callbacks is not None:
                 args += ["--callbacks", callbacks]
@@ -156,11 +170,10 @@ def generate_trajectories_from_metadata(
                 args += ["--callbacks-pkg", callbacks_pkg]
             if callbacks_cls is not None:
                 args += ["--callbacks-cls", callbacks_cls]
+            if post_seed is not None:
+                args += ["--post-seed", post_seed]
 
             generate_trajectory_from_policy(args)
 
         except SystemExit as exc:
             assert exc.code == 0
-
-
-

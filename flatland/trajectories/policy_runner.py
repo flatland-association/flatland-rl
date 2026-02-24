@@ -6,7 +6,7 @@ import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.policy import Policy
-from flatland.env_generation.env_generator import env_generator
+from flatland.env_generation.env_generator import env_generator, env_generator_legacy
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -265,7 +265,7 @@ class PolicyRunner:
               default=None)
 @click.option('--seed',
               type=int,
-              help="Initiate random seed generators. Goes into `reset`. If --env-path is used, the env is reset with the seed, otherwise the env is NOT reset.",
+              help="Initiate random seed generators. Goes into `reset`",
               required=False, default=None)
 @click.option('--effects-generator',
               type=str,
@@ -344,6 +344,16 @@ class PolicyRunner:
               required=False,
               default=None
               )
+@click.option('--legacy-env-generator',
+              type=bool,
+              default=False,
+              help="DEPRECATED: use the patched env_generator. Keep only for regression tests. Update tests and drop in separate pr.",
+              required=False
+              )
+@click.option('--post-seed',
+              type=int,
+              help="DEPRECATED: only applicable with legacy_env_generator.",
+              required=False, default=None)
 def generate_trajectory_from_policy(
     data_dir: Path,
     policy: str = None,
@@ -381,6 +391,8 @@ def generate_trajectory_from_policy(
     callbacks: str = None,
     callbacks_pkg: str = None,
     callbacks_cls: str = None,
+    legacy_env_generator: bool = False,
+    post_seed: int = None,
 ):
     if policy is None:
         policy = os.environ.get("POLICY", None)
@@ -440,6 +452,25 @@ def generate_trajectory_from_policy(
         # TODO https://github.com/flatland-association/flatland-rl/issues/278 a bit hacky for now, clean up later...
         if malfunction_interval == -1 and effects_generator is not None:
             env.effects_generator = effects_generator
+    elif legacy_env_generator:
+        env, _, _ = env_generator_legacy(
+            n_agents=n_agents,
+            x_dim=x_dim,
+            y_dim=y_dim,
+            n_cities=n_cities,
+            max_rail_pairs_in_city=max_rail_pairs_in_city,
+            grid_mode=grid_mode,
+            max_rails_between_cities=max_rails_between_cities,
+            malfunction_duration_min=malfunction_duration_min,
+            malfunction_duration_max=malfunction_duration_max,
+            malfunction_interval=malfunction_interval,
+            effects_generator=effects_generator,
+            speed_ratios=dict(speed_ratios) if len(speed_ratios) > 0 else None,
+            seed=seed,
+            obs_builder_object=obs_builder,
+            rewards=rewards,
+            post_seed=post_seed,
+        )
     else:
         env, _, _ = env_generator(
             n_agents=n_agents,

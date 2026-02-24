@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from numpy.random import RandomState
 
 from flatland.envs.rail_generators import sparse_rail_generator, FileRailFromGridGen, RailGeneratorProduct
 
@@ -13,7 +14,7 @@ from flatland.envs.rail_generators import sparse_rail_generator, FileRailFromGri
     (30, 32, 33, 40, 42, 33, True),
 ])
 def test_generate(w: int, h: int, na: int, w2: int, h2: int, na2: int, warn: bool):
-    expected: RailGeneratorProduct = sparse_rail_generator()(w, h, na, 0)
+    expected: RailGeneratorProduct = sparse_rail_generator()(w, h, na, 0, np_random=RandomState())
 
     with tempfile.TemporaryDirectory() as tmp_dir_name:
         pkl = Path(tmp_dir_name) / f"{uuid.uuid4()}.pkl"
