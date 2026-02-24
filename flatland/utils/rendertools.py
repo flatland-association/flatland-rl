@@ -179,14 +179,27 @@ class RenderLocal(RenderBase):
         return
 
     def update_background(self):
+        # # create background map
+        # targets = {}
+        # for agent_idx, agent in enumerate(self.env.agents):
+        #     if agent is None:
+        #         continue
+        #     #print(f"updatebg: {agent_idx} {agent.target}")
+        #     targets[tuple(agent.target)] = agent_idx
+        # self.gl.build_background_map(targets)
+
         # create background map
-        targets = {}
-        for agent_idx, agent in enumerate(self.env.agents):
+        station_id = 0
+        stations = {}
+        for agent in self.env.agents:
             if agent is None:
                 continue
-            #print(f"updatebg: {agent_idx} {agent.target}")
-            targets[tuple(agent.target)] = agent_idx
-        self.gl.build_background_map(targets)
+            for wps in agent.waypoints:
+                for wp in wps:
+                    if wp not in stations:
+                        stations[wp.position] = station_id
+                station_id += 1
+        self.gl.build_background_map(stations)
 
     def resize(self):
         self.gl.resize(self.env)
