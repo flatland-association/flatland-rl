@@ -1,3 +1,5 @@
+import numpy as np
+
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
@@ -348,9 +350,9 @@ def test_malfunction_to_moving_instead_of_stopped():
 
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
-    assert env.agents[0].speed_counter.speed == 0.2
+    assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
-    assert env.agents[0].speed_counter.distance == 0.0
+    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)
 
     # step 3
     env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
@@ -358,8 +360,8 @@ def test_malfunction_to_moving_instead_of_stopped():
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.MALFUNCTION
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
-    assert env.agents[0].speed_counter.speed == 0.0
-    assert env.agents[0].speed_counter.distance == 0.0
+    assert np.isclose(float(env.agents[0].speed_counter.speed), 0.0)
+    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)
 
     # step 4
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
@@ -368,8 +370,8 @@ def test_malfunction_to_moving_instead_of_stopped():
     # WITHOUT FIX: agent is STOPPED
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
-    assert env.agents[0].speed_counter.speed == 0.2
-    assert env.agents[0].speed_counter.distance == 0.2
+    assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
+    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.2)
     # \ TEMPORARY FIX
 
 
@@ -412,30 +414,30 @@ def test_stop_and_go():
 
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
-    assert env.agents[0].speed_counter.speed == 0.2
+    assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
-    assert env.agents[0].speed_counter.distance == 0.0
+    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)
 
     # step 3
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
-    assert env.agents[0].speed_counter.speed == 0.2
-    assert env.agents[0].speed_counter.distance == 0.2
+    assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
+    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.2)
 
     # step 4
     env.step({0: RailEnvActions.STOP_MOVING, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.STOPPED
-    assert env.agents[0].speed_counter.speed == 0.0
-    assert env.agents[0].speed_counter.distance == 0.2
+    assert np.isclose(float(env.agents[0].speed_counter.speed), 0.0)
+    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.2)
 
     # step 5
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].position == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
-    assert env.agents[0].speed_counter.speed == 0.2
-    assert env.agents[0].speed_counter.distance == 0.4
+    assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
+    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.4)

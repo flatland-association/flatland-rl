@@ -103,7 +103,7 @@ def test_get_global_observation():
                             "agent {} in state {} at {} should see agent malfunction {}, found = {}" \
                                 .format(i, agent.state, (r, c), other_agent.malfunction_handler.malfunction_down_counter,
                                         obs_agents_state[(r, c)][2])
-                        assert np.isclose(obs_agents_state[(r, c)][3], other_agent.speed_counter.speed)
+                        assert np.isclose(obs_agents_state[(r, c)][3], float(other_agent.speed_counter.speed))
                         has_agent = True
                 if not has_agent:
                     assert np.isclose(obs_agents_state[(r, c)][2], -1), \

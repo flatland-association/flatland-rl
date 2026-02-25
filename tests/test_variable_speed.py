@@ -1,9 +1,12 @@
+from fractions import Fraction
+
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.step_utils.speed_counter import _pseudo_fractional
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
 from tests.test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
@@ -18,8 +21,8 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
     env.reset()
 
     env._max_episode_steps = 1000
-    env.acceleration_delta = 0.2
-    env.braking_delta = -0.2
+    env.acceleration_delta = Fraction(2, 10)
+    env.braking_delta = -Fraction(2, 10)
 
     set_penalties_for_replay(env)
     test_config = ReplayConfig(
@@ -27,40 +30,40 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
             Replay(  # 0
                 position=(3, 9),  # east dead-end
                 direction=Grid4TransitionsEnum.EAST,
-                speed=0.5,
-                distance=0.0,
+                speed=_pseudo_fractional(0.5),
+                distance=_pseudo_fractional(0.0),
 
                 action=RailEnvActions.MOVE_FORWARD,
             ),
             Replay(  # 1
                 position=(3, 9),
                 direction=Grid4TransitionsEnum.EAST,
-                speed=0.7,
-                distance=0.7,
+                speed=_pseudo_fractional(0.7),
+                distance=_pseudo_fractional(0.7),
 
                 action=None,
             ),
             Replay(  # 2
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
-                speed=0.7,
-                distance=0.4,
+                speed=_pseudo_fractional(0.7),
+                distance=_pseudo_fractional(0.4),
 
                 action=RailEnvActions.MOVE_FORWARD,
             ),
             Replay(  # 3
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
-                speed=0.9,
-                distance=0.3,
+                speed=_pseudo_fractional(0.9),
+                distance=_pseudo_fractional(0.3),
 
                 action=RailEnvActions.MOVE_FORWARD,
             ),
             Replay(  # 4
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
-                speed=1.0,
-                distance=0.3,
+                speed=_pseudo_fractional(1.0),
+                distance=_pseudo_fractional(0.3),
 
                 action=RailEnvActions.MOVE_LEFT,
 
@@ -68,8 +71,8 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
             Replay(  # 5
                 position=(4, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
-                speed=1.0,
-                distance=0.3,
+                speed=_pseudo_fractional(1.0),
+                distance=_pseudo_fractional(0.3),
                 state=TrainState.MOVING,
 
                 action=RailEnvActions.STOP_MOVING,
@@ -78,39 +81,39 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
             Replay(  # 6
                 position=(5, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
-                speed=0.8,
-                distance=0.1,
+                speed=_pseudo_fractional(0.8),
+                distance=_pseudo_fractional(0.1),
 
                 action=RailEnvActions.STOP_MOVING,
             ),
             Replay(  # 7
                 position=(5, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
-                speed=0.6,
-                distance=0.7,
+                speed=_pseudo_fractional(0.6),
+                distance=_pseudo_fractional(0.7),
 
                 action=RailEnvActions.MOVE_RIGHT,  # must not accelerate/brake!
             ),
             Replay(  # 8
                 position=(6, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
-                speed=0.6,
-                distance=0.3,
+                speed=_pseudo_fractional(0.6),
+                distance=_pseudo_fractional(0.3),
 
                 action=RailEnvActions.DO_NOTHING,
             ),
             Replay(  # 9
                 position=(6, 6),
                 direction=Grid4TransitionsEnum.SOUTH,
-                speed=0.6,
-                distance=0.9,
+                speed=_pseudo_fractional(0.6),
+                distance=_pseudo_fractional(0.9),
 
                 action=RailEnvActions.DO_NOTHING,
             ),
         ],
         target=(3, 0),  # west dead-end
-        speed=0.5,
-        max_speed=1.0,
+        speed=_pseudo_fractional(0.5),
+        max_speed=_pseudo_fractional(1.0),
         initial_position=(3, 9),  # east dead-end
         initial_direction=Grid4TransitionsEnum.EAST,
     )

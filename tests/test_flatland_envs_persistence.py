@@ -64,6 +64,8 @@ def test_regression_forward(package, resource, expected):
     total_rewards = 0
     while not done:
         _, rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
+        # print(f"{env._elapsed_steps} {rewards} {done}")
+        print(f"{env._elapsed_steps} {env.agents[0].speed_counter}")
         total_rewards += sum(rewards.values())
         done = done['__all__']
 

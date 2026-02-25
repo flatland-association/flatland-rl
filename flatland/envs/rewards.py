@@ -352,7 +352,7 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
         if agent.handle in self._previous_speeds:
             smoothness = -(current_speed - self._previous_speeds[agent.handle]) ** 2
         self._previous_speeds[agent.handle] = current_speed
-        return default_reward, energy_efficiency, smoothness
+        return default_reward, float(energy_efficiency), float(smoothness)
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[float, float, float]:
         default_reward = super().end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=elapsed_steps)

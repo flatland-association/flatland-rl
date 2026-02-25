@@ -9,7 +9,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.action_saver import ActionSaver
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
-from flatland.envs.step_utils.speed_counter import SpeedCounter
+from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.timetable_utils import Line
@@ -273,7 +273,7 @@ class EnvAgent(Generic[ConfigurationType]):
         for i, static_agent in enumerate(static_agents_data):
             if len(static_agent) >= 6:
                 speed = static_agent[4]['speed']
-                speed = 1 / (round(1 / speed))
+                speed = _pseudo_fractional(speed)
                 agent = EnvAgent(
                     initial_configuration=(static_agent[0], static_agent[1]),
                     current_configuration=(static_agent[0], static_agent[1]),

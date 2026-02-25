@@ -1,7 +1,9 @@
 import ast
 import os
+import re
 import uuid
 from collections import defaultdict
+from fractions import Fraction
 from pathlib import Path
 from typing import Optional, Tuple, Any, Dict
 
@@ -12,6 +14,7 @@ from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import Rewards
+from flatland.envs.step_utils.speed_counter import _pseudo_fractional
 from flatland.envs.step_utils.states import TrainState
 
 EVENT_LOGS_SUBDIR = 'event_logs'
@@ -165,8 +168,14 @@ class Trajectory:
         df["info"] = df["info"].map(lambda s: s.replace("<TrainState.WAITING: 0>", "0").replace("<TrainState.READY_TO_DEPART: 1>", "1").replace(
             "<TrainState.MALFUNCTION_OFF_MAP: 2>", "2").replace("<TrainState.MOVING: 3>", "3").replace("<TrainState.STOPPED: 4>", "4").replace(
             "<TrainState.MALFUNCTION: 5>", "5").replace("<TrainState.DONE: 6>", "6"))
+        # ast.literal_eval cannot deal with Fraction(a,b), so escape to string
+        df["info"] = df["info"].map(lambda s: re.sub(r"(Fraction\([0-9]+, [0-9]+\))", r"'\1'", s))
         df["info"] = df["info"].map(ast.literal_eval)
-        df["info"] = df["info"].map(lambda d: {k: (v if k != "state" else TrainState(v)) for k, v in d.items()})
+        # eval the "Fraction(a,b)" strings in the agent speeds now
+        df["info"] = df["info"].map(lambda d: {k: (v if k != "speed" or not isinstance(v, str) or not v.startswith("Fraction") else Fraction(
+            *ast.literal_eval(re.sub(r"Fraction\(([0-9]+), ([0-9]+)\)", r"(\1,\2)", v)))) for k, v in d.items()})
+        # backwards compatibility for old stored floats:
+        df["info"] = df["info"].map(lambda d: {k: (v if k != "speed" else _pseudo_fractional(v)) for k, v in d.items()})
         if df.dtypes["reward"] == object:
             df["reward"] = df["reward"].map(ast.literal_eval)
         return df

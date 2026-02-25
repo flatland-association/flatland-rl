@@ -7,7 +7,7 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_grid_transition_map
 from flatland.envs.rewards import DefaultRewards
-from flatland.envs.step_utils.speed_counter import SpeedCounter
+from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
 from tests.test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
@@ -78,7 +78,7 @@ def test_multi_speed_init():
     # See training navigation example in the baseline repository
     old_pos = []
     for i_agent in range(env.get_num_agents()):
-        env.agents[i_agent].speed_counter = SpeedCounter(speed=1. / (i_agent + 1))
+        env.agents[i_agent].speed_counter = SpeedCounter(speed=_pseudo_fractional(1.) / (i_agent + 1))
         old_pos.append(env.agents[i_agent].position)
         print(env.agents[i_agent].position)
     # Run episode
@@ -156,7 +156,7 @@ def test_multispeed_actions_no_malfunction_no_blocking():
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
-                speed=0.5,
+                speed=_pseudo_fractional(0.5),
                 distance=0.0,
 
                 action=RailEnvActions.MOVE_LEFT,
@@ -167,7 +167,7 @@ def test_multispeed_actions_no_malfunction_no_blocking():
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
-                speed=0.5,
+                speed=_pseudo_fractional(0.5),
                 distance=0.5,
 
                 action=RailEnvActions.MOVE_LEFT,
@@ -207,7 +207,7 @@ def test_multispeed_actions_no_malfunction_no_blocking():
             ),
         ],
         target=(3, 0),  # west dead-end
-        speed=0.5,
+        speed=_pseudo_fractional(0.5),
         initial_position=(3, 9),  # east dead-end
         initial_direction=Grid4TransitionsEnum.EAST,
     )
@@ -235,7 +235,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
-                    speed=1. / 3.,
+                    speed=_pseudo_fractional(1. / 3.),
 
                     action=RailEnvActions.MOVE_FORWARD,
                 ),
@@ -319,7 +319,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 )
             ],
             target=(3, 0),  # west dead-end
-            speed=1 / 3,
+            speed=_pseudo_fractional(1 / 3),
             initial_position=(3, 8),
             initial_direction=Grid4TransitionsEnum.WEST,
         ),
@@ -405,7 +405,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
                     distance=0.5,
-                    speed=0.5,
+                    speed=_pseudo_fractional(0.5),
 
                     action=RailEnvActions.MOVE_LEFT,
                 ),
@@ -417,7 +417,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                 ),
             ],
             target=(3, 0),  # west dead-end
-            speed=0.5,
+            speed=_pseudo_fractional(0.5),
             initial_position=(3, 9),  # east dead-end
             initial_direction=Grid4TransitionsEnum.EAST,
         )
@@ -600,7 +600,7 @@ def test_multispeed_actions_malfunction_no_blocking():
 
         ],
         target=(3, 0),  # west dead-end
-        speed=0.5,
+        speed=_pseudo_fractional(0.5),
         initial_position=(3, 9),  # east dead-end
         initial_direction=Grid4TransitionsEnum.EAST,
     )
@@ -690,7 +690,7 @@ def test_multispeed_actions_no_malfunction_invalid_actions():
 
         ],
         target=(3, 0),  # west dead-end
-        speed=0.5,
+        speed=_pseudo_fractional(0.5),
         initial_position=(3, 9),  # east dead-end
         initial_direction=Grid4TransitionsEnum.EAST,
     )
