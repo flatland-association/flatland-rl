@@ -23,14 +23,12 @@ from flatland.trajectories.trajectories import EVENT_LOGS_SUBDIR, OUTPUTS_SUBDIR
     ("30x30 map/20_trains", "57e1ebc5-947c-4314-83c7-0d6fd76b2bd3", True, True, True),
     ("30x30 map/20_trains", "56a78985-588b-42d0-a972-7f8f2514c665", True, True, True),
 
-    # TODO https://github.com/flatland-association/flatland-baselines/issues/24 re-generate episodes
-    # trajectories generated before https://github.com/flatland-association/flatland-rl/pull/302 -> skip_rewards=True
-    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_8", "Test_00_Level_8", True, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_3", "Test_01_Level_3", True, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_6", "Test_02_Level_6", True, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_8", "Test_02_Level_8", False, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_1", "Test_03_Level_1", False, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_2", "Test_03_Level_2", False, False, True),
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_8", "Test_00_Level_8", True, False, False),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_3", "Test_01_Level_3", True, False, False),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_6", "Test_02_Level_6", True, False, False),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_8", "Test_02_Level_8", False, False, False),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_1", "Test_03_Level_1", False, False, False),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_2", "Test_03_Level_2", False, False, False),
 ])
 def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool, skip_rewards_dones_infos: bool, skip_rewards: bool):
     """
