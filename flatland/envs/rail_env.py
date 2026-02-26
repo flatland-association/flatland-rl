@@ -4,6 +4,7 @@ Definition of the RailEnv environment.
 import pickle
 import random
 import warnings
+from fractions import Fraction
 from functools import lru_cache
 from typing import List, Optional, Dict, Tuple, Any, Generic, TypeVar
 
@@ -134,8 +135,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                  remove_agents_at_target=True,
                  random_seed=None,
                  timetable_generator=ttg.timetable_generator,
-                 acceleration_delta=1.0,
-                 braking_delta=-1.0,
+                 acceleration_delta: Fraction = Fraction(1),
+                 braking_delta: Fraction = -Fraction(1),
                  rewards: Rewards = None,
                  effects_generator: EffectsGenerator["RailEnv"] = None,
                  distance_map: AbstractDistanceMap = None,
@@ -447,7 +448,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # get desired new speed independent of motion check
             agent_max_speed = agent.speed_counter.max_speed
             if not action_valid:
-                new_speed = 0.0
+                new_speed = Fraction(0)
             elif (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
                 # start moving
                 new_speed += self.acceleration_delta
@@ -457,7 +458,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif stop_action_given:
                 # decelerate
                 new_speed += self.braking_delta
-            new_speed = max(0.0, min(agent_max_speed, new_speed))
+            new_speed = max(Fraction(0), min(agent_max_speed, new_speed))
 
             # get desired new configuration independent of motion check
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
@@ -562,7 +563,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
-                agent.speed_counter.step(speed=0)
+                agent.speed_counter.step(speed=Fraction(0))
 
             # Handle done state actions, optionally remove agents
             self.handle_done_state(agent)

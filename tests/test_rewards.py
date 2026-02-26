@@ -12,6 +12,7 @@ from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import DefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards
 from flatland.envs.step_utils.env_utils import AgentTransitionData
+from flatland.envs.step_utils.speed_counter import _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.trajectories.policy_runner import PolicyRunner
@@ -236,23 +237,23 @@ def test_energy_efficiency_smoothniss_in_morl():
                      latest_arrival=14,
                      arrival_time=12)
 
-    agent.speed_counter.step(0)
+    agent.speed_counter.step(_pseudo_fractional(0))
     agent.state_machine.set_state(TrainState.WAITING)
     assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None) == (0, 0, 0)
 
-    agent.speed_counter.step(1)
+    agent.speed_counter.step(_pseudo_fractional(1))
     agent.state_machine.set_state(TrainState.MOVING)
     assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None) == (0, -1, -1)
 
-    agent.speed_counter.step(0.6)
+    agent.speed_counter.step(_pseudo_fractional(0.6))
     agent.state_machine.set_state(TrainState.MOVING)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), (0, -0.36, -0.16))
 
-    agent.speed_counter.step(0.6)
+    agent.speed_counter.step(_pseudo_fractional(0.6))
     agent.state_machine.set_state(TrainState.MALFUNCTION)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), (0, 0, -0.36))
 
-    agent.speed_counter.step(0.3)
+    agent.speed_counter.step(_pseudo_fractional(0.3))
     agent.state_machine.set_state(TrainState.MOVING)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), (0, -0.09, -0.09))
 
