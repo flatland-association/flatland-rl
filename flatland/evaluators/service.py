@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import ast
 import glob
 import itertools
 import json
@@ -11,6 +12,7 @@ import re
 import shutil
 import time
 import traceback
+from fractions import Fraction
 from typing import List
 
 import crowdai_api
@@ -100,6 +102,18 @@ def version_check(client_version: str, SUPPORTED_CLIENT_VERSIONS: List[str], SUP
     v = parse_version(client_version)
     return client_version in SUPPORTED_CLIENT_VERSIONS or (vs is not None and v.matches(vs))
 
+
+def msgpack_custom_decode(obj, chain=None):
+    if '__fraction__' in obj:
+        return Fraction(*ast.literal_eval(obj["as_str"]))
+    return m.decode(obj, chain)
+
+
+def msgpack_custom_encode(obj, chain=None):
+    if isinstance(obj, Fraction):
+        obj: Fraction
+        return {'__fraction__': True, 'as_str': str((obj.numerator, obj.denominator))}
+    return m.encode(obj, chain)
 
 class FlatlandRemoteEvaluationService:
     """
@@ -621,7 +635,7 @@ class FlatlandRemoteEvaluationService:
         else:
             command = msgpack.unpackb(
                 command,
-                object_hook=m.decode,
+                object_hook=msgpack_custom_decode,
                 strict_map_key=False,  # msgpack 1.0
             )
         if self.verbose:
@@ -643,7 +657,7 @@ class FlatlandRemoteEvaluationService:
         else:
             sResponse = msgpack.packb(
                 _command_response,
-                default=m.encode,
+                default=msgpack_custom_encode,
                 use_bin_type=True)
         _redis.rpush(command_response_channel, sResponse)
 
@@ -659,7 +673,7 @@ class FlatlandRemoteEvaluationService:
         else:
             sResponse = msgpack.packb(
                 error_dict,
-                default=m.encode,
+                default=msgpack_custom_encode,
                 use_bin_type=True)
 
         _redis.rpush(self.error_channel, sResponse)
@@ -1286,7 +1300,7 @@ class FlatlandRemoteEvaluationService:
         else:
             bytes_error = msgpack.packb(
                 _command_response,
-                default=m.encode,
+                default=msgpack_custom_encode,
                 use_bin_type=True)
 
         _redis.rpush(command_response_channel, bytes_error)
