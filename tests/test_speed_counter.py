@@ -172,7 +172,11 @@ def test_pseudo_fractional():
         d = (d + s)
         while d > 1:
             d -= Fraction(1, 1)
-        print(f'Step {i}: {d:.20f}')
+        try:
+            print(f'Step {i}: {d:.20f}')
+        except TypeError:
+            # support for Python < 3.12, float-style-formatting introduced only in 3.12 https://docs.python.org/3.12/library/fractions.html
+            print(f'Step {i}: {d}')
     assert d == 1.0
 
 
