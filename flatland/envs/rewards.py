@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import Generic, TypeVar, Tuple, Dict, Set, Optional, List
 
+import numpy as np
 from fastenum import fastenum
 
 from flatland.core.env_observation_builder import AgentHandle
@@ -221,18 +222,23 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
                 # stop not served or served but not stopped
                 d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] += -1 * self.intermediate_not_served_penalty
             else:
-                wp = list(wps_intersection)[0]
-                # late arrival
-                # TODO support for multiple waypoints
-                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += self.intermediate_late_arrival_penalty_factor * min(
-                    la - self.arrivals[agent.handle][wp][0],
-                                                                                                                           0)
-                # early departure
-                # N.B. if arrival but not departure, handled by above by departed but never reached.
-                if wp in self.departures[agent.handle]:
-                    # TODO support for multiple waypoints
-                    d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += self.intermediate_early_departure_penalty_factor * min(
-                        self.departures[agent.handle][wp][0] - ed, 0)
+                lates = []
+                earlies = []
+                # take best time window (minimum penalty sum) over all alternatives and all arrival/departures
+                for wp in list(wps_intersection):
+                    # `+ [None]` is for arrival but no departure
+                    for arrival, departure in zip(self.arrivals[agent.handle][wp], self.departures[agent.handle][wp] + [None]):
+                        # late arrival
+                        lates.append(self.intermediate_late_arrival_penalty_factor * min(la - arrival, 0))
+                        # early departure
+                        # N.B. if arrival but not departure, handled by above by departed but never reached.
+                        if departure is not None:
+                            earlies.append(self.intermediate_early_departure_penalty_factor * min(departure - ed, 0))
+                        else:
+                            earlies.append(0)
+                totals = [l + e for l, e in zip(lates, earlies)]
+                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += lates[np.argmin(totals)]
+                d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += earlies[np.argmin(totals)]
         return d
 
     def cumulate(self, *rewards: float) -> Dict[str, float]:
@@ -403,31 +409,33 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
         n_stops_on_time = 0
         initial_wp = agent.waypoints[0][0]
-        # TODO support for multiple waypoints
-        if initial_wp.position in self.departures[agent.handle] and self.departures[agent.handle][initial_wp.position][0] >= agent.waypoints_earliest_departure[
-            0]:
-            n_stops_on_time += 1
+        if initial_wp.position in self.departures[agent.handle]:
+            stop_on_time = False
+            for departure in self.departures[agent.handle][initial_wp.position]:
+                if departure >= agent.waypoints_earliest_departure[0]:
+                    stop_on_time = True
+                    break
+            if stop_on_time:
+                n_stops_on_time += 1
         for i, (wps, la, ed) in enumerate(zip(
             agent.waypoints[1:-1],
             agent.waypoints_latest_arrival[1:-1],
             agent.waypoints_earliest_departure[1:-1]
         )):
+            stop_on_time = False
             for wp in wps:
                 if wp.position not in self.arrivals[agent.handle] or wp.position not in self.departures[agent.handle]:
                     # intermediate stop not served
                     continue
-                # TODO support for multiple waypoints
-                if self.arrivals[agent.handle][wp.position][0] > agent.waypoints_latest_arrival[i + 1]:
-                    # intermediate late arrival
-                    continue
-                # TODO support for multiple waypoints
-                if self.departures[agent.handle][wp.position][0] < agent.waypoints_earliest_departure[i + 1]:
-                    # intermediate early departure
-                    continue
+                for arrival, departure in zip(self.arrivals[agent.handle][wp.position], self.departures[agent.handle][wp.position]):
+                    if arrival <= agent.waypoints_latest_arrival[i + 1] and departure >= agent.waypoints_earliest_departure[i + 1]:
+                        stop_on_time = True
+                        break
+            if stop_on_time:
                 n_stops_on_time += 1
                 break
+        # by design, target is only one cell
         target_wp = agent.waypoints[-1][0]
-        # TODO support for multiple waypoints
         if target_wp.position in self.arrivals[agent.handle] and self.arrivals[agent.handle][target_wp.position][0] <= agent.waypoints_latest_arrival[-1]:
             n_stops_on_time += 1
         n_stops = len(agent.waypoints)
