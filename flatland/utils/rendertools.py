@@ -187,7 +187,7 @@ class RenderLocal(RenderBase):
                 continue
             for wps in agent.waypoints:
                 for wp in wps:
-                    if wp not in stations:
+                    if wp.position not in stations:
                         stations[wp.position] = station_id
                 station_id += 1
         self.gl.build_background_map(stations)
@@ -639,30 +639,25 @@ class RenderLocal(RenderBase):
             self.gl.clear_rails()
 
             # store the stations
-            # assign id to stations, so multiple cells belonging to one station are rendered with the same color
-            station_id = 0
-            stations = {}
+            stations = []
             for agent in self.env.agents:
                 if agent is None:
                     continue
                 for wps in agent.waypoints:
                     for wp in wps:
-                        if wp not in stations:
-                            stations[wp.position] = station_id
-                    station_id += 1
+                        if wp.position not in stations:
+                            stations.append(wp.position)
 
             # Draw each cell independently
             for r in range(env.height):
                 for c in range(env.width):
                     transitions = env.rail.grid[r, c]
                     if (r, c) in stations:
-                        station = stations[(r, c)]
-                        is_selected = True
+                        station = 13 # use fixed color for all stations
                     else:
                         station = None
-                        is_selected = False
 
-                    self.gl.set_rail_at(r, c, transitions, target=station, is_selected=is_selected,
+                    self.gl.set_rail_at(r, c, transitions, target=station, is_selected=station is not None,
                                         rail_grid=env.rail.grid, num_agents=env.get_num_agents(),
                                         show_debug=self.show_debug)
 
