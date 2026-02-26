@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Generic, TypeVar, Tuple, Dict, Set, Optional
+from typing import Generic, TypeVar, Tuple, Dict, Set, Optional, List
 
 from fastenum import fastenum
 
@@ -85,6 +85,10 @@ def defaultdict_set():
     return defaultdict(lambda: set())
 
 
+def defaultdict_list():
+    return defaultdict(lambda: [])
+
+
 class DefaultPenalties(fastenum.Enum):
     COLLISION = "COLLISION"
     TARGET_LATE_ARRIVAL = "TARGET_LATE_ARRIVAL"
@@ -143,8 +147,8 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
         assert self.cancellation_time_buffer >= 0
         assert self.cancellation_factor >= 0
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
-        self.arrivals: Dict[AgentHandle, Dict[Waypoint, int]] = defaultdict(defaultdict)
-        self.departures: Dict[AgentHandle, Dict[Waypoint, int]] = defaultdict(defaultdict)
+        self.arrivals: Dict[AgentHandle, Dict[Waypoint, List[int]]] = defaultdict(defaultdict_list)
+        self.departures: Dict[AgentHandle, Dict[Waypoint, List[int]]] = defaultdict(defaultdict_list)
         self.states: Dict[AgentHandle, Dict[Waypoint, Set[TrainState]]] = defaultdict(defaultdict_set)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
@@ -156,13 +160,13 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
             # Only record arrival if this is a new waypoint (not dwelling at same position)
             old_wp = Waypoint(agent.old_position, agent.old_direction)
             if wp not in self.arrivals[agent.handle]:
-                self.arrivals[agent.handle][wp] = elapsed_steps
+                self.arrivals[agent.handle][wp].append(elapsed_steps)
                 # Only record departure from old position when we arrive from on-map position
                 if old_wp.position is not None:
-                    self.departures[agent.handle][old_wp] = elapsed_steps
+                    self.departures[agent.handle][old_wp].append(elapsed_steps)
         elif agent.old_position is not None:
             old_wp = Waypoint(agent.old_position, agent.old_direction)
-            self.departures[agent.handle][old_wp] = elapsed_steps
+            self.departures[agent.handle][old_wp].append(elapsed_steps)
 
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED:
             # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
@@ -219,13 +223,16 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
             else:
                 wp = list(wps_intersection)[0]
                 # late arrival
-                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += self.intermediate_late_arrival_penalty_factor * min(la - self.arrivals[agent.handle][wp],
+                # TODO support for multiple waypoints
+                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += self.intermediate_late_arrival_penalty_factor * min(
+                    la - self.arrivals[agent.handle][wp][0],
                                                                                                                            0)
                 # early departure
                 # N.B. if arrival but not departure, handled by above by departed but never reached.
                 if wp in self.departures[agent.handle]:
+                    # TODO support for multiple waypoints
                     d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += self.intermediate_early_departure_penalty_factor * min(
-                        self.departures[agent.handle][wp] - ed, 0)
+                        self.departures[agent.handle][wp][0] - ed, 0)
         return d
 
     def cumulate(self, *rewards: float) -> Dict[str, float]:
@@ -380,23 +387,25 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
 
     def __init__(self):
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
-        self.arrivals = defaultdict(defaultdict)
-        self.departures = defaultdict(defaultdict)
+        self.arrivals = defaultdict(defaultdict_list)
+        self.departures = defaultdict(defaultdict_list)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
         if agent.position is None and agent.state_machine.state == TrainState.DONE and agent.target not in self.arrivals[agent.handle]:
-            self.arrivals[agent.handle][agent.target] = elapsed_steps
+            self.arrivals[agent.handle][agent.target].append(elapsed_steps)
 
         if agent.position is not None and agent.position not in self.arrivals[agent.handle]:
-            self.arrivals[agent.handle][agent.position] = elapsed_steps
-            self.departures[agent.handle][agent.old_position] = elapsed_steps
+            self.arrivals[agent.handle][agent.position].append(elapsed_steps)
+            self.departures[agent.handle][agent.old_position].append(elapsed_steps)
 
         return 0, 0
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
         n_stops_on_time = 0
         initial_wp = agent.waypoints[0][0]
-        if initial_wp.position in self.departures[agent.handle] and self.departures[agent.handle][initial_wp.position] >= agent.waypoints_earliest_departure[0]:
+        # TODO support for multiple waypoints
+        if initial_wp.position in self.departures[agent.handle] and self.departures[agent.handle][initial_wp.position][0] >= agent.waypoints_earliest_departure[
+            0]:
             n_stops_on_time += 1
         for i, (wps, la, ed) in enumerate(zip(
             agent.waypoints[1:-1],
@@ -407,16 +416,19 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
                 if wp.position not in self.arrivals[agent.handle] or wp.position not in self.departures[agent.handle]:
                     # intermediate stop not served
                     continue
-                if self.arrivals[agent.handle][wp.position] > agent.waypoints_latest_arrival[i + 1]:
+                # TODO support for multiple waypoints
+                if self.arrivals[agent.handle][wp.position][0] > agent.waypoints_latest_arrival[i + 1]:
                     # intermediate late arrival
                     continue
-                if self.departures[agent.handle][wp.position] < agent.waypoints_earliest_departure[i + 1]:
+                # TODO support for multiple waypoints
+                if self.departures[agent.handle][wp.position][0] < agent.waypoints_earliest_departure[i + 1]:
                     # intermediate early departure
                     continue
                 n_stops_on_time += 1
                 break
         target_wp = agent.waypoints[-1][0]
-        if target_wp.position in self.arrivals[agent.handle] and self.arrivals[agent.handle][target_wp.position] <= agent.waypoints_latest_arrival[-1]:
+        # TODO support for multiple waypoints
+        if target_wp.position in self.arrivals[agent.handle] and self.arrivals[agent.handle][target_wp.position][0] <= agent.waypoints_latest_arrival[-1]:
             n_stops_on_time += 1
         n_stops = len(agent.waypoints)
         return n_stops_on_time, n_stops

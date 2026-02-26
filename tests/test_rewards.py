@@ -307,8 +307,8 @@ def test_punctuality_rewards_initial():
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
     assert (0, 0) not in rewards.arrivals[0]
-    assert rewards.departures[0][(0, 0)] == 5
-    assert rewards.arrivals[0][(2, 2)] == 5
+    assert rewards.departures[0][(0, 0)] == [5]
+    assert rewards.arrivals[0][(2, 2)] == [5]
     assert (2, 2) not in rewards.departures[0]
     assert (3, 3) not in rewards.arrivals[0]
     assert (3, 3) not in rewards.departures[0]
@@ -348,10 +348,10 @@ def test_punctuality_rewards_intermediate():
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
     assert (0, 0) not in rewards.arrivals[0]
-    assert rewards.departures[0][(0, 0)] == 2
-    assert rewards.arrivals[0][(2, 2)] == 2
-    assert rewards.departures[0][(2, 2)] == 5
-    assert rewards.arrivals[0][(4, 4)] == 5
+    assert rewards.departures[0][(0, 0)] == [2]
+    assert rewards.arrivals[0][(2, 2)] == [2]
+    assert rewards.departures[0][(2, 2)] == [5]
+    assert rewards.arrivals[0][(4, 4)] == [5]
     assert (4, 4) not in rewards.departures[0]
     assert (3, 3) not in rewards.arrivals[0]
     assert (3, 3) not in rewards.departures[0]
@@ -393,12 +393,12 @@ def test_punctuality_rewards_target():
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
     assert (0, 0) not in rewards.arrivals[0]
-    assert rewards.departures[0][(0, 0)] == 2
-    assert rewards.arrivals[0][(2, 2)] == 2
-    assert rewards.departures[0][(2, 2)] == 4
-    assert rewards.arrivals[0][(4, 4)] == 4
-    assert rewards.departures[0][(4, 4)] == 10
-    assert rewards.arrivals[0][(3, 3)] == 10
+    assert rewards.departures[0][(0, 0)] == [2]
+    assert rewards.arrivals[0][(2, 2)] == [2]
+    assert rewards.departures[0][(2, 2)] == [4]
+    assert rewards.arrivals[0][(4, 4)] == [4]
+    assert rewards.departures[0][(4, 4)] == [10]
+    assert rewards.arrivals[0][(3, 3)] == [10]
     assert (3, 3) not in rewards.departures[0]
 
     # on time only at target
@@ -430,7 +430,7 @@ def test_arrival_recorded_once_per_waypoint():
     # First step at this waypoint - should record arrival
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=10)
     wp = Waypoint((5, 5), 0)
-    assert rewards._proxy.arrivals[agent.handle][wp] == 10
+    assert rewards._proxy.arrivals[agent.handle][wp] == [10]
 
     # Agent dwells at same position for several steps
     agent.old_position = agent.position
@@ -441,7 +441,7 @@ def test_arrival_recorded_once_per_waypoint():
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=13)
 
     # Arrival time should NOT be updated - still 10
-    assert rewards._proxy.arrivals[agent.handle][wp] == 10, "Arrival should only be recorded once per waypoint"
+    assert rewards._proxy.arrivals[agent.handle][wp] == [10], "Arrival should only be recorded once per waypoint"
 
 
 def test_departure_only_when_moving():
@@ -492,10 +492,10 @@ def test_departure_only_when_moving():
     assert off_wp not in rewards._proxy.arrivals[agent.handle]
     assert off_wp not in rewards._proxy.departures[agent.handle]
     assert wp in rewards._proxy.departures[agent.handle], "Departure should be recorded when agent moves"
-    assert rewards._proxy.departures[agent.handle][wp] == 3
+    assert rewards._proxy.departures[agent.handle][wp] == [3]
     wp = Waypoint((5, 6), 0)
     assert wp in rewards._proxy.arrivals[agent.handle], "Arrival should be recorded when agent moves"
-    assert rewards._proxy.arrivals[agent.handle][wp] == 3
+    assert rewards._proxy.arrivals[agent.handle][wp] == [3]
 
     # Agent arrives at target
     agent.old_position = (5, 6)
@@ -507,7 +507,7 @@ def test_departure_only_when_moving():
     assert off_wp not in rewards._proxy.arrivals[agent.handle]
     assert off_wp not in rewards._proxy.departures[agent.handle]
     assert wp in rewards._proxy.departures[agent.handle], "Departure should be recorded when agent moves off map"
-    assert rewards._proxy.departures[agent.handle][wp] == 4
+    assert rewards._proxy.departures[agent.handle][wp] == [4]
 
 
 def test_waypoint_comparison_uses_waypoint_objects():
