@@ -386,7 +386,7 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
 class PunctualityRewards(Rewards[Tuple[int, int]]):
     """
     Punctuality: n_stops_on_time / n_stops
-    An agent is deemed not punctual at a stop if it arrives too late, departs to early or does not serve the stop at all. If an agent is punctual at a stop, n_stops_on_time is increased by 1.
+    An agent is deemed not punctual at a stop if it arrives too late, departs too early or does not serve the stop at all. If an agent is punctual at a stop, n_stops_on_time is increased by 1.
 
     The implementation returns the tuple `(n_stops_on_time, n_stops)`.
     """
@@ -408,6 +408,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
         n_stops_on_time = 0
+        # by design, initial waypoint is unique
         initial_wp = agent.waypoints[0][0]
         if initial_wp.position in self.departures[agent.handle]:
             stop_on_time = False
