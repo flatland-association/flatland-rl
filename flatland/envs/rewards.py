@@ -154,18 +154,20 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
         d = self.empty()
-        if agent.position is not None:
-            wp = Waypoint(agent.position, agent.direction)
+        if agent.current_configuration is not None:
+            wp = Waypoint(*agent.current_configuration)
             self.states[agent.handle][wp].add(agent.state)
 
             # Only record arrival if this is a new waypoint (not dwelling at same position)
-            old_wp = Waypoint(agent.old_position, agent.old_direction)
-            if wp not in self.arrivals[agent.handle]:
+            if agent.old_configuration != agent.current_configuration:
+                assert wp is not None
+                assert elapsed_steps is not None
                 self.arrivals[agent.handle][wp].append(elapsed_steps)
                 # Only record departure from old position when we arrive from on-map position
-                if old_wp.position is not None:
+                if agent.old_configuration is not None:
+                    old_wp = Waypoint(*agent.old_configuration)
                     self.departures[agent.handle][old_wp].append(elapsed_steps)
-        elif agent.old_position is not None:
+        elif agent.old_configuration is not None:
             old_wp = Waypoint(agent.old_position, agent.old_direction)
             self.departures[agent.handle][old_wp].append(elapsed_steps)
 
@@ -237,8 +239,9 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
                         else:
                             earlies.append(0)
                 totals = [l + e for l, e in zip(lates, earlies)]
-                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += lates[np.argmin(totals)]
-                d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += earlies[np.argmin(totals)]
+                # argmax as penalty is negative reward
+                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += lates[np.argmax(totals)]
+                d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += earlies[np.argmax(totals)]
         return d
 
     def cumulate(self, *rewards: float) -> Dict[str, float]:
