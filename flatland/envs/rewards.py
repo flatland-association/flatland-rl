@@ -424,6 +424,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
             agent.waypoints_earliest_departure[1:-1]
         )):
             stop_on_time = False
+            # has any alternative with any arrival/departure been served on time?
             for wp in wps:
                 if wp.position not in self.arrivals[agent.handle] or wp.position not in self.departures[agent.handle]:
                     # intermediate stop not served
