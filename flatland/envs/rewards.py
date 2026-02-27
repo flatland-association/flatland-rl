@@ -7,7 +7,6 @@ from fastenum import fastenum
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
-from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.states import TrainState
 
@@ -100,7 +99,10 @@ class DefaultPenalties(fastenum.Enum):
     INTERMEDIATE_EARLY_DEPARTURE = "INTERMEDIATE_EARLY_DEPARTURE"
 
 
-class BaseDefaultRewards(Rewards[Dict[str, float]]):
+ConfigurationType = TypeVar('ConfigurationType')
+
+
+class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
     r"""
     Reward Function.
 
@@ -148,28 +150,26 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
         assert self.cancellation_time_buffer >= 0
         assert self.cancellation_factor >= 0
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
-        self.arrivals: Dict[AgentHandle, Dict[Waypoint, List[int]]] = defaultdict(defaultdict_list)
-        self.departures: Dict[AgentHandle, Dict[Waypoint, List[int]]] = defaultdict(defaultdict_list)
-        self.states: Dict[AgentHandle, Dict[Waypoint, Set[TrainState]]] = defaultdict(defaultdict_set)
+        self.arrivals: Dict[AgentHandle, Dict[ConfigurationType, List[int]]] = defaultdict(defaultdict_list)
+        self.departures: Dict[AgentHandle, Dict[ConfigurationType, List[int]]] = defaultdict(defaultdict_list)
+        self.states: Dict[AgentHandle, Dict[ConfigurationType, Set[TrainState]]] = defaultdict(defaultdict_set)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
         d = self.empty()
         if agent.current_configuration is not None:
-            wp = Waypoint(*agent.current_configuration)
-            self.states[agent.handle][wp].add(agent.state)
+
+            self.states[agent.handle][agent.current_configuration].add(agent.state)
 
             # Only record arrival if this is a new waypoint (not dwelling at same position)
             if agent.old_configuration != agent.current_configuration:
-                assert wp is not None
+                assert agent.current_configuration is not None
                 assert elapsed_steps is not None
-                self.arrivals[agent.handle][wp].append(elapsed_steps)
+                self.arrivals[agent.handle][agent.current_configuration].append(elapsed_steps)
                 # Only record departure from old position when we arrive from on-map position
                 if agent.old_configuration is not None:
-                    old_wp = Waypoint(*agent.old_configuration)
-                    self.departures[agent.handle][old_wp].append(elapsed_steps)
+                    self.departures[agent.handle][agent.old_configuration].append(elapsed_steps)
         elif agent.old_configuration is not None:
-            old_wp = Waypoint(agent.old_position, agent.old_direction)
-            self.departures[agent.handle][old_wp].append(elapsed_steps)
+            self.departures[agent.handle][agent.old_configuration].append(elapsed_steps)
 
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED:
             # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
@@ -217,9 +217,9 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
                 d[DefaultPenalties.TARGET_NOT_REACHED.value] = agent.get_current_delay(elapsed_steps, distance_map)
         for intermediate_alternatives, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1],
                                                      agent.waypoints_earliest_departure[1:-1]):
-            agent_arrivals: Set[Waypoint] = set(self.arrivals[agent.handle])
-            intermediate_alternatives: Set[Waypoint] = set(intermediate_alternatives)
-            wps_intersection: Set[Waypoint] = intermediate_alternatives.intersection(agent_arrivals)
+            agent_arrivals: Set[ConfigurationType] = set(self.arrivals[agent.handle])
+            intermediate_alternatives: Set[ConfigurationType] = set(intermediate_alternatives)
+            wps_intersection: Set[ConfigurationType] = intermediate_alternatives.intersection(agent_arrivals)
             if len(wps_intersection) == 0 or TrainState.STOPPED not in self.states[agent.handle][list(wps_intersection)[0]]:
                 # stop not served or served but not stopped
                 d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] += -1 * self.intermediate_not_served_penalty
@@ -402,11 +402,11 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
         # N.B. assuming target is only travelled once:
         if agent.current_configuration is None and agent.state_machine.state == TrainState.DONE and agent.old_configuration is not None and agent.old_configuration in agent.targets:
-            self.arrivals[agent.handle][Waypoint(*agent.old_configuration)].append(elapsed_steps)
+            self.arrivals[agent.handle][agent.old_configuration].append(elapsed_steps)
 
         if agent.current_configuration is not None and agent.current_configuration not in self.arrivals[agent.handle]:
-            self.arrivals[agent.handle][Waypoint(*agent.current_configuration)].append(elapsed_steps)
-            self.departures[agent.handle][Waypoint(*agent.old_configuration)].append(elapsed_steps)
+            self.arrivals[agent.handle][agent.current_configuration].append(elapsed_steps)
+            self.departures[agent.handle][agent.old_configuration].append(elapsed_steps)
 
         return 0, 0
 
