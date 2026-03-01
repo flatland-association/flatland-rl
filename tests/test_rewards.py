@@ -1,4 +1,5 @@
 import tempfile
+from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
@@ -83,8 +84,112 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, None, distance_map, 5) == rewards.empty()
     agent.state = TrainState.DONE
-    # if agent is done, intermediate not served is handled in step reward and not in end_of_episode_reward
     assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == rewards.empty()
+
+
+def test_rewards_intermediate_served_and_stopped_multiple_times_no_earliest_latest_penalty():
+    intermediate_not_served_penalty = 33
+    rewards = DefaultRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
+    agent = EnvAgent(initial_configuration=((0, 0), 0),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
+                     current_configuration=(None, 3),
+                     state_machine=TrainStateMachine(initial_state=TrainState.DONE),
+                     earliest_departure=3,
+                     latest_arrival=10,
+                     waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
+                     waypoints_earliest_departure=[3, 7, None],
+                     waypoints_latest_arrival=[None, 11, 10],
+                     arrival_time=10)
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+
+    # intermediate stop evaluation while stopped
+    agent.current_configuration = ((2, 2), 2)
+    agent.state = TrainState.STOPPED
+    assert rewards.step_reward(agent, None, distance_map, 5) == rewards.empty()
+
+    # second intermediate stop evaluation while stopped
+    agent.current_configuration = ((2, 2), 2)
+    agent.state = TrainState.STOPPED
+    assert rewards.step_reward(agent, None, distance_map, 15) == rewards.empty()
+
+    agent.state = TrainState.DONE
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == rewards.empty()
+
+    rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
+    agent.current_configuration = ((2, 2), 2)
+    agent.state = TrainState.STOPPED
+    assert rewards.step_reward(agent, None, distance_map, 5) == rewards.empty()
+    agent.state = TrainState.DONE
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == rewards.empty()
+
+
+def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival_penalty():
+    intermediate_not_served_penalty = 33
+    rewards = DefaultRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
+    agent = EnvAgent(initial_configuration=((0, 0), 0),
+                     targets={((3, 3), d) for d in Grid4TransitionsEnum},
+                     current_configuration=(None, 3),
+                     state_machine=TrainStateMachine(initial_state=TrainState.DONE),
+                     earliest_departure=3,
+                     latest_arrival=10,
+                     waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]],
+                     waypoints_latest_arrival=[None, 7, 14, 25],
+                     waypoints_earliest_departure=[3, 7, 14, None],
+                     arrival_time=10)
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+
+    # intermediate stop evaluation while stopped
+    agent.current_configuration = ((2, 2), 2)
+    agent.state = TrainState.STOPPED
+    assert rewards.step_reward(agent, None, distance_map, 10) == rewards.empty()
+
+    # depart
+    agent.old_configuration = ((2, 2), 2)
+    agent.current_configuration = ((4, 4), 4)
+    assert rewards.step_reward(agent, None, distance_map, 11) == rewards.empty()
+
+    # second intermediate stop evaluation while stopped
+    agent.old_configuration = ((4, 4), 4)
+    agent.current_configuration = ((2, 2), 2)
+    agent.state = TrainState.STOPPED
+    assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None, None, None), distance_map, 15) == rewards.empty()
+
+    # end of episode reward while done
+    agent.state = TrainState.DONE
+    agent.old_configuration = ((2, 2), 2)
+    agent.current_configuration = ((3, 3), 3)
+    # latest arrival is 7 at intermediate, but effectively at 10:
+    # latest arrival is 14 at intermediate, but effectively at 15:
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == -4 * rewards.intermediate_late_arrival_penalty_factor
+
+    rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
+
+    # intermediate stop evaluation while stopped
+    agent.old_configuration = None
+    agent.current_configuration = ((2, 2), 2)
+    agent.state = TrainState.STOPPED
+    assert rewards.step_reward(agent, None, distance_map, 10) == rewards.empty()
+
+    # depart
+    agent.old_configuration = ((2, 2), 2)
+    agent.current_configuration = ((4, 4), 4)
+    assert rewards.step_reward(agent, None, distance_map, 11) == rewards.empty()
+
+    # second intermediate stop evaluation while stopped
+    agent.old_configuration = ((4, 4), 4)
+    agent.current_configuration = ((2, 2), 2)
+    agent.state = TrainState.STOPPED
+    assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None, None, None), distance_map, 15) == rewards.empty()
+
+    # end of episode reward while done
+    agent.state = TrainState.DONE
+    agent.old_configuration = ((2, 2), 2)
+    agent.current_configuration = ((3, 3), 3)
+    # latest arrival is 7 at intermediate, but effectively at 10:
+    # latest arrival is 14 at intermediate, but effectively at 15:
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == (-4 * rewards.intermediate_late_arrival_penalty_factor, 0, 0)
 
 
 def test_rewards_intermediate_served_but_not_stopped_penalty():
@@ -239,23 +344,23 @@ def test_energy_efficiency_smoothniss_in_morl():
 
     agent.speed_counter.step(_pseudo_fractional(0))
     agent.state_machine.set_state(TrainState.WAITING)
-    assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None) == (0, 0, 0)
+    assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1) == (0, 0, 0)
 
     agent.speed_counter.step(_pseudo_fractional(1))
     agent.state_machine.set_state(TrainState.MOVING)
-    assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None) == (0, -1, -1)
+    assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1) == (0, -1, -1)
 
     agent.speed_counter.step(_pseudo_fractional(0.6))
     agent.state_machine.set_state(TrainState.MOVING)
-    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), (0, -0.36, -0.16))
+    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, -0.36, -0.16))
 
     agent.speed_counter.step(_pseudo_fractional(0.6))
     agent.state_machine.set_state(TrainState.MALFUNCTION)
-    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), (0, 0, -0.36))
+    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, 0, -0.36))
 
     agent.speed_counter.step(_pseudo_fractional(0.3))
     agent.state_machine.set_state(TrainState.MOVING)
-    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=None), (0, -0.09, -0.09))
+    assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, -0.09, -0.09))
 
 
 def test_multi_objective_rewards():
@@ -307,8 +412,8 @@ def test_punctuality_rewards_initial():
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
     assert (0, 0) not in rewards.arrivals[0]
-    assert rewards.departures[0][(0, 0)] == 5
-    assert rewards.arrivals[0][(2, 2)] == 5
+    assert rewards.departures[0][(0, 0)] == [5]
+    assert rewards.arrivals[0][(2, 2)] == [5]
     assert (2, 2) not in rewards.departures[0]
     assert (3, 3) not in rewards.arrivals[0]
     assert (3, 3) not in rewards.departures[0]
@@ -348,10 +453,10 @@ def test_punctuality_rewards_intermediate():
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
     assert (0, 0) not in rewards.arrivals[0]
-    assert rewards.departures[0][(0, 0)] == 2
-    assert rewards.arrivals[0][(2, 2)] == 2
-    assert rewards.departures[0][(2, 2)] == 5
-    assert rewards.arrivals[0][(4, 4)] == 5
+    assert rewards.departures[0][(0, 0)] == [2]
+    assert rewards.arrivals[0][(2, 2)] == [2]
+    assert rewards.departures[0][(2, 2)] == [5]
+    assert rewards.arrivals[0][(4, 4)] == [5]
     assert (4, 4) not in rewards.departures[0]
     assert (3, 3) not in rewards.arrivals[0]
     assert (3, 3) not in rewards.departures[0]
@@ -393,12 +498,12 @@ def test_punctuality_rewards_target():
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
     assert (0, 0) not in rewards.arrivals[0]
-    assert rewards.departures[0][(0, 0)] == 2
-    assert rewards.arrivals[0][(2, 2)] == 2
-    assert rewards.departures[0][(2, 2)] == 4
-    assert rewards.arrivals[0][(4, 4)] == 4
-    assert rewards.departures[0][(4, 4)] == 10
-    assert rewards.arrivals[0][(3, 3)] == 10
+    assert rewards.departures[0][(0, 0)] == [2]
+    assert rewards.arrivals[0][(2, 2)] == [2]
+    assert rewards.departures[0][(2, 2)] == [4]
+    assert rewards.arrivals[0][(4, 4)] == [4]
+    assert rewards.departures[0][(4, 4)] == [10]
+    assert rewards.arrivals[0][(3, 3)] == [10]
     assert (3, 3) not in rewards.departures[0]
 
     # on time only at target
@@ -430,7 +535,7 @@ def test_arrival_recorded_once_per_waypoint():
     # First step at this waypoint - should record arrival
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=10)
     wp = Waypoint((5, 5), 0)
-    assert rewards._proxy.arrivals[agent.handle][wp] == 10
+    assert rewards._proxy.arrivals[agent.handle][wp] == [10]
 
     # Agent dwells at same position for several steps
     agent.old_position = agent.position
@@ -441,7 +546,7 @@ def test_arrival_recorded_once_per_waypoint():
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=13)
 
     # Arrival time should NOT be updated - still 10
-    assert rewards._proxy.arrivals[agent.handle][wp] == 10, "Arrival should only be recorded once per waypoint"
+    assert rewards._proxy.arrivals[agent.handle][wp] == [10], "Arrival should only be recorded once per waypoint"
 
 
 def test_departure_only_when_moving():
@@ -467,10 +572,8 @@ def test_departure_only_when_moving():
     assert off_wp not in rewards._proxy.departures[agent.handle]
 
     # Agent at initial position
-    agent.position = (5, 5)
-    agent.direction = 0
-    agent.old_position = None
-    agent.old_direction = 0
+    agent.current_configuration = ((5, 5), 0)
+    agent.old_configuration = None
 
     # First step - arrival recorded, but no departure (agent hasn't left yet)
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=2)
@@ -482,24 +585,21 @@ def test_departure_only_when_moving():
     assert wp not in rewards._proxy.departures[agent.handle], "Should not record departure when agent hasn't moved"
 
     # Agent moves to new position
-    agent.old_position = (5, 5)
-    agent.old_direction = 0
-    agent.position = (5, 6)
-    agent.direction = 0
+    agent.old_configuration = ((5, 5), 0)
+    agent.current_configuration = ((5, 6), 0)
 
     # Now departure from old position should be recorded
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=3)
     assert off_wp not in rewards._proxy.arrivals[agent.handle]
     assert off_wp not in rewards._proxy.departures[agent.handle]
     assert wp in rewards._proxy.departures[agent.handle], "Departure should be recorded when agent moves"
-    assert rewards._proxy.departures[agent.handle][wp] == 3
+    assert rewards._proxy.departures[agent.handle][wp] == [3]
     wp = Waypoint((5, 6), 0)
     assert wp in rewards._proxy.arrivals[agent.handle], "Arrival should be recorded when agent moves"
-    assert rewards._proxy.arrivals[agent.handle][wp] == 3
+    assert rewards._proxy.arrivals[agent.handle][wp] == [3]
 
     # Agent arrives at target
-    agent.old_position = (5, 6)
-    agent.old_direction = 0
+    agent.old_configuration = ((5, 6), 0)
     agent.current_configuration = None
 
     # Now departure from old position should be recorded, but no arrival for None
@@ -507,7 +607,7 @@ def test_departure_only_when_moving():
     assert off_wp not in rewards._proxy.arrivals[agent.handle]
     assert off_wp not in rewards._proxy.departures[agent.handle]
     assert wp in rewards._proxy.departures[agent.handle], "Departure should be recorded when agent moves off map"
-    assert rewards._proxy.departures[agent.handle][wp] == 4
+    assert rewards._proxy.departures[agent.handle][wp] == [4]
 
 
 def test_waypoint_comparison_uses_waypoint_objects():
