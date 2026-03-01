@@ -155,7 +155,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
         d = self.empty()
         if agent.current_configuration is not None:
-            wp = Waypoint(*agent.current_configuration)
+            wp = Waypoint(agent.position, agent.direction)
             self.states[agent.handle][wp].add(agent.state)
 
             # Only record arrival if this is a new waypoint (not dwelling at same position)
@@ -165,7 +165,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
                 self.arrivals[agent.handle][wp].append(elapsed_steps)
                 # Only record departure from old position when we arrive from on-map position
                 if agent.old_configuration is not None:
-                    old_wp = Waypoint(*agent.old_configuration)
+                    old_wp = Waypoint(agent.old_position, agent.old_direction)
                     self.departures[agent.handle][old_wp].append(elapsed_steps)
         elif agent.old_configuration is not None:
             old_wp = Waypoint(agent.old_position, agent.old_direction)
