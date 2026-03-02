@@ -7,7 +7,7 @@ import numpy as np
 from numpy import array
 from recordtype import recordtype
 
-from flatland.envs.grid.rail_env_grid import RailEnvTransitions
+from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.utils.graphics_pgl import PGLGL
 from flatland.utils.graphics_pil import PILGL, PILSVG
 
@@ -656,7 +656,7 @@ class RenderLocal(RenderBase):
                     else:
                         target = None
                         is_selected = False
-                    if transitions == RailEnvTransitions.diamond_crossing and (r, c) in env.resource_map.level_free_positions:
+                    if transitions == RailEnvTransitionsEnum.diamond_crossing and (r, c) in env.resource_map.level_free_positions:
                         transitions = DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION
 
                     self.gl.set_rail_at(r, c, transitions, target=target, is_selected=is_selected,
