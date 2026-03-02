@@ -272,8 +272,9 @@ class SparseRailGen(RailGen):
 
             if num_level_free_diamond_crossings > 0:
                 choice = np_random.choice(num_diamond_crossings, size=num_level_free_diamond_crossings, replace=False)
+                # Tuple[2,N]
                 positions_diamond_crossings = (grid_map.grid == RailEnvTransitionsEnum.diamond_crossing).nonzero()
-                level_free_positions = {tuple(positions_diamond_crossings[choice[i]]) for i in range(len(choice))}
+                level_free_positions = {(positions_diamond_crossings[0][choice[i]], positions_diamond_crossings[1][choice[i]]) for i in range(len(choice))}
 
         return grid_map, {
             'agents_hints':

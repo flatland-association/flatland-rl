@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
+from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
@@ -1511,7 +1512,9 @@ def test_sparse_generator_with_level_free_04():
                   number_of_agents=1,
                   random_seed=1)
     env.reset()
-    assert env.resource_map.level_free_positions == {(12, 20)}
+    assert env.resource_map.level_free_positions == {(18, 20)}
+    for cell in env.resource_map.level_free_positions:
+        assert env.rail.grid[cell] == RailEnvTransitionsEnum.diamond_crossing
 
 
 def test_sparse_generator_with_level_free_08():
@@ -1535,7 +1538,9 @@ def test_sparse_generator_with_level_free_08():
                   number_of_agents=1,
                   random_seed=1)
     env.reset()
-    assert env.resource_map.level_free_positions == {(12, 20)}
+    assert env.resource_map.level_free_positions == {(18, 20)}
+    for cell in env.resource_map.level_free_positions:
+        assert env.rail.grid[cell] == RailEnvTransitionsEnum.diamond_crossing
 
 
 def test_sparse_generator_with_level_free_09():
@@ -1559,7 +1564,9 @@ def test_sparse_generator_with_level_free_09():
                   number_of_agents=1,
                   random_seed=1)
     env.reset()
-    assert env.resource_map.level_free_positions == {(12, 20), (4, 18)}
+    assert env.resource_map.level_free_positions == {(4, 12), (18, 20)}
+    for cell in env.resource_map.level_free_positions:
+        assert env.rail.grid[cell] == RailEnvTransitionsEnum.diamond_crossing
 
 
 def test_sparse_generator_with_level_free_10():
@@ -1583,22 +1590,7 @@ def test_sparse_generator_with_level_free_10():
                   number_of_agents=1,
                   random_seed=1)
     env.reset()
-    assert env.resource_map.level_free_positions == {(4, 18), (12, 20)}
-
-
-def main():
-    # Make warnings into errors, to generate stack backtraces
-    warnings.simplefilter("error", )  # category=DeprecationWarning)
-
-    # Then run selected tests.
-    # test_sparse_rail_generator()
-    # test_sparse_rail_generator_deterministic()
-    # test_rail_env_action_required_info()
-    # test_rail_env_malfunction_speed_info()
-    # test_sparse_generator_with_too_man_cities_does_not_break_down()
-    # test_sparse_generator_with_illegal_params_aborts()
-    # test_sparse_generator_changes_to_grid_mode()
-
-
-if __name__ == "__main__":
-    main()
+    assert env.resource_map.level_free_positions == {(4, 12), (18, 20)}
+    for cell in env.resource_map.level_free_positions:
+        assert env.rail.grid[cell] == RailEnvTransitionsEnum.diamond_crossing
+    assert np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.diamond_crossing) == 2
