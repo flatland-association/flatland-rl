@@ -383,7 +383,7 @@ class PILSVG(PILGL):
             "": "Background_Light_green.png",
             "WE": "Gleis_Deadend.png",
             "WW EE NN SS": "Gleis_Diamond_Crossing.png",
-            "WW EE NN SS LF": "Gleis_Diamond_Crossing_lf.png",
+            "WW EE NN SS LF": "Gleis_Diamond_Crossing_LF.png",
             "WW EE": "Gleis_horizontal.png",
             "EN SW": "Gleis_Kurve_oben_links.png",
             "WN SE": "Gleis_Kurve_oben_rechts.png",
