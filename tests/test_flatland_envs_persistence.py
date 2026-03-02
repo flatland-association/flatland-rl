@@ -2,6 +2,7 @@ import importlib_resources as ir
 import numpy as np
 import pytest
 
+from flatland.env_generation.env_generator import env_generator
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
@@ -95,3 +96,14 @@ def test_regression_random(package, resource):
             _, rewards, done, _ = env.step({i: np.random.randint(0, 5) for i in env.get_agent_handles()})
             total_rewards += sum(rewards.values())
             done = done['__all__']
+
+
+def test_persistence_level_free():
+    env, _, _ = env_generator(x_dim=100, y_dim=100, p_level_free=0.9, seed=453)
+
+    assert env.resource_map.level_free_positions == {(53, 50), (53, 55), (57, 48), (48, 48), (53, 44)}
+
+    assert len(env.resource_map.level_free_positions) > 0
+    RailEnvPersister.save(env, filename="level_free.pkl")
+    env_loaded, _ = RailEnvPersister.load_new(filename="level_free.pkl")
+    assert env_loaded.resource_map.level_free_positions == {(53, 50), (53, 55), (57, 48), (48, 48), (53, 44)}
