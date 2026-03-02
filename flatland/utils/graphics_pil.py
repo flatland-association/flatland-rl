@@ -8,6 +8,7 @@ from numpy import array
 
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions  # noqa: E402
 from flatland.utils.graphics_layer import GraphicsLayer
+from flatland.utils.rendertools import DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION
 
 
 # import tkinter as tk
@@ -382,6 +383,7 @@ class PILSVG(PILGL):
             "": "Background_Light_green.png",
             "WE": "Gleis_Deadend.png",
             "WW EE NN SS": "Gleis_Diamond_Crossing.png",
+            "WW EE NN SS LF": "Gleis_Diamond_Crossing_lf.png",
             "WW EE": "Gleis_horizontal.png",
             "EN SW": "Gleis_Kurve_oben_links.png",
             "WN SE": "Gleis_Kurve_oben_rechts.png",
@@ -415,6 +417,8 @@ class PILSVG(PILGL):
         pil_rail_files_org = self.load_pngs(rail_files, rotate=True)
         pil_rail_files = self.load_pngs(rail_files, rotate=True, background_image="Background_rail.png",
                                         whitefilter="Background_white_filter.png")
+
+        pil_rail_files[DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION] = pil_rail_files_org["WW EE NN SS LF"]
 
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
