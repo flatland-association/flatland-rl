@@ -382,7 +382,6 @@ class PILSVG(PILGL):
             "": "Background_Light_green.png",
             "WE": "Gleis_Deadend.png",
             "WW EE NN SS": "Gleis_Diamond_Crossing.png",
-            "WW EE NN SS LF": "Gleis_Diamond_Crossing_Level_Free.png",
             "WW EE": "Gleis_horizontal.png",
             "EN SW": "Gleis_Kurve_oben_links.png",
             "WN SE": "Gleis_Kurve_oben_rechts.png",
@@ -417,14 +416,8 @@ class PILSVG(PILGL):
         pil_rail_files = self.load_pngs(rail_files, rotate=True, background_image="Background_rail.png",
                                         whitefilter="Background_white_filter.png")
 
-        # Add level free diamond crossing (indexed by DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION, not binary transition)
-        from flatland.utils.rendertools import DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION
-        pil_rail = self.pil_from_png_file('flatland.png', "Gleis_Diamond_Crossing_Level_Free.png").convert("RGBA")
-        img_bg = self.pil_from_png_file('flatland.png', "Background_rail.png").convert("RGBA")
-        pil_rail = Image.alpha_composite(img_bg, pil_rail)
-        img_bg = self.pil_from_png_file('flatland.png', "Background_white_filter.png").convert("RGBA")
-        pil_rail = Image.alpha_composite(pil_rail, img_bg)
-        pil_rail_files[DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION] = pil_rail
+        # Add level free diamond crossing (indexed not by binary transition)
+        pil_rail_files = self.load_level_free_png(pil_rail_files)
 
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
@@ -457,8 +450,6 @@ class PILSVG(PILGL):
             # Translate the ascii transition description in the format  "NE WS" to the
             # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
             transition_16_bit = ["0"] * 16
-            if transition.split(" ")[-1] == "LF": # LF denotes the level free case for the diamond crossing, which is handled separately after loading all the regular rails
-                    continue 
             for sTran in transition.split(" "): 
                 if len(sTran) == 2:
                     in_direction = directions.index(sTran[0])
@@ -497,6 +488,17 @@ class PILSVG(PILGL):
                     pil[(binary_trans, color_idx)] = pils[color_idx]
 
         return pil
+    
+    def load_level_free_png(self, pil_rail_files):
+        # Level Free Diamond Crossing is indexed by DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION, not binary transition
+        from flatland.utils.rendertools import DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION
+        pil_rail = self.pil_from_png_file('flatland.png', "Gleis_Diamond_Crossing_Level_Free.png").convert("RGBA")
+        img_bg = self.pil_from_png_file('flatland.png', "Background_rail.png").convert("RGBA")
+        pil_rail = Image.alpha_composite(img_bg, pil_rail)
+        img_bg = self.pil_from_png_file('flatland.png', "Background_white_filter.png").convert("RGBA")
+        pil_rail = Image.alpha_composite(pil_rail, img_bg)
+        pil_rail_files[DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION] = pil_rail
+        return pil_rail_files
 
     def set_predicion_path_at(self, row, col, binary_trans, agent_rail_color):
         colored_rail = self.recolor_image(self.pil_rail_org[binary_trans],
