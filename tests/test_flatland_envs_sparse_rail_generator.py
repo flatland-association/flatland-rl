@@ -1594,3 +1594,4 @@ def test_sparse_generator_with_level_free_10():
     for cell in env.resource_map.level_free_positions:
         assert env.rail.grid[cell] == RailEnvTransitionsEnum.diamond_crossing
     assert np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.diamond_crossing) == 2
+    
