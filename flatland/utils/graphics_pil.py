@@ -450,7 +450,7 @@ class PILSVG(PILGL):
             # Translate the ascii transition description in the format  "NE WS" to the
             # binary list of transitions as per RailEnv - NESW (in) x NESW (out)
             transition_16_bit = ["0"] * 16
-            for sTran in transition.split(" "): 
+            for sTran in transition.split(" "):
                 if len(sTran) == 2:
                     in_direction = directions.index(sTran[0])
                     out_direction = directions.index(sTran[1])
