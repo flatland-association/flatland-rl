@@ -3,17 +3,17 @@
   <defs>
     <style>
       .cls-1 {
-        fill: none;
-        stroke: #9a9a9a;
-        stroke-miterlimit: 100;
+        isolation: isolate;
       }
 
       .cls-2 {
-        fill: #9a9a9a;
+        fill: #222;
       }
 
       .cls-3 {
-        isolation: isolate;
+        fill: none;
+        stroke: #222;
+        stroke-miterlimit: 100;
       }
     </style>
   </defs>
@@ -23,40 +23,40 @@
   <g id="Layer_3_Image" data-name="Layer 3 Image">
     <image id="Layer_3_Image-2" data-name="Layer 3 Image" width="418" height="230" transform="translate(70.32 184.8) scale(.24)" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaAAAADmCAYAAACTQFGcAAAACXBIWXMAAC4jAAAuIwF4pT92AAAEVUlEQVR4nO3YMUpcYRiG0d9gEgiBhDRZRSCdjQMOVtbp3IGlpS5Al+AO3IKlA9cFzFIsQpogpgpYGDKVzx08ZwUvf/E9l7tzdXH2OGbi+uaunrCR46P9egIQ24Z79fXLp3G4962e8Zzlyfnl6k29AoDXSYAASAgQAAkBAiAhQAAkBAiAhAABkBAgABICBEBCgABICBAACQECICFAACQECICEAAGQECAAEgIEQEKAAEgIEACJ3THGqh7xxEE9YEOregCQO6gH/M/vh4f7Mca63vGM+zHG2KlXPLVYLB7rDZuYpmlW7wa8vC25V6tpmpb1iH/xCw6AhAABkBAgABICBEBCgABICBAACQECICFAACQECICEAAGQECAAEgIEQEKAAEgIEAAJAQIgIUAAJAQIgIQAAZAQIAASAgRAQoAASAgQAAkBAiAhQAAkBAiAhAABkBAgABICBEBCgABICBAACQECICFAACQECICEAAGQECAAEgIEQEKAAEgIEAAJAQIgIUAAJAQIgIQAAZAQIAASAgRAQoAASAgQAAkBAiAhQAAkBAiAhAABkBAgABICBEBCgABICBAACQECICFAACQECICEAAGQECAAEgIEQEKAAEgIEAAJAQIgIUAAJAQIgIQAAZAQIAASAgRAQoAASAgQAAkBAiAhQAAkBAiAhAABkBAgABICBEBCgABICBAACQECICFAACQECIDEztXF2UE94q/rm7vbesMmjo/2l/UGoLUN9+r9u7frH4d7p/WOZ6xPzi/vd8cYs3/EGfJmwOx9/vjh+5jnvVqOMVZ+wQGQECAAEgIEQEKAAEgIEAAJAQIgIUAAJAQIgIQAAZAQIAASAgRAQoAASAgQAAkBAiAhQAAkBAiAhAABkBAgABICBEBCgABICBAACQECICFAACQECICEAAGQECAAEgIEQEKAAEgIEAAJAQIgIUAAJAQIgIQAAZAQIAASAgRAQoAASAgQAAkBAiAhQAAkBAiAhAABkBAgABICBEBCgABICBAACQECICFAACQECICEAAGQECAAEgIEQEKAAEgIEAAJAQIgIUAAJAQIgIQAAZAQIAASAgRAQoAASAgQAAkBAiAhQAAkBAiAhAABkBAgABICBEBCgABICBAACQECICFAACQECICEAAGQECAAEgIEQEKAAEgIEAAJAQIgIUAAJAQIgIQAAZAQIAASu2OMZT3iidt6wIbm9GZAY/b36v7nr/UY47Te8Yz1GGPs1CueWiwWj/WGTUzTNKt3A17eltyr1TRNs/1g9gsOgIQAAZAQIAASAgRAQoAASAgQAAkBAiAhQAAkBAiAhAABkBAgABICBEBCgABICBAACQECICFAACQECICEAAGQECAAEgIEQEKAAEgIEAAJAQIgIUAAJAQIgIQAAZAQIAASAgRAQoAASAgQAAkBAiAhQAAkBAiAhAABkBAgABICBEBCgABICBAACQECICFAAADA6/EHdlE+8XLt3+0AAAAASUVORK5CYII="/>
   </g>
-  <g id="Rectangle_1" data-name="Rectangle 1" class="cls-3">
+  <g id="Rectangle_1" data-name="Rectangle 1" class="cls-1">
     <g id="Rectangle_1-2" data-name="Rectangle 1">
       <rect class="cls-2" x="33.82" y="53.07" width="172.36" height="10.34"/>
-      <rect class="cls-1" x="33.82" y="53.07" width="172.36" height="10.34"/>
+      <rect class="cls-3" x="33.82" y="53.07" width="172.36" height="10.34"/>
     </g>
   </g>
-  <g id="Rectangle_1-3" data-name="Rectangle 1" class="cls-3">
+  <g id="Rectangle_1-3" data-name="Rectangle 1" class="cls-1">
     <g id="Rectangle_1-4" data-name="Rectangle 1">
       <rect class="cls-2" x="176.74" y="4.31" width="10.34" height="52.6"/>
-      <rect class="cls-1" x="176.74" y="4.31" width="10.34" height="52.6"/>
+      <rect class="cls-3" x="176.74" y="4.31" width="10.34" height="52.6"/>
     </g>
   </g>
-  <g id="Rectangle_1-5" data-name="Rectangle 1" class="cls-3">
+  <g id="Rectangle_1-5" data-name="Rectangle 1" class="cls-1">
     <g id="Rectangle_1-6" data-name="Rectangle 1">
       <rect class="cls-2" x="53.86" y="4.31" width="10.34" height="52.6"/>
-      <rect class="cls-1" x="53.86" y="4.31" width="10.34" height="52.6"/>
+      <rect class="cls-3" x="53.86" y="4.31" width="10.34" height="52.6"/>
     </g>
   </g>
-  <g id="Rectangle_1-7" data-name="Rectangle 1" class="cls-3">
+  <g id="Rectangle_1-7" data-name="Rectangle 1" class="cls-1">
     <g id="Rectangle_1-8" data-name="Rectangle 1">
       <rect class="cls-2" x="176.74" y="181.91" width="10.34" height="52.6"/>
-      <rect class="cls-1" x="176.74" y="181.91" width="10.34" height="52.6"/>
+      <rect class="cls-3" x="176.74" y="181.91" width="10.34" height="52.6"/>
     </g>
   </g>
-  <g id="Rectangle_1-9" data-name="Rectangle 1" class="cls-3">
+  <g id="Rectangle_1-9" data-name="Rectangle 1" class="cls-1">
     <g id="Rectangle_1-10" data-name="Rectangle 1">
       <rect class="cls-2" x="53.86" y="181.91" width="10.34" height="52.6"/>
-      <rect class="cls-1" x="53.86" y="181.91" width="10.34" height="52.6"/>
+      <rect class="cls-3" x="53.86" y="181.91" width="10.34" height="52.6"/>
     </g>
   </g>
-  <g id="Rectangle_1-11" data-name="Rectangle 1" class="cls-3">
+  <g id="Rectangle_1-11" data-name="Rectangle 1" class="cls-1">
     <g id="Rectangle_1-12" data-name="Rectangle 1">
       <rect class="cls-2" x="34.06" y="176.67" width="172.36" height="10.34"/>
-      <rect class="cls-1" x="34.06" y="176.67" width="172.36" height="10.34"/>
+      <rect class="cls-3" x="34.06" y="176.67" width="172.36" height="10.34"/>
     </g>
   </g>
   <g id="Layer_1_Image" data-name="Layer 1 Image">
