@@ -19,6 +19,7 @@ def env_generator(n_agents=7,
                   max_rail_pairs_in_city=4,
                   grid_mode=False,
                   max_rails_between_cities=2,
+                  p_level_free: float = 0,
                   malfunction_duration_min=20,
                   malfunction_duration_max=50,
                   malfunction_interval=540,
@@ -52,6 +53,8 @@ def env_generator(n_agents=7,
         How to distribute the cities in the path, either equally in a grid or random. Goes into `sparse_rail_generator`.
     max_rails_between_cities: int
         Max number of rails connecting to a city. This is only the number of connection points at city boarder.
+    p_level_free : float
+        Percentage of diamond-crossings which are level-free.
     malfunction_duration_min: int
         Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.
     malfunction_duration_max: int
@@ -100,7 +103,8 @@ def env_generator(n_agents=7,
             seed=seed,
             grid_mode=grid_mode,
             max_rails_between_cities=max_rails_between_cities,
-            max_rail_pairs_in_city=max_rail_pairs_in_city
+            max_rail_pairs_in_city=max_rail_pairs_in_city,
+            p_level_free=p_level_free,
         ),
         malfunction_generator=ParamMalfunctionGen(
             MalfunctionParameters(min_duration=malfunction_duration_min, max_duration=malfunction_duration_max, malfunction_rate=1.0 / malfunction_interval)),

@@ -8,6 +8,7 @@ import numpy as np
 from numpy.random import RandomState
 
 from flatland.core.effects_generator import EffectsGenerator
+from flatland.core.grid.grid_resource_map import GridResourceMap
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
@@ -206,6 +207,9 @@ class RailEnvPersister(object):
         env.rail = RailGridTransitionMap(1, 1)  # dummy
         grid = np.array(env_dict["grid"])
 
+        if "level_free_positions" in env_dict:
+            env.resource_map = GridResourceMap(env_dict["level_free_positions"])
+
         # Replace the agents tuple with EnvAgent objects
         if "agents_static" in env_dict:
             env_dict["agents"] = EnvAgent.load_legacy_static_agent(env_dict["agents_static"])
@@ -307,6 +311,7 @@ class RailEnvPersister(object):
 
         msg_data_dict = {
             "grid": grid_data,
+            "level_free_positions": env.resource_map.level_free_positions,
             "agents": agent_data,
             "malfunction": malfunction_data,
             "malfunction_cached_random_state": env.malfunction_generator._cached_random_state if hasattr(env.malfunction_generator,
