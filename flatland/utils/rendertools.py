@@ -180,7 +180,7 @@ class RenderLocal(RenderBase):
 
     def update_background(self):
         # create background map
-        station_id = 0
+        station_color_id = 4  # use fixed color for all stations (bar below building)
         stations = {}
         for agent in self.env.agents:
             if agent is None:
@@ -188,9 +188,9 @@ class RenderLocal(RenderBase):
             for wps in agent.waypoints:
                 for wp in wps:
                     if wp.position not in stations:
-                        stations[wp.position] = station_id
-                station_id += 1
+                        stations[wp.position] = station_color_id
         self.gl.build_background_map(stations)
+        return stations
 
     def resize(self):
         self.gl.resize(self.env)
@@ -638,30 +638,20 @@ class RenderLocal(RenderBase):
             self.new_rail = False
             self.gl.clear_rails()
 
-            # store the stations
-            stations = []
-            for agent in self.env.agents:
-                if agent is None:
-                    continue
-                for wps in agent.waypoints:
-                    for wp in wps:
-                        if wp.position not in stations:
-                            stations.append(wp.position)
+            stations = self.update_background()
 
             # Draw each cell independently
             for r in range(env.height):
                 for c in range(env.width):
                     transitions = env.rail.grid[r, c]
                     if (r, c) in stations:
-                        station = 13 # use fixed color for all stations
+                        station = stations[(r, c)]
                     else:
                         station = None
 
                     self.gl.set_rail_at(r, c, transitions, target=station, is_selected=station is not None,
                                         rail_grid=env.rail.grid, num_agents=env.get_num_agents(),
                                         show_debug=self.show_debug)
-
-            self.gl.build_background_map(stations)
 
             if show_rowcols:
                 # label rows, cols
