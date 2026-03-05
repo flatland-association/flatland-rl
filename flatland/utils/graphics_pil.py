@@ -25,6 +25,9 @@ class PILGL(GraphicsLayer):
     SELECTED_AGENT_LAYER = 4
     SELECTED_TARGET_LAYER = 5
 
+    # Level Free Diamond Crossing is indexed by DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION, not binary transition
+    DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION = 666
+
     def __init__(self, width, height, jupyter=False, screen_width=800, screen_height=600):
         self.yxBase = (0, 0)
         self.linewidth = 4
@@ -416,6 +419,9 @@ class PILSVG(PILGL):
         pil_rail_files = self.load_pngs(rail_files, rotate=True, background_image="Background_rail.png",
                                         whitefilter="Background_white_filter.png")
 
+        # Add level free diamond crossing (indexed not by binary transition)
+        pil_rail_files = self.load_level_free_png(pil_rail_files)
+
         # Load the target files (which have rails and transitions of their own)
         # They are indexed by (binTrans, iAgent), ie a tuple of the binary transition and the agent index
         pil_target_files_org = self.load_pngs(target_files, rotate=False, agent_colors=self.agent_colors)
@@ -485,6 +491,17 @@ class PILSVG(PILGL):
                     pil[(binary_trans, color_idx)] = pils[color_idx]
 
         return pil
+
+    def load_level_free_png(self, pil_rail_files):
+
+        pil_rail = self.pil_from_png_file('flatland.png', "Gleis_Diamond_Crossing_Level_Free.png").convert("RGBA")
+        img_bg = self.pil_from_png_file('flatland.png', "Background_rail.png").convert("RGBA")
+        pil_rail = Image.alpha_composite(img_bg, pil_rail)
+        img_bg = self.pil_from_png_file('flatland.png', "Background_white_filter.png").convert("RGBA")
+        pil_rail = Image.alpha_composite(pil_rail, img_bg)
+
+        pil_rail_files[self.DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION] = pil_rail
+        return pil_rail_files
 
     def set_predicion_path_at(self, row, col, binary_trans, agent_rail_color):
         colored_rail = self.recolor_image(self.pil_rail_org[binary_trans],

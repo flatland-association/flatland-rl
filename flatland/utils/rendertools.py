@@ -7,6 +7,8 @@ import numpy as np
 from numpy import array
 from recordtype import recordtype
 
+from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
+from flatland.utils.graphics_layer import GraphicsLayer
 from flatland.utils.graphics_pgl import PGLGL
 from flatland.utils.graphics_pil import PILGL, PILSVG
 
@@ -25,6 +27,7 @@ class RenderTool(object):
     """ RenderTool is a facade to a renderer.
         (This was introduced for the Browser / JS renderer which has now been removed.)
     """
+
     def __init__(self, env, gl="PGL", jupyter=False,
                  agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                  show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600,
@@ -119,7 +122,6 @@ class RenderBase(object):
         pass
 
 
-
 class RenderLocal(RenderBase):
     """ Class to render the RailEnv and agents.
         Uses two layers, layer 0 for rails (mostly static), layer 1 for agents etc (dynamic)
@@ -139,7 +141,7 @@ class RenderLocal(RenderBase):
     theta = np.linspace(0, np.pi / 2, 5)
     arc = array([np.cos(theta), np.sin(theta)]).T  # from [1,0] to [0,1]
 
-    def __init__(self, env, gl="PILSVG", jupyter=False,
+    def __init__(self, env, gl: GraphicsLayer = "PILSVG", jupyter=False,
                  agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                  show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600):
 
@@ -184,7 +186,7 @@ class RenderLocal(RenderBase):
         for agent_idx, agent in enumerate(self.env.agents):
             if agent is None:
                 continue
-            #print(f"updatebg: {agent_idx} {agent.target}")
+            # print(f"updatebg: {agent_idx} {agent.target}")
             targets[tuple(agent.target)] = agent_idx
         self.gl.build_background_map(targets)
 
@@ -514,7 +516,7 @@ class RenderLocal(RenderBase):
                    episode=None,  # int episode number to show
                    step=None,  # int step number to show in image
                    selected_agent=None,  # indicate which agent is "selected" in the editor
-                   return_image=False): # indicate if image is returned for use in monitor:
+                   return_image=False):  # indicate if image is returned for use in monitor:
         """ Draw the environment using the GraphicsLayer this RenderTool was created with.
             (Use show=False from a Jupyter notebook with %matplotlib inline)
         """
@@ -522,14 +524,14 @@ class RenderLocal(RenderBase):
         # if type(self.gl) is PILSVG:
         if self.gl_str in ["PILSVG", "PGL"]:
             return self.render_env_svg(show=show,
-                                show_observations=show_observations,
-                                show_predictions=show_predictions,
-                                selected_agent=selected_agent,
-                                show_agents=show_agents,
-                                show_inactive_agents=show_inactive_agents,
-                                show_rowcols=show_rowcols,
-                                return_image=return_image
-                                )
+                                       show_observations=show_observations,
+                                       show_predictions=show_predictions,
+                                       selected_agent=selected_agent,
+                                       show_agents=show_agents,
+                                       show_inactive_agents=show_inactive_agents,
+                                       show_rowcols=show_rowcols,
+                                       return_image=return_image
+                                       )
         else:
             return self.render_env_pil(show=show,
                                 show_agents=show_agents,
@@ -653,6 +655,8 @@ class RenderLocal(RenderBase):
                     else:
                         target = None
                         is_selected = False
+                    if transitions == RailEnvTransitionsEnum.diamond_crossing and (r, c) in env.resource_map.level_free_positions:
+                        transitions = self.gl.DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION
 
                     self.gl.set_rail_at(r, c, transitions, target=target, is_selected=is_selected,
                                         rail_grid=env.rail.grid, num_agents=env.get_num_agents(),
