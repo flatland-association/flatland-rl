@@ -143,7 +143,7 @@ class SparseLineGen(BaseLineGen):
         for agent_idx in range(num_agents):
             if agent_idx % 2 == 0:
                 # Select line_length cities, find their num_stations and possible orientations
-                city_idx: List[int] = np_random.choice(len(city_positions), self.line_length, replace=False)
+                city_idx: List[int] = np_random.choice(len(city_positions), min(self.line_length, len(city_positions)), replace=False)
                 # Run a train in from city 0 to city -1
 
             else:
