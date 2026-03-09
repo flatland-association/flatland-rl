@@ -182,13 +182,17 @@ class RenderLocal(RenderBase):
 
     def update_background(self):
         # create background map
-        targets = {}
-        for agent_idx, agent in enumerate(self.env.agents):
+        station_color_id = 4  # use fixed color for all stations (bar below building)
+        stations = {}
+        for agent in self.env.agents:
             if agent is None:
                 continue
-            # print(f"updatebg: {agent_idx} {agent.target}")
-            targets[tuple(agent.target)] = agent_idx
-        self.gl.build_background_map(targets)
+            for wps in agent.waypoints:
+                for wp in wps:
+                    if wp.position not in stations:
+                        stations[wp.position] = station_color_id
+        self.gl.build_background_map(stations)
+        return stations
 
     def resize(self):
         self.gl.resize(self.env)
@@ -636,33 +640,23 @@ class RenderLocal(RenderBase):
             self.new_rail = False
             self.gl.clear_rails()
 
-            # store the targets
-            targets = {}
-            selected = {}
-            for agent_idx, agent in enumerate(self.env.agents):
-                if agent is None:
-                    continue
-                targets[tuple(agent.target)] = agent_idx
-                selected[tuple(agent.target)] = (agent_idx == selected_agent)
+            stations = self.update_background()
 
             # Draw each cell independently
             for r in range(env.height):
                 for c in range(env.width):
                     transitions = env.rail.grid[r, c]
-                    if (r, c) in targets:
-                        target = targets[(r, c)]
-                        is_selected = selected[(r, c)]
+                    if (r, c) in stations:
+                        station = stations[(r, c)]
                     else:
-                        target = None
+                        station = None
                         is_selected = False
                     if transitions == RailEnvTransitionsEnum.diamond_crossing and (r, c) in env.resource_map.level_free_positions:
                         transitions = self.gl.DIAMOND_CROSSING_LEVEL_FREE_PSEUDO_TRANSITION
 
-                    self.gl.set_rail_at(r, c, transitions, target=target, is_selected=is_selected,
+                    self.gl.set_rail_at(r, c, transitions, target=station, is_selected=station is not None,
                                         rail_grid=env.rail.grid, num_agents=env.get_num_agents(),
                                         show_debug=self.show_debug)
-
-            self.gl.build_background_map(targets)
 
             if show_rowcols:
                 # label rows, cols
