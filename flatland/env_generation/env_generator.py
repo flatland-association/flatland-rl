@@ -163,6 +163,7 @@ def env_generator_legacy(
     max_rail_pairs_in_city=4,  # TODO should be 2
     grid_mode=False,
     max_rails_between_cities=2,
+    p_level_free: float = 0,
     malfunction_duration_min=20,
     malfunction_duration_max=50,
     malfunction_interval=540,
@@ -195,6 +196,7 @@ def env_generator_legacy(
             grid_mode=grid_mode,
             max_rails_between_cities=max_rails_between_cities,
             max_rail_pairs_in_city=max_rail_pairs_in_city,
+            p_level_free=p_level_free,
         ),
         malfunction_generator=ParamMalfunctionGen(
             MalfunctionParameters(
