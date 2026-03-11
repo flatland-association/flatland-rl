@@ -115,6 +115,21 @@ def msgpack_custom_encode(obj, chain=None):
         return {'__fraction__': True, 'as_str': str((obj.numerator, obj.denominator))}
     return m.encode(obj, chain)
 
+
+def json_custom_decode(dct):
+    if '__fraction__' in dct:
+        return Fraction(*ast.literal_eval(dct["as_str"]))
+    return dct
+
+
+class JSONCustomEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Fraction):
+            obj: Fraction
+            return {'__fraction__': True, 'as_str': str((obj.numerator, obj.denominator))}
+        return super().default(obj)
+
+
 class FlatlandRemoteEvaluationService:
     """
     A remote evaluation service which exposes the following interfaces
@@ -1094,7 +1109,7 @@ class FlatlandRemoteEvaluationService:
             os.makedirs(os.path.dirname(sfData))
 
         with open(sfData, "w") as fOut:
-            json.dump(self.analysis_data, fOut)
+            json.dump(self.analysis_data, fOut, cls=JSONCustomEncoder)
 
         self.analysis_data = {}
 
