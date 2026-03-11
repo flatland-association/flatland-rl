@@ -4,7 +4,6 @@ import warnings
 import numpy as np
 from numpy.random import RandomState
 
-from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
