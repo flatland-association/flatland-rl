@@ -177,6 +177,9 @@ def env_generator_legacy(
     rewards: Rewards = None,
     effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
 ) -> Tuple[RailEnv, Dict, Dict]:
+    """
+    Old deprecated behavior of stateful rail_generator: ignore seed passed from env int rail_generator, draw from random generator initialised every time by its own seed.
+    """
     warnings.warn("Deprecated - use the patched env_generator. Keep only for regression tests. Update tests and drop in separate pr.")
     if speed_ratios is None:
         speed_ratios = {1.0: 0.25, 0.5: 0.25, 0.33: 0.25, 0.25: 0.25}
