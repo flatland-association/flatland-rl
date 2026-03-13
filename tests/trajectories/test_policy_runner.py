@@ -359,7 +359,7 @@ def test_env_path_and_seed(seed, expected):
                 "--snapshot-interval", "-1",
             ]
             if seed is not None:
-                args += ["--seed", str(seed)]
+                args += ["--post-seed", str(seed)]
             generate_trajectory_from_policy(args)
         assert e_info.value.code == 0
         with (data_dir / "outputs" / "evaluation.json").open("r") as f:

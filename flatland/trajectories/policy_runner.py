@@ -352,7 +352,7 @@ class PolicyRunner:
               )
 @click.option('--post-seed',
               type=int,
-              help="DEPRECATED: only applicable with legacy_env_generator.",
+              help="Initiate random seed after the env is generated, goes into second `reset` with `regenerate_rail=False, regenerate_schedule=False`.",
               required=False, default=None)
 def generate_trajectory_from_policy(
     data_dir: Path,
@@ -447,8 +447,9 @@ def generate_trajectory_from_policy(
 
     if env_path is not None:
         env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
-        if seed is not None:
-            env.reset(random_seed=seed)
+        assert seed is None, "When using --env-path, use --post-seed to do a reset on the loaded env instead. Currently, loaded will always load the same rail/line/timetable from file."
+        if post_seed is not None:
+            env.reset(random_seed=post_seed)
         # TODO https://github.com/flatland-association/flatland-rl/issues/278 a bit hacky for now, clean up later...
         if malfunction_interval == -1 and effects_generator is not None:
             env.effects_generator = effects_generator
@@ -488,7 +489,9 @@ def generate_trajectory_from_policy(
             seed=seed,
             obs_builder_object=obs_builder,
             rewards=rewards,
+            post_seed=post_seed,
         )
+
     fork_from_trajectory = None
     if fork_data_dir is not None and fork_ep_id is not None:
         fork_from_trajectory = Trajectory.load_existing(data_dir=fork_data_dir, ep_id=fork_ep_id)
