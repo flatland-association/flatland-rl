@@ -97,7 +97,7 @@ from flatland.trajectories.policy_runner import generate_trajectory_from_policy
               )
 @click.option('--post-seed',
               type=int,
-              help="DEPRECATED: only applicable with legacy env generator.",
+              help="Initiate random seed after the env is generated, goes into second `reset` with `regenerate_rail=False, regenerate_schedule=False`. Same seed is applied to all loaded envs!",
               required=False, default=None)
 def generate_trajectories_from_metadata(
     metadata_csv: Path,

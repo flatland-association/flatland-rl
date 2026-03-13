@@ -128,6 +128,7 @@ def env_generator(n_agents=7,
         number_of_agents=n_agents,
         obs_builder_object=obs_builder_object,
         record_steps=True,
+        # N.B. env's random state is passed to all generators, which are supposed to be stateless
         random_seed=seed,
         acceleration_delta=acceleration_delta,
         braking_delta=braking_delta,
