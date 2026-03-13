@@ -249,12 +249,12 @@ jobs:
                     python -m pip install tox tox-gh-actions
             -   name: Run profiling
                 run: tox run -e py${{ matrix.python-version }}-profiling
-            -   uses: actions/upload-artifact@v4
+            -   uses: actions/upload-artifact@
                 with:
                     name: upload-profiling-results-${{ matrix.python-version }}
                     path: .tox/py${{ matrix.python-version }}-profiling/log
                     if-no-files-found: error
-            -   uses: actions/upload-artifact@v4
+            -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-performance-profiling-results-${{ matrix.python-version }}
                     path: |
@@ -287,7 +287,7 @@ jobs:
                     python -m pip install tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e py${{ matrix.python-version }}-benchmarks
-            -   uses: actions/upload-artifact@v4
+            -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-benchmarks-results-${{ matrix.python-version }}
                     path: benchmarks.hprof
