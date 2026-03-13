@@ -249,7 +249,7 @@ jobs:
                     python -m pip install tox tox-gh-actions
             -   name: Run profiling
                 run: tox run -e py${{ matrix.python-version }}-profiling
-            -   uses: actions/upload-artifact@
+            -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-profiling-results-${{ matrix.python-version }}
                     path: .tox/py${{ matrix.python-version }}-profiling/log
