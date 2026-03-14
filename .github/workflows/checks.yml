@@ -25,9 +25,9 @@ jobs:
         if: ${{ false }}  # disabled for now, hasn't run in a while resulting in countless issues
         runs-on: ubuntu-22.04
         steps:
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
+                uses: actions/setup-python@v6
                 with:
                     python-version: "3.13"
             -   name: Install tox
@@ -60,9 +60,9 @@ jobs:
                 run: |
                     df -h
                     docker system df
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
+                uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Install tox
@@ -99,9 +99,9 @@ jobs:
                 run: |
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
+                uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
@@ -145,9 +145,9 @@ jobs:
                 run: |
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
+                uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
@@ -156,7 +156,7 @@ jobs:
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Clone flatland-baselines
-                uses: actions/checkout@v4
+                uses: actions/checkout@v6
                 with:
                     repository: flatland-association/flatland-baselines
                     ref: ${{ env.flatland-baselines-ref }}
@@ -179,13 +179,13 @@ jobs:
                   # "3.10", # commented out as failing too often
                     "3.11", "3.12", "3.13" ]
         steps:
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v6
             -   name: Install ffmpeg
                 run: |
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
+                uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Start Redis
@@ -209,9 +209,9 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
+                uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
@@ -233,9 +233,9 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
+                uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
@@ -249,12 +249,12 @@ jobs:
                     python -m pip install tox tox-gh-actions
             -   name: Run profiling
                 run: tox run -e py${{ matrix.python-version }}-profiling
-            -   uses: actions/upload-artifact@v4
+            -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-profiling-results-${{ matrix.python-version }}
                     path: .tox/py${{ matrix.python-version }}-profiling/log
                     if-no-files-found: error
-            -   uses: actions/upload-artifact@v4
+            -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-performance-profiling-results-${{ matrix.python-version }}
                     path: |
@@ -270,9 +270,9 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
+                uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
@@ -287,7 +287,7 @@ jobs:
                     python -m pip install tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e py${{ matrix.python-version }}-benchmarks
-            -   uses: actions/upload-artifact@v4
+            -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-benchmarks-results-${{ matrix.python-version }}
                     path: benchmarks.hprof
@@ -301,9 +301,9 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13" ]
         steps:
-            -   uses: actions/checkout@v4
+            -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v5
+                uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
             -   name: Download episodes
@@ -313,7 +313,7 @@ jobs:
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}
             -   name: Clone flatland-baselines
-                uses: actions/checkout@v4
+                uses: actions/checkout@v6
                 with:
                     repository: flatland-association/flatland-baselines
                     ref: ${{ env.flatland-baselines-ref }}
