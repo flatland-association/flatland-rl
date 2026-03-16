@@ -148,6 +148,7 @@ def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
         assert agent.malfunction_handler.malfunction_down_counter == duration - (num_steps_run - earliest)
 
 
+# TODO https://github.com/flatland-association/flatland-rl/issues/386 use ShortestPathPolicy instead
 def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_intermediate=True):
     if rendering:
         env_renderer = RenderTool(env)
