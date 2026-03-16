@@ -1,5 +1,7 @@
 import sys
 
+import numpy as np
+
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, condition_stopped_cells_and_range, \
     condition_stopped_intermediate_and_range, make_multi_malfunction_condition, IntermediateStopMalfunctionEffectsGenerator
@@ -184,7 +186,8 @@ def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_interm
 
 
 def test_intermediate_stop_malfunction_effects_generator(rendering: bool = False):
-    conditional_malfunction_effects_generator = IntermediateStopMalfunctionEffectsGenerator(1, 1, 3, )
+    # rate=1 gives prob 0.62 =  1 - exp(-rate)
+    conditional_malfunction_effects_generator = IntermediateStopMalfunctionEffectsGenerator(np.inf, 1, 3, )
     env, _, _ = env_generator(
         seed=888,
         line_length=3,
@@ -200,6 +203,6 @@ def test_intermediate_stop_malfunction_effects_generator(rendering: bool = False
     num_steps_run = 1200
     _run_with_sthortest_path(env, rendering, num_steps_run, stop_at_first_intermediate=False)
 
-    assert conditional_malfunction_effects_generator._num_malfunctions == 1
+    assert conditional_malfunction_effects_generator._num_malfunctions == 3
     for agent in env.agents:
         assert agent.state == TrainState.DONE
