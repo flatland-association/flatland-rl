@@ -1,8 +1,10 @@
 import sys
 
+import numpy as np
+
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, condition_stopped_cells_and_range, \
-    condition_stopped_intermediate_and_range, make_multi_malfunction_condition
+    condition_stopped_intermediate_and_range, make_multi_malfunction_condition, IntermediateStopMalfunctionEffectsGenerator
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.envs.step_utils.states import TrainState
@@ -11,14 +13,14 @@ from flatland.utils.rendertools import RenderTool
 
 def test_conditional_stopped_cells_and_range_malfunction_effects_generator():
     env, _, _ = env_generator(seed=42,
-        malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
-        effects_generator=ConditionalMalfunctionEffectsGenerator(
-            malfunction_rate=1,
-            min_duration=888,
-            max_duration=888,
-            # all cells
-            condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
-        ))
+                              malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
+                              effects_generator=ConditionalMalfunctionEffectsGenerator(
+                                  malfunction_rate=1,
+                                  min_duration=888,
+                                  max_duration=888,
+                                  # all cells
+                                  condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
+                              ))
     env.reset()
 
     for _ in range(150):
@@ -89,16 +91,16 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
 
 def test_make_multi_malfunction_condition():
     env, _, _ = env_generator(seed=42,
-        line_length=3,
-        n_cities=3,
-        n_agents=3,
-        malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
-        effects_generator=ConditionalMalfunctionEffectsGenerator(
-            malfunction_rate=1,
-            min_duration=888,
-            max_duration=888,
-            condition=condition_stopped_intermediate_and_range(0, 9999999),
-        ))
+                              line_length=3,
+                              n_cities=3,
+                              n_agents=3,
+                              malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
+                              effects_generator=ConditionalMalfunctionEffectsGenerator(
+                                  malfunction_rate=1,
+                                  min_duration=888,
+                                  max_duration=888,
+                                  condition=condition_stopped_intermediate_and_range(0, 9999999),
+                              ))
 
     cond = make_multi_malfunction_condition(
         [condition_stopped_intermediate_and_range(44, 99), condition_stopped_cells_and_range(44, 99, [env.agents[0].initial_position])])
@@ -122,7 +124,8 @@ def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
     conditional_malfunction_effects_generator = ConditionalMalfunctionEffectsGenerator(
         malfunction_rate=sys.maxsize,
         min_duration=duration, max_duration=duration,
-        earliest_malfunction=earliest, max_num_malfunctions=2,
+        earliest_malfunction=earliest,
+        max_num_malfunctions=2,
     )
     env, _, _ = env_generator(
         seed=42,
@@ -145,9 +148,11 @@ def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
         assert agent.malfunction_handler.malfunction_down_counter == duration - (num_steps_run - earliest)
 
 
-def _run_with_sthortest_path(env, rendering, num_steps=400):
+# TODO https://github.com/flatland-association/flatland-rl/issues/386 use ShortestPathPolicy instead
+def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_intermediate=True):
     if rendering:
         env_renderer = RenderTool(env)
+    agents_at = {agent.handle: 0 for agent in env.agents}
     for _ in range(num_steps):
         if rendering:
             env_renderer.render_env(show=True)
@@ -157,10 +162,19 @@ def _run_with_sthortest_path(env, rendering, num_steps=400):
         for agent in env.agents:
             if agent.position is None:
                 actions[agent.handle] = RailEnvActions.MOVE_FORWARD
-            elif agent.position == agent.waypoints[1][0].position:
-                actions[agent.handle] = RailEnvActions.STOP_MOVING
+            elif agent.state == TrainState.DONE:
+                continue
             else:
-                p = get_k_shortest_paths(env, agent.position, agent.direction, agent.waypoints[1][0].position)
+
+                if agent.position == agent.waypoints[agents_at[agent.handle] + 1][0].position:
+                    if stop_at_first_intermediate:
+                        actions[agent.handle] = RailEnvActions.STOP_MOVING
+                        continue
+                    else:
+                        agents_at[agent.handle] += 1
+                        actions[agent.handle] = RailEnvActions.STOP_MOVING
+                        continue
+                p = get_k_shortest_paths(env, agent.position, agent.direction, agent.waypoints[agents_at[agent.handle] + 1][0].position)
                 shortest_path = p[0]
                 for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
                     new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, _ = env.rail._check_action_on_agent(
@@ -170,3 +184,26 @@ def _run_with_sthortest_path(env, rendering, num_steps=400):
                         break
         env.step(actions)
     return agent
+
+
+def test_intermediate_stop_malfunction_effects_generator(rendering: bool = False):
+    # rate=1 gives prob 0.62 =  1 - exp(-rate)
+    conditional_malfunction_effects_generator = IntermediateStopMalfunctionEffectsGenerator(np.inf, 1, 3, )
+    env, _, _ = env_generator(
+        seed=888,
+        line_length=3,
+        n_cities=5,
+        n_agents=3,
+        x_dim=50,
+        y_dim=50,
+        malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
+        effects_generator=conditional_malfunction_effects_generator,
+    )
+    env.reset()
+
+    num_steps_run = 1200
+    _run_with_sthortest_path(env, rendering, num_steps_run, stop_at_first_intermediate=False)
+
+    assert conditional_malfunction_effects_generator._num_malfunctions == 3
+    for agent in env.agents:
+        assert agent.state == TrainState.DONE
