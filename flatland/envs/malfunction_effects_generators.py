@@ -166,6 +166,9 @@ def condition_stopped_cells_and_range(start_step_incl: int, end_step_excl: int, 
 
 
 class IntermediateStopMalfunctionEffectsGenerator(ConditionalMalfunctionEffectsGenerator):
+    """
+    Departure malfunctions at (intermediate) stops: generate malfunction when stopped at an (intermediate) waypoint.
+    """
     @staticmethod
     def _condition(agent: "EnvAgent", *args, **kwargs):
         if agent.state_machine.state != TrainState.STOPPED:
