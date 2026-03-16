@@ -85,7 +85,8 @@ DEFAULT_COMMAND_TIMEOUT = int(os.getenv(
     "FLATLAND_DEFAULT_COMMAND_TIMEOUT",
     5 * 60))
 
-RANDOM_SEED = int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
+# use "NONE" to disable "post-seeding"
+RANDOM_SEED = None if (os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", None) == "NONE") else int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
 
 # disjunctive
 SUPPORTED_CLIENT_VERSIONS = os.getenv("SUPPORTED_CLIENT_VERSIONS", "").split(",") + [flatland.__version__]
