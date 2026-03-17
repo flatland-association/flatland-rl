@@ -190,7 +190,7 @@ def test_intermediate_stop_malfunction_effects_generator(rendering: bool = False
     # rate=1 gives prob 0.62 =  1 - exp(-rate)
     conditional_malfunction_effects_generator = IntermediateStopMalfunctionEffectsGenerator(np.inf, 1, 3, )
     env, _, _ = env_generator(
-        seed=888,
+        seed=889,
         line_length=3,
         n_cities=5,
         n_agents=3,
