@@ -5,7 +5,57 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## ## [[4.2.3]](https://github.com/flatland-association/flatland-rl/compare/v4.2.2...v4.2.3) 2026-01-30
+## [[4.2.4]](https://github.com/flatland-association/flatland-rl/compare/v4.2.3...v4.2.4) 2026-03-19
+
+### Added
+
+* feat: ignore paths leading out of the grid in `get_k_shortest_paths`. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/347
+* feat(graph): make actions on graph independent of underlying graph (graph generalization part 1). by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/317
+* feat(graph): refactor abstract and graph rail env (graph generalization part 2). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/351
+* feat(graph): generalize env step to be grid-agnostic (graph generalization part 3). by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/353
+* feat(graph): generalize distance map (graph generalization part 4). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/356
+* feat(graph): partially fix graph transition map for symmetric switches (graph generalization part 5). by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/361
+* feat(graph): inject malfunction generator in `from_rail_env` (graph generalization part 6). by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/365
+* feat(rewards): add base class for fine-grained default rewards. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/357
+
+* feat(rewards): support for multiple visits. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/377
+* feat(persistence): persist level free crossings. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/381
+* feat(graphics): add visual element level free. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/380
+* feat(rendering): render all station cells not just targets. by @CleverManu in https://github.com/flatland-association/flatland-rl/pull/374
+* feat: departure malfunction generator. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/383
+
+### Changed
+
+* chore: update dependencies, comply with upstream DLA. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/349
+* chore(deps): bump protobuf from 6.33.4 to 6.33.5 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/350
+* chore: update dependencies, comply with upstream DLA. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/352
+* ci: increase number of retries and retry delay for notebooks. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/355
+* ci: pin setuptools for running profiling on older Flatland versions. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/359
+* chore(deps-dev): bump nbconvert from 7.16.6 to 7.17.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/358
+* chore: update dependencies, comply with upstream DLA (part 3). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/354
+* chore(deps): bump pillow from 12.1.0 to 12.1.1 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/360
+* ci: bump supercharge/redis-github-action@1.7.0 to 1.8.1. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/362
+* ci: disable notebooks-3.10 as failing too often. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/369
+* ci: fix missing env py3.13-notebooks-no-pickle. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/371
+* docs: parameters docs from init to class-level in order to fix Sphinx rendering. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/370
+* refactor: drop redundant get valid move actions. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/372
+* chore: add verbose flag for trajectory analysis. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/373
+* test: do not skip reward comparison any more. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/375
+* chore: bump deprecated gha checkout and setup-python versions to v6. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/385
+* chore(deps-dev): bump tornado from 6.5.4 to 6.5.5 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/384
+* chore(deps): bump pyasn1 from 0.6.2 to 0.6.3 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/387
+* refactor: generators receive random state from env only, deprecate random-stateful generators. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/341
+
+### Fixed
+
+* fix: use fractional speed and distance. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/376
+
+## [[4.2.3]](https://github.com/flatland-association/flatland-rl/compare/v4.2.2...v4.2.3) 2026-01-30
 
 ### Added
 
