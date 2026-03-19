@@ -3,6 +3,7 @@ name: Publish package to Test PyPI
 env:
     # DEPENDENCY SWITCH:
     flatland-baselines-ref: main
+    flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip"
 
 on:
     workflow_dispatch:
