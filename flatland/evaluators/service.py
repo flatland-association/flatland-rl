@@ -85,7 +85,8 @@ DEFAULT_COMMAND_TIMEOUT = int(os.getenv(
     "FLATLAND_DEFAULT_COMMAND_TIMEOUT",
     5 * 60))
 
-RANDOM_SEED = int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
+# use "NONE" to disable "post-seeding"
+RANDOM_SEED = None if (os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", None) == "NONE") else int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
 
 # disjunctive
 SUPPORTED_CLIENT_VERSIONS = os.getenv("SUPPORTED_CLIENT_VERSIONS", "").split(",") + [flatland.__version__]
@@ -114,6 +115,21 @@ def msgpack_custom_encode(obj, chain=None):
         obj: Fraction
         return {'__fraction__': True, 'as_str': str((obj.numerator, obj.denominator))}
     return m.encode(obj, chain)
+
+
+def json_custom_decode(dct):
+    if '__fraction__' in dct:
+        return Fraction(*ast.literal_eval(dct["as_str"]))
+    return dct
+
+
+class JSONCustomEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Fraction):
+            obj: Fraction
+            return {'__fraction__': True, 'as_str': str((obj.numerator, obj.denominator))}
+        return super().default(obj)
+
 
 class FlatlandRemoteEvaluationService:
     """
@@ -1094,7 +1110,7 @@ class FlatlandRemoteEvaluationService:
             os.makedirs(os.path.dirname(sfData))
 
         with open(sfData, "w") as fOut:
-            json.dump(self.analysis_data, fOut)
+            json.dump(self.analysis_data, fOut, cls=JSONCustomEncoder)
 
         self.analysis_data = {}
 

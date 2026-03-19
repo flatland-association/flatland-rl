@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from typing import Any, List, Dict
 
-from flatland.env_generation.env_generator import env_generator
+from flatland.env_generation.env_generator import env_generator_legacy
 from flatland.envs.RailEnvPolicy import RailEnvPolicy
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.evaluator_callback import FlatlandEvaluatorCallbacks
@@ -33,7 +33,8 @@ class DelayPolicy(RailEnvPolicy):
 def test_evaluator_callbacks():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory = PolicyRunner.create_from_policy(env=env_generator(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir, tqdm_kwargs={"disable": True})
+        trajectory = PolicyRunner.create_from_policy(env=env_generator_legacy(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir,
+                                                     tqdm_kwargs={"disable": True})
         print(trajectory.trains_arrived)
         assert trajectory.trains_arrived.iloc[0]["normalized_reward"] == 0.4582954200788596
         assert trajectory.trains_arrived.iloc[0]["success_rate"] == 0
