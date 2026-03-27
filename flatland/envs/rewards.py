@@ -7,6 +7,7 @@ from fastenum import fastenum
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.states import TrainState
 
@@ -79,6 +80,16 @@ class Rewards(Generic[RewardType]):
 
         """
         return None
+
+    # TODO we should drop these methods once EnvAgent.waypoints is also of ConfigurationType instead of Waypoint.
+    @staticmethod
+    def _sanitize_waypoints(agent_waypoints: List[List[Waypoint]]) -> List[List[Tuple[Tuple[int, int], int]]]:
+        agent_waypoints = [[(Rewards._sanitize_waypoint(wp)) for wp in wps] for wps in agent_waypoints]
+        return agent_waypoints
+
+    @staticmethod
+    def _sanitize_waypoint(wp: Waypoint) -> Tuple[Tuple[int, int], int]:
+        return wp._to_tuple() if isinstance(wp, Waypoint) else wp
 
 
 def defaultdict_set():
@@ -215,7 +226,8 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
             # target not reached
             if agent.state.is_on_map_state():
                 d[DefaultPenalties.TARGET_NOT_REACHED.value] = agent.get_current_delay(elapsed_steps, distance_map)
-        for intermediate_alternatives, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1],
+        agent_waypoints = self._sanitize_waypoints(agent.waypoints)
+        for intermediate_alternatives, la, ed in zip(agent_waypoints[1:-1], agent.waypoints_latest_arrival[1:-1],
                                                      agent.waypoints_earliest_departure[1:-1]):
             agent_arrivals: Set[ConfigurationType] = set(self.arrivals[agent.handle])
             intermediate_alternatives: Set[ConfigurationType] = set(intermediate_alternatives)
@@ -404,16 +416,21 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         if agent.current_configuration is None and agent.state_machine.state == TrainState.DONE and agent.old_configuration is not None and agent.old_configuration in agent.targets:
             self.arrivals[agent.handle][agent.old_configuration].append(elapsed_steps)
 
-        if agent.current_configuration is not None and agent.current_configuration not in self.arrivals[agent.handle]:
-            self.arrivals[agent.handle][agent.current_configuration].append(elapsed_steps)
-            self.departures[agent.handle][agent.old_configuration].append(elapsed_steps)
+        if agent.current_configuration is not None:
+            # Only record arrival if this is a new waypoint (not dwelling at same position)
+            if agent.old_configuration != agent.current_configuration:
+                self.arrivals[agent.handle][agent.current_configuration].append(elapsed_steps)
+                # Only record departure from old position when we arrive from on-map position
+                if agent.old_configuration is not None:
+                    self.departures[agent.handle][agent.old_configuration].append(elapsed_steps)
 
         return 0, 0
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
         n_stops_on_time = 0
         # by design, initial waypoint is unique
-        initial_wp = agent.waypoints[0][0]
+        agent_waypoints = self._sanitize_waypoints(agent.waypoints)
+        initial_wp = agent_waypoints[0][0]
         if initial_wp in self.departures[agent.handle]:
             stop_on_time = False
             for departure in self.departures[agent.handle][initial_wp]:
@@ -423,7 +440,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
             if stop_on_time:
                 n_stops_on_time += 1
         for i, (wps, la, ed) in enumerate(zip(
-            agent.waypoints[1:-1],
+            agent_waypoints[1:-1],
             agent.waypoints_latest_arrival[1:-1],
             agent.waypoints_earliest_departure[1:-1]
         )):
@@ -441,7 +458,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
                 n_stops_on_time += 1
                 break
         # by design, target is only one cell
-        target_wp = agent.waypoints[-1][0]
+        target_wp = agent_waypoints[-1][0]
         # N.B. assuming target is only travelled once:
         if target_wp in self.arrivals[agent.handle] and self.arrivals[agent.handle][target_wp][0] <= agent.waypoints_latest_arrival[-1]:
             n_stops_on_time += 1
