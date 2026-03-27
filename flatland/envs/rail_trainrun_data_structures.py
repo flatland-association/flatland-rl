@@ -16,7 +16,8 @@ class Waypoint:
     position = field(type=Tuple[int, int])
     direction = field(type=int, converter=lambda d: d if d is None else int(d))
 
-
+    def _to_tuple(self):
+        return self.position, self.direction
 
 
 # A train run is represented by the waypoints traversed and the times of traversal
