@@ -105,6 +105,9 @@ ENV/
 # vscode
 .vscode/
 
+# macos
+.DS_Store
+
 
 test_save.dat
 
