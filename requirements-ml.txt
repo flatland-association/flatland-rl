@@ -318,7 +318,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.5
+requests==2.33.0
     # via
     #   crowdai-api
     #   flatland-rl (pyproject.toml)
