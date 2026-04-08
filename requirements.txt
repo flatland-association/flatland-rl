@@ -127,7 +127,7 @@ pydantic-core==2.41.5
     # via pydantic
 pyglet==2.1.12
     # via flatland-rl (pyproject.toml)
-pygments==2.19.2
+pygments==2.20.0
     # via ipython
 pyparsing==3.3.1
     # via matplotlib
