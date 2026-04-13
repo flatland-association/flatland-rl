@@ -20,12 +20,12 @@ from flatland.core.resource_map import ResourceMap
 from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
+from flatland.envs import malfunction_effects_generators as mfg
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
-from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import DefaultRewards, Rewards
@@ -204,7 +204,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         self.acceleration_delta = acceleration_delta
         self.braking_delta = braking_delta
 
-        mf = MalfunctionEffectsGenerator(self.malfunction_generator)
+        mf = mfg.MalfunctionEffectsGenerator(self.malfunction_generator)
         if effects_generator is None:
             self.effects_generator = mf
         else:
