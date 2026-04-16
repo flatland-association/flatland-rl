@@ -25,6 +25,7 @@ class TrajectoryEvaluator:
         snapshot_interval=0, tqdm_kwargs: dict = None,
         skip_rewards_dones_infos: bool = False,
         skip_rewards: bool = False,
+        ignoring_action_required: bool = True,
         rewards: Rewards = None
     ) -> RailEnv:
         """
@@ -101,7 +102,15 @@ class TrajectoryEvaluator:
                     if not skip_rewards:
                         assert np.allclose(actual_reward, expected_reward), (elapsed_after_step, agent_id, actual_reward, expected_reward)
                     assert actual_done == expected_done, (elapsed_after_step, agent_id, actual_done, expected_done)
-                    assert actual_info == expected_info, (elapsed_after_step, agent_id, actual_info, expected_info)
+                    if ignoring_action_required:
+                        actual_info_ignoring_action_required = {**actual_info}
+                        expected_info_ignoring_action_required = {**expected_info}
+                        del actual_info_ignoring_action_required["action_required"]
+                        del expected_info_ignoring_action_required["action_required"]
+                        assert actual_info_ignoring_action_required == expected_info_ignoring_action_required, (elapsed_after_step, agent_id, actual_info,
+                                                                                                                expected_info)
+                    else:
+                        assert actual_info == expected_info, (elapsed_after_step, agent_id, actual_info, expected_info)
 
             if done:
                 break

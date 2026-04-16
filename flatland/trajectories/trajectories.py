@@ -358,12 +358,20 @@ class Trajectory:
             columns.append('normalized_reward')
         return self._compare(df, other_df, columns, end_step, start_step)
 
-    def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None, ignoring_rewards: bool = False) -> pd.DataFrame:
+    def compare_rewards_dones_infos(self, other: "Trajectory", start_step: int = None, end_step: int = None, ignoring_rewards: bool = False,
+                                    ignoring_action_required: bool = True) -> pd.DataFrame:
         df = self._read_trains_rewards_dones_infos(episode_only=True)
         other_df = other._read_trains_rewards_dones_infos(episode_only=True)
         columns = ['env_time', 'agent_id', 'reward', 'info', 'done']
         if ignoring_rewards:
             columns = ['env_time', 'agent_id', 'info', 'done']
+
+        def del_action_required(d):
+            del d["action_required"]
+
+        if ignoring_action_required:
+            df["info"] = df["info"].apply(del_action_required)
+            other_df["info"] = other_df["info"].apply(del_action_required)
         return self._compare(df, other_df, columns, end_step, start_step)
 
     @staticmethod

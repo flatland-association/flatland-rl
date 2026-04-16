@@ -368,7 +368,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         """
         info_dict = {
             # TODO https://github.com/flatland-association/flatland-rl/issues/149 revise action required
-            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_entry)
+            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_exit(agent.speed_counter.max_speed))
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
