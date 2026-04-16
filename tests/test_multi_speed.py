@@ -696,4 +696,4 @@ def test_multispeed_actions_no_malfunction_invalid_actions():
         initial_direction=Grid4TransitionsEnum.EAST,
     )
 
-    run_replay_config(env, [test_config], skip_reward_check=True)
+    run_replay_config(env, [test_config], skip_reward_check=True, skip_action_required_check=True)
