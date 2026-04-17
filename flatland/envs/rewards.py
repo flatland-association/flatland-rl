@@ -95,6 +95,7 @@ class DefaultPenalties(fastenum.Enum):
     TARGET_LATE_ARRIVAL = "TARGET_LATE_ARRIVAL"
     CANCELLATION = "CANCELLATION"
     TARGET_NOT_REACHED = "TARGET_NOT_REACHED"
+    TARGET_NOT_REACHED_MINIMUM_PENALTY = "TARGET_NOT_REACHED_MINIMUM_PENALTY"
     INTERMEDIATE_NOT_SERVED = "INTERMEDIATE_NOT_SERVED"
     INTERMEDIATE_LATE_ARRIVAL = "INTERMEDIATE_LATE_ARRIVAL"
     INTERMEDIATE_EARLY_DEPARTURE = "INTERMEDIATE_EARLY_DEPARTURE"
@@ -117,8 +118,10 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
         Cancellation factor :math:`\phi \geq 0`. defaults to  1.
     cancellation_time_buffer : float
         Cancellation time buffer :math:`\pi \geq 0`. Defaults to 0.
+    target_not_reached_minimum_penalty : float
+        Target not reached minimum penalty :math:`\nu \geq 0`. Applied if agent is still on map at end of episode. Defaults to 0.
     intermediate_not_served_penalty : float
-       Intermediate stop not served penalty :math:`\mu \geq 0`. Applied if one of the intermediates is not served or only run through without stopping. Defaults to 1.
+        Intermediate stop not served penalty :math:`\mu \geq 0`. Applied if one of the intermediates is not served or only run through without stopping. Defaults to 1.
     intermediate_late_arrival_penalty_factor : float
         Intermediate late arrival penalty factor :math:`\alpha \geq 0`. Defaults to 0.2.
     intermediate_early_departure_penalty_factor : float
@@ -130,6 +133,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
     def __init__(self,
                  cancellation_factor: float = 1,
                  cancellation_time_buffer: float = 0,
+                 target_not_reached_minimum_penalty: float = 0,
                  intermediate_not_served_penalty: float = 1,
                  intermediate_late_arrival_penalty_factor: float = 0.2,
                  intermediate_early_departure_penalty_factor: float = 0.5,
@@ -141,12 +145,14 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
         self.intermediate_not_served_penalty = intermediate_not_served_penalty
         self.cancellation_time_buffer = cancellation_time_buffer
         self.cancellation_factor = cancellation_factor
+        self.target_not_reached_minimum_penalty = target_not_reached_minimum_penalty
         assert self.collision_factor >= 0
         assert self.intermediate_early_departure_penalty_factor >= 0
         assert self.intermediate_late_arrival_penalty_factor >= 0
         assert self.intermediate_not_served_penalty >= 0
         assert self.cancellation_time_buffer >= 0
         assert self.cancellation_factor >= 0
+        assert self.target_not_reached_minimum_penalty >= 0
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals: Dict[AgentHandle, Dict[Waypoint, List[int]]] = defaultdict(defaultdict_list)
         self.departures: Dict[AgentHandle, Dict[Waypoint, List[int]]] = defaultdict(defaultdict_list)
@@ -214,7 +220,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
 
             # target not reached
             if agent.state.is_on_map_state():
-                d[DefaultPenalties.TARGET_NOT_REACHED.value] = agent.get_current_delay(elapsed_steps, distance_map)
+                d[DefaultPenalties.TARGET_NOT_REACHED.value] = min(-1 * self.target_not_reached_minimum_penalty, agent.get_current_delay(elapsed_steps, distance_map))
         for intermediate_alternatives, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1],
                                                      agent.waypoints_earliest_departure[1:-1]):
             agent_arrivals: Set[Waypoint] = set(self.arrivals[agent.handle])
@@ -263,6 +269,7 @@ class DefaultRewards(Rewards[float]):
     def __init__(self,
                  cancellation_factor: float = 1,
                  cancellation_time_buffer: float = 0,
+                 target_not_reached_minimum_penalty: float = 0,
                  intermediate_not_served_penalty: float = 1,
                  intermediate_late_arrival_penalty_factor: float = 0.2,
                  intermediate_early_departure_penalty_factor: float = 0.5,
@@ -271,6 +278,7 @@ class DefaultRewards(Rewards[float]):
         self._proxy = BaseDefaultRewards(
             cancellation_factor=cancellation_factor,
             cancellation_time_buffer=cancellation_time_buffer,
+            target_not_reached_minimum_penalty=target_not_reached_minimum_penalty,
             intermediate_not_served_penalty=intermediate_not_served_penalty,
             intermediate_late_arrival_penalty_factor=intermediate_late_arrival_penalty_factor,
             intermediate_early_departure_penalty_factor=intermediate_early_departure_penalty_factor,
@@ -301,6 +309,10 @@ class DefaultRewards(Rewards[float]):
     def cancellation_factor(self):
         return self._proxy.cancellation_factor
 
+    @property
+    def target_not_reached_minimum_penalty(self):
+        return self._proxy.target_not_reached_minimum_penalty
+
     @collision_factor.setter
     def collision_factor(self, v):
         self._proxy.collision_factor = v
@@ -324,6 +336,10 @@ class DefaultRewards(Rewards[float]):
     @cancellation_factor.setter
     def cancellation_factor(self, v):
         self._proxy.cancellation_factor = v
+
+    @target_not_reached_minimum_penalty.setter
+    def target_not_reached_minimum_penalty(self, v):
+        self._proxy.target_not_reached_minimum_penalty = v
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> float:
         return sum(self._proxy.step_reward(agent, agent_transition_data, distance_map, elapsed_steps).values())
