@@ -250,12 +250,12 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
                 d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += earlies[np.argmax(totals)]
         return d
 
-    def cumulate(self, *rewards: float) -> Dict[str, float]:
+    def cumulate(self, *rewards: Dict[str, float]) -> Dict[str, float]:
         return {p.value: sum([r[p.value] for r in rewards]) for p in DefaultPenalties}
-
-    def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
-        # https://flatland-association.github.io/flatland-book/challenges/flatland3/eval.html
-        return sum([sum([r[p.value] for r in rewards]) / (max_episode_steps * num_agents) for p in DefaultPenalties]) + 1
+    
+    def normalize(self, *rewards: Dict[str, float], num_agents: int, max_episode_steps: int) -> float:
+        # https://flatland-association.github.io/flatland-book/challenges/ecml2026/eval.html
+        return sum([np.max(sum([r[p.value] for p in DefaultPenalties]), - max_episode_steps) for r in rewards]) / (max_episode_steps * num_agents) + 1
 
     def empty(self) -> Dict[str, float]:
         return {p.value: 0 for p in DefaultPenalties}
@@ -373,10 +373,6 @@ class ECML2026Rewards(DefaultRewards):
             intermediate_early_departure_penalty_factor = 0.5,
             collision_factor = 250
         )
-
-    def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
-        # https://flatland-association.github.io/flatland-book/challenges/ecml2026/eval.html
-        return sum([np.max(sum([r[p.value] for p in DefaultPenalties]), - max_episode_steps) for r in rewards]) / (max_episode_steps * num_agents) + 1
 
 
 class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, float]]):
