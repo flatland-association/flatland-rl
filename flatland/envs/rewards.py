@@ -374,6 +374,10 @@ class ECML2026Rewards(DefaultRewards):
             collision_factor = 250
         )
 
+    def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
+        # https://flatland-association.github.io/flatland-book/challenges/ecml2026/eval.html
+        return sum([np.max(sum([r[p.value] for p in DefaultPenalties]), - max_episode_steps) for r in rewards]) / (max_episode_steps * num_agents) + 1
+
 
 class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, float]]):
     """
