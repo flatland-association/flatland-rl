@@ -358,6 +358,23 @@ class DefaultRewards(Rewards[float]):
         return 0
 
 
+class ECML2026Rewards(DefaultRewards):
+    """
+    Parametrization of ECML 2026 Competition Rewards.
+    """
+
+    def __init__(self):
+        super().__init__(
+            cancellation_factor = 5,
+            cancellation_time_buffer = 0,
+            target_not_reached_minimum_penalty = 100,
+            intermediate_not_served_penalty = 50,
+            intermediate_late_arrival_penalty_factor = 0.5,
+            intermediate_early_departure_penalty_factor = 0.5,
+            collision_factor = 250
+        )
+
+
 class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, float]]):
     """
     Basic MORL (Multi-Objective Reinforcement Learning) Rewards: with 3 items
