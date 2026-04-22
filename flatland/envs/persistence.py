@@ -287,22 +287,25 @@ class RailEnvPersister(object):
 
     @classmethod
     def _apply_malfunction(cls, env: "RailEnv", env_dict: dict):
-        env.malfunction_generator = mal_gen.FileMalfunctionGen(env_dict=env_dict)
-        # TODO generic effects generator serialization
-        env.effects_generator = MalfunctionEffectsGenerator(env.malfunction_generator)
-        malfunction_cached_rand = env_dict.get("malfunction_cached_rand", None)
-        malfunction_rand_idx = env_dict.get("malfunction_rand_idx", None)
-        # backwards compatibility
-        if malfunction_cached_rand is not None:
-            env.malfunction_generator._cached_rand = malfunction_cached_rand
-        if malfunction_rand_idx is not None:
-            env.malfunction_generator._rand_idx = malfunction_rand_idx
-        malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
-        if malfunction_cached_random_state is not None:
-            env.malfunction_generator._cached_random_state = malfunction_cached_random_state
-            np_random = RandomState()
-            np_random.set_state(malfunction_cached_random_state)
-            env.malfunction_generator.generate_rand_numbers(np_random)
+        if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
+            env_dict.get('malfunction').min_duration, int) and isinstance(env_dict.get('malfunction').max_duration, int):
+            malfunction_generator = mal_gen.ParamMalfunctionGen(mal_gen.MalfunctionParameters(*env_dict["malfunction"]))
+            malfunction_cached_rand = env_dict.get("malfunction_cached_rand", None)
+            malfunction_rand_idx = env_dict.get("malfunction_rand_idx", None)
+            # backwards compatibility
+            if malfunction_cached_rand is not None:
+                malfunction_generator._cached_rand = malfunction_cached_rand
+            if malfunction_rand_idx is not None:
+                malfunction_generator._rand_idx = malfunction_rand_idx
+            malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
+            if malfunction_cached_random_state is not None:
+                malfunction_generator._cached_random_state = malfunction_cached_random_state
+                np_random = RandomState()
+                np_random.set_state(malfunction_cached_random_state)
+                malfunction_generator.generate_rand_numbers(np_random)
+
+            # TODO generic effects generator serialization
+            env.effects_generator = MalfunctionEffectsGenerator(malfunction_generator)
 
     @classmethod
     def get_full_state(cls, env):
