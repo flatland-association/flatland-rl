@@ -407,7 +407,7 @@ python-dateutil==2.9.0.post0
     #   jupyter-client
     #   matplotlib
     #   pandas
-python-dotenv==1.2.1
+python-dotenv==1.2.2
     # via testcontainers
 python-gitlab==7.1.0
     # via crowdai-api
