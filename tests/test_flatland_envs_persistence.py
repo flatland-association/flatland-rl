@@ -5,6 +5,7 @@ import importlib_resources as ir
 import numpy as np
 import pytest
 
+from flatland.core.effects_generator import EffectsGenerator
 from flatland.env_generation.env_generator import env_generator_legacy
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
@@ -115,39 +116,43 @@ def test_persistence_level_free():
 
 
 def test_multiple_malfunction_generators():
+    expected = {
+        'cls': 'flatland.core.effects_generator.MultiEffectsGeneratorWrapped',
+        'specs': {
+            'args': [
+                {
+                    'cls': 'flatland.envs.malfunction_effects_generators.MalfunctionEffectsGenerator',
+                    'specs': {
+                        'kwargs': {
+                            'param_malfunction_gen': {'malfunction_rate': 0.0045045045045045045, 'min_duration': 22, 'max_duration': 33},
+                            'malfunction_cached_random_state': None,
+                            'malfunction_rand_idx': 0}}
+                },
+                {
+                    'cls': 'flatland.envs.malfunction_effects_generators.MalfunctionEffectsGenerator',
+                    'specs': {
+                        'kwargs': {
+                            'param_malfunction_gen': {'malfunction_rate': 0.005, 'min_duration': 20, 'max_duration': 30},
+                            'malfunction_cached_random_state': None,
+                            'malfunction_rand_idx': 0
+                        }
+                    }
+                }
+            ],
+        }
+    }
+
+
     env = RailEnv(width=50, height=50, number_of_agents=50,
                   malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(min_duration=20, max_duration=30, malfunction_rate=1.0 / 200)),
                   effects_generator=MalfunctionEffectsGenerator(
                       ParamMalfunctionGen(MalfunctionParameters(min_duration=22, max_duration=33, malfunction_rate=1.0 / 222))),
                   )
     env.reset()
-    assert len(env.effects_generator.__getstate__()) == 2
-    assert env.effects_generator.__getstate__() == [
-        {
-            'param_malfunction_gen': {'malfunction_rate': 0.0045045045045045045, 'min_duration': 22, 'max_duration': 33},
-            'malfunction_cached_random_state': None,
-            'malfunction_rand_idx': 0,
-        },
-        {
-            'param_malfunction_gen': {'malfunction_rate': 0.005, 'min_duration': 20, 'max_duration': 30},
-            'malfunction_cached_random_state': None,
-            'malfunction_rand_idx': 0,
-        }
-    ]
+    assert env.effects_generator.__getstate__() == expected
+    assert EffectsGenerator.from_state(expected).__getstate__() == expected
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         RailEnvPersister.save(env, filename=os.path.join(tmpdirname, "env.pkl"))
         env, _ = RailEnvPersister.load_new(filename=os.path.join(tmpdirname, "env.pkl"))
-    assert len(env.effects_generator.__getstate__()) == 2
-    assert env.effects_generator.__getstate__() == [
-        {
-            'param_malfunction_gen': {'malfunction_rate': 0.0045045045045045045, 'min_duration': 22, 'max_duration': 33},
-            'malfunction_cached_random_state': None,
-            'malfunction_rand_idx': 0,
-        },
-        {
-            'param_malfunction_gen': {'malfunction_rate': 0.005, 'min_duration': 20, 'max_duration': 30},
-            'malfunction_cached_random_state': None,
-            'malfunction_rand_idx': 0,
-        }
-    ]
+    assert env.effects_generator.__getstate__() == expected

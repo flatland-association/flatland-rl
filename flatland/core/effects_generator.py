@@ -92,15 +92,30 @@ class EffectsGenerator(Generic[EnvType]):
             return env
         return self._on_episode_step_end(*args, **kwargs)
 
+    @property
+    def fullname(self):
+        klass = self.__class__
+        module = klass.__module__
+        if module == 'builtins':
+            return klass.__qualname__  # avoid outputs like 'builtins.str'
+        return module + '.' + klass.__qualname__
+
     def __getstate__(self) -> StateDict:
         return {
-            "cls": self.__class__,
-            "specs": {}
+            "cls": self.fullname,
+            # TODO https://github.com/flatland-association/flatland-rl/issues/242 generalize serialization
         }
+
+    def __setstate__(self, state) -> "EffectsGenerator":
+        specs = state.get("specs", {})
+        self.__init__(*specs.get("args", []), **specs.get("kwargs", {}))
 
     @classmethod
     def from_state(cls, state_dict: StateDict) -> "EffectsGenerator":
-        return resolve_type(state_dict["cls"])(**state_dict["specs"])
+        eg = resolve_type(state_dict["cls"])()
+        eg.__setstate__(state_dict)
+        return eg
+
 
 
 class MultiEffectsGeneratorWrapped(EffectsGenerator[EnvType]):
@@ -124,9 +139,15 @@ class MultiEffectsGeneratorWrapped(EffectsGenerator[EnvType]):
 
     def __getstate__(self):
         return {
-            "cls": self.__class__,
-            "specs": [eff.__getstate__() for eff in self.effects_generators]
+            "cls": self.fullname,
+            "specs": {
+                "args": [eff.__getstate__() for eff in self.effects_generators],
+            }
         }
+
+    def __setstate__(self, state_dict):
+        specs = state_dict.get("specs", {})
+        self.__init__(*[EffectsGenerator.from_state(state_dict_) for state_dict_ in specs.get("args", [])])
 
 
 def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType]) -> EffectsGenerator[EnvType]:

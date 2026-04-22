@@ -8,7 +8,6 @@ import numpy as np
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.grid.grid_resource_map import GridResourceMap
-from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 msgpack_numpy.patch()
@@ -25,6 +24,7 @@ from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
 from flatland.envs import timetable_generators as tt_gen
+from flatland.envs import malfunction_effects_generators as mal_eff_gen
 
 
 class RailEnvPersister(object):
@@ -291,11 +291,12 @@ class RailEnvPersister(object):
         if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
             env_dict.get('malfunction').min_duration, int) and isinstance(env_dict.get('malfunction').max_duration, int):
             malfunction_generator = mal_gen.ParamMalfunctionGen.extract_malfunction_generator(env_dict)
-            effects_generator = MalfunctionEffectsGenerator(malfunction_generator)
+            effects_generator = mal_eff_gen.MalfunctionEffectsGenerator(malfunction_generator)
 
+        # new format
         effects_generators_specs = env_dict.get("effects_generator", None)
         if effects_generators_specs is not None:
-            EffectsGenerator.from_state(effects_generators_specs)
+            effects_generator = EffectsGenerator.from_state(effects_generators_specs)
         return effects_generator
 
 

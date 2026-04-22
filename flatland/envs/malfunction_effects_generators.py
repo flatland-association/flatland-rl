@@ -16,7 +16,11 @@ class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         if malfunction_generator is not None:
             self.malfunction_generator = malfunction_generator
         else:
-            self.malfunction_generator = mal_gen.ParamMalfunctionGen.extract_malfunction_generator(kwargs, key="param_malfunction_gen")
+            if kwargs:
+                self.malfunction_generator = mal_gen.ParamMalfunctionGen.extract_malfunction_generator(kwargs, key="param_malfunction_gen")
+            else:
+                # TODO not generic!
+                self.malfunction_generator = mal_gen.NoMalfunctionGen()
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         for agent in env.agents:
@@ -26,17 +30,22 @@ class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
     def __getstate__(self):
         if isinstance(self.malfunction_generator, mfg.ParamMalfunctionGen):
             return {
-                "cls": self.__class__,
+                "cls": self.fullname,
                 "specs": {
-                    "param_malfunction_gen": self.malfunction_generator.get_process_data()._asdict(),
-                    "malfunction_cached_random_state": self.malfunction_generator._cached_random_state,
-                    "malfunction_rand_idx": self.malfunction_generator._rand_idx,
+                    "kwargs": {
+                        "param_malfunction_gen": self.malfunction_generator.get_process_data()._asdict(),
+                        "malfunction_cached_random_state": self.malfunction_generator._cached_random_state,
+                        "malfunction_rand_idx": self.malfunction_generator._rand_idx,
+                    }
                 }
             }
-
         else:
-            return {}
+            return {
+                "cls": self.fullname,
+            }
 
+
+# TODO https://github.com/flatland-association/flatland-rl/issues/242 generalize serialization
 
 MalfunctionCondition = Callable[["EnvAgent", int], bool]
 
@@ -196,10 +205,10 @@ class IntermediateStopMalfunctionEffectsGenerator(ConditionalMalfunctionEffectsG
         return agent.current_configuration in stops
 
     def __init__(self,
-                 malfunction_rate: float = None,
-                 min_duration: float = None,
-                 max_duration: float = None,
-                 earliest_malfunction: int = None,
+                 malfunction_rate: float = 0,
+                 min_duration: float = 0,
+                 max_duration: float = 0,
+                 earliest_malfunction: int = 0,
                  ):
         super().__init__(
             malfunction_rate=malfunction_rate,
@@ -208,3 +217,16 @@ class IntermediateStopMalfunctionEffectsGenerator(ConditionalMalfunctionEffectsG
             earliest_malfunction=earliest_malfunction,
             condition=IntermediateStopMalfunctionEffectsGenerator._condition
         )
+
+    def __getstate__(self):
+        return {
+            "cls": self.fullname,
+            "specs": {
+                "kwargs": dict(
+                    malfunction_rate=self._malfunction_rate,
+                    min_duration=self._min_duration,
+                    max_duration=self._max_duration,
+                    earliest_malfunction=self._earliest_condition,
+                )
+            }
+        }
