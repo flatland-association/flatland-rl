@@ -2,6 +2,8 @@
 
 """Top-level package for flatland."""
 
+__version__ = "0.1.0"
+
 from importlib.metadata import version, PackageNotFoundError
 
 try:
