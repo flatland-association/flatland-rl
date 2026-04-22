@@ -74,7 +74,7 @@ jupyterlab-widgets==3.0.16
     # via ipywidgets
 kiwisolver==1.4.9
     # via matplotlib
-lxml==6.0.2
+lxml==6.1.0
     # via svgutils
 matplotlib==3.10.8
     # via flatland-rl (pyproject.toml)
