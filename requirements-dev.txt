@@ -271,7 +271,7 @@ nbclient==0.10.4
     # via
     #   nbconvert
     #   nbmake
-nbconvert==7.17.0
+nbconvert==7.17.1
     # via
     #   jupyter
     #   jupyter-server
