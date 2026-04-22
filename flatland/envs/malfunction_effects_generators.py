@@ -11,9 +11,12 @@ from flatland.utils.cli_utils import resolve_type
 
 class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
 
-    def __init__(self, malfunction_generator):
+    def __init__(self, malfunction_generator=None, **kwargs):
         super().__init__()
-        self.malfunction_generator = malfunction_generator
+        if malfunction_generator is not None:
+            self.malfunction_generator = malfunction_generator
+        else:
+            self.malfunction_generator = mal_gen.ParamMalfunctionGen.extract_malfunction_generator(kwargs, key="param_malfunction_gen")
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         for agent in env.agents:
@@ -23,19 +26,16 @@ class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
     def __getstate__(self):
         if isinstance(self.malfunction_generator, mfg.ParamMalfunctionGen):
             return {
-                "param_malfunction_gen": self.malfunction_generator.get_process_data()._asdict(),
-                "malfunction_cached_random_state": self.malfunction_generator._cached_random_state,
-                "malfunction_rand_idx": self.malfunction_generator._rand_idx,
+                "cls": self.__class__,
+                "specs": {
+                    "param_malfunction_gen": self.malfunction_generator.get_process_data()._asdict(),
+                    "malfunction_cached_random_state": self.malfunction_generator._cached_random_state,
+                    "malfunction_rand_idx": self.malfunction_generator._rand_idx,
+                }
             }
+
         else:
             return {}
-
-    def __setstate__(self, state):
-        super().__init__()
-        if "param_malfunction_gen" in state:
-            self.malfunction_generator = mal_gen.ParamMalfunctionGen(mfg.MalfunctionParameters(**state["param_malfunction_gen"]))
-        else:
-            self.malfunction_generator = mal_gen.NoMalfunctionGen()
 
 
 MalfunctionCondition = Callable[["EnvAgent", int], bool]
