@@ -206,8 +206,8 @@ def timetable_from_file(filename: Union[str, Path] = None, load_from_package=Non
         if max_episode_steps == 0:
             warnings.warn("This env file has no max_episode_steps (deprecated) - setting to 100")
             max_episode_steps = 100
-        earliest_departures = [[a.earliest_departure] for a in agents]
-        latest_arrivals = [[a.latest_arrival] for a in agents]
+        earliest_departures = [a.waypoints_earliest_departure for a in agents]
+        latest_arrivals = [a.waypoints_latest_arrival for a in agents]
         return Timetable(earliest_departures=earliest_departures, latest_arrivals=latest_arrivals, max_episode_steps=max_episode_steps)
 
     return generator
