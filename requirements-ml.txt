@@ -306,7 +306,7 @@ pyyaml==6.0.3
     #   flatland-rl (pyproject.toml)
     #   ray
     #   wandb
-ray[default,rllib]==2.53.0
+ray[default,rllib]==2.55.0
     # via flatland-rl (pyproject.toml)
 recordtype==1.4
     # via flatland-rl (pyproject.toml)
