@@ -271,28 +271,41 @@ class EnvAgent(Generic[ConfigurationType]):
     def load_legacy_static_agent(cls, static_agents_data: Tuple):
         agents = []
         for i, static_agent in enumerate(static_agents_data):
+            initial_configuration = (static_agent[0], static_agent[1])
+            targets = {(static_agent[2], d) for d in Grid4TransitionsEnum}
             if len(static_agent) >= 6:
                 speed = static_agent[4]['speed']
                 speed = _pseudo_fractional(speed)
+
                 agent = EnvAgent(
-                    initial_configuration=(static_agent[0], static_agent[1]),
-                    current_configuration=(static_agent[0], static_agent[1]),
+                    initial_configuration=initial_configuration,
+                    current_configuration=initial_configuration,
                     old_configuration=None,
                     # N.B. valid targets cleaned in _agents_from_line
-                    targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
+                    targets=targets,
                     moving=static_agent[3],
                     speed_counter=SpeedCounter(speed), handle=i,
+                    waypoints=[[Waypoint(*initial_configuration)], [Waypoint(*target) for target in targets]],
+                    earliest_departure=0,
+                    waypoints_earliest_departure=[0, None],
+                    latest_arrival=sys.maxsize,
+                    waypoints_latest_arrival=[None, sys.maxsize],
                 )
             else:
                 agent = EnvAgent(
-                    initial_configuration=(static_agent[0], static_agent[1]),
-                    current_configuration=(static_agent[0], static_agent[1]),
+                    initial_configuration=initial_configuration,
+                    current_configuration=initial_configuration,
                     old_configuration=None,
                     # N.B. valid targets cleaned in _agents_from_line
                     targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=False,
                     speed_counter=SpeedCounter(1.0),
                     handle=i,
+                    waypoints=[[Waypoint(*initial_configuration)], [Waypoint(*target) for target in targets]],
+                    earliest_departure=0,
+                    waypoints_earliest_departure=[0, None],
+                    latest_arrival=sys.maxsize,
+                    waypoints_latest_arrival=[None, sys.maxsize],
                 )
             agents.append(agent)
         return agents
