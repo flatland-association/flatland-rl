@@ -97,13 +97,21 @@ def test_from_submission():
             TrajectoryEvaluator(trajectory).evaluate(start_step=4)
 
 
-def test_cli_from_submission():
+@pytest.mark.parametrize(
+    'rewards',
+    [None,
+     'flatland.envs.rewards.DefaultRewards',
+     'flatland.envs.rewards.ECML2026Rewards', ]
+)
+def test_cli_from_submission(rewards):
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         with pytest.raises(SystemExit) as e_info:
-            generate_trajectory_from_policy(
-                ["--data-dir", str(data_dir), "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy", "--seed", 42,
-                 "--legacy-env-generator", "True"])
+            args = ["--data-dir", str(data_dir), "--policy-pkg", "tests.trajectories.test_trajectories", "--policy-cls", "RandomPolicy", "--seed", 42,
+                    "--legacy-env-generator", "True", ]
+            if rewards is not None:
+                args.extend(["--rewards", rewards])
+            generate_trajectory_from_policy(args)
         assert e_info.value.code == 0
 
         ep_id = re.sub(r"_step.*", "", str(next((data_dir / SERIALISED_STATE_SUBDIR).glob("*step*.pkl")).name))
@@ -123,9 +131,11 @@ def test_cli_from_submission():
         assert "episode_id	env_time	agent_id	position" in (data_dir / TRAINS_POSITIONS_FNAME).read_text()
 
         with pytest.raises(SystemExit) as e_info:
-            evaluate_trajectory(
-                ["--data-dir", str(data_dir), "--ep-id", ep_id, "--callbacks-pkg", "flatland.callbacks.generate_movie_callbacks", "--callbacks-cls",
-                 "GenerateMovieCallbacks"])
+            args = ["--data-dir", str(data_dir), "--ep-id", ep_id, "--callbacks-pkg", "flatland.callbacks.generate_movie_callbacks", "--callbacks-cls",
+                    "GenerateMovieCallbacks"]
+            if rewards is not None:
+                args.extend(["--rewards", rewards])
+            evaluate_trajectory(args)
         assert e_info.value.code == 0
         # requires ffmpeg
         assert len(list((data_dir / OUTPUTS_SUBDIR).glob("*.mp4"))) == 2
