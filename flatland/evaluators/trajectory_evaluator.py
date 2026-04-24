@@ -162,13 +162,20 @@ class TrajectoryEvaluator:
               help="Skip verification of rewards/dones/infos.",
               required=False
               )
+@click.option('--rewards',
+              type=str,
+              help="Defaults to `flatland.envs.rewards.DefaultRewards`. Can also be provided through env var REWARDS (command-line option takes priority).",
+              required=False,
+              default=None,
+              )
 def evaluate_trajectory(
     data_dir: Path,
     ep_id: str,
     callbacks: str = None,
     callbacks_pkg: str = None,
     callbacks_cls: str = None,
-    skip_rewards_dones_infos: bool = False
+    skip_rewards_dones_infos: bool = False,
+    rewards: str = None,
 ):
     if callbacks is None:
         callbacks = os.environ.get("CALLBACKS", None)
@@ -179,6 +186,10 @@ def evaluate_trajectory(
     callbacks = resolve_type(callbacks, callbacks_pkg, callbacks_cls)
     if callbacks is not None:
         callbacks = callbacks()
+    rewards = resolve_type(rewards)
+    if rewards is not None:
+        rewards = rewards()
+
 
     trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)
-    TrajectoryEvaluator(trajectory, callbacks=callbacks).evaluate(skip_rewards_dones_infos=skip_rewards_dones_infos)
+    TrajectoryEvaluator(trajectory, callbacks=callbacks).evaluate(skip_rewards_dones_infos=skip_rewards_dones_infos, rewards=rewards)

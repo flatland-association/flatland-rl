@@ -220,7 +220,8 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
 
             # target not reached
             if agent.state.is_on_map_state():
-                d[DefaultPenalties.TARGET_NOT_REACHED.value] = min(-1 * self.target_not_reached_minimum_penalty, agent.get_current_delay(elapsed_steps, distance_map))
+                d[DefaultPenalties.TARGET_NOT_REACHED.value] = min(-1 * self.target_not_reached_minimum_penalty,
+                                                                   agent.get_current_delay(elapsed_steps, distance_map))
         for intermediate_alternatives, la, ed in zip(agent.waypoints[1:-1], agent.waypoints_latest_arrival[1:-1],
                                                      agent.waypoints_earliest_departure[1:-1]):
             agent_arrivals: Set[Waypoint] = set(self.arrivals[agent.handle])
@@ -252,7 +253,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
 
     def cumulate(self, *rewards: Dict[str, float]) -> Dict[str, float]:
         return {p.value: sum([r[p.value] for r in rewards]) for p in DefaultPenalties}
-    
+
     def normalize(self, *rewards: Dict[str, float], num_agents: int, max_episode_steps: int) -> float:
         # https://flatland-association.github.io/flatland-book/challenges/ecml2026/eval.html
         return sum([np.maximum(sum([r[p.value] for p in DefaultPenalties]), - max_episode_steps) for r in rewards]) / (max_episode_steps * num_agents) + 1
@@ -267,10 +268,10 @@ class DefaultRewards(Rewards[float]):
     """
 
     def __init__(self,
-                 cancellation_factor: float = 1,
-                 cancellation_time_buffer: float = 0,
-                 target_not_reached_minimum_penalty: float = 0,
-                 intermediate_not_served_penalty: float = 1,
+                 cancellation_factor: float = 1.0,
+                 cancellation_time_buffer: float = 0.0,
+                 target_not_reached_minimum_penalty: float = 0.0,
+                 intermediate_not_served_penalty: float = 1.0,
                  intermediate_late_arrival_penalty_factor: float = 0.2,
                  intermediate_early_departure_penalty_factor: float = 0.5,
                  collision_factor: float = 0.0
@@ -365,13 +366,13 @@ class ECML2026Rewards(DefaultRewards):
 
     def __init__(self):
         super().__init__(
-            cancellation_factor = 5,
-            cancellation_time_buffer = 0,
-            target_not_reached_minimum_penalty = 100,
-            intermediate_not_served_penalty = 50,
-            intermediate_late_arrival_penalty_factor = 0.5,
-            intermediate_early_departure_penalty_factor = 0.5,
-            collision_factor = 250
+            cancellation_factor=5.0,
+            cancellation_time_buffer=0.0,
+            target_not_reached_minimum_penalty=100.0,
+            intermediate_not_served_penalty=50.0,
+            intermediate_late_arrival_penalty_factor=0.5,
+            intermediate_early_departure_penalty_factor=0.5,
+            collision_factor=250.0,
         )
 
 
