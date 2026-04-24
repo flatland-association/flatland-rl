@@ -19,7 +19,7 @@ class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
             if kwargs:
                 self.malfunction_generator = mal_gen.ParamMalfunctionGen.extract_malfunction_generator(kwargs, key="param_malfunction_gen")
             else:
-                # TODO not generic!
+                # TODO https://github.com/flatland-association/flatland-rl/issues/242 not generic!
                 self.malfunction_generator = mal_gen.NoMalfunctionGen()
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
