@@ -1,8 +1,12 @@
 from typing import Callable, TypeVar, Generic, Dict, Any
 
 from flatland.core.env import Environment
+from flatland.utils.cli_utils import resolve_type
 
 EnvType = TypeVar('EnvType', bound=Environment, covariant=True)
+
+StateDict = Dict[str, Any]
+Specs = Dict[str, Any]
 
 
 class EffectsGenerator(Generic[EnvType]):
@@ -88,31 +92,63 @@ class EffectsGenerator(Generic[EnvType]):
             return env
         return self._on_episode_step_end(*args, **kwargs)
 
-    def __getstate__(self) -> Dict[str, Any]:
-        return {}
+    @property
+    def fullname(self):
+        klass = self.__class__
+        module = klass.__module__
+        if module == 'builtins':
+            return klass.__qualname__  # avoid outputs like 'builtins.str'
+        return module + '.' + klass.__qualname__
 
-    def __setstate__(self, state: Dict[str, Any]):
-        pass
+    def __getstate__(self) -> StateDict:
+        return {
+            "cls": self.fullname,
+            # TODO https://github.com/flatland-association/flatland-rl/issues/242 generalize serialization
+        }
+
+    def __setstate__(self, state) -> "EffectsGenerator":
+        specs = state.get("specs", {})
+        self.__init__(*specs.get("args", []), **specs.get("kwargs", {}))
+
+    @classmethod
+    def from_state(cls, state_dict: StateDict) -> "EffectsGenerator":
+        eg = resolve_type(state_dict["cls"])()
+        eg.__setstate__(state_dict)
+        return eg
+
+
+
+class MultiEffectsGeneratorWrapped(EffectsGenerator[EnvType]):
+    def __init__(self, *effects_generators: EffectsGenerator[EnvType]):
+        self.effects_generators = effects_generators
+
+    def on_episode_start(self, env: EnvType, *args, **kwargs) -> EnvType:
+        for eff in self.effects_generators:
+            env = eff.on_episode_start(env)
+        return env
+
+    def on_episode_step_start(self, env: EnvType, *args, **kwargs) -> EnvType:
+        for eff in self.effects_generators:
+            env = eff.on_episode_step_start(env)
+        return env
+
+    def on_episode_step_end(self, env: EnvType, *args, **kwargs) -> EnvType:
+        for eff in self.effects_generators:
+            env = eff.on_episode_step_end(env)
+        return env
+
+    def __getstate__(self):
+        return {
+            "cls": self.fullname,
+            "specs": {
+                "args": [eff.__getstate__() for eff in self.effects_generators],
+            }
+        }
+
+    def __setstate__(self, state_dict):
+        specs = state_dict.get("specs", {})
+        self.__init__(*[EffectsGenerator.from_state(state_dict_) for state_dict_ in specs.get("args", [])])
 
 
 def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType]) -> EffectsGenerator[EnvType]:
-    class _EffectsGeneratorWrapped(EffectsGenerator[EnvType]):
-        def on_episode_start(self, env: EnvType, *args, **kwargs) -> EnvType:
-            for eff in effects_generators:
-                env = eff.on_episode_start(env)
-            return env
-
-        def on_episode_step_start(self, env: EnvType, *args, **kwargs) -> EnvType:
-            for eff in effects_generators:
-                env = eff.on_episode_step_start(env)
-            return env
-
-        def on_episode_step_end(self, env: EnvType, *args, **kwargs) -> EnvType:
-            for eff in effects_generators:
-                env = eff.on_episode_step_end(env)
-            return env
-
-        def __getstate__(self):
-            return [eff.__getstate__() for eff in effects_generators]
-
-    return _EffectsGeneratorWrapped()
+    return MultiEffectsGeneratorWrapped(*effects_generators)

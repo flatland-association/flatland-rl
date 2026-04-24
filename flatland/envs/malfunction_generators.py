@@ -81,6 +81,33 @@ class ParamMalfunctionGen(object):
     def get_process_data(self):
         return MalfunctionProcessData(*self.MFP)
 
+    @classmethod
+    def extract_malfunction_generator(cls, env_dict: dict, key="malfunction") -> "ParamMalfunctionGen":
+        malfunction_spec = env_dict.get(key, None)
+        if malfunction_spec is None:
+            return NoMalfunctionGen()
+
+        if isinstance(malfunction_spec, MalfunctionProcessData):
+            # backwards compatibility
+            malfunction_parameters = MalfunctionParameters(*env_dict[key])
+        else:
+            malfunction_parameters = MalfunctionParameters(**env_dict[key])
+        malfunction_generator = ParamMalfunctionGen(malfunction_parameters)
+        malfunction_cached_rand = env_dict.get("malfunction_cached_rand", None)
+        malfunction_rand_idx = env_dict.get("malfunction_rand_idx", None)
+        # backwards compatibility
+        if malfunction_cached_rand is not None:
+            malfunction_generator._cached_rand = malfunction_cached_rand
+        if malfunction_rand_idx is not None:
+            malfunction_generator._rand_idx = malfunction_rand_idx
+        malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
+        if malfunction_cached_random_state is not None:
+            malfunction_generator._cached_random_state = malfunction_cached_random_state
+            np_random = RandomState()
+            np_random.set_state(malfunction_cached_random_state)
+            malfunction_generator.generate_rand_numbers(np_random)
+        return malfunction_generator
+
 
 class NoMalfunctionGen(ParamMalfunctionGen):
     def __init__(self):
