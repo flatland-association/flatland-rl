@@ -111,12 +111,7 @@ class RailEnvPersister(object):
         env.obs_builder = obs_builder
         env.obs_builder.set_env(env)
         env.obs_builder.reset()
-        env.rail_generator = rail_gen.rail_from_file(env_dict=env_dict)
-        env.line_generator = line_gen.line_from_file(env_dict=env_dict)
-        env.timetable_generator = tt_gen.timetable_from_file(env_dict=env_dict)
-        env.malfunction_generator = mal_gen.FileMalfunctionGen(env_dict=env_dict)
-        # TODO generic effects generator serialization
-        env.effects_generator = MalfunctionEffectsGenerator(env.malfunction_generator)
+
 
     @classmethod
     def load_new(cls,
@@ -267,19 +262,7 @@ class RailEnvPersister(object):
         if dev_pred_dict_ is not None:
             env.dev_obs_dict = dev_obs_dict_
 
-        malfunction_cached_rand = env_dict.get("malfunction_cached_rand", None)
-        malfunction_rand_idx = env_dict.get("malfunction_rand_idx", None)
-        # backwards compatibility
-        if malfunction_cached_rand is not None:
-            env.malfunction_generator._cached_rand = malfunction_cached_rand
-        if malfunction_rand_idx is not None:
-            env.malfunction_generator._rand_idx = malfunction_rand_idx
-        malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
-        if malfunction_cached_random_state is not None:
-            env.malfunction_generator._cached_random_state = malfunction_cached_random_state
-            np_random = RandomState()
-            np_random.set_state(malfunction_cached_random_state)
-            env.malfunction_generator.generate_rand_numbers(np_random)
+
 
         env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None) for i in range(env.get_num_agents())}
         for i_agent in range(env.get_num_agents()):
@@ -296,6 +279,33 @@ class RailEnvPersister(object):
         for agent in env.agents:
             agent.waypoints = [[waypoint_alternatives] if isinstance(waypoint_alternatives, Waypoint) else waypoint_alternatives for waypoint_alternatives in
                                agent.waypoints]
+        env.rail_generator = rail_gen.rail_from_file(env_dict=env_dict)
+        env.line_generator = line_gen.line_from_file(env_dict=env_dict)
+        env.timetable_generator = tt_gen.timetable_from_file(env_dict=env_dict)
+
+        cls._apply_malfunction(env, env_dict)
+
+    @classmethod
+    def _apply_malfunction(cls, env: "RailEnv", env_dict: dict):
+        if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
+            env_dict.get('malfunction').min_duration, int) and isinstance(env_dict.get('malfunction').max_duration, int):
+            malfunction_generator = mal_gen.ParamMalfunctionGen(mal_gen.MalfunctionParameters(*env_dict["malfunction"]))
+            malfunction_cached_rand = env_dict.get("malfunction_cached_rand", None)
+            malfunction_rand_idx = env_dict.get("malfunction_rand_idx", None)
+            # backwards compatibility
+            if malfunction_cached_rand is not None:
+                malfunction_generator._cached_rand = malfunction_cached_rand
+            if malfunction_rand_idx is not None:
+                malfunction_generator._rand_idx = malfunction_rand_idx
+            malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
+            if malfunction_cached_random_state is not None:
+                malfunction_generator._cached_random_state = malfunction_cached_random_state
+                np_random = RandomState()
+                np_random.set_state(malfunction_cached_random_state)
+                malfunction_generator.generate_rand_numbers(np_random)
+
+            # TODO generic effects generator serialization
+            env.effects_generator = MalfunctionEffectsGenerator(malfunction_generator)
 
     @classmethod
     def get_full_state(cls, env):
