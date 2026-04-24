@@ -1,5 +1,6 @@
 from typing import Callable, List, Union
 
+import flatland.envs.malfunction_generators as mfg
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.grid.grid_utils import IntVector2D
 from flatland.envs import malfunction_generators as mal_gen
@@ -18,6 +19,23 @@ class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         for agent in env.agents:
             agent.malfunction_handler.generate_malfunction(self.malfunction_generator, env.np_random)
         return env
+
+    def __getstate__(self):
+        if isinstance(self.malfunction_generator, mfg.ParamMalfunctionGen):
+            return {
+                "param_malfunction_gen": self.malfunction_generator.get_process_data()._asdict(),
+                "malfunction_cached_random_state": self.malfunction_generator._cached_random_state,
+                "malfunction_rand_idx": self.malfunction_generator._rand_idx,
+            }
+        else:
+            return {}
+
+    def __setstate__(self, state):
+        super().__init__()
+        if "param_malfunction_gen" in state:
+            self.malfunction_generator = mal_gen.ParamMalfunctionGen(mfg.MalfunctionParameters(**state["param_malfunction_gen"]))
+        else:
+            self.malfunction_generator = mal_gen.NoMalfunctionGen()
 
 
 MalfunctionCondition = Callable[["EnvAgent", int], bool]
@@ -169,6 +187,7 @@ class IntermediateStopMalfunctionEffectsGenerator(ConditionalMalfunctionEffectsG
     """
     Departure malfunctions at (intermediate) stops: generate malfunction when stopped at an (intermediate) waypoint.
     """
+
     @staticmethod
     def _condition(agent: "EnvAgent", *args, **kwargs):
         if agent.state_machine.state != TrainState.STOPPED:

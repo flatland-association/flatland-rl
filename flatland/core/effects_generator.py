@@ -1,4 +1,4 @@
-from typing import Callable, TypeVar, Generic
+from typing import Callable, TypeVar, Generic, Dict, Any
 
 from flatland.core.env import Environment
 
@@ -13,7 +13,7 @@ class EffectsGenerator(Generic[EnvType]):
     """
 
     def __init__(
-            self,
+        self,
         on_episode_start: Callable[[EnvType], EnvType] = None,
         on_episode_step_start: Callable[[EnvType], EnvType] = None,
         on_episode_step_end: Callable[[EnvType], EnvType] = None,
@@ -88,6 +88,12 @@ class EffectsGenerator(Generic[EnvType]):
             return env
         return self._on_episode_step_end(*args, **kwargs)
 
+    def __getstate__(self) -> Dict[str, Any]:
+        return {}
+
+    def __setstate__(self, state: Dict[str, Any]):
+        pass
+
 
 def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType]) -> EffectsGenerator[EnvType]:
     class _EffectsGeneratorWrapped(EffectsGenerator[EnvType]):
@@ -105,5 +111,8 @@ def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType])
             for eff in effects_generators:
                 env = eff.on_episode_step_end(env)
             return env
+
+        def __getstate__(self):
+            return [eff.__getstate__() for eff in effects_generators]
 
     return _EffectsGeneratorWrapped()

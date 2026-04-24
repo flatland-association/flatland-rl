@@ -7,9 +7,10 @@ import msgpack_numpy
 import numpy as np
 from numpy.random import RandomState
 
-from flatland.core.effects_generator import EffectsGenerator
+from flatland.core.effects_generator import EffectsGenerator, make_multi_effects_generator
 from flatland.core.grid.grid_resource_map import GridResourceMap
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
+from flatland.envs.malfunction_generators import ParamMalfunctionGen
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 msgpack_numpy.patch()
@@ -283,29 +284,57 @@ class RailEnvPersister(object):
         env.line_generator = line_gen.line_from_file(env_dict=env_dict)
         env.timetable_generator = tt_gen.timetable_from_file(env_dict=env_dict)
 
-        cls._apply_malfunction(env, env_dict)
+        env.effects_generator = cls._apply_malfunction(env_dict)
 
     @classmethod
-    def _apply_malfunction(cls, env: "RailEnv", env_dict: dict):
+    def _apply_malfunction(cls, env_dict: dict):
+        effects_generator = EffectsGenerator()
+        # backwards compatibility
         if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
             env_dict.get('malfunction').min_duration, int) and isinstance(env_dict.get('malfunction').max_duration, int):
-            malfunction_generator = mal_gen.ParamMalfunctionGen(mal_gen.MalfunctionParameters(*env_dict["malfunction"]))
-            malfunction_cached_rand = env_dict.get("malfunction_cached_rand", None)
-            malfunction_rand_idx = env_dict.get("malfunction_rand_idx", None)
-            # backwards compatibility
-            if malfunction_cached_rand is not None:
-                malfunction_generator._cached_rand = malfunction_cached_rand
-            if malfunction_rand_idx is not None:
-                malfunction_generator._rand_idx = malfunction_rand_idx
-            malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
-            if malfunction_cached_random_state is not None:
-                malfunction_generator._cached_random_state = malfunction_cached_random_state
-                np_random = RandomState()
-                np_random.set_state(malfunction_cached_random_state)
-                malfunction_generator.generate_rand_numbers(np_random)
+            malfunction_generator = cls._extract_malfunction_generator(env_dict)
+            effects_generator = MalfunctionEffectsGenerator(malfunction_generator)
 
-            # TODO generic effects generator serialization
-            env.effects_generator = MalfunctionEffectsGenerator(malfunction_generator)
+        effects_generators_specs = env_dict.get("effects_generator", None)
+        if effects_generators_specs is not None:
+            effect_generators = []
+            if isinstance(effects_generators_specs, dict):
+                effect_generator_spec = effects_generators_specs
+                effects_generator = MalfunctionEffectsGenerator(cls._extract_malfunction_generator(effect_generator_spec, key="param_malfunction_gen"))
+            else:
+                for effect_generator_spec in effects_generators_specs:
+                    if "param_malfunction_gen" in effect_generator_spec:
+                        effect_generators.append(
+                            MalfunctionEffectsGenerator(cls._extract_malfunction_generator(effect_generator_spec, key="param_malfunction_gen")))
+                effects_generator = make_multi_effects_generator(*effect_generators)
+        return effects_generator
+
+    @classmethod
+    def _extract_malfunction_generator(cls, env_dict: dict, key="malfunction") -> ParamMalfunctionGen:
+        malfunction_spec = env_dict.get(key, None)
+        if malfunction_spec is None:
+            return mal_gen.NoMalfunctionGen()
+
+        if isinstance(malfunction_spec, mal_gen.MalfunctionProcessData):
+            # backwards compatibility
+            malfunction_parameters = mal_gen.MalfunctionParameters(*env_dict[key])
+        else:
+            malfunction_parameters = mal_gen.MalfunctionParameters(**env_dict[key])
+        malfunction_generator = mal_gen.ParamMalfunctionGen(malfunction_parameters)
+        malfunction_cached_rand = env_dict.get("malfunction_cached_rand", None)
+        malfunction_rand_idx = env_dict.get("malfunction_rand_idx", None)
+        # backwards compatibility
+        if malfunction_cached_rand is not None:
+            malfunction_generator._cached_rand = malfunction_cached_rand
+        if malfunction_rand_idx is not None:
+            malfunction_generator._rand_idx = malfunction_rand_idx
+        malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
+        if malfunction_cached_random_state is not None:
+            malfunction_generator._cached_random_state = malfunction_cached_random_state
+            np_random = RandomState()
+            np_random.set_state(malfunction_cached_random_state)
+            malfunction_generator.generate_rand_numbers(np_random)
+        return malfunction_generator
 
     @classmethod
     def get_full_state(cls, env):
@@ -318,6 +347,8 @@ class RailEnvPersister(object):
         # msgpack cannot persist EnvAgent so use the Agent namedtuple.
         agent_data = [agent.to_agent() for agent in env.agents]
         malfunction_data: mal_gen.MalfunctionProcessData = env.malfunction_process_data
+
+        effects_generator = env.effects_generator.__getstate__()
 
         msg_data_dict = {
             "grid": grid_data,
@@ -334,7 +365,8 @@ class RailEnvPersister(object):
             "np_random_state": random_state_to_hashablestate(env.np_random),
             "dev_pred_dict": env.dev_pred_dict,
             "dev_obs_dict": env.dev_obs_dict,
-            "dones": env.dones
+            "dones": env.dones,
+            "effects_generator": effects_generator
         }
         return msg_data_dict
 
