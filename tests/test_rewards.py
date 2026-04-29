@@ -11,7 +11,7 @@ from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.rewards import DefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards
+from flatland.envs.rewards import DefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.speed_counter import _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -333,7 +333,7 @@ def test_rewards_departed_but_never_arrived():
 
 
 def test_rewards_departed_but_never_arrived_minimum_penalty():
-    target_not_reached_minimum_penalty = 50 # has to be > 15 to be effective in this test
+    target_not_reached_minimum_penalty = 50  # has to be > 15 to be effective in this test
     rewards = DefaultRewards(target_not_reached_minimum_penalty=target_not_reached_minimum_penalty)
     agent = EnvAgent(initial_configuration=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
@@ -663,3 +663,16 @@ def test_waypoint_comparison_uses_waypoint_objects():
     wp = Waypoint((7, 8), 1)
     assert wp in rewards._proxy.arrivals[agent.handle], "Should use Waypoint object as key"
     assert (7, 8) not in rewards._proxy.arrivals[agent.handle], "Should not have tuple as key"
+
+
+def test_ecml2026_rewards_normalization():
+    values = [-5, 0, -6, -8, 0, -9]
+    num_agents = 2
+    expected_reshaped = np.array([[-5, -6, 0], [0, -8, -9]])
+    assert np.array_equal(np.reshape(np.array(values), (num_agents, -1), order='F'), expected_reshaped)
+    expected_sum_per_agent = np.array([-11, -17])
+    assert np.array_equal(np.sum(expected_reshaped, axis=1), expected_sum_per_agent)
+
+    max_episode_steps = 12
+    assert ECML2026Rewards().normalize(*values, num_agents=num_agents, max_episode_steps=max_episode_steps) == (-11 + -12) / (
+        num_agents * max_episode_steps) + 1

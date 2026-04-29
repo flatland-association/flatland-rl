@@ -351,9 +351,15 @@ class DefaultRewards(Rewards[float]):
     def cumulate(self, *rewards: float) -> float:
         return sum(rewards)
 
-    def normalize(self, *rewards: float, num_agents: int, max_episode_steps: int) -> float:
-        # https://flatland-association.github.io/flatland-book/challenges/flatland3/eval.html
-        return sum(rewards) / (max_episode_steps * num_agents) + 1.0
+    def normalize(self, *rewards: np.ndarray, num_agents: int, max_episode_steps: int) -> float:
+        # https://flatland-association.github.io/flatland-book/challenges/ecml2026/eval.html
+        if len(rewards) == num_agents:
+            sum_per_agent = np.array(rewards)
+        else:
+            rewards_by_agent = np.reshape(np.array(rewards), (num_agents, -1), order='F')
+            sum_per_agent = np.sum(rewards_by_agent, axis=1)
+        rewards_capped = np.maximum(sum_per_agent, - max_episode_steps)
+        return sum(rewards_capped) / (max_episode_steps * num_agents) + 1
 
     def empty(self) -> float:
         return 0
