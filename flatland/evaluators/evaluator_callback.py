@@ -33,17 +33,9 @@ class FlatlandEvaluatorCallbacks(FlatlandCallbacks[RailEnv]):
         data_dir: Path = None,
         **kwargs,
     ) -> None:
-        # cumulative reward of all agents
-        self._cumulative_reward = sum(env.rewards_dict.values())
-
-        """
-        The normalized rewards normalize the reward for an
-        episode by dividing the whole reward by max-time-steps
-        allowed in that episode, and the number of agents present in
-        that episode, plus one.
-        """
-        # https://flatland-association.github.io/flatland-book/challenges/flatland3/eval.html
-        self._normalized_reward = (self._cumulative_reward / (env._max_episode_steps * env.get_num_agents())) + 1
+        rewards = env.rewards_dict.values()
+        self._cumulative_reward = env.rewards.cumulate(*rewards)
+        self._normalized_reward = env.rewards.normalize(*rewards, num_agents=env.get_num_agents(), max_episode_steps=env._max_episode_steps)
         # Compute percentage complete
         complete = 0
         for i_agent in range(env.get_num_agents()):
