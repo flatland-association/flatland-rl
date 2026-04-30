@@ -287,7 +287,7 @@ nest-asyncio==1.6.0
     # via ipykernel
 networkx==3.4.2
     # via flatland-rl (pyproject.toml)
-notebook==7.5.2
+notebook==7.5.6
     # via jupyter
 notebook-shim==0.2.4
     # via
