@@ -59,14 +59,19 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
 
     if len(agents[0].waypoints) > 1:
         # distance for intermediates parts and sum up
-        line_length = len(agents[0].waypoints) - 1
+        max_line_length = max(len(a.waypoints) - 1 for a in agents)
         fake_agents = []
-        for i in range(line_length):
+        fake_agent_tracker = {}
+        for i in range(max_line_length):
             for a in agents:
                 waypoints = a.waypoints
+                if i >= len(waypoints) - 1:
+                    continue
+                fake_handle = len(fake_agents)  
+                fake_agent_tracker[fake_handle] = a.handle 
 
                 fake_agents.append(EnvAgent(
-                    handle=i * num_agents + a.handle,
+                    handle=fake_handle,
                     initial_configuration=(waypoints[i][0].position, waypoints[i][0].direction),
                     # N.B. routing flexibility is ignored by this timetable generator
                     current_configuration=(waypoints[i][0].position, waypoints[i][0].direction),
@@ -79,7 +84,7 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
         shortest_paths = distance_map_with_intermediates.get_shortest_paths()
         shortest_path_segment_lengths = [[] for _ in range(num_agents)]
         for k, v in shortest_paths.items():
-            shortest_path_segment_lengths[k % num_agents].append(len_handle_none(v))
+            shortest_path_segment_lengths[fake_agent_tracker[k]].append(len_handle_none(v))
         shortest_paths_lengths = [sum(l) for l in shortest_path_segment_lengths]
     else:
         shortest_paths = distance_map.get_shortest_paths()
