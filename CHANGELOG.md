@@ -5,6 +5,35 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[v4.2.5]](https://github.com/flatland-association/flatland-rl/compare/v4.2.4...v4.2.5) 2026-05-1
+
+### Added
+
+* feat: pessimistic action required. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/401
+* feat(rewards): add minimum penalty for target not reached. by @CleverManu in https://github.com/flatland-association/flatland-rl/pull/397
+* feat: ecml2026 competition reward by @CleverManu in https://github.com/flatland-association/flatland-rl/pull/402
+* feat(RailEnvPersister): allow persistence of several malfunction generators (2). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/398
+* feat(RailEnvPersister): generalize effects generator serialization (3). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/407
+
+### Changed
+
+* chore: add macos system file to gitignore. by @manuschn in https://github.com/flatland-association/flatland-rl/pull/392
+* chore(deps): bump aiohttp from 3.13.3 to 3.13.4 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/395
+* chore(deps): bump requests from 2.32.5 to 2.33.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/390
+* chore(deps): bump pygments from 2.19.2 to 2.20.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/393
+* chore(deps): bump pillow from 12.1.1 to 12.2.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/399
+* chore(deps-dev): bump pytest from 9.0.2 to 9.0.3 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/400
+* chore(deps): bump lxml from 6.0.2 to 6.1.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/405
+* chore(deps-dev): bump python-dotenv from 1.2.1 to 1.2.2 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/404
+* chore(deps-dev): bump nbconvert from 7.17.0 to 7.17.1 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/403
+* refactor(RailEnvPersister): cleanup malfunction generator deserialization (1). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/406
+
+### Fixed
+
+* fix: line and timetable generators from file. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/408
+* fix: evaluation of ECML2026Rewards. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/410
+* fix: normalization of ECML2026Rewards. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/412
+
 ## [[4.2.4]](https://github.com/flatland-association/flatland-rl/compare/v4.2.3...v4.2.4) 2026-03-19
 
 ### Added
