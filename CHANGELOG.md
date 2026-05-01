@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * feat: pessimistic action required. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/401
 * feat(rewards): add minimum penalty for target not reached. by @CleverManu in https://github.com/flatland-association/flatland-rl/pull/397
 * feat: ecml2026 competition reward by @CleverManu in https://github.com/flatland-association/flatland-rl/pull/402
+* feat(RailEnvPersister): allow persistence of several malfunction generators (2). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/398
+* feat(RailEnvPersister): generalize effects generator serialization (3). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/407
 
 ### Changed
 
@@ -25,8 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 * chore(deps-dev): bump python-dotenv from 1.2.1 to 1.2.2 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/404
 * chore(deps-dev): bump nbconvert from 7.17.0 to 7.17.1 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/403
 * refactor(RailEnvPersister): cleanup malfunction generator deserialization (1). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/406
-* feat(RailEnvPersister): allow persistence of several malfunction generators (2). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/398
-* feat(RailEnvPersister): generalize effects generator serialization (3). by @chenkins in https://github.com/flatland-association/flatland-rl/pull/407
 
 ### Fixed
 
