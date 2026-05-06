@@ -93,7 +93,7 @@ fsspec==2026.1.0
     #   torch
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.46
+gitpython==3.1.47
     # via wandb
 google-api-core==2.29.0
     # via opencensus
