@@ -255,7 +255,7 @@ matplotlib-inline==0.2.1
     #   ipython
 mccabe==0.7.0
     # via flake8
-mistune==3.2.0
+mistune==3.2.1
     # via nbconvert
 msgpack==1.1.2
     # via
