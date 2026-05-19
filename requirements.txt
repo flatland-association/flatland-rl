@@ -47,7 +47,7 @@ fastenum==1.1.2
     # via flatland-rl (pyproject.toml)
 fonttools==4.61.1
     # via matplotlib
-idna==3.11
+idna==3.15
     # via requests
 importlib-resources==6.5.2
     # via flatland-rl (pyproject.toml)
