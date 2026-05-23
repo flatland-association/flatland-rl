@@ -189,8 +189,8 @@ class RenderLocal(RenderBase):
                 continue
             for wps in agent.waypoints:
                 for wp in wps:
-                    if wp.position not in stations:
-                        stations[wp.position] = station_color_id
+                    if wp.configuration not in stations:
+                        stations[wp.configuration] = station_color_id
         self.gl.build_background_map(stations)
         return stations
 
@@ -210,14 +210,14 @@ class RenderLocal(RenderBase):
             if agent is None:
                 continue
             color = color_map(agent_idx)
-            self.plot_single_agent(agent.position, agent.direction, color, target=agent.target if targets else None,
+            self.plot_single_agent(agent.configuration, agent.direction, color, target=agent.target if targets else None,
                                    static=True, selected=agent_idx == selected_agent)
 
         for agent_idx, agent in enumerate(self.env.agents):
             if agent is None:
                 continue
             color = color_map(agent_idx)
-            self.plot_single_agent(agent.position, agent.direction, color, target=agent.target if targets else None)
+            self.plot_single_agent(agent.configuration, agent.direction, color, target=agent.target if targets else None)
 
     def get_transition_row_col(self, row_col_pos, direction, bgiTrans=False):
         """
@@ -673,7 +673,7 @@ class RenderLocal(RenderBase):
                     continue
 
                 # Show an agent even if it hasn't already started
-                if agent.position is None:
+                if agent.configuration is None:
                     if show_inactive_agents:
                         # print("agent ", agent_idx, agent.position, agent.old_position, agent.initial_position)
                         self.gl.set_agent_at(agent_idx, *(agent.initial_position),
@@ -687,7 +687,7 @@ class RenderLocal(RenderBase):
                 is_malfunction = agent.malfunction_handler.malfunction_down_counter > 0
 
                 if self.agent_render_variant == AgentRenderVariant.BOX_ONLY:
-                    self.gl.set_cell_occupied(agent_idx, *(agent.position))
+                    self.gl.set_cell_occupied(agent_idx, *(agent.configuration))
 
                 elif self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND or \
                     self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:  # noqa: E125
@@ -699,8 +699,8 @@ class RenderLocal(RenderBase):
                         old_direction = agent.old_direction
 
                     # the agent's first step - it doesn't have an old position yet
-                    elif agent.position is not None:
-                        position = agent.position
+                    elif agent.configuration is not None:
+                        position = agent.configuration
                         direction = agent.direction
                         old_direction = agent.direction
 
@@ -712,17 +712,17 @@ class RenderLocal(RenderBase):
 
                     # set_agent_at uses the agent index for the color
                     if self.agent_render_variant == AgentRenderVariant.ONE_STEP_BEHIND_AND_BOX:
-                        self.gl.set_cell_occupied(agent_idx, *(agent.position))
+                        self.gl.set_cell_occupied(agent_idx, *(agent.configuration))
                     self.gl.set_agent_at(agent_idx, *position, old_direction, direction,
                                          selected_agent == agent_idx, rail_grid=env.rail.grid,
                                          show_debug=self.show_debug, clear_debug_text=self.clear_debug_text,
                                          malfunction=is_malfunction)
                 else:
-                    position = agent.position
+                    position = agent.configuration
                     direction = agent.direction
                     for possible_direction in range(4):
                         # Is a transition along movement `desired_movement_from_new_cell` to the current cell possible?
-                        isValid = env.rail.get_transition((agent.position, agent.direction), possible_direction)
+                        isValid = env.rail.get_transition((agent.configuration, agent.direction), possible_direction)
                         if isValid:
                             direction = possible_direction
 
@@ -734,7 +734,7 @@ class RenderLocal(RenderBase):
 
                     # set_agent_at uses the agent index for the color
                     if self.agent_render_variant == AgentRenderVariant.AGENT_SHOWS_OPTIONS_AND_BOX:
-                        self.gl.set_cell_occupied(agent_idx, *(agent.position))
+                        self.gl.set_cell_occupied(agent_idx, *(agent.configuration))
 
                     if show_inactive_agents:
                         show_this_agent = True

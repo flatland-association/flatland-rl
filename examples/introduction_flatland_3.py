@@ -86,20 +86,20 @@ observation_builder = GlobalObsForRailEnv()
 # observation_builder = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv())
 
 # Construct the enviornment with the given observation, generataors, predictors, and stochastic data
-env = RailEnv(width=width,
-              height=height,
-              rail_generator=rail_generator,
-              line_generator=line_generator,
-              number_of_agents=nr_trains,
-              obs_builder_object=observation_builder,
-              malfunction_generator=ParamMalfunctionGen(stochastic_data),
-              remove_agents_at_target=True)
-env.reset()
+rail_env = RailEnv(width=width,
+                   height=height,
+                   rail_generator=rail_generator,
+                   line_generator=line_generator,
+                   number_of_agents=nr_trains,
+                   obs_builder_object=observation_builder,
+                   malfunction_generator=ParamMalfunctionGen(stochastic_data),
+                   remove_agents_at_target=True)
+rail_env.reset()
 
 # Initiate the renderer
 env_renderer = None
 if DO_RENDERING:
-    env_renderer = RenderTool(env,
+    env_renderer = RenderTool(rail_env,
                               agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                               show_debug=False,
                               screen_height=600,  # Adjust these parameters to fit your resolution
@@ -146,12 +146,12 @@ class RandomAgent:
 
 
 # Initialize the agent with the parameters corresponding to the environment and observation_builder
-controller = RandomAgent(218, env.action_space[0])
+controller = RandomAgent(218, rail_env.action_space[0])
 
 # We start by looking at the information of each agent
 # We can see the task assigned to the agent by looking at
 print("\n Agents in the environment have to solve the following tasks: \n")
-for agent_idx, agent in enumerate(env.agents):
+for agent_idx, agent in enumerate(rail_env.agents):
     print(
         "The agent with index {} has the task to go from its initial position {}, facing in the direction {} to its target at {}.".format(
             agent_idx, agent.initial_position, agent.direction, agent.target))
@@ -161,7 +161,7 @@ for agent_idx, agent in enumerate(env.agents):
 print("\n Their current statuses are:")
 print("============================")
 
-for agent_idx, agent in enumerate(env.agents):
+for agent_idx, agent in enumerate(rail_env.agents):
     print("Agent {} status is: {} with its current position being {}".format(agent_idx, str(agent.state),
                                                                              str(agent.position)))
 
@@ -173,8 +173,8 @@ for agent_idx, agent in enumerate(env.agents):
 agents_with_same_start = set()
 print("\n The following agents have the same initial position:")
 print("=====================================================")
-for agent_idx, agent in enumerate(env.agents):
-    for agent_2_idx, agent2 in enumerate(env.agents):
+for agent_idx, agent in enumerate(rail_env.agents):
+    for agent_2_idx, agent2 in enumerate(rail_env.agents):
         if agent_idx != agent_2_idx and agent.initial_position == agent2.initial_position:
             print("Agent {} as the same initial position as agent {}".format(agent_idx, agent_2_idx))
             agents_with_same_start.add(agent_idx)
@@ -186,7 +186,7 @@ for agent_id in agents_with_same_start:
     action_dict[agent_id] = 1  # Try to move with the agents
 
 # Do a step in the environment to see what agents entered:
-env.step(action_dict)
+rail_env.step(action_dict)
 
 # Current state and position of the agents after all agents with same start position tried to move
 print("\n This happened when all tried to enter at the same time:")
@@ -194,8 +194,8 @@ print("========================================================")
 for agent_id in agents_with_same_start:
     print(
         "Agent {} status is: {} with the current position being {}.".format(
-            agent_id, str(env.agents[agent_id].state),
-            str(env.agents[agent_id].position)))
+            agent_id, str(rail_env.agents[agent_id].state),
+            str(rail_env.agents[agent_id].position)))
 
 # As you see only the agents with lower indexes moved. As soon as the cell is free again the agents can attempt
 # to start again.
@@ -209,7 +209,7 @@ for agent_id in agents_with_same_start:
 print("\n The speed information of the agents are:")
 print("=========================================")
 
-for agent_idx, agent in enumerate(env.agents):
+for agent_idx, agent in enumerate(rail_env.agents):
     print(
         "Agent {} speed is: {} with the current fractional position being {}/{}".format(
             agent_idx, agent.speed_counter.speed, agent.speed_counter.distance, 1.0))
@@ -219,7 +219,7 @@ for agent_idx, agent in enumerate(env.agents):
 print("\n The malfunction data of the agents are:")
 print("========================================")
 
-for agent_idx, agent in enumerate(env.agents):
+for agent_idx, agent in enumerate(rail_env.agents):
     print(
         "Agent {} is OK = {}".format(
             agent_idx, agent.malfunction_handler.in_malfunction))
@@ -230,11 +230,11 @@ for agent_idx, agent in enumerate(env.agents):
 # You can access this in the following way.
 
 # Chose an action for each agent
-for a in range(env.get_num_agents()):
+for a in range(rail_env.get_num_agents()):
     action = controller.act(0)
     action_dict.update({a: action})
 # Do the environment step
-observations, rewards, dones, information = env.step(action_dict)
+observations, rewards, dones, information = rail_env.step(action_dict)
 print("\n The following agents can register an action:")
 print("========================================")
 for info in information['action_required']:
@@ -263,14 +263,14 @@ os.makedirs("tmp/frames", exist_ok=True)
 
 for step in range(200):
     # Chose an action for each agent in the environment
-    for a in range(env.get_num_agents()):
+    for a in range(rail_env.get_num_agents()):
         action = controller.act(observations[a])
         action_dict.update({a: action})
 
     # Environment step which returns the observations for all agents, their corresponding
     # reward and whether their are done
 
-    next_obs, all_rewards, done, _ = env.step(action_dict)
+    next_obs, all_rewards, done, _ = rail_env.step(action_dict)
 
     if env_renderer is not None:
         env_renderer.render_env(show=True, show_observations=False, show_predictions=False)
@@ -278,7 +278,7 @@ for step in range(200):
 
     frame_step += 1
     # Update replay buffer and train agent
-    for a in range(env.get_num_agents()):
+    for a in range(rail_env.get_num_agents()):
         controller.step((observations[a], action_dict[a], all_rewards[a], next_obs[a], done[a]))
         score += all_rewards[a]
 

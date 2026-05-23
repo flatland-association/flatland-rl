@@ -1,31 +1,15 @@
-
-
-import os
-import time
-from collections import deque
-
 from typing import Optional
 
-import ipywidgets
-#import jpy_canvas
-from ipycanvas import Canvas
 import ipyevents as ipe
-
+import ipywidgets
 import numpy as np
+# import jpy_canvas
+from ipycanvas import Canvas
 from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButtons, Tab
 from numpy import array
 
 import flatland.utils.rendertools as rt
-from flatland.core.grid.grid4_utils import mirror
-from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import sparse_rail_generator, empty_rail_generator
-
 from flatland.utils.editor_interfaces import AbstractController, AbstractModel, AbstractView
-
 
 
 class View(AbstractView):
@@ -57,7 +41,7 @@ class View(AbstractView):
         #self.wImage = jpy_canvas.Canvas(img)
         self.wImage = Canvas(width=img.shape[1], height=img.shape[0])
 
-        # NCW 
+        # NCW
         #self.yxSize = self.wImage.data.shape[:2]
         self.yxSize = img.shape[:2]
 
@@ -65,14 +49,14 @@ class View(AbstractView):
         #self.writableData = np.copy(self.wImage.data)  # writable copy of image - wid_img.data is somehow readonly
         self.wImage.put_image_data(img)
         self.writableData = np.copy(img)
-        
+
 
         # Register Canvas event handler
 
-        # NCW: 
+        # NCW:
         #self.wImage.register_move(self.controller.on_mouse_move)
         #self.wImage.register_click(self.controller.on_click)
-        
+
         oEvent = ipe.Event(source=self.wImage, watched_events=['mousemove', 'click'])
 
         self.yxBase = self.oRT.gl.yxBase
@@ -119,10 +103,10 @@ class View(AbstractView):
         self.replace_agents = Checkbox(value=True, description="Replace Agents")
 
         self.wTab = Tab()
-        
+
         #for i, title in enumerate(tab_contents):
         #    self.wTab.set_title(i, title)
-        
+
         self.wTab.children = [
             VBox([self.regen_width, self.regen_height, self.regen_n_agents, self.regen_method]),
             VBox([self.wDebug, self.wDebug_move, self.replace_agents, self.wClearOutput])
@@ -178,7 +162,7 @@ class View(AbstractView):
             self.model.env.reset_agents()
             for a in self.model.env.agents:
                 if hasattr(a, 'old_position') is False:
-                    a.old_position = a.position
+                    a.old_position = a.configuration
                 if hasattr(a, 'old_direction') is False:
                     a.old_direction = a.direction
 
@@ -195,7 +179,6 @@ class View(AbstractView):
             #self.writableData = np.copy(self.wImage.data)
             self.writableData = np.copy(img)
             self.wImage.put_image_data(img)
-            
 
             # the size should only be updated on regenerate at most
             #self.yxSize = self.wImage.data.shape[:2]
@@ -237,7 +220,7 @@ class View(AbstractView):
         yxRect = array(self.controller.getBoundingRectYX())
         yxPoint = array(((array([y, x]) - self.yxBase)))
         rcRect = array([self.model.env.height, self.model.env.width])
-        
+
         # Scale factors for converting from pixels (y,x) to cells (r,c)
         #nY = np.floor((self.yxSize[0] - self.yxBase[0]) / self.model.env.height)
         #nX = np.floor((self.yxSize[1] - self.yxBase[1]) / self.model.env.width)

@@ -453,9 +453,9 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         n_stops_on_time = 0
         # by design, initial waypoint is unique
         initial_wp = agent.waypoints[0][0]
-        if initial_wp.position in self.departures[agent.handle]:
+        if initial_wp.configuration in self.departures[agent.handle]:
             stop_on_time = False
-            for departure in self.departures[agent.handle][initial_wp.position]:
+            for departure in self.departures[agent.handle][initial_wp.configuration]:
                 if departure >= agent.waypoints_earliest_departure[0]:
                     stop_on_time = True
                     break
@@ -469,10 +469,10 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
             stop_on_time = False
             # has any alternative with any arrival/departure been served on time?
             for wp in wps:
-                if wp.position not in self.arrivals[agent.handle] or wp.position not in self.departures[agent.handle]:
+                if wp.configuration not in self.arrivals[agent.handle] or wp.configuration not in self.departures[agent.handle]:
                     # intermediate stop not served
                     continue
-                for arrival, departure in zip(self.arrivals[agent.handle][wp.position], self.departures[agent.handle][wp.position]):
+                for arrival, departure in zip(self.arrivals[agent.handle][wp.configuration], self.departures[agent.handle][wp.configuration]):
                     if arrival <= agent.waypoints_latest_arrival[i + 1] and departure >= agent.waypoints_earliest_departure[i + 1]:
                         stop_on_time = True
                         break
@@ -481,7 +481,8 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
                 break
         # by design, target is only one cell
         target_wp = agent.waypoints[-1][0]
-        if target_wp.position in self.arrivals[agent.handle] and self.arrivals[agent.handle][target_wp.position][0] <= agent.waypoints_latest_arrival[-1]:
+        if target_wp.configuration in self.arrivals[agent.handle] and self.arrivals[agent.handle][target_wp.configuration][0] <= agent.waypoints_latest_arrival[
+            -1]:
             n_stops_on_time += 1
         n_stops = len(agent.waypoints)
         return n_stops_on_time, n_stops

@@ -35,8 +35,8 @@ class SingleAgentNavigationObs(ObservationBuilder):
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 
-        if agent.position:
-            possible_transitions = self.env.rail.get_transitions((agent.position, agent.direction))
+        if agent.configuration:
+            possible_transitions = self.env.rail.get_transitions((agent.configuration, agent.direction))
         else:
             possible_transitions = self.env.rail.get_transitions((agent.initial_position, agent.initial_direction))
 
@@ -51,7 +51,7 @@ class SingleAgentNavigationObs(ObservationBuilder):
             min_distances = []
             for direction in [(agent.direction + i) % 4 for i in range(-1, 2)]:
                 if possible_transitions[direction]:
-                    new_position = get_new_position(agent.position, direction)
+                    new_position = get_new_position(agent.configuration, direction)
                     min_distances.append(
                         self.env.distance_map.get()[handle, new_position[0], new_position[1], direction])
                 else:

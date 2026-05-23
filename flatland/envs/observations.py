@@ -94,11 +94,11 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
 
         for _agent in self.env.agents:
             if not _agent.state.is_off_map_state() and \
-                _agent.position:
-                self.location_has_agent[tuple(_agent.position)] = 1
-                self.location_has_agent_direction[tuple(_agent.position)] = _agent.direction
-                self.location_has_agent_speed[tuple(_agent.position)] = _agent.speed_counter.speed
-                self.location_has_agent_malfunction[tuple(_agent.position)] = \
+                _agent.configuration:
+                self.location_has_agent[tuple(_agent.configuration)] = 1
+                self.location_has_agent_direction[tuple(_agent.configuration)] = _agent.direction
+                self.location_has_agent_speed[tuple(_agent.configuration)] = _agent.speed_counter.speed
+                self.location_has_agent_malfunction[tuple(_agent.configuration)] = \
                     _agent.malfunction_handler.malfunction_down_counter
 
             # [NIMISH] WHAT IS THIS
@@ -200,7 +200,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             agent_virtual_position = agent.initial_position
             agent_virtual_direction = agent.initial_direction
         elif agent.state.is_on_map_state():
-            agent_virtual_position = agent.position
+            agent_virtual_position = agent.configuration
             agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
             agent_virtual_position, agent_virtual_direction = list(agent.targets)[0]
@@ -571,7 +571,7 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
             agent_virtual_position = agent.initial_position
             agent_virtual_direction = agent.initial_direction
         elif agent.state.is_on_map_state():
-            agent_virtual_position = agent.position
+            agent_virtual_position = agent.configuration
             agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
             agent_virtual_position = agent.target
@@ -669,7 +669,7 @@ class LocalObsForRailEnv(ObservationBuilder):
         # agent_rel_pos[1] = agent.position[1] + self.max_padding
 
         # Collect visible cells as set to be plotted
-        visited, rel_coords = self.field_of_view(agent.position, agent.direction, )
+        visited, rel_coords = self.field_of_view(agent.configuration, agent.direction, )
         local_rail_obs = None
 
         # Add the visible cells to the observed cells
@@ -689,9 +689,9 @@ class LocalObsForRailEnv(ObservationBuilder):
                 for tmp_agent in agents:
                     if pos == tmp_agent.target:
                         obs_map_state[curr_rel_coord[0], curr_rel_coord[1], 1] = 1
-            if pos != agent.position:
+            if pos != agent.configuration:
                 for tmp_agent in agents:
-                    if pos == tmp_agent.position:
+                    if pos == tmp_agent.configuration:
                         obs_other_agents_state[curr_rel_coord[0], curr_rel_coord[1], :] = np.identity(4)[
                             tmp_agent.direction]
 

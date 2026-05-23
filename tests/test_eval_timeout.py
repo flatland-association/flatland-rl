@@ -1,13 +1,11 @@
-from flatland.evaluators.client import FlatlandRemoteClient
-from flatland.core.env_observation_builder import DummyObservationBuilder
-#from my_observation_builder import CustomObservationBuilder
-import numpy as np
 import time
 
-
+# from my_observation_builder import CustomObservationBuilder
+import numpy as np
 
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
+from flatland.evaluators.client import FlatlandRemoteClient
 
 
 class CustomObservationBuilder(ObservationBuilder):
@@ -18,16 +16,16 @@ class CustomObservationBuilder(ObservationBuilder):
     def set_env(self, env: Environment):
         super().set_env(env)
         # Note :
-        # The instantiations which depend on parameters of the Env object should be 
+        # The instantiations which depend on parameters of the Env object should be
         # done here, as it is only here that the updated self.env instance is available
         self.rail_obs = np.zeros((self.env.height, self.env.width))
 
     def reset(self):
         """
-        Called internally on every env.reset() call, 
+        Called internally on every env.reset() call,
         to reset any observation specific variables that are being used
         """
-        self.rail_obs[:] = 0        
+        self.rail_obs[:] = 0
         for _x in range(self.env.width):
             for _y in range(self.env.height):
                 # Get the transition map value at location _x, _y
@@ -40,7 +38,7 @@ class CustomObservationBuilder(ObservationBuilder):
 
 
         status = agent.status
-        position = agent.position
+        position = agent.configuration
         direction = agent.direction
         initial_position = agent.initial_position
         target = agent.target
@@ -75,14 +73,14 @@ def __disabled__test_random_timeouts():
 
         evaluation_number += 1
         # Switch to a new evaluation environemnt
-        # 
-        # a remote_client.env_create is similar to instantiating a 
+        #
+        # a remote_client.env_create is similar to instantiating a
         # RailEnv and then doing a env.reset()
-        # hence it returns the first observation from the 
+        # hence it returns the first observation from the
         # env.reset()
-        # 
+        #
         # You can also pass your custom observation_builder object
-        # to allow you to have as much control as you wish 
+        # to allow you to have as much control as you wish
         # over the observation of your choice.
         time_start = time.time()
         observation, info = remote_client.env_create(
@@ -92,11 +90,11 @@ def __disabled__test_random_timeouts():
         if not observation:
             #
             # If the remote_client returns False on a `env_create` call,
-            # then it basically means that your agent has already been 
+            # then it basically means that your agent has already been
             # evaluated on all the required evaluation environments,
             # and hence its safe to break out of the main evaluation loop
             break
-        
+
         print("Evaluation Number : {}".format(evaluation_number))
 
         if np.random.uniform() < reset_delay_rate:
@@ -137,7 +135,7 @@ def __disabled__test_random_timeouts():
             if done['__all__']:
                 print("Reward : ", sum(list(all_rewards.values())))
                 break
-        
+
         np_time_taken_by_controller = np.array(time_taken_by_controller)
         np_time_taken_per_step = np.array(time_taken_per_step)
         print("="*100)
@@ -153,8 +151,8 @@ def __disabled__test_random_timeouts():
     print("Evaluation of all environments complete...")
     ########################################################################
     # Submit your Results
-    # 
-    # Please do not forget to include this call, as this triggers the 
+    #
+    # Please do not forget to include this call, as this triggers the
     # final computation of the score statistics, video generation, etc
     # and is necesaary to have your submission marked as successfully evaluated
     ########################################################################

@@ -120,7 +120,7 @@ def test_get_shortest_paths():
 def _assert_paths_equal(iAgent:int, actual:List[Waypoint], expected:List[Waypoint]):
     assert len(actual) == len(expected), f"Lengths differ: actual={len(actual)}, expected={len(expected)}"
     for iWP, (wpA, wpE) in enumerate(zip(actual, expected)):
-        assert wpA.position == wpE.position, f"Agent {iAgent} Waypoints at step {iWP} differ: actual={wpA.position}, expected={wpE.position}"
+        assert wpA.configuration == wpE.configuration, f"Agent {iAgent} Waypoints at step {iWP} differ: actual={wpA.configuration}, expected={wpE.configuration}"
         assert wpA.direction == wpE.direction, f"Agent {iAgent} Waypoint directions at step {iWP} differ:actual={wpA.direction}, expected={wpE.direction}"
 
 # todo file test_002.pkl has to be generated automatically
