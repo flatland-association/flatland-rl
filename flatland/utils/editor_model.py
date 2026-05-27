@@ -334,10 +334,10 @@ class EditorModel(AbstractModel):
 
     def find_agent_at(self, cell_row_col):
         for agent_idx, agent in enumerate(self.env.agents):
-            if agent.position is None:
+            if agent.configuration is None:
                 rc_pos = agent.initial_position
             else:
-                rc_pos = agent.position
+                rc_pos = agent.configuration
             if tuple(rc_pos) == tuple(cell_row_col):
                 return agent_idx
         return None
@@ -378,7 +378,7 @@ class EditorModel(AbstractModel):
                 # Move the selected agent to this cell
                 agent = self.env.agents[self.selected_agent]
                 agent.initial_position = tuple(cell_row_col)
-                agent.position = tuple(cell_row_col)
+                agent.configuration = tuple(cell_row_col)
                 agent.old_position = tuple(cell_row_col)
         else:
             # Yes

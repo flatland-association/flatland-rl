@@ -50,10 +50,10 @@ def test_save_load():
     assert (env.width == 30)
     assert (env.height == 30)
     assert (len(env.agents) == 2)
-    assert (agent_1_pos == env.agents[0].position)
+    assert (agent_1_pos == env.agents[0].configuration)
     assert (agent_1_dir == env.agents[0].direction)
     assert (agent_1_tar == env.agents[0].target)
-    assert (agent_2_pos == env.agents[1].position)
+    assert (agent_2_pos == env.agents[1].configuration)
     assert (agent_2_dir == env.agents[1].direction)
     assert (agent_2_tar == env.agents[1].target)
 
@@ -76,7 +76,7 @@ def test_save_load_mpk():
     assert (len(env2.agents) == len(env.agents))
 
     for agent1, agent2 in zip(env.agents, env2.agents):
-        assert (agent1.position == agent2.position)
+        assert (agent1.position == agent2.configuration)
         assert (agent1.direction == agent2.direction)
         assert (agent1.target == agent2.target)
 
@@ -141,8 +141,8 @@ def test_rail_environment_single_agent(show=False):
         # or direction.
         # They should always be able to go somewhere.
         if show:
-            print("After reset - agent pos:", agent.position, "dir: ", agent.direction)
-            print(transitions.get_transitions(rail_map[agent.position], agent.direction))
+            print("After reset - agent pos:", agent.configuration, "dir: ", agent.direction)
+            print(transitions.get_transitions(rail_map[agent.configuration], agent.direction))
 
         # assert (transitions.get_transitions(
         #    rail_map[agent.position],
@@ -157,7 +157,7 @@ def test_rail_environment_single_agent(show=False):
         # agent.initial_position = initial_pos = agent.position
 
         valid_active_actions_done = 0
-        pos = agent.position
+        pos = agent.configuration
 
         if show:
             env_renderer.render_env(show=show, show_agents=True)
@@ -172,9 +172,9 @@ def test_rail_environment_single_agent(show=False):
             _, _, dict_done, _ = rail_env.step({0: action})
 
             prev_pos = pos
-            pos = agent.position  # rail_env.agents_position[0]
+            pos = agent.configuration  # rail_env.agents_position[0]
 
-            print("action:", action, "pos:", agent.position, "prev:", prev_pos, agent.direction)
+            print("action:", action, "pos:", agent.configuration, "prev:", prev_pos, agent.direction)
             print(dict_done)
             if prev_pos != pos:
                 valid_active_actions_done += 1

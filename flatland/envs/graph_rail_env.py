@@ -97,16 +97,17 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         EnvAgent.apply_timetable(self.agents, timetable)
         for agent in self.agents:
             assert len(agent.waypoints[-1]) == 1
-            agent.waypoints = [[GraphTransitionMap.grid_configuration_to_graph_configuration(*wp.position, wp.direction) for wp in flex_intermediate_stop] for
+            agent.waypoints = [[GraphTransitionMap.grid_configuration_to_graph_configuration(*wp.configuration, wp.direction) for wp in flex_intermediate_stop]
+                               for
                                flex_intermediate_stop in agent.waypoints[:1]] + [
-                                  GraphTransitionMap.grid_configuration_to_graph_configuration(*(agent.waypoints[-1][0].position), d) for d in range(4)]
+                                  GraphTransitionMap.grid_configuration_to_graph_configuration(*(agent.waypoints[-1][0].configuration), d) for d in range(4)]
         return agents
 
     def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:
         agents = EnvAgent.from_line(line)
         for agent in agents:
             agent.initial_configuration = GraphTransitionMap.grid_configuration_to_graph_configuration(*agent.initial_position, agent.initial_direction)
-            agent.current_configuration = GraphTransitionMap.grid_configuration_to_graph_configuration(*agent.position, agent.direction)
+            agent.current_configuration = GraphTransitionMap.grid_configuration_to_graph_configuration(*agent.configuration, agent.direction)
             agent.targets = {GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) for t in agent.targets if
                              GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) in rail.g.nodes}
         return agents

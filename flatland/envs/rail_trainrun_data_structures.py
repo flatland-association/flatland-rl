@@ -4,6 +4,7 @@ from attrs import define, field
 
 
 @define(frozen=True)
+# @dataclass(repr=True)
 class Waypoint:
     """
     A way point is the entry into a cell defined by
@@ -16,7 +17,11 @@ class Waypoint:
     position = field(type=Tuple[int, int])
     direction = field(type=int, converter=lambda d: d if d is None else int(d))
 
+    def __hash__(self):
+        return self.position[0] * 10000 + self.position[1] * 10 + (self.direction or 5)
 
+    def __eq__(self, other):
+        return self.position == other.position and self.direction == other.direction
 
 
 # A train run is represented by the waypoints traversed and the times of traversal
@@ -28,3 +33,6 @@ TrainrunWaypoint = NamedTuple('TrainrunWaypoint', [
 # A train run is the list of an agent's way points and their scheduled time
 Trainrun = List[TrainrunWaypoint]
 TrainrunDict = Dict[int, Trainrun]
+
+if __name__ == '__main__':
+    print(hash(Waypoint((5, 5), 6)) == hash(Waypoint((5, 5), 6)))

@@ -25,7 +25,7 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
             result = env.rail.apply_action_independent(RailEnvActions.from_value(a), (agent.position, agent.direction))
             if result is not None:
                 (new_position, new_direction), _ = result
-                if new_position == self._shortest_paths[agent.handle][1].position and new_direction == self._shortest_paths[agent.handle][1].direction:
+                if new_position == self._shortest_paths[agent.handle][1].configuration and new_direction == self._shortest_paths[agent.handle][1].direction:
                     return a
         raise Exception("Invalid state")
 
@@ -71,6 +71,6 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
         if agent.position is None:
             return
 
-        while self._shortest_paths[agent.handle][0].position != agent.position:
+        while self._shortest_paths[agent.handle][0].configuration != agent.position:
             self._shortest_paths[agent.handle] = self._shortest_paths[agent.handle][1:]
-        assert self._shortest_paths[agent.handle][0].position == agent.position
+        assert self._shortest_paths[agent.handle][0].configuration == agent.position

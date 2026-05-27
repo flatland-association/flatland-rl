@@ -37,7 +37,7 @@ class SingleAgentNavigationObs(ObservationBuilder):
             agent_virtual_position = agent.initial_position
             agent_virtual_direction = agent.initial_direction
         elif agent.state.is_on_map_state():
-            agent_virtual_position = agent.position
+            agent_virtual_position = agent.configuration
             agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
             agent_virtual_position = agent.target

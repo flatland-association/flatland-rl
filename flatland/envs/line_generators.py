@@ -194,7 +194,7 @@ class SparseLineGen(BaseLineGen):
                 shortest_path = k_sh[0]
                 previous_direction = shortest_path[-1].direction
                 new_agent_waypoints[agent_id].append([shortest_path[-1]])
-            new_agent_waypoints[agent_id][-1] = [Waypoint(new_agent_waypoints[agent_id][-1][0].position, None)]
+            new_agent_waypoints[agent_id][-1] = [Waypoint(new_agent_waypoints[agent_id][-1][0].configuration, None)]
         return Line(agent_waypoints=new_agent_waypoints, agent_speeds=agent_speeds)
 
 

@@ -126,7 +126,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             replay = test_config.replay[step]
             # if not agent.position == replay.position:
             # import pdb; pdb.set_trace()
-            _assert(a, agent.position, replay.position, 'position')
+            _assert(a, agent.position, replay.configuration, 'position')
             _assert(a, agent.direction, replay.direction, 'direction')
             if replay.state is not None:
                 _assert(a, TrainState(agent.state).name, TrainState(replay.state).name, 'state', close=False)

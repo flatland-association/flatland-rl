@@ -60,7 +60,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
         shortest_distance = np.inf
 
         for exit_direction in range(4):
-            neighbour = get_new_position(agent.position, exit_direction)
+            neighbour = get_new_position(agent.configuration, exit_direction)
 
             if neighbour[0] >= 0 and neighbour[0] < env.height and neighbour[1] >= 0 and neighbour[1] < env.width:
                 desired_movement_from_new_cell = (exit_direction + 2) % 4
@@ -72,8 +72,8 @@ def _step_along_shortest_path(env, obs_builder, rail):
                                                                    desired_movement_from_new_cell)
                     if is_valid:
                         distance_to_target = obs_builder.env.distance_map.get()[
-                            (agent.handle, *agent.position, exit_direction)]
-                        print("agent {} at {} facing {} taking {} distance {}".format(agent.handle, agent.position,
+                            (agent.handle, *agent.configuration, exit_direction)]
+                        print("agent {} at {} facing {} taking {} distance {}".format(agent.handle, agent.configuration,
                                                                                       agent.direction,
                                                                                       exit_direction,
                                                                                       distance_to_target))
