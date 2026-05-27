@@ -3,7 +3,7 @@ from typing import NamedTuple, Tuple, List, Dict
 from attrs import define, field
 
 
-@define(frozen=True)
+@define(frozen=True, cache_hash=True)
 class Waypoint:
     """
     A way point is the entry into a cell defined by
