@@ -39,6 +39,9 @@ jobs:
                 run: |
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
+                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
+                    # https://docs.scipy.org/doc/scipy/building/index.html
+                    sudo apt-get -y build-dep scipy
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v6
