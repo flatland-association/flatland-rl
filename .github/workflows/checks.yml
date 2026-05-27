@@ -65,7 +65,7 @@ jobs:
             -   name: Install ffmpeg
                 run: |
                     set -euxo
-                    sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
                     # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
@@ -110,7 +110,7 @@ jobs:
                 run: |
                     set -euxo
                     # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
-                    sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
                     # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
@@ -162,7 +162,7 @@ jobs:
                 run: |
                     set -euxo
                     # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
-                    sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
                     # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
@@ -208,7 +208,7 @@ jobs:
                 run: |
                     set -euxo
                     # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
-                    sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
                     # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
