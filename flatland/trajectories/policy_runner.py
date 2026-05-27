@@ -1,10 +1,10 @@
 import os
 import sys
 from pathlib import Path
+from typing import Tuple
 
 import click
 import tqdm
-
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
@@ -18,6 +18,104 @@ from flatland.utils.cli_utils import resolve_type
 
 
 class PolicyRunner:
+    def __init__(
+        self,
+        policy: Policy,
+        data_dir: Path,
+        env: AbstractRailEnv = None,
+        snapshot_interval: int = 1,
+        ep_id: str = None,
+        callbacks: FlatlandCallbacks = None,
+        start_step: int = 0,
+        end_step: int = None,
+        fork_from_trajectory: "Trajectory" = None,
+        no_save: bool = False,
+    ):
+        if fork_from_trajectory is not None and env is not None:
+            raise Exception("Provided fork-from-trajectory and env, cannot do both.")
+        elif fork_from_trajectory is None and env is None:
+            raise Exception("Provided neither fork-from-trajectory nor env, must provide exactly one.")
+        if fork_from_trajectory is not None:
+            trajectory = fork_from_trajectory.fork(data_dir=data_dir, ep_id=ep_id, start_step=start_step)
+            env = trajectory.load_env(start_step=start_step)
+        else:
+            trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id)
+
+        # TODO bad code smell - private method - check num resets?
+        observations = env._get_observations()
+
+        assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
+
+        (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
+        if not no_save:
+            RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
+
+        if snapshot_interval > 0:
+            from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
+            if callbacks is None:
+                callbacks = TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir)
+            else:
+                callbacks = make_multi_callbacks(callbacks,
+                                                 TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir))
+
+        n_agents = env.get_num_agents()
+        assert len(env.agents) == n_agents
+
+        if end_step is None:
+            end_step = env._max_episode_steps
+        assert end_step >= start_step
+
+        if callbacks is not None and start_step == 0:
+            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
+
+        self.policy = policy
+        self.env = env
+        self.trajectory = trajectory
+        self.observations = observations
+        self.callbacks = callbacks
+        self.n_agents = n_agents
+        self.env_time = start_step
+        self.end_step = end_step
+        self.done = False
+
+    def step(self, persist: bool = False) -> Tuple["Trajectory", bool]:
+        """Execute one environment step. Returns (trajectory, done)."""
+        env_time = self.env_time
+        assert env_time == self.env._elapsed_steps
+
+        action_dict = self.policy.act_many(self.env.get_agent_handles(), observations=list(self.observations.values()))
+        for handle, action in action_dict.items():
+            self.trajectory.action_collect(env_time=env_time, agent_id=handle, action=action)
+
+        self.observations, rewards, dones, infos = self.env.step(action_dict)
+
+        for agent_id in range(self.n_agents):
+            agent = self.env.agents[agent_id]
+            self.trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=agent.current_configuration)
+            self.trajectory.rewards_dones_infos_collect(env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
+                                                        info={k: v[agent_id] for k, v in infos.items()},
+                                                        done=dones[agent_id])
+
+        self.done = dones['__all__']
+
+        if self.callbacks is not None:
+            self.callbacks.on_episode_step(env=self.env, data_dir=self.trajectory.outputs_dir)
+
+        if self.done:
+            if self.callbacks is not None:
+                self.callbacks.on_episode_end(env=self.env, data_dir=self.trajectory.outputs_dir)
+            actual_success_rate = sum([agent.state == 6 for agent in self.env.agents]) / self.n_agents
+            # not persisted yet, need to get df from collected buffer
+            collected_rewards = self.trajectory._collected_trains_rewards_dones_infos_to_df()["reward"]
+            normalized_reward = self.env.rewards.normalize(*collected_rewards, max_episode_steps=self.env._max_episode_steps,
+                                                           num_agents=self.env.get_num_agents())
+            self.trajectory.arrived_collect(env_time, actual_success_rate, normalized_reward)
+
+        self.env_time += 1
+        if persist:
+            self.trajectory.persist()
+        return self.trajectory, self.done
+
     @staticmethod
     def create_from_policy(
         policy: Policy,
@@ -29,7 +127,6 @@ class PolicyRunner:
         tqdm_kwargs: dict = None,
         start_step: int = 0,
         end_step: int = None,
-
         fork_from_trajectory: "Trajectory" = None,
         no_save: bool = False,
     ) -> Trajectory:
@@ -68,83 +165,26 @@ class PolicyRunner:
         Trajectory
 
         """
-        if fork_from_trajectory is not None and env is not None:
-            raise Exception("Provided fork-from-trajectory and env, cannot do both.")
-        elif fork_from_trajectory is None and env is None:
-            raise Exception("Provided neither fork-from-trajectory nor env, must provide exactly one.")
-        if fork_from_trajectory is not None:
-            trajectory = fork_from_trajectory.fork(data_dir=data_dir, ep_id=ep_id, start_step=start_step)
-            env = trajectory.load_env(start_step=start_step)
-        else:
-            trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id)
-
-        # TODO bad code smell - private method - check num resets?
-        observations = env._get_observations()
-
-        assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
-
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
-
-        (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
-        if not no_save:
-            RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
-
-        if snapshot_interval > 0:
-            from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
-            if callbacks is None:
-                callbacks = TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir)
-            else:
-                callbacks = make_multi_callbacks(callbacks,
-                                                 TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir))
-
-        n_agents = env.get_num_agents()
-        assert len(env.agents) == n_agents
-
-        env_time = start_step
-        if end_step is None:
-            end_step = env._max_episode_steps
-        assert end_step >= start_step
-        env_time_range = range(start_step, end_step)
-
-        if callbacks is not None and start_step == 0:
-            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
-
-        done = False
-        for env_time in tqdm.tqdm(env_time_range, **tqdm_kwargs):
-            assert env_time == env._elapsed_steps
-
-            action_dict = policy.act_many(env.get_agent_handles(), observations=list(observations.values()))
-            for handle, action in action_dict.items():
-                trajectory.action_collect(env_time=env_time, agent_id=handle, action=action)
-
-            observations, rewards, dones, infos = env.step(action_dict)
-
-            for agent_id in range(n_agents):
-                agent = env.agents[agent_id]
-                trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=agent.current_configuration)
-                trajectory.rewards_dones_infos_collect(env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
-                                                       info={k: v[agent_id] for k, v in infos.items()},
-                                                       done=dones[agent_id])
-
-            done = dones['__all__']
-
-            if callbacks is not None:
-                callbacks.on_episode_step(env=env, data_dir=trajectory.outputs_dir)
-
+        runner = PolicyRunner(
+            policy=policy,
+            data_dir=data_dir,
+            env=env,
+            snapshot_interval=snapshot_interval,
+            ep_id=ep_id,
+            callbacks=callbacks,
+            start_step=start_step,
+            end_step=end_step,
+            fork_from_trajectory=fork_from_trajectory,
+            no_save=no_save,
+        )
+        for _ in tqdm.tqdm(range(runner.env_time, runner.end_step), **tqdm_kwargs):
+            _, done = runner.step()
             if done:
-                if callbacks is not None:
-                    callbacks.on_episode_end(env=env, data_dir=trajectory.outputs_dir)
                 break
-        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        if done:
-            # not persisted yet, need to get df from collected buffer
-            rewards = trajectory._collected_trains_rewards_dones_infos_to_df()["reward"]
-            normalized_reward = env.rewards.normalize(*rewards, max_episode_steps=env._max_episode_steps,
-                                                      num_agents=env.get_num_agents())
-            trajectory.arrived_collect(env_time, actual_success_rate, normalized_reward)
-        trajectory.persist()
-        return trajectory
+        runner.trajectory.persist()
+        return runner.trajectory
 
 
 @click.command()
