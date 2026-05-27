@@ -8,22 +8,22 @@ annotated-types==0.7.0
     # via pydantic
 asttokens==3.0.1
     # via stack-data
-attrs==25.4.0
+attrs==26.1.0
     # via
     #   entrypoint
     #   flatland-rl (pyproject.toml)
     #   versions
-boto3==1.42.26
+boto3==1.43.15
     # via flatland-rl (pyproject.toml)
-botocore==1.42.26
+botocore==1.43.15
     # via
     #   boto3
     #   s3transfer
-certifi==2026.1.4
+certifi==2026.5.20
     # via requests
-charset-normalizer==3.4.4
+charset-normalizer==3.4.7
     # via requests
-click==8.3.1
+click==8.4.1
     # via
     #   flatland-rl (pyproject.toml)
     #   versions
@@ -37,7 +37,7 @@ crowdai-api==0.1.22
     # via flatland-rl (pyproject.toml)
 cycler==0.12.1
     # via matplotlib
-decorator==5.2.1
+decorator==5.3.1
     # via ipython
 entrypoint==2.1.0
     # via versions
@@ -45,17 +45,17 @@ executing==2.2.1
     # via stack-data
 fastenum==1.1.2
     # via flatland-rl (pyproject.toml)
-fonttools==4.61.1
+fonttools==4.63.0
     # via matplotlib
-idna==3.15
+idna==3.16
     # via requests
-importlib-resources==6.5.2
+importlib-resources==7.1.0
     # via flatland-rl (pyproject.toml)
 ipycanvas==0.14.3
     # via flatland-rl (pyproject.toml)
 ipyevents==2.0.4
     # via flatland-rl (pyproject.toml)
-ipython==8.38.0
+ipython==8.39.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipywidgets
@@ -64,21 +64,21 @@ ipywidgets==8.1.8
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
     #   ipyevents
-jedi==0.19.2
+jedi==0.20.0
     # via ipython
-jmespath==1.0.1
+jmespath==1.1.0
     # via
     #   boto3
     #   botocore
 jupyterlab-widgets==3.0.16
     # via ipywidgets
-kiwisolver==1.4.9
+kiwisolver==1.5.0
     # via matplotlib
-lxml==6.1.0
+lxml==6.1.1
     # via svgutils
-matplotlib==3.10.8
+matplotlib==3.10.9
     # via flatland-rl (pyproject.toml)
-matplotlib-inline==0.2.1
+matplotlib-inline==0.2.2
     # via ipython
 msgpack==1.2.1
     # via
@@ -102,11 +102,11 @@ numpy==1.26.4
     #   pandas
 orderings==1.6.0
     # via versions
-packaging==25.0
+packaging==26.2
     # via matplotlib
-pandas==2.3.3
+pandas==3.0.3
     # via flatland-rl (pyproject.toml)
-parso==0.8.5
+parso==0.8.7
     # via jedi
 pexpect==4.9.0
     # via ipython
@@ -121,15 +121,15 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pydantic==2.12.5
+pydantic==2.13.4
     # via flatland-rl (pyproject.toml)
-pydantic-core==2.41.5
+pydantic-core==2.46.4
     # via pydantic
-pyglet==2.1.12
+pyglet==2.1.14
     # via flatland-rl (pyproject.toml)
 pygments==2.20.0
     # via ipython
-pyparsing==3.3.1
+pyparsing==3.3.2
     # via matplotlib
 python-dateutil==2.9.0.post0
     # via
@@ -137,19 +137,17 @@ python-dateutil==2.9.0.post0
     #   flatland-rl (pyproject.toml)
     #   matplotlib
     #   pandas
-python-gitlab==7.1.0
+python-gitlab==8.3.0
     # via crowdai-api
-pytz==2025.2
-    # via pandas
 pyyaml==6.0.3
     # via flatland-rl (pyproject.toml)
 recordtype==1.4
     # via flatland-rl (pyproject.toml)
-redis==7.1.0
+redis==7.4.0
     # via
     #   crowdai-api
     #   flatland-rl (pyproject.toml)
-requests==2.33.0
+requests==2.34.2
     # via
     #   crowdai-api
     #   flatland-rl (pyproject.toml)
@@ -157,7 +155,7 @@ requests==2.33.0
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via python-gitlab
-s3transfer==0.16.0
+s3transfer==0.17.1
     # via boto3
 six==1.17.0
     # via
@@ -171,9 +169,9 @@ svgutils==0.3.4
     # via flatland-rl (pyproject.toml)
 timeout-decorator==0.5.0
     # via flatland-rl (pyproject.toml)
-tqdm==4.67.1
+tqdm==4.67.3
     # via flatland-rl (pyproject.toml)
-traitlets==5.14.3
+traitlets==5.15.0
     # via
     #   ipython
     #   ipywidgets
@@ -195,8 +193,6 @@ typing-extensions==4.15.0
     #   versions
 typing-inspection==0.4.2
     # via pydantic
-tzdata==2025.3
-    # via pandas
 urllib3==2.7.0
     # via
     #   botocore
@@ -204,7 +200,7 @@ urllib3==2.7.0
     #   requests
 versions==1.6.1
     # via flatland-rl (pyproject.toml)
-wcwidth==0.2.14
+wcwidth==0.7.0
     # via prompt-toolkit
 widgetsnbextension==4.0.15
     # via ipywidgets
