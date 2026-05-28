@@ -120,8 +120,13 @@ class SpeedCounter:
         """
         With the given speed, do we exit cell at next time step?
         """
-        speed = cached_cap_speed(self._max_speed, speed)
-        return cached_distance_update(self._distance, speed)
+        return self.cached_cell_exit(self._max_speed, speed, self._distance)
+
+    @staticmethod
+    @lru_cache()
+    def cached_cell_exit(max_speed: Fraction, speed: Fraction, distance: Fraction) -> bool:
+        speed = cached_cap_speed(max_speed, speed)
+        return cached_distance_update(distance, speed)
 
     @property
     def speed(self) -> Fraction:
