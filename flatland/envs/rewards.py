@@ -129,6 +129,8 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
     collision_factor : float
         Crash penalty factor :math:`\kappa \geq 0`. Defaults to 0.0.
     """
+    # cache enumeration
+    _cached_default_penalties = set(DefaultPenalties)
 
     def __init__(self,
                  cancellation_factor: float = 1,
@@ -252,14 +254,15 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
         return d
 
     def cumulate(self, *rewards: Dict[str, float]) -> Dict[str, float]:
-        return {p.value: sum([r[p.value] for r in rewards]) for p in DefaultPenalties}
+        return {p.value: sum([r[p.value] for r in rewards]) for p in self._cached_default_penalties}
 
     def normalize(self, *rewards: Dict[str, float], num_agents: int, max_episode_steps: int) -> float:
         # https://flatland-association.github.io/flatland-book/challenges/ecml2026/eval.html
-        return sum([np.maximum(sum([r[p.value] for p in DefaultPenalties]), - max_episode_steps) for r in rewards]) / (max_episode_steps * num_agents) + 1
+        return sum([np.maximum(sum([r[p.value] for p in self._cached_default_penalties]), - max_episode_steps) for r in rewards]) / (
+                max_episode_steps * num_agents) + 1
 
     def empty(self) -> Dict[str, float]:
-        return {p.value: 0 for p in DefaultPenalties}
+        return {p.value: 0 for p in self._cached_default_penalties}
 
 
 class DefaultRewards(Rewards[float]):
