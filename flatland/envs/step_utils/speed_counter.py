@@ -51,6 +51,11 @@ def cached_cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction
     return max(Fraction(0), min(agent_max_speed, new_speed))
 
 
+@lru_cache()
+def cached_distance_update(_distance, speed: Fraction) -> bool:
+    return _distance + speed >= SEGMENT_LENGTH
+
+
 class SpeedCounter:
     def __init__(self, speed: float, max_speed: float = None):
         self._speed: Fraction = _pseudo_fractional(speed)
@@ -115,7 +120,7 @@ class SpeedCounter:
         With the given speed, do we exit cell at next time step?
         """
         speed = cached_cap_speed(self._max_speed, speed)
-        return self._distance + speed >= SEGMENT_LENGTH
+        return cached_distance_update(self._distance, speed)
 
     @property
     def speed(self) -> Fraction:
