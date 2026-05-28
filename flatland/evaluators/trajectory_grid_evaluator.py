@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import click
@@ -109,3 +110,7 @@ def evaluate_trajectories_from_metadata(
     reporter = resolve_type(report, report_pkg, report_cls)
     if reporter is not None:
         reporter(aggregated_scenario_scores)
+
+
+if __name__ == "__main__":
+    sys.exit(evaluate_trajectories_from_metadata())  # pragma: no cover
