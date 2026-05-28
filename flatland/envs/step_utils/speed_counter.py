@@ -8,6 +8,7 @@ import numpy as np
 SEGMENT_LENGTH: Fraction = Fraction(1)
 
 
+@lru_cache()
 def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
     """
     Convert float to fractional with special consideration of inverses of integers.
