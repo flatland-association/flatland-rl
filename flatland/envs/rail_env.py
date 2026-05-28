@@ -30,6 +30,7 @@ from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
+from flatland.envs.step_utils.speed_counter import cached_cap_speed
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
@@ -458,7 +459,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif stop_action_given:
                 # decelerate
                 new_speed += self.braking_delta
-            new_speed = max(Fraction(0), min(agent_max_speed, new_speed))
+            new_speed = cached_cap_speed(agent_max_speed, new_speed)
 
             # get desired new configuration independent of motion check
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
@@ -510,7 +511,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             self.temp_transition_data[
                 i_agent].state_transition_signal.movement_allowed = action_valid  # action leading to valid next cell for now - remainder we only know after motion check!
             # New desired speed zero?
-            self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = new_speed == 0.0
+            self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = self._is_speed_zero(new_speed)
 
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
             self.temp_transition_data[i_agent].current_resource = current_resource
@@ -596,6 +597,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         self.effects_generator.on_episode_step_end(self)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
+
+    @lru_cache()
+    def _is_speed_zero(self, new_speed: Fraction) -> bool:
+        return new_speed == 0.0
 
     @lru_cache()
     def _fast_state_position_sync_check(self, state, configuration, remove_agents_at_target):
