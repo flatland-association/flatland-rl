@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from typing import Tuple
 
@@ -116,3 +117,7 @@ def cli(root_data_dir: Path, output_dir: Path):
     if output_dir is not None:
         persist_data_frame_for_trajectories(agent_stats, all_actions, all_trains_arrived, all_trains_positions, all_trains_rewards_dones_infos, env_stats,
                                             output_dir)
+
+
+if __name__ == "__main__":
+    sys.exit(cli())  # pragma: no cover

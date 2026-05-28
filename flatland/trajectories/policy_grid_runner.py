@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import click
@@ -177,3 +178,7 @@ def generate_trajectories_from_metadata(
 
         except SystemExit as exc:
             assert exc.code == 0
+
+
+if __name__ == "__main__":
+    sys.exit(generate_trajectories_from_metadata())  # pragma: no cover

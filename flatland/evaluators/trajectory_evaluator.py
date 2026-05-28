@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import click
@@ -193,3 +194,7 @@ def evaluate_trajectory(
 
     trajectory = Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)
     TrajectoryEvaluator(trajectory, callbacks=callbacks).evaluate(skip_rewards_dones_infos=skip_rewards_dones_infos, rewards=rewards)
+
+
+if __name__ == "__main__":
+    sys.exit(evaluate_trajectory())  # pragma: no cover

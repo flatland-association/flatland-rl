@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import click
@@ -506,3 +507,7 @@ def generate_trajectory_from_policy(
         fork_from_trajectory=fork_from_trajectory,
         callbacks=callbacks,
     )
+
+
+if __name__ == "__main__":
+    sys.exit(generate_trajectory_from_policy())  # pragma: no cover
