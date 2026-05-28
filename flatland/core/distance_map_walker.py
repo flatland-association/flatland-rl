@@ -11,7 +11,8 @@ UnderlyingConfigurationType = TypeVar('UnderlyingConfigurationType')
 
 class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionMapType, UnderlyingConfigurationType]):
     """
-    Utility class to compute distance maps from each cell in the rail network (and each possible orientation within it) to each agent's target cell.
+    "All-to-any-one-in-cluster": utility class to compute distance maps from each configuration in the rail network (cell and each possible orientation within it in grid case)
+     to any in the set of target configurations.
     """
 
     def __init__(self, distance_map: AbstractDistanceMap):

@@ -79,50 +79,51 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
             Dict[int, Optional[List[WalkingElement]]]
 
         """
-        shortest_paths = dict()
-
-        def _shortest_path_for_agent(agent: EnvAgent):
-            if agent.state.is_off_map_state():
-                configuration = agent.initial_configuration
-            elif agent.state.is_on_map_state():
-                configuration = agent.current_configuration
-            elif agent.state == TrainState.DONE:
-                shortest_paths[agent.handle] = None
-                return
-            else:
-                shortest_paths[agent.handle] = None
-                return
-
-            shortest_paths[agent.handle] = []
-            distance = math.inf
-            depth = 0
-            while configuration not in agent.targets and (max_depth is None or depth < max_depth):
-                best_next_configuration = None
-                next_configurations = self.rail.get_successor_configurations(configuration)
-                for next_configuration in next_configurations:
-                    next_action_distance = self._get_distance(next_configuration, agent.handle)
-                    if next_action_distance < distance:
-                        distance = next_action_distance
-                        best_next_configuration = next_configuration
-                shortest_paths[agent.handle].append(self.waypoint_init(configuration))
-                depth += 1
-
-                # if there is no way to continue, the rail must be disconnected!
-                # (or distance map is incorrect)
-                if best_next_configuration is None:
-                    shortest_paths[agent.handle] = None
-                    return
-                configuration = best_next_configuration
-            if max_depth is None or depth < max_depth:
-                shortest_paths[agent.handle].append(self.waypoint_init(configuration))
 
         if agent_handle is not None:
-            _shortest_path_for_agent(self.agents[agent_handle])
+            agents = [self.agents[agent_handle]]
         else:
-            for agent in self.agents:
-                _shortest_path_for_agent(agent)
+            agents = self.agents
+
+        shortest_paths = dict()
+        for agent in agents:
+            shortest_paths[agent.handle] = self._shortest_path_for_agent(agent, max_depth)
 
         return shortest_paths
+
+    def _shortest_path_for_agent(self, agent: EnvAgent, max_depth: Optional[int] = None):
+        if agent.state.is_off_map_state():
+            configuration = agent.initial_configuration
+        elif agent.state.is_on_map_state():
+            configuration = agent.current_configuration
+        elif agent.state == TrainState.DONE:
+            return None
+        else:
+            return None
+
+        agent_shortest_path = []
+
+        distance = math.inf
+        depth = 0
+        while configuration not in agent.targets and (max_depth is None or depth < max_depth):
+            best_next_configuration = None
+            next_configurations = self.rail.get_successor_configurations(configuration)
+            for next_configuration in next_configurations:
+                next_action_distance = self._get_distance(next_configuration, agent.handle)
+                if next_action_distance < distance:
+                    distance = next_action_distance
+                    best_next_configuration = next_configuration
+            agent_shortest_path.append(self.waypoint_init(configuration))
+            depth += 1
+
+            # if there is no way to continue, the rail must be disconnected!
+            # (or distance map is incorrect)
+            if best_next_configuration is None:
+                return None
+            configuration = best_next_configuration
+        if max_depth is None or depth < max_depth:
+            agent_shortest_path.append(self.waypoint_init(configuration))
+        return agent_shortest_path
 
     def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
         raise NotImplementedError()
