@@ -49,12 +49,33 @@ def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
 
 @lru_cache()
 def cached_cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
-    return max(Fraction(0), min(agent_max_speed, new_speed))
+    v = max(Fraction(0), min(agent_max_speed, new_speed))
+    assert isinstance(v, Fraction)
+    assert v >= 0.0
+    assert v <= 1.0
+    return v
 
 
 @lru_cache()
-def cached_distance_update(_distance, speed: Fraction) -> bool:
+def _cached_cell_exit(_distance, speed: Fraction) -> bool:
     return _distance + speed >= SEGMENT_LENGTH
+
+
+@lru_cache()
+def cached_cell_exit(max_speed: Fraction, speed: Fraction, distance: Fraction) -> bool:
+    speed = cached_cap_speed(max_speed, speed)
+    return _cached_cell_exit(distance, speed)
+
+
+@lru_cache()
+def cached_distance_update(distance, speed):
+    distance += speed
+
+    # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
+    while distance >= SEGMENT_LENGTH:
+        distance = distance - SEGMENT_LENGTH
+
+    return distance, distance < speed
 
 
 class SpeedCounter:
@@ -85,19 +106,8 @@ class SpeedCounter:
 
         if speed is not None:
             self._speed = cached_cap_speed(self._max_speed, _pseudo_fractional(speed))
-        assert isinstance(self._speed, Fraction)
-        assert self._speed >= 0.0
-        assert self.speed <= 1.0
 
-        self._distance += self._speed
-
-        # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
-        while self.distance >= SEGMENT_LENGTH:
-            self._distance = self._distance - SEGMENT_LENGTH
-        if self._distance < self._speed:
-            self._is_cell_entry = True
-        else:
-            self._is_cell_entry = False
+        self._distance, self._is_cell_entry = cached_distance_update(self._distance, self._speed)
 
     def __repr__(self):
         return f"speed: {self.speed} \
@@ -120,8 +130,7 @@ class SpeedCounter:
         """
         With the given speed, do we exit cell at next time step?
         """
-        speed = cached_cap_speed(self._max_speed, speed)
-        return cached_distance_update(self._distance, speed)
+        return cached_cell_exit(self._max_speed, speed, self._distance)
 
     @property
     def speed(self) -> Fraction:
