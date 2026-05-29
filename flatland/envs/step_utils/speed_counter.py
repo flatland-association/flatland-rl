@@ -1,5 +1,6 @@
 from decimal import Decimal
 from fractions import Fraction
+from functools import lru_cache
 from typing import Optional
 
 import numpy as np
@@ -7,6 +8,7 @@ import numpy as np
 SEGMENT_LENGTH: Fraction = Fraction(1)
 
 
+@lru_cache()
 def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
     """
     Convert float to fractional with special consideration of inverses of integers.
@@ -45,6 +47,16 @@ def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
     raise ValueError(f"Cannot convert {v} to Fraction.")
 
 
+@lru_cache()
+def cached_cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
+    return max(Fraction(0), min(agent_max_speed, new_speed))
+
+
+@lru_cache()
+def cached_distance_update(_distance, speed: Fraction) -> bool:
+    return _distance + speed >= SEGMENT_LENGTH
+
+
 class SpeedCounter:
     def __init__(self, speed: float, max_speed: float = None):
         self._speed: Fraction = _pseudo_fractional(speed)
@@ -72,7 +84,7 @@ class SpeedCounter:
         """
 
         if speed is not None:
-            self._speed = max(min(_pseudo_fractional(speed), self._max_speed), Fraction(0))
+            self._speed = cached_cap_speed(self._max_speed, _pseudo_fractional(speed))
         assert isinstance(self._speed, Fraction)
         assert self._speed >= 0.0
         assert self.speed <= 1.0
@@ -108,8 +120,8 @@ class SpeedCounter:
         """
         With the given speed, do we exit cell at next time step?
         """
-        speed = max(min(speed, self._max_speed), Fraction(0))
-        return self._distance + speed >= SEGMENT_LENGTH
+        speed = cached_cap_speed(self._max_speed, speed)
+        return cached_distance_update(self._distance, speed)
 
     @property
     def speed(self) -> Fraction:

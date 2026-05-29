@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
@@ -400,8 +402,8 @@ def test_stop_and_go():
     env.agents[0].initial_direction = Grid4TransitionsEnum.SOUTH
     env.agents[0].target = (0, 3)
     env.agents[0].earliest_departure = 0
-    env.agents[0].speed_counter._speed = 0.2
-    env.agents[0].speed_counter._max_speed = 0.2
+    env.agents[0].speed_counter._speed = Fraction(1, 5)
+    env.agents[0].speed_counter._max_speed = Fraction(1, 5)
 
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
