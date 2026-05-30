@@ -41,6 +41,7 @@ dependencies = [
     "pydantic",
     "python-dateutil",
     "PyYAML",
+    "redis<8", # pin to <8 - timeout errors, see https://github.com/flatland-association/flatland-baselines/pull/62
     "requests",
     "recordtype",
     "redis",
