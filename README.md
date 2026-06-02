@@ -21,9 +21,10 @@ This library was developed specifically for the
 AIcrowd [Flatland challenges](http://flatland.aicrowd.com/research/top-challenge-solutions.html) in which we strongly
 encourage you to take part in!
 
-- [Flatland 3 Challenge](https://www.aicrowd.com/challenges/flatland-3)
-- [AMLD 2021 Challenge](https://www.aicrowd.com/challenges/flatland)
-- [NeurIPS 2020 Challenge](https://www.aicrowd.com/challenges/neurips-2020-flatland-challenge/)
+- [ECML 2026 Challenge](https://competition.flatland.cloud/suites/6240c685-0fb4-481e-9404-47a570632227) ([documentation](https://flatland-association.github.io/flatland-book/challenges/ecml2026.html) | [starterkit](https://github.com/flatland-association/ecml2026-starterkit))
+- [Flatland 3 Challenge 2021](https://www.aicrowd.com/challenges/flatland-3) ([documentation](https://flatland-association.github.io/flatland-book/challenges/flatland3.html))
+- [AMLD 2021 Challenge](https://www.aicrowd.com/challenges/flatland) ([documentation](https://flatland-association.github.io/flatland-book/challenges/amld2021.html))
+- [NeurIPS 2020 Challenge](https://www.aicrowd.com/challenges/neurips-2020-flatland-challenge/) ([documentation](https://flatland-association.github.io/flatland-book/challenges/neurips2020-challenge.html))
 - [2019 Challenge](https://www.aicrowd.com/challenges/flatland-challenge)
 
 📦 Setup
