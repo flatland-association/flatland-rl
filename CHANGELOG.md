@@ -5,6 +5,32 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [[v4.2.6]](https://github.com/flatland-association/flatland-rl/compare/v4.2.5...v4.2.6) 2026-06-01
+
+### Added
+
+* feat(cli): allow all click commands to be run as module. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/430
+
+### Changed
+
+* chore(docs): prepare release notes v4.2.5. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/416
+* chore(deps-dev): bump jupyter-server from 2.17.0 to 2.18.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/417
+* chore(deps): bump gitpython from 3.1.46 to 3.1.47 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/411
+* chore(deps-dev): bump jupyterlab from 4.5.2 to 4.5.7 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/414
+* chore(deps-dev): bump notebook from 7.5.2 to 7.5.6 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/413
+* chore(deps): bump urllib3 from 2.6.3 to 2.7.0 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/421
+* chore(deps-dev): bump mistune from 3.2.0 to 3.2.1 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/418
+* chore(deps): bump gitpython from 3.1.47 to 3.1.50 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/420
+* chore(deps): bump idna from 3.11 to 3.15 by @dependabot[bot] in https://github.com/flatland-association/flatland-rl/pull/422
+* chore: pin redis<8. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/431
+
+### Fixed
+
+* perf(core): cache fraction comparisons. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/427
+* perf(core): add caching speed counter and rewards. by @chenkins in https://github.com/flatland-association/flatland-rl/pull/428
+* perf(core): improve performance of shortest path finding by caching `Waypoint` hashes. by @chenkins
+  in https://github.com/flatland-association/flatland-rl/pull/426
+
 ## [[v4.2.5]](https://github.com/flatland-association/flatland-rl/compare/v4.2.4...v4.2.5) 2026-05-1
 
 ### Added
