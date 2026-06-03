@@ -1,10 +1,11 @@
 import os
 import sys
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Any, Optional
 
 import click
 import tqdm
+
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
@@ -18,8 +19,77 @@ from flatland.utils.cli_utils import resolve_type
 
 
 class PolicyRunner:
-    def __init__(
-        self,
+    def __init__(self,
+                 policy: Policy,
+                 trajectory: Trajectory,
+                 env: AbstractRailEnv,
+                 callbacks: Optional[FlatlandCallbacks] = None,
+                 end_step=None,
+                 observations: dict[int, Any] = None,
+                 ):
+        self.policy = policy
+        self.env = env
+        self.trajectory = trajectory
+        self.observations = observations
+        if self.observations is None:
+            # TODO extract to public interface?
+            self.observations = env._get_observations()
+        self.callbacks = callbacks
+        self.n_agents = env.get_num_agents()
+        # TODO extract to public interface?
+        self.env_time = env._elapsed_steps
+        self.end_step = end_step
+        self.done = False
+
+    def step(self, persist: bool = False) -> Tuple["Trajectory", bool]:
+        """Execute one environment step. Returns (trajectory, done)."""
+        env_time = self.env_time
+        assert env_time == self.env._elapsed_steps
+
+        action_dict = self.policy.act_many(self.env.get_agent_handles(), observations=list(self.observations.values()))
+        for handle, action in action_dict.items():
+            self.trajectory.action_collect(env_time=env_time, agent_id=handle, action=action)
+
+        self.observations, rewards, dones, infos = self.env.step(action_dict)
+
+        for agent_id in range(self.n_agents):
+            agent = self.env.agents[agent_id]
+            self.trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=agent.current_configuration)
+            self.trajectory.rewards_dones_infos_collect(env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
+                                                        info={k: v[agent_id] for k, v in infos.items()},
+                                                        done=dones[agent_id])
+
+        self.done = dones['__all__']
+
+        if self.callbacks is not None:
+            self.callbacks.on_episode_step(env=self.env, data_dir=self.trajectory.outputs_dir)
+
+        if self.done:
+            if self.callbacks is not None:
+                self.callbacks.on_episode_end(env=self.env, data_dir=self.trajectory.outputs_dir)
+            actual_success_rate = sum([agent.state == 6 for agent in self.env.agents]) / self.n_agents
+            # not persisted yet, need to get df from collected buffer
+            collected_rewards = self.trajectory._collected_trains_rewards_dones_infos_to_df()["reward"]
+            normalized_reward = self.env.rewards.normalize(*collected_rewards, max_episode_steps=self.env._max_episode_steps,
+                                                           num_agents=self.env.get_num_agents())
+            self.trajectory.arrived_collect(env_time, actual_success_rate, normalized_reward)
+
+        self.env_time += 1
+        if persist:
+            self.trajectory.persist()
+        return self.trajectory, self.done
+
+    @staticmethod
+    def resume(trajectory: Trajectory, policy: Policy) -> "PolicyRunner":
+        elapsed_steps = trajectory.trains_rewards_dones_infos["env_time"].max()
+        # TODO constructor only allows to fork or start empty, but not resume
+        return PolicyRunner(
+            policy=policy,
+            env=trajectory.load_env(elapsed_steps)
+        )
+
+    @staticmethod
+    def _fork(
         policy: Policy,
         data_dir: Path,
         env: AbstractRailEnv = None,
@@ -68,53 +138,14 @@ class PolicyRunner:
         if callbacks is not None and start_step == 0:
             callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
 
-        self.policy = policy
-        self.env = env
-        self.trajectory = trajectory
-        self.observations = observations
-        self.callbacks = callbacks
-        self.n_agents = n_agents
-        self.env_time = start_step
-        self.end_step = end_step
-        self.done = False
-
-    def step(self, persist: bool = False) -> Tuple["Trajectory", bool]:
-        """Execute one environment step. Returns (trajectory, done)."""
-        env_time = self.env_time
-        assert env_time == self.env._elapsed_steps
-
-        action_dict = self.policy.act_many(self.env.get_agent_handles(), observations=list(self.observations.values()))
-        for handle, action in action_dict.items():
-            self.trajectory.action_collect(env_time=env_time, agent_id=handle, action=action)
-
-        self.observations, rewards, dones, infos = self.env.step(action_dict)
-
-        for agent_id in range(self.n_agents):
-            agent = self.env.agents[agent_id]
-            self.trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=agent.current_configuration)
-            self.trajectory.rewards_dones_infos_collect(env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
-                                                        info={k: v[agent_id] for k, v in infos.items()},
-                                                        done=dones[agent_id])
-
-        self.done = dones['__all__']
-
-        if self.callbacks is not None:
-            self.callbacks.on_episode_step(env=self.env, data_dir=self.trajectory.outputs_dir)
-
-        if self.done:
-            if self.callbacks is not None:
-                self.callbacks.on_episode_end(env=self.env, data_dir=self.trajectory.outputs_dir)
-            actual_success_rate = sum([agent.state == 6 for agent in self.env.agents]) / self.n_agents
-            # not persisted yet, need to get df from collected buffer
-            collected_rewards = self.trajectory._collected_trains_rewards_dones_infos_to_df()["reward"]
-            normalized_reward = self.env.rewards.normalize(*collected_rewards, max_episode_steps=self.env._max_episode_steps,
-                                                           num_agents=self.env.get_num_agents())
-            self.trajectory.arrived_collect(env_time, actual_success_rate, normalized_reward)
-
-        self.env_time += 1
-        if persist:
-            self.trajectory.persist()
-        return self.trajectory, self.done
+        return PolicyRunner(
+            policy=policy,
+            trajectory=trajectory,
+            callbacks=callbacks,
+            env=env,
+            end_step=end_step,
+            observations=observations,
+        )
 
     @staticmethod
     def create_from_policy(
@@ -167,7 +198,7 @@ class PolicyRunner:
         """
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
-        runner = PolicyRunner(
+        runner = PolicyRunner._fork(
             policy=policy,
             data_dir=data_dir,
             env=env,
