@@ -14,7 +14,7 @@ from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, AbstractRailEnv
 from flatland.envs.rewards import DefaultRewards
-from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
+from flatland.trajectories.trajectories import Trajectory
 from flatland.utils.cli_utils import resolve_type
 
 
@@ -105,20 +105,16 @@ class PolicyRunner:
             raise Exception("Provided fork-from-trajectory and env, cannot do both.")
         elif fork_from_trajectory is None and env is None:
             raise Exception("Provided neither fork-from-trajectory nor env, must provide exactly one.")
+        assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
+
         if fork_from_trajectory is not None:
             trajectory = fork_from_trajectory.fork(data_dir=data_dir, ep_id=ep_id, start_step=start_step)
             env = trajectory.load_env(start_step=start_step)
         else:
-            trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id)
+            trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id, env=env, no_save=no_save)
 
         # TODO bad code smell - private method - check num resets?
         observations = env._get_observations()
-
-        assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
-
-        (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
-        if not no_save:
-            RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
 
         if snapshot_interval > 0:
             from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks

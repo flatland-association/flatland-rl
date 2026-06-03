@@ -498,7 +498,7 @@ class Trajectory:
         return trajectory
 
     @staticmethod
-    def create_empty(data_dir: Path, ep_id: Optional[str] = None) -> "Trajectory":
+    def create_empty(data_dir: Path, env:RailEnv, ep_id: Optional[str] = None, no_save: bool = False,) -> "Trajectory":
         """
         Create a new empty trajectory.
 
@@ -525,6 +525,10 @@ class Trajectory:
         assert len(trajectory.actions) == 0
         assert len(trajectory.trains_arrived) == 0
         assert len(trajectory.trains_rewards_dones_infos) == 0
+
+        (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
+        if not no_save:
+            RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
         return trajectory
 
 
