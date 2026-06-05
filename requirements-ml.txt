@@ -270,7 +270,7 @@ pure-eval==0.2.3
     # via stack-data
 py-spy==0.4.1
     # via ray
-pyarrow==22.0.0
+pyarrow==23.0.1
     # via ray
 pyasn1==0.6.3
     # via
