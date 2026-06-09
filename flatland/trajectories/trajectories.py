@@ -436,20 +436,6 @@ class Trajectory:
         if start_step is not None and env._elapsed_steps < start_step:
             from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
             env = TrajectoryEvaluator(trajectory=self).evaluate(start_step=env._elapsed_steps, end_step=start_step)
-            # # (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
-            # # temp_trajectory = Trajectory.create_empty(data_dir, str(uuid))
-            # if env is None:
-            #     # copy initial env
-            #     # RailEnvPersister.save(env, temp_trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{temp_trajectory.ep_id}.pkl")
-            #     # replay the trajectory to the start_step from the latest snapshot
-            #     env = TrajectoryEvaluator(trajectory=self).evaluate(end_step=start_step)
-            #     # RailEnvPersister.save(env, temp_trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{temp_trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
-            # else:
-            #     # copy latest snapshot
-            #     # RailEnvPersister.save(env, temp_trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{temp_trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
-            #     # replay the trajectory to the start_step from the latest snapshot
-            #
-            #     # RailEnvPersister.save(env, temp_trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{temp_trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
         return env
 
     @staticmethod
