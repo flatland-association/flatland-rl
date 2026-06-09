@@ -103,8 +103,7 @@ def test_from_submission():
         assert not (data_dir / f"step471").exists()
 
         TrajectoryEvaluator(trajectory).evaluate(start_step=5)
-        with pytest.raises(FileNotFoundError):
-            TrajectoryEvaluator(trajectory).evaluate(start_step=4)
+        TrajectoryEvaluator(trajectory).evaluate(start_step=4)
 
 
 def test_cli_from_submission():
@@ -154,13 +153,11 @@ def test_fork_and_run_from_intermediate_step(verbose: bool = False):
             print(trajectory.trains_positions)
             print(trajectory.trains_rewards_dones_infos)
 
-        fork = PolicyRunner.create_from_policy(
-            data_dir=data_dir / "fork",
-            policy=RandomPolicy(),
-            # no snapshot here, PolicyRunner needs to start from a previous snapshot and run forward to starting step:
-            start_step=7,
+        fork = trajectory.fork(data_dir=data_dir / "fork", start_step=7)
+        fork = PolicyRunner.resume(
+            trajectory=fork,
+            policy=RandomPolicy(reset_at=7),
             end_step=17,
-            fork_from_trajectory=trajectory
         )
         if verbose:
             print(fork.actions)
@@ -199,12 +196,11 @@ def test_run_from_intermediate_step_pkl(verbose: bool = False):
             print(trajectory.trains_arrived)
             print(trajectory.trains_positions)
             print(trajectory.trains_rewards_dones_infos)
-        other = PolicyRunner.create_from_policy(
-            data_dir=data_dir / "other",
+        fork = trajectory.fork(data_dir=data_dir / "fork", start_step=7)
+        other = PolicyRunner.resume(
+            trajectory=fork,
             policy=RandomPolicy(),
-            start_step=7,
             end_step=17,
-            env=RailEnvPersister.load_new(data_dir / "trajectory" / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step0007.pkl")[0]
         )
         if verbose:
             print(other.actions)
@@ -223,26 +219,6 @@ def test_run_from_intermediate_step_pkl(verbose: bool = False):
         assert len(positions_diff) == 0
         assert len(arrived_diff) == 0
         assert len(rewards_dones_infos_diff) == 0
-
-
-def test_failing_from_wrong_intermediate_step():
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        data_dir = Path(tmpdirname)
-    trajectory = PolicyRunner.create_from_policy(
-        env=env_generator(obs_builder_object=EnvStepObservationBuilder(), )[0],
-        policy=RandomPolicy(reset_at=7),
-        data_dir=data_dir / "trajectory",
-        snapshot_interval=1
-    )
-    with pytest.raises(AssertionError) as e_info:
-        PolicyRunner.create_from_policy(
-            data_dir=data_dir / "other",
-            policy=RandomPolicy(),
-            start_step=8,
-            end_step=17,
-            env=RailEnvPersister.load_new(data_dir / "trajectory" / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step0007.pkl")[0]
-        )
-    assert str(e_info.value) == 'Expected env at 8, found 7.'
 
 
 def test_evaluation_snapshots():

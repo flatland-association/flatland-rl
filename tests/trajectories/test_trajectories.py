@@ -49,7 +49,7 @@ def test_restore_episode():
         assert trajectory._find_closest_snapshot(5) == 5
         assert trajectory._find_closest_snapshot(7) == 5
 
-        env = trajectory.load_env(7, inexact=True)
+        env = trajectory.load_env(7)
 
         env_5, _ = RailEnvPersister.load_new(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{5:04d}.pkl")
         env_10, _ = RailEnvPersister.load_new(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{10:04d}.pkl")
@@ -93,8 +93,7 @@ def test_from_submission():
         assert not (data_dir / f"step471").exists()
 
         TrajectoryEvaluator(trajectory).evaluate(start_step=5)
-        with pytest.raises(FileNotFoundError):
-            TrajectoryEvaluator(trajectory).evaluate(start_step=4)
+        TrajectoryEvaluator(trajectory).evaluate(start_step=4)
 
 
 @pytest.mark.parametrize(

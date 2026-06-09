@@ -10,6 +10,8 @@ from typing import Optional, Tuple, Any, Dict
 import pandas as pd
 from attr import attrs, attrib
 
+from flatland.core.effects_generator import EffectsGenerator
+from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
@@ -392,7 +394,10 @@ class Trajectory:
             return diff, df, other_df
         return diff
 
-    def load_env(self, start_step: int = None, inexact: bool = False, rewards: Rewards = None) -> Optional[RailEnv]:
+    def load_env(self, start_step: Optional[int] = None,
+                 obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
+                 rewards: Optional["Rewards"] = None,
+                 effects_generator: Optional[EffectsGenerator[RailEnv]] = None, ) -> Optional[RailEnv]:
         """
         Restore an episode's env.
 
@@ -400,8 +405,6 @@ class Trajectory:
         ----------
         start_step : Optional[int]
             start from snapshot (if it exists)
-        inexact : bool
-            allows returning the last snapshot before start_step
         rewards : Rewards
             rewards for the loaded env. If not provided, defaults to the loaded env's rewards.
         Returns
@@ -410,21 +413,44 @@ class Trajectory:
             the rail env or None if the snapshot at the step does not exist
         """
         self.outputs_dir.mkdir(exist_ok=True)
-        if start_step is None:
-            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-            env, _ = RailEnvPersister.load_new(f, rewards=rewards)
-            return env
-        else:
-            closest = start_step
-            if inexact:
+
+        def inner_load():
+            if start_step is None:
+                f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
+                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+                return env
+            else:
                 closest = self._find_closest_snapshot(start_step)
                 if closest is None:
                     f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                    env, _ = RailEnvPersister.load_new(f, rewards=rewards)
+                    env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
                     return env
-            f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
-            env, _ = RailEnvPersister.load_new(f, rewards=rewards)
-            return env
+                f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
+                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+                return env
+
+        env = inner_load()
+        if start_step is not None:
+            assert env._elapsed_steps <= start_step
+
+        if start_step is not None and env._elapsed_steps < start_step:
+            from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
+            env = TrajectoryEvaluator(trajectory=self).evaluate(start_step=env._elapsed_steps, end_step=start_step)
+            # # (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
+            # # temp_trajectory = Trajectory.create_empty(data_dir, str(uuid))
+            # if env is None:
+            #     # copy initial env
+            #     # RailEnvPersister.save(env, temp_trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{temp_trajectory.ep_id}.pkl")
+            #     # replay the trajectory to the start_step from the latest snapshot
+            #     env = TrajectoryEvaluator(trajectory=self).evaluate(end_step=start_step)
+            #     # RailEnvPersister.save(env, temp_trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{temp_trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+            # else:
+            #     # copy latest snapshot
+            #     # RailEnvPersister.save(env, temp_trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{temp_trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+            #     # replay the trajectory to the start_step from the latest snapshot
+            #
+            #     # RailEnvPersister.save(env, temp_trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{temp_trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
+        return env
 
     @staticmethod
     def load_existing(data_dir: Path, ep_id: str) -> "Trajectory":
@@ -463,9 +489,10 @@ class Trajectory:
         Trajectory
 
         """
-        trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id)
+        # copy initial env in all cases
+        initial_env = self.load_env()
+        trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id, env=initial_env)
 
-        env = self.load_env(start_step=start_step, inexact=True)
         self._load(episode_only=True)
 
         # will run action start_step into step start_step+1
@@ -479,26 +506,16 @@ class Trajectory:
         trajectory.trains_arrived["episode_id"] = trajectory.ep_id
         trajectory.trains_rewards_dones_infos["episode_id"] = trajectory.ep_id
         trajectory.persist()
-        if env is None or env._elapsed_steps < start_step:
-            from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
-            (trajectory.data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True)
-            if env is None:
-                # copy initial env
-                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl")
-                # replay the trajectory to the start_step from the latest snapshot
-                env = TrajectoryEvaluator(trajectory=trajectory).evaluate(end_step=start_step)
-                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
-            else:
-                # copy latest snapshot
-                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
-                # replay the trajectory to the start_step from the latest snapshot
-                env = TrajectoryEvaluator(trajectory=trajectory).evaluate(start_step=env._elapsed_steps, end_step=start_step)
-                RailEnvPersister.save(env, trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{env._elapsed_steps:04d}.pkl")
-            trajectory._load()
+
+        latest_snapshot = self.load_env(start_step=start_step)
+        RailEnvPersister.save(latest_snapshot,
+                              trajectory.data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{latest_snapshot._elapsed_steps:04d}.pkl")
+
+        trajectory._load()
         return trajectory
 
     @staticmethod
-    def create_empty(data_dir: Path, env:RailEnv, ep_id: Optional[str] = None, no_save: bool = False,) -> "Trajectory":
+    def create_empty(data_dir: Path, env: RailEnv, ep_id: Optional[str] = None) -> "Trajectory":
         """
         Create a new empty trajectory.
 
@@ -506,12 +523,15 @@ class Trajectory:
         ----------
         data_dir : Path
             the data dir backing the trajectory. Must be empty.
+        env : RailEnv
+            initial env to be serialised
         ep_id
             the episode ID for the new trajectory. If not provided, a new UUID is generated.
 
         Returns
         -------
         Trajectory
+
         """
         data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -527,7 +547,8 @@ class Trajectory:
         assert len(trajectory.trains_rewards_dones_infos) == 0
 
         (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
-        if not no_save:
+        # TODO flagg - graph envs cannot be serialized yet
+        if env is not None:
             RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
         return trajectory
 
