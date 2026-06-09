@@ -7,6 +7,7 @@ import click
 import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
+from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
 from flatland.envs.observations import TreeObsForRailEnv
@@ -27,7 +28,7 @@ class PolicyRunner:
                  end_step=None,
                  observations: dict[int, Any] = None,
                  ):
-        self.policy = policy
+        self._policy = policy
         self.env = env
         self.trajectory = trajectory
         self.observations = observations
@@ -41,12 +42,22 @@ class PolicyRunner:
         self.end_step = end_step
         self.done = False
 
+    @property
+    def policy(self):
+        return self._policy
+
+    def change_policy(self, policy: Policy, obs_builder: ObservationBuilder):
+        self._policy = policy
+        self.env.obs_builder = obs_builder
+        self.env.obs_builder.set_env(self.env)
+        self.observations = self.env._get_observations()
+
     def step(self, persist: bool = False) -> Tuple["Trajectory", bool]:
         """Execute one environment step. Returns (trajectory, done)."""
         env_time = self.env_time
         assert env_time == self.env._elapsed_steps
 
-        action_dict = self.policy.act_many(self.env.get_agent_handles(), observations=list(self.observations.values()))
+        action_dict = self._policy.act_many(self.env.get_agent_handles(), observations=list(self.observations.values()))
         for handle, action in action_dict.items():
             self.trajectory.action_collect(env_time=env_time, agent_id=handle, action=action)
 
