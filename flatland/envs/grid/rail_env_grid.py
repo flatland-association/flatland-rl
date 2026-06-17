@@ -135,3 +135,10 @@ class RailEnvTransitionsEnum(IntEnum):
     def is_deadend(transition):
         return transition in {RailEnvTransitionsEnum.dead_end_from_east, RailEnvTransitionsEnum.dead_end_from_south, RailEnvTransitionsEnum.dead_end_from_north,
                               RailEnvTransitionsEnum.dead_end_from_west}
+
+    @staticmethod
+    def is_turn(transition):
+        return transition in {RailEnvTransitionsEnum.right_turn_from_south,
+                              RailEnvTransitionsEnum.right_turn_from_west,
+                              RailEnvTransitionsEnum.right_turn_from_north,
+                              RailEnvTransitionsEnum.right_turn_from_east}

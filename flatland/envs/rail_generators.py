@@ -240,10 +240,13 @@ class SparseRailGen(RailGen):
             self._generate_city_connection_points(
                 city_positions, city_radius, vector_field, rails_between_cities,
                 rail_pairs_in_city, np_random=np_random)
+        print("inner_connection_points: ", inner_connection_points)
+        print("outer_connection_points: ", outer_connection_points)
 
         # Connect the cities through the connection points
-        inter_city_lines = self._connect_cities(city_positions, outer_connection_points, city_cells,
+        inter_city_lines_split = self._connect_cities(city_positions, outer_connection_points, city_cells,
                                                 rail_trans, grid_map)
+        inter_city_lines = [p for single in inter_city_lines_split for p in single]
 
         # Build inner cities
         free_rails = self._build_inner_cities(city_positions, inner_connection_points,
@@ -277,7 +280,10 @@ class SparseRailGen(RailGen):
                 {
                     'city_positions': city_positions,
                     'train_stations': train_stations,
-                    'city_orientations': city_orientations
+                    'city_orientations': city_orientations,
+                    'outer_connection_points': outer_connection_points,
+                    'free_rails': free_rails,
+                    'inter_city_lines': inter_city_lines_split
                 },
             'level_free_positions': level_free_positions
         }
@@ -502,7 +508,7 @@ class SparseRailGen(RailGen):
 
     def _connect_cities(self, city_positions: IntVector2DArray, connection_points: List[List[List[IntVector2D]]],
                         city_cells: set,
-                        rail_trans: RailEnvTransitions, grid_map: RailEnvTransitions) -> List[IntVector2DArray]:
+                        rail_trans: RailEnvTransitions, grid_map: RailEnvTransitions) -> List[List[IntVector2DArray]]:
         """
         Connects cities together through rails. Each city connects from its outgoing connection points to the closest
         cities. This guarantees that all connection points are used.
@@ -556,7 +562,7 @@ class SparseRailGen(RailGen):
                         warnings.warn("[WARNING] No line added between stations")
                     elif new_line[-1] != neighbour_connection_point or new_line[0] != city_out_connection_point:
                         warnings.warn("[WARNING] Unable to connect requested stations")
-                    all_paths.extend(new_line)
+                    all_paths.append(new_line)
         return all_paths
 
     def get_closest_neighbour_for_direction(self, closest_neighbours, out_direction):

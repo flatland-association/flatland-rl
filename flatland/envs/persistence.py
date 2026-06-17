@@ -301,6 +301,9 @@ class RailEnvPersister(object):
         else:
             env.effects_generator = cls._apply_malfunction(env_dict)
 
+        if "optionals" in env_dict:
+            env.optionals = env_dict["optionals"]
+
     @classmethod
     def _apply_malfunction(cls, env_dict: dict):
         effects_generator = EffectsGenerator()
@@ -350,6 +353,8 @@ class RailEnvPersister(object):
             "dones": env.dones,
             "effects_generator": effects_generator
         }
+        if hasattr(env, "optionals"):
+            msg_data_dict["optionals"]=env.optionals
         return msg_data_dict
 
     ################################################################################################
