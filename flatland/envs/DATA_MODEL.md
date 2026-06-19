@@ -59,6 +59,7 @@ classDiagram
     StoppingPoint --> "1" FlatlandNode
     FlatlandEdge --> "2" FlatlandNode
     Fibre --> "2" Pin
+    Fibre --> "1.." FlatlandEdge
     Station "1" --> "1.." Gate
     Station "1" --> "1.." StoppingPoint
     Gate "1" --> "1.." Pin
@@ -68,7 +69,54 @@ classDiagram
         class FlatlandEdge
     }
     note for FlatlandEdge "Either station xor line(s)"
-    note for Fibre "May define subset of Cartesian product of from and to pins, fibres can fork and join."
+    note for Fibre "May define subset of Cartesian product of from and to pins.<br/>Fibres can fork and join.<br/>Fibres must not go through other stations"
+```
+
+### JSON Representation
+
+```json
+{
+    "stations_links": {
+        "stations": {
+            "station_id": {
+                "name": "",
+                "gates": {
+                    "gate_id": {
+                        "name": "",
+                        "pins": {
+                            "pin_id": {
+                                "node": "",
+                                "name": ""
+                            }
+                        }
+                    }
+                },
+                "stopping_points": [
+                    {
+                        "node": "",
+                        "name": ""
+                    }
+                ],
+                "edges": []
+            }
+        },
+        "links": [
+            {
+                "from_station": "",
+                "from_gate": "",
+                "to_station": "",
+                "to_gate": "",
+                "fibres": [
+                    {
+                        "from_pin": "",
+                        "to_pin": "",
+                        "edges": []
+                    }
+                ]
+            }
+        ]
+    }
+}
 ```
 
 ## Terminology mapping to `sparse_rail_gen`
