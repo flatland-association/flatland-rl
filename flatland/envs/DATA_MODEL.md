@@ -24,6 +24,7 @@ The logical model is as follows:
 * `Fibre`s cover wayside infrastructure between two connection pins of two stations. Currently: only internally in sparse rail generator.
 * `Link`s bundle fibres between the same `Gate`s.
 * `Station`s have `StoppingPoint`s where trains can start and stop. Currently: list of cells.
+* A sequence of consecutive `Link`s form a `Chain`. They must end in `Gate`s linked by a `GateLink`.
 
 ```mermaid
 classDiagram
@@ -32,6 +33,8 @@ classDiagram
             name "e.g. A North -- B South (1)"
         }
         class Fibre {
+        }
+        class Chain {
         }
     }
     namespace Stations {
@@ -50,6 +53,9 @@ classDiagram
         class StoppingPoint {
             name "e.g. Station A Track 0"
         }
+
+        class GateLink {
+        }
     }
 
     Pin "0,1" --> "1" FlatlandNode
@@ -63,6 +69,8 @@ classDiagram
     Station "1" --> "1.." Gate
     Station "1" --> "1.." StoppingPoint
     Gate "1" --> "1.." Pin
+    Chain --> "1..." Link
+    GateLink --> "2" Gate
 
     namespace Rail {
         class FlatlandNode
@@ -70,9 +78,13 @@ classDiagram
     }
     note for FlatlandEdge "Either station xor line(s)"
     note for Fibre "May define subset of Cartesian product of from and to pins.<br/>Fibres can fork and join.<br/>Fibres must not go through other stations"
+    note for Chain "Links in the Chain end/start at same station at different Gates"
+
 ```
 
 ### JSON Representation
+
+Without `Chain`s and `GateLink`s:
 
 ```json
 {
