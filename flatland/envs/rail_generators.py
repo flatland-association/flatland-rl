@@ -315,8 +315,7 @@ class SparseRailGen(RailGen):
                     _city_name(i): {
                         'name': _city_name(i),
                         'gates': {
-                            # Grid4TransitionsEnum.to_char(j)
-                            j: {
+                            Grid4TransitionsEnum.to_char(j): {
                                 'name': f"{_city_name(i)}.{Grid4TransitionsEnum.to_char(j)}",
                                 'pins': {
                                     k: {
