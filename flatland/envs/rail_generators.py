@@ -291,7 +291,7 @@ class SparseRailGen(RailGen):
             'stations_links': {
                 'stations': {
                     i: {
-                        'name': f"{i}",
+                        'name': _city_name(i),
                         'gates': {
                             "gate_id": {
                                 'name': "",
@@ -303,7 +303,7 @@ class SparseRailGen(RailGen):
                             }},
                         'stopping_points': [{
                             'node': train_station[0],
-                            'name': f"{i}.{train_station[1]}",
+                            'name': f"{_city_name(i)}.{train_station[1]}",
                             'track_number': train_station[1],
                         } for train_station in train_stations_city],
                         'edges': [c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
