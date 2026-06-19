@@ -293,14 +293,15 @@ class SparseRailGen(RailGen):
                     i: {
                         'name': _city_name(i),
                         'gates': {
-                            "gate_id": {
-                                'name': "",
+                            j: {
+                                'name': f"{_city_name(i)}.{Grid4TransitionsEnum.to_char(j)}",
                                 'pins': {
-                                    "pin_id": {
-                                        'node': "",
-                                        'name': ""
-                                    }}
-                            }},
+                                    k: {
+                                        'node': n,
+                                        'name': f"{_city_name(i)}.{Grid4TransitionsEnum.to_char(j)}.{k}"
+                                    } for k, n in enumerate(connection_area)
+                                }
+                            } for j, connection_area in enumerate(outer_connection_points_city) if len(connection_area) > 0},
                         'stopping_points': [{
                             'node': train_station[0],
                             'name': f"{_city_name(i)}.{train_station[1]}",
