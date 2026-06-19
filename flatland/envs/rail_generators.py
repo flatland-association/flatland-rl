@@ -299,12 +299,13 @@ class SparseRailGen(RailGen):
                                     }}
                             }},
                         'stopping_points': [{
-                            'node': "",
-                            'name': ""
-                        }],
+                            'node': train_station,
+                            'name': f"{i}.{track_number}"
+                        } for track_number, train_station in enumerate(train_stations_city)],
                         'edges': [c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
                     }
-                    for i, (free_rails_city, outer_connection_points_city) in enumerate(zip(free_rails, outer_connection_points))
+                    for i, (free_rails_city, outer_connection_points_city, train_stations_city) in
+                    enumerate(zip(free_rails, outer_connection_points, train_stations))
                 },
                 'links': [{
                     'from_station': "",
