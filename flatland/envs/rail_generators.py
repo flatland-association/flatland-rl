@@ -124,6 +124,9 @@ def sparse_rail_generator(*args: object, **kwargs: object) -> RailGenerator:
     return SparseRailGen(*args, **kwargs)
 
 
+def _city_name(city_idx: int) -> str:
+    return chr(ord('A') + city_idx)
+
 class SparseRailGen(RailGen):
 
     def __init__(self, max_num_cities: int = 2, grid_mode: bool = False, max_rails_between_cities: int = 2,
@@ -299,9 +302,10 @@ class SparseRailGen(RailGen):
                                     }}
                             }},
                         'stopping_points': [{
-                            'node': train_station,
-                            'name': f"{i}.{track_number}"
-                        } for track_number, train_station in enumerate(train_stations_city)],
+                            'node': train_station[0],
+                            'name': f"{i}.{train_station[1]}",
+                            'track_number': train_station[1],
+                        } for train_station in train_stations_city],
                         'edges': [c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
                     }
                     for i, (free_rails_city, outer_connection_points_city, train_stations_city) in
