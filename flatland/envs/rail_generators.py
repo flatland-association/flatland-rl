@@ -335,10 +335,13 @@ class SparseRailGen(RailGen):
                     enumerate(zip(free_rails, outer_connection_points, train_stations))
                 },
                 'links': [{
+                    # TODO use split/relative notation and name instead?
                     'from_station': _city_name(from_station),
                     'from_gate': f"{_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}",
+                    'from_facing': f"{Grid4TransitionsEnum.to_char(from_gate)}",
                     'to_station': _city_name(to_station),
                     'to_gate': f"{_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}",
+                    'to_facing': f"{Grid4TransitionsEnum.to_char(to_gate)}",
                     'fibres': [{
                         'from_pin': f"{_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}.{from_track}",
                         'to_pin': f"{_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}.{to_track}",
