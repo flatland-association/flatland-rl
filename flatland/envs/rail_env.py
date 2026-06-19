@@ -169,6 +169,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         self.timetable_generator = timetable_generator
 
         self.rail: Optional[UnderlyingTransitionMapType] = None
+        self.stations_links = None
 
         self.remove_agents_at_target = remove_agents_at_target
 
@@ -297,6 +298,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
         optionals = {}
         if regenerate_rail or self.rail is None:
+            self.stations_links = None
             optionals, rail = self._call_rail_generator(optionals)
             self.rail = rail
 
@@ -738,6 +740,8 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
         self.optionals  = optionals
+        if optionals and 'stations_links' in optionals:
+            self.stations_links = optionals['stations_links']
 
         return optionals, rail
 

@@ -245,7 +245,7 @@ class SparseRailGen(RailGen):
 
         # Connect the cities through the connection points
         inter_city_lines_split = self._connect_cities(city_positions, outer_connection_points, city_cells,
-                                                rail_trans, grid_map)
+                                                      rail_trans, grid_map)
         inter_city_lines = [p for single in inter_city_lines_split for p in single]
 
         # Build inner cities
@@ -285,6 +285,39 @@ class SparseRailGen(RailGen):
                     'free_rails': free_rails,
                     'inter_city_lines': inter_city_lines_split
                 },
+            'stations_links': {
+                'stations': {
+                    i: {
+                        'name': f"{i}",
+                        'gates': {
+                            "gate_id": {
+                                'name': "",
+                                'pins': {
+                                    "pin_id": {
+                                        'node': "",
+                                        'name': ""
+                                    }}
+                            }},
+                        'stopping_points': [{
+                            'node': "",
+                            'name': ""
+                        }],
+                        'edges': [c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
+                    }
+                    for i, (free_rails_city, outer_connection_points_city) in enumerate(zip(free_rails, outer_connection_points))
+                },
+                'links': [{
+                    'from_station': "",
+                    'from_gate': "",
+                    'to_station': "",
+                    'to_gate': "",
+                    'fibres': [{
+                        'from_pin': "",
+                        'to_pin': "",
+                        'edges': []
+                    }]
+                }]
+            },
             'level_free_positions': level_free_positions
         }
 
