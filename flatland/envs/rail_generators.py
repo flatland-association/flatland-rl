@@ -2,6 +2,7 @@
 import math
 import pickle
 import warnings
+from collections import defaultdict
 from pathlib import Path
 from typing import Callable, Tuple, Optional, Dict, List, Union
 
@@ -126,6 +127,7 @@ def sparse_rail_generator(*args: object, **kwargs: object) -> RailGenerator:
 
 def _city_name(city_idx: int) -> str:
     return chr(ord('A') + city_idx)
+
 
 class SparseRailGen(RailGen):
 
@@ -278,6 +280,26 @@ class SparseRailGen(RailGen):
                 positions_diamond_crossings = (grid_map.grid == RailEnvTransitionsEnum.diamond_crossing).nonzero()
                 level_free_positions = {(positions_diamond_crossings[0][choice[i]], positions_diamond_crossings[1][choice[i]]) for i in range(len(choice))}
 
+        # collect and group fibres
+        city_to_gate_to_pins = {i: {k: pins for k, pins in enumerate(city)} for i, city in
+                                enumerate(outer_connection_points)}
+        pin_to_gate = {pin: (city, direction) for city, pins_per_direction in city_to_gate_to_pins.items() for direction, pins in pins_per_direction.items() for
+                       _, pin in enumerate(pins)}
+        pin_to_track = {pin: j for i, city in enumerate(outer_connection_points) for direction in city for j, pin in enumerate(direction)}
+
+        gates_to_fibres = defaultdict(list)
+        for city, fibre in enumerate(inter_city_lines_split):
+            fibre_start_pin = fibre[0]
+            fibre_end_pin = fibre[-1]
+            from_station = pin_to_gate[fibre_start_pin][0]
+            from_gate = pin_to_gate[fibre_start_pin][1]
+            to_station = pin_to_gate[fibre_end_pin][0]
+            to_gate = pin_to_gate[fibre_end_pin][1]
+            from_track = pin_to_track[fibre_start_pin]
+            to_track = pin_to_track[fibre_end_pin]
+            gates_to_fibres[(from_station, from_gate, from_track, to_station, to_gate, to_track)].append(fibre)
+
+        # TODO inconsistency: 0-based indexing or name-based indexing in dicts? or use lists?
         return grid_map, {
             'agents_hints':
                 {
@@ -313,16 +335,16 @@ class SparseRailGen(RailGen):
                     enumerate(zip(free_rails, outer_connection_points, train_stations))
                 },
                 'links': [{
-                    'from_station': "",
-                    'from_gate': "",
-                    'to_station': "",
-                    'to_gate': "",
+                    'from_station': _city_name(from_station),
+                    'from_gate': f"{_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}",
+                    'to_station': _city_name(to_station),
+                    'to_gate': f"{_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}",
                     'fibres': [{
-                        'from_pin': "",
-                        'to_pin': "",
-                        'edges': []
-                    }]
-                }]
+                        'from_pin': f"{_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}.{from_track}",
+                        'to_pin': f"{_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}.{to_track}",
+                        'edges': fibre
+                    } for fibre in fibres]
+                } for (from_station, from_gate, from_track, to_station, to_gate, to_track), fibres in gates_to_fibres.items()]
             },
             'level_free_positions': level_free_positions
         }
