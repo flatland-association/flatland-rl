@@ -1,7 +1,7 @@
 import pytest
 
-from flatland.ml.ray.examples.flatland_inference_with_random_policy import add_flatland_inference_with_random_policy_args
-from flatland.ml.ray.examples.flatland_inference_with_random_policy import rollout, register_flatland_ray_cli_observation_builders
+from flatland.ml.ray.examples.flatland_observation_builders_registry import register_flatland_ray_cli_observation_builders
+from flatland.ml.ray.examples.flatland_rollout import add_flatland_inference_from_checkpoint, random_rollout
 
 
 @pytest.mark.parametrize(
@@ -20,6 +20,5 @@ from flatland.ml.ray.examples.flatland_inference_with_random_policy import rollo
 )
 def test_rail_env_wrappers_random_rollout(obid: str):
     register_flatland_ray_cli_observation_builders()
-    parser = add_flatland_inference_with_random_policy_args()
-    rollout(parser.parse_args(
-        ["--num-agents", "2", "--obs-builder", obid]))
+    parser = add_flatland_inference_from_checkpoint()
+    random_rollout(parser.parse_args(["--num-agents", "2", "--obs-builder", obid]))

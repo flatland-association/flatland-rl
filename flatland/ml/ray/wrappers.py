@@ -1,8 +1,8 @@
-import os
 from typing import Optional, Any, List
 
 import numpy as np
 import torch
+from ray.rllib.algorithms import Algorithm
 from ray.rllib.core import Columns
 from ray.rllib.core.rl_module import RLModule
 from ray.rllib.utils.numpy import convert_to_numpy, softmax
@@ -54,28 +54,35 @@ def ray_env_generator(render_mode: Optional[str] = None, **kwargs) -> RayMultiAg
     return env
 
 
-def ray_policy_wrapper(rl_module: RLModule) -> Policy:
+# TODO is this action applying safe?
+def ray_policy_wrapper(rl_module: RLModule) -> RailEnvPolicy:
     class _RayCheckpointPolicy(RailEnvPolicy):
 
         def act_many(self, handles: List[int], observations: List[Any], **kwargs):
             obss = np.stack(observations)
-
-            actions = rl_module.forward_inference({"obs": torch.from_numpy(obss).unsqueeze(0).float()})
+            # TODO why no batch dim?
+            # obss = torch.from_numpy(obss).unsqueeze(0).float()
+            obss = torch.from_numpy(obss).float()
+            actions = rl_module.forward_inference({"obs": obss})
             if Columns.ACTIONS in actions:
                 if isinstance(actions[Columns.ACTIONS], dict):
                     action_dict = {h: a[0] for h, a in actions[Columns.ACTIONS].items()}
                 else:
-                    action_dict = dict(zip(handles, convert_to_numpy(actions[Columns.ACTIONS][0])))
+                    # TODO why no batch dim?
+                    action_dict = dict(zip(handles, convert_to_numpy(actions[Columns.ACTIONS])))
             else:
                 logits = convert_to_numpy(actions[Columns.ACTION_DIST_INPUTS])
-                action_dict = {str(h): np.random.choice(len(RailEnvActions), p=softmax(l)) for h, l in enumerate(logits[0])}
+
+                # TODO why no batch dim?
+                action_dict = {str(h): np.random.choice(len(RailEnvActions), p=softmax(l)) for h, l in enumerate(logits)}
 
             return action_dict
 
     return _RayCheckpointPolicy()
 
 
-def ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path: str, policy_id: str) -> Policy:
+# TODO is Algorithm the appropriate abstraction here?
+def ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path: str, algo: Algorithm, module_id: str) -> RailEnvPolicy:
     """
     Load RLlib checkpoint into Flatland RailEnvPolicy.
 
@@ -85,19 +92,15 @@ def ray_policy_wrapper_from_rllib_checkpoint(checkpoint_path: str, policy_id: st
     ----------
     checkpoint_path : str
         path to the rllib checkpoint
-    policy_id : str
-        policy ID to be found under <checkpoint_path>/learner_group/learner/rl_module/<policy_id>
+    algo : Algorithm
+    module_id : str
+        module ID to be found under <checkpoint_path>/learner_group/learner/rl_module/<module_id>
 
     Returns
     -------
-
+    Policy
     """
-    cp = os.path.join(
-        checkpoint_path,
-        "learner_group",
-        "learner",
-        "rl_module",
-        policy_id,
-    )
-    rl_module = RLModule.from_checkpoint(cp)
+
+    algo.restore(checkpoint_path)
+    rl_module = algo.get_module(module_id)
     return ray_policy_wrapper(rl_module)
