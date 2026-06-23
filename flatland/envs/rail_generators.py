@@ -10,7 +10,7 @@ import numpy as np
 from numpy import array
 from numpy.random.mtrand import RandomState
 
-from envs.rail_env_shortest_paths import get_k_shortest_paths
+from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import direction_to_point, mirror
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D, \
