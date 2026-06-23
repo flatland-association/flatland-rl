@@ -10,6 +10,7 @@ import numpy as np
 from numpy import array
 from numpy.random.mtrand import RandomState
 
+from envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import direction_to_point, mirror
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D, \
@@ -297,7 +298,19 @@ class SparseRailGen(RailGen):
             to_gate = pin_to_gate[fibre_end_pin][1]
             from_track = pin_to_track[fibre_start_pin]
             to_track = pin_to_track[fibre_end_pin]
-            gates_to_fibres[(from_station, from_gate, from_track, to_station, to_gate, to_track)].append(fibre)
+
+            paths = get_k_shortest_paths(None, rail=grid_map,
+                                         source_position=fibre_start_pin,
+                                         source_direction=from_gate,
+                                         target_position=fibre_end_pin,
+                                         k=1,
+                                         # TODO instead ban from finding paths through cities.
+                                         cutoff=len(fibre) + 5)
+            if len(paths) > 0:
+                gates_to_fibres[(from_station, from_gate, from_track, to_station, to_gate, to_track)].append([wp.position for wp in paths[0]])
+            else:
+                print(
+                    f"no path found for {_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}.{from_track} -> {_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}.{to_track}")
 
         # TODO inconsistency: 0-based indexing or name-based indexing in dicts? or use lists?
         return grid_map, {
