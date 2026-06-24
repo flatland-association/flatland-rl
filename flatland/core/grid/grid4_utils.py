@@ -24,6 +24,15 @@ def get_direction(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
     raise Exception("Could not determine direction {}->{}".format(pos1, pos2))
 
 
+def is_neighbor_cell(pos1: IntVector2D, pos2: IntVector2D) -> bool:
+    """
+    Check whether pos1 and pos2 are adjacent to each other, top/bottom or left/right, no diagonal.
+    """
+    diff_0 = pos2[0] - pos1[0]
+    diff_1 = pos2[1] - pos1[1]
+    return abs(diff_0) + abs(diff_1) == 1
+
+
 @lru_cache(maxsize=4)
 def mirror(dir):
     return (dir + 2) % 4
