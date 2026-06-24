@@ -34,7 +34,19 @@ MOVEMENT_ARRAY = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 
 @lru_cache(maxsize=1_000_000)
 def get_new_position(position, movement):
+    """
+    Get new (r,c) when exiting in direction movement.
+    """
     m = MOVEMENT_ARRAY[movement]
+    return (position[0] + m[0], position[1] + m[1])
+
+
+@lru_cache(maxsize=1_000_000)
+def get_old_position(position, movement):
+    """
+    Get old (r,c) when entering in direction movement.
+    """
+    m = MOVEMENT_ARRAY[mirror(movement)]
     return (position[0] + m[0], position[1] + m[1])
 
 

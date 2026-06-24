@@ -630,6 +630,33 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         position, direction = configuration
         return self.check_bounds(position) and fast_count_nonzero(self.get_transitions(configuration)) > 0
 
+    def get_neighbor_pairs(self, cell: Tuple[int, int]) -> Set[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """
+
+        Parameters
+        ----------
+        cell : tuple
+            The configuration indices a cell as ((column, row), orientation),
+            where orientation is the direction an agent is facing within a cell.
+            Alternatively, it can be accessed as (column, row) to return the
+            full cell content.
+
+        Returns
+        -------
+        tuple
+            Set of configurations
+
+        """
+        pairs = set()
+        for from_dir in range(4):
+            nexttt = self.get_transitions((cell, from_dir))
+            from_cell = get_new_position(cell, mirror(from_dir))
+            for to_dir, flag in enumerate(nexttt):
+                if flag:
+                    to_cell = get_new_position(cell, to_dir)
+                    pairs.add((from_cell, to_cell))
+        return pairs
+
 
 def mirror(dir):
     return (dir + 2) % 4
