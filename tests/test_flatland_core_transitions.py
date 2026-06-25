@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """Tests for `flatland` package."""
+
+from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid8 import Grid8Transitions
 from flatland.core.transition_map import GridTransitionMap
@@ -244,3 +246,12 @@ def test_rail_env_remove_deadend():
 
     assert ret.remove_deadends(int(rw('0010 0001 1000 0100'), 2)) == 0
     assert ret.remove_deadends(int(rw('0010 0001 1000 0110'), 2)) == int(rw('0000 0000 0000 0010'), 2)
+
+
+def test_get_neighboring_cells_horizontal_straight():
+    rail = GridTransitionMap(3, 3)
+    rail.set_transitions((1, 1), RailEnvTransitionsEnum.horizontal_straight)
+    pairs = rail.get_neighbor_pairs((1, 1))
+    assert ((1, 0), (1, 2)) in pairs
+    assert ((1, 2), (1, 0)) in pairs
+    assert len(pairs) == 2
