@@ -89,7 +89,7 @@ DEFAULT_COMMAND_TIMEOUT = int(os.getenv(
 RANDOM_SEED = None if (os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", None) == "NONE") else int(os.getenv("FLATLAND_EVALUATION_RANDOM_SEED", 1001))
 
 # disjunctive
-SUPPORTED_CLIENT_VERSIONS = os.getenv("SUPPORTED_CLIENT_VERSIONS", "").split(",") + [flatland.__version__]
+SUPPORTED_CLIENT_VERSIONS = os.getenv("SUPPORTED_CLIENT_VERSIONS", "").split(",")  # + [flatland.__version__]
 # conjunctive
 SUPPORTED_CLIENT_VERSION_RANGE = os.getenv("SUPPORTED_CLIENT_VERSION_RANGE", "")
 
