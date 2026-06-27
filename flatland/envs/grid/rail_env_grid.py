@@ -151,6 +151,12 @@ class RailEnvTransitionsEnum(IntEnum):
                               RailEnvTransitionsEnum.horizontal_straight}
 
     @staticmethod
+    def is_simple_switch(transition):
+        return transition in {RailEnvTransitionsEnum.simple_switch_north_right,
+                              RailEnvTransitionsEnum.simple_switch_south_right,
+                              }
+
+    @staticmethod
     def is_double_slip(transition):
         return transition in {RailEnvTransitionsEnum.double_slip_NW_SE, RailEnvTransitionsEnum.double_slip_NE_SW}
 
