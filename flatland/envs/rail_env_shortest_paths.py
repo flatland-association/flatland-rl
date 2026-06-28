@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List, Set, Tuple
 
 import matplotlib.pyplot as plt
@@ -63,13 +64,14 @@ def get_k_shortest_paths(env: "RailEnv",
     # countu: number of shortest paths found to node u
     # countu = 0, for all u in V
 
-    count = {(r, c, d): 0 for r in range(height) for c in range(width) for d in range(4)}
+    count = defaultdict(lambda: 0)
 
     # B is a heap data structure containing paths
     # N.B. use OrderedSet to make result deterministic!
     heap: OrderedSet[Tuple[Waypoint]] = OrderedSet()
 
     # insert path Ps = {s} into B with cost 0
+    # TODO use orderedset per length instead!
     heap.add((Waypoint(source_position, source_direction),))
 
     # while B is not empty and countt < K:
