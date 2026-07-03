@@ -139,8 +139,8 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
                     "max_duration": self._max_duration,
                     "earliest_malfunction": self._earliest_condition,
                     "max_num_malfunctions": self._max_num_malfunctions,
-                    "condition_pkg": None if self._condition is None else self._condition.fullname.split(".")[:-1],
-                    "condition_cls": None if self._condition is None else self._condition.fullname.split(".")[-1],
+                    "condition_pkg": None if self._condition is None else self._condition.__module__,
+                    "condition_cls": None if self._condition is None else self._condition.__qualname__,
                 }
             }
         }
