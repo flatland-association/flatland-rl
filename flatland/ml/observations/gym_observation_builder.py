@@ -76,7 +76,7 @@ class GlobalObsForRailEnvGym(GymObservationBuilderWrapper):
         self.observation_space = None
 
     def set_env(self, env: RailEnv):
-        super().set_env(env)
+        self.wrap.set_env(env)
         self._update_observation_space(env)
 
     def _update_observation_space(self, env):
