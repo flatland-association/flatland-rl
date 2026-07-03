@@ -725,7 +725,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         self._update_agent_positions_map(ignore_old_positions=False)
 
     def _call_rail_generator(self, optionals) -> Tuple[dict, GridTransitionMap]:
-        print("_call_rail_generator")
         if "__call__" in dir(self.rail_generator):
             rail, optionals = self.rail_generator(
                 self.width, self.height, self.number_of_agents, self.num_resets, self.np_random)
@@ -736,7 +735,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         else:
             raise ValueError("Could not invoke __call__ or generate on rail_generator")
         self.height, self.width = rail.grid.shape
-        print(optionals)
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
         self.optionals  = optionals
