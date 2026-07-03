@@ -151,10 +151,11 @@ class RailEnvPersister(object):
             rewards=rewards,
             effects_generator=effects_generator,
         )
+        cls.set_full_state(env, env_dict)
+
         env.obs_builder.set_env(env)
         env.obs_builder.reset()
 
-        cls.set_full_state(env, env_dict)
         return env, env_dict
 
     @classmethod
