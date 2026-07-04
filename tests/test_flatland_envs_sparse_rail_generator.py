@@ -1,7 +1,9 @@
+import dataclasses
 import unittest
 import warnings
 
 import numpy as np
+import pytest
 from numpy.random import RandomState
 
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
@@ -9,6 +11,7 @@ from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator, _city_name
+from flatland.envs.stations_links import Pin, GateRef
 from flatland.utils.rendertools import RenderTool
 
 
@@ -615,23 +618,36 @@ def test_city_name():
 
 
 def test_sparse_rail_generator_gates_to_fibres_reuses_connecting_line():
-    """gates_to_fibres/stations_links['links'][*]['fibres'] must directly reuse the path
-    _connect_cities drew for each inter-city connection instead of re-deriving it with a shortest-
-    path search - each fibre's edges must start/end exactly at its own from_pin/to_pin node."""
+    """gates_to_fibres/stations_links.links[*].fibres must directly reuse the path _connect_cities
+    drew for each inter-city connection instead of re-deriving it with a shortest-path search -
+    each fibre's edges must start/end exactly at its own from_pin/to_pin node."""
     generate = sparse_rail_generator(max_num_cities=3, max_rails_between_cities=2, grid_mode=False)
     grid_map, optionals = generate(width=40, height=40, num_agents=5, np_random=RandomState(1))
 
-    stations = optionals['stations_links']['stations']
-    links = optionals['stations_links']['links']
+    stations_links = optionals['stations_links']
+    stations = stations_links.stations
+    links = stations_links.links
     assert len(links) > 0
 
     def pin_node(pin_name):
         station_name, gate_char, track = pin_name.split(".")
-        return stations[station_name]['gates'][gate_char]['pins'][int(track)]['node']
+        return stations[station_name].gates[gate_char].pins[int(track)].node
 
     for link in links:
-        for fibre in link['fibres']:
-            edges = fibre['edges']
+        for fibre in link.fibres:
+            edges = fibre.edges
             assert len(edges) > 0
-            assert edges[0] == pin_node(fibre['from_pin'])
-            assert edges[-1] == pin_node(fibre['to_pin'])
+            assert edges[0] == pin_node(fibre.from_pin)
+            assert edges[-1] == pin_node(fibre.to_pin)
+
+
+def test_stations_links_dataclasses_are_frozen():
+    """stations_links (Pin, Gate, StoppingPoint, Station, Fibre, Link, StationsLinks) and the
+    internal GateRef/GateConnection helpers must be immutable dataclasses."""
+    pin = Pin(node=(0, 0), name="A.N.0")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        pin.name = "changed"
+
+    gate_ref = GateRef(city=0, direction=1)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        gate_ref.city = 1

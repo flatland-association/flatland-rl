@@ -20,6 +20,7 @@ from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransiti
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes, align_cell_to_city
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+from flatland.envs.stations_links import Pin, Gate, StoppingPoint, Station, Fibre, Link, StationsLinks, GateRef, GateConnection
 
 RailGeneratorProduct = Tuple[RailGridTransitionMap, Optional[Dict]]
 """ A rail generator returns a RailGenerator Product, which is just
@@ -300,8 +301,8 @@ class SparseRailGen(RailGen):
         # collect and group fibres
         city_to_gate_to_pins = {i: {k: pins for k, pins in enumerate(city)} for i, city in
                                 enumerate(outer_connection_points)}
-        pin_to_gate = {pin: (city, direction) for city, pins_per_direction in city_to_gate_to_pins.items() for direction, pins in pins_per_direction.items() for
-                       _, pin in enumerate(pins)}
+        pin_to_gate: Dict[IntVector2D, GateRef] = {pin: GateRef(city, direction) for city, pins_per_direction in city_to_gate_to_pins.items()
+                                                   for direction, pins in pins_per_direction.items() for _, pin in enumerate(pins)}
         pin_to_track = {pin: j for i, city in enumerate(outer_connection_points) for direction in city for j, pin in enumerate(direction)}
 
         # for each city, flood-fill outward from its own free_rails cells to get the full set of
@@ -313,18 +314,60 @@ class SparseRailGen(RailGen):
             city_open_set = {cell for track in free_rails_city for cell in track}
             free_rails_flooded.append([list(find_connected_cells(grid_map, open_set=city_open_set, forbidden_cells=city_pin_cells))])
 
-        gates_to_fibres = defaultdict(list)
+        gates_to_fibres: Dict[GateConnection, List[IntVector2DArray]] = defaultdict(list)
         for city, fibre in enumerate(inter_city_lines_split):
             fibre_start_pin = fibre[0]
             fibre_end_pin = fibre[-1]
-            from_station = pin_to_gate[fibre_start_pin][0]
-            from_gate = pin_to_gate[fibre_start_pin][1]
-            to_station = pin_to_gate[fibre_end_pin][0]
-            to_gate = pin_to_gate[fibre_end_pin][1]
+            from_station = pin_to_gate[fibre_start_pin].city
+            from_gate = pin_to_gate[fibre_start_pin].direction
+            to_station = pin_to_gate[fibre_end_pin].city
+            to_gate = pin_to_gate[fibre_end_pin].direction
             from_track = pin_to_track[fibre_start_pin]
             to_track = pin_to_track[fibre_end_pin]
 
-            gates_to_fibres[(from_station, from_gate, from_track, to_station, to_gate, to_track)].append(fibre)
+            gates_to_fibres[GateConnection(from_station=from_station, from_gate=from_gate, from_track=from_track,
+                                           to_station=to_station, to_gate=to_gate, to_track=to_track)].append(fibre)
+
+        stations = {
+            _city_name(i): Station(
+                name=_city_name(i),
+                gates={
+                    Grid4TransitionsEnum.to_char(j): Gate(
+                        name=f"{_city_name(i)}.{Grid4TransitionsEnum.to_char(j)}",
+                        pins={
+                            k: Pin(node=n, name=f"{_city_name(i)}.{Grid4TransitionsEnum.to_char(j)}.{k}")
+                            for k, n in enumerate(connection_area)
+                        }
+                    ) for j, connection_area in enumerate(outer_connection_points_city) if len(connection_area) > 0
+                },
+                stopping_points=[
+                    StoppingPoint(node=train_station[0], name=f"{_city_name(i)}.{train_station[1]}", track_number=train_station[1])
+                    for train_station in train_stations_city
+                ],
+                edges=[c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
+            )
+            for i, (free_rails_city, outer_connection_points_city, train_stations_city) in
+            enumerate(zip(free_rails_flooded, outer_connection_points, train_stations))
+        }
+
+        links = [
+            Link(
+                # TODO use split/relative notation and name instead?
+                from_station=_city_name(gate_connection.from_station),
+                from_gate=f"{_city_name(gate_connection.from_station)}.{Grid4TransitionsEnum.to_char(gate_connection.from_gate)}",
+                from_facing=f"{Grid4TransitionsEnum.to_char(gate_connection.from_gate)}",
+                to_station=_city_name(gate_connection.to_station),
+                to_gate=f"{_city_name(gate_connection.to_station)}.{Grid4TransitionsEnum.to_char(gate_connection.to_gate)}",
+                to_facing=f"{Grid4TransitionsEnum.to_char(gate_connection.to_gate)}",
+                fibres=[
+                    Fibre(
+                        from_pin=f"{_city_name(gate_connection.from_station)}.{Grid4TransitionsEnum.to_char(gate_connection.from_gate)}.{gate_connection.from_track}",
+                        to_pin=f"{_city_name(gate_connection.to_station)}.{Grid4TransitionsEnum.to_char(gate_connection.to_gate)}.{gate_connection.to_track}",
+                        edges=fibre
+                    ) for fibre in fibres
+                ]
+            ) for gate_connection, fibres in gates_to_fibres.items()
+        ]
 
         # TODO inconsistency: 0-based indexing or name-based indexing in dicts? or use lists?
         return grid_map, {
@@ -334,45 +377,7 @@ class SparseRailGen(RailGen):
                     'train_stations': train_stations,
                     'city_orientations': city_orientations,
                 },
-            'stations_links': {
-                'stations': {
-                    _city_name(i): {
-                        'name': _city_name(i),
-                        'gates': {
-                            Grid4TransitionsEnum.to_char(j): {
-                                'name': f"{_city_name(i)}.{Grid4TransitionsEnum.to_char(j)}",
-                                'pins': {
-                                    k: {
-                                        'node': n,
-                                        'name': f"{_city_name(i)}.{Grid4TransitionsEnum.to_char(j)}.{k}"
-                                    } for k, n in enumerate(connection_area)
-                                }
-                            } for j, connection_area in enumerate(outer_connection_points_city) if len(connection_area) > 0},
-                        'stopping_points': [{
-                            'node': train_station[0],
-                            'name': f"{_city_name(i)}.{train_station[1]}",
-                            'track_number': train_station[1],
-                        } for train_station in train_stations_city],
-                        'edges': [c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
-                    }
-                    for i, (free_rails_city, outer_connection_points_city, train_stations_city) in
-                    enumerate(zip(free_rails_flooded, outer_connection_points, train_stations))
-                },
-                'links': [{
-                    # TODO use split/relative notation and name instead?
-                    'from_station': _city_name(from_station),
-                    'from_gate': f"{_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}",
-                    'from_facing': f"{Grid4TransitionsEnum.to_char(from_gate)}",
-                    'to_station': _city_name(to_station),
-                    'to_gate': f"{_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}",
-                    'to_facing': f"{Grid4TransitionsEnum.to_char(to_gate)}",
-                    'fibres': [{
-                        'from_pin': f"{_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}.{from_track}",
-                        'to_pin': f"{_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}.{to_track}",
-                        'edges': fibre
-                    } for fibre in fibres]
-                } for (from_station, from_gate, from_track, to_station, to_gate, to_track), fibres in gates_to_fibres.items()]
-            },
+            'stations_links': StationsLinks(stations=stations, links=links),
             'level_free_positions': level_free_positions
         }
 
