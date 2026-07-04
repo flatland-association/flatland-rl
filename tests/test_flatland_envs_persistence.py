@@ -121,6 +121,24 @@ def test_optionals_not_persisted():
     assert not hasattr(fresh_env, "optionals")
 
 
+def test_set_full_state_restores_dev_obs_dict_without_dev_pred_dict():
+    """A legacy/incomplete env_dict with dev_obs_dict but no dev_pred_dict key must still restore
+    dev_obs_dict - previously this assignment was guarded by the wrong variable (dev_pred_dict_
+    instead of dev_obs_dict_), a copy-paste bug."""
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2)
+    env.reset(False, False)
+
+    env_dict = RailEnvPersister.get_full_state(env)
+    del env_dict["dev_pred_dict"]
+    env_dict["dev_obs_dict"] = {0: "some observation payload"}
+
+    RailEnvPersister.set_full_state(env, env_dict)
+
+    assert env.dev_obs_dict == {0: "some observation payload"}
+
+
 def test_legacy_envs():
     envs = [("env_data.railway", sRes) for sExt in ["mpk", "pkl"] for sRes in ir.contents("env_data.railway") if sRes.endswith(sExt)]
     for package, resource in envs:

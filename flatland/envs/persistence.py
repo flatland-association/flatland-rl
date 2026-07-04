@@ -271,7 +271,7 @@ class RailEnvPersister(object):
         if dev_pred_dict_ is not None:
             env.dev_pred_dict = dev_pred_dict_
         dev_obs_dict_ = env_dict.get("dev_obs_dict", None)
-        if dev_pred_dict_ is not None:
+        if dev_obs_dict_ is not None:
             env.dev_obs_dict = dev_obs_dict_
 
         env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None) for i in range(env.get_num_agents())}
