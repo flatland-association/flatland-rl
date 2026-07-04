@@ -54,9 +54,6 @@ class PolicyRunner:
     def policy(self):
         return self._policy
 
-    def fork(self):
-        pass
-
     @property
     def env_time(self):
         return self.env._elapsed_steps
