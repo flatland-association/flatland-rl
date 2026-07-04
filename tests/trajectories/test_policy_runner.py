@@ -221,6 +221,31 @@ def test_run_from_intermediate_step_pkl(verbose: bool = False):
         assert len(rewards_dones_infos_diff) == 0
 
 
+def test_failing_from_wrong_intermediate_step():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory = PolicyRunner.create_from_policy(
+            env=env_generator(obs_builder_object=EnvStepObservationBuilder(), )[0],
+            policy=RandomPolicy(reset_at=7),
+            data_dir=data_dir / "trajectory",
+            snapshot_interval=1
+        )
+        stepped_env, _ = RailEnvPersister.load_new(data_dir / "trajectory" / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step0007.pkl")
+        assert stepped_env._elapsed_steps == 7
+
+        # no_save=True bypasses env (re-)loading, so the trajectory (fresh, expecting step 0)
+        # and the passed-in env (already at step 7) must be checked for consistency.
+        with pytest.raises(AssertionError) as e_info:
+            PolicyRunner.create_from_policy(
+                data_dir=data_dir / "other",
+                policy=RandomPolicy(),
+                env=stepped_env,
+                no_save=True,
+                snapshot_interval=0,
+            )
+        assert str(e_info.value) == 'Expected env at 0, found 7.'
+
+
 def test_evaluation_snapshots():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)

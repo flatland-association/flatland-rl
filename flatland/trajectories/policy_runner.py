@@ -37,7 +37,8 @@ class PolicyRunner:
         trajectory_env_time = 0 if np.isnan(trajectory_env_time) else trajectory_env_time
         if by_pass_env is not None:
             self.env = by_pass_env = by_pass_env
-            assert by_pass_env._elapsed_steps == trajectory_env_time
+            assert by_pass_env._elapsed_steps == trajectory_env_time, \
+                f"Expected env at {trajectory_env_time}, found {by_pass_env._elapsed_steps}."
         else:
             self.env = trajectory.load_env(trajectory_env_time, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
 
