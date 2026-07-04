@@ -101,7 +101,6 @@ def get_k_shortest_paths(env: "RailEnv",
         # – if countu ≤ K then
         # CAVEAT: do not allow for loopy paths
         elif count[urcd] <= k:
-            # TODO speedup lookup of feasible transitions?
             possible_transitions = rail.get_transitions((urcd[:2], urcd[2]))
             if debug:
                 print("  looking at neighbors of u={}, transitions are {}".format(u, possible_transitions))
