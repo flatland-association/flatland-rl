@@ -10,7 +10,6 @@ import numpy as np
 from numpy import array
 from numpy.random.mtrand import RandomState
 
-from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import direction_to_point, mirror
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D, \
@@ -20,6 +19,7 @@ from flatland.envs import persistence
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes, align_cell_to_city
+from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
 RailGeneratorProduct = Tuple[RailGridTransitionMap, Optional[Dict]]
@@ -319,9 +319,6 @@ class SparseRailGen(RailGen):
                     'city_positions': city_positions,
                     'train_stations': train_stations,
                     'city_orientations': city_orientations,
-                    'outer_connection_points': outer_connection_points,
-                    'free_rails': free_rails,
-                    'inter_city_lines': inter_city_lines_split
                 },
             'stations_links': {
                 'stations': {
