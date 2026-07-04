@@ -286,6 +286,9 @@ class SparseRailGen(RailGen):
                        _, pin in enumerate(pins)}
         pin_to_track = {pin: j for i, city in enumerate(outer_connection_points) for direction in city for j, pin in enumerate(direction)}
 
+        # ban shortest-path search from cutting through inner-city tracks
+        free_rails_cells = {cell for city in free_rails for track in city for cell in track}
+
         gates_to_fibres = defaultdict(list)
         for city, fibre in enumerate(inter_city_lines_split):
             fibre_start_pin = fibre[0]
@@ -302,8 +305,7 @@ class SparseRailGen(RailGen):
                                          source_direction=from_gate,
                                          target_position=fibre_end_pin,
                                          k=1,
-                                         # TODO instead ban from finding paths through cities.
-                                         cutoff=len(fibre) + 5)
+                                         forbidden_cells=free_rails_cells)
             if len(paths) > 0:
                 gates_to_fibres[(from_station, from_gate, from_track, to_station, to_gate, to_track)].append([wp.position for wp in paths[0]])
             else:

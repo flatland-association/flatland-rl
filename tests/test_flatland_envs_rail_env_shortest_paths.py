@@ -315,6 +315,104 @@ def test_get_k_shortest_paths(rendering=False):
     assert actual == expected, "Sets are different:\nactual={},\nexpected={}".format(actual, expected)
 
 
+def test_get_k_shortest_paths_with_forbidden_cells(rendering=False):
+    rail, rail_map, optionals = make_simple_rail_with_alternatives()
+
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=GlobalObsForRailEnv(),
+                  )
+    env.reset()
+
+    initial_position = (3, 1)  # west dead-end
+    initial_direction = Grid4TransitionsEnum.WEST  # west
+    target_position = (3, 9)  # east
+
+    agent = env.agents[0]
+    agent.position = initial_position
+    agent.initial_position = initial_position
+    agent.direction = initial_direction
+    agent.target = target_position
+    agent.moving = True
+
+    env.reset(False, False)
+
+    # (0, 4) only lies on the "northern" alternative (via row 0) - forbidding it must leave
+    # only the "southern" alternative (via rows 4-6).
+    actual = set(get_k_shortest_paths(
+        env=env,
+        source_position=initial_position,
+        source_direction=int(initial_direction),
+        target_position=target_position,
+        k=10,
+        forbidden_cells={(0, 4)},
+    ))
+
+    expected = set([
+        (
+            Waypoint(position=(3, 1), direction=3),
+            Waypoint(position=(3, 0), direction=3),
+            Waypoint(position=(3, 1), direction=1),
+            Waypoint(position=(3, 2), direction=1),
+            Waypoint(position=(3, 3), direction=1),
+            Waypoint(position=(3, 4), direction=1),
+            Waypoint(position=(3, 5), direction=1),
+            Waypoint(position=(3, 6), direction=1),
+            Waypoint(position=(4, 6), direction=2),
+            Waypoint(position=(5, 6), direction=2),
+            Waypoint(position=(6, 6), direction=2),
+            Waypoint(position=(5, 6), direction=0),
+            Waypoint(position=(4, 6), direction=0),
+            Waypoint(position=(4, 7), direction=1),
+            Waypoint(position=(4, 8), direction=1),
+            Waypoint(position=(4, 9), direction=1),
+            Waypoint(position=(3, 9), direction=0))
+    ])
+
+    assert actual == expected, "Sets are different:\nactual={},\nexpected={}".format(actual, expected)
+
+
+def test_get_k_shortest_paths_with_forbidden_cells_blocks_all_paths(rendering=False):
+    rail, rail_map, optionals = make_simple_rail_with_alternatives()
+
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=GlobalObsForRailEnv(),
+                  )
+    env.reset()
+
+    initial_position = (3, 1)  # west dead-end
+    initial_direction = Grid4TransitionsEnum.WEST  # west
+    target_position = (3, 9)  # east
+
+    agent = env.agents[0]
+    agent.position = initial_position
+    agent.initial_position = initial_position
+    agent.direction = initial_direction
+    agent.target = target_position
+    agent.moving = True
+
+    env.reset(False, False)
+
+    # (3, 3) lies on the shared prefix of every alternative from source to target -
+    # forbidding it must make the target unreachable.
+    actual = get_k_shortest_paths(
+        env=env,
+        source_position=initial_position,
+        source_direction=int(initial_direction),
+        target_position=target_position,
+        k=10,
+        forbidden_cells={(3, 3)},
+    )
+    assert actual == []
+
+
 def test_get_k_shortest_paths_with_direction_at_target(rendering=False):
     rail, rail_map, optionals = make_simple_rail_with_alternatives()
 
