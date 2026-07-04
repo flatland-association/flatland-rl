@@ -435,7 +435,8 @@ class Trajectory:
 
         if start_step is not None and env._elapsed_steps < start_step:
             from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
-            env = TrajectoryEvaluator(trajectory=self).evaluate(start_step=env._elapsed_steps, end_step=start_step)
+            env = TrajectoryEvaluator(trajectory=self).evaluate(start_step=env._elapsed_steps, end_step=start_step,
+                                                                obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
         return env
 
     @staticmethod
