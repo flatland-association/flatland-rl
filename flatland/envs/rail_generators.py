@@ -11,7 +11,7 @@ from numpy import array
 from numpy.random.mtrand import RandomState
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.grid4_utils import direction_to_point, mirror
+from flatland.core.grid.grid4_utils import direction_to_point, mirror, find_connected_cells
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D, \
     Vec2dOperations
 from flatland.core.transition_map import GridTransitionMap
@@ -286,8 +286,17 @@ class SparseRailGen(RailGen):
                        _, pin in enumerate(pins)}
         pin_to_track = {pin: j for i, city in enumerate(outer_connection_points) for direction in city for j, pin in enumerate(direction)}
 
-        # ban shortest-path search from cutting through inner-city tracks
-        free_rails_cells = {cell for city in free_rails for track in city for cell in track}
+        # ban shortest-path search from cutting through inner-city tracks: for each city, flood-fill
+        # outward from its own free_rails cells, never crossing a city pin (city pins mark the city
+        # boundary, so this stays within the city and never leaks into the inter-city lines).
+        # free_rails_flooded keeps the same List[city][track][cell] structure as free_rails (with a
+        # single flooded "track" per city) so it can be used as a drop-in replacement for free_rails.
+        city_pin_cells = set(pin_to_gate.keys())
+        free_rails_flooded: List[List[List[IntVector2D]]] = []
+        for free_rails_city in free_rails:
+            city_open_set = {cell for track in free_rails_city for cell in track}
+            free_rails_flooded.append([list(find_connected_cells(grid_map, open_set=city_open_set, forbidden_cells=city_pin_cells))])
+        free_rails_flooded_cells = {cell for city in free_rails_flooded for track in city for cell in track}
 
         gates_to_fibres = defaultdict(list)
         for city, fibre in enumerate(inter_city_lines_split):
@@ -305,7 +314,7 @@ class SparseRailGen(RailGen):
                                          source_direction=from_gate,
                                          target_position=fibre_end_pin,
                                          k=1,
-                                         forbidden_cells=free_rails_cells)
+                                         forbidden_cells=free_rails_flooded_cells)
             if len(paths) > 0:
                 gates_to_fibres[(from_station, from_gate, from_track, to_station, to_gate, to_track)].append([wp.position for wp in paths[0]])
             else:
@@ -342,7 +351,7 @@ class SparseRailGen(RailGen):
                         'edges': [c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
                     }
                     for i, (free_rails_city, outer_connection_points_city, train_stations_city) in
-                    enumerate(zip(free_rails, outer_connection_points, train_stations))
+                    enumerate(zip(free_rails_flooded, outer_connection_points, train_stations))
                 },
                 'links': [{
                     # TODO use split/relative notation and name instead?
