@@ -373,12 +373,12 @@ class PolicyRunner:
               )
 @click.option('--fork-data-dir',
               type=click.Path(exists=True, path_type=Path),
-              help="Path to existing RailEnv to start trajectory from",
+              help="Path to an existing trajectory's data dir to fork from. Must be used together with `--fork-ep-id`.",
               required=False, default=None
               )
 @click.option('--fork-ep-id',
-              type=int,
-              help="Path to existing RailEnv to start trajectory from",
+              type=str,
+              help="Episode ID of the existing trajectory (in `--fork-data-dir`) to fork from. Must be used together with `--fork-data-dir`.",
               required=False, default=None
               )
 @click.option('--callbacks',
@@ -548,7 +548,7 @@ def generate_trajectory_from_policy(
         )
 
     if fork_data_dir is not None and fork_ep_id is not None:
-        trajectory = Trajectory.load_existing(data_dir=fork_data_dir, ep_id=fork_ep_id).fork(data_dir=data_dir, ep_id=fork_ep_id, start_step=start_step, )
+        trajectory = Trajectory.load_existing(data_dir=fork_data_dir, ep_id=fork_ep_id).fork(data_dir=data_dir, ep_id=ep_id, start_step=start_step, )
     else:
         trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id, env=env)
 
