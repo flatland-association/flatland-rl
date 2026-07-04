@@ -7,11 +7,16 @@ from typing import Optional, Any
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
+from flatland.core.effects_generator import MultiEffectsGeneratorWrapped
+from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
+from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
+from flatland.envs.malfunction_generators import ParamMalfunctionGen, MalfunctionParameters
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rewards import DefaultRewards
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
 from flatland.trajectories.policy_runner import generate_trajectory_from_policy, PolicyRunner
 from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, OUTPUTS_SUBDIR
@@ -57,6 +62,29 @@ def test_restore_episode():
         # TODO poor man's state comparison for now
         assert [a.position for a in env_5.agents] == [a.position for a in env.agents]
         assert [a.position for a in env_10.agents] != [a.position for a in env.agents]
+
+
+def test_load_env_replay_overrides():
+    """obs_builder/rewards/effects_generator passed to Trajectory.load_env must take effect on the
+    replay-to-step fallback path (closest snapshot stepped forward via TrajectoryEvaluator), not just
+    when loading an exact snapshot - see load_env's docstring."""
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory = PolicyRunner.create_from_policy(env=env_generator_legacy(seed=42)[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
+        # step 7 has no exact snapshot (nearest is 5) -> forces the replay-to-step fallback in load_env
+        assert trajectory._find_closest_snapshot(7) == 5
+
+        custom_obs_builder = DummyObservationBuilder()
+        custom_rewards = DefaultRewards()
+        custom_effects_generator = MalfunctionEffectsGenerator(
+            ParamMalfunctionGen(MalfunctionParameters(min_duration=1, max_duration=2, malfunction_rate=1.0)))
+
+        env = trajectory.load_env(7, obs_builder=custom_obs_builder, rewards=custom_rewards, effects_generator=custom_effects_generator)
+
+        assert env.obs_builder is custom_obs_builder
+        assert env.rewards is custom_rewards
+        assert isinstance(env.effects_generator, MultiEffectsGeneratorWrapped)
+        assert custom_effects_generator in env.effects_generator.effects_generators
 
 
 def test_from_submission():

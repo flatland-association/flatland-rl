@@ -48,11 +48,11 @@ class TrajectoryEvaluator:
         skip_rewards_dones_infos : bool
             skip verification of rewards/dones/infos
         rewards : Rewards
-            Rewards used for evaluation. If not provided, defaults to the restored env's rewards.
+            Rewards used for evaluation, forwarded to `Trajectory.load_env`. If not provided, defaults to the restored env's default rewards.
         obs_builder : ObservationBuilder
-            obs builder for the restored env. If not provided, defaults to the restored env's obs builder.
+            obs builder for the restored env, forwarded to `Trajectory.load_env`. If not provided, defaults to `DummyObservationBuilder`.
         effects_generator : EffectsGenerator
-            effects generator for the restored env. If not provided, defaults to the restored env's effects generator.
+            if given, forwarded to `Trajectory.load_env` and combined with (not replacing) the restored env's persisted effects generator.
         """
         if tqdm_kwargs is None:
             tqdm_kwargs = {}

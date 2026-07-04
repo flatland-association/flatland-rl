@@ -401,12 +401,22 @@ class Trajectory:
         """
         Restore an episode's env.
 
+        `obs_builder`, `rewards` and `effects_generator`, if given, take effect for the restored env
+        regardless of whether `start_step` is loaded from an exact snapshot or reached via replay (i.e. the
+        closest earlier snapshot is stepped forward with `TrajectoryEvaluator` to reach `start_step`) - both
+        paths forward them identically. See `RailEnvPersister.load_new` for how each is applied
+        (`effects_generator` is combined with, not replacing, any persisted effects generator).
+
         Parameters
         ----------
         start_step : Optional[int]
             start from snapshot (if it exists)
+        obs_builder : ObservationBuilder
+            obs builder for the restored env. If not provided, defaults to `DummyObservationBuilder`.
         rewards : Rewards
             rewards for the loaded env. If not provided, defaults to the loaded env's rewards.
+        effects_generator : EffectsGenerator
+            if given, combined with (not replacing) the persisted effects generator, so both fire.
         Returns
         -------
         RailEnv
