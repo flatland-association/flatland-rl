@@ -19,7 +19,6 @@ from flatland.envs import persistence
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes, align_cell_to_city
-from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
 RailGeneratorProduct = Tuple[RailGridTransitionMap, Optional[Dict]]
@@ -127,7 +126,26 @@ def sparse_rail_generator(*args: object, **kwargs: object) -> RailGenerator:
 
 
 def _city_name(city_idx: int) -> str:
-    return chr(ord('A') + city_idx)
+    """
+    Bijective base-26 letter naming (like spreadsheet column names): A, B, ..., Z, AA, AB, ..., ZZ,
+    AAA, ...
+
+    Parameters
+    ----------
+    city_idx : int
+        0-based city index.
+
+    Returns
+    -------
+    str
+        City name.
+    """
+    name = ""
+    n = city_idx + 1
+    while n > 0:
+        n, remainder = divmod(n - 1, 26)
+        name = chr(ord('A') + remainder) + name
+    return name
 
 
 class SparseRailGen(RailGen):
@@ -286,17 +304,14 @@ class SparseRailGen(RailGen):
                        _, pin in enumerate(pins)}
         pin_to_track = {pin: j for i, city in enumerate(outer_connection_points) for direction in city for j, pin in enumerate(direction)}
 
-        # ban shortest-path search from cutting through inner-city tracks: for each city, flood-fill
-        # outward from its own free_rails cells, never crossing a city pin (city pins mark the city
-        # boundary, so this stays within the city and never leaks into the inter-city lines).
-        # free_rails_flooded keeps the same List[city][track][cell] structure as free_rails (with a
-        # single flooded "track" per city) so it can be used as a drop-in replacement for free_rails.
+        # for each city, flood-fill outward from its own free_rails cells to get the full set of
+        # cells belonging to the city, never crossing a city pin (city pins mark the city boundary,
+        # so this stays within the city and never leaks into the inter-city lines).
         city_pin_cells = set(pin_to_gate.keys())
         free_rails_flooded: List[List[List[IntVector2D]]] = []
         for free_rails_city in free_rails:
             city_open_set = {cell for track in free_rails_city for cell in track}
             free_rails_flooded.append([list(find_connected_cells(grid_map, open_set=city_open_set, forbidden_cells=city_pin_cells))])
-        free_rails_flooded_cells = {cell for city in free_rails_flooded for track in city for cell in track}
 
         gates_to_fibres = defaultdict(list)
         for city, fibre in enumerate(inter_city_lines_split):
@@ -309,17 +324,7 @@ class SparseRailGen(RailGen):
             from_track = pin_to_track[fibre_start_pin]
             to_track = pin_to_track[fibre_end_pin]
 
-            paths = get_k_shortest_paths(None, rail=grid_map,
-                                         source_position=fibre_start_pin,
-                                         source_direction=from_gate,
-                                         target_position=fibre_end_pin,
-                                         k=1,
-                                         forbidden_cells=free_rails_flooded_cells)
-            if len(paths) > 0:
-                gates_to_fibres[(from_station, from_gate, from_track, to_station, to_gate, to_track)].append([wp.position for wp in paths[0]])
-            else:
-                warnings.warn(
-                    f"[WARNING] no path found for {_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}.{from_track} -> {_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}.{to_track}")
+            gates_to_fibres[(from_station, from_gate, from_track, to_station, to_gate, to_track)].append(fibre)
 
         # TODO inconsistency: 0-based indexing or name-based indexing in dicts? or use lists?
         return grid_map, {

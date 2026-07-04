@@ -8,7 +8,7 @@ from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import sparse_rail_generator
+from flatland.envs.rail_generators import sparse_rail_generator, _city_name
 from flatland.utils.rendertools import RenderTool
 
 
@@ -599,3 +599,39 @@ def test_sparse_generator_with_level_free_10():
         assert rail.grid[cell] == RailEnvTransitionsEnum.diamond_crossing
     assert np.count_nonzero(rail.grid == RailEnvTransitionsEnum.diamond_crossing) == 2
 
+
+def test_city_name():
+    """Bijective base-26 naming: A, B, ..., Z, AA, AB, ..., AZ, BA, ..., ZZ, AAA, ..."""
+    assert _city_name(0) == "A"
+    assert _city_name(1) == "B"
+    assert _city_name(25) == "Z"
+    assert _city_name(26) == "AA"
+    assert _city_name(27) == "AB"
+    assert _city_name(51) == "AZ"
+    assert _city_name(52) == "BA"
+    assert _city_name(701) == "ZZ"
+    assert _city_name(702) == "AAA"
+    assert _city_name(703) == "AAB"
+
+
+def test_sparse_rail_generator_gates_to_fibres_reuses_connecting_line():
+    """gates_to_fibres/stations_links['links'][*]['fibres'] must directly reuse the path
+    _connect_cities drew for each inter-city connection instead of re-deriving it with a shortest-
+    path search - each fibre's edges must start/end exactly at its own from_pin/to_pin node."""
+    generate = sparse_rail_generator(max_num_cities=3, max_rails_between_cities=2, grid_mode=False)
+    grid_map, optionals = generate(width=40, height=40, num_agents=5, np_random=RandomState(1))
+
+    stations = optionals['stations_links']['stations']
+    links = optionals['stations_links']['links']
+    assert len(links) > 0
+
+    def pin_node(pin_name):
+        station_name, gate_char, track = pin_name.split(".")
+        return stations[station_name]['gates'][gate_char]['pins'][int(track)]['node']
+
+    for link in links:
+        for fibre in link['fibres']:
+            edges = fibre['edges']
+            assert len(edges) > 0
+            assert edges[0] == pin_node(fibre['from_pin'])
+            assert edges[-1] == pin_node(fibre['to_pin'])
