@@ -634,7 +634,8 @@ class SparseRailGen(RailGen):
                         warnings.warn("[WARNING] No line added between stations")
                     elif new_line[-1] != neighbour_connection_point or new_line[0] != city_out_connection_point:
                         warnings.warn("[WARNING] Unable to connect requested stations")
-                    all_paths.append(new_line)
+                    else:
+                        all_paths.append(new_line)
         return all_paths
 
     def get_closest_neighbour_for_direction(self, closest_neighbours, out_direction):
