@@ -132,6 +132,10 @@ class RailEnvTransitionsEnum(IntEnum):
     simple_switch_west_right = fast_grid4_rotate_transition(simple_switch_north_right, 270)
 
     @staticmethod
+    def is_empty(transition):
+        return transition == RailEnvTransitionsEnum.empty
+
+    @staticmethod
     def is_deadend(transition):
         return transition in {RailEnvTransitionsEnum.dead_end_from_east,
                               RailEnvTransitionsEnum.dead_end_from_south,
@@ -152,9 +156,19 @@ class RailEnvTransitionsEnum(IntEnum):
 
     @staticmethod
     def is_simple_switch(transition):
-        return transition in {RailEnvTransitionsEnum.simple_switch_north_right,
+        return transition in {RailEnvTransitionsEnum.simple_switch_north_left,
+                              RailEnvTransitionsEnum.simple_switch_east_left,
+                              RailEnvTransitionsEnum.simple_switch_south_left,
+                              RailEnvTransitionsEnum.simple_switch_west_left,
+                              RailEnvTransitionsEnum.simple_switch_north_right,
+                              RailEnvTransitionsEnum.simple_switch_east_right,
                               RailEnvTransitionsEnum.simple_switch_south_right,
+                              RailEnvTransitionsEnum.simple_switch_west_right,
                               }
+
+    @staticmethod
+    def is_diamond_crossing(transition):
+        return transition == RailEnvTransitionsEnum.diamond_crossing
 
     @staticmethod
     def is_double_slip(transition):
@@ -164,6 +178,13 @@ class RailEnvTransitionsEnum(IntEnum):
     def is_single_slip(transition):
         return transition in {RailEnvTransitionsEnum.single_slip_NE, RailEnvTransitionsEnum.single_slip_SE, RailEnvTransitionsEnum.single_slip_SW,
                               RailEnvTransitionsEnum.single_slip_NW, }
+
+    @staticmethod
+    def is_symmetric_switch(transition):
+        return transition in {RailEnvTransitionsEnum.symmetric_switch_from_south,
+                              RailEnvTransitionsEnum.symmetric_switch_from_west,
+                              RailEnvTransitionsEnum.symmetric_switch_from_north,
+                              RailEnvTransitionsEnum.symmetric_switch_from_east}
 
     @staticmethod
     def is_one_one(transition):
