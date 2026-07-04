@@ -6,7 +6,7 @@ import msgpack
 import msgpack_numpy
 import numpy as np
 
-from flatland.core.effects_generator import EffectsGenerator, make_multi_effects_generator
+from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.grid.grid_resource_map import GridResourceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
@@ -123,11 +123,10 @@ class RailEnvPersister(object):
         """
         Load environment with distance map from a file into new env.
 
-        `obs_builder`, `rewards` and `effects_generator` are never part of the persisted state; if given, they
-        always take effect for the restored env instead of any (non-existent) persisted counterpart. The
-        restored `effects_generator` is the only exception with a genuine persisted counterpart: if given,
-        it is combined with (not replacing) the effects generator restored from `env_dict` via
-        `make_multi_effects_generator`, so both fire.
+        `obs_builder`, `rewards` and `effects_generator` are never part of the persisted state as such (only
+        `effects_generator` has a genuine persisted counterpart, restored from `env_dict`); if given, each of
+        the three always takes effect for the restored env, replacing rather than merging with any restored
+        or default counterpart.
 
         Parameters:
         -------
@@ -139,8 +138,7 @@ class RailEnvPersister(object):
         rewards : Rewards
             rewards for the restored env. Defaults to the env's own default rewards if not given.
         effects_generator : EffectsGenerator
-            if given, combined with the effects generator restored from `env_dict` (both fire) instead of
-            replacing or discarding it.
+            if given, replaces the effects generator restored from `env_dict` instead of being discarded.
         """
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
@@ -209,10 +207,10 @@ class RailEnvPersister(object):
         -------
         env_dict: dict
         effects_generator: Optional[EffectsGenerator]
-            if given, combined with (not replacing) the effects generator restored from `env_dict` via
-            `make_multi_effects_generator`, so both fire. Without this, any effects generator passed to the
-            `RailEnv` constructor would be silently discarded here, since `env_dict`'s "new format"
-            `effects_generator` state (if present) always takes precedence at reconstruction time.
+            if given, replaces the effects generator restored from `env_dict` instead of being discarded.
+            Without this, any effects generator passed to the `RailEnv` constructor would be silently
+            discarded here, since `env_dict`'s "new format" `effects_generator` state (if present) always
+            takes precedence at reconstruction time.
         """
         env.rail = RailGridTransitionMap(1, 1)  # dummy
         grid = np.array(env_dict["grid"])
@@ -298,11 +296,10 @@ class RailEnvPersister(object):
         env.line_generator = line_gen.line_from_file(env_dict=env_dict)
         env.timetable_generator = tt_gen.timetable_from_file(env_dict=env_dict)
 
-        restored_effects_generator = cls._apply_malfunction(env_dict)
         if effects_generator is not None:
-            env.effects_generator = make_multi_effects_generator(effects_generator, restored_effects_generator)
+            env.effects_generator = effects_generator
         else:
-            env.effects_generator = restored_effects_generator
+            env.effects_generator = cls._apply_malfunction(env_dict)
 
     @classmethod
     def _apply_malfunction(cls, env_dict: dict):

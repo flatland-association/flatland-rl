@@ -7,7 +7,6 @@ from typing import Optional, Any
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
-from flatland.core.effects_generator import MultiEffectsGeneratorWrapped
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
@@ -77,14 +76,13 @@ def test_load_env_replay_overrides():
         custom_obs_builder = DummyObservationBuilder()
         custom_rewards = DefaultRewards()
         custom_effects_generator = MalfunctionEffectsGenerator(
-            ParamMalfunctionGen(MalfunctionParameters(min_duration=1, max_duration=2, malfunction_rate=1.0)))
+            ParamMalfunctionGen(MalfunctionParameters(min_duration=20, max_duration=50, malfunction_rate=1 / 540)))
 
         env = trajectory.load_env(7, obs_builder=custom_obs_builder, rewards=custom_rewards, effects_generator=custom_effects_generator)
 
         assert env.obs_builder is custom_obs_builder
         assert env.rewards is custom_rewards
-        assert isinstance(env.effects_generator, MultiEffectsGeneratorWrapped)
-        assert custom_effects_generator in env.effects_generator.effects_generators
+        assert env.effects_generator is custom_effects_generator
 
 
 def test_from_submission():

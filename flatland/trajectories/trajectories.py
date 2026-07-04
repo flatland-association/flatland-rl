@@ -404,8 +404,8 @@ class Trajectory:
         `obs_builder`, `rewards` and `effects_generator`, if given, take effect for the restored env
         regardless of whether `start_step` is loaded from an exact snapshot or reached via replay (i.e. the
         closest earlier snapshot is stepped forward with `TrajectoryEvaluator` to reach `start_step`) - both
-        paths forward them identically. See `RailEnvPersister.load_new` for how each is applied
-        (`effects_generator` is combined with, not replacing, any persisted effects generator).
+        paths forward them identically. See `RailEnvPersister.load_new` for how each is applied: all three
+        replace rather than merge with any restored or default counterpart.
 
         Parameters
         ----------
@@ -416,7 +416,7 @@ class Trajectory:
         rewards : Rewards
             rewards for the loaded env. If not provided, defaults to the loaded env's rewards.
         effects_generator : EffectsGenerator
-            if given, combined with (not replacing) the persisted effects generator, so both fire.
+            if given, replaces the persisted effects generator instead of being discarded.
         Returns
         -------
         RailEnv

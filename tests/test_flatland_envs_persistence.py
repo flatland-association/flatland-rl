@@ -5,7 +5,7 @@ import importlib_resources as ir
 import numpy as np
 import pytest
 
-from flatland.core.effects_generator import EffectsGenerator, MultiEffectsGeneratorWrapped
+from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.env_generation.env_generator import env_generator_legacy
 from flatland.envs.line_generators import sparse_line_generator
@@ -43,15 +43,13 @@ def test_load_new():
 
 
 def test_load_new_overrides():
-    """obs_builder/rewards/effects_generator passed to load_new take effect for the restored env: obs_builder
-    and rewards are used as-is (they have no persisted counterpart), while effects_generator is combined with
-    (not replacing) the persisted one, so both fire."""
+    """obs_builder/rewards/effects_generator passed to load_new take effect for the restored env, replacing
+    (not merging with) any restored or default counterpart - same semantics for all three."""
     rail, rail_map, optionals = make_simple_rail()
     env_initial = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                           line_generator=sparse_line_generator(), number_of_agents=2,
                           malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(min_duration=20, max_duration=30, malfunction_rate=1.0 / 200)))
     env_initial.reset(False, False)
-    persisted_effects_generator_state = env_initial.effects_generator.__getstate__()
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         filename = os.path.join(tmpdirname, "env.pkl")
@@ -67,11 +65,7 @@ def test_load_new_overrides():
 
         assert env_loaded.obs_builder is custom_obs_builder
         assert env_loaded.rewards is custom_rewards
-
-        assert isinstance(env_loaded.effects_generator, MultiEffectsGeneratorWrapped)
-        assert custom_effects_generator in env_loaded.effects_generator.effects_generators
-        restored = [eg for eg in env_loaded.effects_generator.effects_generators if eg is not custom_effects_generator][0]
-        assert restored.__getstate__() == persisted_effects_generator_state
+        assert env_loaded.effects_generator is custom_effects_generator
 
 
 def test_legacy_envs():

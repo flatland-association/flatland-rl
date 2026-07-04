@@ -52,7 +52,7 @@ class TrajectoryEvaluator:
         obs_builder : ObservationBuilder
             obs builder for the restored env, forwarded to `Trajectory.load_env`. If not provided, defaults to `DummyObservationBuilder`.
         effects_generator : EffectsGenerator
-            if given, forwarded to `Trajectory.load_env` and combined with (not replacing) the restored env's persisted effects generator.
+            if given, forwarded to `Trajectory.load_env` and replaces the restored env's persisted effects generator instead of being discarded.
         """
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
