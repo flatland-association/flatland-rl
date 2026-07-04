@@ -318,8 +318,8 @@ class SparseRailGen(RailGen):
             if len(paths) > 0:
                 gates_to_fibres[(from_station, from_gate, from_track, to_station, to_gate, to_track)].append([wp.position for wp in paths[0]])
             else:
-                print(
-                    f"no path found for {_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}.{from_track} -> {_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}.{to_track}")
+                warnings.warn(
+                    f"[WARNING] no path found for {_city_name(from_station)}.{Grid4TransitionsEnum.to_char(from_gate)}.{from_track} -> {_city_name(to_station)}.{Grid4TransitionsEnum.to_char(to_gate)}.{to_track}")
 
         # TODO inconsistency: 0-based indexing or name-based indexing in dicts? or use lists?
         return grid_map, {
