@@ -123,13 +123,22 @@ class RailEnvPersister(object):
         """
         Load environment with distance map from a file into new env.
 
+        `obs_builder`, `rewards` and `effects_generator` are never part of the persisted state as such (only
+        `effects_generator` has a genuine persisted counterpart, restored from `env_dict`); if given, each of
+        the three always takes effect for the restored env, replacing rather than merging with any restored
+        or default counterpart.
+
         Parameters:
         -------
         filename: Union[str, Path]
         load_from_package: Optional[str]
             defaults to `None`.
         obs_builder : ObservationBuilder[RailEnv]
-            defaults to `None`.
+            obs builder for the restored env. Defaults to `DummyObservationBuilder` if not given.
+        rewards : Rewards
+            rewards for the restored env. Defaults to the env's own default rewards if not given.
+        effects_generator : EffectsGenerator
+            if given, replaces the effects generator restored from `env_dict` instead of being discarded.
         """
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
@@ -149,12 +158,12 @@ class RailEnvPersister(object):
             obs_builder_object=obs_builder,
             record_steps=True,
             rewards=rewards,
-            effects_generator=effects_generator,
         )
+        cls.set_full_state(env, env_dict, effects_generator=effects_generator)
+
         env.obs_builder.set_env(env)
         env.obs_builder.reset()
 
-        cls.set_full_state(env, env_dict)
         return env, env_dict
 
     @classmethod
@@ -190,13 +199,18 @@ class RailEnvPersister(object):
         return cls.load_new(resource, load_from_package=package)
 
     @classmethod
-    def set_full_state(cls, env, env_dict):
+    def set_full_state(cls, env, env_dict, effects_generator: Optional[EffectsGenerator] = None):
         """
         Sets environment state from env_dict
 
         Parameters
         -------
         env_dict: dict
+        effects_generator: Optional[EffectsGenerator]
+            if given, replaces the effects generator restored from `env_dict` instead of being discarded.
+            Without this, any effects generator passed to the `RailEnv` constructor would be silently
+            discarded here, since `env_dict`'s "new format" `effects_generator` state (if present) always
+            takes precedence at reconstruction time.
         """
         env.rail = RailGridTransitionMap(1, 1)  # dummy
         grid = np.array(env_dict["grid"])
@@ -282,7 +296,10 @@ class RailEnvPersister(object):
         env.line_generator = line_gen.line_from_file(env_dict=env_dict)
         env.timetable_generator = tt_gen.timetable_from_file(env_dict=env_dict)
 
-        env.effects_generator = cls._apply_malfunction(env_dict)
+        if effects_generator is not None:
+            env.effects_generator = effects_generator
+        else:
+            env.effects_generator = cls._apply_malfunction(env_dict)
 
     @classmethod
     def _apply_malfunction(cls, env_dict: dict):

@@ -1,23 +1,106 @@
 import os
 import sys
 from pathlib import Path
+from typing import Tuple, Any, Optional
 
 import click
+import numpy as np
 import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
+from flatland.core.effects_generator import EffectsGenerator
+from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.policy import Policy
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, AbstractRailEnv
-from flatland.envs.rewards import DefaultRewards
-from flatland.trajectories.trajectories import Trajectory, SERIALISED_STATE_SUBDIR
+from flatland.envs.rewards import DefaultRewards, Rewards
+from flatland.trajectories.trajectories import Trajectory
 from flatland.utils.cli_utils import resolve_type
 
 
 class PolicyRunner:
+    def __init__(self,
+                 policy: Policy,
+                 trajectory: Trajectory,
+                 by_pass_env: RailEnv = None,
+                 callbacks: Optional[FlatlandCallbacks] = None,
+                 end_step=None,
+                 obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
+                 rewards: Optional["Rewards"] = None,
+                 effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+                 ):
+        self._policy = policy
+        trajectory_env_time = trajectory.trains_rewards_dones_infos["env_time"].max()
+        trajectory_env_time = 0 if np.isnan(trajectory_env_time) else trajectory_env_time
+        if by_pass_env is not None:
+            self.env = by_pass_env = by_pass_env
+            assert by_pass_env._elapsed_steps == trajectory_env_time, \
+                f"Expected env at {trajectory_env_time}, found {by_pass_env._elapsed_steps}."
+        else:
+            self.env = trajectory.load_env(trajectory_env_time, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+
+        self.trajectory = trajectory
+        # TODO extract to public interface?
+        self.observations = self.env._get_observations()
+        self.callbacks = callbacks
+        self.n_agents = self.env.get_num_agents()
+        self.end_step = end_step if end_step is not None else self.env._max_episode_steps
+        self.done = False
+
+    @property
+    def policy(self):
+        return self._policy
+
+    @property
+    def env_time(self):
+        return self.env._elapsed_steps
+
+    def change_policy(self, policy: Policy, obs_builder: ObservationBuilder):
+        self._policy = policy
+        self.env.obs_builder = obs_builder
+        self.env.obs_builder.set_env(self.env)
+        self.observations = self.env._get_observations()
+
+    def step(self, persist: bool = False) -> Tuple["Trajectory", bool]:
+        """Execute one environment step. Returns (trajectory, done)."""
+        env_time = self.env_time
+        assert env_time == self.env._elapsed_steps
+
+        action_dict = self._policy.act_many(self.env.get_agent_handles(), observations=list(self.observations.values()))
+        for handle, action in action_dict.items():
+            self.trajectory.action_collect(env_time=env_time, agent_id=handle, action=action)
+
+        self.observations, rewards, dones, infos = self.env.step(action_dict)
+
+        for agent_id in range(self.n_agents):
+            agent = self.env.agents[agent_id]
+            self.trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=agent.current_configuration)
+            self.trajectory.rewards_dones_infos_collect(env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
+                                                        info={k: v[agent_id] for k, v in infos.items()},
+                                                        done=dones[agent_id])
+
+        self.done = dones['__all__']
+
+        if self.callbacks is not None:
+            self.callbacks.on_episode_step(env=self.env, data_dir=self.trajectory.outputs_dir)
+
+        if self.done:
+            if self.callbacks is not None:
+                self.callbacks.on_episode_end(env=self.env, data_dir=self.trajectory.outputs_dir)
+            actual_success_rate = sum([agent.state == 6 for agent in self.env.agents]) / self.n_agents
+            # not persisted yet, need to get df from collected buffer
+            collected_rewards = self.trajectory._collected_trains_rewards_dones_infos_to_df()["reward"]
+            normalized_reward = self.env.rewards.normalize(*collected_rewards, max_episode_steps=self.env._max_episode_steps,
+                                                           num_agents=self.env.get_num_agents())
+            self.trajectory.arrived_collect(env_time, actual_success_rate, normalized_reward)
+
+        if persist:
+            self.trajectory.persist()
+        return self.trajectory, self.done
+
     @staticmethod
     def create_from_policy(
         policy: Policy,
@@ -27,11 +110,35 @@ class PolicyRunner:
         ep_id: str = None,
         callbacks: FlatlandCallbacks = None,
         tqdm_kwargs: dict = None,
-        start_step: int = 0,
         end_step: int = None,
-
-        fork_from_trajectory: "Trajectory" = None,
         no_save: bool = False,
+    ) -> Trajectory:
+        trajectory = Trajectory.create_empty(data_dir=data_dir, env=env if not no_save else None, ep_id=ep_id, )
+        return PolicyRunner.resume(
+            policy=policy,
+            trajectory=trajectory,
+            by_pass_env=env if no_save else None,
+            snapshot_interval=snapshot_interval,
+            callbacks=callbacks,
+            tqdm_kwargs=tqdm_kwargs,
+            end_step=end_step,
+            rewards=env.rewards,
+            obs_builder=env.obs_builder,
+            effects_generator=env.effects_generator,
+        )
+
+    @staticmethod
+    def resume(
+        policy: Policy,
+        trajectory: Trajectory,
+        by_pass_env: RailEnv = None,
+        snapshot_interval: int = 1,
+        callbacks: FlatlandCallbacks = None,
+        tqdm_kwargs: dict = None,
+        end_step: int = None,
+        obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
+        rewards: Optional[Rewards] = None,
+        effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
     ) -> Trajectory:
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -43,108 +150,52 @@ class PolicyRunner:
         ----------
         policy : Policy
             the submission's policy
-        data_dir : Path
-            the path to write the trajectory to
-        env: RailEnv
-            directly inject env, skip env generation
+        trajectory : Trajectory
+        by_pass_env : RailEnv
+            Deprecated: pass env directly to avoid loading env (graph envs do not support env persistence yet).
         snapshot_interval : int
             interval to write pkl snapshots
-        ep_id: str
-            episode ID to store data under. If not provided, generate one.
         callbacks: FlatlandCallbacks
             callbacks to run during trajectory creation
         tqdm_kwargs: dict
             additional kwargs for tqdm
-        start_step : int
-            start evaluation from intermediate step incl. (requires snapshot to be present); take actions from start_step and first step executed is start_step + 1. Defaults to 0 with first elapsed step 1.
         end_step : int
             stop evaluation at intermediate step excl. Capped by env's max_episode_steps
-        fork_from_trajectory : Trajectory
-            copy data from this trajectory up to start step and run policy from there on
-        no_save : bool
-            do not save the initial env. Deprecated.
         Returns
         -------
         Trajectory
 
         """
-        if fork_from_trajectory is not None and env is not None:
-            raise Exception("Provided fork-from-trajectory and env, cannot do both.")
-        elif fork_from_trajectory is None and env is None:
-            raise Exception("Provided neither fork-from-trajectory nor env, must provide exactly one.")
-        if fork_from_trajectory is not None:
-            trajectory = fork_from_trajectory.fork(data_dir=data_dir, ep_id=ep_id, start_step=start_step)
-            env = trajectory.load_env(start_step=start_step)
-        else:
-            trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id)
-
-        # TODO bad code smell - private method - check num resets?
-        observations = env._get_observations()
-
-        assert start_step == env._elapsed_steps, f"Expected env at {start_step}, found {env._elapsed_steps}."
-
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
-
-        (data_dir / SERIALISED_STATE_SUBDIR).mkdir(parents=True, exist_ok=True)
-        if not no_save:
-            RailEnvPersister.save(env, str(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}.pkl"))
 
         if snapshot_interval > 0:
             from flatland.trajectories.trajectory_snapshot_callbacks import TrajectorySnapshotCallbacks
             if callbacks is None:
-                callbacks = TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir)
+                callbacks = TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=trajectory.data_dir)
             else:
                 callbacks = make_multi_callbacks(callbacks,
-                                                 TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval, data_dir_override=data_dir))
+                                                 TrajectorySnapshotCallbacks(trajectory, snapshot_interval=snapshot_interval,
+                                                                             data_dir_override=trajectory.data_dir))
 
-        n_agents = env.get_num_agents()
-        assert len(env.agents) == n_agents
-
-        env_time = start_step
-        if end_step is None:
-            end_step = env._max_episode_steps
-        assert end_step >= start_step
-        env_time_range = range(start_step, end_step)
-
-        if callbacks is not None and start_step == 0:
-            callbacks.on_episode_start(env=env, data_dir=trajectory.outputs_dir)
-
-        done = False
-        for env_time in tqdm.tqdm(env_time_range, **tqdm_kwargs):
-            assert env_time == env._elapsed_steps
-
-            action_dict = policy.act_many(env.get_agent_handles(), observations=list(observations.values()))
-            for handle, action in action_dict.items():
-                trajectory.action_collect(env_time=env_time, agent_id=handle, action=action)
-
-            observations, rewards, dones, infos = env.step(action_dict)
-
-            for agent_id in range(n_agents):
-                agent = env.agents[agent_id]
-                trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=agent.current_configuration)
-                trajectory.rewards_dones_infos_collect(env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
-                                                       info={k: v[agent_id] for k, v in infos.items()},
-                                                       done=dones[agent_id])
-
-            done = dones['__all__']
-
-            if callbacks is not None:
-                callbacks.on_episode_step(env=env, data_dir=trajectory.outputs_dir)
-
+        runner = PolicyRunner(
+            policy=policy,
+            trajectory=trajectory,
+            by_pass_env=by_pass_env,
+            callbacks=callbacks,
+            end_step=end_step,
+            effects_generator=effects_generator,
+            rewards=rewards,
+            obs_builder=obs_builder
+        )
+        for _ in tqdm.tqdm(range(runner.env_time, runner.end_step), **tqdm_kwargs):
+            if callbacks is not None and runner.env_time == 0:
+                callbacks.on_episode_start(env=runner.env, data_dir=trajectory.outputs_dir)
+            _, done = runner.step()
             if done:
-                if callbacks is not None:
-                    callbacks.on_episode_end(env=env, data_dir=trajectory.outputs_dir)
                 break
-        actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
-        if done:
-            # not persisted yet, need to get df from collected buffer
-            rewards = trajectory._collected_trains_rewards_dones_infos_to_df()["reward"]
-            normalized_reward = env.rewards.normalize(*rewards, max_episode_steps=env._max_episode_steps,
-                                                      num_agents=env.get_num_agents())
-            trajectory.arrived_collect(env_time, actual_success_rate, normalized_reward)
-        trajectory.persist()
-        return trajectory
+        runner.trajectory.persist()
+        return runner.trajectory
 
 
 @click.command()
@@ -319,12 +370,12 @@ class PolicyRunner:
               )
 @click.option('--fork-data-dir',
               type=click.Path(exists=True, path_type=Path),
-              help="Path to existing RailEnv to start trajectory from",
+              help="Path to an existing trajectory's data dir to fork from. Must be used together with `--fork-ep-id`.",
               required=False, default=None
               )
 @click.option('--fork-ep-id',
-              type=int,
-              help="Path to existing RailEnv to start trajectory from",
+              type=str,
+              help="Episode ID of the existing trajectory (in `--fork-data-dir`) to fork from. Must be used together with `--fork-data-dir`.",
               required=False, default=None
               )
 @click.option('--callbacks',
@@ -493,19 +544,20 @@ def generate_trajectory_from_policy(
             post_seed=post_seed,
         )
 
-    fork_from_trajectory = None
     if fork_data_dir is not None and fork_ep_id is not None:
-        fork_from_trajectory = Trajectory.load_existing(data_dir=fork_data_dir, ep_id=fork_ep_id)
-    PolicyRunner.create_from_policy(
+        trajectory = Trajectory.load_existing(data_dir=fork_data_dir, ep_id=fork_ep_id).fork(data_dir=data_dir, ep_id=ep_id, start_step=start_step, )
+    else:
+        trajectory = Trajectory.create_empty(data_dir=data_dir, ep_id=ep_id, env=env)
+
+    PolicyRunner.resume(
         policy=policy_cls(),
-        data_dir=data_dir,
+        trajectory=trajectory,
         snapshot_interval=snapshot_interval,
-        ep_id=ep_id,
-        env=env,
-        start_step=start_step,
         end_step=end_step,
-        fork_from_trajectory=fork_from_trajectory,
         callbacks=callbacks,
+        effects_generator=effects_generator,
+        rewards=rewards,
+        obs_builder=obs_builder,
     )
 
 

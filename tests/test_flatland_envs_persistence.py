@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from flatland.core.effects_generator import EffectsGenerator
+from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.env_generation.env_generator import env_generator_legacy
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_effects_generators import MalfunctionEffectsGenerator
@@ -14,6 +15,7 @@ from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.rewards import DefaultRewards
 from flatland.utils.simple_rail import make_simple_rail
 
 
@@ -38,6 +40,32 @@ def test_load_new():
 
     assert np.all(np.array_equal(rails_initial, rails_loaded))
     assert agents_initial == agents_loaded
+
+
+def test_load_new_overrides():
+    """obs_builder/rewards/effects_generator passed to load_new take effect for the restored env, replacing
+    (not merging with) any restored or default counterpart - same semantics for all three."""
+    rail, rail_map, optionals = make_simple_rail()
+    env_initial = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                          line_generator=sparse_line_generator(), number_of_agents=2,
+                          malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(min_duration=20, max_duration=30, malfunction_rate=1.0 / 200)))
+    env_initial.reset(False, False)
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        filename = os.path.join(tmpdirname, "env.pkl")
+        RailEnvPersister.save(env_initial, filename)
+
+        custom_obs_builder = DummyObservationBuilder()
+        custom_rewards = DefaultRewards()
+        custom_effects_generator = MalfunctionEffectsGenerator(
+            ParamMalfunctionGen(MalfunctionParameters(min_duration=1, max_duration=2, malfunction_rate=1.0)))
+
+        env_loaded, _ = RailEnvPersister.load_new(filename, obs_builder=custom_obs_builder, rewards=custom_rewards,
+                                                  effects_generator=custom_effects_generator)
+
+        assert env_loaded.obs_builder is custom_obs_builder
+        assert env_loaded.rewards is custom_rewards
+        assert env_loaded.effects_generator is custom_effects_generator
 
 
 def test_legacy_envs():

@@ -1,12 +1,15 @@
 import os
 import sys
 from pathlib import Path
+from typing import Any, Optional
 
 import click
 import numpy as np
 import tqdm
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
+from flatland.core.effects_generator import EffectsGenerator
+from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import Rewards
@@ -27,7 +30,9 @@ class TrajectoryEvaluator:
         skip_rewards_dones_infos: bool = False,
         skip_rewards: bool = False,
         ignoring_action_required: bool = True,
-        rewards: Rewards = None
+        rewards: Rewards = None,
+        obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
+        effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
     ) -> RailEnv:
         """
          Parameters
@@ -43,12 +48,16 @@ class TrajectoryEvaluator:
         skip_rewards_dones_infos : bool
             skip verification of rewards/dones/infos
         rewards : Rewards
-            Rewards used for evaluation. If not provided, defaults to the restored env's rewards.
+            Rewards used for evaluation, forwarded to `Trajectory.load_env`. If not provided, defaults to the restored env's default rewards.
+        obs_builder : ObservationBuilder
+            obs builder for the restored env, forwarded to `Trajectory.load_env`. If not provided, defaults to `DummyObservationBuilder`.
+        effects_generator : EffectsGenerator
+            if given, forwarded to `Trajectory.load_env` and replaces the restored env's persisted effects generator instead of being discarded.
         """
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
 
-        env = self.trajectory.load_env(start_step=start_step, rewards=rewards)
+        env = self.trajectory.load_env(start_step=start_step, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
         if start_step is None:
             start_step = 0
         if end_step is None:
