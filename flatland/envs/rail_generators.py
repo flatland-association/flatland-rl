@@ -246,8 +246,6 @@ class SparseRailGen(RailGen):
             self._generate_city_connection_points(
                 city_positions, city_radius, vector_field, rails_between_cities,
                 rail_pairs_in_city, np_random=np_random)
-        print("inner_connection_points: ", inner_connection_points)
-        print("outer_connection_points: ", outer_connection_points)
 
         # Connect the cities through the connection points
         inter_city_lines_split = self._connect_cities(city_positions, outer_connection_points, city_cells,
