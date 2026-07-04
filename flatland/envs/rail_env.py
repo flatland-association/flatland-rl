@@ -737,7 +737,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         self.height, self.width = rail.grid.shape
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
-        self.optionals  = optionals
         if optionals and 'stations_links' in optionals:
             self.stations_links = optionals['stations_links']
 
