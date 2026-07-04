@@ -112,7 +112,8 @@ class EffectsGenerator(Generic[EnvType]):
 
     @classmethod
     def from_state(cls, state_dict: StateDict) -> "EffectsGenerator":
-        eg = resolve_type(state_dict["cls"])()
+        klass = resolve_type(state_dict["cls"])
+        eg = klass.__new__(klass)
         eg.__setstate__(state_dict)
         return eg
 

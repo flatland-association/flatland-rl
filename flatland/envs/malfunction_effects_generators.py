@@ -88,30 +88,17 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
             Additional condition to be created instead of instance via `condition`. Defaults to None.
         """
         super().__init__()
-        # allow for "empty" constructor and subsequent __setstate__
-        if malfunction_rate is None:
-            self._malfunction_rate = None
-            self._min_duration = None
-            self._max_duration = None
+        self._malfunction_rate = float(malfunction_rate)
+        self._min_duration = int(min_duration)
+        self._max_duration = int(max_duration)
 
-            self._malfunction_generator = None
-            self._earliest_condition = None
-            self._max_num_malfunctions = None
-            self._num_malfunctions = None
-            self._condition = None
-        else:
-            self._malfunction_rate = float(malfunction_rate)
-            self._min_duration = int(min_duration)
-            self._max_duration = int(max_duration)
-
-            self._malfunction_generator = mal_gen.ParamMalfunctionGen(
-                mal_gen.MalfunctionParameters(malfunction_rate=self._malfunction_rate, min_duration=self._min_duration, max_duration=self._max_duration)
-            )
-            self._earliest_condition = int(earliest_malfunction) if earliest_malfunction is not None else None
-            self._max_num_malfunctions = int(max_num_malfunctions) if max_num_malfunctions is not None else None
-            self._num_malfunctions = 0
-            self._condition = resolve_type(condition, condition_pkg, condition_cls)
-            self._condition = self._condition
+        self._malfunction_generator = mal_gen.ParamMalfunctionGen(
+            mal_gen.MalfunctionParameters(malfunction_rate=self._malfunction_rate, min_duration=self._min_duration, max_duration=self._max_duration)
+        )
+        self._earliest_condition = int(earliest_malfunction) if earliest_malfunction is not None else None
+        self._max_num_malfunctions = int(max_num_malfunctions) if max_num_malfunctions is not None else None
+        self._num_malfunctions = 0
+        self._condition = resolve_type(condition, condition_pkg, condition_cls)
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         if self._earliest_condition is not None and env._elapsed_steps < self._earliest_condition:
