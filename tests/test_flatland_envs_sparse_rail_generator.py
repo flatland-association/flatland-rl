@@ -11,7 +11,7 @@ from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import sparse_rail_generator, _city_name, _gate_name, _pin_name
-from flatland.envs.stations_links import Pin, GateRef
+from flatland.envs.stations_links import Pin
 from flatland.utils.rendertools import RenderTool
 
 
@@ -636,7 +636,7 @@ def test_pin_name():
 def test_sparse_rail_generator_gates_to_fibres_reuses_connecting_line():
     """gates_to_fibres/stations_links.links[*].fibres must directly reuse the path _connect_cities
     drew for each inter-city connection instead of re-deriving it with a shortest-path search -
-    each fibre's edges must start/end exactly at its own from_pin/to_pin node."""
+    each fibre's edges must start/end exactly at its link's from_pin/to_pin node."""
     generate = sparse_rail_generator(max_num_cities=3, max_rails_between_cities=2, grid_mode=False)
     grid_map, optionals = generate(width=40, height=40, num_agents=5, np_random=RandomState(1))
 
@@ -653,17 +653,13 @@ def test_sparse_rail_generator_gates_to_fibres_reuses_connecting_line():
         for fibre in link.fibres:
             edges = fibre.edges
             assert len(edges) > 0
-            assert edges[0] == pin_node(fibre.from_pin)
-            assert edges[-1] == pin_node(fibre.to_pin)
+            assert edges[0] == pin_node(link.from_pin)
+            assert edges[-1] == pin_node(link.to_pin)
 
 
 def test_stations_links_dataclasses_are_frozen():
-    """stations_links (Pin, Gate, StoppingPoint, Station, Fibre, Link, StationsLinks) and the
-    internal GateRef/GateConnection helpers must be immutable dataclasses."""
+    """stations_links (Pin, Gate, StoppingPoint, Station, Fibre, Link, StationsLinks) must be
+    immutable dataclasses."""
     pin = Pin(node=(0, 0), name="A.N.0")
     with pytest.raises(dataclasses.FrozenInstanceError):
         pin.name = "changed"
-
-    gate_ref = GateRef(city=0, direction=1)
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        gate_ref.city = 1
