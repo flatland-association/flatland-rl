@@ -1,14 +1,17 @@
+import dataclasses
 import unittest
 import warnings
 
 import numpy as np
+import pytest
 from numpy.random import RandomState
 
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import sparse_rail_generator
+from flatland.envs.rail_generators import sparse_rail_generator, _city_name, _gate_name, _pin_name, _stopping_point_name
+from flatland.envs.stations_links import Pin
 from flatland.utils.rendertools import RenderTool
 
 
@@ -599,3 +602,71 @@ def test_sparse_generator_with_level_free_10():
         assert rail.grid[cell] == RailEnvTransitionsEnum.diamond_crossing
     assert np.count_nonzero(rail.grid == RailEnvTransitionsEnum.diamond_crossing) == 2
 
+
+def test_city_name():
+    """Bijective base-26 naming: A, B, ..., Z, AA, AB, ..., AZ, BA, ..., ZZ, AAA, ..."""
+    assert _city_name(0) == "A"
+    assert _city_name(1) == "B"
+    assert _city_name(25) == "Z"
+    assert _city_name(26) == "AA"
+    assert _city_name(27) == "AB"
+    assert _city_name(51) == "AZ"
+    assert _city_name(52) == "BA"
+    assert _city_name(701) == "ZZ"
+    assert _city_name(702) == "AAA"
+    assert _city_name(703) == "AAB"
+
+
+def test_gate_name():
+    """Gate name is <station name>.<facing char>, N/E/S/W for facing 0/1/2/3."""
+    assert _gate_name(0, 0) == "A.N"
+    assert _gate_name(0, 1) == "A.E"
+    assert _gate_name(0, 2) == "A.S"
+    assert _gate_name(0, 3) == "A.W"
+    assert _gate_name(26, 0) == "AA.N"
+
+
+def test_pin_name():
+    """Pin name is <station name>.<facing char>.<track number>."""
+    assert _pin_name(0, 0, 0) == "A.N.0"
+    assert _pin_name(0, 1, 2) == "A.E.2"
+    assert _pin_name(26, 3, 5) == "AA.W.5"
+
+
+def test_stopping_point_name():
+    """Stopping point name is <station name>.<stopping point index>."""
+    assert _stopping_point_name(0, 0) == "A.0"
+    assert _stopping_point_name(0, 2) == "A.2"
+    assert _stopping_point_name(26, 5) == "AA.5"
+
+
+def test_sparse_rail_generator_gates_to_fibres_reuses_connecting_line():
+    """gates_to_fibres/stations_links.links[*].fibres must directly reuse the path _connect_cities
+    drew for each inter-city connection instead of re-deriving it with a shortest-path search -
+    each fibre's edges must start/end exactly at its link's from_pin/to_pin node."""
+    generate = sparse_rail_generator(max_num_cities=3, max_rails_between_cities=2, grid_mode=False)
+    grid_map, optionals = generate(width=40, height=40, num_agents=5, np_random=RandomState(1))
+
+    stations_links = optionals['stations_links']
+    stations = stations_links.stations
+    links = stations_links.links
+    assert len(links) > 0
+
+    def pin_node(pin_name):
+        station_name, gate_char, track = pin_name.split(".")
+        return stations[station_name].gates[gate_char].pins[int(track)].node
+
+    for link in links:
+        for fibre in link.fibres:
+            edges = fibre.edges
+            assert len(edges) > 0
+            assert edges[0] == pin_node(link.from_pin)
+            assert edges[-1] == pin_node(link.to_pin)
+
+
+def test_stations_links_dataclasses_are_frozen():
+    """stations_links (Pin, Gate, StoppingPoint, Station, Fibre, Link, StationsLinks) must be
+    immutable dataclasses."""
+    pin = Pin(node=(0, 0), name="A.N.0")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        pin.name = "changed"

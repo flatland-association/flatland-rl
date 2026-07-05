@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Set, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,6 +18,7 @@ def get_k_shortest_paths(env: "RailEnv",
                          target_direction: int = None,
                          rail: GridTransitionMap = None,
                          cutoff: int = None,
+                         forbidden_cells: Set[Tuple[int, int]] = None,
                          ) -> List[Tuple[Waypoint]]:
     """
     Computes the k shortest paths using modified Dijkstra
@@ -40,6 +41,8 @@ def get_k_shortest_paths(env: "RailEnv",
     target_direction: Optional[Tuple[int,int]]
     cutoff :          Optional[int]
         do not consider paths longer than cutoff
+    forbidden_cells : Optional[Set[Tuple[int, int]]]
+        cells to exclude from the search - paths are never expanded into one of these cells
     Returns
     -------
     List[Tuple[WalkingElement]]
@@ -131,6 +134,11 @@ def get_k_shortest_paths(env: "RailEnv",
                     if r >= height or r < 0 or c >= width or c < 0:
                         if debug:
                             print(f"        ignoring v={v} as out out bounds ({height, width}).")
+                        continue
+                    # ignore if in forbidden_cells
+                    if forbidden_cells is not None and v.position in forbidden_cells:
+                        if debug:
+                            print(f"        ignoring v={v} as in forbidden_cells.")
                         continue
                     #     – insert Pv into B
                     heap.add(pv)

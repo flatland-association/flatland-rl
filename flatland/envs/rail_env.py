@@ -169,6 +169,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         self.timetable_generator = timetable_generator
 
         self.rail: Optional[UnderlyingTransitionMapType] = None
+        self.stations_links = None
 
         self.remove_agents_at_target = remove_agents_at_target
 
@@ -297,8 +298,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
         optionals = {}
         if regenerate_rail or self.rail is None:
+            self.stations_links = None
             optionals, rail = self._call_rail_generator(optionals)
             self.rail = rail
+
 
             # Do a new set_env call on the obs_builder to ensure
             # that obs_builder specific instantiations are made according to the
@@ -647,6 +650,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         return self.obs_dict
 
     def _call_rail_generator(self, optionals) -> Tuple[dict, UnderlyingTransitionMapType]:
+
         # TODO https://github.com/flatland-association/flatland-rl/issues/242 fix signature
         return self.rail_generator(self.number_of_agents, self.num_resets, self.np_random)
 
@@ -727,11 +731,14 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         elif "generate" in dir(self.rail_generator):
             rail, optionals = self.rail_generator.generate(
                 self.width, self.height, self.number_of_agents, self.num_resets, self.np_random)
+
         else:
             raise ValueError("Could not invoke __call__ or generate on rail_generator")
         self.height, self.width = rail.grid.shape
         if optionals and 'distance_map' in optionals:
             self.distance_map.set(optionals['distance_map'])
+        if optionals and 'stations_links' in optionals:
+            self.stations_links = optionals['stations_links']
 
         return optionals, rail
 

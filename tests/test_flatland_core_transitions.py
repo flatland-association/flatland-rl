@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """Tests for `flatland` package."""
+
 from flatland.core.grid.grid4 import Grid4Transitions
 from flatland.core.grid.grid8 import Grid8Transitions
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
+from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 
 
 # remove whitespace in string; keep whitespace below for easier reading
@@ -244,3 +246,111 @@ def test_rail_env_remove_deadend():
 
     assert ret.remove_deadends(int(rw('0010 0001 1000 0100'), 2)) == 0
     assert ret.remove_deadends(int(rw('0010 0001 1000 0110'), 2)) == int(rw('0000 0000 0000 0010'), 2)
+
+
+def test_get_neighboring_cells_horizontal_straight():
+    rail = GridTransitionMap(3, 3)
+    rail.set_transitions((1, 1), RailEnvTransitionsEnum.horizontal_straight)
+    pairs = rail.get_neighbor_pairs((1, 1))
+    assert ((1, 0), (1, 2)) in pairs
+    assert ((1, 2), (1, 0)) in pairs
+    assert len(pairs) == 2
+
+
+def test_is_deadend():
+    for member in [RailEnvTransitionsEnum.dead_end_from_east, RailEnvTransitionsEnum.dead_end_from_south,
+                   RailEnvTransitionsEnum.dead_end_from_north, RailEnvTransitionsEnum.dead_end_from_west]:
+        assert RailEnvTransitionsEnum.is_deadend(member), member.name
+    assert not RailEnvTransitionsEnum.is_deadend(RailEnvTransitionsEnum.vertical_straight)
+
+
+def test_is_turn():
+    for member in [RailEnvTransitionsEnum.right_turn_from_south, RailEnvTransitionsEnum.right_turn_from_west,
+                   RailEnvTransitionsEnum.right_turn_from_north, RailEnvTransitionsEnum.right_turn_from_east]:
+        assert RailEnvTransitionsEnum.is_turn(member), member.name
+    assert not RailEnvTransitionsEnum.is_turn(RailEnvTransitionsEnum.vertical_straight)
+
+
+def test_is_straight():
+    for member in [RailEnvTransitionsEnum.vertical_straight, RailEnvTransitionsEnum.horizontal_straight]:
+        assert RailEnvTransitionsEnum.is_straight(member), member.name
+    assert not RailEnvTransitionsEnum.is_straight(RailEnvTransitionsEnum.dead_end_from_east)
+
+
+def test_is_double_slip():
+    for member in [RailEnvTransitionsEnum.double_slip_NW_SE, RailEnvTransitionsEnum.double_slip_NE_SW]:
+        assert RailEnvTransitionsEnum.is_double_slip(member), member.name
+    assert not RailEnvTransitionsEnum.is_double_slip(RailEnvTransitionsEnum.vertical_straight)
+
+
+def test_is_single_slip():
+    for member in [RailEnvTransitionsEnum.single_slip_NE, RailEnvTransitionsEnum.single_slip_SE,
+                   RailEnvTransitionsEnum.single_slip_SW, RailEnvTransitionsEnum.single_slip_NW]:
+        assert RailEnvTransitionsEnum.is_single_slip(member), member.name
+    assert not RailEnvTransitionsEnum.is_single_slip(RailEnvTransitionsEnum.vertical_straight)
+
+
+def test_is_one_one():
+    one_one_members = [
+        RailEnvTransitionsEnum.dead_end_from_east, RailEnvTransitionsEnum.dead_end_from_south,
+        RailEnvTransitionsEnum.dead_end_from_north, RailEnvTransitionsEnum.dead_end_from_west,
+        RailEnvTransitionsEnum.right_turn_from_south, RailEnvTransitionsEnum.right_turn_from_west,
+        RailEnvTransitionsEnum.right_turn_from_north, RailEnvTransitionsEnum.right_turn_from_east,
+        RailEnvTransitionsEnum.vertical_straight, RailEnvTransitionsEnum.horizontal_straight,
+    ]
+    for member in one_one_members:
+        assert RailEnvTransitionsEnum.is_one_one(member), member.name
+    not_one_one_members = [
+        RailEnvTransitionsEnum.empty, RailEnvTransitionsEnum.diamond_crossing,
+        RailEnvTransitionsEnum.simple_switch_north_left, RailEnvTransitionsEnum.simple_switch_north_right,
+        RailEnvTransitionsEnum.single_slip_NE, RailEnvTransitionsEnum.double_slip_NW_SE,
+        RailEnvTransitionsEnum.symmetric_switch_from_south,
+    ]
+    for member in not_one_one_members:
+        assert not RailEnvTransitionsEnum.is_one_one(member), member.name
+
+
+def test_is_simple_switch_all_variants():
+    for member in [RailEnvTransitionsEnum.simple_switch_north_left, RailEnvTransitionsEnum.simple_switch_east_left,
+                   RailEnvTransitionsEnum.simple_switch_south_left, RailEnvTransitionsEnum.simple_switch_west_left,
+                   RailEnvTransitionsEnum.simple_switch_north_right, RailEnvTransitionsEnum.simple_switch_east_right,
+                   RailEnvTransitionsEnum.simple_switch_south_right, RailEnvTransitionsEnum.simple_switch_west_right]:
+        assert RailEnvTransitionsEnum.is_simple_switch(member), member.name
+    assert not RailEnvTransitionsEnum.is_simple_switch(RailEnvTransitionsEnum.vertical_straight)
+
+
+def test_is_empty():
+    assert RailEnvTransitionsEnum.is_empty(RailEnvTransitionsEnum.empty)
+    assert not RailEnvTransitionsEnum.is_empty(RailEnvTransitionsEnum.vertical_straight)
+
+
+def test_is_diamond_crossing():
+    assert RailEnvTransitionsEnum.is_diamond_crossing(RailEnvTransitionsEnum.diamond_crossing)
+    assert not RailEnvTransitionsEnum.is_diamond_crossing(RailEnvTransitionsEnum.vertical_straight)
+
+
+def test_is_symmetric_switch():
+    for member in [RailEnvTransitionsEnum.symmetric_switch_from_south, RailEnvTransitionsEnum.symmetric_switch_from_west,
+                   RailEnvTransitionsEnum.symmetric_switch_from_north, RailEnvTransitionsEnum.symmetric_switch_from_east]:
+        assert RailEnvTransitionsEnum.is_symmetric_switch(member), member.name
+    assert not RailEnvTransitionsEnum.is_symmetric_switch(RailEnvTransitionsEnum.vertical_straight)
+
+
+def test_is_methods_partition_all_enum_members():
+    """Every RailEnvTransitionsEnum member must be classified by exactly one `is_*` case predicate -
+    this is the exhaustive check that would have caught is_simple_switch originally covering
+    only 2 of its 8 variants."""
+    case_predicates = {
+        "is_empty": RailEnvTransitionsEnum.is_empty,
+        "is_straight": RailEnvTransitionsEnum.is_straight,
+        "is_simple_switch": RailEnvTransitionsEnum.is_simple_switch,
+        "is_diamond_crossing": RailEnvTransitionsEnum.is_diamond_crossing,
+        "is_single_slip": RailEnvTransitionsEnum.is_single_slip,
+        "is_double_slip": RailEnvTransitionsEnum.is_double_slip,
+        "is_symmetric_switch": RailEnvTransitionsEnum.is_symmetric_switch,
+        "is_deadend": RailEnvTransitionsEnum.is_deadend,
+        "is_turn": RailEnvTransitionsEnum.is_turn,
+    }
+    for member in RailEnvTransitionsEnum:
+        matches = [name for name, predicate in case_predicates.items() if predicate(member)]
+        assert len(matches) == 1, f"{member.name} matched {matches}, expected exactly one case predicate"

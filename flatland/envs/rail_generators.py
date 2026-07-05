@@ -2,15 +2,16 @@
 import math
 import pickle
 import warnings
+from collections import defaultdict
 from pathlib import Path
-from typing import Callable, Tuple, Optional, Dict, List, Union
+from typing import Callable, Tuple, Optional, Dict, List, Union, Any
 
 import numpy as np
 from numpy import array
 from numpy.random.mtrand import RandomState
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.grid.grid4_utils import direction_to_point, mirror
+from flatland.core.grid.grid4_utils import direction_to_point, mirror, find_connected_cells
 from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D, \
     Vec2dOperations
 from flatland.core.transition_map import GridTransitionMap
@@ -19,6 +20,7 @@ from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransiti
 from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
     fix_inner_nodes, align_cell_to_city
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+from flatland.envs.stations_links import Pin, Gate, StoppingPoint, Station, Fibre, Link, StationsLinks
 
 RailGeneratorProduct = Tuple[RailGridTransitionMap, Optional[Dict]]
 """ A rail generator returns a RailGenerator Product, which is just
@@ -122,6 +124,88 @@ def rail_from_grid_transition_map(rail_map, optionals=None) -> RailGenerator:
 
 def sparse_rail_generator(*args: object, **kwargs: object) -> RailGenerator:
     return SparseRailGen(*args, **kwargs)
+
+
+def _city_name(city_idx: int) -> str:
+    """
+    Bijective base-26 letter naming (like spreadsheet column names): A, B, ..., Z, AA, AB, ..., ZZ,
+    AAA, ...
+
+    Parameters
+    ----------
+    city_idx : int
+        0-based city index.
+
+    Returns
+    -------
+    str
+        City name.
+    """
+    name = ""
+    n = city_idx + 1
+    while n > 0:
+        n, remainder = divmod(n - 1, 26)
+        name = chr(ord('A') + remainder) + name
+    return name
+
+
+def _gate_name(station_idx: int, gate_idx: int) -> str:
+    """
+    Gate name: <station name>.<facing char>
+
+    Parameters
+    ----------
+    station_idx : int
+        0-based city/station index.
+    gate_idx : int
+        Facing direction (Grid4TransitionsEnum-compatible: N=0, E=1, S=2, W=3).
+
+    Returns
+    -------
+    str
+        Gate name.
+    """
+    return f"{_city_name(station_idx)}.{Grid4TransitionsEnum.to_char(gate_idx)}"
+
+
+def _pin_name(station_idx: int, gate_idx: int, track_number: int) -> str:
+    """
+    Pin name: <station name>.<facing char>.<track number>
+
+    Parameters
+    ----------
+    station_idx : int
+        0-based city/station index.
+    gate_idx : int
+        Facing direction (Grid4TransitionsEnum-compatible: N=0, E=1, S=2, W=3).
+    track_number : int
+        0-based track number within the gate.
+
+    Returns
+    -------
+    str
+        Pin name.
+    """
+    return f"{_gate_name(station_idx, gate_idx)}.{track_number}"
+
+
+def _stopping_point_name(station_idx: int, stopping_point_idx: int) -> str:
+    """
+    Stopping point name: <station name>.<stopping point index>
+
+    Parameters
+    ----------
+    station_idx : int
+        0-based city/station index.
+    stopping_point_idx : int
+        0-based stopping point index within the station.
+
+    Returns
+    -------
+    str
+        Stopping point name.
+    """
+    return f"{_city_name(station_idx)}.{stopping_point_idx}"
 
 
 class SparseRailGen(RailGen):
@@ -242,8 +326,9 @@ class SparseRailGen(RailGen):
                 rail_pairs_in_city, np_random=np_random)
 
         # Connect the cities through the connection points
-        inter_city_lines = self._connect_cities(city_positions, outer_connection_points, city_cells,
-                                                rail_trans, grid_map)
+        inter_city_lines_split = self._connect_cities(city_positions, outer_connection_points, city_cells,
+                                                      rail_trans, grid_map)
+        inter_city_lines = [p for single in inter_city_lines_split for p in single]
 
         # Build inner cities
         free_rails = self._build_inner_cities(city_positions, inner_connection_points,
@@ -272,15 +357,79 @@ class SparseRailGen(RailGen):
                 positions_diamond_crossings = (grid_map.grid == RailEnvTransitionsEnum.diamond_crossing).nonzero()
                 level_free_positions = {(positions_diamond_crossings[0][choice[i]], positions_diamond_crossings[1][choice[i]]) for i in range(len(choice))}
 
+        stations_links = self._extract_stations_links(grid_map, free_rails, inter_city_lines_split, outer_connection_points, train_stations)
+
         return grid_map, {
             'agents_hints':
                 {
                     'city_positions': city_positions,
                     'train_stations': train_stations,
-                    'city_orientations': city_orientations
+                    'city_orientations': city_orientations,
                 },
+            'stations_links': stations_links,
             'level_free_positions': level_free_positions
         }
+
+    def _extract_stations_links(self, grid_map: RailGridTransitionMap, free_rails: tuple[list[Any], list[list[list[Any]]]],
+                                inter_city_lines_split: list[list[Any]], outer_connection_points, train_stations: list[list[tuple[Any, int]]]) -> StationsLinks:
+        # collect and group fibres
+        city_to_gate_to_pins = {i: {k: pins for k, pins in enumerate(city)} for i, city in
+                                enumerate(outer_connection_points)}
+        pin_to_gate: Dict[IntVector2D, str] = {
+            pin: _gate_name(city, direction)
+            for city, pins_per_direction in city_to_gate_to_pins.items()
+            for direction, pins in pins_per_direction.items() for _, pin in enumerate(pins)}
+        pin_to_track = {pin: j for i, city in enumerate(outer_connection_points) for direction in city for j, pin in enumerate(direction)}
+
+        # for each city, flood-fill outward from its own free_rails cells to get the full set of
+        # cells belonging to the city, never crossing a city pin (city pins mark the city boundary,
+        # so this stays within the city and never leaks into the inter-city lines).
+        city_pin_cells = set(pin_to_gate.keys())
+        free_rails_flooded: List[List[List[IntVector2D]]] = []
+        for free_rails_city in free_rails:
+            city_open_set = {cell for track in free_rails_city for cell in track}
+            free_rails_flooded.append([list(find_connected_cells(grid_map, open_set=city_open_set, forbidden_cells=city_pin_cells))])
+
+        gates_to_fibres: Dict[Tuple[str, str], List[IntVector2DArray]] = defaultdict(list)
+        for city, fibre in enumerate(inter_city_lines_split):
+            fibre_start_pin = fibre[0]
+            fibre_end_pin = fibre[-1]
+            from_pin = f"{pin_to_gate[fibre_start_pin]}.{pin_to_track[fibre_start_pin]}"
+            to_pin = f"{pin_to_gate[fibre_end_pin]}.{pin_to_track[fibre_end_pin]}"
+
+            gates_to_fibres[(from_pin, to_pin)].append(fibre)
+
+        stations = {
+            _city_name(i): Station(
+                name=_city_name(i),
+                gates={
+                    Grid4TransitionsEnum.to_char(j): Gate(
+                        name=_gate_name(i, j),
+                        pins={
+                            k: Pin(node=n, name=_pin_name(i, j, k))
+                            for k, n in enumerate(connection_area)
+                        }
+                    ) for j, connection_area in enumerate(outer_connection_points_city) if len(connection_area) > 0
+                },
+                stopping_points=[
+                    StoppingPoint(node=train_station[0], name=_stopping_point_name(i, train_station[1]))
+                    for train_station in train_stations_city
+                ],
+                edges=[c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
+            )
+            for i, (free_rails_city, outer_connection_points_city, train_stations_city) in
+            enumerate(zip(free_rails_flooded, outer_connection_points, train_stations))
+        }
+
+        links = [
+            Link(
+                from_pin=from_pin,
+                to_pin=to_pin,
+                fibres=[Fibre(edges=fibre) for fibre in fibres]
+            ) for (from_pin, to_pin), fibres in gates_to_fibres.items()
+        ]
+        stations_links = StationsLinks(stations=stations, links=links)
+        return stations_links
 
     def _generate_random_city_positions(self, num_cities: int, city_radius: int, width: int,
                                         height: int, np_random: RandomState = None) -> Tuple[
@@ -502,7 +651,7 @@ class SparseRailGen(RailGen):
 
     def _connect_cities(self, city_positions: IntVector2DArray, connection_points: List[List[List[IntVector2D]]],
                         city_cells: set,
-                        rail_trans: RailEnvTransitions, grid_map: RailEnvTransitions) -> List[IntVector2DArray]:
+                        rail_trans: RailEnvTransitions, grid_map: RailEnvTransitions) -> List[List[IntVector2DArray]]:
         """
         Connects cities together through rails. Each city connects from its outgoing connection points to the closest
         cities. This guarantees that all connection points are used.
@@ -556,7 +705,8 @@ class SparseRailGen(RailGen):
                         warnings.warn("[WARNING] No line added between stations")
                     elif new_line[-1] != neighbour_connection_point or new_line[0] != city_out_connection_point:
                         warnings.warn("[WARNING] Unable to connect requested stations")
-                    all_paths.extend(new_line)
+                    else:
+                        all_paths.append(new_line)
         return all_paths
 
     def get_closest_neighbour_for_direction(self, closest_neighbours, out_direction):

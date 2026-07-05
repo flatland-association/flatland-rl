@@ -111,7 +111,6 @@ class RailEnvPersister(object):
         env.obs_builder.set_env(env)
         env.obs_builder.reset()
 
-
     @classmethod
     def load_new(cls,
                  filename: Union[str, Path],
@@ -272,10 +271,8 @@ class RailEnvPersister(object):
         if dev_pred_dict_ is not None:
             env.dev_pred_dict = dev_pred_dict_
         dev_obs_dict_ = env_dict.get("dev_obs_dict", None)
-        if dev_pred_dict_ is not None:
+        if dev_obs_dict_ is not None:
             env.dev_obs_dict = dev_obs_dict_
-
-
 
         env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None) for i in range(env.get_num_agents())}
         for i_agent in range(env.get_num_agents()):
@@ -301,6 +298,9 @@ class RailEnvPersister(object):
         else:
             env.effects_generator = cls._apply_malfunction(env_dict)
 
+        if "stations_links" in env_dict:
+            env.stations_links = env_dict["stations_links"]
+
     @classmethod
     def _apply_malfunction(cls, env_dict: dict):
         effects_generator = EffectsGenerator()
@@ -315,8 +315,6 @@ class RailEnvPersister(object):
         if effects_generators_specs is not None:
             effects_generator = EffectsGenerator.from_state(effects_generators_specs)
         return effects_generator
-
-
 
     @classmethod
     def get_full_state(cls, env):
@@ -350,6 +348,8 @@ class RailEnvPersister(object):
             "dones": env.dones,
             "effects_generator": effects_generator
         }
+        if hasattr(env, "stations_links"):
+            msg_data_dict["stations_links"] = env.stations_links
         return msg_data_dict
 
     ################################################################################################

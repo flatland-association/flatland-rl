@@ -68,6 +68,77 @@ def test_load_new_overrides():
         assert env_loaded.effects_generator is custom_effects_generator
 
 
+def test_stations_links_default_before_rail_generation():
+    """A freshly-constructed RailEnv (before any reset/rail generation) must have `stations_links`
+    accessible as None instead of raising AttributeError. `optionals` (the generator's raw,
+    undocumented return dict) is intentionally not a RailEnv attribute at all - it's transient,
+    local to `_call_rail_generator`."""
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2)
+    assert env.stations_links is None
+    assert not hasattr(env, "optionals")
+
+
+def test_set_full_state_legacy_env_dict_without_stations_links():
+    """A legacy env_dict lacking the 'stations_links' key must not leave that attribute unset
+    on the restored env - it should fall back to its None default."""
+    rail, rail_map, optionals = make_simple_rail()
+    env_initial = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                          line_generator=sparse_line_generator(), number_of_agents=2)
+    env_initial.reset(False, False)
+
+    env_dict = RailEnvPersister.get_full_state(env_initial)
+    env_dict.pop("stations_links", None)
+
+    fresh_env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                        line_generator=sparse_line_generator(), number_of_agents=2)
+    RailEnvPersister.set_full_state(fresh_env, env_dict)
+
+    assert fresh_env.stations_links is None
+
+
+def test_optionals_not_persisted():
+    """`optionals` (the generator's raw, undocumented return dict) is not a RailEnv attribute and
+    must not be persisted - get_full_state must not include it, and set_full_state must not create
+    it on the restored env even from a (now-legacy) env_dict that still happens to have the key."""
+    rail, rail_map, optionals = make_simple_rail()
+    env_initial = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                          line_generator=sparse_line_generator(), number_of_agents=2)
+    env_initial.reset(False, False)
+    assert not hasattr(env_initial, "optionals")
+
+    env_dict = RailEnvPersister.get_full_state(env_initial)
+    assert "optionals" not in env_dict
+
+    # simulate a legacy pickle saved before optionals was dropped from persistence
+    env_dict["optionals"] = {"stale": "data"}
+
+    fresh_env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                        line_generator=sparse_line_generator(), number_of_agents=2)
+    RailEnvPersister.set_full_state(fresh_env, env_dict)
+
+    assert not hasattr(fresh_env, "optionals")
+
+
+def test_set_full_state_restores_dev_obs_dict_without_dev_pred_dict():
+    """A legacy/incomplete env_dict with dev_obs_dict but no dev_pred_dict key must still restore
+    dev_obs_dict - previously this assignment was guarded by the wrong variable (dev_pred_dict_
+    instead of dev_obs_dict_), a copy-paste bug."""
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2)
+    env.reset(False, False)
+
+    env_dict = RailEnvPersister.get_full_state(env)
+    del env_dict["dev_pred_dict"]
+    env_dict["dev_obs_dict"] = {0: "some observation payload"}
+
+    RailEnvPersister.set_full_state(env, env_dict)
+
+    assert env.dev_obs_dict == {0: "some observation payload"}
+
+
 def test_legacy_envs():
     envs = [("env_data.railway", sRes) for sExt in ["mpk", "pkl"] for sRes in ir.contents("env_data.railway") if sRes.endswith(sExt)]
     for package, resource in envs:
