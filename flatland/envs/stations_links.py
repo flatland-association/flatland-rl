@@ -1,4 +1,4 @@
-"""Data model stations and links, see https://flatland-association.github.io/flatland-book//environment/environment/stations_links.html
+"""Data model stations and links, see https://flatland-association.github.io/flatland-book/environment/environment/stations_links.html
 Convention: use fully qualified names.
 """
 from dataclasses import dataclass
