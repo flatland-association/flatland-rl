@@ -381,7 +381,7 @@ class SparseRailGen(RailGen):
                     ) for j, connection_area in enumerate(outer_connection_points_city) if len(connection_area) > 0
                 },
                 stopping_points=[
-                    StoppingPoint(node=train_station[0], name=f"{_city_name(i)}.{train_station[1]}", track_number=train_station[1])
+                    StoppingPoint(node=train_station[0], name=f"{_city_name(i)}.{train_station[1]}", stopping_point_idx=train_station[1])
                     for train_station in train_stations_city
                 ],
                 edges=[c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
@@ -395,11 +395,11 @@ class SparseRailGen(RailGen):
                 # TODO use split/relative notation and name instead?
                 from_station=_city_name(gate_connection.from_station),
                 from_gate=_gate_name(gate_connection.from_station, gate_connection.from_gate),
-                from_facing=f"{Grid4TransitionsEnum.to_char(gate_connection.from_gate)}",
+                from_gate_idx=f"{Grid4TransitionsEnum.to_char(gate_connection.from_gate)}",
                 to_station=_city_name(gate_connection.to_station),
                 to_gate=_gate_name(gate_connection.to_station, gate_connection.to_gate),
                 # this is index in dict
-                to_facing=f"{Grid4TransitionsEnum.to_char(gate_connection.to_gate)}",
+                to_gate_idx=f"{Grid4TransitionsEnum.to_char(gate_connection.to_gate)}",
                 fibres=[
                     Fibre(
                         from_pin=_pin_name(gate_connection.from_station, gate_connection.from_gate, gate_connection.from_track),
