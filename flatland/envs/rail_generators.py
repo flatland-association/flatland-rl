@@ -149,6 +149,46 @@ def _city_name(city_idx: int) -> str:
     return name
 
 
+def _gate_name(station_idx: int, gate_idx: int) -> str:
+    """
+    Gate name: <station name>.<facing char>
+
+    Parameters
+    ----------
+    station_idx : int
+        0-based city/station index.
+    gate_idx : int
+        Facing direction (Grid4TransitionsEnum-compatible: N=0, E=1, S=2, W=3).
+
+    Returns
+    -------
+    str
+        Gate name.
+    """
+    return f"{_city_name(station_idx)}.{Grid4TransitionsEnum.to_char(gate_idx)}"
+
+
+def _pin_name(station_idx: int, gate_idx: int, track_number: int) -> str:
+    """
+    Pin name: <station name>.<facing char>.<track number>
+
+    Parameters
+    ----------
+    station_idx : int
+        0-based city/station index.
+    gate_idx : int
+        Facing direction (Grid4TransitionsEnum-compatible: N=0, E=1, S=2, W=3).
+    track_number : int
+        0-based track number within the gate.
+
+    Returns
+    -------
+    str
+        Pin name.
+    """
+    return f"{_gate_name(station_idx, gate_idx)}.{track_number}"
+
+
 class SparseRailGen(RailGen):
 
     def __init__(self, max_num_cities: int = 2, grid_mode: bool = False, max_rails_between_cities: int = 2,
@@ -333,9 +373,9 @@ class SparseRailGen(RailGen):
                 name=_city_name(i),
                 gates={
                     Grid4TransitionsEnum.to_char(j): Gate(
-                        name=f"{_city_name(i)}.{Grid4TransitionsEnum.to_char(j)}",
+                        name=_gate_name(i, j),
                         pins={
-                            k: Pin(node=n, name=f"{_city_name(i)}.{Grid4TransitionsEnum.to_char(j)}.{k}")
+                            k: Pin(node=n, name=_pin_name(i, j, k))
                             for k, n in enumerate(connection_area)
                         }
                     ) for j, connection_area in enumerate(outer_connection_points_city) if len(connection_area) > 0
@@ -354,15 +394,16 @@ class SparseRailGen(RailGen):
             Link(
                 # TODO use split/relative notation and name instead?
                 from_station=_city_name(gate_connection.from_station),
-                from_gate=f"{_city_name(gate_connection.from_station)}.{Grid4TransitionsEnum.to_char(gate_connection.from_gate)}",
+                from_gate=_gate_name(gate_connection.from_station, gate_connection.from_gate),
                 from_facing=f"{Grid4TransitionsEnum.to_char(gate_connection.from_gate)}",
                 to_station=_city_name(gate_connection.to_station),
-                to_gate=f"{_city_name(gate_connection.to_station)}.{Grid4TransitionsEnum.to_char(gate_connection.to_gate)}",
+                to_gate=_gate_name(gate_connection.to_station, gate_connection.to_gate),
+                # this is index in dict
                 to_facing=f"{Grid4TransitionsEnum.to_char(gate_connection.to_gate)}",
                 fibres=[
                     Fibre(
-                        from_pin=f"{_city_name(gate_connection.from_station)}.{Grid4TransitionsEnum.to_char(gate_connection.from_gate)}.{gate_connection.from_track}",
-                        to_pin=f"{_city_name(gate_connection.to_station)}.{Grid4TransitionsEnum.to_char(gate_connection.to_gate)}.{gate_connection.to_track}",
+                        from_pin=_pin_name(gate_connection.from_station, gate_connection.from_gate, gate_connection.from_track),
+                        to_pin=_pin_name(gate_connection.to_station, gate_connection.to_gate, gate_connection.to_track),
                         edges=fibre
                     ) for fibre in fibres
                 ]
