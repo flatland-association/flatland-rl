@@ -10,7 +10,7 @@ from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import sparse_rail_generator, _city_name, _gate_name, _pin_name
+from flatland.envs.rail_generators import sparse_rail_generator, _city_name, _gate_name, _pin_name, _stopping_point_name
 from flatland.envs.stations_links import Pin
 from flatland.utils.rendertools import RenderTool
 
@@ -631,6 +631,13 @@ def test_pin_name():
     assert _pin_name(0, 0, 0) == "A.N.0"
     assert _pin_name(0, 1, 2) == "A.E.2"
     assert _pin_name(26, 3, 5) == "AA.W.5"
+
+
+def test_stopping_point_name():
+    """Stopping point name is <station name>.<stopping point index>."""
+    assert _stopping_point_name(0, 0) == "A.0"
+    assert _stopping_point_name(0, 2) == "A.2"
+    assert _stopping_point_name(26, 5) == "AA.5"
 
 
 def test_sparse_rail_generator_gates_to_fibres_reuses_connecting_line():

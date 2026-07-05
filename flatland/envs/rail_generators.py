@@ -4,7 +4,7 @@ import pickle
 import warnings
 from collections import defaultdict
 from pathlib import Path
-from typing import Callable, Tuple, Optional, Dict, List, Union
+from typing import Callable, Tuple, Optional, Dict, List, Union, Any
 
 import numpy as np
 from numpy import array
@@ -357,6 +357,21 @@ class SparseRailGen(RailGen):
                 positions_diamond_crossings = (grid_map.grid == RailEnvTransitionsEnum.diamond_crossing).nonzero()
                 level_free_positions = {(positions_diamond_crossings[0][choice[i]], positions_diamond_crossings[1][choice[i]]) for i in range(len(choice))}
 
+        stations_links = self._extract_stations_links(grid_map, free_rails, inter_city_lines_split, outer_connection_points, train_stations)
+
+        return grid_map, {
+            'agents_hints':
+                {
+                    'city_positions': city_positions,
+                    'train_stations': train_stations,
+                    'city_orientations': city_orientations,
+                },
+            'stations_links': stations_links,
+            'level_free_positions': level_free_positions
+        }
+
+    def _extract_stations_links(self, grid_map: RailGridTransitionMap, free_rails: tuple[list[Any], list[list[list[Any]]]],
+                                inter_city_lines_split: list[list[Any]], outer_connection_points, train_stations: list[list[tuple[Any, int]]]) -> StationsLinks:
         # collect and group fibres
         city_to_gate_to_pins = {i: {k: pins for k, pins in enumerate(city)} for i, city in
                                 enumerate(outer_connection_points)}
@@ -413,17 +428,8 @@ class SparseRailGen(RailGen):
                 fibres=[Fibre(edges=fibre) for fibre in fibres]
             ) for (from_pin, to_pin), fibres in gates_to_fibres.items()
         ]
-
-        return grid_map, {
-            'agents_hints':
-                {
-                    'city_positions': city_positions,
-                    'train_stations': train_stations,
-                    'city_orientations': city_orientations,
-                },
-            'stations_links': StationsLinks(stations=stations, links=links),
-            'level_free_positions': level_free_positions
-        }
+        stations_links = StationsLinks(stations=stations, links=links)
+        return stations_links
 
     def _generate_random_city_positions(self, num_cities: int, city_radius: int, width: int,
                                         height: int, np_random: RandomState = None) -> Tuple[
