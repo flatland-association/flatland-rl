@@ -189,6 +189,25 @@ def _pin_name(station_idx: int, gate_idx: int, track_number: int) -> str:
     return f"{_gate_name(station_idx, gate_idx)}.{track_number}"
 
 
+def _stopping_point_name(station_idx: int, stopping_point_idx: int) -> str:
+    """
+    Stopping point name: <station name>.<stopping point index>
+
+    Parameters
+    ----------
+    station_idx : int
+        0-based city/station index.
+    stopping_point_idx : int
+        0-based stopping point index within the station.
+
+    Returns
+    -------
+    str
+        Stopping point name.
+    """
+    return f"{_city_name(station_idx)}.{stopping_point_idx}"
+
+
 class SparseRailGen(RailGen):
 
     def __init__(self, max_num_cities: int = 2, grid_mode: bool = False, max_rails_between_cities: int = 2,
@@ -378,7 +397,7 @@ class SparseRailGen(RailGen):
                     ) for j, connection_area in enumerate(outer_connection_points_city) if len(connection_area) > 0
                 },
                 stopping_points=[
-                    StoppingPoint(node=train_station[0], name=f"{_city_name(i)}.{train_station[1]}")
+                    StoppingPoint(node=train_station[0], name=_stopping_point_name(i, train_station[1]))
                     for train_station in train_stations_city
                 ],
                 edges=[c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
