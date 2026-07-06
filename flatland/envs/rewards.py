@@ -180,12 +180,17 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
             self.departures[agent.handle][old_wp].append(elapsed_steps)
 
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED:
-            # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
-            # - if braking, reduced speed
-            # - if not braking, still full speed
-            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design, should we penalize invalid actions upon symmetric switch?
-            # - if invalid action, speed set to 0
-            d[DefaultPenalties.COLLISION.value] = -1 * agent_transition_data.speed * self.collision_factor
+            # A stop is "voluntary" if the controller issued STOP_MOVING and braking brings the speed to zero this step.
+            # Only penalize stops imposed by the env (motion check conflict or invalid action), not controlled stops.
+            sts = agent_transition_data.state_transition_signal
+            voluntary_stop = sts.stop_action_given and sts.new_speed_zero
+            if not voluntary_stop:
+                # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
+                # - if braking, reduced speed
+                # - if not braking, still full speed
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design, should we penalize invalid actions upon symmetric switch?
+                # - if invalid action, speed set to 0
+                d[DefaultPenalties.COLLISION.value] = -1 * agent_transition_data.speed * self.collision_factor
 
         if agent.state == TrainState.DONE and agent.state_machine.previous_state != TrainState.DONE:
             self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps, d)
