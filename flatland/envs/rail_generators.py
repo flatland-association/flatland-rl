@@ -390,14 +390,16 @@ class SparseRailGen(RailGen):
             city_open_set = {cell for track in free_rails_city for cell in track}
             free_rails_flooded.append([list(find_connected_cells(grid_map, open_set=city_open_set, forbidden_cells=city_pin_cells))])
 
-        gates_to_fibres: Dict[Tuple[str, str], List[IntVector2DArray]] = defaultdict(list)
+        gates_to_fibres: Dict[Tuple[str, str], List[Tuple[str, str, IntVector2DArray]]] = defaultdict(list)
         for city, fibre in enumerate(inter_city_lines_split):
             fibre_start_pin = fibre[0]
             fibre_end_pin = fibre[-1]
-            from_pin = f"{pin_to_gate[fibre_start_pin]}.{pin_to_track[fibre_start_pin]}"
-            to_pin = f"{pin_to_gate[fibre_end_pin]}.{pin_to_track[fibre_end_pin]}"
+            from_gate = pin_to_gate[fibre_start_pin]
+            to_gate = pin_to_gate[fibre_end_pin]
+            from_pin = f"{from_gate}.{pin_to_track[fibre_start_pin]}"
+            to_pin = f"{to_gate}.{pin_to_track[fibre_end_pin]}"
 
-            gates_to_fibres[(from_pin, to_pin)].append(fibre)
+            gates_to_fibres[(from_gate, to_gate)].append((from_pin, to_pin, fibre))
 
         stations = {
             _city_name(i): Station(
@@ -423,10 +425,10 @@ class SparseRailGen(RailGen):
 
         links = [
             Link(
-                from_pin=from_pin,
-                to_pin=to_pin,
-                fibres=[Fibre(edges=fibre) for fibre in fibres]
-            ) for (from_pin, to_pin), fibres in gates_to_fibres.items()
+                from_gate=from_gate,
+                to_gate=to_gate,
+                fibres=[Fibre(edges=fibre, from_pin=from_pin, to_pin=to_pin) for from_pin, to_pin, fibre in fibres]
+            ) for (from_gate, to_gate), fibres in gates_to_fibres.items()
         ]
         stations_links = StationsLinks(stations=stations, links=links)
         return stations_links

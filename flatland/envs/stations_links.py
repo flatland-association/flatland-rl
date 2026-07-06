@@ -41,13 +41,16 @@ class Station:
 @dataclass(frozen=True)
 class Fibre:
     edges: List[IntVector2D]
+    # A.N.0, A.N.1, ...
+    from_pin: str
+    to_pin: str
 
 
 @dataclass(frozen=True)
 class Link:
-    # A.N.0, A.N.1, ...
-    from_pin: str
-    to_pin: str
+    # A.N, A.S, ...
+    from_gate: str
+    to_gate: str
     fibres: List[Fibre]
 
 
