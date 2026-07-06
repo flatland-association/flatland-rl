@@ -257,7 +257,7 @@ mccabe==0.7.0
     # via flake8
 mistune==3.2.1
     # via nbconvert
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   flatland-rl (pyproject.toml)
     #   msgpack-numpy
