@@ -643,7 +643,8 @@ def test_stopping_point_name():
 def test_sparse_rail_generator_gates_to_fibres_reuses_connecting_line():
     """gates_to_fibres/stations_links.links[*].fibres must directly reuse the path _connect_cities
     drew for each inter-city connection instead of re-deriving it with a shortest-path search -
-    each fibre's edges must start/end exactly at its link's from_pin/to_pin node."""
+    each fibre's edges must start/end exactly at its own from_pin/to_pin node, and each link must
+    connect a gate to a gate (not a pin to a pin)."""
     generate = sparse_rail_generator(max_num_cities=3, max_rails_between_cities=2, grid_mode=False)
     grid_map, optionals = generate(width=40, height=40, num_agents=5, np_random=RandomState(1))
 
@@ -656,12 +657,19 @@ def test_sparse_rail_generator_gates_to_fibres_reuses_connecting_line():
         station_name, gate_char, track = pin_name.split(".")
         return stations[station_name].gates[gate_char].pins[int(track)].node
 
+    def gate_of(pin_name):
+        station_name, gate_char, _ = pin_name.split(".")
+        return f"{station_name}.{gate_char}"
+
     for link in links:
+        assert len(link.fibres) > 0
         for fibre in link.fibres:
             edges = fibre.edges
             assert len(edges) > 0
-            assert edges[0] == pin_node(link.from_pin)
-            assert edges[-1] == pin_node(link.to_pin)
+            assert edges[0] == pin_node(fibre.from_pin)
+            assert edges[-1] == pin_node(fibre.to_pin)
+            assert gate_of(fibre.from_pin) == link.from_gate
+            assert gate_of(fibre.to_pin) == link.to_gate
 
 
 def test_stations_links_dataclasses_are_frozen():
