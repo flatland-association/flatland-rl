@@ -229,14 +229,19 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
             agent_arrivals: Set[Waypoint] = set(self.arrivals[agent.handle])
             intermediate_alternatives: Set[Waypoint] = set(intermediate_alternatives)
             wps_intersection: Set[Waypoint] = intermediate_alternatives.intersection(agent_arrivals)
-            if len(wps_intersection) == 0 or TrainState.STOPPED not in self.states[agent.handle][list(wps_intersection)[0]]:
+            # a station may consist of several halting cells (alternative waypoints);
+            # the stop is served iff the train stopped at any of them
+            stopped_wps: Set[Waypoint] = {wp for wp in wps_intersection if TrainState.STOPPED in self.states[agent.handle][wp]}
+            if len(stopped_wps) == 0:
+
                 # stop not served or served but not stopped
                 d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] += -1 * self.intermediate_not_served_penalty
             else:
                 lates = []
                 earlies = []
-                # take best time window (minimum penalty sum) over all alternatives and all arrival/departures
-                for wp in list(wps_intersection):
+                # take best time window (minimum penalty sum) over all halting cells and all arrival/departures;
+                # cells merely rolled through without stopping do not provide a serving time window
+                for wp in list(stopped_wps):
                     # `+ [None]` is for arrival but no departure
                     for arrival, departure in zip(self.arrivals[agent.handle][wp], self.departures[agent.handle][wp] + [None]):
                         # late arrival
