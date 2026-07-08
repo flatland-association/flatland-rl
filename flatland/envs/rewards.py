@@ -256,10 +256,17 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
     def cumulate(self, *rewards: Dict[str, float]) -> Dict[str, float]:
         return {p.value: sum([r[p.value] for r in rewards]) for p in self._cached_default_penalties}
 
-    def normalize(self, *rewards: Dict[str, float], num_agents: int, max_episode_steps: int) -> float:
+    # policy runner calls normalization: normalize sum over all keys instead of per key.
+    def normalize(self, *rewards: np.ndarray, num_agents: int, max_episode_steps: int) -> float:
         # https://flatland-association.github.io/flatland-book/challenges/ecml2026/eval.html
-        return sum([np.maximum(sum([r[p.value] for p in self._cached_default_penalties]), - max_episode_steps) for r in rewards]) / (
-                max_episode_steps * num_agents) + 1
+        if len(rewards) == num_agents:
+            sum_per_agent = np.array(rewards)
+        else:
+            rewards_by_agent = np.reshape(np.array(rewards), (num_agents, -1), order='F')
+            rewards_by_agent = [super().cumulate(*detailled_per_agent) for detailled_per_agent in rewards_by_agent]
+            sum_per_agent = [sum(detailled_per_agent.values()) for detailled_per_agent in rewards_by_agent]
+        rewards_capped = np.maximum(sum_per_agent, - max_episode_steps)
+        return sum(rewards_capped) / (max_episode_steps * num_agents) + 1
 
     def empty(self) -> Dict[str, float]:
         return {p.value: 0 for p in self._cached_default_penalties}
@@ -368,7 +375,7 @@ class DefaultRewards(Rewards[float]):
         return 0
 
 
-class ECML2026Rewards(DefaultRewards):
+class BaseECML2026Rewards(BaseDefaultRewards):
     """
     Parametrization of ECML 2026 Competition Rewards.
     """
@@ -382,6 +389,24 @@ class ECML2026Rewards(DefaultRewards):
             intermediate_late_arrival_penalty_factor=0.5,
             intermediate_early_departure_penalty_factor=0.5,
             collision_factor=250.0,
+        )
+
+
+class ECML2026Rewards(DefaultRewards):
+    """
+    Parametrization of ECML 2026 Competition Rewards (without details).
+    """
+
+    def __init__(self):
+        base_rewards = BaseECML2026Rewards()
+        super().__init__(
+            cancellation_factor=base_rewards.cancellation_factor,
+            cancellation_time_buffer=base_rewards.cancellation_time_buffer,
+            target_not_reached_minimum_penalty=base_rewards.target_not_reached_minimum_penalty,
+            intermediate_not_served_penalty=base_rewards.intermediate_not_served_penalty,
+            intermediate_late_arrival_penalty_factor=base_rewards.intermediate_late_arrival_penalty_factor,
+            intermediate_early_departure_penalty_factor=base_rewards.intermediate_early_departure_penalty_factor,
+            collision_factor=base_rewards.collision_factor,
         )
 
 
