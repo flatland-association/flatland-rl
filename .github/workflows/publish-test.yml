@@ -58,3 +58,49 @@ jobs:
                 with:
                     name: python-package
                     path: dist/
+
+    docker-publish:
+        runs-on: ubuntu-22.04
+        needs: [ publish ]
+        permissions:
+            contents: read
+            packages: write
+        env:
+            REGISTRY: ghcr.io
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.12" ]
+                variant:
+                    -   name: default
+                        with-ml: "false"
+                        tag-suffix: ""
+                    -   name: ml
+                        with-ml: "true"
+                        tag-suffix: "-ml"
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v6
+            -   name: Log in to GHCR
+                uses: docker/login-action@v3
+                with:
+                    registry: ${{ env.REGISTRY }}
+                    username: ${{ github.actor }}
+                    password: ${{ secrets.GITHUB_TOKEN }}
+            -   name: Set up Docker Buildx
+                uses: docker/setup-buildx-action@v3
+            -   name: Build image name
+                id: image-name
+                run: echo "IMAGE_NAME=$(echo '${{ env.REGISTRY }}/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+            -   name: Build and push image
+                uses: docker/build-push-action@v6
+                with:
+                    context: .
+                    build-args: |
+                        PYTHON_VERSION=${{ matrix.python-version }}
+                        WITH_ML=${{ matrix.variant.with-ml }}
+                        FLATLAND_RL_REF=${{ github.ref_name }}
+                    push: true
+                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:v${{ inputs.version }}${{ matrix.variant.tag-suffix }}
+                    cache-from: type=gha,scope=python-${{ matrix.python-version }}-${{ matrix.variant.name }}
+                    cache-to: type=gha,mode=max,scope=python-${{ matrix.python-version }}-${{ matrix.variant.name }}
