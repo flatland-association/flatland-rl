@@ -861,7 +861,8 @@ def test_env_collision_penalty_on_head_on_conflict():
         assert rewards[0][DefaultPenalties.COLLISION.value] == 0
         assert rewards[1][DefaultPenalties.COLLISION.value] == 0
 
-    # 4th step: agents at (3,3) east and (3,4) west want to swap -> motion check stops agent 1
+    # 4th step: agent 0 at (3,2) east, agent 1 at (3,4) west, one free cell (3,3) between them;
+    # both request entry -> motion check awards the cell to agent 0 and force-stops agent 1
     _, rewards, _, _ = env.step(forward)
     assert agent_1.state_machine.previous_state == TrainState.MOVING
     assert agent_1.state == TrainState.STOPPED
@@ -870,3 +871,19 @@ def test_env_collision_penalty_on_head_on_conflict():
     # the agent winning the conflict resolution keeps moving unpenalized
     assert agent_0.state == TrainState.MOVING
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+
+    # 5th step: agents now face each other on adjacent cells (3,3)/(3,4); agent 0's move would
+    # make it collide with agent 1, which the motion check forbids -> agent 0 force-stopped
+    _, rewards, _, _ = env.step(forward)
+    assert agent_0.state_machine.previous_state == TrainState.MOVING
+    assert agent_0.state == TrainState.STOPPED
+    assert rewards[0][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR, \
+        "An env-forced stop (swap prevention) must incur the collision penalty proportional to speed"
+    assert rewards[1][DefaultPenalties.COLLISION.value] == 0, \
+        "The penalty fires once on the MOVING -> STOPPED transition, not per deadlocked step"
+
+    # deadlock persists: no positions change, no further collision penalties accrue
+    _, rewards, _, _ = env.step(forward)
+    assert (agent_0.position, agent_1.position) == ((3, 3), (3, 4))
+    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    assert rewards[1][DefaultPenalties.COLLISION.value] == 0
