@@ -385,6 +385,35 @@ class ECML2026Rewards(DefaultRewards):
         )
 
 
+class BaseECML2026Rewards(BaseDefaultRewards):
+    """
+    Parametrization of ECML 2026 Competition Rewards.
+    """
+
+    def __init__(self):
+        super().__init__(
+            cancellation_factor=5.0,
+            cancellation_time_buffer=0.0,
+            target_not_reached_minimum_penalty=100.0,
+            intermediate_not_served_penalty=50.0,
+            intermediate_late_arrival_penalty_factor=0.5,
+            intermediate_early_departure_penalty_factor=0.5,
+            collision_factor=250.0,
+        )
+
+    # policy runner calls normalization: normalize sum over all keys instead of per key.
+    def normalize(self, *rewards: np.ndarray, num_agents: int, max_episode_steps: int) -> float:
+        # https://flatland-association.github.io/flatland-book/challenges/ecml2026/eval.html
+        if len(rewards) == num_agents:
+            sum_per_agent = np.array(rewards)
+        else:
+            rewards_by_agent = np.reshape(np.array(rewards), (num_agents, -1), order='F')
+            rewards_by_agent = [super().cumulate(*detailled_per_agent) for detailled_per_agent in rewards_by_agent]
+            sum_per_agent = [sum(detailled_per_agent.values()) for detailled_per_agent in rewards_by_agent]
+        rewards_capped = np.maximum(sum_per_agent, - max_episode_steps)
+        return sum(rewards_capped) / (max_episode_steps * num_agents) + 1
+
+
 class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, float]]):
     """
     Basic MORL (Multi-Objective Reinforcement Learning) Rewards: with 3 items
