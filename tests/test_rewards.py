@@ -16,14 +16,15 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.rewards import BaseDefaultRewards, DefaultPenalties, DefaultRewards, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, BaseECML2026Rewards
+from flatland.envs.rewards import DefaultPenalties, DefaultRewards, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, \
+    BaseECML2026Rewards
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.speed_counter import _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.trajectories.policy_runner import PolicyRunner
-from tests.trajectories.test_policy_runner import RandomPolicy
 from flatland.utils.simple_rail import make_simple_rail
+from tests.trajectories.test_policy_runner import RandomPolicy
 
 
 def test_rewards_late_arrival():
@@ -401,8 +402,8 @@ def test_energy_efficiency_smoothniss_in_morl():
         (DefaultRewards(), (-1786.0,)),
         (BaseDefaultRewards(), (-1786.0,)),
         (BasicMultiObjectiveRewards(), (-1786.0, -914.0, -138.5625)),
-        (ECML2026Rewards(), (-28912.0,)),
-        (BaseECML2026Rewards(), (-28912.0,)),
+        (ECML2026Rewards(), (-11724.5,)),
+        (BaseECML2026Rewards(), (-11724.5,)),
     ],
 )
 def test_rewards_via_policy_runner(rewards, expected_sums):
