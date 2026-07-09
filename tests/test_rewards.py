@@ -3,6 +3,7 @@ from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.env_generation.env_generator import env_generator_legacy
@@ -11,7 +12,7 @@ from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.rewards import DefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards
+from flatland.envs.rewards import DefaultRewards, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, BaseECML2026Rewards
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.speed_counter import _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -389,24 +390,48 @@ def test_energy_efficiency_smoothniss_in_morl():
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, -0.09, -0.09))
 
 
-def test_multi_objective_rewards():
+@pytest.mark.parametrize(
+    "rewards,expected_sums",
+    [
+        (DefaultRewards(), (-1786.0,)),
+        (BaseDefaultRewards(), (-1786.0,)),
+        (BasicMultiObjectiveRewards(), (-1786.0, -914.0, -138.5625)),
+        (ECML2026Rewards(), (-28912.0,)),
+        (BaseECML2026Rewards(), (-28912.0,)),
+    ],
+)
+def test_rewards_via_policy_runner(rewards, expected_sums):
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
-        trajectory_morl = PolicyRunner.create_from_policy(
-            env=env_generator_legacy(rewards=BasicMultiObjectiveRewards(), seed=42, )[0],
-            policy=RandomPolicy(), data_dir=data_dir / "morl",
+        trajectory = PolicyRunner.create_from_policy(
+            env=env_generator_legacy(rewards=rewards, seed=42, )[0],
+            policy=RandomPolicy(), data_dir=data_dir,
             snapshot_interval=5,
         )
-        assert trajectory_morl.trains_rewards_dones_infos["reward"].map(lambda r: r[0]).sum() == -1786.0
-        assert trajectory_morl.trains_rewards_dones_infos["reward"].map(lambda r: r[1]).sum() == -914.0
-        assert trajectory_morl.trains_rewards_dones_infos["reward"].map(lambda r: r[2]).sum() == -138.5625
+        reward_col = trajectory.trains_rewards_dones_infos["reward"]
+        # dict-valued rewards (e.g. BaseDefaultRewards/BaseECML2026Rewards) are compared as a single total across all penalty keys.
+        if len(expected_sums) == 1:
+            assert reward_col.map(lambda r: sum(r.values()) if isinstance(r, dict) else r).sum() == expected_sums[0]
+        else:
+            for i, expected in enumerate(expected_sums):
+                assert reward_col.map(lambda r: r[i]).sum() == expected
 
-        trajectory_default_rewards = PolicyRunner.create_from_policy(
-            env=env_generator_legacy(rewards=DefaultRewards(), seed=42, )[0], policy=RandomPolicy(),
-            data_dir=data_dir / "default",
+
+def test_default_rewards_via_policy_runner():
+    """Not passing `rewards` at all (RailEnv's own default) must be equivalent to passing an explicit `DefaultRewards()`."""
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory_implicit = PolicyRunner.create_from_policy(
+            env=env_generator_legacy(seed=42, )[0], policy=RandomPolicy(),
+            data_dir=data_dir / "implicit",
             snapshot_interval=5,
         )
-        assert trajectory_default_rewards.trains_rewards_dones_infos["reward"].sum() == -1786.0
+        trajectory_explicit = PolicyRunner.create_from_policy(
+            env=env_generator_legacy(rewards=DefaultRewards(), seed=42, )[0], policy=RandomPolicy(),
+            data_dir=data_dir / "explicit",
+            snapshot_interval=5,
+        )
+        assert trajectory_implicit.trains_rewards_dones_infos["reward"].sum() == trajectory_explicit.trains_rewards_dones_infos["reward"].sum() == -1786.0
 
 
 def test_punctuality_rewards_initial():

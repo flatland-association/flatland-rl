@@ -263,7 +263,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]]):
             sum_per_agent = np.array(rewards)
         else:
             rewards_by_agent = np.reshape(np.array(rewards), (num_agents, -1), order='F')
-            rewards_by_agent = [super().cumulate(*detailled_per_agent) for detailled_per_agent in rewards_by_agent]
+            rewards_by_agent = [self.cumulate(*detailled_per_agent) for detailled_per_agent in rewards_by_agent]
             sum_per_agent = [sum(detailled_per_agent.values()) for detailled_per_agent in rewards_by_agent]
         rewards_capped = np.maximum(sum_per_agent, - max_episode_steps)
         return sum(rewards_capped) / (max_episode_steps * num_agents) + 1
