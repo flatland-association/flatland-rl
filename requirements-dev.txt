@@ -480,7 +480,7 @@ snakeviz==2.2.2
     # via flatland-rl (pyproject.toml)
 solus==1.2.2
     # via versions
-soupsieve==2.8.1
+soupsieve==2.8.4
     # via beautifulsoup4
 spectate==1.0.1
     # via ipycytoscape
