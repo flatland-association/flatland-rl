@@ -50,7 +50,6 @@ jobs:
                     build-args: |
                         PYTHON_VERSION=${{ matrix.python-version }}
                         WITH_ML=${{ matrix.variant.with-ml }}
+                    no-cache: true
                     push: ${{ github.event_name != 'pull_request' }}
                     tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:latest-py${{ matrix.python-version }}${{ matrix.variant.tag-suffix }}
-                    cache-from: type=gha,scope=python-${{ matrix.python-version }}-${{ matrix.variant.name }}
-                    cache-to: type=gha,mode=max,scope=python-${{ matrix.python-version }}-${{ matrix.variant.name }}

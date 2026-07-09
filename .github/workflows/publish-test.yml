@@ -100,7 +100,6 @@ jobs:
                         PYTHON_VERSION=${{ matrix.python-version }}
                         WITH_ML=${{ matrix.variant.with-ml }}
                         FLATLAND_RL_REF=${{ github.ref_name }}
+                    no-cache: true
                     push: true
                     tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:v${{ inputs.version }}-py${{ matrix.python-version }}${{ matrix.variant.tag-suffix }}
-                    cache-from: type=gha,scope=python-${{ matrix.python-version }}-${{ matrix.variant.name }}
-                    cache-to: type=gha,mode=max,scope=python-${{ matrix.python-version }}-${{ matrix.variant.name }}

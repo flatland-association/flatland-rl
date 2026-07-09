@@ -29,5 +29,6 @@ FROM base AS ml-false
 FROM ml-${WITH_ML} AS final
 
 ARG FLATLAND_RL_REF
+# Verified: when FLATLAND_RL_REF is a version tag (e.g. "v1.2.3" `pip show flatland-rl` reports "1.2.3", not "v1.2.3" and not a ".devN")
 RUN python -m pip install "git+https://github.com/flatland-association/flatland-rl.git@${FLATLAND_RL_REF}"
 
