@@ -888,3 +888,42 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert (agent_0.position, agent_1.position) == ((3, 3), (3, 4))
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0
+
+
+def test_env_no_collision_penalty_for_dwell_after_malfunction():
+    """A train whose malfunction ends before its scheduled departure can dwell either way without penalty:
+    hold it stopped via DO_NOTHING and restart at the last moment, or restart early and brake again
+    (stop-and-go). Before the voluntary-stop fix (#452), only the first strategy was free -- braking the
+    restarted train cost the full collision penalty, forcing policies into the DO_NOTHING workaround."""
+    env = _make_simple_env(n_agents=1)
+    agent = env.agents[0]
+
+    for _ in range(3):
+        env.step({0: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+
+    # malfunction hits while moving; waiting it out is not a collision
+    agent.malfunction_handler.malfunction_down_counter = 3
+    for _ in range(3):
+        _, rewards, _, _ = env.step({0: RailEnvActions.DO_NOTHING})
+        assert agent.state == TrainState.MALFUNCTION
+        assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    # malfunction ends -> STOPPED (via MALFUNCTION, not MOVING -> STOPPED): no penalty
+    _, rewards, _, _ = env.step({0: RailEnvActions.DO_NOTHING})
+    assert agent.state == TrainState.STOPPED
+    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+
+    # strategy 1: hold the stopped train with DO_NOTHING, restart at the last moment -- free
+    for _ in range(3):
+        _, rewards, _, _ = env.step({0: RailEnvActions.DO_NOTHING})
+        assert agent.state == TrainState.STOPPED
+        assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+
+    # strategy 2 (stop-and-go): brake the restarted train voluntarily -- also free since the fix
+    _, rewards, _, _ = env.step({0: RailEnvActions.STOP_MOVING})
+    assert agent.state == TrainState.STOPPED
+    assert rewards[0][DefaultPenalties.COLLISION.value] == 0, \
+        "Braking a restarted train must cost the same as holding it stopped: nothing"
