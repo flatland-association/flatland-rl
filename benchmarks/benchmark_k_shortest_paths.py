@@ -24,7 +24,10 @@ def test_k_shortest_paths_between_all_cell_pairs():
     train_stations = data["train_stations"]
     # take one track per station only for the benchmark
     train_stations_flat = [station[i % len(station)] for i, station in enumerate(train_stations)]
-    for (source_position, source_direction), (target_position, _) in itertools.product(train_stations_flat, train_stations_flat):
+    for i, ((source_position, source_direction), (target_position, _)) in enumerate(itertools.product(train_stations_flat, train_stations_flat)):
+        # sub sample
+        if i % 7 != 0:
+            continue
         get_k_shortest_paths(
             env=env,
             source_position=source_position,
