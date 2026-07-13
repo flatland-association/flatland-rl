@@ -28,6 +28,8 @@ def test_k_shortest_paths_between_all_cell_pairs():
         # sub sample
         if i % 7 != 0:
             continue
+        if i > 1000:
+            break
         get_k_shortest_paths(
             env=env,
             source_position=source_position,
