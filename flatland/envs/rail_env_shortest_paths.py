@@ -63,7 +63,7 @@ def get_k_shortest_paths(env: "RailEnv",
 
     # countu: number of shortest paths found to node u
     # countu = 0, for all u in V
-    count = defaultdict(lambda: 0)
+    count: Dict[Tuple[int, int, int], int] = defaultdict(int)
 
     # B is a heap data structure containing paths
     # N.B. use OrderedSet to make result deterministic!
@@ -71,22 +71,22 @@ def get_k_shortest_paths(env: "RailEnv",
 
     # insert path Ps = {s} into B with cost 0
     heap[1].add((Waypoint(source_position, source_direction),))
-    heap_count = 1
 
     # while B is not empty and countt < K:
-    while heap_count > 0 and len(shortest_paths) < k:
+    while heap and len(shortest_paths) < k:
         if debug:
             print("iteration heap={}, shortest_paths={}".format(heap, shortest_paths))
         # – let Pu be the shortest cost path in B with cost C
-        cost = min([l for l in heap.keys() if len(heap[l]) > 0])
-        pu = list(heap[cost])[0]
+        cost = min(heap)
+        pu = next(iter(heap[cost]))
         u: Waypoint = pu[-1]
         if debug:
             print("  looking at pu={}".format(pu))
 
         #     – B = B − {Pu }
         heap[cost].remove(pu)
-        heap_count -= 1
+        if not heap[cost]:
+            del heap[cost]
         #     – countu = countu + 1
 
         urcd = (*u.position, u.direction)
@@ -140,7 +140,6 @@ def get_k_shortest_paths(env: "RailEnv",
                         continue
                     #     – insert Pv into B
                     heap[len(pv)].add(pv)
-                    heap_count += 1
 
     # return P
     return shortest_paths
