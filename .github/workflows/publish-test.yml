@@ -48,6 +48,8 @@ jobs:
                 run: git tag v$VERSION
             -   name: Build new package
                 run: tox run -e build
+            -   name: Verify dist is pure Python
+                run: python scripts/verify_cython_extension_build.py --dist-dir dist --expect pure-python
             -   name: Publish package to PyPI
                 uses: pypa/gh-action-pypi-publish@release/v1
                 with:

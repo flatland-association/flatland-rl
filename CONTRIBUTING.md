@@ -171,6 +171,20 @@ Renders the scene into a image (screenshot):
 renderer.gl.save_image("filename.bmp")
 ```
 
+### Cython
+
+A few hot-path modules may optionally be compiled with [Cython](https://cython.org/) for extra performance.
+Two Cython approaches are relevant here:
+
+- We declare and build the extension modules via `pyproject.toml`'s `[tool.setuptools] ext-modules`
+  (see [Compiling with setuptools](https://docs.cython.org/en/latest/src/userguide/compilation_setuptools.html)),
+  which lets the modules be compiled without a `setup.py` and without failing the build when Cython or a C
+  compiler is unavailable.
+- The accelerated modules stay plain, fully-interpretable `.py` files - Cython's
+  [pure Python mode](https://cython.readthedocs.io/en/latest/src/tutorial/pure.html#augmenting-pxd) - so if you
+  need to add type declarations for further speed-ups, do so via a companion `.pxd` file rather than converting
+  the module to `.pyx`, keeping it importable as ordinary Python when Cython isn't used.
+
 ### Type Hints
 
 We use type hints ([PEP 484](https://www.python.org/dev/peps/pep-0484/)) for better readability and better IDE support:

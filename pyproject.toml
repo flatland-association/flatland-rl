@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm>=8", "cython"]
+requires = ["setuptools>=74.1.0", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -59,6 +59,7 @@ dynamic = ["version"]
 dev = [
     "coverage",
     "opencv-python",
+    "cython>=3.3.0a1",
     "deptry",
     "folium",
     "flake8",
@@ -99,6 +100,16 @@ flatland-trajectory-generate-from-policy = "flatland.trajectories.policy_runner:
 flatland-trajectory-generate-from-metadata = "flatland.trajectories.policy_grid_runner:generate_trajectories_from_metadata"
 flatland-trajectory-evaluate = "flatland.evaluators.trajectory_evaluator:evaluate_trajectory"
 flatland-trajectory-analysis = "flatland.evaluators.trajectory_analysis:cli"
+
+[tool.setuptools]
+# declarative Cython extension build (https://docs.cython.org/en/latest/src/userguide/compilation_setuptools.html),
+# replacing the former setup.py + cythonize() call.
+# optional = true: if Cython and/or a C compiler are unavailable, the build falls back to the plain-Python
+# sources instead of failing (see tox.ini's verify-build-no-cython/verify-build-no-gcc envs).
+ext-modules = [
+    { name = "flatland.envs.step_utils.state_machine", sources = ["flatland/envs/step_utils/state_machine.py"], optional = true },
+    { name = "flatland.envs.step_utils.states", sources = ["flatland/envs/step_utils/states.py"], optional = true },
+]
 
 [tool.setuptools.packages]
 find = { }

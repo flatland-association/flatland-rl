@@ -48,7 +48,34 @@ Install Flatland using pip:
 python -m pip install flatland-rl
 ```
 
-This is the preferred method to install Flatland, as it will always install the most recent stable release.
+This is the preferred method to install Flatland, as it will always install the most recent stable release. The
+published package is pure Python, so this always works regardless of your platform or toolchain.
+
+### Cython-accelerated build
+
+A few hot-path modules can optionally be compiled with [Cython](https://cython.org/) for extra performance. This requires building from
+source, since the package published on PyPI is the plain-Python build described above:
+
+```shell
+python -m pip install "cython>=3.3.0a1"
+python -m pip install --no-build-isolation --no-binary flatland-rl flatland-rl
+```
+
+(or `python -m pip install --no-build-isolation -e .` from a checkout of this repository).
+
+**Requirements:**
+
+- [Cython](https://cython.org/) `>=3.3.0a1` installed in the environment you are installing into (`pip install
+  cython` above) - it must be present *before* pip starts the build, hence `--no-build-isolation`, which tells
+  pip to use your environment's packages instead of provisioning a fresh, empty build environment.
+- A working C compiler (e.g. `gcc`/`clang` on Linux/macOS, or the Microsoft C++ Build Tools on Windows).
+
+Cython compilation is optional and best-effort: if either requirement is missing, the build falls back to the
+plain-Python sources instead of failing, printing a warning for each module it could not compile. Pass `-v` to
+pip (`python -m pip install -v --no-build-isolation ...`) to see it - by default pip hides the underlying build
+output on success.
+
+In both cases the install still succeeds - you get the plain-Python modules, just without the Cython speed-up.
 
 👥 Credits
 ---
