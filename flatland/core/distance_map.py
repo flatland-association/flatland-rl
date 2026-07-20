@@ -1,5 +1,5 @@
 import math
-from typing import Dict, List, Optional, Generic, TypeVar, Callable
+from typing import Dict, List, Optional, Generic, TypeVar, Callable, Set
 
 from flatland.core.transition_map import TransitionMap
 from flatland.envs.agent_utils import EnvAgent
@@ -100,29 +100,45 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
             return None
         else:
             return None
+        handle = agent.handle
+        targets = agent.targets
 
+        return self._reconstruct_shortest_path(configuration, handle, max_depth, targets)
+
+    def _reconstruct_shortest_path(
+        self,
+        source: UnderlyingConfigurationType,
+        handle,
+        max_depth: Optional[int],
+        targets: Set[UnderlyingConfigurationType]
+    ) -> List[UnderlyingWaypointType]:
+        """
+        Reconstruct shortest path from distance map going forward from source to any of targets.
+        """
         agent_shortest_path = []
 
         distance = math.inf
         depth = 0
-        while configuration not in agent.targets and (max_depth is None or depth < max_depth):
+
+        while source not in targets and (max_depth is None or depth < max_depth):
             best_next_configuration = None
-            next_configurations = self.rail.get_successor_configurations(configuration)
+            next_configurations = self.rail.get_successor_configurations(source)
             for next_configuration in next_configurations:
-                next_action_distance = self._get_distance(next_configuration, agent.handle)
+
+                next_action_distance = self._get_distance(next_configuration, handle)
                 if next_action_distance < distance:
                     distance = next_action_distance
                     best_next_configuration = next_configuration
-            agent_shortest_path.append(self.waypoint_init(configuration))
+            agent_shortest_path.append(self.waypoint_init(source))
             depth += 1
 
             # if there is no way to continue, the rail must be disconnected!
             # (or distance map is incorrect)
             if best_next_configuration is None:
                 return None
-            configuration = best_next_configuration
+            source = best_next_configuration
         if max_depth is None or depth < max_depth:
-            agent_shortest_path.append(self.waypoint_init(configuration))
+            agent_shortest_path.append(self.waypoint_init(source))
         return agent_shortest_path
 
     def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
