@@ -1,5 +1,6 @@
 import math
-from typing import Dict, List, Optional, Generic, TypeVar, Callable, Set
+from collections import defaultdict
+from typing import Dict, FrozenSet, List, Optional, Generic, TypeVar, Callable, Set, Tuple
 
 from flatland.core.transition_map import TransitionMap
 from flatland.envs.agent_utils import EnvAgent
@@ -10,6 +11,10 @@ UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=Trans
 UnderlyingDistanceMapType = TypeVar('UnderlyingDistanceMapType')
 UnderlyingConfigurationType = TypeVar('UnderlyingConfigurationType')
 UnderlyingWaypointType = TypeVar('UnderlyingWaypointType')
+
+
+def _no_source_configuration():
+    return None
 
 
 class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingConfigurationType, UnderlyingWaypointType]):
@@ -149,4 +154,44 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
         raise NotImplementedError()
 
     def _get_distance(self, configuration: UnderlyingConfigurationType, target_nr: int):
+        raise NotImplementedError()
+
+
+class ConfigurationDistanceMap(
+    AbstractDistanceMap[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingConfigurationType,
+    UnderlyingWaypointType]
+):
+    """
+    Intermediate distance map collecting the full (source_configuration, distance) pair for every configuration
+    visited during the BFS walk, keyed by (configuration, target_configuration) - the actual target configuration
+    set reached, rather than the numeric target_nr (agent handle). Concrete subclasses only need to provide the
+    underlying storage for the raw distance value via `_set_agent_distance`/`_get_agent_distance`.
+    """
+
+    def __init__(self, agents: List[EnvAgent],
+                 waypoint_init: Callable[[UnderlyingConfigurationType], UnderlyingWaypointType]):
+        super().__init__(agents=agents, waypoint_init=waypoint_init)
+        self.source_configurations: Dict[
+            Tuple[UnderlyingConfigurationType, FrozenSet[UnderlyingConfigurationType]], UnderlyingConfigurationType
+        ] = defaultdict(_no_source_configuration)
+
+    def _target_configuration(self, target_nr: int) -> FrozenSet[UnderlyingConfigurationType]:
+        return frozenset(self.agents[target_nr].targets)
+
+    def _set_distance(self, configuration: UnderlyingConfigurationType,
+                      source_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+        self.source_configurations[(configuration, self._target_configuration(target_nr))] = source_configuration
+        self._set_agent_distance(configuration, target_nr, new_distance)
+
+    def _get_distance(self, configuration: UnderlyingConfigurationType, target_nr: int):
+        return self._get_agent_distance(configuration, target_nr)
+
+    def _get_source_configuration(self, configuration: UnderlyingConfigurationType,
+                                  target_nr: int) -> UnderlyingConfigurationType:
+        return self.source_configurations[(configuration, self._target_configuration(target_nr))]
+
+    def _set_agent_distance(self, configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+        raise NotImplementedError()
+
+    def _get_agent_distance(self, configuration: UnderlyingConfigurationType, target_nr: int):
         raise NotImplementedError()

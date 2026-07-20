@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from flatland.core.distance_map import AbstractDistanceMap
+from flatland.core.distance_map import ConfigurationDistanceMap
 from flatland.core.distance_map_walker import DistanceMapWalker
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
@@ -12,7 +12,8 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 def _waypoint(c):
     return Waypoint(*c)
 
-class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[Tuple[int, int], int], Waypoint]):
+
+class DistanceMap(ConfigurationDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[Tuple[int, int], int], Waypoint]):
     def __init__(self, agents: List[EnvAgent], env_height: int, env_width: int):
         super().__init__(agents=agents, waypoint_init=_waypoint)
         self.env_height = env_height
@@ -53,12 +54,11 @@ class DistanceMap(AbstractDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[T
                     self.distance_map[computed_targets.index(targets), :, :, :])
             computed_targets.append(targets)
 
-    def _set_distance(self, configuration: Tuple[Tuple[int, int], int],
-                      source_configuration: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
+    def _set_agent_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
         (r, c), direction = configuration
         self.distance_map[target_nr, r, c, direction] = new_distance
 
-    def _get_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int):
+    def _get_agent_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int):
         distance_map = self.get()
         (r, c), direction = configuration
         return distance_map[target_nr, r, c, direction]
