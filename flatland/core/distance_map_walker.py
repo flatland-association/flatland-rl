@@ -12,7 +12,7 @@ UnderlyingConfigurationType = TypeVar('UnderlyingConfigurationType')
 class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionMapType, UnderlyingConfigurationType]):
     """
     "All-to-any-one-in-cluster": utility class to compute distance maps from each configuration in the rail network (cell and each possible orientation within it in grid case)
-     to any in the set of target configurations.
+     to any one in the set of target configurations using backwards BFS.
     """
 
     def __init__(self, distance_map: AbstractDistanceMap):
