@@ -89,7 +89,9 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         'action_required': [True for _ in test_configs]
     }
 
-    find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator).record_steps = True
+    record_steps_effects_generator = find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator)
+    if record_steps_effects_generator is not None:
+        record_steps_effects_generator.record_steps = True
 
     for step in range(len(test_configs[0].replay)):
         if step == 0:
