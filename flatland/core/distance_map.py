@@ -76,7 +76,7 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
 
         Returns
         -------
-            Dict[int, Optional[List[WalkingElement]]]
+            Dict[int, Optional[List[UnderlyingWaypointType]]]
 
         """
 
