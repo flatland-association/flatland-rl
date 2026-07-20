@@ -1,4 +1,4 @@
-from typing import Callable, TypeVar, Generic, Dict, Any
+from typing import Callable, TypeVar, Generic, Dict, Any, List, Optional
 
 from flatland.core.env import Environment
 from flatland.utils.cli_utils import resolve_type
@@ -153,3 +153,30 @@ class MultiEffectsGeneratorWrapped(EffectsGenerator[EnvType]):
 
 def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType]) -> EffectsGenerator[EnvType]:
     return MultiEffectsGeneratorWrapped(*effects_generators)
+
+
+def find_effects_generator(effects_generator: EffectsGenerator[EnvType], cls: type) -> Optional[EffectsGenerator[EnvType]]:
+    """
+    Recursively search a (possibly `MultiEffectsGeneratorWrapped`-composed) effects generator for an instance of `cls`.
+    """
+    if isinstance(effects_generator, cls):
+        return effects_generator
+    if isinstance(effects_generator, MultiEffectsGeneratorWrapped):
+        for eff in effects_generator.effects_generators:
+            found = find_effects_generator(eff, cls)
+            if found is not None:
+                return found
+    return None
+
+
+def find_all_effects_generators(effects_generator: EffectsGenerator[EnvType], cls: type) -> List[EffectsGenerator[EnvType]]:
+    """
+    Recursively collect all instances of `cls` within a (possibly `MultiEffectsGeneratorWrapped`-composed) effects generator.
+    """
+    found = []
+    if isinstance(effects_generator, cls):
+        found.append(effects_generator)
+    if isinstance(effects_generator, MultiEffectsGeneratorWrapped):
+        for eff in effects_generator.effects_generators:
+            found.extend(find_all_effects_generators(eff, cls))
+    return found

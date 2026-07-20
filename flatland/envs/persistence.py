@@ -6,9 +6,10 @@ import msgpack
 import msgpack_numpy
 import numpy as np
 
-from flatland.core.effects_generator import EffectsGenerator
+from flatland.core.effects_generator import EffectsGenerator, find_effects_generator, make_multi_effects_generator
 from flatland.core.grid.grid_resource_map import GridResourceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
+from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 
 msgpack_numpy.patch()
 from flatland.envs.step_utils.states import StateTransitionSignals
@@ -73,7 +74,8 @@ class RailEnvPersister(object):
 
         # Add additional info to dict_env before saving
         dict_env["episode"] = env.cur_episode
-        dict_env["actions"] = env.list_actions
+        record_steps_effects_generator = find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator)
+        dict_env["actions"] = record_steps_effects_generator.list_actions if record_steps_effects_generator is not None else []
         dict_env["shape"] = (env.width, env.height)
         dict_env["max_episode_steps"] = env._max_episode_steps
 
@@ -296,13 +298,17 @@ class RailEnvPersister(object):
         if effects_generator is not None:
             env.effects_generator = effects_generator
         else:
-            env.effects_generator = cls._apply_malfunction(env_dict)
+            # `record_steps` is not part of the serialized `effects_generator` state (see `RecordStepsEffectsGenerator.__getstate__`),
+            # so carry over whatever is currently configured on `env` (e.g. from the `RailEnv` constructor) across the rebuild below.
+            current_record_steps_generator = find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator)
+            record_steps = current_record_steps_generator.record_steps if current_record_steps_generator is not None else False
+            env.effects_generator = cls._apply_malfunction(env_dict, record_steps=record_steps)
 
         if "stations_links" in env_dict:
             env.stations_links = env_dict["stations_links"]
 
     @classmethod
-    def _apply_malfunction(cls, env_dict: dict):
+    def _apply_malfunction(cls, env_dict: dict, record_steps: bool = False):
         effects_generator = EffectsGenerator()
         # backwards compatibility
         if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
@@ -314,6 +320,20 @@ class RailEnvPersister(object):
         effects_generators_specs = env_dict.get("effects_generator", None)
         if effects_generators_specs is not None:
             effects_generator = EffectsGenerator.from_state(effects_generators_specs)
+
+        # ensure exactly one `RecordStepsEffectsGenerator` is present - restored from the "new format" `effects_generator`
+        # state above if it was saved with one, otherwise added here so record_steps keeps working after loading
+        record_steps_effects_generator = find_effects_generator(effects_generator, RecordStepsEffectsGenerator)
+        if record_steps_effects_generator is None:
+            record_steps_effects_generator = RecordStepsEffectsGenerator()
+            effects_generator = make_multi_effects_generator(effects_generator, record_steps_effects_generator)
+        record_steps_effects_generator.record_steps = record_steps
+
+        # old format: actions recorded by `save_episode` under a dedicated top-level key, not part of `effects_generator` state
+        list_actions = env_dict.get("actions", None)
+        if list_actions is not None:
+            record_steps_effects_generator.set_state(list_actions)
+
         return effects_generator
 
     @classmethod

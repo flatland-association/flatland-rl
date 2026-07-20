@@ -12,7 +12,7 @@ import numpy as np
 
 import flatland.envs.timetable_generators as ttg
 from flatland.core.distance_map import AbstractDistanceMap
-from flatland.core.effects_generator import EffectsGenerator, make_multi_effects_generator
+from flatland.core.effects_generator import EffectsGenerator, MultiEffectsGeneratorWrapped, make_multi_effects_generator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_resource_map import GridResourceMap
@@ -28,6 +28,7 @@ from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.speed_counter import cached_cap_speed
@@ -597,7 +598,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
         self._verify_mutually_exclusive_resource_allocation()
 
-        self.effects_generator.on_episode_step_end(self)
+        self.effects_generator.on_episode_step_end(self, action_dict=action_dict)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
 
@@ -714,11 +715,14 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
 
         self.agent_positions = None
 
-        # save episode timesteps ie agent positions, orientations.  (not yet actions / observations)
-        self.record_steps = record_steps  # whether to save timesteps
         # save timesteps in here: [[[row, col, dir, malfunction],...nAgents], ...nSteps]
         self.cur_episode = []
-        self.list_actions = []  # save actions in here
+        record_steps_effects_generator = RecordStepsEffectsGenerator(record_steps=record_steps)
+        if isinstance(self.effects_generator, MultiEffectsGeneratorWrapped):
+            # flatten instead of nesting another `MultiEffectsGeneratorWrapped` layer around the existing one
+            self.effects_generator = make_multi_effects_generator(*self.effects_generator.effects_generators, record_steps_effects_generator)
+        else:
+            self.effects_generator = make_multi_effects_generator(self.effects_generator, record_steps_effects_generator)
 
         # Agent positions map
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1
@@ -766,41 +770,11 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
     def step(self, action_dict: Dict[int, RailEnvActions]):
         obs, rewards, dones, info = super().step(action_dict=action_dict)
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
-        if self.record_steps:
-            self.record_timestep(action_dict)
-        # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
         return obs, rewards, dones, info
 
     def _infrastructure_representation(self, configuration: Tuple[Tuple[int, int], int]) -> str:
         return RailEnvTransitionsEnum(self.rail.get_full_transitions(*configuration.position)).name
-
-    # TODO https://github.com/flatland-association/flatland-rl/issues/195  extract to callbacks instead!
-    def record_timestep(self, dActions):
-        """
-        Record the positions and orientations of all agents in memory, in the cur_episode
-        """
-        list_agents_state = []
-        for i_agent in range(self.get_num_agents()):
-            agent = self.agents[i_agent]
-            # the int cast is to avoid numpy types which may cause problems with msgpack
-            # in env v2, agents may have position None, before starting
-            if agent.position is None:
-                pos = (None, None)
-                dir = None
-            else:
-                pos = (int(agent.position[0]), int(agent.position[1]))
-                dir = int(agent.direction)
-            # print("pos:", pos, type(pos[0]))
-            list_agents_state.append([
-                *pos, dir,
-                agent.malfunction_handler.malfunction_down_counter,
-                agent.state.value,
-                int(agent.position in self.motion_check.deadlocked),
-            ])
-
-        self.cur_episode.append(list_agents_state)
-        self.list_actions.append(dActions)
 
     def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
         return EnvAgent.apply_timetable(self.agents, timetable)
