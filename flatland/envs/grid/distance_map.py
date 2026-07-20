@@ -54,11 +54,6 @@ class DistanceMap(ConfigurationDistanceMap[RailGridTransitionMap, np.ndarray, Tu
                     self.distance_map[computed_targets.index(targets), :, :, :])
             computed_targets.append(targets)
 
-    def _set_agent_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
-        (r, c), direction = configuration
+    def _set_agent_distance(self, source_configuration: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
+        (r, c), direction = source_configuration
         self.distance_map[target_nr, r, c, direction] = new_distance
-
-    def _get_agent_distance(self, configuration: Tuple[Tuple[int, int], int], target_nr: int):
-        distance_map = self.get()
-        (r, c), direction = configuration
-        return distance_map[target_nr, r, c, direction]

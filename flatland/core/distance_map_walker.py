@@ -72,7 +72,7 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
         neighbors = []
         for predecessor_configuration in rail.get_predecessor_configurations(configuration):
             new_distance = min(
-                self.distance_map._get_distance(predecessor_configuration, target_nr),
+                self.distance_map.get_agent_distance(predecessor_configuration, target_nr),
                 current_distance + 1
             )
             neighbors.append((predecessor_configuration, new_distance))
