@@ -5,6 +5,8 @@ env:
     flatland-baselines-ref: main
     flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip"
     flatland-scenarios-olten-partially-closed-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip"
+    ecml2026-pkl: "https://github.com/flatland-association/ecml2026-starterkit/raw/refs/heads/main/reinforcement_learning/sampling/level_0_scenario_1.pkl"
+    ecml2026-stations-pkl: "https://github.com/flatland-association/ecml2026-starterkit/raw/refs/heads/main/reinforcement_learning/sampling/stations.pkl"
 
 on:
     workflow_dispatch:
@@ -262,6 +264,37 @@ jobs:
                         benchmarks/*.png
                     if-no-files-found: error
 
+    profiling-get-k-shortest-paths:
+        runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v6
+                with:
+                    python-version: ${{ matrix.python-version }}
+            -   name: Download ecml2026 scenario
+                run: |
+                    wget "${{ env.ecml2026-pkl }}" -O level_0_scenario_1.pkl
+                    wget "${{ env.ecml2026-stations-pkl }}" -O stations.pkl
+                working-directory: ${{ github.workspace }}
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    python -m pip install tox tox-gh-actions
+            -   name: Run profiling
+                run: tox run -e py${{ matrix.python-version }}-profiling-get-k-shortest-paths
+            -   uses: actions/upload-artifact@v6
+                with:
+                    name: upload-profiling-get-k-shortest-paths-results-${{ matrix.python-version }}
+                    path: |
+                        benchmarks/*.prof
+                        benchmarks/*.png
+                    if-no-files-found: error
+
     benchmarks:
         if: ${{ github.event.inputs.run_benchmarks || github.ref == 'refs/heads/main' }}
         runs-on: ubuntu-22.04
@@ -280,6 +313,9 @@ jobs:
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+                working-directory: ${{ github.workspace }}
+            -   name: Download ecml2026 scenario
+                run: wget "${{ env.ecml2026-pkl }}" -O level_0_scenario_1.pkl
                 working-directory: ${{ github.workspace }}
             -   name: Install tox
                 run: |

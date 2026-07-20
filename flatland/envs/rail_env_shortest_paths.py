@@ -1,4 +1,5 @@
-from typing import List, Set, Tuple
+from collections import defaultdict
+from typing import List, Set, Tuple, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -62,33 +63,30 @@ def get_k_shortest_paths(env: "RailEnv",
 
     # countu: number of shortest paths found to node u
     # countu = 0, for all u in V
-
-    count = {(r, c, d): 0 for r in range(height) for c in range(width) for d in range(4)}
+    count: Dict[Tuple[int, int, int], int] = defaultdict(int)
 
     # B is a heap data structure containing paths
     # N.B. use OrderedSet to make result deterministic!
-    heap: OrderedSet[Tuple[Waypoint]] = OrderedSet()
+    heap: Dict[int, OrderedSet[Tuple[Waypoint]]] = defaultdict(OrderedSet)
 
     # insert path Ps = {s} into B with cost 0
-    heap.add((Waypoint(source_position, source_direction),))
+    heap[1].add((Waypoint(source_position, source_direction),))
 
     # while B is not empty and countt < K:
-    while len(heap) > 0 and len(shortest_paths) < k:
+    while heap and len(shortest_paths) < k:
         if debug:
             print("iteration heap={}, shortest_paths={}".format(heap, shortest_paths))
         # – let Pu be the shortest cost path in B with cost C
-        cost = np.inf
-        pu = None
-        for path in heap:
-            if len(path) < cost:
-                pu = path
-                cost = len(path)
+        cost = min(heap)
+        pu = next(iter(heap[cost]))
         u: Waypoint = pu[-1]
         if debug:
             print("  looking at pu={}".format(pu))
 
         #     – B = B − {Pu }
-        heap.remove(pu)
+        heap[cost].remove(pu)
+        if not heap[cost]:
+            del heap[cost]
         #     – countu = countu + 1
 
         urcd = (*u.position, u.direction)
@@ -141,7 +139,7 @@ def get_k_shortest_paths(env: "RailEnv",
                             print(f"        ignoring v={v} as in forbidden_cells.")
                         continue
                     #     – insert Pv into B
-                    heap.add(pv)
+                    heap[len(pv)].add(pv)
 
     # return P
     return shortest_paths
