@@ -149,8 +149,11 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
     def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
         raise NotImplementedError()
 
-    def _set_distance(self, source_configuration: UnderlyingConfigurationType,
-                      next_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+    def _set_distance(self,
+                      source_configuration: UnderlyingConfigurationType,
+                      target_configuration: UnderlyingConfigurationType,
+                      target_nr: int,
+                      new_distance: int):
         raise NotImplementedError()
 
     def get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
@@ -176,7 +179,8 @@ class ConfigurationDistanceMap(
         ] = defaultdict(_infinite_distance)
 
     def _set_distance(self, source_configuration: UnderlyingConfigurationType,
-                      next_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+                      target_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+        # TODO this is wrong!
         for target_configuration in self.agents[target_nr].targets:
             self.distances[(source_configuration, target_configuration)] = new_distance
         self._set_agent_distance(source_configuration, target_nr, new_distance)
@@ -188,8 +192,7 @@ class ConfigurationDistanceMap(
             for target_configuration in self.agents[target_nr].targets
         )
 
-    def _get_distance(self, source_configuration: UnderlyingConfigurationType,
-                      target_configuration: UnderlyingConfigurationType) -> int:
+    def _get_distance(self, source_configuration: UnderlyingConfigurationType, target_configuration: UnderlyingConfigurationType) -> int:
         self.get()
         return self.distances[(source_configuration, target_configuration)]
 
