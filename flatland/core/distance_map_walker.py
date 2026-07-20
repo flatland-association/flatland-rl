@@ -18,7 +18,9 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
     def __init__(self, distance_map: AbstractDistanceMap):
         self.distance_map = distance_map
 
-    def _distance_map_walker(self, rail: UnderlyingTransitionMapType, target_nr: int,
+    def _distance_map_walker(self,
+                             rail: UnderlyingTransitionMapType,
+                             target_nr: int,
                              target_configurations: List[UnderlyingConfigurationType]):
         """
         Utility function to compute distance maps from each cell in the rail network (and each possible
@@ -30,7 +32,7 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
         """
         # Returns max distance to target, from the farthest away node, while filling in distance_map
         for target_configuration in target_configurations:
-            self.distance_map._set_distance(target_configuration, target_nr, 0)
+            self.distance_map._set_distance(target_configuration, target_configuration, target_nr, 0)
 
         # Fill in the (up to) 4 neighboring nodes
         # direction is the direction of movement, meaning that at least one possible orientation of an agent
@@ -68,8 +70,11 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
         minimum distances from each target cell.
         """
         neighbors = []
-        for configuration in rail.get_predecessor_configurations(configuration):
-            new_distance = min(self.distance_map._get_distance(configuration, target_nr), current_distance + 1)
-            neighbors.append((configuration, new_distance))
-            self.distance_map._set_distance(configuration, target_nr, new_distance)
+        for predecessor_configuration in rail.get_predecessor_configurations(configuration):
+            new_distance = min(
+                self.distance_map._get_distance(predecessor_configuration, target_nr),
+                current_distance + 1
+            )
+            neighbors.append((predecessor_configuration, new_distance))
+            self.distance_map._set_distance(predecessor_configuration, configuration, target_nr, new_distance)
         return neighbors

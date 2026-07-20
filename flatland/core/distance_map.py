@@ -144,7 +144,8 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
     def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
         raise NotImplementedError()
 
-    def _set_distance(self, configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+    def _set_distance(self, configuration: UnderlyingConfigurationType,
+                      source_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
         raise NotImplementedError()
 
     def _get_distance(self, configuration: UnderlyingConfigurationType, target_nr: int):
