@@ -125,17 +125,17 @@ class MultiEffectsGeneratorWrapped(EffectsGenerator[EnvType]):
 
     def on_episode_start(self, env: EnvType, *args, **kwargs) -> EnvType:
         for eff in self.effects_generators:
-            env = eff.on_episode_start(env)
+            env = eff.on_episode_start(env, *args, **kwargs)
         return env
 
     def on_episode_step_start(self, env: EnvType, *args, **kwargs) -> EnvType:
         for eff in self.effects_generators:
-            env = eff.on_episode_step_start(env)
+            env = eff.on_episode_step_start(env, *args, **kwargs)
         return env
 
     def on_episode_step_end(self, env: EnvType, *args, **kwargs) -> EnvType:
         for eff in self.effects_generators:
-            env = eff.on_episode_step_end(env)
+            env = eff.on_episode_step_end(env, *args, **kwargs)
         return env
 
     def __getstate__(self):

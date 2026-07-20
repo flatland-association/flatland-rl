@@ -269,6 +269,23 @@ def _make_env_with_record_steps():
     return env
 
 
+def test_record_steps_effects_generator_records_live_action_dict():
+    """
+    `env.step(action_dict)` must deliver `action_dict` all the way through `effects_generator.on_episode_step_end`
+    to the composed `RecordStepsEffectsGenerator`, not just seed `list_actions` directly via `set_state`.
+    """
+    env = _make_env_with_record_steps()
+
+    action_dict_1 = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.STOP_MOVING}
+    action_dict_2 = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD}
+    env.step(action_dict_1)
+    env.step(action_dict_2)
+
+    record_steps_effects_generator = find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator)
+    assert record_steps_effects_generator.list_actions == [action_dict_1, action_dict_2]
+    assert len(env.cur_episode) == 2
+
+
 def test_record_steps_effects_generator_deserialization_new_format():
     """
     Post-refactor episode files have both a "new format" `effects_generator` state (which already embeds a
