@@ -167,8 +167,8 @@ class ConfigurationDistanceMap(
     """
     Intermediate distance map collecting the distance from every configuration visited during the BFS walk to
     each individual target configuration, keyed by (source_configuration, target_configuration) - a single
-    target configuration, rather than the numeric target_nr (agent handle). Concrete subclasses only need to
-    provide the underlying storage for the raw distance value via `_set_agent_distance`.
+    target configuration, rather than the numeric target_nr (agent handle). `get_agent_distance` returns the
+    minimum distance from a source configuration to any of the target configurations for a given agent.
     """
 
     def __init__(self, agents: List[EnvAgent],
@@ -180,10 +180,8 @@ class ConfigurationDistanceMap(
 
     def _set_distance(self, source_configuration: UnderlyingConfigurationType,
                       target_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
-        # TODO this is wrong!
         for target_configuration in self.agents[target_nr].targets:
             self.distances[(source_configuration, target_configuration)] = new_distance
-        self._set_agent_distance(source_configuration, target_nr, new_distance)
 
     def get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
         self.get()
@@ -195,6 +193,3 @@ class ConfigurationDistanceMap(
     def _get_distance(self, source_configuration: UnderlyingConfigurationType, target_configuration: UnderlyingConfigurationType) -> int:
         self.get()
         return self.distances[(source_configuration, target_configuration)]
-
-    def _set_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
-        raise NotImplementedError()

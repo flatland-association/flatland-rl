@@ -24,6 +24,3 @@ class GraphDistanceMap(ConfigurationDistanceMap[GraphTransitionMap, Dict[int, Di
             else:
                 self.distance_map[i] = self.distance_map[computed_targets.index(agent.targets)]
             computed_targets.append(agent.targets)
-
-    def _set_agent_distance(self, source_configuration: str, target_nr: int, new_distance: int):
-        self.distance_map[target_nr][source_configuration] = new_distance
