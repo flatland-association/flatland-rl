@@ -103,7 +103,6 @@ flatland-trajectory-analysis = "flatland.evaluators.trajectory_analysis:cli"
 
 [tool.setuptools]
 # declarative Cython extension build (https://docs.cython.org/en/latest/src/userguide/compilation_setuptools.html),
-# replacing the former setup.py + cythonize() call.
 # optional = true: if Cython and/or a C compiler are unavailable, the build falls back to the plain-Python
 # sources instead of failing (see tox.ini's verify-build-no-cython/verify-build-no-gcc envs).
 ext-modules = [
