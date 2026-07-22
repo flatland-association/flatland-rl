@@ -18,9 +18,6 @@ class GraphDistanceMap(AgentSourceTargetDistanceMap[GraphTransitionMap, Dict[int
     def _valid_targets(self, agent: EnvAgent, rail: GraphTransitionMap):
         return agent.targets
 
-    def _all_configurations(self, rail: GraphTransitionMap):
-        return rail.g.nodes
-
     def _copy_agent_distance(self, target_nr: int, source_target_nr: int):
         self.distance_map[target_nr] = self.distance_map[source_target_nr]
 

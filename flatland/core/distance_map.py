@@ -111,8 +111,8 @@ class AgentSourceTargetDistanceMap(
         for i, agent in enumerate(agents):
             targets = self._valid_targets(agent, rail)
             if targets not in computed_targets:
-                distance_map_walker._distance_map_walker(rail, targets)
-                for configuration in self._all_configurations(rail):
+                _, reachable_configurations = distance_map_walker._distance_map_walker(rail, targets)
+                for configuration in reachable_configurations:
                     self._set_agent_distance(configuration, i, self.get_agent_distance(configuration, i))
             else:
                 # just copy the distance map from other agent with same target (performance)
@@ -123,9 +123,6 @@ class AgentSourceTargetDistanceMap(
         raise NotImplementedError()
 
     def _valid_targets(self, agent: EnvAgent, rail: UnderlyingTransitionMapType) -> List[UnderlyingConfigurationType]:
-        raise NotImplementedError()
-
-    def _all_configurations(self, rail: UnderlyingTransitionMapType):
         raise NotImplementedError()
 
     def _copy_agent_distance(self, target_nr: int, source_target_nr: int):

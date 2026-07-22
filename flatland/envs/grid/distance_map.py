@@ -34,14 +34,6 @@ class DistanceMap(
     def _valid_targets(self, agent: EnvAgent, rail: RailGridTransitionMap) -> List[Tuple[Tuple[int, int], int]]:
         return [target for target in agent.targets if rail.is_valid_configuration(target)]
 
-    def _all_configurations(self, rail: RailGridTransitionMap):
-        return (
-            ((r, c), direction)
-            for r in range(self.env_height)
-            for c in range(self.env_width)
-            for direction in range(4)
-        )
-
     def _copy_agent_distance(self, target_nr: int, source_target_nr: int):
         # just copy the distance map from other agent with same target (performance)
         self.distance_map[target_nr, :, :, :] = np.copy(self.distance_map[source_target_nr, :, :, :])

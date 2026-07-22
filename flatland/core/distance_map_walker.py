@@ -1,5 +1,5 @@
 from collections import deque
-from typing import List, Generic, TypeVar
+from typing import List, Generic, Set, Tuple, TypeVar
 
 from flatland.core.distance_map import ConfigurationDistanceMap
 from flatland.core.transition_map import TransitionMap
@@ -21,7 +21,8 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
 
     def _distance_map_walker(self,
                              rail: UnderlyingTransitionMapType,
-                             target_configurations: List[UnderlyingConfigurationType]):
+                             target_configurations: List[UnderlyingConfigurationType]
+                             ) -> Tuple[int, Set[UnderlyingConfigurationType]]:
         """
         Utility function to compute distance maps from each cell in the rail network (and each possible
         orientation within it) to each of the target configurations.
@@ -29,8 +30,14 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
         Parameters
         ----------
         target_configurations
+
+        Returns
+        -------
+        Tuple[int, Set[UnderlyingConfigurationType]]
+            the max distance to target, from the farthest away node, and the set of all configurations
+            backwards-reachable from any of the target configurations (i.e. those a distance was filled in for).
         """
-        # Returns max distance to target, from the farthest away node, while filling in distance_map
+        # Fill in distance_map, seeding each target configuration at distance 0
         for target_configuration in target_configurations:
             self.distance_map._set_distance(target_configuration, target_configuration, 0)
 
@@ -65,7 +72,7 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
                 if len(valid_neighbors) > 0:
                     max_distance = max(max_distance, distance + 1)
 
-        return max_distance
+        return max_distance, visited
 
     def _get_and_update_neighbors(self, rail: UnderlyingTransitionMapType, configuration: UnderlyingConfigurationType,
                                   current_distance: int, target_configuration: UnderlyingConfigurationType):
