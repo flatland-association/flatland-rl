@@ -17,11 +17,6 @@ class RecordStepsEffectsGenerator(EffectsGenerator["RailEnv"]):
         self.list_actions = []  # save actions in here
 
     def on_episode_step_end(self, env: "RailEnv", action_dict: Optional[Dict[int, RailEnvActions]] = None, *args, **kwargs) -> "RailEnv":
-        # `env` may be `None` here if an earlier effects generator composed alongside this one in a
-        # `MultiEffectsGeneratorWrapped` chain does not return it (e.g. mutates in place and returns `None`).
-        if env is None:
-            return env
-
         list_agents_state = []
         for i_agent in range(env.get_num_agents()):
             agent = env.agents[i_agent]

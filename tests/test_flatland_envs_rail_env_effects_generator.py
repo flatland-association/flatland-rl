@@ -32,6 +32,7 @@ def test_rail_env_effects_generator_on_episode_step_end():
     class TestMalfunctionEffectsGenerator(EffectsGenerator[RailEnv]):
         def on_episode_step_end(self, env: RailEnv, *args, **kwargs) -> RailEnv:
             env.agents[0].malfunction_handler._set_malfunction_down_counter(999999)
+            return env
 
     env, _, _ = env_generator(seed=42, effects_generator=TestMalfunctionEffectsGenerator())
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
