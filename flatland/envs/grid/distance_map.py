@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from flatland.core.distance_map import ConfigurationDistanceMap
+from flatland.core.distance_map import AgentSourceTargetDistanceMap
 from flatland.core.distance_map_walker import DistanceMapWalker
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
@@ -13,7 +13,9 @@ def _waypoint(c):
     return Waypoint(*c)
 
 
-class DistanceMap(ConfigurationDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[Tuple[int, int], int], Waypoint]):
+class DistanceMap(
+    AgentSourceTargetDistanceMap[RailGridTransitionMap, np.ndarray, Tuple[Tuple[int, int], int], Waypoint]
+):
     def __init__(self, agents: List[EnvAgent], env_height: int, env_width: int):
         super().__init__(agents=agents, waypoint_init=_waypoint)
         self.env_height = env_height

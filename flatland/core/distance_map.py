@@ -17,14 +17,52 @@ def _infinite_distance():
     return math.inf
 
 
-class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingConfigurationType, UnderlyingWaypointType]):
+class ConfigurationDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingConfigurationType, UnderlyingWaypointType]):
+    """
+    Base distance map collecting the distance from every configuration visited during the BFS walk to the
+    effective target configuration reached, keyed by (source_configuration, target_configuration) - agnostic
+    of any numeric target_nr (agent handle), which `DistanceMapWalker` has no notion of.
+    """
+
     def __init__(self, agents: List[EnvAgent], waypoint_init: Callable[[UnderlyingConfigurationType], UnderlyingWaypointType]):
-        self.distance_map = None
-        self.agents_previous_computation = None
-        self.reset_was_called = False
         self.agents: List[EnvAgent] = agents
         self.rail: Optional[RailGridTransitionMap] = None
         self.waypoint_init = waypoint_init
+        self.distances: Dict[
+            Tuple[UnderlyingConfigurationType, UnderlyingConfigurationType], int
+        ] = defaultdict(_infinite_distance)
+
+    def reset(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
+        """
+        Reset the distance map
+        """
+        self.agents: List[EnvAgent] = agents
+        self.rail = rail
+
+    def _set_distance(self, source_configuration: UnderlyingConfigurationType,
+                      target_configuration: UnderlyingConfigurationType, new_distance: int):
+        self.distances[(source_configuration, target_configuration)] = new_distance
+
+    def _get_distance(self, source_configuration: UnderlyingConfigurationType,
+                      target_configuration: UnderlyingConfigurationType) -> int:
+        return self.distances[(source_configuration, target_configuration)]
+
+
+class AgentSourceTargetDistanceMap(
+    ConfigurationDistanceMap[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingConfigurationType,
+    UnderlyingWaypointType]
+):
+    """
+    Adds agent-handle (target_nr) aware querying on top of `ConfigurationDistanceMap`. `get_agent_distance`
+    returns the minimum distance from a source configuration to any of a given agent's target configurations;
+    concrete subclasses provide the underlying per-agent storage via `_set_agent_distance`.
+    """
+
+    def __init__(self, agents: List[EnvAgent], waypoint_init: Callable[[UnderlyingConfigurationType], UnderlyingWaypointType]):
+        super().__init__(agents=agents, waypoint_init=waypoint_init)
+        self.distance_map = None
+        self.agents_previous_computation = None
+        self.reset_was_called = False
 
     def set(self, distance_map: UnderlyingDistanceMapType):
         """
@@ -56,9 +94,11 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
         """
         Reset the distance map
         """
+        super().reset(agents=agents, rail=rail)
         self.reset_was_called = True
-        self.agents: List[EnvAgent] = agents
-        self.rail = rail
+
+    def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
+        raise NotImplementedError()
 
     # N.B. get_shortest_paths is not part of distance_map since it refers to RailEnvActions (would lead to circularity!)
     def get_shortest_paths(self, max_depth: Optional[int] = None, agent_handle: Optional[int] = None) -> Dict[int, Optional[List[UnderlyingWaypointType]]]:
@@ -145,40 +185,6 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
         if max_depth is None or depth < max_depth:
             agent_shortest_path.append(self.waypoint_init(source))
         return agent_shortest_path
-
-    def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
-        raise NotImplementedError()
-
-    def get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
-        raise NotImplementedError()
-
-
-class ConfigurationDistanceMap(
-    AbstractDistanceMap[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingConfigurationType,
-    UnderlyingWaypointType]
-):
-    """
-    Intermediate distance map collecting the distance from every configuration visited during the BFS walk to
-    the effective target configuration reached, keyed by (source_configuration, target_configuration) - agnostic
-    of any numeric target_nr (agent handle), which `DistanceMapWalker` has no notion of. `get_agent_distance`
-    returns the minimum distance from a source configuration to any of a given agent's target configurations;
-    `_compute()` is responsible for using it to fill in the concrete per-agent storage (via `_set_agent_distance`).
-    """
-
-    def __init__(self, agents: List[EnvAgent],
-                 waypoint_init: Callable[[UnderlyingConfigurationType], UnderlyingWaypointType]):
-        super().__init__(agents=agents, waypoint_init=waypoint_init)
-        self.distances: Dict[
-            Tuple[UnderlyingConfigurationType, UnderlyingConfigurationType], int
-        ] = defaultdict(_infinite_distance)
-
-    def _set_distance(self, source_configuration: UnderlyingConfigurationType,
-                      target_configuration: UnderlyingConfigurationType, new_distance: int):
-        self.distances[(source_configuration, target_configuration)] = new_distance
-
-    def _get_distance(self, source_configuration: UnderlyingConfigurationType,
-                      target_configuration: UnderlyingConfigurationType) -> int:
-        return self.distances[(source_configuration, target_configuration)]
 
     def get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
         return min(

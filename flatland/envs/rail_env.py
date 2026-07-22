@@ -11,7 +11,7 @@ from typing import List, Optional, Dict, Tuple, Any, Generic, TypeVar
 import numpy as np
 
 import flatland.envs.timetable_generators as ttg
-from flatland.core.distance_map import AbstractDistanceMap
+from flatland.core.distance_map import AgentSourceTargetDistanceMap
 from flatland.core.effects_generator import EffectsGenerator, find_effects_generator, make_multi_effects_generator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
@@ -123,7 +123,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
     effects_generator : Optional[EffectsGenerator["RailEnv"]]
         The effects generator that can modify the env at the end of env reset, at the beginning of the env step and at the end of the env step.
-    distance_map: AbstractDistanceMap
+    distance_map: AgentSourceTargetDistanceMap
         Use pre-computed distance map. Defaults to new distance map.
     """
 
@@ -141,7 +141,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                  braking_delta: Fraction = -Fraction(1),
                  rewards: Rewards = None,
                  effects_generator: EffectsGenerator["RailEnv"] = None,
-                 distance_map: AbstractDistanceMap = None,
+                 distance_map: AgentSourceTargetDistanceMap = None,
                  ):
 
         super().__init__()

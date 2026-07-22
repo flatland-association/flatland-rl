@@ -3,13 +3,13 @@ from typing import List, Dict
 
 import numpy as np
 
-from flatland.core.distance_map import ConfigurationDistanceMap
+from flatland.core.distance_map import AgentSourceTargetDistanceMap
 from flatland.core.distance_map_walker import DistanceMapWalker
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 
 
-class GraphDistanceMap(ConfigurationDistanceMap[GraphTransitionMap, Dict[int, Dict[str, int]], str, str]):
+class GraphDistanceMap(AgentSourceTargetDistanceMap[GraphTransitionMap, Dict[int, Dict[str, int]], str, str]):
     def __init__(self, agents: List[EnvAgent]):
         super().__init__(agents=agents, waypoint_init=str)
 
