@@ -305,18 +305,30 @@ class RailEnvPersister(object):
 
     @classmethod
     def _apply_effects_generator(cls, env_dict: dict):
-        effects_generator = EffectsGenerator()
-        # backwards compatibility
-        if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
-            env_dict.get('malfunction').min_duration, int) and isinstance(env_dict.get('malfunction').max_duration, int):
-            malfunction_generator = mal_gen.ParamMalfunctionGen.extract_malfunction_generator(env_dict)
-            effects_generator = mal_eff_gen.MalfunctionEffectsGenerator(malfunction_generator)
-
-        # new format
+        # new format takes precedence: if the full effects_generator state was saved, that alone is authoritative
         effects_generators_specs = env_dict.get("effects_generator", None)
         if effects_generators_specs is not None:
             effects_generator = EffectsGenerator.from_state(effects_generators_specs)
+        else:
+            effects_generator = cls._patch_malfunction_effects_generator(EffectsGenerator(), env_dict)
 
+        effects_generator = cls._patch_record_steps_effects_generator(effects_generator, env_dict)
+        return effects_generator
+
+    @classmethod
+    def _patch_malfunction_effects_generator(cls, effects_generator: EffectsGenerator, env_dict: dict) -> EffectsGenerator:
+        """
+        Backwards compatibility: legacy files (pre-dating the "effects_generator" state key) stored malfunction
+        parameters directly under a top-level "malfunction" key - reconstruct a MalfunctionEffectsGenerator from it.
+        """
+        if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
+            env_dict.get('malfunction').min_duration, int) and isinstance(env_dict.get('malfunction').max_duration, int):
+            malfunction_generator = mal_gen.ParamMalfunctionGen.extract_malfunction_generator(env_dict)
+            return mal_eff_gen.MalfunctionEffectsGenerator(malfunction_generator)
+        return effects_generator
+
+    @classmethod
+    def _patch_record_steps_effects_generator(cls, effects_generator: EffectsGenerator, env_dict: dict) -> EffectsGenerator:
         # old format: actions recorded by `save_episode` under a dedicated top-level key, not part of `effects_generator`
         # state. Its mere presence is the signal that recording was desired - patch a `RecordStepsEffectsGenerator` in
         # with that history if the "new format" restore above didn't already deserialize one.
@@ -327,7 +339,6 @@ class RailEnvPersister(object):
                 record_steps_effects_generator = RecordStepsEffectsGenerator()
                 effects_generator = make_multi_effects_generator(effects_generator, record_steps_effects_generator)
             record_steps_effects_generator.set_state(list_actions)
-
         return effects_generator
 
     @classmethod
