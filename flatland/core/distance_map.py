@@ -215,6 +215,7 @@ class AgentSourceTargetDistanceMap(
         return agent_shortest_path
 
     def get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
+        self.get()
         return min(
             self._get_distance(source_configuration, target_configuration)
             for target_configuration in self.agents[target_nr].targets

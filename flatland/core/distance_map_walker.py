@@ -25,7 +25,10 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
                              ) -> Tuple[int, Set[UnderlyingConfigurationType]]:
         """
         Utility function to compute distance maps from each cell in the rail network (and each possible
-        orientation within it) to each of the target configurations.
+        orientation within it) to each of the target configurations. Each target configuration is walked
+        independently (its own BFS, its own visited set) - a shared visited set across multiple target
+        configurations would incorrectly cut off exploration wherever their searches cross (e.g. on a
+        cyclic/looped rail layout).
 
         Parameters
         ----------
@@ -37,27 +40,35 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
             the max distance to target, from the farthest away node, and the set of all configurations
             backwards-reachable from any of the target configurations (i.e. those a distance was filled in for).
         """
-        # Fill in distance_map, seeding each target configuration at distance 0
+        max_distance = 0
+        reachable_configurations = set()
         for target_configuration in target_configurations:
-            self.distance_map._set_distance(target_configuration, target_configuration, 0)
+            target_max_distance, target_reachable = self._walk_to_target(rail, target_configuration)
+            max_distance = max(max_distance, target_max_distance)
+            reachable_configurations |= target_reachable
+        return max_distance, reachable_configurations
+
+    def _walk_to_target(self, rail: UnderlyingTransitionMapType, target_configuration: UnderlyingConfigurationType
+                        ) -> Tuple[int, Set[UnderlyingConfigurationType]]:
+        """
+        Backward BFS from a single target configuration to every configuration that can reach it, filling in
+        the minimum distances.
+        """
+        self.distance_map._set_distance(target_configuration, target_configuration, 0)
 
         # Fill in the (up to) 4 neighboring nodes
         # direction is the direction of movement, meaning that at least one possible orientation of an agent
         # in cell (row,col) allows a movement in direction `direction'
-        nodes_queue = deque(
-            x
-            for target_configuration in target_configurations
-            for x in self._get_and_update_neighbors(rail, target_configuration, 0, target_configuration)
-        )
+        nodes_queue = deque(self._get_and_update_neighbors(rail, target_configuration, 0, target_configuration))
 
         # BFS from target `position' to all the reachable nodes in the grid
         # Stop the search if the target position is re-visited, in any direction
-        visited = set(target_configurations)
+        visited = {target_configuration}
 
         max_distance = 0
 
         while nodes_queue:
-            configuration, distance, target_configuration = nodes_queue.popleft()
+            configuration, distance = nodes_queue.popleft()
 
             if configuration not in visited:
                 visited.add(configuration)
@@ -77,8 +88,8 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
     def _get_and_update_neighbors(self, rail: UnderlyingTransitionMapType, configuration: UnderlyingConfigurationType,
                                   current_distance: int, target_configuration: UnderlyingConfigurationType):
         """
-        Utility function used by _distance_map_walker to perform a BFS walk over the rail, filling in the
-        minimum distances from each target cell.
+        Utility function used by _walk_to_target to perform a BFS walk over the rail, filling in the
+        minimum distances to a single target configuration.
         """
         neighbors = []
         for predecessor_configuration in rail.get_predecessor_configurations(configuration):
@@ -86,6 +97,6 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
                 self.distance_map._get_distance(predecessor_configuration, target_configuration),
                 current_distance + 1
             )
-            neighbors.append((predecessor_configuration, new_distance, target_configuration))
+            neighbors.append((predecessor_configuration, new_distance))
             self.distance_map._set_distance(predecessor_configuration, target_configuration, new_distance)
         return neighbors
