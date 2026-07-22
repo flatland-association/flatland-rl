@@ -122,10 +122,10 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
 
         Parameters
         ----------
-        action : [ActionsType]
+        action : ActionsType
             Action to execute
         configuration : ConfigurationType
-            position and orientation
+            current configuration, e.g. position and orientation or current edge
 
         Returns
         -------
@@ -143,6 +143,20 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
         raise NotImplementedError()
 
     def is_valid_configuration(self, configuration: UnderlyingConfigurationType) -> bool:
+        raise NotImplementedError()
+
+    def is_valid_configuration(self, configuration: ConfigurationType) -> bool:
+        """
+        Whether the map contains the configuration (position+direction tuple for grid or edge for graphs).
+
+        Parameters
+        ----------
+        configuration: ConfigurationType
+
+        Returns
+        -------
+
+        """
         raise NotImplementedError()
 
 
