@@ -149,13 +149,6 @@ class AbstractDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanc
     def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
         raise NotImplementedError()
 
-    def _set_distance(self,
-                      source_configuration: UnderlyingConfigurationType,
-                      target_configuration: UnderlyingConfigurationType,
-                      target_nr: int,
-                      new_distance: int):
-        raise NotImplementedError()
-
     def get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
         raise NotImplementedError()
 
@@ -166,9 +159,10 @@ class ConfigurationDistanceMap(
 ):
     """
     Intermediate distance map collecting the distance from every configuration visited during the BFS walk to
-    each individual target configuration, keyed by (source_configuration, target_configuration) - a single
-    target configuration, rather than the numeric target_nr (agent handle). `get_agent_distance` returns the
-    minimum distance from a source configuration to any of the target configurations for a given agent.
+    the effective target configuration reached, keyed by (source_configuration, target_configuration) - agnostic
+    of any numeric target_nr (agent handle), which `DistanceMapWalker` has no notion of. `get_agent_distance`
+    returns the minimum distance from a source configuration to any of a given agent's target configurations;
+    `_compute()` is responsible for using it to fill in the concrete per-agent storage (via `_set_agent_distance`).
     """
 
     def __init__(self, agents: List[EnvAgent],
@@ -179,17 +173,18 @@ class ConfigurationDistanceMap(
         ] = defaultdict(_infinite_distance)
 
     def _set_distance(self, source_configuration: UnderlyingConfigurationType,
-                      target_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
-        for target_configuration in self.agents[target_nr].targets:
-            self.distances[(source_configuration, target_configuration)] = new_distance
+                      target_configuration: UnderlyingConfigurationType, new_distance: int):
+        self.distances[(source_configuration, target_configuration)] = new_distance
+
+    def _get_distance(self, source_configuration: UnderlyingConfigurationType,
+                      target_configuration: UnderlyingConfigurationType) -> int:
+        return self.distances[(source_configuration, target_configuration)]
 
     def get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
-        self.get()
         return min(
-            self.distances[(source_configuration, target_configuration)]
+            self._get_distance(source_configuration, target_configuration)
             for target_configuration in self.agents[target_nr].targets
         )
 
-    def _get_distance(self, source_configuration: UnderlyingConfigurationType, target_configuration: UnderlyingConfigurationType) -> int:
-        self.get()
-        return self.distances[(source_configuration, target_configuration)]
+    def _set_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+        raise NotImplementedError()

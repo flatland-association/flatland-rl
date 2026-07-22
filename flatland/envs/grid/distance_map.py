@@ -47,9 +47,18 @@ class DistanceMap(ConfigurationDistanceMap[RailGridTransitionMap, np.ndarray, Tu
         for i, agent in enumerate(agents):
             targets = [target for target in agent.targets if rail.is_valid_configuration(target)]
             if targets not in computed_targets:
-                distance_map_walker._distance_map_walker(rail, i, targets)
+                distance_map_walker._distance_map_walker(rail, targets)
+                for r in range(self.env_height):
+                    for c in range(self.env_width):
+                        for direction in range(4):
+                            configuration = ((r, c), direction)
+                            self._set_agent_distance(configuration, i, self.get_agent_distance(configuration, i))
             else:
                 # just copy the distance map form other agent with same target (performance)
                 self.distance_map[i, :, :, :] = np.copy(
                     self.distance_map[computed_targets.index(targets), :, :, :])
             computed_targets.append(targets)
+
+    def _set_agent_distance(self, source_configuration: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
+        (r, c), direction = source_configuration
+        self.distance_map[target_nr, r, c, direction] = new_distance
