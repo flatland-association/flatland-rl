@@ -25,7 +25,7 @@ concurrency:
 jobs:
     lint:
         if: ${{ false }}  # disabled for now, hasn't run in a while resulting in countless issues
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -40,46 +40,11 @@ jobs:
                 run: tox run -e flake8
 
     deptry:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
-        steps:
-            -   name: Inspect disk
-                run: |
-                    df -h
-                    docker system df
-            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
-            -   name: Prune docker system
-                run: |
-                    docker system prune --all --force
-            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
-            -   name: Free disk space
-                run: |
-                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
-            -   name: Inspect disk again
-                run: |
-                    df -h
-                    docker system df
-            -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v6
-                with:
-                    python-version: ${{ matrix.python-version }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
-            -   name: Run deptry
-                run: tox -e py${{ matrix.python-version }}-verify-requirements
-
-    testml:
-        runs-on: ubuntu-22.04
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   name: Inspect disk
                 run: |
@@ -99,8 +64,58 @@ jobs:
                     docker system df
             -   name: Install ffmpeg
                 run: |
+                    set -euxo
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
+                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
+                    # https://docs.scipy.org/doc/scipy/building/index.html
+                    sudo apt-get -y build-dep scipy
+            -   uses: actions/checkout@v6
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v6
+                with:
+                    python-version: ${{ matrix.python-version }}
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    python -m pip install tox tox-gh-actions
+            -   name: Run deptry
+                run: tox -e py${{ matrix.python-version }}-verify-requirements
+
+    testml:
+        runs-on: ubuntu-24.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        steps:
+            -   name: Inspect disk
+                run: |
+                    df -h
+                    docker system df
+            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
+            -   name: Prune docker system
+                run: |
+                    docker system prune --all --force
+            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
+            -   name: Free disk space
+                run: |
+                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
+            -   name: Inspect disk again
+                run: |
+                    df -h
+                    docker system df
+            -   name: Install ffmpeg
+                run: |
+                    set -euxo
+                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+                    sudo apt-get update
+                    sudo apt-get -y install ffmpeg
+                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
+                    # https://docs.scipy.org/doc/scipy/building/index.html
+                    sudo apt-get -y build-dep scipy
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v6
@@ -121,11 +136,11 @@ jobs:
                 run: df . -h
 
     test:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   name: Inspect disk
                 run: |
@@ -145,8 +160,15 @@ jobs:
                     docker system df
             -   name: Install ffmpeg
                 run: |
+                    set -euxo
+                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
+                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
+                    # https://docs.scipy.org/doc/scipy/building/index.html
+                    sudo apt-get -y build-dep scipy
+
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v6
@@ -173,19 +195,25 @@ jobs:
                 run: df . -h
 
     notebooks:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
                 python-version: [
                   # "3.10", # commented out as failing too often
-                    "3.11", "3.12", "3.13" ]
+                    "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Install ffmpeg
                 run: |
+                    set -euxo
+                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
+                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
+                    # https://docs.scipy.org/doc/scipy/building/index.html
+                    sudo apt-get -y build-dep scipy
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v6
                 with:
@@ -205,11 +233,11 @@ jobs:
                     tox run -e py${{ matrix.python-version }}-notebooks-no-pickle
 
     examples:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -229,11 +257,11 @@ jobs:
                 run: tox run -e py${{ matrix.python-version }}-examples
 
     profiling:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -297,11 +325,11 @@ jobs:
 
     benchmarks:
         if: ${{ github.event.inputs.run_benchmarks || github.ref == 'refs/heads/main' }}
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -331,11 +359,11 @@ jobs:
 
     regression:
         if: ${{ github.event.inputs.run_benchmarks || github.ref == 'refs/heads/main' }}
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}

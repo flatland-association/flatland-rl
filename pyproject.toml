@@ -18,6 +18,7 @@ classifiers = [
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
     'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
 ]
 dependencies = [
     "attrs",
@@ -35,7 +36,7 @@ dependencies = [
     "msgpack",
     "networkx<3.5", # pin as 3.5 has dropped support for 3.10 https://networkx.org/documentation/stable/release/release_3.5.html
     "numpy<2",
-    "pandas",
+    "pandas<3", # pin for now (peristence changed in v3).
     "Pillow",
     "pyglet",
     "pydantic",
