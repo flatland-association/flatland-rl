@@ -98,6 +98,37 @@ class AgentSourceTargetDistanceMap(
         self.reset_was_called = True
 
     def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
+        """
+        Computes the distance maps for each unique target. Thus, if several targets are the same we only
+        compute the distance for them once and copy to all agents with the same target.
+        """
+        from flatland.core.distance_map_walker import DistanceMapWalker
+
+        self.agents_previous_computation = self.agents
+        self.distance_map = self._new_distance_map(len(agents))
+        distance_map_walker = DistanceMapWalker(self)
+        computed_targets = []
+        for i, agent in enumerate(agents):
+            targets = self._valid_targets(agent, rail)
+            if targets not in computed_targets:
+                distance_map_walker._distance_map_walker(rail, targets)
+                for configuration in self._all_configurations(rail):
+                    self._set_agent_distance(configuration, i, self.get_agent_distance(configuration, i))
+            else:
+                # just copy the distance map from other agent with same target (performance)
+                self._copy_agent_distance(i, computed_targets.index(targets))
+            computed_targets.append(targets)
+
+    def _new_distance_map(self, num_agents: int) -> UnderlyingDistanceMapType:
+        raise NotImplementedError()
+
+    def _valid_targets(self, agent: EnvAgent, rail: UnderlyingTransitionMapType) -> List[UnderlyingConfigurationType]:
+        raise NotImplementedError()
+
+    def _all_configurations(self, rail: UnderlyingTransitionMapType):
+        raise NotImplementedError()
+
+    def _copy_agent_distance(self, target_nr: int, source_target_nr: int):
         raise NotImplementedError()
 
     # N.B. get_shortest_paths is not part of distance_map since it refers to RailEnvActions (would lead to circularity!)
