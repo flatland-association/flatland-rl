@@ -12,7 +12,7 @@ import numpy as np
 
 import flatland.envs.timetable_generators as ttg
 from flatland.core.distance_map import AbstractDistanceMap
-from flatland.core.effects_generator import EffectsGenerator, MultiEffectsGeneratorWrapped, make_multi_effects_generator
+from flatland.core.effects_generator import EffectsGenerator, find_effects_generator, make_multi_effects_generator
 from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_resource_map import GridResourceMap
@@ -717,12 +717,11 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
 
         # save timesteps in here: [[[row, col, dir, malfunction],...nAgents], ...nSteps]
         self.cur_episode = []
-        record_steps_effects_generator = RecordStepsEffectsGenerator(record_steps=record_steps)
-        if isinstance(self.effects_generator, MultiEffectsGeneratorWrapped):
-            # flatten instead of nesting another `MultiEffectsGeneratorWrapped` layer around the existing one
-            self.effects_generator = make_multi_effects_generator(*self.effects_generator.effects_generators, record_steps_effects_generator)
-        else:
-            self.effects_generator = make_multi_effects_generator(self.effects_generator, record_steps_effects_generator)
+        if record_steps and find_effects_generator(self.effects_generator, RecordStepsEffectsGenerator) is None:
+            # `make_multi_effects_generator` flattens automatically, so this never nests regardless of what the
+            # caller passed as `effects_generator`; the `find_effects_generator` check above avoids adding a
+            # second `RecordStepsEffectsGenerator` if the caller's `effects_generator` already contains one.
+            self.effects_generator = make_multi_effects_generator(self.effects_generator, RecordStepsEffectsGenerator())
 
         # Agent positions map
         self.agent_positions = np.zeros((self.height, self.width), dtype=int) - 1

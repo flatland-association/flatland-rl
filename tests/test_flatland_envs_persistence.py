@@ -250,6 +250,7 @@ def test_multiple_malfunction_generators():
                   malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(min_duration=20, max_duration=30, malfunction_rate=1.0 / 200)),
                   effects_generator=MalfunctionEffectsGenerator(
                       ParamMalfunctionGen(MalfunctionParameters(min_duration=22, max_duration=33, malfunction_rate=1.0 / 222))),
+                  record_steps=True,
                   )
     env.reset()
     assert env.effects_generator.__getstate__() == expected

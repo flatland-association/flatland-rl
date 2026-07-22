@@ -7,18 +7,19 @@ from flatland.envs.rail_env_action import RailEnvActions
 class RecordStepsEffectsGenerator(EffectsGenerator["RailEnv"]):
     """
     Records agent positions, orientations, malfunction status, state and deadlock status for each step
-    into `env.cur_episode`, and the actions into `self.list_actions`, whenever `self.record_steps` is set.
+    into `env.cur_episode`, and the actions into `self.list_actions`, for every step, whenever composed into an env's
+    `effects_generator`. Whether steps are recorded at all is controlled by whether this generator is present in the
+    chain (see `RailEnv`'s `record_steps` constructor argument), not by any flag on this class.
     """
 
-    def __init__(self, record_steps: bool = False):
+    def __init__(self):
         super().__init__()
-        self.record_steps = record_steps  # whether to save timesteps
         self.list_actions = []  # save actions in here
 
     def on_episode_step_end(self, env: "RailEnv", action_dict: Optional[Dict[int, RailEnvActions]] = None, *args, **kwargs) -> "RailEnv":
         # `env` may be `None` here if an earlier effects generator composed alongside this one in a
         # `MultiEffectsGeneratorWrapped` chain does not return it (e.g. mutates in place and returns `None`).
-        if env is None or not self.record_steps:
+        if env is None:
             return env
 
         list_agents_state = []

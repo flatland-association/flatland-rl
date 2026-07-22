@@ -298,17 +298,17 @@ class RailEnvPersister(object):
         if effects_generator is not None:
             env.effects_generator = effects_generator
         else:
-            # `record_steps` is not part of the serialized `effects_generator` state (see `RecordStepsEffectsGenerator.__getstate__`),
-            # so carry over whatever is currently configured on `env` (e.g. from the `RailEnv` constructor) across the rebuild below.
-            current_record_steps_generator = find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator)
-            record_steps = current_record_steps_generator.record_steps if current_record_steps_generator is not None else False
-            env.effects_generator = cls._apply_malfunction(env_dict, record_steps=record_steps)
+            # a `RecordStepsEffectsGenerator`'s mere presence (not a flag on it) is what makes an env record steps,
+            # and for "old format" files that presence isn't part of the serialized `effects_generator` state, so
+            # carry over whether one was configured on `env` (e.g. from the `RailEnv` constructor) across the rebuild below.
+            had_record_steps_effects_generator = find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator) is not None
+            env.effects_generator = cls._apply_malfunction(env_dict, add_record_steps_effects_generator=had_record_steps_effects_generator)
 
         if "stations_links" in env_dict:
             env.stations_links = env_dict["stations_links"]
 
     @classmethod
-    def _apply_malfunction(cls, env_dict: dict, record_steps: bool = False):
+    def _apply_malfunction(cls, env_dict: dict, add_record_steps_effects_generator: bool = False):
         effects_generator = EffectsGenerator()
         # backwards compatibility
         if env_dict.get('malfunction') is not None and isinstance(env_dict.get('malfunction').malfunction_rate, float) and isinstance(
@@ -321,17 +321,17 @@ class RailEnvPersister(object):
         if effects_generators_specs is not None:
             effects_generator = EffectsGenerator.from_state(effects_generators_specs)
 
-        # ensure exactly one `RecordStepsEffectsGenerator` is present - restored from the "new format" `effects_generator`
-        # state above if it was saved with one, otherwise added here so record_steps keeps working after loading
+        # a `RecordStepsEffectsGenerator` records unconditionally whenever it's present - restore it from the "new
+        # format" `effects_generator` state above if it was saved with one, otherwise add it back here if the caller
+        # says one was configured before this rebuild, so recording keeps working after loading (old format)
         record_steps_effects_generator = find_effects_generator(effects_generator, RecordStepsEffectsGenerator)
-        if record_steps_effects_generator is None:
+        if record_steps_effects_generator is None and add_record_steps_effects_generator:
             record_steps_effects_generator = RecordStepsEffectsGenerator()
             effects_generator = make_multi_effects_generator(effects_generator, record_steps_effects_generator)
-        record_steps_effects_generator.record_steps = record_steps
 
         # old format: actions recorded by `save_episode` under a dedicated top-level key, not part of `effects_generator` state
         list_actions = env_dict.get("actions", None)
-        if list_actions is not None:
+        if list_actions is not None and record_steps_effects_generator is not None:
             record_steps_effects_generator.set_state(list_actions)
 
         return effects_generator

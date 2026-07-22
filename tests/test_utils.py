@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional
 import numpy as np
 from attr import attrs, attrib
 
-from flatland.core.effects_generator import find_effects_generator
+from flatland.core.effects_generator import find_effects_generator, make_multi_effects_generator
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.line_generators import LineGenerator
@@ -89,9 +89,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         'action_required': [True for _ in test_configs]
     }
 
-    record_steps_effects_generator = find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator)
-    if record_steps_effects_generator is not None:
-        record_steps_effects_generator.record_steps = True
+    if find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator) is None:
+        env.effects_generator = make_multi_effects_generator(env.effects_generator, RecordStepsEffectsGenerator())
 
     for step in range(len(test_configs[0].replay)):
         if step == 0:

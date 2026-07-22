@@ -151,8 +151,23 @@ class MultiEffectsGeneratorWrapped(EffectsGenerator[EnvType]):
         self.__init__(*[EffectsGenerator.from_state(state_dict_) for state_dict_ in specs.get("args", [])])
 
 
+def _flatten_effects_generators(effects_generators):
+    flattened = []
+    for eff in effects_generators:
+        if isinstance(eff, MultiEffectsGeneratorWrapped):
+            flattened.extend(_flatten_effects_generators(eff.effects_generators))
+        else:
+            flattened.append(eff)
+    return flattened
+
+
 def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType]) -> EffectsGenerator[EnvType]:
-    return MultiEffectsGeneratorWrapped(*effects_generators)
+    """
+    Compose effects generators into a single flat `MultiEffectsGeneratorWrapped` - any argument that is itself a
+    `MultiEffectsGeneratorWrapped` (however deeply nested) is unwrapped first, so nesting never accumulates
+    regardless of the shape of what's passed in.
+    """
+    return MultiEffectsGeneratorWrapped(*_flatten_effects_generators(effects_generators))
 
 
 T = TypeVar('T', bound=EffectsGenerator)
