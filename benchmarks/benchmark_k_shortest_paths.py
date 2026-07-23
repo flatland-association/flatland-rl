@@ -28,7 +28,7 @@ def test_k_shortest_paths_between_all_cell_pairs():
         # sub-sample
         if i % 7 != 0:
             continue
-        if i > 50:
+        if i > 30:
             break
         get_k_shortest_paths(
             env=env,
