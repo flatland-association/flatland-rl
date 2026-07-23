@@ -1,0 +1,51 @@
+from typing import Dict, List, Optional
+
+from flatland.core.effects_generator import EffectsGenerator
+from flatland.envs.rail_env_action import RailEnvActions
+
+
+class RecordStepsEffectsGenerator(EffectsGenerator["RailEnv"]):
+    """
+    Records agent positions, orientations, malfunction status, state and deadlock status for each step
+    into `env.cur_episode`, and the actions into `self.list_actions`, for every step, whenever composed into an env's
+    `effects_generator`. Whether steps are recorded at all is controlled by whether this generator is present in the
+    chain (see `RailEnv`'s `record_steps` constructor argument), not by any flag on this class.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.list_actions = []  # save actions in here
+
+    def on_episode_step_end(self, env: "RailEnv", action_dict: Optional[Dict[int, RailEnvActions]] = None, *args, **kwargs) -> "RailEnv":
+        list_agents_state = []
+        for i_agent in range(env.get_num_agents()):
+            agent = env.agents[i_agent]
+            # the int cast is to avoid numpy types which may cause problems with msgpack
+            # in env v2, agents may have position None, before starting
+            if agent.position is None:
+                pos = (None, None)
+                dir = None
+            else:
+                pos = (int(agent.position[0]), int(agent.position[1]))
+                dir = int(agent.direction)
+            list_agents_state.append([
+                *pos, dir,
+                agent.malfunction_handler.malfunction_down_counter,
+                agent.state.value,
+                int(agent.position in env.motion_check.deadlocked),
+            ])
+
+        env.cur_episode.append(list_agents_state)
+        self.list_actions.append(action_dict)
+        return env
+
+    def set_state(self, list_actions: List[Optional[Dict[int, RailEnvActions]]]):
+        """
+        Restore `list_actions` from persisted state, e.g. the "actions" recorded by `RailEnvPersister.save_episode`.
+        Not part of the generic `EffectsGenerator.__getstate__`/`__setstate__` roundtrip, since actions are stored
+        under a dedicated top-level key rather than embedded in the serialized `effects_generator` state.
+        """
+        self.list_actions = list(list_actions)
+
+    def __getstate__(self):
+        return {"cls": self.fullname}

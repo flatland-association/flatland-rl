@@ -4,6 +4,7 @@ from typing import List, Tuple, Optional
 import numpy as np
 from attr import attrs, attrib
 
+from flatland.core.effects_generator import find_effects_generator, make_multi_effects_generator
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.line_generators import LineGenerator
@@ -11,6 +12,7 @@ from flatland.envs.malfunction_generators import MalfunctionParameters, malfunct
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnvActions, RailEnv
 from flatland.envs.rail_generators import RailGenerator
+from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.rendertools import RenderTool
@@ -87,7 +89,8 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         'action_required': [True for _ in test_configs]
     }
 
-    env.record_steps = True
+    if find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator) is None:
+        env.effects_generator = make_multi_effects_generator(env.effects_generator, RecordStepsEffectsGenerator())
 
     for step in range(len(test_configs[0].replay)):
         if step == 0:

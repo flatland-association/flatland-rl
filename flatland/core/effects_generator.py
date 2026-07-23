@@ -1,4 +1,4 @@
-from typing import Callable, TypeVar, Generic, Dict, Any
+from typing import Callable, TypeVar, Generic, Dict, Any, List, Optional, Type
 
 from flatland.core.env import Environment
 from flatland.utils.cli_utils import resolve_type
@@ -125,17 +125,17 @@ class MultiEffectsGeneratorWrapped(EffectsGenerator[EnvType]):
 
     def on_episode_start(self, env: EnvType, *args, **kwargs) -> EnvType:
         for eff in self.effects_generators:
-            env = eff.on_episode_start(env)
+            env = eff.on_episode_start(env, *args, **kwargs)
         return env
 
     def on_episode_step_start(self, env: EnvType, *args, **kwargs) -> EnvType:
         for eff in self.effects_generators:
-            env = eff.on_episode_step_start(env)
+            env = eff.on_episode_step_start(env, *args, **kwargs)
         return env
 
     def on_episode_step_end(self, env: EnvType, *args, **kwargs) -> EnvType:
         for eff in self.effects_generators:
-            env = eff.on_episode_step_end(env)
+            env = eff.on_episode_step_end(env, *args, **kwargs)
         return env
 
     def __getstate__(self):
@@ -151,5 +151,43 @@ class MultiEffectsGeneratorWrapped(EffectsGenerator[EnvType]):
         self.__init__(*[EffectsGenerator.from_state(state_dict_) for state_dict_ in specs.get("args", [])])
 
 
+def _flatten_effects_generators(effects_generators):
+    flattened = []
+    for eff in effects_generators:
+        if isinstance(eff, MultiEffectsGeneratorWrapped):
+            flattened.extend(_flatten_effects_generators(eff.effects_generators))
+        else:
+            flattened.append(eff)
+    return flattened
+
+
 def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType]) -> EffectsGenerator[EnvType]:
-    return MultiEffectsGeneratorWrapped(*effects_generators)
+    """
+    Compose effects generators into a single flat `MultiEffectsGeneratorWrapped` - any argument that is itself a
+    `MultiEffectsGeneratorWrapped` (however deeply nested) is unwrapped first, so nesting never accumulates
+    regardless of the shape of what's passed in.
+    """
+    return MultiEffectsGeneratorWrapped(*_flatten_effects_generators(effects_generators))
+
+
+T = TypeVar('T', bound=EffectsGenerator)
+
+
+def find_all_effects_generators(effects_generator: EffectsGenerator[EnvType], cls: Type[T]) -> List[T]:
+    """
+    Recursively collect all instances of `cls` within a (possibly `MultiEffectsGeneratorWrapped`-composed) effects generator.
+    """
+    found = []
+    if isinstance(effects_generator, cls):
+        found.append(effects_generator)
+    if isinstance(effects_generator, MultiEffectsGeneratorWrapped):
+        for eff in effects_generator.effects_generators:
+            found.extend(find_all_effects_generators(eff, cls))
+    return found
+
+
+def find_effects_generator(effects_generator: EffectsGenerator[EnvType], cls: Type[T]) -> Optional[T]:
+    """
+    Recursively search a (possibly `MultiEffectsGeneratorWrapped`-composed) effects generator for an instance of `cls`.
+    """
+    return next(iter(find_all_effects_generators(effects_generator, cls)), None)

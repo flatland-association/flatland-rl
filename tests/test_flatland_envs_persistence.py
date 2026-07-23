@@ -5,7 +5,7 @@ import importlib_resources as ir
 import numpy as np
 import pytest
 
-from flatland.core.effects_generator import EffectsGenerator
+from flatland.core.effects_generator import EffectsGenerator, find_all_effects_generators, find_effects_generator
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.env_generation.env_generator import env_generator_legacy
 from flatland.envs.line_generators import sparse_line_generator
@@ -15,6 +15,7 @@ from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards
 from flatland.utils.simple_rail import make_simple_rail
 
@@ -236,6 +237,9 @@ def test_multiple_malfunction_generators():
                             'malfunction_rand_idx': 0
                         }
                     }
+                },
+                {
+                    'cls': 'flatland.envs.record_steps_effects_generator.RecordStepsEffectsGenerator',
                 }
             ],
         }
@@ -246,6 +250,7 @@ def test_multiple_malfunction_generators():
                   malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(min_duration=20, max_duration=30, malfunction_rate=1.0 / 200)),
                   effects_generator=MalfunctionEffectsGenerator(
                       ParamMalfunctionGen(MalfunctionParameters(min_duration=22, max_duration=33, malfunction_rate=1.0 / 222))),
+                  record_steps=True,
                   )
     env.reset()
     assert env.effects_generator.__getstate__() == expected
@@ -255,3 +260,83 @@ def test_multiple_malfunction_generators():
         RailEnvPersister.save(env, filename=os.path.join(tmpdirname, "env.pkl"))
         env, _ = RailEnvPersister.load_new(filename=os.path.join(tmpdirname, "env.pkl"))
     assert env.effects_generator.__getstate__() == expected
+
+
+def _make_env_with_record_steps():
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2, record_steps=True)
+    env.reset(False, False)
+    return env
+
+
+def test_record_steps_effects_generator_records_live_action_dict():
+    """
+    `env.step(action_dict)` must deliver `action_dict` all the way through `effects_generator.on_episode_step_end`
+    to the composed `RecordStepsEffectsGenerator`, not just seed `list_actions` directly via `set_state`.
+    """
+    env = _make_env_with_record_steps()
+
+    action_dict_1 = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.STOP_MOVING}
+    action_dict_2 = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD}
+    env.step(action_dict_1)
+    env.step(action_dict_2)
+
+    record_steps_effects_generator = find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator)
+    assert record_steps_effects_generator.list_actions == [action_dict_1, action_dict_2]
+    assert len(env.cur_episode) == 2
+
+
+def test_record_steps_effects_generator_deserialization_new_format():
+    """
+    Post-refactor episode files have both a "new format" `effects_generator` state (which already embeds a
+    `RecordStepsEffectsGenerator`, since it is composed into every `RailEnv`) and a top-level "actions" key
+    (written by `save_episode`). Deserialization must reuse the `RecordStepsEffectsGenerator` restored from the
+    `effects_generator` state - filling it with `list_actions` from the top-level "actions" key - rather than
+    adding a second one.
+    """
+    env = _make_env_with_record_steps()
+    action_dicts = [
+        {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.STOP_MOVING},
+        {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD},
+    ]
+    # seed list_actions directly so the test does not depend on what step() itself passes through the effects_generator chain
+    find_effects_generator(env.effects_generator, RecordStepsEffectsGenerator).set_state(action_dicts)
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        filename = os.path.join(tmpdirname, "episode.pkl")
+        RailEnvPersister.save_episode(env, filename)
+        env_loaded, env_dict = RailEnvPersister.load_new(filename)
+
+    assert env_dict["actions"] == action_dicts
+    assert env_dict["effects_generator"] is not None
+
+    found = find_all_effects_generators(env_loaded.effects_generator, RecordStepsEffectsGenerator)
+    assert len(found) == 1, f"expected exactly one RecordStepsEffectsGenerator after deserialization, found {len(found)}"
+    assert found[0].list_actions == action_dicts
+
+
+def test_record_steps_effects_generator_deserialization_old_format():
+    """
+    Legacy episode files (pre-dating `RecordStepsEffectsGenerator`) have a top-level "actions" key from
+    `save_episode`, but no `RecordStepsEffectsGenerator` in their (possibly absent) `effects_generator` state.
+    Deserialization must add exactly one `RecordStepsEffectsGenerator` and fill it from that legacy "actions" key.
+    """
+    env = _make_env_with_record_steps()
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        filename = os.path.join(tmpdirname, "episode.pkl")
+        RailEnvPersister.save_episode(env, filename)
+        env_dict = RailEnvPersister.load_env_dict(filename)
+
+    # simulate a legacy episode file: no "effects_generator" key at all
+    del env_dict["effects_generator"]
+    action_dicts = [{0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.STOP_MOVING}]
+    env_dict["actions"] = action_dicts
+
+    env_loaded = _make_env_with_record_steps()
+    RailEnvPersister.set_full_state(env_loaded, env_dict)
+
+    found = find_all_effects_generators(env_loaded.effects_generator, RecordStepsEffectsGenerator)
+    assert len(found) == 1, f"expected exactly one RecordStepsEffectsGenerator after deserialization, found {len(found)}"
+    assert found[0].list_actions == action_dicts
