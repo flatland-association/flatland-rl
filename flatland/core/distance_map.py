@@ -38,6 +38,9 @@ class ConfigurationDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDi
         """
         self.agents: List[EnvAgent] = agents
         self.rail = rail
+        self.distances: Dict[
+            Tuple[UnderlyingConfigurationType, UnderlyingConfigurationType], int
+        ] = defaultdict(_infinite_distance)
 
     def _set_distance(self, source_configuration: UnderlyingConfigurationType,
                       target_configuration: UnderlyingConfigurationType, new_distance: int):
@@ -111,9 +114,13 @@ class AgentSourceTargetDistanceMap(
         for i, agent in enumerate(agents):
             targets = self._valid_targets(agent, rail)
             if targets not in computed_targets:
-                _, reachable_configurations = distance_map_walker._distance_map_walker(rail, targets)
+                reachable_configurations = distance_map_walker._distance_map_walker(rail, targets)
                 for configuration in reachable_configurations:
-                    self._set_agent_distance(configuration, i, self.get_agent_distance(configuration, i))
+                    new_distance = min(
+                        (self._get_distance(configuration, target_configuration) for target_configuration in targets),
+                        default=math.inf
+                    )
+                    self._set_agent_distance(configuration, i, new_distance)
             else:
                 # just copy the distance map from other agent with same target (performance)
                 self._copy_agent_distance(i, computed_targets.index(targets))
@@ -216,10 +223,10 @@ class AgentSourceTargetDistanceMap(
 
     def get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
         self.get()
-        return min(
-            self._get_distance(source_configuration, target_configuration)
-            for target_configuration in self.agents[target_nr].targets
-        )
+        return self._get_agent_distance(source_configuration, target_nr)
 
     def _set_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+        raise NotImplementedError()
+
+    def _get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
         raise NotImplementedError()

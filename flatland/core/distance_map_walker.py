@@ -1,5 +1,5 @@
 from collections import deque
-from typing import List, Generic, Set, Tuple, TypeVar
+from typing import List, Generic, Set, TypeVar
 
 from flatland.core.distance_map import ConfigurationDistanceMap
 from flatland.core.transition_map import TransitionMap
@@ -22,7 +22,7 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
     def _distance_map_walker(self,
                              rail: UnderlyingTransitionMapType,
                              target_configurations: List[UnderlyingConfigurationType]
-                             ) -> Tuple[int, Set[UnderlyingConfigurationType]]:
+                             ) -> Set[UnderlyingConfigurationType]:
         """
         Utility function to compute distance maps from each cell in the rail network (and each possible
         orientation within it) to each of the target configurations. Each target configuration is walked
@@ -36,20 +36,17 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
 
         Returns
         -------
-        Tuple[int, Set[UnderlyingConfigurationType]]
-            the max distance to target, from the farthest away node, and the set of all configurations
-            backwards-reachable from any of the target configurations (i.e. those a distance was filled in for).
+        Set[UnderlyingConfigurationType]
+            the set of all configurations backwards-reachable from any of the target configurations (i.e.
+            those a distance was filled in for).
         """
-        max_distance = 0
         reachable_configurations = set()
         for target_configuration in target_configurations:
-            target_max_distance, target_reachable = self._walk_to_target(rail, target_configuration)
-            max_distance = max(max_distance, target_max_distance)
-            reachable_configurations |= target_reachable
-        return max_distance, reachable_configurations
+            reachable_configurations |= self._walk_to_target(rail, target_configuration)
+        return reachable_configurations
 
     def _walk_to_target(self, rail: UnderlyingTransitionMapType, target_configuration: UnderlyingConfigurationType
-                        ) -> Tuple[int, Set[UnderlyingConfigurationType]]:
+                        ) -> Set[UnderlyingConfigurationType]:
         """
         Backward BFS from a single target configuration to every configuration that can reach it, filling in
         the minimum distances.
@@ -65,8 +62,6 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
         # Stop the search if the target position is re-visited, in any direction
         visited = {target_configuration}
 
-        max_distance = 0
-
         while nodes_queue:
             configuration, distance = nodes_queue.popleft()
 
@@ -80,10 +75,7 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
                 for n in valid_neighbors:
                     nodes_queue.append(n)
 
-                if len(valid_neighbors) > 0:
-                    max_distance = max(max_distance, distance + 1)
-
-        return max_distance, visited
+        return visited
 
     def _get_and_update_neighbors(self, rail: UnderlyingTransitionMapType, configuration: UnderlyingConfigurationType,
                                   current_distance: int, target_configuration: UnderlyingConfigurationType):
