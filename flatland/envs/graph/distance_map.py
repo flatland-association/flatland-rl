@@ -1,7 +1,8 @@
 from collections import defaultdict
 from typing import List, Dict, Set
 
-from flatland.core.distance_map import AgentSourceTargetDistanceMap, _infinite_distance
+from flatland.core.configuration_distance_map import _infinite_distance
+from flatland.core.distance_map import AgentSourceTargetDistanceMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 

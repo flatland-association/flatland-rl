@@ -1,7 +1,7 @@
 from collections import deque
 from typing import List, Generic, Set, TypeVar
 
-from flatland.core.distance_map import ConfigurationDistanceMap
+from flatland.core.configuration_distance_map import ConfigurationDistanceMap
 from flatland.core.transition_map import TransitionMap
 
 UnderlyingDistanceMapType = TypeVar('UnderlyingDistanceMapType', bound=ConfigurationDistanceMap)

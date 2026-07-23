@@ -1,54 +1,16 @@
 import math
-from collections import defaultdict
-from typing import Dict, List, Optional, Generic, TypeVar, Callable, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set
 
-from flatland.core.transition_map import TransitionMap
+from flatland.core.configuration_distance_map import (
+    ConfigurationDistanceMap,
+    UnderlyingConfigurationType,
+    UnderlyingDistanceMapType,
+    UnderlyingTransitionMapType,
+    UnderlyingWaypointType,
+)
+from flatland.core.distance_map_walker import DistanceMapWalker
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.step_utils.states import TrainState
-
-UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=TransitionMap)
-UnderlyingDistanceMapType = TypeVar('UnderlyingDistanceMapType')
-UnderlyingConfigurationType = TypeVar('UnderlyingConfigurationType')
-UnderlyingWaypointType = TypeVar('UnderlyingWaypointType')
-
-
-def _infinite_distance():
-    return math.inf
-
-
-class ConfigurationDistanceMap(Generic[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingConfigurationType, UnderlyingWaypointType]):
-    """
-    Base distance map collecting the distance from every configuration visited during the BFS walk to the
-    effective target configuration reached, keyed by (source_configuration, target_configuration) - agnostic
-    of any numeric target_nr (agent handle), which `DistanceMapWalker` has no notion of.
-    """
-
-    def __init__(self, agents: List[EnvAgent], waypoint_init: Callable[[UnderlyingConfigurationType], UnderlyingWaypointType]):
-        self.agents: List[EnvAgent] = agents
-        self.rail: Optional[RailGridTransitionMap] = None
-        self.waypoint_init = waypoint_init
-        self.distances: Dict[
-            Tuple[UnderlyingConfigurationType, UnderlyingConfigurationType], int
-        ] = defaultdict(_infinite_distance)
-
-    def reset(self, agents: List[EnvAgent], rail: UnderlyingTransitionMapType):
-        """
-        Reset the distance map
-        """
-        self.agents: List[EnvAgent] = agents
-        self.rail = rail
-        self.distances: Dict[
-            Tuple[UnderlyingConfigurationType, UnderlyingConfigurationType], int
-        ] = defaultdict(_infinite_distance)
-
-    def _set_distance(self, source_configuration: UnderlyingConfigurationType,
-                      target_configuration: UnderlyingConfigurationType, new_distance: int):
-        self.distances[(source_configuration, target_configuration)] = new_distance
-
-    def _get_distance(self, source_configuration: UnderlyingConfigurationType,
-                      target_configuration: UnderlyingConfigurationType) -> int:
-        return self.distances[(source_configuration, target_configuration)]
 
 
 class AgentSourceTargetDistanceMap(
@@ -105,8 +67,6 @@ class AgentSourceTargetDistanceMap(
         Computes the distance maps for each unique target. Thus, if several targets are the same we only
         compute the distance for them once and copy to all agents with the same target.
         """
-        from flatland.core.distance_map_walker import DistanceMapWalker
-
         self.agents_previous_computation = self.agents
         self.distance_map = self._new_distance_map(len(agents))
         distance_map_walker = DistanceMapWalker(self)
