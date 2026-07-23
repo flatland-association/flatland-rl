@@ -30,6 +30,9 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMapType, UnderlyingTransitionM
         configurations would incorrectly cut off exploration wherever their searches cross (e.g. on a
         cyclic/looped rail layout).
 
+        N.B. this makes the walk cost O(K * V) instead of O(V) for K target configurations (e.g. up to 4
+        headings for one physical target) - an accepted correctness-over-performance tradeoff.
+
         Parameters
         ----------
         target_configurations
