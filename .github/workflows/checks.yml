@@ -230,6 +230,9 @@ jobs:
 
     profiling:
         runs-on: ubuntu-22.04
+        permissions:
+            contents: read
+            pull-requests: write
         strategy:
             fail-fast: false
             matrix:
@@ -263,9 +266,72 @@ jobs:
                         benchmarks/*.prof
                         benchmarks/*.png
                     if-no-files-found: error
+            # Only python 3.12 publishes to a gist and comments on the PR - no need to repeat the same
+            # picture for every matrix entry. Restricted to same-repo PRs since forks don't receive secrets
+            # (GIST_TOKEN below), so the gist/comment steps would just fail auth on a fork PR.
+            -   name: Find existing profiling comment
+                if: >-
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    github.event.pull_request.head.repo.full_name == github.repository }}
+                id: find-comment
+                uses: peter-evans/find-comment@v3
+                with:
+                    issue-number: ${{ github.event.pull_request.number }}
+                    comment-author: 'github-actions[bot]'
+                    body-includes: <!-- flatland-ci-profiling-overall -->
+            -   name: Create or update gist with overall profiling result
+                if: >-
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    github.event.pull_request.head.repo.full_name == github.repository }}
+                id: gist
+                env:
+                    # Classic PAT with the `gist` scope - the default GITHUB_TOKEN cannot create gists.
+                    GH_TOKEN: ${{ secrets.GIST_TOKEN }}
+                    # One gist shared by both profiling jobs, across every PR:
+                    # https://gist.github.com/flatland-competition/6f2b1d5d6e3ee80f57edab68215a05ef
+                    GIST_ID: 6f2b1d5d6e3ee80f57edab68215a05ef
+                    PR_SHA: ${{ github.event.pull_request.head.sha }}
+                run: |
+                    short_sha=${PR_SHA:0:7}
+                    # Named per PR only (not per commit) - the PR number already disambiguates within the
+                    # shared gist, so each new commit on a PR safely overwrites that PR's own file.
+                    filename="pr${{ github.event.pull_request.number }}_performance_overall.png"
+                    # `gh gist create` rejects binary files outright, and the gists API's `content` field is
+                    # text-only - so we go through git directly (a gist is just a git repo under the hood,
+                    # which accepts binary content fine).
+                    git clone "https://$GH_TOKEN@gist.github.com/$GIST_ID.git" gist_dir
+                    cp benchmarks/performance_overall.png "gist_dir/$filename"
+                    git -C gist_dir -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
+                        add "$filename"
+                    git -C gist_dir -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
+                        commit --allow-empty -m "Add profiling png for PR #${{ github.event.pull_request.number }}, $PR_SHA"
+                    git -C gist_dir push
+                    raw_url=$(gh api "gists/$GIST_ID" --jq ".files[\"$filename\"].raw_url")
+                    echo "url=https://gist.github.com/$GIST_ID" >> "$GITHUB_OUTPUT"
+                    echo "raw_url=$raw_url" >> "$GITHUB_OUTPUT"
+                    echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+            -   name: Create or update profiling comment
+                if: >-
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    github.event.pull_request.head.repo.full_name == github.repository }}
+                uses: peter-evans/create-or-update-comment@v4
+                with:
+                    comment-id: ${{ steps.find-comment.outputs.comment-id }}
+                    issue-number: ${{ github.event.pull_request.number }}
+                    edit-mode: replace
+                    body: |
+                        <!-- flatland-ci-profiling-overall -->
+                        ### 📈 Performance profiling (Python 3.12) — commit [`${{ steps.gist.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }})
+
+                        ![performance overall](${{ steps.gist.outputs.raw_url }})
+
+                        _Updated by [this workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · [gist](${{ steps.gist.outputs.url }})._
 
     profiling-get-k-shortest-paths:
         runs-on: ubuntu-22.04
+        permissions:
+            contents: read
+            pull-requests: write
         strategy:
             fail-fast: false
             matrix:
@@ -294,6 +360,64 @@ jobs:
                         benchmarks/*.prof
                         benchmarks/*.png
                     if-no-files-found: error
+            # See the `profiling` job above for why this is gated to python 3.12 and same-repo PRs only.
+            -   name: Find existing get_k_shortest_paths profiling comment
+                if: >-
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    github.event.pull_request.head.repo.full_name == github.repository }}
+                id: find-comment
+                uses: peter-evans/find-comment@v3
+                with:
+                    issue-number: ${{ github.event.pull_request.number }}
+                    comment-author: 'github-actions[bot]'
+                    body-includes: <!-- flatland-ci-profiling-get-k-shortest-paths -->
+            -   name: Create or update gist with get_k_shortest_paths profiling result
+                if: >-
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    github.event.pull_request.head.repo.full_name == github.repository }}
+                id: gist
+                env:
+                    # Classic PAT with the `gist` scope - the default GITHUB_TOKEN cannot create gists.
+                    GH_TOKEN: ${{ secrets.GIST_TOKEN }}
+                    # One gist shared by both profiling jobs, across every PR:
+                    # https://gist.github.com/flatland-competition/6f2b1d5d6e3ee80f57edab68215a05ef
+                    GIST_ID: 6f2b1d5d6e3ee80f57edab68215a05ef
+                    PR_SHA: ${{ github.event.pull_request.head.sha }}
+                run: |
+                    short_sha=${PR_SHA:0:7}
+                    # Named per PR only (not per commit) - the PR number already disambiguates within the
+                    # shared gist, so each new commit on a PR safely overwrites that PR's own file.
+                    filename="pr${{ github.event.pull_request.number }}_performance_get_k_shortest_paths.png"
+                    # `gh gist create` rejects binary files outright, and the gists API's `content` field is
+                    # text-only - so we go through git directly (a gist is just a git repo under the hood,
+                    # which accepts binary content fine).
+                    git clone "https://$GH_TOKEN@gist.github.com/$GIST_ID.git" gist_dir
+                    cp benchmarks/performance_get_k_shortest_paths.png "gist_dir/$filename"
+                    git -C gist_dir -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
+                        add "$filename"
+                    git -C gist_dir -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
+                        commit --allow-empty -m "Add profiling png for PR #${{ github.event.pull_request.number }}, $PR_SHA"
+                    git -C gist_dir push
+                    raw_url=$(gh api "gists/$GIST_ID" --jq ".files[\"$filename\"].raw_url")
+                    echo "url=https://gist.github.com/$GIST_ID" >> "$GITHUB_OUTPUT"
+                    echo "raw_url=$raw_url" >> "$GITHUB_OUTPUT"
+                    echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+            -   name: Create or update get_k_shortest_paths profiling comment
+                if: >-
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    github.event.pull_request.head.repo.full_name == github.repository }}
+                uses: peter-evans/create-or-update-comment@v4
+                with:
+                    comment-id: ${{ steps.find-comment.outputs.comment-id }}
+                    issue-number: ${{ github.event.pull_request.number }}
+                    edit-mode: replace
+                    body: |
+                        <!-- flatland-ci-profiling-get-k-shortest-paths -->
+                        ### 📈 `get_k_shortest_paths` profiling (Python 3.12) — commit [`${{ steps.gist.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }})
+
+                        ![get_k_shortest_paths profiling](${{ steps.gist.outputs.raw_url }})
+
+                        _Updated by [this workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · [gist](${{ steps.gist.outputs.url }})._
 
     benchmarks:
         if: ${{ github.event.inputs.run_benchmarks || github.ref == 'refs/heads/main' }}
