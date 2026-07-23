@@ -10,6 +10,17 @@
 
 from flatland.envs.step_utils.states cimport StateTransitionSignals
 
+# module-level C int constants mirroring TrainState's values, hoisted once in state_machine.py so
+# calculate_next_state's hot dispatch can compare a `cython.int` local against pure C ints instead of
+# repeatedly doing a Python attribute lookup on `TrainState.WAITING` etc. per branch.
+cdef int _WAITING
+cdef int _READY_TO_DEPART
+cdef int _MALFUNCTION_OFF_MAP
+cdef int _MOVING
+cdef int _STOPPED
+cdef int _MALFUNCTION
+cdef int _DONE
+
 cdef class TrainStateMachine:
     # `TrainState` is a plain enum.IntEnum (see states.pxd) - not a cdef class - so these stay
     # generic `object` references rather than a specific Cython extension type.
