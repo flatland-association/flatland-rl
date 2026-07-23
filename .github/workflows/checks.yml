@@ -285,7 +285,12 @@ jobs:
                     github.event.pull_request.head.repo.full_name == github.repository }}
                 id: gist
                 env:
-                    # Classic PAT with the `gist` scope - the default GITHUB_TOKEN cannot create gists.
+                    # Classic PAT with the `gist` scope, owned by the account that owns the shared gist below
+                    # (only the gist's owner can push updates to it - gists have no collaborator model). The
+                    # default GITHUB_TOKEN can't be used here at all: it's a repo-scoped GitHub App
+                    # installation token (contents, issues, pull-requests, etc.), and gists are a
+                    # user-account-level resource with no corresponding repo permission to grant it - a
+                    # fine-grained PAT won't work either, as fine-grained tokens don't cover gists.
                     GH_TOKEN: ${{ secrets.GIST_TOKEN }}
                     # One gist shared by both profiling jobs, across every PR:
                     # https://gist.github.com/flatland-competition/6f2b1d5d6e3ee80f57edab68215a05ef
@@ -377,7 +382,12 @@ jobs:
                     github.event.pull_request.head.repo.full_name == github.repository }}
                 id: gist
                 env:
-                    # Classic PAT with the `gist` scope - the default GITHUB_TOKEN cannot create gists.
+                    # Classic PAT with the `gist` scope, owned by the account that owns the shared gist below
+                    # (only the gist's owner can push updates to it - gists have no collaborator model). The
+                    # default GITHUB_TOKEN can't be used here at all: it's a repo-scoped GitHub App
+                    # installation token (contents, issues, pull-requests, etc.), and gists are a
+                    # user-account-level resource with no corresponding repo permission to grant it - a
+                    # fine-grained PAT won't work either, as fine-grained tokens don't cover gists.
                     GH_TOKEN: ${{ secrets.GIST_TOKEN }}
                     # One gist shared by both profiling jobs, across every PR:
                     # https://gist.github.com/flatland-competition/6f2b1d5d6e3ee80f57edab68215a05ef
