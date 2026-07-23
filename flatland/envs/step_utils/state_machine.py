@@ -210,3 +210,19 @@ class TrainStateMachine:
 
     def __eq__(self, other):
         return self._state == other._state and self.previous_state == other.previous_state
+
+    def __getstate__(self):
+        return {
+            "_initial_state": self._initial_state,
+            "_state": self._state,
+            "st_signals": self.st_signals,
+            "next_state": self.next_state,
+            "previous_state": self.previous_state,
+        }
+
+    def __setstate__(self, state):
+        self._initial_state = state["_initial_state"]
+        self._state = state["_state"]
+        self.st_signals = state["st_signals"]
+        self.next_state = state["next_state"]
+        self.previous_state = state["previous_state"]
