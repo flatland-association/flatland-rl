@@ -24,6 +24,7 @@ dependencies = [
     "boto3",
     "click",
     "crowdai_api",
+    "cython>=3.3.0a1", # needed at runtime too: flatland/envs/step_utils/state_machine.py uses `cython.int` locals for a hot-path optimization, whether or not the module is actually compiled.
     "fastenum",
     "importlib_resources",
     "ipycanvas",
@@ -59,7 +60,6 @@ dynamic = ["version"]
 dev = [
     "coverage",
     "opencv-python",
-    "cython>=3.3.0a1",
     "deptry",
     "folium",
     "flake8",
