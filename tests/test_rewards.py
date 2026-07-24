@@ -496,7 +496,7 @@ def test_punctuality_rewards_intermediate():
     agent.current_configuration = ((2, 2), 2)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2))
     agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((4, 4), 4)
+    agent.current_configuration = ((4, 4), 0)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
