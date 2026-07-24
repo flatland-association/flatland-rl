@@ -5,6 +5,7 @@ import numpy as np
 from fastenum import fastenum
 
 from flatland.core.env_observation_builder import AgentHandle
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -530,7 +531,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
 
         target_wps = agent_waypoints[-1]
         # TODO wrong place to explode to set of target configurations - get rid of ((r,c), None) everyhwer
-        target_wps = {(target_wp[0], i) for target_wp in target_wps for i in range(4)}
+        target_wps = {(target_wp[0], d) for target_wp in target_wps for d in Grid4TransitionsEnum}
         # N.B. assuming target is only travelled once:
         if any(target_wp in self.arrivals[agent.handle] for target_wp in target_wps) and any(
             self.arrivals[agent.handle][target_wp][0] <= agent.waypoints_latest_arrival[-1] for target_wp in target_wps if

@@ -120,7 +120,7 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_no_earliest_late
 
     agent.state = TrainState.DONE
     # if agent is done, intermediate not served is handled in step reward and not in end_of_episode_reward
-    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == -rewards.empty()
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == rewards.empty()
 
     rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
     agent.current_configuration = ((2, 2), 2)
