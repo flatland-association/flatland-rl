@@ -558,6 +558,37 @@ def test_punctuality_rewards_target():
     assert rewards.cumulate(*collect) == (1, 3)
 
 
+@pytest.mark.parametrize("rewards,assert_result", [
+    (PunctualityRewards(), lambda rewards, result: rewards.arrivals[0][((3, 3), 3)] == [0]),
+    (DefaultRewards(), lambda rewards, result: (sum(result.values()) if isinstance(result, dict) else result) == 0),
+    (BaseDefaultRewards(), lambda rewards, result: (sum(result.values()) if isinstance(result, dict) else result) == 0),
+])
+def test_zero_distance_target_arrival_recorded(rewards, assert_result):
+    """Regression test: an agent whose initial configuration coincides with a target reaches DONE on
+    its very first on-map step, so old_configuration/current_configuration are both None by the time
+    step_reward() runs (the agent was never on the map before, and has already been removed from it).
+    TrainState.DONE is only reachable via TrainStateMachine.update_if_reached(), which requires the
+    agent to actually be at a target configuration - so this arrival must still be recorded/rewarded,
+    independent of any internal arrival bookkeeping keyed off old_configuration/current_configuration."""
+    agent = EnvAgent(
+        handle=0,
+        initial_configuration=((3, 3), 3),
+        targets={((3, 3), 3)},
+        current_configuration=None,
+        old_configuration=None,
+        state_machine=TrainStateMachine(initial_state=TrainState.DONE),
+        earliest_departure=0,
+        latest_arrival=10,
+        arrival_time=5
+    )
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+
+    result = rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=0)
+
+    assert assert_result(rewards, result)
+
+
 def test_punctuality_rewards_single_direction_target_does_not_crash():
     """Regression test: agent.targets can be filtered down to a single (position, direction)
     configuration (e.g. a dead-end target reachable from only one direction) - step_reward must

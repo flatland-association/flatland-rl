@@ -490,8 +490,11 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         # (see EnvAgent.targets), never a placeholder with a None direction - so no further exploding needed here.
         agent_targets = agent.targets
         # N.B. assuming target is only travelled once
+        # N.B. DONE is only ever reached via TrainStateMachine.update_if_reached(), which requires the agent to
+        # have actually been at a target configuration - so old_configuration being None here (e.g. a zero-distance
+        # journey reaching DONE on the very first on-map step) does not mean the target wasn't really reached.
         # TODO revise design -  target configurations have no arrival - should we change that?
-        if agent.current_configuration is None and agent.state_machine.state == TrainState.DONE and agent.old_configuration is not None and not any(
+        if agent.current_configuration is None and agent.state_machine.state == TrainState.DONE and not any(
             target_configuration in self.arrivals[agent.handle] for target_configuration in agent_targets):
             # TODO bad design smell - we haven't kept track of which one was reach, we take any of them here
             self.arrivals[agent.handle][next(target_configuration for target_configuration in agent_targets)].append(elapsed_steps)
