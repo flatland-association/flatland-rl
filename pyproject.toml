@@ -69,6 +69,7 @@ dev = [
     "pip-tools",
     "pytest",
     "pytest-retry",
+    "pytest-xdist",
     "seaborn",
     "snakeviz",
     "testcontainers",
