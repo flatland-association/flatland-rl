@@ -305,6 +305,10 @@ jobs:
                     # text-only - so we go through git directly (a gist is just a git repo under the hood,
                     # which accepts binary content fine).
                     git clone "https://$GH_TOKEN@gist.github.com/$GIST_ID.git" gist_dir
+                    # gist.github.com redirects the clone URL (e.g. to add a trailing slash), and git drops
+                    # the embedded token from the remote URL when it follows that redirect - so re-embed it
+                    # before pushing, otherwise push fails non-interactively ("could not read Username").
+                    git -C gist_dir remote set-url origin "https://$GH_TOKEN@gist.github.com/$GIST_ID.git"
                     cp benchmarks/performance_overall.png "gist_dir/$filename"
                     git -C gist_dir -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
                         add "$filename"
@@ -402,6 +406,10 @@ jobs:
                     # text-only - so we go through git directly (a gist is just a git repo under the hood,
                     # which accepts binary content fine).
                     git clone "https://$GH_TOKEN@gist.github.com/$GIST_ID.git" gist_dir
+                    # gist.github.com redirects the clone URL (e.g. to add a trailing slash), and git drops
+                    # the embedded token from the remote URL when it follows that redirect - so re-embed it
+                    # before pushing, otherwise push fails non-interactively ("could not read Username").
+                    git -C gist_dir remote set-url origin "https://$GH_TOKEN@gist.github.com/$GIST_ID.git"
                     cp benchmarks/performance_get_k_shortest_paths.png "gist_dir/$filename"
                     git -C gist_dir -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
                         add "$filename"
