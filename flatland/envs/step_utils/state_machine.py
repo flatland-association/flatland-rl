@@ -1,4 +1,17 @@
+import cython
+
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+
+# hoisted once at import time so `calculate_next_state`'s hot dispatch can compare a `cython.int` local against
+# these instead of repeatedly looking up `TrainState.WAITING` etc. (a Python attribute access) per branch -
+# derived from TrainState itself, so they can't drift out of sync with it.
+_WAITING = TrainState.WAITING.value
+_READY_TO_DEPART = TrainState.READY_TO_DEPART.value
+_MALFUNCTION_OFF_MAP = TrainState.MALFUNCTION_OFF_MAP.value
+_MOVING = TrainState.MOVING.value
+_STOPPED = TrainState.STOPPED.value
+_MALFUNCTION = TrainState.MALFUNCTION.value
+_DONE = TrainState.DONE.value
 
 
 class TrainStateMachine:
@@ -75,27 +88,28 @@ class TrainStateMachine:
         self.next_state = TrainState.DONE
 
     def calculate_next_state(self, current_state):
+        state_value: cython.int = current_state.value
 
         # _Handle the current state
-        if current_state == TrainState.WAITING:
+        if state_value == _WAITING:
             self._handle_waiting()
 
-        elif current_state == TrainState.READY_TO_DEPART:
+        elif state_value == _READY_TO_DEPART:
             self._handle_ready_to_depart()
 
-        elif current_state == TrainState.MALFUNCTION_OFF_MAP:
+        elif state_value == _MALFUNCTION_OFF_MAP:
             self._handle_malfunction_off_map()
 
-        elif current_state == TrainState.MOVING:
+        elif state_value == _MOVING:
             self._handle_moving()
 
-        elif current_state == TrainState.STOPPED:
+        elif state_value == _STOPPED:
             self._handle_stopped()
 
-        elif current_state == TrainState.MALFUNCTION:
+        elif state_value == _MALFUNCTION:
             self._handle_malfunction()
 
-        elif current_state == TrainState.DONE:
+        elif state_value == _DONE:
             self._handle_done()
 
         else:
@@ -210,3 +224,19 @@ class TrainStateMachine:
 
     def __eq__(self, other):
         return self._state == other._state and self.previous_state == other.previous_state
+
+    def __getstate__(self):
+        return {
+            "_initial_state": self._initial_state,
+            "_state": self._state,
+            "st_signals": self.st_signals,
+            "next_state": self.next_state,
+            "previous_state": self.previous_state,
+        }
+
+    def __setstate__(self, state):
+        self._initial_state = state["_initial_state"]
+        self._state = state["_state"]
+        self.st_signals = state["st_signals"]
+        self.next_state = state["next_state"]
+        self.previous_state = state["previous_state"]

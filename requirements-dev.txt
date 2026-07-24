@@ -81,6 +81,8 @@ crowdai-api==0.1.22
     # via flatland-rl (pyproject.toml)
 cycler==0.12.1
     # via matplotlib
+cython==3.3.0a1
+    # via flatland-rl (pyproject.toml)
 debugpy==1.8.19
     # via ipykernel
 decorator==5.2.1

@@ -228,6 +228,59 @@ jobs:
             -   name: Run examples
                 run: tox run -e py${{ matrix.python-version }}-examples
 
+    verify-cython-build:
+        runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v6
+                with:
+                    python-version: ${{ matrix.python-version }}
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    python -m pip install tox tox-gh-actions
+            -   name: Verify Cython modules are compiled when Cython and gcc are available
+                run: tox run -e py${{ matrix.python-version }}-verify-cython-build
+
+    verify-build-fallback:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Set up Python
+                uses: actions/setup-python@v6
+                with:
+                    python-version: "3.13"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    python -m pip install tox tox-gh-actions
+            -   name: Verify build succeeds without Cython installed
+                run: tox run -e verify-build-no-cython
+            -   name: Verify build succeeds without a C compiler
+                run: tox run -e verify-build-no-gcc
+
+    build:
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Set up Python
+                uses: actions/setup-python@v6
+                with:
+                    python-version: "3.13"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    python -m pip install tox tox-gh-actions
+            -   name: Build package
+                run: tox run -e build
+            -   name: Verify dist is pure Python
+                run: python scripts/verify_cython_extension_build.py --dist-dir dist --expect pure-python
+
     profiling:
         runs-on: ubuntu-22.04
         permissions:
