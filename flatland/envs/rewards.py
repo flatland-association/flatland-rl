@@ -12,6 +12,7 @@ from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.states import TrainState
 
 RewardType = TypeVar('RewardType')
+ConfigurationType = TypeVar('ConfigurationType')
 
 
 class Rewards(Generic[RewardType]):
@@ -83,12 +84,12 @@ class Rewards(Generic[RewardType]):
 
     # TODO we should drop these methods once EnvAgent.waypoints is also of ConfigurationType instead of Waypoint.
     @staticmethod
-    def _sanitize_waypoints(agent_waypoints: List[List[Waypoint]]) -> List[List[Tuple[Tuple[int, int], int]]]:
+    def _sanitize_waypoints(agent_waypoints: List[List[Waypoint]]) -> List[List[ConfigurationType]]:
         agent_waypoints = [[(Rewards._sanitize_waypoint(wp)) for wp in wps] for wps in agent_waypoints]
         return agent_waypoints
 
     @staticmethod
-    def _sanitize_waypoint(wp: Waypoint) -> Tuple[Tuple[int, int], int]:
+    def _sanitize_waypoint(wp: Waypoint) -> ConfigurationType:
         return wp._to_tuple() if isinstance(wp, Waypoint) else wp
 
 
@@ -109,9 +110,6 @@ class DefaultPenalties(fastenum.Enum):
     INTERMEDIATE_NOT_SERVED = "INTERMEDIATE_NOT_SERVED"
     INTERMEDIATE_LATE_ARRIVAL = "INTERMEDIATE_LATE_ARRIVAL"
     INTERMEDIATE_EARLY_DEPARTURE = "INTERMEDIATE_EARLY_DEPARTURE"
-
-
-ConfigurationType = TypeVar('ConfigurationType')
 
 
 class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
@@ -480,10 +478,9 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         self.departures = defaultdict(defaultdict_list)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
+        # N.B. agent.targets is always a set of already-exploded (position, direction) configurations
+        # (see EnvAgent.targets), never a placeholder with a None direction - so no further exploding needed here.
         agent_targets = agent.targets
-        # TODO wrong place to explode to set of target configurations - get rid of ((r,c), None) everyhwer
-        if len(agent_targets) == 1 and agent_targets[0][1] is None:
-            agent_targets = [(agent_targets[0][0], i) for i in range(4)]
         # N.B. assuming target is only travelled once
         # TODO revise design -  target configurations have no arrival - should we change that?
         if agent.current_configuration is None and agent.state_machine.state == TrainState.DONE and agent.old_configuration is not None and not any(
@@ -491,7 +488,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
             # TODO bad design smell - we haven't kept track of which one was reach, we take any of them here
             self.arrivals[agent.handle][next(target_configuration for target_configuration in agent_targets)].append(elapsed_steps)
 
-        if agent.current_configuration is not None and agent.current_configuration not in self.arrivals[agent.handle][agent.current_configuration]:
+        if agent.current_configuration is not None and agent.current_configuration not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][agent.current_configuration].append(elapsed_steps)
             self.departures[agent.handle][agent.old_configuration].append(elapsed_steps)
 

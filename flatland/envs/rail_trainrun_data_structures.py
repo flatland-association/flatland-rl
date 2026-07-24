@@ -16,7 +16,7 @@ class Waypoint:
     position = field(type=Tuple[int, int])
     direction = field(type=int, converter=lambda d: d if d is None else int(d))
 
-    def _to_tuple(self):
+    def _to_tuple(self) -> Tuple[Tuple[int, int], int]:
         return self.position, self.direction
 
 

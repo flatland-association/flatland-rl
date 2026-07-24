@@ -558,6 +558,61 @@ def test_punctuality_rewards_target():
     assert rewards.cumulate(*collect) == (1, 3)
 
 
+def test_punctuality_rewards_single_direction_target_does_not_crash():
+    """Regression test: agent.targets can be filtered down to a single (position, direction)
+    configuration (e.g. a dead-end target reachable from only one direction) - step_reward must
+    not crash indexing this as if it were a subscriptable sequence."""
+    rewards = PunctualityRewards()
+    agent = EnvAgent(
+        handle=0,
+        initial_configuration=((0, 0), 0),
+        targets={((3, 3), 3)},
+        current_configuration=((3, 3), 3),
+        old_configuration=((2, 2), 2),
+        state_machine=TrainStateMachine(initial_state=TrainState.DONE),
+        earliest_departure=3,
+        latest_arrival=10,
+        arrival_time=10
+    )
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    agent.current_configuration = None
+
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10)
+
+    assert rewards.arrivals[0][((3, 3), 3)] == [10]
+
+
+def test_punctuality_rewards_arrival_recorded_once_per_configuration():
+    """Regression test: dwelling at the same configuration for several steps must not append
+    duplicate arrival/departure entries."""
+    rewards = PunctualityRewards()
+    agent = EnvAgent(
+        handle=0,
+        initial_configuration=((0, 0), 0),
+        targets={((3, 3), d) for d in Grid4TransitionsEnum},
+        current_configuration=(None, 3),
+        state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+        earliest_departure=3,
+        latest_arrival=10,
+        arrival_time=10
+    )
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+
+    agent.old_configuration = ((0, 0), 0)
+    agent.current_configuration = ((2, 2), 2)
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
+
+    # agent dwells at the same configuration for further steps
+    agent.old_configuration = ((2, 2), 2)
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=6)
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=7)
+
+    assert rewards.arrivals[0][((2, 2), 2)] == [5]
+    assert rewards.departures[0][((0, 0), 0)] == [5]
+
+
 def test_arrival_recorded_once_per_waypoint():
     """Test that arrivals are only recorded once per waypoint, not every step (Bug #327)."""
     rewards = DefaultRewards()
