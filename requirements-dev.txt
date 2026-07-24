@@ -97,6 +97,8 @@ entrypoint==2.1.0
     # via versions
 eradicate==2.3.0
     # via flake8-eradicate
+execnet==2.1.2
+    # via pytest-xdist
 executing==2.2.1
     # via stack-data
 fastenum==1.1.2
@@ -397,7 +399,10 @@ pytest==9.0.3
     #   flatland-rl (pyproject.toml)
     #   nbmake
     #   pytest-retry
+    #   pytest-xdist
 pytest-retry==1.7.0
+    # via flatland-rl (pyproject.toml)
+pytest-xdist==3.8.0
     # via flatland-rl (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
