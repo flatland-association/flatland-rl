@@ -64,15 +64,30 @@ jobs:
                     docker system df
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
+                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
+            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
+            # scheduled runs so the nightly cron always exercises a from-scratch install.
+            -   name: Restore cached tox environments
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v4
+                with:
+                    path: .tox
+                    key: tox-deptry-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
+                    python -m pip install -U tox tox-gh-actions
             -   name: Run deptry
                 run: tox -e py${{ matrix.python-version }}-verify-requirements
+            -   name: Save cached tox environments
+                if: ${{ always() && github.event_name != 'schedule' }}
+                uses: actions/cache/save@v4
+                with:
+                    path: .tox
+                    key: tox-deptry-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
 
     testml:
         runs-on: ubuntu-22.04
@@ -103,6 +118,7 @@ jobs:
                     sudo apt-get -y install ffmpeg
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
+                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -111,12 +127,26 @@ jobs:
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
+            # scheduled runs so the nightly cron always exercises a from-scratch install.
+            -   name: Restore cached tox environments
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v4
+                with:
+                    path: .tox
+                    key: tox-testml-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
+                    python -m pip install -U tox tox-gh-actions
             -   name: Run tests
                 run: tox run -e py${{ matrix.python-version }}-ml
+            -   name: Save cached tox environments
+                if: ${{ always() && github.event_name != 'schedule' }}
+                uses: actions/cache/save@v4
+                with:
+                    path: .tox
+                    key: tox-testml-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Check disk space
                 run: df . -h
 
@@ -149,6 +179,7 @@ jobs:
                     sudo apt-get -y install ffmpeg
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
+                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -163,12 +194,26 @@ jobs:
                     repository: flatland-association/flatland-baselines
                     ref: ${{ env.flatland-baselines-ref }}
                     path: flatland-baselines
+            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
+            # scheduled runs so the nightly cron always exercises a from-scratch install.
+            -   name: Restore cached tox environments
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v4
+                with:
+                    path: .tox
+                    key: tox-test-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
+                    python -m pip install -U tox tox-gh-actions
             -   name: Run tests
                 run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
+            -   name: Save cached tox environments
+                if: ${{ always() && github.event_name != 'schedule' }}
+                uses: actions/cache/save@v4
+                with:
+                    path: .tox
+                    key: tox-test-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Check disk space
                 run: df . -h
 
@@ -187,6 +232,7 @@ jobs:
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
             -   name: Set up Python ${{ matrix.python-version }}
+                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -195,14 +241,28 @@ jobs:
                 with:
                     redis-version: 7.4.2
                     redis-port: 6379
+            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
+            # scheduled runs so the nightly cron always exercises a from-scratch install.
+            -   name: Restore cached tox environments
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v4
+                with:
+                    path: .tox
+                    key: tox-notebooks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
+                    python -m pip install -U tox tox-gh-actions
             -   name: Run notebooks
                 run: |
                     tox run -e py${{ matrix.python-version }}-notebooks
                     tox run -e py${{ matrix.python-version }}-notebooks-no-pickle
+            -   name: Save cached tox environments
+                if: ${{ always() && github.event_name != 'schedule' }}
+                uses: actions/cache/save@v4
+                with:
+                    path: .tox
+                    key: tox-notebooks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
 
     examples:
         runs-on: ubuntu-22.04
@@ -213,6 +273,7 @@ jobs:
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
+                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -221,12 +282,26 @@ jobs:
                     wget "${{ env.flatland-scenarios-olten-partially-closed-url }}" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
                     unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
+            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
+            # scheduled runs so the nightly cron always exercises a from-scratch install.
+            -   name: Restore cached tox environments
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v4
+                with:
+                    path: .tox
+                    key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
+                    python -m pip install -U tox tox-gh-actions
             -   name: Run examples
                 run: tox run -e py${{ matrix.python-version }}-examples
+            -   name: Save cached tox environments
+                if: ${{ always() && github.event_name != 'schedule' }}
+                uses: actions/cache/save@v4
+                with:
+                    path: .tox
+                    key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
 
     profiling:
         runs-on: ubuntu-22.04
@@ -251,7 +326,10 @@ jobs:
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
+                    python -m pip install -U tox tox-gh-actions
+            # No .tox caching here (unlike the other jobs): this env's profiling output is written under
+            # .tox/py${{ matrix.python-version }}-profiling/log, i.e. inside the directory that would be
+            # cached - caching it risks uploading a stale profiling log as if it were the current run's.
             -   name: Run profiling
                 run: tox run -e py${{ matrix.python-version }}-profiling
             -   uses: actions/upload-artifact@v6
@@ -348,6 +426,7 @@ jobs:
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
+                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -356,12 +435,26 @@ jobs:
                     wget "${{ env.ecml2026-pkl }}" -O level_0_scenario_1.pkl
                     wget "${{ env.ecml2026-stations-pkl }}" -O stations.pkl
                 working-directory: ${{ github.workspace }}
+            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
+            # scheduled runs so the nightly cron always exercises a from-scratch install.
+            -   name: Restore cached tox environments
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v4
+                with:
+                    path: .tox
+                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
+                    python -m pip install -U tox tox-gh-actions
             -   name: Run profiling
                 run: tox run -e py${{ matrix.python-version }}-profiling-get-k-shortest-paths
+            -   name: Save cached tox environments
+                if: ${{ always() && github.event_name != 'schedule' }}
+                uses: actions/cache/save@v4
+                with:
+                    path: .tox
+                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-profiling-get-k-shortest-paths-results-${{ matrix.python-version }}
@@ -447,6 +540,7 @@ jobs:
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
+                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -459,12 +553,26 @@ jobs:
             -   name: Download ecml2026 scenario
                 run: wget "${{ env.ecml2026-pkl }}" -O level_0_scenario_1.pkl
                 working-directory: ${{ github.workspace }}
+            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
+            # scheduled runs so the nightly cron always exercises a from-scratch install.
+            -   name: Restore cached tox environments
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v4
+                with:
+                    path: .tox
+                    key: tox-benchmarks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
+                    python -m pip install -U tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e py${{ matrix.python-version }}-benchmarks
+            -   name: Save cached tox environments
+                if: ${{ always() && github.event_name != 'schedule' }}
+                uses: actions/cache/save@v4
+                with:
+                    path: .tox
+                    key: tox-benchmarks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-benchmarks-results-${{ matrix.python-version }}
@@ -481,6 +589,7 @@ jobs:
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
+                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -496,9 +605,23 @@ jobs:
                     repository: flatland-association/flatland-baselines
                     ref: ${{ env.flatland-baselines-ref }}
                     path: flatland-baselines
+            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
+            # scheduled runs so the nightly cron always exercises a from-scratch install.
+            -   name: Restore cached tox environments
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v4
+                with:
+                    path: .tox
+                    key: tox-regression-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
+                    python -m pip install -U tox tox-gh-actions
             -   name: Run benchmarks
                 run: tox run -e py${{ matrix.python-version }}-regression
+            -   name: Save cached tox environments
+                if: ${{ always() && github.event_name != 'schedule' }}
+                uses: actions/cache/save@v4
+                with:
+                    path: .tox
+                    key: tox-regression-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
