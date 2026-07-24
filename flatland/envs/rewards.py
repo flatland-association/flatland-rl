@@ -93,6 +93,14 @@ class Rewards(Generic[RewardType]):
     def _sanitize_waypoint(wp: Waypoint) -> ConfigurationType:
         return wp._to_tuple() if isinstance(wp, Waypoint) else wp
 
+    @staticmethod
+    def _intermediate_waypoints(agent_waypoints: List[List[ConfigurationType]], agent: EnvAgent):
+        """
+        Zips an agent's intermediate waypoint alternatives (i.e. excluding the initial and target stops)
+        with their corresponding earliest-departure/latest-arrival time windows.
+        """
+        return zip(agent_waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1])
+
 
 def defaultdict_set():
     return defaultdict(lambda: set())
@@ -235,8 +243,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
                 d[DefaultPenalties.TARGET_NOT_REACHED.value] = min(-1 * self.target_not_reached_minimum_penalty,
                                                                    agent.get_current_delay(elapsed_steps, distance_map))
         agent_waypoints = self._sanitize_waypoints(agent.waypoints)
-        for intermediate_alternatives, la, ed in zip(agent_waypoints[1:-1], agent.waypoints_latest_arrival[1:-1],
-                                                     agent.waypoints_earliest_departure[1:-1]):
+        for intermediate_alternatives, la, ed in self._intermediate_waypoints(agent_waypoints, agent):
             agent_arrivals: Set[ConfigurationType] = set(self.arrivals[agent.handle])
             intermediate_alternatives: Set[ConfigurationType] = set(intermediate_alternatives)
             wps_intersection: Set[ConfigurationType] = intermediate_alternatives.intersection(agent_arrivals)
@@ -510,11 +517,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
                     break
             if stop_on_time:
                 n_stops_on_time += 1
-        for i, (wps, la, ed) in enumerate(zip(
-            agent_waypoints[1:-1],
-            agent.waypoints_latest_arrival[1:-1],
-            agent.waypoints_earliest_departure[1:-1]
-        )):
+        for wps, la, ed in self._intermediate_waypoints(agent_waypoints, agent):
             stop_on_time = False
             # has any alternative with any arrival/departure been served on time?
             for wp in wps:
@@ -522,7 +525,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
                     # intermediate stop not served
                     continue
                 for arrival, departure in zip(self.arrivals[agent.handle][wp], self.departures[agent.handle][wp]):
-                    if arrival <= agent.waypoints_latest_arrival[i + 1] and departure >= agent.waypoints_earliest_departure[i + 1]:
+                    if arrival <= la and departure >= ed:
                         stop_on_time = True
                         break
             if stop_on_time:
