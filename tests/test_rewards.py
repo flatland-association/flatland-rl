@@ -154,11 +154,11 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival
 
     # depart
     agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((4, 4), 4)
+    agent.current_configuration = ((4, 4), 0)
     assert rewards.step_reward(agent, None, distance_map, 11) == rewards.empty()
 
     # second intermediate stop evaluation while stopped
-    agent.old_configuration = ((4, 4), 4)
+    agent.old_configuration = ((4, 4), 0)
     agent.current_configuration = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None, None, None), distance_map, 15) == rewards.empty()
@@ -181,11 +181,11 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival
 
     # depart
     agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((4, 4), 4)
+    agent.current_configuration = ((4, 4), 0)
     assert rewards.step_reward(agent, None, distance_map, 11) == rewards.empty()
 
     # second intermediate stop evaluation while stopped
-    agent.old_configuration = ((4, 4), 4)
+    agent.old_configuration = ((4, 4), 0)
     agent.current_configuration = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None, None, None), distance_map, 15) == rewards.empty()
@@ -504,8 +504,8 @@ def test_punctuality_rewards_intermediate():
     assert rewards.departures[0][((0, 0), 0)] == [2]
     assert rewards.arrivals[0][((2, 2), 2)] == [2]
     assert rewards.departures[0][((2, 2), 2)] == [5]
-    assert rewards.arrivals[0][((4, 4), 4)] == [5]
-    assert ((4, 4), 4) not in rewards.departures[0]
+    assert rewards.arrivals[0][((4, 4), 0)] == [5]
+    assert ((4, 4), 0) not in rewards.departures[0]
     assert ((3, 3), 3) not in rewards.arrivals[0]
     assert ((3, 3), 3) not in rewards.departures[0]
 
@@ -538,9 +538,9 @@ def test_punctuality_rewards_target():
     agent.current_configuration = ((2, 2), 2)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2))
     agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((4, 4), 4)
+    agent.current_configuration = ((4, 4), 0)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=4))
-    agent.old_configuration = ((4, 4), 4)
+    agent.old_configuration = ((4, 4), 0)
     agent.current_configuration = ((3, 3), 3)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
@@ -549,8 +549,8 @@ def test_punctuality_rewards_target():
     assert rewards.departures[0][((0, 0), 0)] == [2]
     assert rewards.arrivals[0][((2, 2), 2)] == [2]
     assert rewards.departures[0][((2, 2), 2)] == [4]
-    assert rewards.arrivals[0][((4, 4), 4)] == [4]
-    assert rewards.departures[0][((4, 4), 4)] == [10]
+    assert rewards.arrivals[0][((4, 4), 0)] == [4]
+    assert rewards.departures[0][((4, 4), 0)] == [10]
     assert rewards.arrivals[0][((3, 3), 3)] == [10]
     assert ((3, 3), 3) not in rewards.departures[0]
 
