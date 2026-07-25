@@ -1010,3 +1010,85 @@ def test_env_no_collision_penalty_for_dwell_after_malfunction():
     assert agent.state == TrainState.STOPPED
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0, \
         "Braking a restarted train must cost the same as holding it stopped: nothing"
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Platooning: trains in adjacent cells moving in the same direction, each entering the cell just
+# vacated by the train in front. When the platoon moves in lockstep no train is ever blocked, so
+# no collision penalty should arise -- unless a slower train ahead fails to vacate its cell in time.
+# ---------------------------------------------------------------------------------------------------------------------
+
+def _make_platoon_env(n_agents: int, start_columns, lead_max_speed: float = 1.0) -> RailEnv:
+    """n_agents on make_simple_rail's row-3 straight, all heading east to (3, 9).
+    start_columns[i] is the initial column of agent i; the leading agent (0) may run at a reduced max speed."""
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=n_agents,
+                  rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env.reset(random_seed=42)
+    for i, agent in enumerate(env.agents):
+        agent.initial_configuration = ((3, start_columns[i]), Grid4TransitionsEnum.EAST)
+        agent.current_configuration = None
+        agent.earliest_departure = 0
+        agent.latest_arrival = 50
+        agent.target = (3, 9)
+        agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}
+        agent.speed_counter = SpeedCounter(lead_max_speed if i == 0 else 1.0)
+    return env
+
+
+def _depart(env):
+    """Two steps to move all agents from WAITING through READY_TO_DEPART onto the rail."""
+    forward = {i: RailEnvActions.MOVE_FORWARD for i in range(len(env.agents))}
+    for _ in range(2):
+        env.step(forward)
+
+
+@pytest.mark.parametrize("start_columns", [(3, 2, 1), (1, 2, 3)], ids=["front-is-agent-0", "front-is-agent-2"])
+def test_platoon_same_speed_no_collision_penalty(start_columns):
+    """3 trains at max speed 1 in adjacent cells moving in step: each enters the cell just vacated
+    by the train ahead, so no train is ever blocked -> no collision penalty, regardless of agent id
+    (i.e. regardless of the order in which the motion check allocates cells)."""
+    env = _make_platoon_env(3, start_columns=start_columns)
+    _depart(env)
+    forward = {i: RailEnvActions.MOVE_FORWARD for i in range(3)}
+    for _ in range(4):
+        _, rewards, _, _ = env.step(forward)
+        for i in range(3):
+            assert env.agents[i].state == TrainState.MOVING
+            assert rewards[i][DefaultPenalties.COLLISION.value] == 0
+
+
+def test_platoon_slow_leader_periodic_collision_penalty():
+    """Leader runs at max speed 0.8, the two followers at 1.0. On steps where the leader does not
+    change cell (it needs 1/0.8 = 5 ticks per 4 cells), the followers request its still-occupied
+    cell and are force-stopped -> collision penalty. When the leader advances, the platoon moves in
+    step and no penalty arises. The blocked pattern therefore repeats with period 5."""
+    env = _make_platoon_env(3, start_columns=(3, 2, 1), lead_max_speed=0.8)
+    _depart(env)
+    leader, follower_1, follower_2 = env.agents
+    forward = {i: RailEnvActions.MOVE_FORWARD for i in range(3)}
+
+    def leader_column(step_positions):
+        return step_positions[0]
+
+    # step 0: leader occupies its starting cell (has not advanced yet) -> both followers blocked
+    _, rewards, _, _ = env.step(forward)
+    assert follower_1.state == TrainState.STOPPED and follower_2.state == TrainState.STOPPED
+    assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
+    assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
+    assert rewards[0][DefaultPenalties.COLLISION.value] == 0  # leader itself moves freely
+
+    # steps 1..4: leader vacates a cell each tick, platoon moves in step -> no penalty for anyone
+    for _ in range(4):
+        _, rewards, _, _ = env.step(forward)
+        for i in range(3):
+            assert rewards[i][DefaultPenalties.COLLISION.value] == 0
+
+    # step 5: one full period later, the leader again fails to vacate its cell -> followers blocked again
+    _, rewards, _, _ = env.step(forward)
+    assert follower_1.state == TrainState.STOPPED and follower_2.state == TrainState.STOPPED
+    assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
+    assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
+    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
