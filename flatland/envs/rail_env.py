@@ -467,7 +467,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 new_speed += self.braking_delta
             new_speed = cached_cap_speed(agent_max_speed, new_speed)
 
-# get desired new configuration independent of motion check
+            # get desired new configuration independent of motion check
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
                 new_configuration = initial_configuration
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and action_valid and (
