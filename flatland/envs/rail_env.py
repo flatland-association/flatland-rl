@@ -429,7 +429,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # Try moving actions on current position
             if current_or_initial_configuration is None:  # Agent not added on map yet
                 current_or_initial_configuration = initial_configuration
-            # TODO new_cell_valid and transition_valid ignored in step(). should we set next state to stopped and new speed to 0 if invalid action given or invalid new cell (inconsistent grid)?
             transition = self.rail.apply_action_independent(
                 raw_action, current_or_initial_configuration
             )
