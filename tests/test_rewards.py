@@ -826,7 +826,7 @@ def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, 
     # penalty path (covered by the tests of PR #452) is out of scope here, allowing
     # agent_transition_data=None as in the other reward tests
     agent.state = state
-    rewards.step_reward(agent, VOLUNTARY_STOP, distance_map, elapsed_steps)
+    rewards.step_reward(agent, None, distance_map, elapsed_steps)
  
  
 @pytest.mark.parametrize("pass_through_cell,halting_cell", [
