@@ -973,11 +973,8 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0
 
 
-def test_env_no_collision_penalty_for_dwell_after_malfunction():
-    """A train whose malfunction ends before its scheduled departure can dwell either way without penalty:
-    hold it stopped via DO_NOTHING and restart at the last moment, or restart early and brake again
-    (stop-and-go). Before the voluntary-stop fix (#452), only the first strategy was free -- braking the
-    restarted train cost the full collision penalty, forcing policies into the DO_NOTHING workaround."""
+def _env_after_malfunction():
+    """Returns env with agent[0] in STOPPED state immediately after a malfunction ends."""
     env = _make_simple_env(n_agents=1)
     agent = env.agents[0]
 
@@ -991,12 +988,22 @@ def test_env_no_collision_penalty_for_dwell_after_malfunction():
         _, rewards, _, _ = env.step({0: RailEnvActions.DO_NOTHING})
         assert agent.state == TrainState.MALFUNCTION
         assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+
     # malfunction ends -> STOPPED (via MALFUNCTION, not MOVING -> STOPPED): no penalty
     _, rewards, _, _ = env.step({0: RailEnvActions.DO_NOTHING})
     assert agent.state == TrainState.STOPPED
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    return env
 
-    # strategy 1: hold the stopped train with DO_NOTHING, restart at the last moment -- free
+
+def test_env_no_collision_penalty_for_dwell_after_malfunction():
+    """A train whose malfunction ends before its scheduled departure can dwell either way without penalty:
+    hold it stopped via DO_NOTHING and restart at the last moment, or restart early and brake again
+    (stop-and-go). Before the voluntary-stop fix (#452), only the first strategy was free -- braking the
+    restarted train cost the full collision penalty, forcing policies into the DO_NOTHING workaround."""
+    # strategy 1: hold the stopped train via DO_NOTHING, restart at the last moment -- free
+    env = _env_after_malfunction()
+    agent = env.agents[0]
     for _ in range(3):
         _, rewards, _, _ = env.step({0: RailEnvActions.DO_NOTHING})
         assert agent.state == TrainState.STOPPED
@@ -1005,7 +1012,12 @@ def test_env_no_collision_penalty_for_dwell_after_malfunction():
     assert agent.state == TrainState.MOVING
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
 
-    # strategy 2 (stop-and-go): brake the restarted train voluntarily -- also free since the fix
+    # strategy 2 (stop-and-go): restart immediately, then brake voluntarily -- also free since fix #452
+    env = _env_after_malfunction()
+    agent = env.agents[0]
+    _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
     _, rewards, _, _ = env.step({0: RailEnvActions.STOP_MOVING})
     assert agent.state == TrainState.STOPPED
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0, \
@@ -1092,3 +1104,17 @@ def test_platoon_slow_leader_periodic_collision_penalty():
     assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+
+    # steps 6..9: second clear window
+    for _ in range(4):
+        _, rewards, _, _ = env.step(forward)
+        for i in range(3):
+            assert rewards[i][DefaultPenalties.COLLISION.value] == 0
+
+    # step 10: second full period, same block pattern
+    _, rewards, _, _ = env.step(forward)
+    assert follower_1.state == TrainState.STOPPED and follower_2.state == TrainState.STOPPED
+    assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
+    assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
+    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+
