@@ -19,7 +19,7 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import DefaultPenalties, DefaultRewards, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, \
     BaseECML2026Rewards
 from flatland.envs.step_utils.env_utils import AgentTransitionData
-from flatland.envs.step_utils.speed_counter import _pseudo_fractional
+from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.trajectories.policy_runner import PolicyRunner
