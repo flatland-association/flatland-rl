@@ -524,12 +524,19 @@ def test_speed_after_malfunction_full_acceleration_braking():
     assert agent.speed_counter.distance == 0
 
 
-def test_symmetric_switch_braking():
+def test_symmetric_switch_stop_action():
+    """
+    Document (wrong) agent behaviour when choosing invalid action upon entering. Action is applied upon exit.
+    """
     env, _, _ = env_generator_legacy(seed=43, n_agents=1)
-    env.braking_delta = - Fraction(1, 10)
+
     assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
     print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
     assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
+    assert not env.rail.is_valid_configuration(((15, 16), 1))  # cannot enter (15,16) heading EAST == 1:
+
+    env.braking_delta = - Fraction(1, 10)
+
     agent = env.agents[0]
     assert agent.speed_counter.speed == 0.5
     assert agent.speed_counter.max_speed == 0.5
@@ -565,29 +572,31 @@ def test_symmetric_switch_braking():
     assert agent.speed_counter.speed == Fraction(2, 5)
     assert agent.speed_counter.distance == Fraction(9, 10)
 
+    # TODO bug: we should have been stopped before entering 15,15
     env.step({agent.handle: RailEnvActions.STOP_MOVING})
     assert agent.position == (15, 15)
     assert agent.direction == 1
-    # TODO bug: moved to invalid position,direction:
-    assert not env.rail.is_valid_configuration(((15, 16), 1))  # cannot enter (15,16) heading EAST == 1:
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(3, 10)
-
-    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
     assert agent.speed_counter.distance, Fraction(1, 1)
 
 
-def test_symmetric_switch_full_braking():
+def test_symmetric_switch_move_forward_action():
+    """
+    Document (wrong) agent behaviour when choosing invalid action upon entering. Action is applied upon exit.
+    """
     env, _, _ = env_generator_legacy(seed=43, n_agents=1)
-
-    # TODO this should return invalid_configuration
-    assert env.rail._check_action_on_agent(RailEnvActions.MOVE_FORWARD, ((15, 14), 1)) == (
-        True, ((15, 15), 1), True, RailEnvActions.MOVE_FORWARD, True
-    )
 
     assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
     print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
     assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
+    assert not env.rail.is_valid_configuration(((15, 16), 1))  # cannot enter (15,16) heading EAST == 1:
+
+    # TODO this should return invalid_configuration when action is evaluated upon entering! Document behaviour for now.
+    assert env.rail._check_action_on_agent(RailEnvActions.MOVE_FORWARD, ((15, 14), 1)) == (
+        True, ((15, 15), 1), True, RailEnvActions.MOVE_FORWARD, True
+    )
+
     agent = env.agents[0]
     assert agent.speed_counter.speed == 0.5
     assert agent.speed_counter.max_speed == 0.5
@@ -623,18 +632,18 @@ def test_symmetric_switch_full_braking():
     assert agent.speed_counter.speed == 0
     assert agent.speed_counter.distance == 0.5
 
+    # TODO bug: we should have been stopped before entering 15,15!
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.position == (15, 15)
     assert agent.direction == 1
-    # TODO bug: moved to invalid position,direction:
-    assert not env.rail.is_valid_configuration(((15, 16), 1))  # cannot enter (15,16) heading EAST == 1:
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == 0.5
     assert agent.speed_counter.distance == 0
 
-
-def test_motion_check_braking():
-    """
-    Verify that without full braking, the agent losing the tie does not move forward to the next cell.
-    """
-    pass
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.position == (15, 15)
+    assert agent.direction == 1
+    assert agent.state == TrainState.STOPPED
+    assert agent.speed_counter.speed == 0
+    # TODO re-evaluate design: speed was 0.5 when stopped - should we not have travelled to 0.5 when stopped?
+    assert agent.speed_counter.distance == 0
