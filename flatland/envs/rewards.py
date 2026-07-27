@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Generic, TypeVar, Tuple, Dict, Set, Optional, List
+from typing import Generic, TypeVar, Tuple, Dict, Set, Optional, List, Iterator
 
 import numpy as np
 from fastenum import fastenum
@@ -94,7 +94,7 @@ class Rewards(Generic[RewardType]):
         return wp._to_tuple() if isinstance(wp, Waypoint) else wp
 
     @staticmethod
-    def _intermediate_waypoints(agent_waypoints: List[List[ConfigurationType]], agent: EnvAgent):
+    def _intermediate_waypoints(agent_waypoints: List[List[ConfigurationType]], agent: EnvAgent) -> Iterator[Tuple[List[ConfigurationType], int, int]]:
         """
         Zips an agent's intermediate waypoint alternatives (i.e. excluding the initial and target stops)
         with their corresponding earliest-departure/latest-arrival time windows.
@@ -553,9 +553,14 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         # TODO wrong place to explode to set of target configurations - get rid of ((r,c), None) everyhwer
         target_wps = {(target_wp[0], d) for target_wp in target_wps for d in Grid4TransitionsEnum}
         # N.B. assuming target is only travelled once:
-        if any(target_wp in self.arrivals[agent.handle] for target_wp in target_wps) and any(
-            self.arrivals[agent.handle][target_wp][0] <= agent.waypoints_latest_arrival[-1] for target_wp in target_wps if
-            len(self.arrivals[agent.handle][target_wp]) > 0):
+        # N.B. filter by membership before subscripting so probing never-visited target directions does not
+        # auto-vivify spurious empty-list entries in the arrivals defaultdict.
+        arrivals_for_handle = self.arrivals[agent.handle]
+        matched_target_wps = [target_wp for target_wp in target_wps if target_wp in arrivals_for_handle]
+        if any(
+            len(arrivals_for_handle[target_wp]) > 0 and arrivals_for_handle[target_wp][0] <= agent.waypoints_latest_arrival[-1]
+            for target_wp in matched_target_wps
+        ):
             n_stops_on_time += 1
         n_stops = len(agent.waypoints)
         return n_stops_on_time, n_stops

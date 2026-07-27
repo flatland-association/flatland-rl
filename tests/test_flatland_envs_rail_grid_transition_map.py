@@ -577,3 +577,22 @@ def test_get_valid_directions_on_grid(elem, expected):
     rail = RailGridTransitionMap(1, 1, RailEnvTransitions())
     rail.set_transitions((0, 0), elem)
     assert rail.get_valid_directions_on_grid(0, 0) == expected
+
+
+@pytest.mark.parametrize(
+    "configuration, expected",
+    [
+        pytest.param(((0, 0), Grid4TransitionsEnum.EAST), True, id="in_bounds_valid_transition"),
+        pytest.param(((0, 0), Grid4TransitionsEnum.NORTH), False, id="in_bounds_no_transition"),
+        pytest.param(((-1, 0), Grid4TransitionsEnum.EAST), False, id="out_of_bounds_negative_row"),
+        pytest.param(((0, -1), Grid4TransitionsEnum.EAST), False, id="out_of_bounds_negative_column"),
+        pytest.param(((3, 0), Grid4TransitionsEnum.EAST), False, id="out_of_bounds_row_at_height"),
+        pytest.param(((0, 3), Grid4TransitionsEnum.EAST), False, id="out_of_bounds_column_at_width"),
+    ]
+)
+def test_is_valid_configuration_out_of_bounds(configuration, expected):
+    """Regression test: is_valid_configuration must reject configurations whose position falls
+    outside the grid, not just cells with no outgoing transitions."""
+    rail = RailGridTransitionMap(3, 3, RailEnvTransitions())
+    rail.set_transitions((0, 0), RailEnvTransitionsEnum.horizontal_straight)
+    assert rail.is_valid_configuration(configuration) == expected

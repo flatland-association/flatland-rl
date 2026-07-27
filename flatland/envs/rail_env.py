@@ -437,7 +437,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 new_configuration_independent, straight = transition
 
             # (2) STATE TRANSITION SIGNALS
-            # get desired new_position and new_direction
             stop_action_given = raw_action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
             movement_action_given = RailEnvActions.is_moving_action(raw_action)
@@ -449,7 +448,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             new_speed = agent.speed_counter.speed
 
             # N.B. no acceleration if
-            # - symmetric switch (as movement_action_given == False)
+            # - facing a symmetric switch and the corrected action is not MOVE_FORWARD with straight==True
             # - if L/R corrected to F, then do not accelerate (as then raw_action != MOVE_FORWARD)
             # TODO revise design: does it make sense to accelerate when coming from STOPPED/MALFUNCTION as speed not set to 0?
             # get desired new speed independent of motion check
@@ -576,11 +575,11 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
                 agent.speed_counter.step(speed=Fraction(0))
 
-            # (10) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
+            # (11) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
             self.handle_done_state(agent)
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
-            # (11) UPDATE REWARDS
+            # (12) UPDATE REWARDS
             self.rewards_dict[i_agent] = self.rewards.cumulate(
                 self.rewards_dict[i_agent],
                 self.rewards.step_reward(
@@ -591,7 +590,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 )
             )
 
-            # (12) UPDATE MALFUNCTION COUNTER
+            # (13) UPDATE MALFUNCTION COUNTER
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
             agent.malfunction_handler.update_counter()
 
