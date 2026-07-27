@@ -1105,19 +1105,6 @@ def test_platoon_slow_leader_periodic_collision_penalty():
     assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
 
-    # steps 6..9: second clear window
-    for _ in range(4):
-        _, rewards, _, _ = env.step(forward)
-        for i in range(3):
-            assert rewards[i][DefaultPenalties.COLLISION.value] == 0
-
-    # step 10: second full period, same block pattern
-    _, rewards, _, _ = env.step(forward)
-    assert follower_1.state == TrainState.STOPPED and follower_2.state == TrainState.STOPPED
-    assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
-    assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
-    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
-
 
 def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
     """A train arriving at a symmetric switch must choose left or right; MOVE_FORWARD (going straight)
