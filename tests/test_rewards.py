@@ -9,7 +9,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.env_generation.env_generator import env_generator_legacy
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
-from flatland.envs.grid.rail_env_grid import RailEnvTransitions
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
@@ -1118,3 +1118,68 @@ def test_platoon_slow_leader_periodic_collision_penalty():
     assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
 
+
+def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
+    """A train arriving at a symmetric switch must choose left or right; MOVE_FORWARD (going straight)
+    is invalid. The env cannot perform the action and force-stops the train, which -- like any
+    env-imposed stop -- incurs the collision penalty proportional to speed. 
+
+    Layout (train departs at (2,3) heading WEST, rolls to the symmetric switch at (2,1) whose only
+    valid exits are north and south -- continuing west is invalid):
+
+        (0,1) dead-end
+              |
+        (2,1) switch <- (2,2) <- (2,3) start
+              |
+        (4,1) dead-end
+    """
+    transitions = RailEnvTransitions()
+    grid = np.zeros((5, 6), dtype=np.uint16)
+    grid[2, 1] = RailEnvTransitionsEnum.symmetric_switch_from_east  # heading west forks N/S
+    grid[2, 2] = RailEnvTransitionsEnum.horizontal_straight
+    grid[2, 3] = RailEnvTransitionsEnum.horizontal_straight
+    grid[2, 4] = RailEnvTransitionsEnum.dead_end_from_east
+    grid[1, 1] = RailEnvTransitionsEnum.vertical_straight
+    grid[0, 1] = RailEnvTransitionsEnum.dead_end_from_north
+    grid[3, 1] = RailEnvTransitionsEnum.vertical_straight
+    grid[4, 1] = RailEnvTransitionsEnum.dead_end_from_south
+
+    rail = RailGridTransitionMap(width=6, height=5, transitions=transitions)
+    rail.grid = grid
+    optionals = {'agents_hints': {'city_positions': [(2, 4), (0, 1)],
+                                  'train_stations': [[((2, 4), 0)], [((0, 1), 0)]],
+                                  'city_orientations': [3, 0]}}
+    env = RailEnv(width=6, height=5,
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
+                  rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env.reset(random_seed=42)
+    env._max_episode_steps = 100
+
+    agent = env.agents[0]
+    agent.initial_configuration = ((2, 3), Grid4TransitionsEnum.WEST)
+    agent.current_configuration = None
+    agent.earliest_departure = 0
+    agent.latest_arrival = 50
+    agent.target = (0, 1)
+    agent.targets = {((0, 1), d) for d in Grid4TransitionsEnum}
+
+    # sanity: at the switch, heading west, forward is not a valid transition (only north/south are)
+    north, east, south, west = env.rail.get_transitions(((2, 1), Grid4TransitionsEnum.WEST))
+    assert (north, east, south, west) == (1, 0, 1, 0)
+
+    # drive forward until the train reaches the switch and is force-stopped
+    penalties = []
+    for _ in range(6):
+        _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD})
+        penalties.append(rewards[0][DefaultPenalties.COLLISION.value])
+        if agent.state == TrainState.STOPPED:
+            break
+
+    assert agent.position == (2, 1), "train should be stopped on the switch cell"
+    assert agent.state_machine.previous_state == TrainState.MOVING
+    assert agent.state == TrainState.STOPPED
+    assert penalties[-1] == -1 * 1 * COLLISION_FACTOR, \
+        "MOVE_FORWARD into a symmetric switch is invalid -> env-forced stop -> collision penalty"
+    # no penalty accrued while the train was still approaching at full speed
+    assert penalties[:-1] == [0] * (len(penalties) - 1)
