@@ -821,11 +821,12 @@ def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate=11, ea
 def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, elapsed_steps: int, old: Waypoint):
     agent.old_configuration = (old.position, old.direction)
     agent.current_configuration = (waypoint.position, waypoint.direction)
-    # set twice so that state_machine.previous_state == state: the MOVING -> STOPPED collision
-    # penalty path (covered by the tests of PR #452) is out of scope here, allowing
-    # agent_transition_data=None as in the other reward tests
-    agent.state = state
-    rewards.step_reward(agent, None, distance_map, elapsed_steps)
+    agent.state = state    
+    transition_data = AgentTransitionData(
+        speed=Fraction(0), new_configuration=(waypoint.position, waypoint.direction),
+        new_speed=Fraction(0), current_resource=waypoint.position,
+        state_transition_signal=StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=True))
+    rewards.step_reward(agent, transition_data, distance_map, elapsed_steps)
  
  
 @pytest.mark.parametrize("pass_through_cell,halting_cell", [
