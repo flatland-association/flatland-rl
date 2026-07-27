@@ -826,8 +826,7 @@ def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, 
     # penalty path (covered by the tests of PR #452) is out of scope here, allowing
     # agent_transition_data=None as in the other reward tests
     agent.state = state
-    agent.state = state
-    rewards.step_reward(agent, None, distance_map, elapsed_steps)
+    rewards.step_reward(agent, VOLUNTARY_STOP, distance_map, elapsed_steps)
  
  
 @pytest.mark.parametrize("pass_through_cell,halting_cell", [
@@ -868,6 +867,7 @@ def test_multicell_station_late_arrival_scored_on_halting_cell():
     assert d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] == 0
     assert d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] == LATE_ARRIVAL_FACTOR * (11 - 20), \
         "Late arrival must be scored on the halting cell, not diluted by an on-time pass-through"
+    assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
  
  
 def test_multicell_station_not_served_when_only_rolled_through():
