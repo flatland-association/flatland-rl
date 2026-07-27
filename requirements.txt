@@ -4,26 +4,26 @@
 #
 #    pip-compile --output-file=requirements.txt pyproject.toml
 #
-annotated-types==0.7.0
+annotated-types==0.8.0
     # via pydantic
-asttokens==3.0.1
+asttokens==3.0.2
     # via stack-data
 attrs==26.1.0
     # via
     #   entrypoint
     #   flatland-rl (pyproject.toml)
     #   versions
-boto3==1.43.15
+boto3==1.43.56
     # via flatland-rl (pyproject.toml)
-botocore==1.43.15
+botocore==1.43.56
     # via
     #   boto3
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.7.22
     # via requests
-charset-normalizer==3.4.7
+charset-normalizer==3.4.9
     # via requests
-click==8.4.1
+click==8.4.2
     # via
     #   flatland-rl (pyproject.toml)
     #   versions
@@ -47,7 +47,7 @@ fastenum==1.1.2
     # via flatland-rl (pyproject.toml)
 fonttools==4.63.0
     # via matplotlib
-idna==3.16
+idna==3.18
     # via requests
 importlib-resources==7.1.0
     # via flatland-rl (pyproject.toml)
@@ -76,7 +76,7 @@ kiwisolver==1.5.0
     # via matplotlib
 lxml==6.1.1
     # via svgutils
-matplotlib==3.10.9
+matplotlib==3.11.1
     # via flatland-rl (pyproject.toml)
 matplotlib-inline==0.2.2
     # via ipython
@@ -115,7 +115,7 @@ pillow==12.3.0
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
     #   matplotlib
-prompt-toolkit==3.0.52
+prompt-toolkit==3.0.53
     # via ipython
 ptyprocess==0.7.0
     # via pexpect
@@ -125,7 +125,7 @@ pydantic==2.13.4
     # via flatland-rl (pyproject.toml)
 pydantic-core==2.46.4
     # via pydantic
-pyglet==2.1.14
+pyglet==2.1.15
     # via flatland-rl (pyproject.toml)
 pygments==2.20.0
     # via ipython
@@ -137,15 +137,15 @@ python-dateutil==2.9.0.post0
     #   flatland-rl (pyproject.toml)
     #   matplotlib
     #   pandas
-python-gitlab==8.3.0
+python-gitlab==8.4.0
     # via crowdai-api
-pytz==2026.2
+pytz==2026.3.post1
     # via pandas
 pyyaml==6.0.3
     # via flatland-rl (pyproject.toml)
 recordtype==1.4
     # via flatland-rl (pyproject.toml)
-redis==7.4.0
+redis==7.4.1
     # via
     #   crowdai-api
     #   flatland-rl (pyproject.toml)
@@ -157,7 +157,7 @@ requests==2.34.2
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via python-gitlab
-s3transfer==0.17.1
+s3transfer==0.19.2
     # via boto3
 six==1.17.0
     # via
@@ -171,9 +171,9 @@ svgutils==0.3.4
     # via flatland-rl (pyproject.toml)
 timeout-decorator==0.5.0
     # via flatland-rl (pyproject.toml)
-tqdm==4.67.3
+tqdm==4.70.0
     # via flatland-rl (pyproject.toml)
-traitlets==5.15.0
+traitlets==5.15.1
     # via
     #   ipython
     #   ipywidgets
@@ -183,7 +183,7 @@ typing-aliases==1.10.1
     #   entrypoint
     #   orderings
     #   versions
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   flatland-rl (pyproject.toml)
     #   named
@@ -195,7 +195,7 @@ typing-extensions==4.15.0
     #   versions
 typing-inspection==0.4.2
     # via pydantic
-tzdata==2026.2
+tzdata==2026.3
     # via pandas
 urllib3==2.7.0
     # via
@@ -204,7 +204,7 @@ urllib3==2.7.0
     #   requests
 versions==1.6.1
     # via flatland-rl (pyproject.toml)
-wcwidth==0.7.0
+wcwidth==0.8.2
     # via prompt-toolkit
 widgetsnbextension==4.0.15
     # via ipywidgets

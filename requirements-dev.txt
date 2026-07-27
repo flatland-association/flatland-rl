@@ -4,9 +4,9 @@
 #
 #    pip-compile --extra=dev --output-file=requirements-dev.txt pyproject.toml
 #
-annotated-types==0.7.0
+annotated-types==0.8.0
     # via pydantic
-anyio==4.13.0
+anyio==4.14.2
     # via
     #   httpx
     #   jupyter-server
@@ -18,7 +18,7 @@ argon2-cffi-bindings==25.1.0
     # via argon2-cffi
 arrow==1.4.0
     # via isoduration
-asttokens==3.0.1
+asttokens==3.0.2
     # via stack-data
 async-lru==2.3.0
     # via jupyterlab
@@ -32,13 +32,13 @@ attrs==26.1.0
     #   versions
 babel==2.18.0
     # via jupyterlab-server
-beautifulsoup4==4.14.3
+beautifulsoup4==4.15.0
     # via nbconvert
 bleach[css]==6.4.0
     # via nbconvert
-boto3==1.43.15
+boto3==1.43.56
     # via flatland-rl (pyproject.toml)
-botocore==1.43.15
+botocore==1.43.56
     # via
     #   boto3
     #   s3transfer
@@ -46,18 +46,18 @@ branca==0.8.2
     # via folium
 build==1.5.0
     # via pip-tools
-cachetools==7.1.4
+cachetools==7.1.6
     # via tox
-certifi==2026.5.20
+certifi==2026.7.22
     # via
     #   httpcore
     #   httpx
     #   requests
-cffi==2.0.0
+cffi==2.1.0
     # via argon2-cffi-bindings
-charset-normalizer==3.4.7
+charset-normalizer==3.4.9
     # via requests
-click==8.4.1
+click==8.4.2
     # via
     #   deptry
     #   flatland-rl (pyproject.toml)
@@ -73,13 +73,13 @@ contourpy==1.3.2
     # via
     #   flatland-rl (pyproject.toml)
     #   matplotlib
-coverage==7.14.1
+coverage==7.15.2
     # via flatland-rl (pyproject.toml)
 crowdai-api==0.1.22
     # via flatland-rl (pyproject.toml)
 cycler==0.12.1
     # via matplotlib
-debugpy==1.8.20
+debugpy==1.8.21
     # via ipykernel
 decorator==5.3.1
     # via ipython
@@ -87,9 +87,9 @@ defusedxml==0.7.1
     # via nbconvert
 deptry==0.25.1
     # via flatland-rl (pyproject.toml)
-distlib==0.4.0
+distlib==0.4.3
     # via virtualenv
-docker==7.1.0
+docker==7.2.0
     # via testcontainers
 entrypoint==2.1.0
     # via versions
@@ -101,9 +101,9 @@ executing==2.2.1
     # via stack-data
 fastenum==1.1.2
     # via flatland-rl (pyproject.toml)
-fastjsonschema==2.21.2
+fastjsonschema==2.22.1
     # via nbformat
-filelock==3.29.0
+filelock==3.32.0
     # via
     #   python-discovery
     #   tox
@@ -126,7 +126,7 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via jupyterlab
-idna==3.16
+idna==3.18
     # via
     #   anyio
     #   httpx
@@ -140,7 +140,7 @@ ipycanvas==0.14.3
     # via flatland-rl (pyproject.toml)
 ipyevents==2.0.4
     # via flatland-rl (pyproject.toml)
-ipykernel==7.2.0
+ipykernel==7.3.0
     # via
     #   jupyter
     #   jupyter-console
@@ -177,7 +177,7 @@ jmespath==1.1.0
     # via
     #   boto3
     #   botocore
-json5==0.14.0
+json5==0.15.0
     # via jupyterlab-server
 jsonpointer==3.1.1
     # via jsonschema
@@ -190,7 +190,11 @@ jsonschema-specifications==2025.9.1
     # via jsonschema
 jupyter==1.1.1
     # via flatland-rl (pyproject.toml)
-jupyter-client==8.8.0
+jupyter-builder==1.1.1
+    # via
+    #   jupyterlab
+    #   notebook
+jupyter-client==8.9.1
     # via
     #   ipykernel
     #   jupyter-console
@@ -201,6 +205,7 @@ jupyter-console==6.6.3
 jupyter-core==5.9.1
     # via
     #   ipykernel
+    #   jupyter-builder
     #   jupyter-client
     #   jupyter-console
     #   jupyter-server
@@ -212,7 +217,7 @@ jupyter-events==0.12.1
     # via jupyter-server
 jupyter-lsp==2.3.1
     # via jupyterlab
-jupyter-server==2.20.2
+jupyter-server==2.20.0
     # via
     #   jupyter-lsp
     #   jupyterlab
@@ -221,7 +226,7 @@ jupyter-server==2.20.2
     #   notebook-shim
 jupyter-server-terminals==0.5.4
     # via jupyter-server
-jupyterlab==4.5.10
+jupyterlab==4.6.2
     # via
     #   jupyter
     #   notebook
@@ -243,7 +248,7 @@ markupsafe==3.0.3
     # via
     #   jinja2
     #   nbconvert
-matplotlib==3.10.9
+matplotlib==3.11.1
     # via
     #   flatland-rl (pyproject.toml)
     #   seaborn
@@ -253,7 +258,7 @@ matplotlib-inline==0.2.2
     #   ipython
 mccabe==0.7.0
     # via flake8
-mistune==3.3.0
+mistune==3.3.4
     # via nbconvert
 msgpack==1.2.1
     # via
@@ -265,7 +270,7 @@ named==1.4.2
     # via
     #   entrypoint
     #   solus
-nbclient==0.10.4
+nbclient==0.11.0
     # via
     #   nbconvert
     #   nbmake
@@ -281,11 +286,11 @@ nbformat==5.10.4
     #   nbmake
 nbmake==1.5.5
     # via flatland-rl (pyproject.toml)
-nest-asyncio==1.6.0
+nest-asyncio2==1.7.2
     # via ipykernel
 networkx==3.4.2
     # via flatland-rl (pyproject.toml)
-notebook==7.5.6
+notebook==7.6.1
     # via jupyter
 notebook-shim==0.2.4
     # via
@@ -339,9 +344,9 @@ pillow==12.3.0
     #   ipycanvas
     #   ipyplot
     #   matplotlib
-pip-tools==7.5.3
+pip-tools==7.6.0
     # via flatland-rl (pyproject.toml)
-platformdirs==4.9.6
+platformdirs==4.11.0
     # via
     #   jupyter-core
     #   python-discovery
@@ -351,9 +356,9 @@ pluggy==1.6.0
     # via
     #   pytest
     #   tox
-prometheus-client==0.25.0
+prometheus-client==0.26.0
     # via jupyter-server
-prompt-toolkit==3.0.52
+prompt-toolkit==3.0.53
     # via
     #   ipython
     #   jupyter-console
@@ -375,7 +380,7 @@ pydantic-core==2.46.4
     # via pydantic
 pyflakes==3.4.0
     # via flake8
-pyglet==2.1.14
+pyglet==2.1.15
     # via flatland-rl (pyproject.toml)
 pygments==2.20.0
     # via
@@ -386,13 +391,13 @@ pygments==2.20.0
     #   pytest
 pyparsing==3.3.2
     # via matplotlib
-pyproject-api==1.10.0
+pyproject-api==1.11.0
     # via tox
 pyproject-hooks==1.2.0
     # via
     #   build
     #   pip-tools
-pytest==9.0.3
+pytest==9.1.1
     # via
     #   flatland-rl (pyproject.toml)
     #   nbmake
@@ -410,17 +415,17 @@ python-dateutil==2.9.0.post0
     #   jupyter-client
     #   matplotlib
     #   pandas
-python-discovery==1.3.1
+python-discovery==1.5.0
     # via
     #   tox
     #   virtualenv
 python-dotenv==1.2.2
     # via testcontainers
-python-gitlab==8.3.0
+python-gitlab==8.4.0
     # via crowdai-api
 python-json-logger==4.1.0
     # via jupyter-events
-pytz==2026.2
+pytz==2026.3.post1
     # via pandas
 pyyaml==6.0.3
     # via
@@ -434,7 +439,7 @@ pyzmq==27.1.0
     #   jupyter-server
 recordtype==1.4
     # via flatland-rl (pyproject.toml)
-redis==7.4.0
+redis==7.4.1
     # via
     #   crowdai-api
     #   flatland-rl (pyproject.toml)
@@ -454,7 +459,7 @@ requests==2.34.2
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via python-gitlab
-requirements-parser==0.13.0
+requirements-parser==0.13.1
     # via deptry
 rfc3339-validator==0.1.4
     # via
@@ -466,11 +471,11 @@ rfc3986-validator==0.1.1
     #   jupyter-events
 rfc3987-syntax==1.1.0
     # via jsonschema
-rpds-py==0.30.0
+rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
-s3transfer==0.17.1
+s3transfer==0.19.2
     # via boto3
 seaborn==0.13.2
     # via flatland-rl (pyproject.toml)
@@ -487,7 +492,7 @@ snakeviz==2.2.2
     # via flatland-rl (pyproject.toml)
 solus==1.2.2
     # via versions
-soupsieve==2.8.4
+soupsieve==2.9.1
     # via beautifulsoup4
 stack-data==0.6.3
     # via ipython
@@ -497,11 +502,11 @@ terminado==0.18.1
     # via
     #   jupyter-server
     #   jupyter-server-terminals
-testcontainers==4.14.2
+testcontainers==4.15.0
     # via flatland-rl (pyproject.toml)
 timeout-decorator==0.5.0
     # via flatland-rl (pyproject.toml)
-tinycss2==1.4.0
+tinycss2==1.5.1
     # via bleach
 tomli==2.4.1
     # via deptry
@@ -516,15 +521,16 @@ tornado==6.5.7
     #   notebook
     #   snakeviz
     #   terminado
-tox==4.54.0
+tox==4.58.0
     # via flatland-rl (pyproject.toml)
-tqdm==4.67.3
+tqdm==4.70.0
     # via flatland-rl (pyproject.toml)
-traitlets==5.15.0
+traitlets==5.15.1
     # via
     #   ipykernel
     #   ipython
     #   ipywidgets
+    #   jupyter-builder
     #   jupyter-client
     #   jupyter-console
     #   jupyter-core
@@ -540,10 +546,11 @@ typing-aliases==1.10.1
     #   entrypoint
     #   orderings
     #   versions
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   beautifulsoup4
     #   flatland-rl (pyproject.toml)
+    #   jupyter-client
     #   named
     #   orderings
     #   pydantic
@@ -554,7 +561,7 @@ typing-extensions==4.15.0
     #   versions
 typing-inspection==0.4.2
     # via pydantic
-tzdata==2026.2
+tzdata==2026.3
     # via
     #   arrow
     #   pandas
@@ -569,9 +576,9 @@ urllib3==2.7.0
     #   testcontainers
 versions==1.6.1
     # via flatland-rl (pyproject.toml)
-virtualenv==21.3.3
+virtualenv==21.7.0
     # via tox
-wcwidth==0.7.0
+wcwidth==0.8.2
     # via prompt-toolkit
 webcolors==25.10.0
     # via jsonschema
@@ -585,7 +592,7 @@ wheel==0.47.0
     # via pip-tools
 widgetsnbextension==4.0.15
     # via ipywidgets
-wrapt==2.2.1
+wrapt==2.2.2
     # via testcontainers
 xyzservices==2026.3.0
     # via folium
