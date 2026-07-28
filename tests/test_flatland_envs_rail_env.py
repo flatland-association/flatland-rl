@@ -498,7 +498,6 @@ def test_speed_after_malfunction_full_acceleration_braking():
     initial_speed = agent.speed_counter.max_speed
     assert initial_speed == 0.5
     assert agent.speed_counter.speed == initial_speed
-    assert agent.speed_counter.speed == initial_speed
 
     while not agent.state.is_on_map_state():
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
@@ -578,7 +577,7 @@ def test_symmetric_switch_stop_action():
     assert agent.direction == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(3, 10)
-    assert agent.speed_counter.distance, Fraction(1, 1)
+    assert agent.speed_counter.distance == Fraction(1, 5)
 
 
 def test_symmetric_switch_move_forward_action():
