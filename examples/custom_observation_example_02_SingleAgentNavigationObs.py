@@ -26,12 +26,6 @@ class SingleAgentNavigationObs(ObservationBuilder):
     will be [1, 0, 0].
     """
 
-    def __init__(self):
-        super().__init__()
-
-    def reset(self, env):
-        super().reset(env)
-
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 

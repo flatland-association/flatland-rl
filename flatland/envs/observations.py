@@ -750,11 +750,5 @@ class FullEnvObservation(ObservationBuilder["RailEnv", "RailEnv"]):
     Returns full env as observation.
     """
 
-    def __init__(self):
-        pass
-
     def get(self, handle: AgentHandle = 0) -> "RailEnv":
         return self.env
-
-    def reset(self, env):
-        self.env = env

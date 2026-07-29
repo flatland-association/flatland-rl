@@ -98,12 +98,6 @@ class DummyObservationBuilder(ObservationBuilder[Environment, bool]):
     This is used in the evaluation service
     """
 
-    def __init__(self):
-        super().__init__()
-
-    def reset(self, env: Environment):
-        super().reset(env)
-
     def get(self, handle: AgentHandle = 0) -> bool:
         return True
 
