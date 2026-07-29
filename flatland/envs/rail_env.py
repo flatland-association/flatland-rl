@@ -787,4 +787,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         agents = EnvAgent.from_line(line)
         for agent in agents:
             agent.targets = {t for t in agent.targets if rail.is_valid_configuration(t)}
+            # N.B. only the target's direction alternatives (last waypoint group) can be invalid - the
+            # line generator's own routing already guarantees valid configurations everywhere else.
+            agent.waypoints[-1] = [wp for wp in agent.waypoints[-1] if rail.is_valid_configuration((wp.position, wp.direction))]
         return agents

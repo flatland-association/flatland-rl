@@ -169,9 +169,8 @@ class SparseLineGen(BaseLineGen):
         agent_positions = [[[p] for p in pa] for pa in agent_positions]
         agent_directions = [[[d] for d in da] for da in agent_directions]
 
-        agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, None)]] for
-                           # TODO dla does not work without None even when all are present
-                           # agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, d) for d in range(4)]] for
+        agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] +
+                              [[Waypoint(target, d) for d in Grid4TransitionsEnum]] for
                            i, (pas, das, target)
                            in enumerate(zip(agent_positions, agent_directions, agent_targets))}
 
@@ -198,7 +197,7 @@ class SparseLineGen(BaseLineGen):
                 shortest_path = k_sh[0]
                 previous_direction = shortest_path[-1].direction
                 new_agent_waypoints[agent_id].append([shortest_path[-1]])
-            # new_agent_waypoints[agent_id][-1] = [Waypoint(new_agent_waypoints[agent_id][-1][0].position, None)]
+            # new_agent_waypoints[agent_id][-1] = [Waypoint(new_agent_waypoints[agent_id][-1][0].position, d) for d in Grid4TransitionsEnum]
         return Line(agent_waypoints=new_agent_waypoints, agent_speeds=agent_speeds)
 
 
