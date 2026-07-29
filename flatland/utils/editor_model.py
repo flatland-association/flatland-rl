@@ -5,6 +5,7 @@ import time
 import numpy as np
 from numpy import array
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import mirror
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
@@ -394,7 +395,7 @@ class EditorModel(AbstractModel):
 
     def add_target(self, rc_cell):
         if self.selected_agent is not None:
-            self.env.agents[self.selected_agent].target = tuple(rc_cell)
+            self.env.agents[self.selected_agent].targets = {(tuple(rc_cell), d) for d in Grid4TransitionsEnum}
             self.view.oRT.update_background()
             self.redraw()
 

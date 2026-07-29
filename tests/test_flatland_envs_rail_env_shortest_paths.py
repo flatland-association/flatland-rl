@@ -30,7 +30,7 @@ def test_get_shortest_paths_unreachable():
     agent.position = (3, 1)  # west dead-end
     agent.initial_position = (3, 1)  # west dead-end
     agent.direction = Grid4TransitionsEnum.WEST
-    agent.target = (3, 9)  # east dead-end
+    agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
     env.reset(False, False)
@@ -256,7 +256,7 @@ def test_get_k_shortest_paths(rendering=False):
     agent.position = initial_position
     agent.initial_position = initial_position
     agent.direction = initial_direction
-    agent.target = target_position  # east dead-end
+    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
     env.reset(False, False)
@@ -335,7 +335,7 @@ def test_get_k_shortest_paths_with_forbidden_cells(rendering=False):
     agent.position = initial_position
     agent.initial_position = initial_position
     agent.direction = initial_direction
-    agent.target = target_position
+    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}
     agent.moving = True
 
     env.reset(False, False)
@@ -395,7 +395,7 @@ def test_get_k_shortest_paths_with_forbidden_cells_blocks_all_paths(rendering=Fa
     agent.position = initial_position
     agent.initial_position = initial_position
     agent.direction = initial_direction
-    agent.target = target_position
+    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}
     agent.moving = True
 
     env.reset(False, False)
@@ -434,7 +434,7 @@ def test_get_k_shortest_paths_with_direction_at_target(rendering=False):
     agent.position = initial_position
     agent.initial_position = initial_position
     agent.direction = initial_direction
-    agent.target = target_position  # east dead-end
+    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
     env.reset(False, False)

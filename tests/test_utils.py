@@ -99,7 +99,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 # set the initial position
                 agent.initial_position = test_config.initial_position
                 agent.initial_direction = test_config.initial_direction
-                agent.target = test_config.target
+                agent.targets = {(test_config.target, d) for d in Grid4TransitionsEnum}
                 agent.speed_counter = SpeedCounter(speed=test_config.speed,
                                                    max_speed=test_config.max_speed if test_config.max_speed is not None else test_config.speed)
             env.reset(False, False)

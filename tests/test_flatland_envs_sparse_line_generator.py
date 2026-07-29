@@ -216,6 +216,8 @@ def test_sparse_line_generator():
                         [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.WEST]], [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.NORTH]],
                         [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.WEST]]]
     agent_targets = [(39, 8), (10, 40), (42, 22), (18, 5), (39, 8), (12, 40), (31, 27), (39, 8), (8, 27), (44, 22)]
+    # TODO
+    # agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, d) for d in Grid4TransitionsEnum]] for i, (pas, das, target)
     agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, None)]] for i, (pas, das, target)
                        in enumerate(zip(agent_positions, agent_directions, agent_targets))}
     assert line == Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
@@ -444,10 +446,16 @@ def test_sparse_line_generator_with_intermediate_stops():
                         [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.EAST]],
                         [[Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.WEST]]]
     agent_targets = [(27, 41), (12, 40), (10, 40), (9, 27), (45, 34), (39, 8), (12, 40), (18, 5), (20, 25), (39, 8)]
-    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, None)]] for i, (pas, das, target)
+    agent_targets = [((27, 41), 0), ((12, 40), 1), ((10, 40), 1), ((9, 27), 1), ((45, 34), 3), ((39, 8), 3), ((12, 40), 1), ((18, 5), 1), ((20, 25), 0),
+                     ((39, 8), 3)]
+    agent_targets_new = [awp[-1][0] for awp in line.agent_waypoints.values()]
+    # TODO
+    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(*target)]] for i, (pas, das, target)
+                       # agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target[0],d)for d in range(4)] ] for i, (pas, das, target)
+                       # agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(*target)]] for i, (pas, das, target)
                        in enumerate(zip(agent_positions, agent_directions, agent_targets))}
 
     assert line == Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     for a in EnvAgent.from_line(line):
         print(
-            f"EnvAgent(handle={a.handle}, initial_position={a.initial_position}, initial_direction={a.initial_direction}, target={a.target}, direction={a.direction}, waypoints={a.waypoints}, waypoints_latest_arrival={a.waypoints_earliest_departure}, waypoints_earliest_departure={a.waypoints_latest_arrival}),")
+            f"EnvAgent(handle={a.handle}, initial_position={a.initial_position}, initial_direction={a.initial_direction}, target={next(iter(a.targets))[0]}, direction={a.direction}, waypoints={a.waypoints}, waypoints_latest_arrival={a.waypoints_earliest_departure}, waypoints_earliest_departure={a.waypoints_latest_arrival}),")

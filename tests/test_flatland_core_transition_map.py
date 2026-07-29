@@ -56,13 +56,13 @@ def check_path(env, rail, position, direction, target, expected, rendering=False
     agent = env.agents[0]
     agent.position = position  # south dead-end
     agent.direction = direction  # north
-    agent.target = target  # east dead-end
+    agent.targets = {(target, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
         renderer.render_env(show=True, show_observations=False)
         input("Continue?")
-    assert rail.check_path_exists(agent.position, agent.direction, agent.target) == expected
+    assert rail.check_path_exists(agent.position, agent.direction, next(iter(agent.targets))[0]) == expected
 
 
 def test_path_exists(rendering=False):

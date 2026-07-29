@@ -210,14 +210,14 @@ class RenderLocal(RenderBase):
             if agent is None:
                 continue
             color = color_map(agent_idx)
-            self.plot_single_agent(agent.position, agent.direction, color, target=agent.target if targets else None,
+            self.plot_single_agent(agent.position, agent.direction, color, target=next(iter(agent.targets))[0] if targets else None,
                                    static=True, selected=agent_idx == selected_agent)
 
         for agent_idx, agent in enumerate(self.env.agents):
             if agent is None:
                 continue
             color = color_map(agent_idx)
-            self.plot_single_agent(agent.position, agent.direction, color, target=agent.target if targets else None)
+            self.plot_single_agent(agent.position, agent.direction, color, target=next(iter(agent.targets))[0] if targets else None)
 
     def get_transition_row_col(self, row_col_pos, direction, bgiTrans=False):
         """

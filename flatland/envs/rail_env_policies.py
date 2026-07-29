@@ -53,12 +53,15 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
                 if len(p) > 0:
                     assert p[-1] == p1, (p[-1], p1)
                 pp_next = get_k_shortest_paths(None, p1.position, p1.direction, p2.position, rail=env.rail)
-                p_next = None
                 if p2.direction is None:
                     p_next = pp_next[0]
                 else:
+                    # accept a landing direction matching any of pp2's alternatives (e.g. a target explodes to all
+                    # valid directions, since any of them is acceptable), not just p2's own direction.
+                    p2_directions = {wp.direction for wp in pp2}
+                    p_next = None
                     for _p_next in pp_next:
-                        if _p_next[-1].direction == p2.direction:
+                        if _p_next[-1].direction in p2_directions:
                             p_next = _p_next
                             break
                 assert p_next is not None, f"Not found next path from {p1} to {p2}"

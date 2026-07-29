@@ -71,3 +71,20 @@ def test_graph_transition_map_from_with_random_policy(seed):
         assert len(graph_trajectory.trains_positions["position"].compare(grid_trajectory.trains_positions["position"])) == 0
 
         assert len(graph_trajectory.compare_rewards_dones_infos(grid_trajectory)) == 0
+
+
+@pytest.mark.parametrize("seed", range(42, 58))
+def test_apply_timetable_to_agents_waypoints_well_formed(seed):
+    """Regression test: `GraphRailEnv._apply_timetable_to_agents` must produce `agent.waypoints` as a
+    well-formed `List[List[ConfigurationType]]` - every entry, including the exploded target directions,
+    must itself be a list of configurations, and only configurations that actually exist in the graph
+    (e.g. not a direction blocked by a dead end) may be included."""
+    grid_env, _, _ = env_generator(seed=seed)
+    graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed)
+
+    for agent in graph_env.agents:
+        assert all(isinstance(wps, list) for wps in agent.waypoints)
+        for wps in agent.waypoints:
+            for configuration in wps:
+                assert configuration in graph_env.rail.g.nodes
+        assert set(agent.waypoints[-1]) == agent.targets

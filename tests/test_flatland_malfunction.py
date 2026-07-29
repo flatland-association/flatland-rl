@@ -34,7 +34,7 @@ class SingleAgentNavigationObs(ObservationBuilder):
             agent_virtual_position = agent.position
             agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
-            agent_virtual_position = agent.target
+            agent_virtual_position = next(iter(agent.targets))[0]
             agent_virtual_direction = agent.direction
         else:
             return None
@@ -91,7 +91,7 @@ def test_malfunction_process():
     agent_old_position = env.agents[0].position
 
     # Move target to unreachable position in order to not interfere with test
-    env.agents[0].target = (0, 0)
+    env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
 
     # Add in max episode steps because schedule generator sets it to 0 for dummy data
     env._max_episode_steps = 200
@@ -147,7 +147,7 @@ def test_malfunction_process_statistically():
     env.reset(True, True, random_seed=10)
     env._max_episode_steps = 1000
 
-    env.agents[0].target = (0, 0)
+    env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
     # Next line only for test generation
     agent_malfunction_list = [[] for i in range(2)]
     agent_malfunction_list = [[0, 0, 0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 2, 1],
@@ -185,7 +185,7 @@ def test_malfunction_before_entry():
                   obs_builder_object=SingleAgentNavigationObs()
                   )
     env.reset(False, False, random_seed=10)
-    env.agents[0].target = (0, 0)
+    env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
 
     # Test initial malfunction values for all agents
     # we want some agents to be malfunctioning already and some to be working
@@ -255,7 +255,7 @@ def test_initial_malfunction():
     env.reset(False, False, random_seed=10)
     env._max_episode_steps = 1000
     print(env.agents[0].malfunction_handler)
-    env.agents[0].target = (0, 5)
+    env.agents[0].targets = {((0, 5), d) for d in Grid4TransitionsEnum}
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
         replay=[
@@ -319,7 +319,7 @@ def test_initial_malfunction():
             )
         ],
         speed=env.agents[0].speed_counter.speed,
-        target=env.agents[0].target,
+        target=next(iter(env.agents[0].targets))[0],
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
     )
@@ -433,7 +433,7 @@ def test_initial_malfunction_stop_moving():
             )
         ],
         speed=env.agents[0].speed_counter.speed,
-        target=env.agents[0].target,
+        target=next(iter(env.agents[0].targets))[0],
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
     )
@@ -531,7 +531,7 @@ def test_initial_malfunction_do_nothing():
             )
         ],
         speed=env.agents[0].speed_counter.speed,
-        target=env.agents[0].target,
+        target=next(iter(env.agents[0].targets))[0],
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
     )
@@ -613,7 +613,7 @@ def test_last_malfunction_step():
     env.agents[0].speed_counter = SpeedCounter(speed=1. / 3.)
     env.agents[0].initial_position = (6, 6)
     env.agents[0].initial_direction = 2
-    env.agents[0].target = (0, 3)
+    env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
 
     env._max_episode_steps = 1000
 

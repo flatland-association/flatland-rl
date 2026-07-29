@@ -54,8 +54,8 @@ def load_env_agent(agent_tuple: Agent):
         action_saver=agent_tuple.action_saver,
         state_machine=agent_tuple.state_machine,
         malfunction_handler=agent_tuple.malfunction_handler,
-        waypoints=agent_tuple.waypoints if agent_tuple.waypoints is not None else [Waypoint(agent_tuple.initial_position, agent_tuple.initial_direction),
-                                                                                   Waypoint(agent_tuple.target, None)],
+        waypoints=agent_tuple.waypoints if agent_tuple.waypoints is not None else [[Waypoint(agent_tuple.initial_position, agent_tuple.initial_direction)],
+                                                                                   [Waypoint(agent_tuple.target, d) for d in Grid4TransitionsEnum]],
         waypoints_earliest_departure=agent_tuple.waypoints_earliest_departure if agent_tuple.waypoints_earliest_departure is not None else [
             agent_tuple.earliest_departure, None],
         waypoints_latest_arrival=agent_tuple.waypoints_latest_arrival if agent_tuple.waypoints_latest_arrival is not None else [None,
@@ -127,16 +127,6 @@ class EnvAgent(Generic[ConfigurationType]):
     def old_direction(self, value):
         self.old_configuration = (self.old_position, value)
 
-    @property
-    def target(self):
-        # assuming same cell for all
-        return list(self.targets)[0][0]
-
-    @target.setter
-    def target(self, value):
-        # backwards compatibility to mean any direction into the cell. Will valid directions be post-cleaned in _agents_from_line.
-        self.targets = {(value, d) for d in Grid4TransitionsEnum}
-
     # INIT FROM HERE IN _from_line()
     initial_configuration = attrib(type=ConfigurationType)
 
@@ -191,7 +181,7 @@ class EnvAgent(Generic[ConfigurationType]):
                      initial_direction=self.initial_direction,
                      direction=self.direction,
                      # N.B. not serialized, valid targets post-processed.
-                     target=self.target,
+                     target=next(iter(self.targets))[0],
                      moving=self.moving,
                      earliest_departure=self.earliest_departure,
                      latest_arrival=self.latest_arrival,
@@ -318,7 +308,7 @@ class EnvAgent(Generic[ConfigurationType]):
             f"\tinitial_direction={self.initial_direction},\n"
             f"\tposition={self.position},\n"
             f"\tdirection={self.direction if self.direction is None else Grid4TransitionsEnum(self.direction).value},\n"
-            f"\ttarget={self.target},\n"
+            f"\ttarget={next(iter(self.targets))[0]},\n"
             f"\ttargets={self.targets},\n"
             f"\told_position={self.old_position},\n"
             f"\told_direction={self.old_direction},\n"

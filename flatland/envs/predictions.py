@@ -55,13 +55,14 @@ class DummyPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.ndarray]]
             action_priorities = [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]
             agent_virtual_position = agent.position
             agent_virtual_direction = agent.direction
+            agent_target = next(iter(agent.targets))[0]
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
             prediction[0] = [0, *agent_virtual_position, agent_virtual_direction, 0]
             for index in range(1, self.max_depth + 1):
                 action_done = False
                 # if we're at the target, stop moving...
-                if agent.position == agent.target:
-                    prediction[index] = [index, *agent.target, agent.direction, RailEnvActions.STOP_MOVING.value]
+                if agent.position == agent_target:
+                    prediction[index] = [index, *agent_target, agent.direction, RailEnvActions.STOP_MOVING.value]
                     continue
                 for action in action_priorities:
                     result = self.env.rail.apply_action_independent(action, (agent.position, agent.direction))
@@ -126,6 +127,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
 
         prediction_dict = {}
         for agent in agents:
+            agent_target = next(iter(agent.targets))[0]
             if agent.state.is_off_map_state():
                 agent_virtual_position = agent.initial_position
                 agent_virtual_direction = agent.initial_direction
@@ -133,7 +135,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
                 agent_virtual_position = agent.position
                 agent_virtual_direction = agent.direction
             elif agent.state == TrainState.DONE:
-                agent_virtual_position = agent.target
+                agent_virtual_position = agent_target
                 agent_virtual_direction = agent.direction
             else:
 
@@ -160,7 +162,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
             visited = OrderedSet()
             for index in range(1, self.max_depth + 1):
                 # if we're at the target, stop moving until max_depth is reached
-                if new_position == agent.target or not shortest_path:
+                if new_position == agent_target or not shortest_path:
                     prediction[index] = [index, *new_position, new_direction, RailEnvActions.STOP_MOVING.value]
                     visited.add((*new_position, agent.direction))
                     continue

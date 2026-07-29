@@ -35,7 +35,7 @@ def test_dummy_predictor(rendering=False):
     env.agents[0].initial_position = (5, 6)
     env.agents[0].initial_direction = 0
     env.agents[0].direction = 0
-    env.agents[0].target = (3, 0)
+    env.agents[0].targets = {((3, 0), d) for d in Grid4TransitionsEnum}
 
     env.reset(False, False)
     env.agents[0].earliest_departure = 1
@@ -132,7 +132,7 @@ def test_shortest_path_predictor(rendering=False):
     agent.position = (5, 6)  # south dead-end
     agent.direction = 0  # north
     agent.initial_direction = 0  # north
-    agent.target = (3, 9)  # east dead-end
+    agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
 
@@ -266,7 +266,7 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     env.agents[0].position = (5, 6)  # south dead-end
     env.agents[0].direction = 0  # north
     env.agents[0].initial_direction = 0  # north
-    env.agents[0].target = (3, 9)  # east dead-end
+    env.agents[0].targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     env.agents[0].moving = True
     env.agents[0]._set_state(TrainState.MOVING)
 
@@ -274,7 +274,7 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     env.agents[1].position = (3, 8)  # east dead-end
     env.agents[1].direction = 3  # west
     env.agents[1].initial_direction = 3  # west
-    env.agents[1].target = (6, 6)  # south dead-end
+    env.agents[1].targets = {((6, 6), d) for d in Grid4TransitionsEnum}  # south dead-end
     env.agents[1].moving = True
     env.agents[1]._set_state(TrainState.MOVING)
 

@@ -329,7 +329,7 @@ def test_timetable_generator_intermediate():
         a.waypoints = [[wp] for wp in a.waypoints]
     for a in env_agents:
         print(
-            f"EnvAgent(handle={a.handle}, initial_configuration=({a.initial_position},{a.initial_direction}),  target={a.target}, current_configuration=(None,{a.direction}),  waypoints={a.waypoints}, waypoints_latest_arrival=None, waypoints_earliest_departure=None),")
+            f"EnvAgent(handle={a.handle}, initial_configuration=({a.initial_position},{a.initial_direction}),  target={next(iter(a.targets))[0]}, current_configuration=(None,{a.direction}),  waypoints={a.waypoints}, waypoints_latest_arrival=None, waypoints_earliest_departure=None),")
     agents_hints = {
         'city_positions': [(31, 26), (10, 40), (44, 34), (7, 27), (17, 5), (27, 41), (20, 24), (38, 8), (8, 16), (42, 22)],
         'train_stations': [[((31, 26), 0), ((31, 27), 1)], [((9, 40), 0), ((10, 40), 1), ((11, 40), 2), ((12, 40), 3)],
