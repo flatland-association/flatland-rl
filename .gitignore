@@ -120,3 +120,9 @@ playground/
 *.pkl
 
 /images/
+
+# Claude Code
+.claude/*.local.json
+.claude/**/*.log
+CLAUDE.local.md
+# .claude/
