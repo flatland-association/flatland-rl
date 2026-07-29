@@ -38,6 +38,16 @@ class Agent(NamedTuple):
     waypoints_latest_arrival: List[int] = None
 
 
+def _normalize_waypoints(waypoints: List) -> List[List[Waypoint]]:
+    """
+    Normalizes a persisted `waypoints` field to the current `List[List[Waypoint]]` shape. Envs persisted
+    before routing-flexibility alternatives were introduced store it as a flat `List[Waypoint]` (one bare
+    `Waypoint` per stop) rather than one alternatives-group per stop - wrap any such bare entry in a
+    single-element list. A no-op for waypoints already in the current shape.
+    """
+    return [wp if isinstance(wp, list) else [wp] for wp in waypoints]
+
+
 def load_env_agent(agent_tuple: Agent):
     return EnvAgent(
         initial_configuration=(agent_tuple.initial_position, agent_tuple.initial_direction),
@@ -54,8 +64,9 @@ def load_env_agent(agent_tuple: Agent):
         action_saver=agent_tuple.action_saver,
         state_machine=agent_tuple.state_machine,
         malfunction_handler=agent_tuple.malfunction_handler,
-        waypoints=agent_tuple.waypoints if agent_tuple.waypoints is not None else [[Waypoint(agent_tuple.initial_position, agent_tuple.initial_direction)],
-                                                                                   [Waypoint(agent_tuple.target, d) for d in Grid4TransitionsEnum]],
+        waypoints=_normalize_waypoints(agent_tuple.waypoints) if agent_tuple.waypoints is not None else [
+            [Waypoint(agent_tuple.initial_position, agent_tuple.initial_direction)],
+            [Waypoint(agent_tuple.target, d) for d in Grid4TransitionsEnum]],
         waypoints_earliest_departure=agent_tuple.waypoints_earliest_departure if agent_tuple.waypoints_earliest_departure is not None else [
             agent_tuple.earliest_departure, None],
         waypoints_latest_arrival=agent_tuple.waypoints_latest_arrival if agent_tuple.waypoints_latest_arrival is not None else [None,

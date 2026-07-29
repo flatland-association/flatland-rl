@@ -7,6 +7,7 @@ import msgpack_numpy
 import numpy as np
 
 from flatland.core.effects_generator import EffectsGenerator, find_effects_generator, make_multi_effects_generator
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid_resource_map import GridResourceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
@@ -245,7 +246,8 @@ class RailEnvPersister(object):
             # target waypoint group exploded to all 4 directions unfiltered - clean it up now that the real
             # rail grid is available. A no-op for agents whose waypoints were already filtered at save time.
             if None in {wp.direction for wp in agent.waypoints[-1]}:
-                agent.waypoints[-1] = [wp for wp in agent.waypoints[-1] for d in range(4) if env.rail.is_valid_configuration((wp.position, d))]
+                agent.waypoints[-1] = [Waypoint(wp.position, d) for wp in agent.waypoints[-1] for d in Grid4TransitionsEnum
+                                       if env.rail.is_valid_configuration((wp.position, d))]
             else:
                 agent.waypoints[-1] = [wp for wp in agent.waypoints[-1] if env.rail.is_valid_configuration((wp.position, wp.direction))]
 

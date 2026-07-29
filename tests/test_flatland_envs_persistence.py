@@ -15,8 +15,9 @@ from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
-from flatland.envs.rewards import DefaultRewards
+from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.utils.simple_rail import make_simple_rail
 
 
@@ -340,3 +341,42 @@ def test_record_steps_effects_generator_deserialization_old_format():
     found = find_all_effects_generators(env_loaded.effects_generator, RecordStepsEffectsGenerator)
     assert len(found) == 1, f"expected exactly one RecordStepsEffectsGenerator after deserialization, found {len(found)}"
     assert found[0].list_actions == action_dicts
+
+
+def test_set_full_state_legacy_flat_waypoints():
+    """
+    Regression test: envs persisted before routing-flexibility alternatives were introduced store `waypoints`
+    as a flat `List[Waypoint]` (one bare `Waypoint` per stop, target direction `None` meaning "any direction"),
+    not the current `List[List[Waypoint]]` (one alternatives-group per stop). Loading such a legacy agent must
+    not crash (`load_env_agent` must normalize the flat shape), and the target's `None`-direction placeholder
+    must be expanded into distinct, rail-valid concrete directions - not left as several copies of the same
+    `None`-direction waypoint.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env_initial = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                          line_generator=sparse_line_generator(), number_of_agents=2)
+    env_initial.reset(False, False)
+    env_dict = RailEnvPersister.get_full_state(env_initial)
+
+    legacy_agent = env_dict["agents"][0]
+    target = legacy_agent.target
+    legacy_agent = legacy_agent._replace(
+        waypoints=[Waypoint(legacy_agent.initial_position, legacy_agent.initial_direction), Waypoint(target, None)],
+        waypoints_earliest_departure=[legacy_agent.earliest_departure, None],
+        waypoints_latest_arrival=[None, legacy_agent.latest_arrival],
+    )
+    env_dict["agents"] = [legacy_agent] + list(env_dict["agents"][1:])
+
+    env_loaded = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                         line_generator=sparse_line_generator(), number_of_agents=2)
+    RailEnvPersister.set_full_state(env_loaded, env_dict)
+
+    agent = env_loaded.agents[0]
+    assert all(isinstance(wps, list) for wps in agent.waypoints)
+    target_wps = agent.waypoints[-1]
+    assert len(target_wps) == len(set(target_wps)), f"expected distinct target waypoints, got {target_wps}"
+    assert all(wp.direction is not None for wp in target_wps)
+    assert all(env_loaded.rail.is_valid_configuration((wp.position, wp.direction)) for wp in target_wps)
+
+    # must not raise - Rewards._sanitize_waypoints() assumes every waypoints entry is a list.
+    Rewards._sanitize_waypoints(agent.waypoints)
