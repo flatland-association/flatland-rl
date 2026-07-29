@@ -36,9 +36,9 @@ beautifulsoup4==4.15.0
     # via nbconvert
 bleach[css]==6.4.0
     # via nbconvert
-boto3==1.43.56
+boto3==1.43.58
     # via flatland-rl (pyproject.toml)
-botocore==1.43.56
+botocore==1.43.58
     # via
     #   boto3
     #   s3transfer
@@ -248,7 +248,7 @@ markupsafe==3.0.3
     # via
     #   jinja2
     #   nbconvert
-matplotlib==3.11.1
+matplotlib==3.10.9
     # via
     #   flatland-rl (pyproject.toml)
     #   seaborn
@@ -421,7 +421,7 @@ python-discovery==1.5.0
     #   virtualenv
 python-dotenv==1.2.2
     # via testcontainers
-python-gitlab==8.4.0
+python-gitlab==8.5.0
     # via crowdai-api
 python-json-logger==4.1.0
     # via jupyter-events
@@ -592,7 +592,7 @@ wheel==0.47.0
     # via pip-tools
 widgetsnbextension==4.0.15
     # via ipywidgets
-wrapt==2.2.2
+wrapt==2.3.0
     # via testcontainers
 xyzservices==2026.3.0
     # via folium
