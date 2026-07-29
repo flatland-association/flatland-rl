@@ -306,12 +306,12 @@ def complex_rail_generator(nr_start_goal=1,
 
 ## Publishing
 
-To publish a new version of the package:
+Releases are managed by [release-please](https://github.com/googleapis/release-please). Every push to `main` updates
+(or opens) a release PR that bumps the version and updates `CHANGELOG.md` based on the
+[Conventional Commit Messages](https://www.conventionalcommits.org/en/v1.0.0/) merged since the last release. Merging
+that PR tags the release, publishes the package to PyPI and builds/pushes the Docker images - see
+`.github/workflows/publish.yml`.
 
-1. Pick an appropriate version number (this project follows semantic versioning, hence chose wisely) and
-   update `CHANGELOG.md` accordingly.
-2. Create a branch using the naming convention `release/<version-number>`, e.g. `release/4.0.0`.
-3. Commit your changes to `CHANGELOG.md`.
-4. Push the branch and open a PR targeting `main` and get it approved by a core team member.
-5. Merge the PR, a GitHub action will pick it up and release the new version.
+To publish a release candidate to Test PyPI without cutting a real release, manually trigger
+`.github/workflows/publish.yml` (workflow_dispatch) with a version number.
 

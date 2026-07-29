@@ -1,4 +1,4 @@
-name: Publish package to PyPI
+name: Publish package
 
 env:
     # DEPENDENCY SWITCH:
@@ -6,13 +6,36 @@ env:
     flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip"
 
 on:
-    pull_request:
+    push:
         branches: [ "main" ]
-        types: [ "closed" ]
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "Version number to publish to Test PyPI (leave empty to skip publishing)"
+                required: false
+                type: string
 
 jobs:
+    release-please:
+        if: ${{ github.event_name == 'push' }}
+        runs-on: ubuntu-22.04
+        permissions:
+            contents: write
+            pull-requests: write
+        outputs:
+            release_created: ${{ steps.release.outputs.release_created }}
+            tag_name: ${{ steps.release.outputs.tag_name }}
+        steps:
+            -   uses: googleapis/release-please-action@v4
+                id: release
+
+    # Runs the full test matrix before either publish flow below: for a real release (gated on
+    # release-please having just created one) or a manual Test PyPI publish (gated on a version being given).
     test:
-        if: ${{ github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/') }}
+        if: >-
+            ${{ (github.event_name == 'push' && needs.release-please.outputs.release_created) ||
+            (github.event_name == 'workflow_dispatch' && inputs.version != '') }}
+        needs: [ release-please ]
         runs-on: ubuntu-22.04
         strategy:
             fail-fast: false
@@ -40,6 +63,8 @@ jobs:
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
             -   uses: actions/checkout@v6
+                with:
+                    ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
             -   name: Set up Python ${{ matrix.python-version }}
                 uses: actions/setup-python@v6
                 with:
@@ -64,13 +89,51 @@ jobs:
             -   name: Check disk space
                 run: df . -h
 
-    publish:
+    publish-pypi:
+        if: ${{ github.event_name == 'push' && needs.release-please.outputs.release_created }}
+        needs: [ release-please, test ]
         runs-on: ubuntu-22.04
-        needs: [ test ]
+        environment: pypi
+        # https://docs.pypi.org/trusted-publishers/using-a-publisher/
         permissions:
-            contents: write
+            id-token: write
         outputs:
-            version_tag: ${{ steps.build-version-tag.outputs.VERSION_TAG }}
+            version_tag: ${{ needs.release-please.outputs.tag_name }}
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v6
+                with:
+                    ref: ${{ needs.release-please.outputs.tag_name }}
+            -   name: Set up Python
+                uses: actions/setup-python@v6
+                with:
+                    python-version: "3.13"
+            -   name: Install tox
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install tox tox-gh-actions
+            -   name: Build new package
+                run: tox run -e build
+            -   name: Publish package to PyPI
+                uses: pypa/gh-action-pypi-publish@release/v1
+                with:
+                    packages-dir: dist/
+            -   name: Archive package
+                uses: actions/upload-artifact@v6
+                with:
+                    name: python-package
+                    path: dist/
+
+    publish-test-pypi:
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' }}
+        needs: [ test ]
+        runs-on: ubuntu-22.04
+        environment: test-pypi
+        # https://docs.pypi.org/trusted-publishers/using-a-publisher/
+        permissions:
+            id-token: write
+        outputs:
+            version_tag: v${{ inputs.version }}
         steps:
             -   name: Checkout
                 uses: actions/checkout@v6
@@ -84,25 +147,15 @@ jobs:
                 run: |
                     python -m pip install --upgrade pip
                     pip install tox tox-gh-actions
-            -   name: Build version tag
-                id: build-version-tag
-                run: |
-                    VERSION=$(echo "$GITHUB_HEAD_REF" | sed 's/release\///')
-                    echo "VERSION_TAG=v$VERSION" >> "$GITHUB_OUTPUT"
-            -   name: Tag commit with version
-                env:
-                    VERSION_TAG: ${{ steps.build-version-tag.outputs.VERSION_TAG }}
-                run: git tag "$VERSION_TAG"
             -   name: Build new package
+                env:
+                    SETUPTOOLS_SCM_PRETEND_VERSION: ${{ inputs.version }}
                 run: tox run -e build
-            -   name: Publish package to PyPI
+            -   name: Publish package to Test PyPI
                 uses: pypa/gh-action-pypi-publish@release/v1
                 with:
-                    password: ${{ secrets.PYPI_API_TOKEN }}
-            -   name: Push version tag
-                env:
-                    VERSION_TAG: ${{ steps.build-version-tag.outputs.VERSION_TAG }}
-                run: git push origin "$VERSION_TAG"
+                    repository-url: https://test.pypi.org/legacy/
+                    packages-dir: dist/
             -   name: Archive package
                 uses: actions/upload-artifact@v6
                 with:
@@ -110,8 +163,11 @@ jobs:
                     path: dist/
 
     docker-publish:
+        # Runs after whichever publish flow ran - the other is always skipped, so the default
+        # needs-implies-success() condition would otherwise block this job.
+        if: ${{ !cancelled() && (needs.publish-pypi.result == 'success' || needs.publish-test-pypi.result == 'success') }}
+        needs: [ publish-pypi, publish-test-pypi ]
         runs-on: ubuntu-22.04
-        needs: [ publish ]
         permissions:
             contents: read
             packages: write
@@ -131,6 +187,16 @@ jobs:
         steps:
             -   name: Checkout
                 uses: actions/checkout@v6
+            -   name: Resolve version tag and flatland-rl ref
+                id: version
+                run: |
+                    if [ -n "${{ needs.publish-pypi.outputs.version_tag }}" ]; then
+                        echo "VERSION_TAG=${{ needs.publish-pypi.outputs.version_tag }}" >> "$GITHUB_OUTPUT"
+                        echo "FLATLAND_RL_REF=${{ needs.publish-pypi.outputs.version_tag }}" >> "$GITHUB_OUTPUT"
+                    else
+                        echo "VERSION_TAG=${{ needs.publish-test-pypi.outputs.version_tag }}" >> "$GITHUB_OUTPUT"
+                        echo "FLATLAND_RL_REF=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+                    fi
             -   name: Log in to GHCR
                 uses: docker/login-action@v3
                 with:
@@ -152,7 +218,7 @@ jobs:
                     build-args: |
                         PYTHON_VERSION=${{ matrix.python-version }}
                         WITH_ML=${{ matrix.variant.with-ml }}
-                        FLATLAND_RL_REF=${{ needs.publish.outputs.version_tag }}
+                        FLATLAND_RL_REF=${{ steps.version.outputs.FLATLAND_RL_REF }}
                     no-cache: true
                     push: true
-                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:${{ needs.publish.outputs.version_tag }}-py${{ matrix.python-version }}${{ matrix.variant.tag-suffix }}
+                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:${{ steps.version.outputs.VERSION_TAG }}-py${{ matrix.python-version }}${{ matrix.variant.tag-suffix }}
