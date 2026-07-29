@@ -27,8 +27,8 @@ class SingleAgentNavigationObs(ObservationBuilder):
     def __init__(self):
         super().__init__()
 
-    def reset(self):
-        pass
+    def reset(self, env):
+        super().reset(env)
 
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]

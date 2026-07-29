@@ -1,8 +1,10 @@
 """
 ObservationBuilder objects are objects that can be passed to environments designed for customizability.
-The ObservationBuilder-derived custom classes implement 2 functions, reset() and get() or get(handle).
+The ObservationBuilder-derived custom classes implement 2 functions, reset(env) and get() or get(handle).
 
-+ `reset()` is called after each environment reset, to allow for pre-computing relevant data.
++ `reset(env)` is called after each environment reset, to allow for pre-computing relevant data. It receives the
+  (possibly newly generated) env instance, so any instantiations depending on env parameters (e.g. width, height)
+  should be done here rather than in `__init__`.
 
 + `get()` is called whenever an observation has to be computed, potentially for each agent independently in case of \
 multi-agent environments.
@@ -28,14 +30,20 @@ class ObservationBuilder(Generic[EnvType, ObservationType]):
     def __init__(self):
         self.env: Optional[EnvType] = None
 
-    def set_env(self, env: EnvType):
-        self.env: EnvType = env
+    def reset(self, env: EnvType):
+        """
+        Called after each environment reset, to allow for pre-computing relevant data. Receives the
+        (possibly newly generated) env instance, so any instantiations depending on env parameters
+        (e.g. width, height) should be made here rather than in `__init__`.
 
-    def reset(self):
+        Subclasses that need to pre-compute env-dependent data should override this method and call
+        `super().reset(env)` first to keep `self.env` up to date.
+
+        Parameters
+        ----------
+        env: EnvType
         """
-        Called after each environment reset.
-        """
-        raise NotImplementedError()
+        self.env: EnvType = env
 
     def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, ObservationType]:
         """
@@ -93,8 +101,8 @@ class DummyObservationBuilder(ObservationBuilder[Environment, bool]):
     def __init__(self):
         super().__init__()
 
-    def reset(self):
-        pass
+    def reset(self, env: Environment):
+        super().reset(env)
 
     def get(self, handle: AgentHandle = 0) -> bool:
         return True
@@ -129,11 +137,9 @@ def gauss_perturbation_observation_builder_wrapper(
             self._builder = builder
             self._np_random = np_random
 
-        def set_env(self, env: Environment):
-            builder.set_env(env)
-
-        def reset(self):
-            builder.reset()
+        def reset(self, env: Environment):
+            super().reset(env)
+            builder.reset(env)
 
         def get(self, handle: AgentHandle = 0) -> ObservationBuilder[Environment, np.ndarray]:
             obs: np.ndarray = self._builder.get(handle)

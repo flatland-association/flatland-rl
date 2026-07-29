@@ -52,8 +52,8 @@ class EnvStepObservationBuilder(ObservationBuilder[RailEnv, int]):
     def get(self, handle: AgentHandle = 0) -> ObservationType:
         return self.env._elapsed_steps
 
-    def reset(self):
-        pass
+    def reset(self, env):
+        super().reset(env)
 
 
 def test_from_episode():

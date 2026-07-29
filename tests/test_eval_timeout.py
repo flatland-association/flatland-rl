@@ -15,19 +15,15 @@ class CustomObservationBuilder(ObservationBuilder):
     def __init__(self):
         super(CustomObservationBuilder, self).__init__()
 
-    def set_env(self, env: Environment):
-        super().set_env(env)
-        # Note :
-        # The instantiations which depend on parameters of the Env object should be 
-        # done here, as it is only here that the updated self.env instance is available
+    def reset(self, env: Environment):
+        """
+        Called internally on every env.reset() call,
+        to reset any observation specific variables that are being used.
+        Also the place to do any instantiations which depend on parameters of the Env object,
+        since it is only here that the updated env instance is available.
+        """
+        super().reset(env)
         self.rail_obs = np.zeros((self.env.height, self.env.width))
-
-    def reset(self):
-        """
-        Called internally on every env.reset() call, 
-        to reset any observation specific variables that are being used
-        """
-        self.rail_obs[:] = 0        
         for _x in range(self.env.width):
             for _y in range(self.env.height):
                 # Get the transition map value at location _x, _y

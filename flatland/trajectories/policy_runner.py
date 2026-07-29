@@ -61,7 +61,7 @@ class PolicyRunner:
     def change_policy(self, policy: Policy, obs_builder: ObservationBuilder):
         self._policy = policy
         self.env.obs_builder = obs_builder
-        self.env.obs_builder.set_env(self.env)
+        self.env.obs_builder.reset(self.env)
         self.observations = self.env._get_observations()
 
     def step(self, persist: bool = False) -> Tuple["Trajectory", bool]:

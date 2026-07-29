@@ -53,7 +53,10 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         self.predictor = predictor
         self.location_has_target = None
 
-    def reset(self):
+    def reset(self, env: "RailEnv"):
+        super().reset(env)
+        if self.predictor:
+            self.predictor.reset(env)
         self.location_has_target = {tuple(agent.target): 1 for agent in self.env.agents}
 
     def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, Node]:
@@ -522,11 +525,6 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         for direction in self.tree_explored_actions_char:
             self.print_subtree(node.childs[direction], direction, indent + "\t")
 
-    def set_env(self, env: Environment):
-        super().set_env(env)
-        if self.predictor:
-            self.predictor.set_env(self.env)
-
     def _reverse_dir(self, direction):
         return int((direction + 2) % 4)
 
@@ -553,10 +551,8 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
     def __init__(self):
         super(GlobalObsForRailEnv, self).__init__()
 
-    def set_env(self, env: Environment):
-        super().set_env(env)
-
-    def reset(self):
+    def reset(self, env: Environment):
+        super().reset(env)
         self.rail_obs = np.zeros((self.env.height, self.env.width, 16))
         for i in range(self.rail_obs.shape[0]):
             for j in range(self.rail_obs.shape[1]):
@@ -648,7 +644,8 @@ class LocalObsForRailEnv(ObservationBuilder):
         self.center = center
         self.max_padding = max(self.view_width, self.view_height - self.center)
 
-    def reset(self):
+    def reset(self, env):
+        super().reset(env)
         # We build the transition map with a view_radius empty cells expansion on each side.
         # This helps to collect the local transition map view when the agent is close to a border.
         self.max_padding = max(self.view_width, self.view_height)
@@ -759,8 +756,5 @@ class FullEnvObservation(ObservationBuilder["RailEnv", "RailEnv"]):
     def get(self, handle: AgentHandle = 0) -> "RailEnv":
         return self.env
 
-    def reset(self):
-        pass
-
-    def set_env(self, env):
+    def reset(self, env):
         self.env = env

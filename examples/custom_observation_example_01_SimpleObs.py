@@ -20,8 +20,8 @@ class SimpleObs(ObservationBuilder):
     def __init__(self):
         super().__init__()
 
-    def reset(self):
-        return
+    def reset(self, env):
+        super().reset(env)
 
     def get(self, handle: int = 0) -> np.ndarray:
         observation = handle * np.ones((5,))

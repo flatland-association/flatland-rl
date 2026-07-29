@@ -110,8 +110,7 @@ class RailEnvPersister(object):
         if obs_builder is None:
             obs_builder = DummyObservationBuilder()
         env.obs_builder = obs_builder
-        env.obs_builder.set_env(env)
-        env.obs_builder.reset()
+        env.obs_builder.reset(env)
 
     @classmethod
     def load_new(cls,
@@ -162,8 +161,7 @@ class RailEnvPersister(object):
         )
         cls.set_full_state(env, env_dict, effects_generator=effects_generator)
 
-        env.obs_builder.set_env(env)
-        env.obs_builder.reset()
+        env.obs_builder.reset(env)
 
         return env, env_dict
 
