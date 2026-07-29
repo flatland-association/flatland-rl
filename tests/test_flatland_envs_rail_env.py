@@ -21,6 +21,7 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
+from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
@@ -645,4 +646,114 @@ def test_symmetric_switch_move_forward_action():
     assert agent.state == TrainState.STOPPED
     assert agent.speed_counter.speed == 0
     # TODO re-evaluate design: speed was 0.5 when stopped - should we not have travelled to 0.5 when stopped?
+    assert agent.speed_counter.distance == 0
+
+
+def test_earliest_departure_state_transitions_initial_speed_zero():
+    """
+    Document state transitions WAITING -> READY_TO_DEPART -> MOVING for a single agent starting
+    at speed 0 with max speed 1 and acceleration delta 0.5, issuing MOVE_FORWARD from the very
+    first step. Tracks configuration, speed and state until the agent reaches the second
+    configuration after its initial one.
+    """
+    env, _, _ = env_generator_legacy(seed=42, n_agents=1)
+    env.acceleration_delta = Fraction(1, 2)
+    agent = env.agents[0]
+    agent.speed_counter = SpeedCounter(speed=Fraction(0), max_speed=Fraction(1))
+    agent.earliest_departure = 3
+
+    # WAITING: off map, earliest departure not yet reached - no speed/distance progress.
+    while agent.state == TrainState.WAITING:
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+        assert agent.current_configuration is None
+        assert agent.speed_counter.speed == 0
+        assert agent.speed_counter.distance == 0
+
+    # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
+    assert agent.state == TrainState.READY_TO_DEPART
+    assert agent.current_configuration is None
+
+    # READY_TO_DEPART -> MOVING: agent appears at its initial configuration this very step, but the
+    # speed_counter is not stepped yet (N.B. no movement in the first time step after READY_TO_DEPART).
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.current_configuration == agent.initial_configuration
+    assert agent.speed_counter.speed == 0
+    assert agent.speed_counter.distance == 0
+
+    first_configuration = agent.current_configuration
+    second_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_configuration)
+    third_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_configuration)
+
+    # First real moving step: speed_counter accelerates from 0 to 0.5, not yet enough to leave the initial configuration.
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.current_configuration == first_configuration
+    assert agent.speed_counter.speed == Fraction(1, 2)
+    assert agent.speed_counter.distance == Fraction(1, 2)
+
+    # Speed accelerates to max (1): the agent overshoots into the configuration after the initial one.
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.current_configuration == second_configuration
+    assert agent.speed_counter.speed == 1
+    # TODO revise design: currently, already new speed is applied after acceleration, the distance travelled should be with old speed
+    assert agent.speed_counter.distance == Fraction(1, 2)
+
+    # At max speed, the agent advances exactly one configuration per step from here on.
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.current_configuration == third_configuration
+    assert agent.speed_counter.speed == 1
+    assert agent.speed_counter.distance == Fraction(1, 2)
+
+
+def test_earliest_departure_state_transitions_initial_speed_equals_max_speed():
+    """
+    Same as test_earliest_departure_state_transitions, but with initial speed equal to max speed
+    (1): no acceleration takes place, so once MOVING the agent advances exactly one configuration
+    per step, with distance resetting to 0 cleanly every time.
+    """
+    env, _, _ = env_generator_legacy(seed=42, n_agents=1)
+    env.acceleration_delta = Fraction(1, 2)
+    agent = env.agents[0]
+    agent.speed_counter = SpeedCounter(speed=Fraction(1), max_speed=Fraction(1))
+    agent.earliest_departure = 3
+
+    # WAITING: off map, earliest departure not yet reached - no speed/distance progress.
+    while agent.state == TrainState.WAITING:
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+        assert agent.current_configuration is None
+        assert agent.speed_counter.speed == 1
+        assert agent.speed_counter.distance == 0
+
+    # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
+    assert agent.state == TrainState.READY_TO_DEPART
+    assert agent.current_configuration is None
+
+    # READY_TO_DEPART -> MOVING: agent appears at its initial configuration this very step, but the
+    # speed_counter is not stepped yet (N.B. no movement in the first time step after READY_TO_DEPART).
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.current_configuration == agent.initial_configuration
+    assert agent.speed_counter.speed == 1
+    # at offset 0 in initial configuration:
+    assert agent.speed_counter.distance == 0
+
+    first_configuration = agent.current_configuration
+    second_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_configuration)
+    third_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_configuration)
+
+    # Already at max speed: the agent advances exactly one configuration every step, distance resetting to 0 cleanly.
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.current_configuration == second_configuration
+    assert agent.speed_counter.speed == 1
+    # at offset 0 in second configuration
+    assert agent.speed_counter.distance == 0
+
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.current_configuration == third_configuration
+    assert agent.speed_counter.speed == 1
     assert agent.speed_counter.distance == 0
