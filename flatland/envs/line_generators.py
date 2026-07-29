@@ -170,7 +170,8 @@ class SparseLineGen(BaseLineGen):
         agent_directions = [[[d] for d in da] for da in agent_directions]
 
         agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] +
-                              [[Waypoint(target, d) for d in Grid4TransitionsEnum]] for
+                              [[Waypoint(target, d) for d in Grid4TransitionsEnum
+                                if rail.is_valid_configuration((target, d))]] for
                            i, (pas, das, target)
                            in enumerate(zip(agent_positions, agent_directions, agent_targets))}
 

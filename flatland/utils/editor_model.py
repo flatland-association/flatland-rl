@@ -395,7 +395,10 @@ class EditorModel(AbstractModel):
 
     def add_target(self, rc_cell):
         if self.selected_agent is not None:
-            self.env.agents[self.selected_agent].targets = {(tuple(rc_cell), d) for d in Grid4TransitionsEnum}
+            rc_target = tuple(rc_cell)
+            self.env.agents[self.selected_agent].targets = {
+                (rc_target, d) for d in Grid4TransitionsEnum if self.env.rail.is_valid_configuration((rc_target, d))
+            }
             self.view.oRT.update_background()
             self.redraw()
 

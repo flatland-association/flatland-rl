@@ -216,7 +216,8 @@ def test_sparse_line_generator():
                         [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.WEST]], [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.NORTH]],
                         [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.WEST]]]
     agent_targets = [(39, 8), (10, 40), (42, 22), (18, 5), (39, 8), (12, 40), (31, 27), (39, 8), (8, 27), (44, 22)]
-    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, d) for d in Grid4TransitionsEnum]]
+    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] +
+                          [[Waypoint(target, d) for d in Grid4TransitionsEnum if rail.is_valid_configuration((target, d))]]
                        for i, (pas, das, target)
                        in enumerate(zip(agent_positions, agent_directions, agent_targets))}
     assert line == Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])

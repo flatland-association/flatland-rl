@@ -241,6 +241,13 @@ class RailEnvPersister(object):
         # N.B. targets not serialised, so do post-cleaning. Otherwise, done in env._agents_from_line() during reset().
         for agent in env.agents:
             agent.targets = {t for t in agent.targets if env.rail.is_valid_configuration(t)}
+            # N.B. legacy agents loaded without persisted waypoints (see load_env_agent's fallback) get their
+            # target waypoint group exploded to all 4 directions unfiltered - clean it up now that the real
+            # rail grid is available. A no-op for agents whose waypoints were already filtered at save time.
+            if None in {wp.direction for wp in agent.waypoints[-1]}:
+                agent.waypoints[-1] = [wp for wp in agent.waypoints[-1] for d in range(4) if env.rail.is_valid_configuration((wp.position, d))]
+            else:
+                agent.waypoints[-1] = [wp for wp in agent.waypoints[-1] if env.rail.is_valid_configuration((wp.position, wp.direction))]
 
         max_episode_steps = env_dict.get('max_episode_steps', None)
         if max_episode_steps is not None:
