@@ -26,9 +26,9 @@ attrs==26.1.0
     #   jsonschema
     #   referencing
     #   versions
-boto3==1.43.58
+boto3==1.43.61
     # via flatland-rl (pyproject.toml)
-botocore==1.43.58
+botocore==1.43.61
     # via
     #   boto3
     #   s3transfer
@@ -86,7 +86,7 @@ farama-notifications==0.0.6
     # via gymnasium
 fastenum==1.1.2
     # via flatland-rl (pyproject.toml)
-filelock==3.32.0
+filelock==3.32.2
     # via
     #   python-discovery
     #   ray
@@ -460,7 +460,7 @@ urllib3==2.7.0
     #   sentry-sdk
 versions==1.6.1
     # via flatland-rl (pyproject.toml)
-virtualenv==21.7.0
+virtualenv==21.7.1
     # via ray
 wandb==0.28.1
     # via flatland-rl (pyproject.toml)

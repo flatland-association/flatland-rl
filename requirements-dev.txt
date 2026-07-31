@@ -34,9 +34,9 @@ beautifulsoup4==4.15.0
     # via nbconvert
 bleach[css]==6.4.0
     # via nbconvert
-boto3==1.43.58
+boto3==1.43.61
     # via flatland-rl (pyproject.toml)
-botocore==1.43.58
+botocore==1.43.61
     # via
     #   boto3
     #   s3transfer
@@ -101,7 +101,7 @@ fastenum==1.1.2
     # via flatland-rl (pyproject.toml)
 fastjsonschema==2.22.1
     # via nbformat
-filelock==3.32.0
+filelock==3.32.2
     # via
     #   python-discovery
     #   tox
@@ -188,7 +188,7 @@ jsonschema-specifications==2025.9.1
     # via jsonschema
 jupyter==1.1.1
     # via flatland-rl (pyproject.toml)
-jupyter-builder==1.1.1
+jupyter-builder==1.2.0
     # via
     #   jupyterlab
     #   notebook
@@ -575,7 +575,7 @@ urllib3==2.7.0
     #   testcontainers
 versions==1.6.1
     # via flatland-rl (pyproject.toml)
-virtualenv==21.7.0
+virtualenv==21.7.1
     # via tox
 wcwidth==0.8.2
     # via prompt-toolkit
