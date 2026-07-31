@@ -310,7 +310,7 @@ def test_reward_function_waiting(rendering=False):
 
         print(env.dones["__all__"])
         for agent in env.agents:
-            print("[{}] agent {} at {}, target {} ".format(iteration + 1, agent.handle, agent.position, next(iter(agent.targets))[0]))
+            print("[{}] agent {} at {}, target {} ".format(iteration + 1, agent.handle, agent.position, agent.targets))
         print(np.all([np.array_equal(agent2.position, next(iter(agent2.targets))[0]) for agent2 in env.agents]))
         for agent in env.agents:
             expected_position = expectations[iteration + 1]['positions'][agent.handle]

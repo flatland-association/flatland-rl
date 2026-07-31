@@ -57,7 +57,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         super().reset(env)
         if self.predictor:
             self.predictor.reset(env)
-        self.location_has_target = {tuple(next(iter(agent.targets))[0]): 1 for agent in self.env.agents}
+        self.location_has_target = {tuple(t[0]): 1 for agent in self.env.agents for t in agent.targets}
 
     def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, Node]:
         """

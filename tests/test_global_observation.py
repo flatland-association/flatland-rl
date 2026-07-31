@@ -33,7 +33,7 @@ def test_get_global_observation():
     for i in range(len(env.agents)):
         agent: EnvAgent = env.agents[i]
         print("[{}] state={}, position={}, target={}, initial_position={}".format(i, agent.state, agent.position,
-                                                                                  next(iter(agent.targets))[0],
+                                                                                  agent.targets,
                                                                                   agent.initial_position))
 
     for i, agent in enumerate(env.agents):
