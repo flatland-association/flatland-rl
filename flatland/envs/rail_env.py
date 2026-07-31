@@ -175,7 +175,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         self.remove_agents_at_target = remove_agents_at_target
 
         self.obs_builder = obs_builder_object
-        self.obs_builder.set_env(self)
 
         self._max_episode_steps: Optional[int] = None
         self._elapsed_steps = 0
@@ -303,12 +302,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             optionals, rail = self._call_rail_generator(optionals)
             self.rail = rail
 
-
-            # Do a new set_env call on the obs_builder to ensure
-            # that obs_builder specific instantiations are made according to the
-            # specifications of the current environment : like width, height, etc
-            self.obs_builder.set_env(self)
-
         if regenerate_schedule or regenerate_rail or self.get_num_agents() == 0:
             agents_hints = None
             if optionals and 'agents_hints' in optionals:
@@ -342,7 +335,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         self.dones = dict.fromkeys(list(range(self.get_num_agents())) + ["__all__"], False)
 
         # Reset the state of the observation builder with the new environment
-        self.obs_builder.reset()
+        self.obs_builder.reset(self)
 
         # Empty the episode store of agent positions
         self.cur_episode = []

@@ -17,12 +17,6 @@ class SimpleObs(ObservationBuilder):
     all equal to the ID of the respective agent.
     """
 
-    def __init__(self):
-        super().__init__()
-
-    def reset(self):
-        return
-
     def get(self, handle: int = 0) -> np.ndarray:
         observation = handle * np.ones((5,))
         return observation

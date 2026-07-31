@@ -34,11 +34,8 @@ class GymObservationBuilderWrapper(GymObservationBuilder[EnvType, ObservationTyp
         self.wrap = wrap
         self.observation_space = observation_space
 
-    def set_env(self, env: EnvType):
-        self.wrap.set_env(env)
-
-    def reset(self):
-        self.wrap.reset()
+    def reset(self, env: EnvType):
+        self.wrap.reset(env)
 
     def get(self, handle: AgentHandle = 0) -> MultiAgentDict:
         return self.wrap.get(handle)
@@ -75,10 +72,6 @@ class GlobalObsForRailEnvGym(GymObservationBuilderWrapper):
         super().__init__(GlobalObsForRailEnv(), None)
         self.observation_space = None
 
-    def set_env(self, env: RailEnv):
-        self.wrap.set_env(env)
-        self._update_observation_space(env)
-
     def _update_observation_space(self, env):
         # workaround for multi-agent setting (i.e. do not flatten agent dict, only flatten per-agent observations)
         self.unflattened_observation_space = gym.spaces.Tuple(spaces=[
@@ -97,6 +90,6 @@ class GlobalObsForRailEnvGym(GymObservationBuilderWrapper):
         assert np.count_nonzero(np.isnan(obs)) == 0, obs
         return obs
 
-    def reset(self):
-        super().reset()
-        self._update_observation_space(self.wrap.env)
+    def reset(self, env: RailEnv):
+        super().reset(env)
+        self._update_observation_space(env)

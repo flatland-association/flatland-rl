@@ -50,12 +50,9 @@ def perturbation_tree_observation_builder_wrapper(
             )
             self._blank = blank
 
-        def set_env(self, env: Environment):
-            super().set_env(env)
-            self._builder.set_env(env)
-
-        def reset(self):
-            self._builder.reset()
+        def reset(self, env: Environment):
+            super().reset(env)
+            self._builder.reset(env)
             self._malfunction_handlers = {
                 i: MalfunctionHandler() for i in self.env.get_agent_handles()
             }

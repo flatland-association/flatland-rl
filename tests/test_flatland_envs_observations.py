@@ -366,9 +366,6 @@ def test_gauss_perturbation_observation_builder_wrapper():
             super().__init__()
             self._shape = shape
 
-        def reset(self):
-            pass
-
         def get(self, handle: int = 0) -> np.ndarray:
             return np.zeros(self._shape)
 

@@ -30,8 +30,10 @@ class ObservePredictions(ObservationBuilder):
         super().__init__()
         self.predictor = predictor
 
-    def reset(self):
-        pass
+    def reset(self, env: Environment):
+        super().reset(env)
+        if self.predictor:
+            self.predictor.reset(env)
 
     def get_many(self, handles: Optional[List[int]] = None) -> Dict[int, np.ndarray]:
         '''
@@ -95,11 +97,6 @@ class ObservePredictions(ObservationBuilder):
         self.env.dev_obs_dict[handle] = visited
 
         return observation
-
-    def set_env(self, env: Environment):
-        super().set_env(env)
-        if self.predictor:
-            self.predictor.set_env(self.env)
 
 
 def create_env(custom_obs_builder):

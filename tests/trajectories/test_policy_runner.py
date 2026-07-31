@@ -52,9 +52,6 @@ class EnvStepObservationBuilder(ObservationBuilder[RailEnv, int]):
     def get(self, handle: AgentHandle = 0) -> ObservationType:
         return self.env._elapsed_steps
 
-    def reset(self):
-        pass
-
 
 def test_from_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:

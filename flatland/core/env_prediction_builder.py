@@ -1,9 +1,11 @@
 """
 PredictionBuilder objects are objects that can be passed to environments designed for customizability.
-The PredictionBuilder-derived custom classes implement 2 functions, reset() and get([handle]).
+The PredictionBuilder-derived custom classes implement 2 functions, reset(env) and get([handle]).
 If predictions are not required in every step or not for all agents, then
 
-+ `reset()` is called after each environment reset, to allow for pre-computing relevant data.
++ `reset(env)` is called after each environment reset, to allow for pre-computing relevant data. It receives the
+  (possibly newly generated) env instance, so any instantiations depending on env parameters should be done here
+  rather than in `__init__`.
 
 + `get()` is called whenever an step has to be computed, potentially for each agent independently in \
 case of multi-agent environments.
@@ -24,14 +26,16 @@ class PredictionBuilder(Generic[EnvType, PredictionType]):
         self.max_depth = max_depth
         self.env: EnvType = None
 
-    def set_env(self, env: EnvType):
-        self.env = env
+    def reset(self, env: EnvType):
+        """
+        Called after each environment reset. Receives the env instance so prediction-builder-specific
+        instantiations depending on env parameters can be made here.
 
-    def reset(self):
+        Parameters
+        ----------
+        env: EnvType
         """
-        Called after each environment reset.
-        """
-        pass
+        self.env = env
 
     def get(self, handle: int = 0) -> PredictionType:
         """
