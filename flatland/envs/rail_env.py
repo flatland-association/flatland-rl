@@ -425,21 +425,21 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             agent.old_configuration = agent.current_configuration
 
             # Get action for the agent
-            raw_action = RailEnvActions.from_value(action_dict.get(i_agent, RailEnvActions.DO_NOTHING))
+            action = RailEnvActions.from_value(action_dict.get(i_agent, RailEnvActions.DO_NOTHING))
             # Try moving actions on current position
             if current_or_initial_configuration is None:  # Agent not added on map yet
                 current_or_initial_configuration = initial_configuration
             transition = self.rail.apply_action_independent(
-                raw_action, current_or_initial_configuration
+                action, current_or_initial_configuration
             )
             action_valid = transition is not None
             if action_valid:
                 new_configuration_independent, straight = transition
 
             # (2) STATE TRANSITION SIGNALS
-            stop_action_given = raw_action == RailEnvActions.STOP_MOVING
+            stop_action_given = action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
-            movement_action_given = RailEnvActions.is_moving_action(raw_action)
+            movement_action_given = RailEnvActions.is_moving_action(action)
             earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
             state = agent.state
 
@@ -449,7 +449,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
             # N.B. no acceleration if
             # - facing a symmetric switch and the corrected action is not MOVE_FORWARD with straight==True
-            # - if L/R corrected to F, then do not accelerate (as then raw_action != MOVE_FORWARD)
+            # - if L/R corrected to F, then do not accelerate (as then action != MOVE_FORWARD)
             # TODO revise design: does it make sense to accelerate when coming from STOPPED/MALFUNCTION as speed not set to 0?
             # get desired new speed independent of motion check
             agent_max_speed = agent.speed_counter.max_speed
@@ -458,7 +458,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
                 # start moving
                 new_speed += self.acceleration_delta
-            elif raw_action == RailEnvActions.MOVE_FORWARD and straight:
+            elif action == RailEnvActions.MOVE_FORWARD and straight:
                 # accelerate upon forward, but only if running straight
                 new_speed += self.acceleration_delta
             elif stop_action_given:
@@ -491,7 +491,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 valid_position_direction = any(self.rail.get_transitions(new_configuration))
                 if not valid_position_direction:
                     warnings.warn(f"{new_configuration} not valid on the grid."
-                                  f" Coming from {current_or_initial_configuration} with raw action {raw_action} and action valid {action_valid}. {self._infrastructure_representation(agent)}")
+                                  f" Coming from {current_or_initial_configuration} with action {action} and action valid {action_valid}. {self._infrastructure_representation(agent)}")
                 # fails if initial position has invalid direction or if the grid is not closed
                 # assert valid_position_direction
 
